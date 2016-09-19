@@ -73,7 +73,7 @@ else ()
             DOC "The directory where Ptexture.h resides")
     find_library( PTEX_LIBRARY
         NAMES
-            Ptex wdasPtex
+            libPtex.a Ptex wdasPtex
         HINTS
             "${PTEX_LOCATION}/lib64"
             "${PTEX_LOCATION}/lib"
