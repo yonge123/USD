@@ -3,6 +3,7 @@
     subLayers = [
         @../usd/schema.usda@,
         @../usdShade/schema.usda@,
+        @../usdGeom/schema.usda@,
     ]
 )
 
@@ -189,6 +190,17 @@ class "PtexTexture" (
     uniform int faceOffset (
         doc = """The Ptex face offset to be applied to the face index. By
         default, this parameter will be bound to the ptexFaceOffset primvar."""
+    )
+}
+
+class "ImagePlane" (
+    inherits = [</Imageable>]
+    customData = {
+        string className = "ImagePlane"
+    }
+) {
+    double depth (
+        doc = """Distance from the camera."""
     )
 }
 

@@ -39,6 +39,7 @@
 #define USDHYDRA_TOKENS \
     (black) \
     (clamp) \
+    (depth) \
     ((displayLookBxdf, "displayLook:bxdf")) \
     (faceIndex) \
     (faceOffset) \
@@ -85,6 +86,7 @@
 /// The tokens are:
 /// \li <b>black</b> - Return black when sampling outside the bounds of the texture., Possible value for UsdHydraUvTexture::GetWrapTAttr(), Possible value for UsdHydraUvTexture::GetWrapSAttr()
 /// \li <b>clamp</b> - The texture coordinate is clamped to [0,1]. , Possible value for UsdHydraUvTexture::GetWrapTAttr(), Possible value for UsdHydraUvTexture::GetWrapSAttr()
+/// \li <b>depth</b> - UsdHydraImagePlane
 /// \li <b>displayLookBxdf</b> - UsdHydraLookAPI
 /// \li <b>faceIndex</b> - UsdHydraPtexTexture
 /// \li <b>faceOffset</b> - UsdHydraPtexTexture

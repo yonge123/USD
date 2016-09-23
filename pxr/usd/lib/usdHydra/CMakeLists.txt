@@ -15,6 +15,7 @@ pxr_shared_library(usdHydra
         texture
         uvTexture
         ptexTexture
+        imagePlane
         tokens
 
     CPPFILES
@@ -28,6 +29,7 @@ pxr_shared_library(usdHydra
         wrapTexture.cpp
         wrapUvTexture.cpp
         wrapPtexTexture.cpp
+        wrapImagePlane.cpp
         wrapTokens.cpp
 
     PYTHON_FILES
