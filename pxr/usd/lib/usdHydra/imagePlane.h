@@ -109,6 +109,64 @@ private:
 
 public:
     // --------------------------------------------------------------------- //
+    // FILENAME 
+    // --------------------------------------------------------------------- //
+    /// Asset path to the file containg the image data.
+    ///
+    /// \n  C++ Type: SdfAssetPath
+    /// \n  Usd Type: SdfValueTypeNames->Asset
+    /// \n  Variability: SdfVariabilityUniform
+    /// \n  Fallback Value: @@
+    UsdAttribute GetFilenameAttr() const;
+
+    /// See GetFilenameAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateFilenameAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // FRAME 
+    // --------------------------------------------------------------------- //
+    /// The frame offset for animated textures.
+    ///
+    /// \n  C++ Type: double
+    /// \n  Usd Type: SdfValueTypeNames->Double
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: No Fallback
+    UsdAttribute GetFrameAttr() const;
+
+    /// See GetFrameAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateFrameAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // TEXTUREMEMORY 
+    // --------------------------------------------------------------------- //
+    /// Amount of memory used to store the texture (in Mb). A value of
+    /// zero specifies the native resolution.
+    ///
+    /// \n  C++ Type: float
+    /// \n  Usd Type: SdfValueTypeNames->Float
+    /// \n  Variability: SdfVariabilityUniform
+    /// \n  Fallback Value: No Fallback
+    UsdAttribute GetTextureMemoryAttr() const;
+
+    /// See GetTextureMemoryAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateTextureMemoryAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
     // DEPTH 
     // --------------------------------------------------------------------- //
     /// Distance from the camera.

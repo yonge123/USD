@@ -47,6 +47,27 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
+_CreateFilenameAttr(UsdHydraImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateFilenameAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Asset), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateFrameAttr(UsdHydraImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateFrameAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Double), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateTextureMemoryAttr(UsdHydraImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateTextureMemoryAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
+}
+        
+static UsdAttribute
 _CreateDepthAttr(UsdHydraImagePlane &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateDepthAttr(
@@ -81,6 +102,27 @@ void wrapUsdHydraImagePlane()
 
         .def(!self)
 
+        
+        .def("GetFilenameAttr",
+             &This::GetFilenameAttr)
+        .def("CreateFilenameAttr",
+             &_CreateFilenameAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetFrameAttr",
+             &This::GetFrameAttr)
+        .def("CreateFrameAttr",
+             &_CreateFrameAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetTextureMemoryAttr",
+             &This::GetTextureMemoryAttr)
+        .def("CreateTextureMemoryAttr",
+             &_CreateTextureMemoryAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
         
         .def("GetDepthAttr",
              &This::GetDepthAttr)

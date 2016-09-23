@@ -142,6 +142,12 @@ class "ImagePlane"
     double depth (
         doc = "Distance from the camera."
     )
+    double frame (
+        doc = "The frame offset for animated textures."
+    )
+    uniform asset info:filename = @@ (
+        doc = "Asset path to the file containg the image data."
+    )
     rel proxyPrim = None (
         doc = '''The proxyPrim relationship allows us to link a
         prim whose purpose is "render" to its (single target)
@@ -201,6 +207,10 @@ class "ImagePlane"
         to a different runtime level of detail, and that does not interact
         well with the needs of multithreaded rendering. Purpose provides us with
         a better tool for dynamic, interactive complexity management.'''
+    )
+    uniform float textureMemory (
+        doc = """Amount of memory used to store the texture (in Mb). A value of
+        zero specifies the native resolution."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]

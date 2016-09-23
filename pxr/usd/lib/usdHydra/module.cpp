@@ -30,6 +30,7 @@ TF_WRAP_MODULE
     TF_WRAP(UsdHydraShader); 
     TF_WRAP(UsdHydraTexture); 
     TF_WRAP(UsdHydraUvTexture); 
-    TF_WRAP(UsdHydraPtexTexture); 
+    TF_WRAP(UsdHydraPtexTexture);
+    TF_WRAP(UsdHydraImagePlane);
     TF_WRAP(UsdHydraTokens); 
 }

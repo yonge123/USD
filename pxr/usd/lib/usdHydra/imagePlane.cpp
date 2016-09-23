@@ -77,6 +77,57 @@ UsdHydraImagePlane::_GetTfType() const
 }
 
 UsdAttribute
+UsdHydraImagePlane::GetFilenameAttr() const
+{
+    return GetPrim().GetAttribute(UsdHydraTokens->infoFilename);
+}
+
+UsdAttribute
+UsdHydraImagePlane::CreateFilenameAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdHydraTokens->infoFilename,
+                       SdfValueTypeNames->Asset,
+                       /* custom = */ false,
+                       SdfVariabilityUniform,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdHydraImagePlane::GetFrameAttr() const
+{
+    return GetPrim().GetAttribute(UsdHydraTokens->frame);
+}
+
+UsdAttribute
+UsdHydraImagePlane::CreateFrameAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdHydraTokens->frame,
+                       SdfValueTypeNames->Double,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdHydraImagePlane::GetTextureMemoryAttr() const
+{
+    return GetPrim().GetAttribute(UsdHydraTokens->textureMemory);
+}
+
+UsdAttribute
+UsdHydraImagePlane::CreateTextureMemoryAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdHydraTokens->textureMemory,
+                       SdfValueTypeNames->Float,
+                       /* custom = */ false,
+                       SdfVariabilityUniform,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
 UsdHydraImagePlane::GetDepthAttr() const
 {
     return GetPrim().GetAttribute(UsdHydraTokens->depth);
@@ -110,6 +161,9 @@ const TfTokenVector&
 UsdHydraImagePlane::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
+        UsdHydraTokens->infoFilename,
+        UsdHydraTokens->frame,
+        UsdHydraTokens->textureMemory,
         UsdHydraTokens->depth,
     };
     static TfTokenVector allNames =
