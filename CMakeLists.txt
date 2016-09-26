@@ -31,6 +31,11 @@ set(CMAKE_CXX_FLAGS ${_PXR_CXX_FLAGS})
 
 include(Public)
 
+if (${PXR_CLION_INTELLISENSE_WORKAROUND})
+    # This helps clion's intellisense to work properly
+    include_directories(.)
+endif ()
+
 add_subdirectory(pxr)
 add_subdirectory(extras)
 

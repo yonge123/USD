@@ -29,6 +29,7 @@ option(PXR_BUILD_KATANA_PLUGIN "Build usd katana plugin" OFF)
 option(PXR_BUILD_MAYA_PLUGIN "Build usd maya plugin" OFF)
 option(PXR_BUILD_ALEMBIC_PLUGIN "Build the Alembic plugin for USD" OFF)
 option(PXR_MAYA_TBB_BUG_WORKAROUND "Turn on linker flag (-Wl,-Bsymbolic) to work around a Maya TBB bug" OFF)
+option(PXR_CLION_INTELLISENSE_WORKAROUND "Fixing Clion's intellisense by including the root directory" OFF)
 
 set(PXR_INSTALL_LOCATION ""
     CACHE
