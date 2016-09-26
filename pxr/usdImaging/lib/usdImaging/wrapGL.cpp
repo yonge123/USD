@@ -39,11 +39,11 @@ using namespace boost;
 
 static boost::python::tuple
 _TestIntersection(
-    UsdImagingGL & self, 
+    UsdImagingGL & self,
     const GfMatrix4d &viewMatrix,
     const GfMatrix4d &projectionMatrix,
     const GfMatrix4d &worldToLocalSpace,
-    const UsdPrim& root, 
+    const UsdPrim& root,
     UsdImagingGL::RenderParams params)
 {
     GfVec3d hitPoint;
@@ -80,7 +80,7 @@ _GetPrimPathFromInstanceIndex(
 
 void wrapGL()
 {
-    { 
+    {
         // Start a new scope so that DrawMode, CullStyle and RenderParams are under GL.
         scope GL = class_<UsdImagingGL, boost::noncopyable>("GL",
                                         "UsdImaging GL Renderer class")
@@ -151,6 +151,7 @@ void wrapGL()
             .def_readwrite("clipPlanes", &Params::clipPlanes)
             .def_readwrite("highlight", &Params::highlight)
             .def_readwrite("enableHardwareShading", &Params::enableHardwareShading)
+            .def_readwrite("displayImagePlanes", &Params::displayImagePlanes)
         ;
 
     }
