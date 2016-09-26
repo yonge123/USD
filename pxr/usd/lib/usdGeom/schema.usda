@@ -201,11 +201,8 @@ class ImagePlane "ImagePlane" (
         }
         doc = "Asset path to the file containg the image data."
     )
-    double frame (
+    double frame = 0.0 (
         doc = "The frame offset for animated textures."
-    )
-    double depth (
-        doc = """Distance from the camera."""
     )
 }
 

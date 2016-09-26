@@ -63,7 +63,6 @@
     (cubic) \
     (curveVertexCounts) \
     ((default_, "default")) \
-    (depth) \
     (doubleSided) \
     (edgeAndCorner) \
     (edgeOnly) \
@@ -203,7 +202,6 @@
 /// \li <b>cubic</b> - Possible value for UsdGeomBasisCurves::GetTypeAttr(), Default value for UsdGeomBasisCurves::GetTypeAttr()
 /// \li <b>curveVertexCounts</b> - UsdGeomCurves
 /// \li <b>default_</b> - Possible value for UsdGeomImageable::GetPurposeAttr(), Default value for UsdGeomImageable::GetPurposeAttr()
-/// \li <b>depth</b> - UsdGeomImagePlane
 /// \li <b>doubleSided</b> - UsdGeomGprim
 /// \li <b>edgeAndCorner</b> - Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->cornersPlus1, Possible value for UsdGeomMesh::GetInterpolateBoundaryAttr(), Default value for UsdGeomMesh::GetInterpolateBoundaryAttr()
 /// \li <b>edgeOnly</b> - Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->none., Possible value for UsdGeomMesh::GetInterpolateBoundaryAttr()

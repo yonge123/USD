@@ -159,7 +159,7 @@ public:
     /// \n  C++ Type: double
     /// \n  Usd Type: SdfValueTypeNames->Double
     /// \n  Variability: SdfVariabilityVarying
-    /// \n  Fallback Value: No Fallback
+    /// \n  Fallback Value: 0.0
     UsdAttribute GetFrameAttr() const;
 
     /// See GetFrameAttr(), and also 
@@ -168,25 +168,6 @@ public:
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
     UsdAttribute CreateFrameAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
-
-public:
-    // --------------------------------------------------------------------- //
-    // DEPTH 
-    // --------------------------------------------------------------------- //
-    /// Distance from the camera.
-    ///
-    /// \n  C++ Type: double
-    /// \n  Usd Type: SdfValueTypeNames->Double
-    /// \n  Variability: SdfVariabilityVarying
-    /// \n  Fallback Value: No Fallback
-    UsdAttribute GetDepthAttr() const;
-
-    /// See GetDepthAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    UsdAttribute CreateDepthAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // ===================================================================== //

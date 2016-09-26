@@ -50,7 +50,6 @@
 #include "pxr/usd/usdGeom/capsule.h"
 #include "pxr/usd/usdGeom/points.h"
 #include "pxr/usd/usdGeom/nurbsPatch.h"
-#include "pxr/usd/usdGeom/imagePlane.h"
 
 // Shader Schema
 #include "pxr/usd/usdShade/pShader.h"
@@ -66,9 +65,66 @@
 // Mesh Topology
 #include "pxr/imaging/hd/meshTopology.h"
 
+// OpenImageIO
+#include <OpenImageIO/imageio.h>
+
 #include "pxr/base/gf/frustum.h"
 #include "pxr/base/gf/gamma.h"
 #include "pxr/base/tf/stl.h"
+
+static const GLuint invalid_texture = 0;
+
+struct ImagePlaneDef {
+    GLuint gl_texture;
+    SdfAssetPath asset;
+
+    ImagePlaneDef(const UsdPrim &prim, const UsdImagingEngine::RenderParams& _params) : gl_texture(invalid_texture)
+    { // TODO: use try to use the functions from Hydra to loadup these images
+// Hydra's memory manager might not exists at this point
+// Right now using the simples approach to load the texture to video memory
+        UsdGeomImagePlane image_plane(prim);
+
+        double frame = 0.0;
+        image_plane.GetFrameAttr().Get(&frame, _params.frame);
+        image_plane.GetFilenameAttr().Get(&asset, UsdTimeCode(_params.frame.GetValue() + frame));
+    }
+
+    void release()
+    {
+        if (gl_texture != invalid_texture)
+        {
+            glDeleteTextures(1, &gl_texture);
+            gl_texture = invalid_texture;
+        }
+    }
+
+    void read_texture()
+    {
+        release();
+        OIIO::ImageInput* in = OIIO::ImageInput::open(asset.GetResolvedPath());
+        if (in == 0)
+            return;
+        const OIIO::ImageSpec& spec = in->spec();
+        std::vector<unsigned char> pixels(static_cast<size_t>(spec.width * spec.height * spec.nchannels), 0);
+        in->read_image(OIIO::TypeDesc::UINT8, &pixels[0]);
+        in->close();
+        OIIO::ImageInput::destroy(in);
+
+        GLint old_bound_texture = 0;
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &old_bound_texture);
+
+        glGenTextures(1, &gl_texture);
+        glBindTexture(GL_TEXTURE_2D, gl_texture);
+        glTexImage2D(GL_TEXTURE_2D, 0,
+                     spec.nchannels, spec.width, spec.height, 0,
+                     GL_RGB, GL_UNSIGNED_BYTE, &pixels[0]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindTexture(GL_TEXTURE_2D, old_bound_texture);
+    }
+};
 
 // Sentinel value for prim restarts, so that multiple prims can be lumped into a
 // single draw call, if the hardware supports it.
@@ -127,6 +183,9 @@ UsdImagingRefEngine::InvalidateBuffers()
     glDeleteBuffers(1, &_attribBuffer);
     glDeleteBuffers(1, &_indexBuffer);
 
+    for (auto& it : _imagePlanes)
+        it.release();
+
     _attribBuffer = 0;
     _indexBuffer = 0;
 }
@@ -158,6 +217,7 @@ UsdImagingRefEngine::_PopulateBuffers()
                     _lineColors.size() +
                     _IDColors.size()   +
                     _lineIDColors.size()),
+
                  NULL, GL_STATIC_DRAW);
 
     // Write the raw points into the buffer.
@@ -188,6 +248,9 @@ UsdImagingRefEngine::_PopulateBuffers()
     offset = 0;
     _AppendSubData<GLuint>(GL_ELEMENT_ARRAY_BUFFER, &offset, _verts);
     _AppendSubData<GLuint>(GL_ELEMENT_ARRAY_BUFFER, &offset, _lineVerts);
+
+    for (auto& it : _imagePlanes)
+        it.read_texture();
 }
 
 /*virtual*/ 
@@ -270,6 +333,79 @@ UsdImagingRefEngine::_DrawLines(bool drawID)
     }
 }
 
+
+void
+UsdImagingRefEngine::_DrawImagePlanes()
+{
+    if (_imagePlanes.empty())
+        return;
+
+    GLint old_matrix_mode = GL_PROJECTION;
+    glGetIntegerv(GL_MATRIX_MODE, &old_matrix_mode);
+    const bool old_texture_enabled = glIsEnabled(GL_TEXTURE_2D);
+
+    GLint old_bound_texture = 0;
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &old_bound_texture);
+
+    if (!old_texture_enabled)
+        glEnable(GL_TEXTURE_2D);
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+
+    glPushAttrib(GL_LIGHTING_BIT);
+    glDisable(GL_LIGHTING);
+    glShadeModel(GL_FLAT);
+
+    for (auto& it : _imagePlanes)
+    {
+        if (it.gl_texture == invalid_texture)
+            continue;
+
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glBindTexture(GL_TEXTURE_2D, 4);
+
+        glBegin(GL_TRIANGLES);
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex2f(-1.0f, -1.0f);
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex2f(-1.0f, 1.0f);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex2f(1.0f, 1.0f);
+
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex2f(-1.0f, -1.0f);
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex2f(1.0f, -1.0f);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex2f(1.0f, 1.0f);
+        glEnd();
+    }
+
+    glPopAttrib();
+    glBindTexture(GL_TEXTURE_2D, old_bound_texture);
+
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+
+    glMatrixMode(old_matrix_mode);
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+
+    if (!old_texture_enabled)
+        glDisable(GL_TEXTURE_2D);
+}
+
 void
 UsdImagingRefEngine::Render(const UsdPrim& root, RenderParams params)
 {
@@ -293,10 +429,45 @@ UsdImagingRefEngine::Render(const UsdPrim& root, RenderParams params)
     _root = root;
     _params = params;
 
+    if (not _attribBuffer) {
+
+        _ctm = GfMatrix4d(1.0);
+        TfReset(_xformStack);
+        TfReset(_points);
+        TfReset(_normals);
+        TfReset(_colors);
+        TfReset(_IDColors);
+        TfReset(_verts);
+        TfReset(_numVerts);
+        TfReset(_linePoints);
+        TfReset(_lineColors);
+        TfReset(_lineIDColors);
+        TfReset(_lineVerts);
+        TfReset(_numLineVerts);
+        TfReset(_vertIdxOffsets);
+        TfReset(_lineVertIdxOffsets);
+        _imagePlanes.clear();
+        _vertCount = 0;
+        _lineVertCount = 0;
+        _primIDCounter = 0;
+
+        _TraverseStage(root);
+    }
+
     glPushAttrib( GL_LIGHTING_BIT );
     glPushAttrib( GL_POLYGON_BIT );
     glPushAttrib( GL_CURRENT_BIT );
     glPushAttrib( GL_ENABLE_BIT );
+
+    if (not _attribBuffer) {
+        _PopulateBuffers();
+    } else {
+        glBindBuffer(GL_ARRAY_BUFFER, _attribBuffer);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _indexBuffer);
+    }
+
+    if (_params.displayImagePlanes)
+        _DrawImagePlanes();
 
     if (params.cullStyle == CULL_STYLE_NOTHING) {
         glDisable( GL_CULL_FACE );
@@ -339,44 +510,12 @@ UsdImagingRefEngine::Render(const UsdPrim& root, RenderParams params)
         break;
     }
 
-
     if (_SupportsPrimitiveRestartIndex()) {
         glPrimitiveRestartIndexNV( _PRIM_RESTART_INDEX );
         glEnableClientState( GL_PRIMITIVE_RESTART_NV );
     }
 
-    if (not _attribBuffer) {
-
-        _ctm = GfMatrix4d(1.0);
-        TfReset(_xformStack);
-        TfReset(_points);
-        TfReset(_normals);
-        TfReset(_colors);
-        TfReset(_IDColors);
-        TfReset(_verts);
-        TfReset(_numVerts);
-        TfReset(_linePoints);
-        TfReset(_lineColors);
-        TfReset(_lineIDColors);
-        TfReset(_lineVerts);
-        TfReset(_numLineVerts);
-        TfReset(_vertIdxOffsets);
-        TfReset(_lineVertIdxOffsets);
-        _vertCount = 0;
-        _lineVertCount = 0;
-        _primIDCounter = 0;
-
-        _TraverseStage(root);
-    }
-
     TF_VERIFY(_xformStack.empty());
-
-    if (not _attribBuffer) {
-        _PopulateBuffers();
-    } else {
-        glBindBuffer(GL_ARRAY_BUFFER, _attribBuffer);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _indexBuffer);
-    }
 
     glEnableClientState(GL_VERTEX_ARRAY);
 
@@ -628,7 +767,7 @@ UsdImagingRefEngine::_TraverseStage(const UsdPrim& root)
                 else if (primIt->IsA<UsdGeomNurbsPatch>())
                     _HandleNurbsPatch(*primIt);
                 else if (primIt->IsA<UsdGeomImagePlane>())
-                    _HandleImagePlane(*primIt);
+                    _imagePlanes.push_back(ImagePlaneDef(*primIt, _params));
             } else {
                 primIt.PruneChildren();
             }
@@ -980,12 +1119,6 @@ UsdImagingRefEngine::_HandleNurbsPatch(const UsdPrim &prim)
 }
 
 void
-UsdImagingRefEngine::_HandleImagePlane(const UsdPrim &prim)
-{
-    std::cerr << "Handling Image Plane!" << std::endl;
-}
-
-void 
 UsdImagingRefEngine::_RenderPrimitive(const UsdPrim &prim, 
                                       const UsdGeomGprim *gprimSchema, 
                                       const VtArray<GfVec3f>& pts, 

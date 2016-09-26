@@ -127,23 +127,6 @@ UsdGeomImagePlane::CreateFrameAttr(VtValue const &defaultValue, bool writeSparse
                        writeSparsely);
 }
 
-UsdAttribute
-UsdGeomImagePlane::GetDepthAttr() const
-{
-    return GetPrim().GetAttribute(UsdGeomTokens->depth);
-}
-
-UsdAttribute
-UsdGeomImagePlane::CreateDepthAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->depth,
-                       SdfValueTypeNames->Double,
-                       /* custom = */ false,
-                       SdfVariabilityVarying,
-                       defaultValue,
-                       writeSparsely);
-}
-
 namespace {
 static inline TfTokenVector
 _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
@@ -163,7 +146,6 @@ UsdGeomImagePlane::GetSchemaAttributeNames(bool includeInherited)
     static TfTokenVector localNames = {
         UsdGeomTokens->infoFilename,
         UsdGeomTokens->frame,
-        UsdGeomTokens->depth,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(

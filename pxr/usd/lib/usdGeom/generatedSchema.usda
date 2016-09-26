@@ -88,10 +88,7 @@ class "Imageable" (
 
 class ImagePlane "ImagePlane"
 {
-    double depth (
-        doc = "Distance from the camera."
-    )
-    double frame (
+    double frame = 0 (
         doc = "The frame offset for animated textures."
     )
     uniform asset info:filename = @@ (

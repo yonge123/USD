@@ -98,6 +98,7 @@ public:
         float alphaThreshold; // threshold < 0 implies automatic
         ClipPlanesVector clipPlanes;
         bool enableHardwareShading;
+        bool displayImagePlanes;
 
         RenderParams() : 
             frame(UsdTimeCode::Default()),
@@ -118,7 +119,8 @@ public:
             wireframeColor(.0f, .0f, .0f, .0f),
             alphaThreshold(-1),
             clipPlanes(),
-            enableHardwareShading(true)
+            enableHardwareShading(true),
+            displayImagePlanes(true)
         {
         }
 
@@ -141,7 +143,8 @@ public:
                 and wireframeColor              == other.wireframeColor
                 and alphaThreshold              == other.alphaThreshold
                 and clipPlanes                  == other.clipPlanes
-                and enableHardwareShading       == other.enableHardwareShading;
+                and enableHardwareShading       == other.enableHardwareShading
+                and displayImagePlanes          == other.displayImagePlanes;
         }
         bool operator!=(const RenderParams &other) const {
             return not (*this == other);

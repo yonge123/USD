@@ -33,6 +33,7 @@ pxr_shared_library(usdImaging
         ${GLEW_LIBRARY}
         ${TBB_tbb_LIBRARY}
         ${TBB_tbbmalloc_LIBRARY}
+        ${OIIO_LIBRARIES}
 
     INCLUDE_DIRS
         ${PYTHON_INCLUDE_PATH}
@@ -40,6 +41,7 @@ pxr_shared_library(usdImaging
         ${OPENGL_INCLUDE_DIR}
         ${GLEW_INCLUDE_DIR}
         ${TBB_INCLUDE_DIRS}
+        ${OIIO_INCLUDE_DIRS}
 
     PUBLIC_CLASSES
         adapterRegistry

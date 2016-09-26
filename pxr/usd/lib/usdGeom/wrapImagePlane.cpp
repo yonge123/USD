@@ -59,13 +59,6 @@ _CreateFrameAttr(UsdGeomImagePlane &self,
     return self.CreateFrameAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Double), writeSparsely);
 }
-        
-static UsdAttribute
-_CreateDepthAttr(UsdGeomImagePlane &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateDepthAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Double), writeSparsely);
-}
 
 void wrapUsdGeomImagePlane()
 {
@@ -109,13 +102,6 @@ void wrapUsdGeomImagePlane()
              &This::GetFrameAttr)
         .def("CreateFrameAttr",
              &_CreateFrameAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
-        .def("GetDepthAttr",
-             &This::GetDepthAttr)
-        .def("CreateDepthAttr",
-             &_CreateDepthAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 

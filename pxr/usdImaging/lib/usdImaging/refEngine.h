@@ -29,12 +29,15 @@
 #include "pxr/usdImaging/usdImaging/engine.h"
 
 #include "pxr/usd/usdGeom/gprim.h"
+#include "pxr/usd/usdGeom/imagePlane.h"
 #include "pxr/usd/usd/notice.h"
 
 #include "pxr/base/tf/declarePtrs.h"
 
 #include "pxr/base/tf/hashmap.h"
 #include "pxr/base/tf/hashset.h"
+
+struct ImagePlaneDef;
 
 TF_DECLARE_WEAK_PTRS(UsdImagingRefEngine);
 
@@ -86,10 +89,11 @@ private:
     void _HandleCapsule(const UsdPrim &prim);
     void _HandlePoints(const UsdPrim &prim);
     void _HandleNurbsPatch(const UsdPrim &prim);
-    void _HandleImagePlane(const UsdPrim &prim);
-    void _RenderPrimitive(const UsdPrim &prim, const UsdGeomGprim *gprimSchema, 
+    void _RenderPrimitive(const UsdPrim &prim, const UsdGeomGprim *gprimSchema,
                           const VtArray<GfVec3f> &pts, const VtIntArray &nmvts, 
                           const VtIntArray &vts);
+
+    void _DrawImagePlanes();
 
     // Generates GPU buffers for raw float and index data.
     void _PopulateBuffers();
@@ -169,6 +173,9 @@ private:
     // The byte-offsets into the element array buffer indicating the start of
     // each line segment-- not needed if prim restart is supported.
     std::vector<GLvoid*> _lineVertIdxOffsets;
+
+    // Storing image planes
+    std::vector<ImagePlaneDef> _imagePlanes;
 
     // A rolling count of points, to assist in providing buffer offsets for the
     // raw data of all lines.
