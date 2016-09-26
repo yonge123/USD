@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdHydra/imagePlane.h"
+#include "pxr/usd/usdGeom/imagePlane.h"
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/typed.h"
 
@@ -31,56 +31,56 @@
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
-    TfType::Define<UsdHydraImagePlane,
-        TfType::Bases< UsdSchemaBase > >();
+    TfType::Define<UsdGeomImagePlane,
+        TfType::Bases< UsdGeomImageable > >();
     
     // Register the usd prim typename to associate it with the TfType, under
     // UsdSchemaBase. This enables one to call TfType::FindByName("ImagePlane") to find
-    // TfType<UsdHydraImagePlane>, which is how IsA queries are answered.
-    TfType::AddAlias<UsdSchemaBase, UsdHydraImagePlane>("ImagePlane");
+    // TfType<UsdGeomImagePlane>, which is how IsA queries are answered.
+    TfType::AddAlias<UsdSchemaBase, UsdGeomImagePlane>("ImagePlane");
 }
 
 /* virtual */
-UsdHydraImagePlane::~UsdHydraImagePlane()
+UsdGeomImagePlane::~UsdGeomImagePlane()
 {
 }
 
 /* static */
-UsdHydraImagePlane
-UsdHydraImagePlane::Get(const UsdStagePtr &stage, const SdfPath &path)
+UsdGeomImagePlane
+UsdGeomImagePlane::Get(const UsdStagePtr &stage, const SdfPath &path)
 {
     if (not stage) {
         TF_CODING_ERROR("Invalid stage");
-        return UsdHydraImagePlane();
+        return UsdGeomImagePlane();
     }
-    return UsdHydraImagePlane(stage->GetPrimAtPath(path));
+    return UsdGeomImagePlane(stage->GetPrimAtPath(path));
 }
 
 /* static */
-UsdHydraImagePlane
-UsdHydraImagePlane::Define(
+UsdGeomImagePlane
+UsdGeomImagePlane::Define(
     const UsdStagePtr &stage, const SdfPath &path)
 {
     static TfToken usdPrimTypeName("ImagePlane");
     if (not stage) {
         TF_CODING_ERROR("Invalid stage");
-        return UsdHydraImagePlane();
+        return UsdGeomImagePlane();
     }
-    return UsdHydraImagePlane(
+    return UsdGeomImagePlane(
         stage->DefinePrim(path, usdPrimTypeName));
 }
 
 /* static */
 const TfType &
-UsdHydraImagePlane::_GetStaticTfType()
+UsdGeomImagePlane::_GetStaticTfType()
 {
-    static TfType tfType = TfType::Find<UsdHydraImagePlane>();
+    static TfType tfType = TfType::Find<UsdGeomImagePlane>();
     return tfType;
 }
 
 /* static */
 bool 
-UsdHydraImagePlane::_IsTypedSchema()
+UsdGeomImagePlane::_IsTypedSchema()
 {
     static bool isTyped = _GetStaticTfType().IsA<UsdTyped>();
     return isTyped;
@@ -88,21 +88,21 @@ UsdHydraImagePlane::_IsTypedSchema()
 
 /* virtual */
 const TfType &
-UsdHydraImagePlane::_GetTfType() const
+UsdGeomImagePlane::_GetTfType() const
 {
     return _GetStaticTfType();
 }
 
 UsdAttribute
-UsdHydraImagePlane::GetFilenameAttr() const
+UsdGeomImagePlane::GetFilenameAttr() const
 {
-    return GetPrim().GetAttribute(UsdHydraTokens->infoFilename);
+    return GetPrim().GetAttribute(UsdGeomTokens->infoFilename);
 }
 
 UsdAttribute
-UsdHydraImagePlane::CreateFilenameAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdGeomImagePlane::CreateFilenameAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdHydraTokens->infoFilename,
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->infoFilename,
                        SdfValueTypeNames->Asset,
                        /* custom = */ false,
                        SdfVariabilityUniform,
@@ -111,15 +111,15 @@ UsdHydraImagePlane::CreateFilenameAttr(VtValue const &defaultValue, bool writeSp
 }
 
 UsdAttribute
-UsdHydraImagePlane::GetFrameAttr() const
+UsdGeomImagePlane::GetFrameAttr() const
 {
-    return GetPrim().GetAttribute(UsdHydraTokens->frame);
+    return GetPrim().GetAttribute(UsdGeomTokens->frame);
 }
 
 UsdAttribute
-UsdHydraImagePlane::CreateFrameAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdGeomImagePlane::CreateFrameAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdHydraTokens->frame,
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->frame,
                        SdfValueTypeNames->Double,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -128,32 +128,15 @@ UsdHydraImagePlane::CreateFrameAttr(VtValue const &defaultValue, bool writeSpars
 }
 
 UsdAttribute
-UsdHydraImagePlane::GetTextureMemoryAttr() const
+UsdGeomImagePlane::GetDepthAttr() const
 {
-    return GetPrim().GetAttribute(UsdHydraTokens->textureMemory);
+    return GetPrim().GetAttribute(UsdGeomTokens->depth);
 }
 
 UsdAttribute
-UsdHydraImagePlane::CreateTextureMemoryAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdGeomImagePlane::CreateDepthAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdHydraTokens->textureMemory,
-                       SdfValueTypeNames->Float,
-                       /* custom = */ false,
-                       SdfVariabilityUniform,
-                       defaultValue,
-                       writeSparsely);
-}
-
-UsdAttribute
-UsdHydraImagePlane::GetDepthAttr() const
-{
-    return GetPrim().GetAttribute(UsdHydraTokens->depth);
-}
-
-UsdAttribute
-UsdHydraImagePlane::CreateDepthAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdHydraTokens->depth,
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->depth,
                        SdfValueTypeNames->Double,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -175,17 +158,16 @@ _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
 
 /*static*/
 const TfTokenVector&
-UsdHydraImagePlane::GetSchemaAttributeNames(bool includeInherited)
+UsdGeomImagePlane::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdHydraTokens->infoFilename,
-        UsdHydraTokens->frame,
-        UsdHydraTokens->textureMemory,
-        UsdHydraTokens->depth,
+        UsdGeomTokens->infoFilename,
+        UsdGeomTokens->frame,
+        UsdGeomTokens->depth,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
-            UsdSchemaBase::GetSchemaAttributeNames(true),
+            UsdGeomImageable::GetSchemaAttributeNames(true),
             localNames);
 
     if (includeInherited)

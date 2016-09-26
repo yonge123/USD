@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdHydra/imagePlane.h"
+#include "pxr/usd/usdGeom/imagePlane.h"
 
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/conversions.h"
@@ -47,38 +47,31 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
-_CreateFilenameAttr(UsdHydraImagePlane &self,
+_CreateFilenameAttr(UsdGeomImagePlane &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateFilenameAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Asset), writeSparsely);
 }
         
 static UsdAttribute
-_CreateFrameAttr(UsdHydraImagePlane &self,
+_CreateFrameAttr(UsdGeomImagePlane &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateFrameAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Double), writeSparsely);
 }
         
 static UsdAttribute
-_CreateTextureMemoryAttr(UsdHydraImagePlane &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateTextureMemoryAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
-}
-        
-static UsdAttribute
-_CreateDepthAttr(UsdHydraImagePlane &self,
+_CreateDepthAttr(UsdGeomImagePlane &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateDepthAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Double), writeSparsely);
 }
 
-void wrapUsdHydraImagePlane()
+void wrapUsdGeomImagePlane()
 {
-    typedef UsdHydraImagePlane This;
+    typedef UsdGeomImagePlane This;
 
-    class_<This, bases<UsdSchemaBase> >
+    class_<This, bases<UsdGeomImageable> >
         cls("ImagePlane");
 
     cls
@@ -116,13 +109,6 @@ void wrapUsdHydraImagePlane()
              &This::GetFrameAttr)
         .def("CreateFrameAttr",
              &_CreateFrameAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
-        .def("GetTextureMemoryAttr",
-             &This::GetTextureMemoryAttr)
-        .def("CreateTextureMemoryAttr",
-             &_CreateTextureMemoryAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         

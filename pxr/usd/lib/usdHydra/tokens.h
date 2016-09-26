@@ -39,7 +39,6 @@
 #define USDHYDRA_TOKENS \
     (black) \
     (clamp) \
-    (depth) \
     ((displayLookBxdf, "displayLook:bxdf")) \
     (faceIndex) \
     (faceOffset) \
@@ -86,15 +85,14 @@
 /// The tokens are:
 /// \li <b>black</b> - Return black when sampling outside the bounds of the texture., Possible value for UsdHydraUvTexture::GetWrapTAttr(), Possible value for UsdHydraUvTexture::GetWrapSAttr()
 /// \li <b>clamp</b> - The texture coordinate is clamped to [0,1]. , Possible value for UsdHydraUvTexture::GetWrapTAttr(), Possible value for UsdHydraUvTexture::GetWrapSAttr()
-/// \li <b>depth</b> - UsdHydraImagePlane
 /// \li <b>displayLookBxdf</b> - UsdHydraLookAPI
 /// \li <b>faceIndex</b> - UsdHydraPtexTexture
 /// \li <b>faceOffset</b> - UsdHydraPtexTexture
-/// \li <b>frame</b> - UsdHydraImagePlane, UsdHydraTexture
+/// \li <b>frame</b> - UsdHydraTexture
 /// \li <b>HwPrimvar_1</b> - Special token for the usdHydra library.
 /// \li <b>HwPtexTexture_1</b> - Special token for the usdHydra library.
 /// \li <b>HwUvTexture_1</b> - Special token for the usdHydra library.
-/// \li <b>infoFilename</b> - UsdHydraImagePlane, UsdHydraTexture, UsdHydraShader
+/// \li <b>infoFilename</b> - UsdHydraTexture, UsdHydraShader
 /// \li <b>infoVarname</b> - UsdHydraPrimvar
 /// \li <b>linear</b> - A weighted linear blend of nearest adjacent samples. , Possible value for UsdHydraUvTexture::GetMinFilterAttr(), Possible value for UsdHydraUvTexture::GetMagFilterAttr()
 /// \li <b>linearMipmapLinear</b> - See https://www.opengl.org/wiki/Sampler_Object , Possible value for UsdHydraUvTexture::GetMinFilterAttr()
@@ -106,7 +104,7 @@
 /// \li <b>nearestMipmapLinear</b> - See https://www.opengl.org/wiki/Sampler_Object , Possible value for UsdHydraUvTexture::GetMinFilterAttr()
 /// \li <b>nearestMipmapNearest</b> - See https://www.opengl.org/wiki/Sampler_Object , Possible value for UsdHydraUvTexture::GetMinFilterAttr()
 /// \li <b>repeat</b> - The texture coordinate wraps around the texture. So a texture coordinate of -0.2 becomes the equivalent of 0.8. , Possible value for UsdHydraUvTexture::GetWrapTAttr(), Possible value for UsdHydraUvTexture::GetWrapSAttr()
-/// \li <b>textureMemory</b> - UsdHydraImagePlane, UsdHydraTexture
+/// \li <b>textureMemory</b> - UsdHydraTexture
 /// \li <b>uv</b> - UsdHydraUvTexture
 /// \li <b>wrapS</b> - UsdHydraUvTexture
 /// \li <b>wrapT</b> - UsdHydraUvTexture

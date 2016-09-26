@@ -137,20 +137,3 @@ class Shader "PtexTexture"
     )
 }
 
-class ImagePlane "ImagePlane"
-{
-    double depth (
-        doc = "Distance from the camera."
-    )
-    double frame (
-        doc = "The frame offset for animated textures."
-    )
-    uniform asset info:filename = @@ (
-        doc = "Asset path to the file containg the image data."
-    )
-    uniform float textureMemory (
-        doc = """Amount of memory used to store the texture (in Mb). A value of
-        zero specifies the native resolution."""
-    )
-}
-

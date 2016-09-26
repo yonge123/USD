@@ -50,9 +50,7 @@
 #include "pxr/usd/usdGeom/capsule.h"
 #include "pxr/usd/usdGeom/points.h"
 #include "pxr/usd/usdGeom/nurbsPatch.h"
-
-// Hydra Schema
-#include "pxr/usd/usdHydra/imagePlane.h"
+#include "pxr/usd/usdGeom/imagePlane.h"
 
 // Shader Schema
 #include "pxr/usd/usdShade/pShader.h"
@@ -629,7 +627,7 @@ UsdImagingRefEngine::_TraverseStage(const UsdPrim& root)
                     _HandlePoints(*primIt);
                 else if (primIt->IsA<UsdGeomNurbsPatch>())
                     _HandleNurbsPatch(*primIt);
-                else if (primIt->IsA<UsdHydraImagePlane>())
+                else if (primIt->IsA<UsdGeomImagePlane>())
                     _HandleImagePlane(*primIt);
             } else {
                 primIt.PruneChildren();

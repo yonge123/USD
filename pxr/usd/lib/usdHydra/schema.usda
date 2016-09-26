@@ -192,23 +192,3 @@ class "PtexTexture" (
         default, this parameter will be bound to the ptexFaceOffset primvar."""
     )
 }
-
-class ImagePlane "ImagePlane" (
-) {
-    uniform asset info:filename = @@ (
-        customData = {
-            string apiName = "filename"
-        }
-        doc = "Asset path to the file containg the image data."
-    )
-    double frame (
-        doc = "The frame offset for animated textures."
-    )
-    uniform float textureMemory (
-        doc = """Amount of memory used to store the texture (in Mb). A value of
-        zero specifies the native resolution."""
-    )
-    double depth (
-        doc = """Distance from the camera."""
-    )
-}

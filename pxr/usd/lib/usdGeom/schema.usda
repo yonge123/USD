@@ -192,6 +192,23 @@ class "Imageable" (
     )
 }
 
+class ImagePlane "ImagePlane" (
+    inherits = </Imageable>
+) {
+    uniform asset info:filename = @@ (
+        customData = {
+            string apiName = "filename"
+        }
+        doc = "Asset path to the file containg the image data."
+    )
+    double frame (
+        doc = "The frame offset for animated textures."
+    )
+    double depth (
+        doc = """Distance from the camera."""
+    )
+}
+
 class "Xformable" (
     inherits = </Imageable>
     customData = {

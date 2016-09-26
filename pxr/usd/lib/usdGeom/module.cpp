@@ -32,7 +32,7 @@ TF_WRAP_MODULE
     TF_WRAP(UsdGeomModelAPI);
     TF_WRAP(UsdGeomPrimvar);
     TF_WRAP(UsdGeomTokens);
-    TF_WRAP(UsdGeomXformOp);
+    TF_WRAP(UsdGeomXformOp);;
     TF_WRAP(UsdGeomXformCommonAPI);
     TF_WRAP(UsdGeomXformCache);
     TF_WRAP(Metrics);
@@ -40,6 +40,7 @@ TF_WRAP_MODULE
     // Generated schema.  Base classes must precede derived classes.
     // Indentation shows class hierarchy.
     TF_WRAP(UsdGeomImageable);
+        TF_WRAP(UsdGeomImagePlane);
         TF_WRAP(UsdGeomScope);
         TF_WRAP(UsdGeomXformable);
             TF_WRAP(UsdGeomXform);

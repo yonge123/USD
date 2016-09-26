@@ -63,6 +63,7 @@
     (cubic) \
     (curveVertexCounts) \
     ((default_, "default")) \
+    (depth) \
     (doubleSided) \
     (edgeAndCorner) \
     (edgeOnly) \
@@ -77,6 +78,7 @@
     (faceVertexIndices) \
     (focalLength) \
     (focusDistance) \
+    (frame) \
     (fStop) \
     (guide) \
     (height) \
@@ -85,6 +87,7 @@
     (horizontalAperture) \
     (horizontalApertureOffset) \
     (ids) \
+    ((infoFilename, "info:filename")) \
     (inherited) \
     (interpolateBoundary) \
     (interpolation) \
@@ -200,6 +203,7 @@
 /// \li <b>cubic</b> - Possible value for UsdGeomBasisCurves::GetTypeAttr(), Default value for UsdGeomBasisCurves::GetTypeAttr()
 /// \li <b>curveVertexCounts</b> - UsdGeomCurves
 /// \li <b>default_</b> - Possible value for UsdGeomImageable::GetPurposeAttr(), Default value for UsdGeomImageable::GetPurposeAttr()
+/// \li <b>depth</b> - UsdGeomImagePlane
 /// \li <b>doubleSided</b> - UsdGeomGprim
 /// \li <b>edgeAndCorner</b> - Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->cornersPlus1, Possible value for UsdGeomMesh::GetInterpolateBoundaryAttr(), Default value for UsdGeomMesh::GetInterpolateBoundaryAttr()
 /// \li <b>edgeOnly</b> - Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->none., Possible value for UsdGeomMesh::GetInterpolateBoundaryAttr()
@@ -214,6 +218,7 @@
 /// \li <b>faceVertexIndices</b> - UsdGeomMesh
 /// \li <b>focalLength</b> - UsdGeomCamera
 /// \li <b>focusDistance</b> - UsdGeomCamera
+/// \li <b>frame</b> - UsdGeomImagePlane
 /// \li <b>fStop</b> - UsdGeomCamera
 /// \li <b>guide</b> - Possible value for UsdGeomImageable::GetPurposeAttr()
 /// \li <b>height</b> - UsdGeomCone, UsdGeomCapsule, UsdGeomCylinder
@@ -222,6 +227,7 @@
 /// \li <b>horizontalAperture</b> - UsdGeomCamera
 /// \li <b>horizontalApertureOffset</b> - UsdGeomCamera
 /// \li <b>ids</b> - UsdGeomPoints
+/// \li <b>infoFilename</b> - UsdGeomImagePlane
 /// \li <b>inherited</b> - Possible value for UsdGeomImageable::GetVisibilityAttr(), Default value for UsdGeomImageable::GetVisibilityAttr()
 /// \li <b>interpolateBoundary</b> - UsdGeomMesh
 /// \li <b>interpolation</b> - UsdGeomPrimvar - How a Primvar interpolates across a primitive; equivalent to RenderMan's \ref Usd_InterpolationVals "class specifier" 

@@ -21,15 +21,15 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef USDHYDRA_GENERATED_IMAGEPLANE_H
-#define USDHYDRA_GENERATED_IMAGEPLANE_H
+#ifndef USDGEOM_GENERATED_IMAGEPLANE_H
+#define USDGEOM_GENERATED_IMAGEPLANE_H
 
-/// \file usdHydra/imagePlane.h
+/// \file usdGeom/imagePlane.h
 
-#include "pxr/usd/usd/schemaBase.h"
+#include "pxr/usd/usdGeom/imageable.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
-#include "pxr/usd/usdHydra/tokens.h"
+#include "pxr/usd/usdGeom/tokens.h"
 
 #include "pxr/base/vt/value.h"
 
@@ -46,10 +46,10 @@ class SdfAssetPath;
 // IMAGEPLANE                                                                 //
 // -------------------------------------------------------------------------- //
 
-/// \class UsdHydraImagePlane
+/// \class UsdGeomImagePlane
 ///
 ///
-class UsdHydraImagePlane : public UsdSchemaBase
+class UsdGeomImagePlane : public UsdGeomImageable
 {
 public:
     /// Compile-time constant indicating whether or not this class corresponds
@@ -58,25 +58,25 @@ public:
     /// a non-empty typeName.
     static const bool IsConcrete = true;
 
-    /// Construct a UsdHydraImagePlane on UsdPrim \p prim .
-    /// Equivalent to UsdHydraImagePlane::Get(prim.GetStage(), prim.GetPath())
+    /// Construct a UsdGeomImagePlane on UsdPrim \p prim .
+    /// Equivalent to UsdGeomImagePlane::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
-    explicit UsdHydraImagePlane(const UsdPrim& prim=UsdPrim())
-        : UsdSchemaBase(prim)
+    explicit UsdGeomImagePlane(const UsdPrim& prim=UsdPrim())
+        : UsdGeomImageable(prim)
     {
     }
 
-    /// Construct a UsdHydraImagePlane on the prim held by \p schemaObj .
-    /// Should be preferred over UsdHydraImagePlane(schemaObj.GetPrim()),
+    /// Construct a UsdGeomImagePlane on the prim held by \p schemaObj .
+    /// Should be preferred over UsdGeomImagePlane(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
-    explicit UsdHydraImagePlane(const UsdSchemaBase& schemaObj)
-        : UsdSchemaBase(schemaObj)
+    explicit UsdGeomImagePlane(const UsdSchemaBase& schemaObj)
+        : UsdGeomImageable(schemaObj)
     {
     }
 
     /// Destructor.
-    virtual ~UsdHydraImagePlane();
+    virtual ~UsdGeomImagePlane();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
@@ -84,16 +84,16 @@ public:
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
-    /// Return a UsdHydraImagePlane holding the prim adhering to this
+    /// Return a UsdGeomImagePlane holding the prim adhering to this
     /// schema at \p path on \p stage.  If no prim exists at \p path on
     /// \p stage, or if the prim at that path does not adhere to this schema,
     /// return an invalid schema object.  This is shorthand for the following:
     ///
     /// \code
-    /// UsdHydraImagePlane(stage->GetPrimAtPath(path));
+    /// UsdGeomImagePlane(stage->GetPrimAtPath(path));
     /// \endcode
     ///
-    static UsdHydraImagePlane
+    static UsdGeomImagePlane
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
     /// Attempt to ensure a \a UsdPrim adhering to this schema at \p path
@@ -118,7 +118,7 @@ public:
     /// specify this schema class, in case a stronger typeName opinion overrides
     /// the opinion at the current EditTarget.
     ///
-    static UsdHydraImagePlane
+    static UsdGeomImagePlane
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 private:
@@ -168,26 +168,6 @@ public:
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
     UsdAttribute CreateFrameAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
-
-public:
-    // --------------------------------------------------------------------- //
-    // TEXTUREMEMORY 
-    // --------------------------------------------------------------------- //
-    /// Amount of memory used to store the texture (in Mb). A value of
-    /// zero specifies the native resolution.
-    ///
-    /// \n  C++ Type: float
-    /// \n  Usd Type: SdfValueTypeNames->Float
-    /// \n  Variability: SdfVariabilityUniform
-    /// \n  Fallback Value: No Fallback
-    UsdAttribute GetTextureMemoryAttr() const;
-
-    /// See GetTextureMemoryAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    UsdAttribute CreateTextureMemoryAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // --------------------------------------------------------------------- //
