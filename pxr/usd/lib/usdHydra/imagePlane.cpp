@@ -32,8 +32,12 @@
 TF_REGISTRY_FUNCTION(TfType)
 {
     TfType::Define<UsdHydraImagePlane,
-        TfType::Bases< UsdGeomImageable > >();
+        TfType::Bases< UsdSchemaBase > >();
     
+    // Register the usd prim typename to associate it with the TfType, under
+    // UsdSchemaBase. This enables one to call TfType::FindByName("ImagePlane") to find
+    // TfType<UsdHydraImagePlane>, which is how IsA queries are answered.
+    TfType::AddAlias<UsdSchemaBase, UsdHydraImagePlane>("ImagePlane");
 }
 
 /* virtual */
@@ -52,6 +56,19 @@ UsdHydraImagePlane::Get(const UsdStagePtr &stage, const SdfPath &path)
     return UsdHydraImagePlane(stage->GetPrimAtPath(path));
 }
 
+/* static */
+UsdHydraImagePlane
+UsdHydraImagePlane::Define(
+    const UsdStagePtr &stage, const SdfPath &path)
+{
+    static TfToken usdPrimTypeName("ImagePlane");
+    if (not stage) {
+        TF_CODING_ERROR("Invalid stage");
+        return UsdHydraImagePlane();
+    }
+    return UsdHydraImagePlane(
+        stage->DefinePrim(path, usdPrimTypeName));
+}
 
 /* static */
 const TfType &
@@ -168,7 +185,7 @@ UsdHydraImagePlane::GetSchemaAttributeNames(bool includeInherited)
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
-            UsdGeomImageable::GetSchemaAttributeNames(true),
+            UsdSchemaBase::GetSchemaAttributeNames(true),
             localNames);
 
     if (includeInherited)

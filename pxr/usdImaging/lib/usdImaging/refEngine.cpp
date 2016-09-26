@@ -51,6 +51,9 @@
 #include "pxr/usd/usdGeom/points.h"
 #include "pxr/usd/usdGeom/nurbsPatch.h"
 
+// Hydra Schema
+#include "pxr/usd/usdHydra/imagePlane.h"
+
 // Shader Schema
 #include "pxr/usd/usdShade/pShader.h"
 
@@ -574,13 +577,11 @@ UsdImagingRefEngine::_TraverseStage(const UsdPrim& root)
     // Traverse the stage to extract data for drawing.
     while (primIt) {
         if (not primIt.IsPostVisit()) {
-
             if (_excludedSet.find(primIt->GetPath()) != _excludedSet.end()) {
                 primIt.PruneChildren();
                 ++primIt;
                 continue;
             }
-
             bool visible = true;
 
             // Because we are pruning invisible subtrees, we can assume all
@@ -627,7 +628,9 @@ UsdImagingRefEngine::_TraverseStage(const UsdPrim& root)
                 else if (primIt->IsA<UsdGeomPoints>())
                     _HandlePoints(*primIt);
                 else if (primIt->IsA<UsdGeomNurbsPatch>())
-                    _HandleNurbsPatch(*primIt);                    
+                    _HandleNurbsPatch(*primIt);
+                else if (primIt->IsA<UsdHydraImagePlane>())
+                    _HandleImagePlane(*primIt);
             } else {
                 primIt.PruneChildren();
             }
@@ -976,6 +979,12 @@ UsdImagingRefEngine::_HandleNurbsPatch(const UsdPrim &prim)
     VtIntArray vts = tp.GetFaceVertexIndices();
 
     _RenderPrimitive(prim, &geoSchema, pts, nmvts, vts );
+}
+
+void
+UsdImagingRefEngine::_HandleImagePlane(const UsdPrim &prim)
+{
+    std::cerr << "Handling Image Plane!" << std::endl;
 }
 
 void 

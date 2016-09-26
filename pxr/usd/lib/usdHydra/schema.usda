@@ -193,11 +193,7 @@ class "PtexTexture" (
     )
 }
 
-class "ImagePlane" (
-    inherits = [</Imageable>]
-    customData = {
-        string className = "ImagePlane"
-    }
+class ImagePlane "ImagePlane" (
 ) {
     uniform asset info:filename = @@ (
         customData = {

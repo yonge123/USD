@@ -86,6 +86,7 @@ private:
     void _HandleCapsule(const UsdPrim &prim);
     void _HandlePoints(const UsdPrim &prim);
     void _HandleNurbsPatch(const UsdPrim &prim);
+    void _HandleImagePlane(const UsdPrim &prim);
     void _RenderPrimitive(const UsdPrim &prim, const UsdGeomGprim *gprimSchema, 
                           const VtArray<GfVec3f> &pts, const VtIntArray &nmvts, 
                           const VtIntArray &vts);

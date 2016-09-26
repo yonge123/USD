@@ -78,7 +78,7 @@ void wrapUsdHydraImagePlane()
 {
     typedef UsdHydraImagePlane This;
 
-    class_<This, bases<UsdGeomImageable> >
+    class_<This, bases<UsdSchemaBase> >
         cls("ImagePlane");
 
     cls
@@ -89,6 +89,8 @@ void wrapUsdHydraImagePlane()
         .def("Get", &This::Get, (arg("stage"), arg("path")))
         .staticmethod("Get")
 
+        .def("Define", &This::Define, (arg("stage"), arg("path")))
+        .staticmethod("Define")
 
         .def("GetSchemaAttributeNames",
              &This::GetSchemaAttributeNames,
