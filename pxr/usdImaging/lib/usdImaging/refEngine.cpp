@@ -105,6 +105,14 @@ struct ImagePlaneDef {
         if (in == 0)
             return;
         const OIIO::ImageSpec& spec = in->spec();
+        if (spec.width < 32 ||
+            spec.height < 32 ||
+            spec.nchannels > 4 ||
+            spec.nchannels < 3)
+        {
+            in->close();
+            OIIO::ImageInput::destroy(in);
+        }
         std::vector<unsigned char> pixels(static_cast<size_t>(spec.width * spec.height * spec.nchannels), 0);
         in->read_image(OIIO::TypeDesc::UINT8, &pixels[0]);
         in->close();
@@ -116,8 +124,8 @@ struct ImagePlaneDef {
         glGenTextures(1, &gl_texture);
         glBindTexture(GL_TEXTURE_2D, gl_texture);
         glTexImage2D(GL_TEXTURE_2D, 0,
-                     spec.nchannels, spec.width, spec.height, 0,
-                     GL_RGB, GL_UNSIGNED_BYTE, &pixels[0]);
+                     spec.nchannels == 4 ? GL_RGBA : GL_RGB, spec.width, spec.height, 0,
+                     spec.nchannels == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, &pixels[0]);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
