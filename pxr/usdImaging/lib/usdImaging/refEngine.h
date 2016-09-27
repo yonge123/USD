@@ -37,6 +37,9 @@
 #include "pxr/base/tf/hashmap.h"
 #include "pxr/base/tf/hashset.h"
 
+#include <OpenImageIO/imageio.h>
+#include <OpenImageIO/imagecache.h>
+
 struct ImagePlaneDef;
 
 TF_DECLARE_WEAK_PTRS(UsdImagingRefEngine);
@@ -176,6 +179,7 @@ private:
 
     // Storing image planes
     std::vector<ImagePlaneDef> _imagePlanes;
+    OIIO::ImageCache* _imageCache;
 
     // A rolling count of points, to assist in providing buffer offsets for the
     // raw data of all lines.

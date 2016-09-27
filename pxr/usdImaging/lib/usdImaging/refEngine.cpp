@@ -65,9 +65,6 @@
 // Mesh Topology
 #include "pxr/imaging/hd/meshTopology.h"
 
-// OpenImageIO
-#include <OpenImageIO/imageio.h>
-
 #include "pxr/base/gf/frustum.h"
 #include "pxr/base/gf/gamma.h"
 #include "pxr/base/tf/stl.h"
@@ -98,13 +95,12 @@ struct ImagePlaneDef {
         }
     }
 
-    void read_texture()
+    void read_texture(OIIO::ImageCache* cache)
     {
-        release();
-        OIIO::ImageInput* in = OIIO::ImageInput::open(asset.GetResolvedPath());
-        if (in == 0)
+        OIIO::ImageSpec spec;
+        const OIIO::ustring image_path(asset.GetResolvedPath());
+        if (!cache->get_imagespec(image_path, spec))
             return;
-        const OIIO::ImageSpec& spec = in->spec();
         // oiio gives back invalid textures sometimes
         if (spec.width < 32 ||
             spec.height < 32 ||
@@ -112,14 +108,9 @@ struct ImagePlaneDef {
             spec.height > 4096 ||
             spec.nchannels > 4 ||
             spec.nchannels < 3)
-        {
-            in->close();
-            OIIO::ImageInput::destroy(in);
-        }
+            return;
         std::vector<unsigned char> pixels(static_cast<size_t>(spec.width * spec.height * spec.nchannels), 0);
-        in->read_image(OIIO::TypeDesc::UINT8, &pixels[0]);
-        in->close();
-        OIIO::ImageInput::destroy(in);
+        cache->get_pixels(image_path, 0, 0, 0, spec.width, 0, spec.height, 0, 1, OIIO::TypeDesc::UINT8, &pixels[0]);
 
         GLint old_bound_texture = 0;
         glGetIntegerv(GL_TEXTURE_BINDING_2D, &old_bound_texture);
@@ -152,12 +143,17 @@ UsdImagingRefEngine::UsdImagingRefEngine(const SdfPathVector &excludedPrimPaths)
     TF_FOR_ALL(pathIt, excludedPrimPaths) {
         _excludedSet.insert(*pathIt);
     }
+
+    _imageCache = OIIO::ImageCache::create(false);
+    _imageCache->attribute("max_memory_MB", 1024.0);
+    _imageCache->attribute("max_open_files", 256);
 }
 
 UsdImagingRefEngine::~UsdImagingRefEngine()
 {
     TfNotice::Revoke(_objectsChangedNoticeKey);
     InvalidateBuffers();
+    OIIO::ImageCache::destroy(_imageCache);
 }
 
 bool
@@ -263,7 +259,7 @@ UsdImagingRefEngine::_PopulateBuffers()
     if (_params.displayImagePlanes)
     {
         for (auto& it : _imagePlanes)
-            it.read_texture();
+            it.read_texture(_imageCache);
     }
 }
 
