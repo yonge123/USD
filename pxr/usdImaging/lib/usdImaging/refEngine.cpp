@@ -105,8 +105,11 @@ struct ImagePlaneDef {
         if (in == 0)
             return;
         const OIIO::ImageSpec& spec = in->spec();
+        // oiio gives back invalid textures sometimes
         if (spec.width < 32 ||
             spec.height < 32 ||
+            spec.width > 4096 ||
+            spec.height > 4096 ||
             spec.nchannels > 4 ||
             spec.nchannels < 3)
         {
