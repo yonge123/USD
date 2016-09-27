@@ -119,7 +119,7 @@ struct ImagePlaneDef {
                      spec.nchannels, spec.width, spec.height, 0,
                      GL_RGB, GL_UNSIGNED_BYTE, &pixels[0]);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glBindTexture(GL_TEXTURE_2D, old_bound_texture);
@@ -249,12 +249,15 @@ UsdImagingRefEngine::_PopulateBuffers()
     _AppendSubData<GLuint>(GL_ELEMENT_ARRAY_BUFFER, &offset, _verts);
     _AppendSubData<GLuint>(GL_ELEMENT_ARRAY_BUFFER, &offset, _lineVerts);
 
-    for (auto& it : _imagePlanes)
-        it.read_texture();
+    if (_params.displayImagePlanes)
+    {
+        for (auto& it : _imagePlanes)
+            it.read_texture();
+    }
 }
 
-/*virtual*/ 
-SdfPath 
+/*virtual*/
+SdfPath
 UsdImagingRefEngine::GetPrimPathFromPrimIdColor(
         GfVec4i const& primIdColor,
         GfVec4i const& instanceIdColor,
@@ -356,6 +359,9 @@ UsdImagingRefEngine::_DrawImagePlanes()
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
+    glMatrixMode(GL_TEXTURE);
+    glPushMatrix();
+    glLoadIdentity();
 
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
@@ -371,28 +377,36 @@ UsdImagingRefEngine::_DrawImagePlanes()
             continue;
 
         glColor3f(1.0f, 1.0f, 1.0f);
-        glBindTexture(GL_TEXTURE_2D, 4);
+        glBindTexture(GL_TEXTURE_2D, it.gl_texture);
 
-        glBegin(GL_TRIANGLES);
-        glTexCoord2f(0.0f, 1.0f);
-        glVertex2f(-1.0f, -1.0f);
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex2f(-1.0f, 1.0f);
-        glTexCoord2f(1.0f, 0.0f);
-        glVertex2f(1.0f, 1.0f);
+        const float min_x = -1.0f;
+        const float max_x = 1.0f;
+        const float min_y = -1.0f;
+        const float max_y = 1.0f;
 
-        glTexCoord2f(0.0f, 1.0f);
-        glVertex2f(-1.0f, -1.0f);
-        glTexCoord2f(1.0f, 1.0f);
-        glVertex2f(1.0f, -1.0f);
-        glTexCoord2f(1.0f, 0.0f);
-        glVertex2f(1.0f, 1.0f);
+        const float min_uv = 0.0f;
+        const float max_uv = 1.0f;
+
+        glBegin(GL_QUADS);
+        glTexCoord2f(min_uv, max_uv);
+        glVertex2f(min_x, min_y);
+
+        glTexCoord2f(max_uv, max_uv);
+        glVertex2f(max_x, min_y);
+
+        glTexCoord2f(max_uv, min_uv);
+        glVertex2f(max_x, max_y);
+
+        glTexCoord2f(min_uv, min_uv);
+        glVertex2f(min_x, max_y);
         glEnd();
     }
 
-    glPopAttrib();
+    glPopAttrib(); // GL_LIGHTING_BIT
     glBindTexture(GL_TEXTURE_2D, old_bound_texture);
 
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
