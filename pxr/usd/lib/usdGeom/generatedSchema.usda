@@ -88,6 +88,9 @@ class "Imageable" (
 
 class ImagePlane "ImagePlane"
 {
+    rel camera = None (
+        doc = "Link to the camera."
+    )
     int2 coverage = (0, 0) (
         doc = "Coverage of the image in pixels. 0 is equal to the image's size."
     )
@@ -105,7 +108,7 @@ class ImagePlane "ImagePlane"
         doc = "Asset path to the file containg the image data."
     )
     float2 offset = (0, 0) (
-        doc = "Image plane offset relative to camera."
+        doc = "Image plane offset in inches."
     )
     rel proxyPrim = None (
         doc = '''The proxyPrim relationship allows us to link a
@@ -169,6 +172,9 @@ class ImagePlane "ImagePlane"
     )
     float rotate = 0 (
         doc = "Rotation value for the image plane. Specified in degrees."
+    )
+    float2 size = (-1, -1) (
+        doc = "Image plane size in inches. Less than zero means equal to the camera aperture size."
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]

@@ -162,6 +162,23 @@ UsdGeomImagePlane::CreateOffsetAttr(VtValue const &defaultValue, bool writeSpars
 }
 
 UsdAttribute
+UsdGeomImagePlane::GetSizeAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->size);
+}
+
+UsdAttribute
+UsdGeomImagePlane::CreateSizeAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->size,
+                       SdfValueTypeNames->Float2,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
 UsdGeomImagePlane::GetRotateAttr() const
 {
     return GetPrim().GetAttribute(UsdGeomTokens->rotate);
@@ -212,6 +229,19 @@ UsdGeomImagePlane::CreateCoverageOriginAttr(VtValue const &defaultValue, bool wr
                        writeSparsely);
 }
 
+UsdRelationship
+UsdGeomImagePlane::GetCameraRel() const
+{
+    return GetPrim().GetRelationship(UsdGeomTokens->camera);
+}
+
+UsdRelationship
+UsdGeomImagePlane::CreateCameraRel() const
+{
+    return GetPrim().CreateRelationship(UsdGeomTokens->camera,
+                       /* custom = */ false);
+}
+
 namespace {
 static inline TfTokenVector
 _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
@@ -233,6 +263,7 @@ UsdGeomImagePlane::GetSchemaAttributeNames(bool includeInherited)
         UsdGeomTokens->frame,
         UsdGeomTokens->fit,
         UsdGeomTokens->offset,
+        UsdGeomTokens->size,
         UsdGeomTokens->rotate,
         UsdGeomTokens->coverage,
         UsdGeomTokens->coverageOrigin,

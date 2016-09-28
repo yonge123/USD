@@ -209,7 +209,10 @@ class ImagePlane "ImagePlane" (
         doc = "Fitting mode for the image plane."
     )
     float2 offset = (0.0, 0.0) (
-        doc = "Image plane offset relative to camera."
+        doc = "Image plane offset in inches."
+    )
+    float2 size = (-1.0, -1.0) (
+        doc = "Image plane size in inches. Less than zero means equal to the camera aperture size."
     )
     float rotate = 0.0 (
         doc = "Rotation value for the image plane. Specified in degrees."
@@ -219,6 +222,9 @@ class ImagePlane "ImagePlane" (
     )
     int2 coverageOrigin = (0, 0) (
         doc = "Coverage origin in pixels. Clamped to -image's size and image's size."
+    )
+    rel camera (
+        doc = "Link to the camera from where aperture sizes are queried."
     )
 }
 

@@ -75,6 +75,13 @@ _CreateOffsetAttr(UsdGeomImagePlane &self,
 }
         
 static UsdAttribute
+_CreateSizeAttr(UsdGeomImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateSizeAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float2), writeSparsely);
+}
+        
+static UsdAttribute
 _CreateRotateAttr(UsdGeomImagePlane &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateRotateAttr(
@@ -154,6 +161,13 @@ void wrapUsdGeomImagePlane()
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
+        .def("GetSizeAttr",
+             &This::GetSizeAttr)
+        .def("CreateSizeAttr",
+             &_CreateSizeAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
         .def("GetRotateAttr",
              &This::GetRotateAttr)
         .def("CreateRotateAttr",
@@ -175,6 +189,11 @@ void wrapUsdGeomImagePlane()
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 
+        
+        .def("GetCameraRel",
+             &This::GetCameraRel)
+        .def("CreateCameraRel",
+             &This::CreateCameraRel)
     ;
 
     _CustomWrapCode(cls);

@@ -46,6 +46,7 @@
     (bilinear) \
     (boundaries) \
     (bspline) \
+    (camera) \
     (catmullClark) \
     (catmullRom) \
     (clippingPlanes) \
@@ -195,6 +196,7 @@
 /// \li <b>bilinear</b> - Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->all., Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr()
 /// \li <b>boundaries</b> - Possible value for UsdGeomMesh::GetFaceVaryingLinearInterpolationAttr()
 /// \li <b>bspline</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr()
+/// \li <b>camera</b> - UsdGeomImagePlane
 /// \li <b>catmullClark</b> - Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr(), Default value for UsdGeomMesh::GetSubdivisionSchemeAttr()
 /// \li <b>catmullRom</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr()
 /// \li <b>clippingPlanes</b> - UsdGeomCamera
@@ -277,7 +279,7 @@
 /// \li <b>right</b> - Possible value for UsdGeomCamera::GetStereoRoleAttr()
 /// \li <b>rightHanded</b> - Possible value for UsdGeomGprim::GetOrientationAttr(), Default value for UsdGeomGprim::GetOrientationAttr()
 /// \li <b>rotate</b> - UsdGeomImagePlane
-/// \li <b>size</b> - UsdGeomCube
+/// \li <b>size</b> - UsdGeomCube, UsdGeomImagePlane
 /// \li <b>stereoRole</b> - UsdGeomCamera
 /// \li <b>subdivisionScheme</b> - UsdGeomMesh
 /// \li <b>toSize</b> - Possible value for UsdGeomImagePlane::GetFitAttr()

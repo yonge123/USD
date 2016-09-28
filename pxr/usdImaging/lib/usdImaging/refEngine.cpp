@@ -50,6 +50,7 @@
 #include "pxr/usd/usdGeom/capsule.h"
 #include "pxr/usd/usdGeom/points.h"
 #include "pxr/usd/usdGeom/nurbsPatch.h"
+#include "pxr/usd/usdGeom/camera.h"
 
 // Shader Schema
 #include "pxr/usd/usdShade/pShader.h"
@@ -89,16 +90,19 @@ namespace {
 
 struct ImagePlaneDef {
     SdfAssetPath asset;
+    GfVec2f size;
+    GfVec2f offset;
+    GfVec2i coverage;
+    GfVec2i coverage_origin;
+    GfVec2f camera_aperture;
     GLuint gl_texture;
+    float rotate;
     int width;
     int height;
     int fit;
-    float rotate;
-    GfVec2i coverage;
-    GfVec2i coverage_origin;
 
-    ImagePlaneDef(const UsdPrim &prim, const UsdImagingEngine::RenderParams& _params) : gl_texture(invalid_texture),
-        width(0), height(0)
+    ImagePlaneDef(const UsdPrim &prim, const UsdImagingEngine::RenderParams& _params, const UsdPrim& _root)
+        : camera_aperture(1.0f, 1.0f), gl_texture(invalid_texture), width(0), height(0)
     { // TODO: use try to use the functions from Hydra to loadup these images
 // Hydra's memory manager might not exists at this point
 // Right now using the simples approach to load the texture to video memory
@@ -107,6 +111,8 @@ struct ImagePlaneDef {
         double frame = 0.0;
         image_plane.GetFrameAttr().Get(&frame, _params.frame);
         image_plane.GetFilenameAttr().Get(&asset, UsdTimeCode(_params.frame.GetValue() + frame));
+        image_plane.GetSizeAttr().Get(&size, _params.frame);
+        image_plane.GetOffsetAttr().Get(&offset, _params.frame);
         image_plane.GetRotateAttr().Get(&rotate, _params.frame);
         image_plane.GetCoverageAttr().Get(&coverage, _params.frame);
         image_plane.GetCoverageOriginAttr().Get(&coverage_origin, _params.frame);
@@ -124,6 +130,39 @@ struct ImagePlaneDef {
             fit = IMAGE_PLANE_FIT_TO_SIZE;
         else
             fit = IMAGE_PLANE_FIT_BEST;
+        rotate = static_cast<float>(M_PI) * rotate / 180.0f;
+
+        bool found_camera = false;
+        constexpr float mm_to_inch = 1.0f / 25.4f;
+
+        auto read_camera = [&](const UsdPrim& camera_prim) {
+            UsdGeomCamera camera(camera_prim);
+            camera.GetHorizontalApertureAttr().Get(&camera_aperture[0], _params.frame);
+            camera.GetVerticalApertureAttr().Get(&camera_aperture[1], _params.frame);
+            camera_aperture[0] *= mm_to_inch;
+            camera_aperture[1] *= mm_to_inch;
+
+            found_camera = true;
+        };
+
+        SdfPathVector camera_paths;
+        image_plane.GetCameraRel().GetForwardedTargets(&camera_paths);
+        if (camera_paths.size() > 0)
+        {
+            const UsdPrim camera_prim = _root.GetStage()->GetPrimAtPath(camera_paths[0]);
+            if (camera_prim.IsValid() && camera_prim.IsA<UsdGeomCamera>())
+                read_camera(camera_prim);
+        }
+
+        // traverse upwards in the hierarchy to find the camera above the image plane
+        if (!found_camera)
+        {
+            for (UsdPrim parent = prim.GetParent(); parent.IsValid(); parent = parent.GetParent())
+            {
+                if (parent.IsA<UsdGeomCamera>())
+                    read_camera(parent);
+            }
+        }
     }
 
     void release()
@@ -398,6 +437,10 @@ UsdImagingRefEngine::_DrawLines(bool drawID)
 void
 UsdImagingRefEngine::_DrawImagePlanes()
 {
+    // Since the viewport can change independently from the
+    // image plane / camera settings without trigger a recalculation
+    // it's better to calculate this here. Optionally we could cache the calculations
+    // based on the viewport, but it's not too heavy anyway.
     if (_imagePlanes.empty())
         return;
 
@@ -505,18 +548,68 @@ UsdImagingRefEngine::_DrawImagePlanes()
         if (it.coverage[1] != 0)
             max_uv_y = static_cast<float>(it.coverage[1]) / static_cast<float>(it.height);
 
+        const float size_ratio_x = it.size[0] / it.camera_aperture[0];
+        const float size_ratio_y = it.size[1] / it.camera_aperture[1];
+
+        if (it.size[0] >= 0.0f)
+        {
+            min_x *= size_ratio_x;
+            max_x *= size_ratio_x;
+        }
+
+        if (it.size[1] >= 0.0f)
+        {
+            min_y *= size_ratio_y;
+            max_y *= size_ratio_y;
+        }
+
+        const float offset_x = it.offset[0] / it.camera_aperture[0];
+        const float offset_y = it.offset[1] / it.camera_aperture[1];
+
+        min_x += offset_x;
+        max_x += offset_x;
+
+        min_y += offset_y;
+        max_y += offset_y;
+
+        GfVec2f lower_left(min_x, min_y);
+        GfVec2f lower_right(max_x, min_y);
+
+        GfVec2f upper_left(min_x, max_y);
+        GfVec2f upper_right(max_x, max_y);
+
+        // TODO: we need a global define for "epsilon"
+        if (it.rotate < -0.0001f || it.rotate > 0.0001f)
+        { // TODO: due to how these coordinates are converted to screen space ones
+          // we need to compensate for the from window => screen coordinates transform
+            // we want to match the maya rotation order
+            const float dsin = sinf(-it.rotate);
+            const float dcos = cosf(-it.rotate);
+
+            auto rotate_corner = [&](GfVec2f& corner) {
+                const float t = corner[0] * dcos - corner[1] * dsin;
+                corner[1] = corner[0] * dsin + corner[1] * dcos;
+                corner[0] = t;
+            };
+
+            rotate_corner(lower_left);
+            rotate_corner(lower_right);
+            rotate_corner(upper_left);
+            rotate_corner(upper_right);
+        }
+
         glBegin(GL_QUADS);
         glTexCoord2f(min_uv_x, max_uv_y);
-        glVertex2f(min_x, min_y);
+        glVertex2f(lower_left[0], lower_left[1]);
 
         glTexCoord2f(max_uv_x, max_uv_y);
-        glVertex2f(max_x, min_y);
+        glVertex2f(lower_right[0], lower_right[1]);
 
         glTexCoord2f(max_uv_x, min_uv_y);
-        glVertex2f(max_x, max_y);
+        glVertex2f(upper_right[0], upper_right[1]);
 
         glTexCoord2f(min_uv_x, min_uv_y);
-        glVertex2f(min_x, max_y);
+        glVertex2f(upper_left[0], upper_left[1]);
         glEnd();
     }
 
@@ -899,7 +992,7 @@ UsdImagingRefEngine::_TraverseStage(const UsdPrim& root)
                 else if (primIt->IsA<UsdGeomNurbsPatch>())
                     _HandleNurbsPatch(*primIt);
                 else if (primIt->IsA<UsdGeomImagePlane>())
-                    _imagePlanes.push_back(ImagePlaneDef(*primIt, _params));
+                    _imagePlanes.emplace_back(*primIt, _params, _root);
             } else {
                 primIt.PruneChildren();
             }

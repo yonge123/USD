@@ -197,7 +197,7 @@ public:
     // --------------------------------------------------------------------- //
     // OFFSET 
     // --------------------------------------------------------------------- //
-    /// Image plane offset relative to camera.
+    /// Image plane offset in inches.
     ///
     /// \n  C++ Type: GfVec2f
     /// \n  Usd Type: SdfValueTypeNames->Float2
@@ -211,6 +211,25 @@ public:
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
     UsdAttribute CreateOffsetAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // SIZE 
+    // --------------------------------------------------------------------- //
+    /// Image plane size in inches. Less than zero means equal to the camera aperture size.
+    ///
+    /// \n  C++ Type: GfVec2f
+    /// \n  Usd Type: SdfValueTypeNames->Float2
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: (-1, -1)
+    UsdAttribute GetSizeAttr() const;
+
+    /// See GetSizeAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateSizeAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // --------------------------------------------------------------------- //
@@ -268,6 +287,18 @@ public:
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
     UsdAttribute CreateCoverageOriginAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // CAMERA 
+    // --------------------------------------------------------------------- //
+    /// Link to the camera.
+    ///
+    UsdRelationship GetCameraRel() const;
+
+    /// See GetCameraRel(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create
+    UsdRelationship CreateCameraRel() const;
 
 public:
     // ===================================================================== //
