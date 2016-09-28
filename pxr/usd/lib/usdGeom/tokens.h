@@ -41,6 +41,7 @@
     (alwaysSharp) \
     (axis) \
     (basis) \
+    (best) \
     (bezier) \
     (bilinear) \
     (boundaries) \
@@ -57,6 +58,8 @@
     (cornersOnly) \
     (cornersPlus1) \
     (cornersPlus2) \
+    (coverage) \
+    (coverageOrigin) \
     (creaseIndices) \
     (creaseLengths) \
     (creaseSharpnesses) \
@@ -75,6 +78,8 @@
     (faceVaryingLinearInterpolation) \
     (faceVertexCounts) \
     (faceVertexIndices) \
+    (fill) \
+    (fit) \
     (focalLength) \
     (focusDistance) \
     (frame) \
@@ -83,6 +88,7 @@
     (height) \
     (hermite) \
     (holeIndices) \
+    (horizontal) \
     (horizontalAperture) \
     (horizontalApertureOffset) \
     (ids) \
@@ -100,6 +106,7 @@
     (none) \
     (nonperiodic) \
     (normals) \
+    (offset) \
     (open) \
     (order) \
     (orientation) \
@@ -120,9 +127,11 @@
     (render) \
     (right) \
     (rightHanded) \
+    (rotate) \
     (size) \
     (stereoRole) \
     (subdivisionScheme) \
+    ((toSize, "to size")) \
     ((trimCurveCounts, "trimCurve:counts")) \
     ((trimCurveKnots, "trimCurve:knots")) \
     ((trimCurveOrders, "trimCurve:orders")) \
@@ -141,6 +150,7 @@
     (varying) \
     (velocities) \
     (vertex) \
+    (vertical) \
     (verticalAperture) \
     (verticalApertureOffset) \
     (vForm) \
@@ -180,6 +190,7 @@
 /// \li <b>alwaysSharp</b> - Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->boundaries.
 /// \li <b>axis</b> - UsdGeomCone, UsdGeomCapsule, UsdGeomCylinder
 /// \li <b>basis</b> - UsdGeomBasisCurves
+/// \li <b>best</b> - Possible value for UsdGeomImagePlane::GetFitAttr(), Default value for UsdGeomImagePlane::GetFitAttr()
 /// \li <b>bezier</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr(), Default value for UsdGeomBasisCurves::GetBasisAttr()
 /// \li <b>bilinear</b> - Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->all., Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr()
 /// \li <b>boundaries</b> - Possible value for UsdGeomMesh::GetFaceVaryingLinearInterpolationAttr()
@@ -196,6 +207,8 @@
 /// \li <b>cornersOnly</b> - Possible value for UsdGeomMesh::GetFaceVaryingLinearInterpolationAttr()
 /// \li <b>cornersPlus1</b> - Possible value for UsdGeomMesh::GetFaceVaryingLinearInterpolationAttr(), Default value for UsdGeomMesh::GetFaceVaryingLinearInterpolationAttr()
 /// \li <b>cornersPlus2</b> - Possible value for UsdGeomMesh::GetFaceVaryingLinearInterpolationAttr()
+/// \li <b>coverage</b> - UsdGeomImagePlane
+/// \li <b>coverageOrigin</b> - UsdGeomImagePlane
 /// \li <b>creaseIndices</b> - UsdGeomMesh
 /// \li <b>creaseLengths</b> - UsdGeomMesh
 /// \li <b>creaseSharpnesses</b> - UsdGeomMesh
@@ -214,6 +227,8 @@
 /// \li <b>faceVaryingLinearInterpolation</b> - UsdGeomMesh
 /// \li <b>faceVertexCounts</b> - UsdGeomMesh
 /// \li <b>faceVertexIndices</b> - UsdGeomMesh
+/// \li <b>fill</b> - Possible value for UsdGeomImagePlane::GetFitAttr()
+/// \li <b>fit</b> - UsdGeomImagePlane
 /// \li <b>focalLength</b> - UsdGeomCamera
 /// \li <b>focusDistance</b> - UsdGeomCamera
 /// \li <b>frame</b> - UsdGeomImagePlane
@@ -222,6 +237,7 @@
 /// \li <b>height</b> - UsdGeomCone, UsdGeomCapsule, UsdGeomCylinder
 /// \li <b>hermite</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr()
 /// \li <b>holeIndices</b> - UsdGeomMesh
+/// \li <b>horizontal</b> - Possible value for UsdGeomImagePlane::GetFitAttr()
 /// \li <b>horizontalAperture</b> - UsdGeomCamera
 /// \li <b>horizontalApertureOffset</b> - UsdGeomCamera
 /// \li <b>ids</b> - UsdGeomPoints
@@ -239,6 +255,7 @@
 /// \li <b>none</b> - Possible value for UsdGeomMesh::GetInterpolateBoundaryAttr(), Possible value for UsdGeomMesh::GetFaceVaryingLinearInterpolationAttr(), Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr()
 /// \li <b>nonperiodic</b> - Possible value for UsdGeomBasisCurves::GetWrapAttr(), Default value for UsdGeomBasisCurves::GetWrapAttr()
 /// \li <b>normals</b> - UsdGeomPointBased
+/// \li <b>offset</b> - UsdGeomImagePlane
 /// \li <b>open</b> - Possible value for UsdGeomNurbsPatch::GetVFormAttr(), Default value for UsdGeomNurbsPatch::GetVFormAttr(), Possible value for UsdGeomNurbsPatch::GetUFormAttr(), Default value for UsdGeomNurbsPatch::GetUFormAttr()
 /// \li <b>order</b> - UsdGeomNurbsCurves
 /// \li <b>orientation</b> - UsdGeomGprim
@@ -259,9 +276,11 @@
 /// \li <b>render</b> - Possible value for UsdGeomImageable::GetPurposeAttr()
 /// \li <b>right</b> - Possible value for UsdGeomCamera::GetStereoRoleAttr()
 /// \li <b>rightHanded</b> - Possible value for UsdGeomGprim::GetOrientationAttr(), Default value for UsdGeomGprim::GetOrientationAttr()
+/// \li <b>rotate</b> - UsdGeomImagePlane
 /// \li <b>size</b> - UsdGeomCube
 /// \li <b>stereoRole</b> - UsdGeomCamera
 /// \li <b>subdivisionScheme</b> - UsdGeomMesh
+/// \li <b>toSize</b> - Possible value for UsdGeomImagePlane::GetFitAttr()
 /// \li <b>trimCurveCounts</b> - UsdGeomNurbsPatch
 /// \li <b>trimCurveKnots</b> - UsdGeomNurbsPatch
 /// \li <b>trimCurveOrders</b> - UsdGeomNurbsPatch
@@ -280,6 +299,7 @@
 /// \li <b>varying</b> - Possible value for UsdGeomPrimvar::SetInterpolation. Four values are interpolated over each uv patch segment of the  surface. Bilinear interpolation is used for interpolation  between the four values.
 /// \li <b>velocities</b> - UsdGeomPointBased
 /// \li <b>vertex</b> - Possible value for UsdGeomPrimvar::SetInterpolation. Values are interpolated between each vertex in the surface primitive. The basis function of the surface is used for  interpolation between vertices.
+/// \li <b>vertical</b> - Possible value for UsdGeomImagePlane::GetFitAttr()
 /// \li <b>verticalAperture</b> - UsdGeomCamera
 /// \li <b>verticalApertureOffset</b> - UsdGeomCamera
 /// \li <b>vForm</b> - UsdGeomNurbsPatch

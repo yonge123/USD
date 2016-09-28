@@ -59,6 +59,41 @@ _CreateFrameAttr(UsdGeomImagePlane &self,
     return self.CreateFrameAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Double), writeSparsely);
 }
+        
+static UsdAttribute
+_CreateFitAttr(UsdGeomImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateFitAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateOffsetAttr(UsdGeomImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateOffsetAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float2), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateRotateAttr(UsdGeomImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateRotateAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateCoverageAttr(UsdGeomImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateCoverageAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Int2), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateCoverageOriginAttr(UsdGeomImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateCoverageOriginAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Int2), writeSparsely);
+}
 
 void wrapUsdGeomImagePlane()
 {
@@ -102,6 +137,41 @@ void wrapUsdGeomImagePlane()
              &This::GetFrameAttr)
         .def("CreateFrameAttr",
              &_CreateFrameAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetFitAttr",
+             &This::GetFitAttr)
+        .def("CreateFitAttr",
+             &_CreateFitAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetOffsetAttr",
+             &This::GetOffsetAttr)
+        .def("CreateOffsetAttr",
+             &_CreateOffsetAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetRotateAttr",
+             &This::GetRotateAttr)
+        .def("CreateRotateAttr",
+             &_CreateRotateAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetCoverageAttr",
+             &This::GetCoverageAttr)
+        .def("CreateCoverageAttr",
+             &_CreateCoverageAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetCoverageOriginAttr",
+             &This::GetCoverageOriginAttr)
+        .def("CreateCoverageOriginAttr",
+             &_CreateCoverageOriginAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 

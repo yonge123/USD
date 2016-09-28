@@ -48,6 +48,10 @@ class SdfAssetPath;
 
 /// \class UsdGeomImagePlane
 ///
+/// For any described attribute \em Fallback \em Value or \em Allowed \em Values below
+/// that are text/tokens, the actual token is published and defined in \ref UsdGeomTokens.
+/// So to set an attribute to the value "rightHanded", use UsdGeomTokens->rightHanded
+/// as the value.
 ///
 class UsdGeomImagePlane : public UsdGeomImageable
 {
@@ -168,6 +172,102 @@ public:
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
     UsdAttribute CreateFrameAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // FIT 
+    // --------------------------------------------------------------------- //
+    /// Fitting mode for the image plane.
+    ///
+    /// \n  C++ Type: TfToken
+    /// \n  Usd Type: SdfValueTypeNames->Token
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: best
+    /// \n  \ref UsdGeomTokens "Allowed Values": [fill, best, horizontal, vertical, to size]
+    UsdAttribute GetFitAttr() const;
+
+    /// See GetFitAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateFitAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // OFFSET 
+    // --------------------------------------------------------------------- //
+    /// Image plane offset relative to camera.
+    ///
+    /// \n  C++ Type: GfVec2f
+    /// \n  Usd Type: SdfValueTypeNames->Float2
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: (0, 0)
+    UsdAttribute GetOffsetAttr() const;
+
+    /// See GetOffsetAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateOffsetAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // ROTATE 
+    // --------------------------------------------------------------------- //
+    /// Rotation value for the image plane. Specified in degrees.
+    ///
+    /// \n  C++ Type: float
+    /// \n  Usd Type: SdfValueTypeNames->Float
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: 0.0
+    UsdAttribute GetRotateAttr() const;
+
+    /// See GetRotateAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateRotateAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // COVERAGE 
+    // --------------------------------------------------------------------- //
+    /// Coverage of the image in pixels. 0 is equal to the image's size.
+    ///
+    /// \n  C++ Type: GfVec2i
+    /// \n  Usd Type: SdfValueTypeNames->Int2
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: (0, 0)
+    UsdAttribute GetCoverageAttr() const;
+
+    /// See GetCoverageAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateCoverageAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // COVERAGEORIGIN 
+    // --------------------------------------------------------------------- //
+    /// Coverage origin in pixels. Clamped to -image's size and image's size.
+    ///
+    /// \n  C++ Type: GfVec2i
+    /// \n  Usd Type: SdfValueTypeNames->Int2
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: (0, 0)
+    UsdAttribute GetCoverageOriginAttr() const;
+
+    /// See GetCoverageOriginAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateCoverageOriginAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // ===================================================================== //

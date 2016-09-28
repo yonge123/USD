@@ -204,6 +204,22 @@ class ImagePlane "ImagePlane" (
     double frame = 0.0 (
         doc = "The frame offset for animated textures."
     )
+    token fit = "best" (
+        allowedTokens = ["fill", "best", "horizontal", "vertical", "to size"]
+        doc = "Fitting mode for the image plane."
+    )
+    float2 offset = (0.0, 0.0) (
+        doc = "Image plane offset relative to camera."
+    )
+    float rotate = 0.0 (
+        doc = "Rotation value for the image plane. Specified in degrees."
+    )
+    int2 coverage = (0, 0) (
+        doc = "Coverage of the image in pixels. 0 is equal to the image's size."
+    )
+    int2 coverageOrigin = (0, 0) (
+        doc = "Coverage origin in pixels. Clamped to -image's size and image's size."
+    )
 }
 
 class "Xformable" (

@@ -127,6 +127,91 @@ UsdGeomImagePlane::CreateFrameAttr(VtValue const &defaultValue, bool writeSparse
                        writeSparsely);
 }
 
+UsdAttribute
+UsdGeomImagePlane::GetFitAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->fit);
+}
+
+UsdAttribute
+UsdGeomImagePlane::CreateFitAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->fit,
+                       SdfValueTypeNames->Token,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdGeomImagePlane::GetOffsetAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->offset);
+}
+
+UsdAttribute
+UsdGeomImagePlane::CreateOffsetAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->offset,
+                       SdfValueTypeNames->Float2,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdGeomImagePlane::GetRotateAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->rotate);
+}
+
+UsdAttribute
+UsdGeomImagePlane::CreateRotateAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->rotate,
+                       SdfValueTypeNames->Float,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdGeomImagePlane::GetCoverageAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->coverage);
+}
+
+UsdAttribute
+UsdGeomImagePlane::CreateCoverageAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->coverage,
+                       SdfValueTypeNames->Int2,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdGeomImagePlane::GetCoverageOriginAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->coverageOrigin);
+}
+
+UsdAttribute
+UsdGeomImagePlane::CreateCoverageOriginAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->coverageOrigin,
+                       SdfValueTypeNames->Int2,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
 namespace {
 static inline TfTokenVector
 _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
@@ -146,6 +231,11 @@ UsdGeomImagePlane::GetSchemaAttributeNames(bool includeInherited)
     static TfTokenVector localNames = {
         UsdGeomTokens->infoFilename,
         UsdGeomTokens->frame,
+        UsdGeomTokens->fit,
+        UsdGeomTokens->offset,
+        UsdGeomTokens->rotate,
+        UsdGeomTokens->coverage,
+        UsdGeomTokens->coverageOrigin,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(

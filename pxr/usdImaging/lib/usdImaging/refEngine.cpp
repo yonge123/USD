@@ -71,11 +71,34 @@
 
 static const GLuint invalid_texture = 0;
 
-struct ImagePlaneDef {
-    GLuint gl_texture;
-    SdfAssetPath asset;
+namespace {
+    enum {
+        IMAGE_PLANE_FIT_FILL,
+        IMAGE_PLANE_FIT_BEST,
+        IMAGE_PLANE_FIT_HORIZONTAL,
+        IMAGE_PLANE_FIT_VERTICAL,
+        IMAGE_PLANE_FIT_TO_SIZE
+    };
 
-    ImagePlaneDef(const UsdPrim &prim, const UsdImagingEngine::RenderParams& _params) : gl_texture(invalid_texture)
+    const TfToken image_plane_fill("fill");
+    const TfToken image_plane_best("best");
+    const TfToken image_plane_horizontal("horizontal");
+    const TfToken image_plane_vertical("vertical");
+    const TfToken image_plane_to_size("to size");
+}
+
+struct ImagePlaneDef {
+    SdfAssetPath asset;
+    GLuint gl_texture;
+    int width;
+    int height;
+    int fit;
+    float rotate;
+    GfVec2i coverage;
+    GfVec2i coverage_origin;
+
+    ImagePlaneDef(const UsdPrim &prim, const UsdImagingEngine::RenderParams& _params) : gl_texture(invalid_texture),
+        width(0), height(0)
     { // TODO: use try to use the functions from Hydra to loadup these images
 // Hydra's memory manager might not exists at this point
 // Right now using the simples approach to load the texture to video memory
@@ -84,6 +107,23 @@ struct ImagePlaneDef {
         double frame = 0.0;
         image_plane.GetFrameAttr().Get(&frame, _params.frame);
         image_plane.GetFilenameAttr().Get(&asset, UsdTimeCode(_params.frame.GetValue() + frame));
+        image_plane.GetRotateAttr().Get(&rotate, _params.frame);
+        image_plane.GetCoverageAttr().Get(&coverage, _params.frame);
+        image_plane.GetCoverageOriginAttr().Get(&coverage_origin, _params.frame);
+        TfToken fit_token;
+        image_plane.GetFitAttr().Get(&fit_token, _params.frame);
+        if (fit_token == image_plane_fill)
+            fit = IMAGE_PLANE_FIT_FILL;
+        else if (fit_token == image_plane_best)
+            fit = IMAGE_PLANE_FIT_BEST;
+        else if (fit_token == image_plane_horizontal)
+            fit = IMAGE_PLANE_FIT_HORIZONTAL;
+        else if (fit_token == image_plane_vertical)
+            fit = IMAGE_PLANE_FIT_VERTICAL;
+        else if (fit_token == image_plane_to_size)
+            fit = IMAGE_PLANE_FIT_TO_SIZE;
+        else
+            fit = IMAGE_PLANE_FIT_BEST;
     }
 
     void release()
@@ -97,20 +137,25 @@ struct ImagePlaneDef {
 
     void read_texture(OIIO::ImageCache* cache)
     {
+        // This is cleared at a different stage, so if it exists, just skip loading the texture.
+        if (gl_texture != invalid_texture)
+            return;
         OIIO::ImageSpec spec;
         const OIIO::ustring image_path(asset.GetResolvedPath());
         if (!cache->get_imagespec(image_path, spec))
             return;
+        width = spec.width;
+        height = spec.height;
         // oiio gives back invalid textures sometimes
-        if (spec.width < 32 ||
-            spec.height < 32 ||
-            spec.width > 4096 ||
-            spec.height > 4096 ||
+        if (width < 32 ||
+            height < 32 ||
+            width > 4096 ||
+            height > 4096 ||
             spec.nchannels > 4 ||
             spec.nchannels < 3)
             return;
-        std::vector<unsigned char> pixels(static_cast<size_t>(spec.width * spec.height * spec.nchannels), 0);
-        cache->get_pixels(image_path, 0, 0, 0, spec.width, 0, spec.height, 0, 1, OIIO::TypeDesc::UINT8, &pixels[0]);
+        std::vector<unsigned char> pixels(static_cast<size_t>(width * height * spec.nchannels), 0);
+        cache->get_pixels(image_path, 0, 0, 0, width, 0, height, 0, 1, OIIO::TypeDesc::UINT8, &pixels[0]);
 
         GLint old_bound_texture = 0;
         glGetIntegerv(GL_TEXTURE_BINDING_2D, &old_bound_texture);
@@ -118,7 +163,7 @@ struct ImagePlaneDef {
         glGenTextures(1, &gl_texture);
         glBindTexture(GL_TEXTURE_2D, gl_texture);
         glTexImage2D(GL_TEXTURE_2D, 0,
-                     spec.nchannels == 4 ? GL_RGBA : GL_RGB, spec.width, spec.height, 0,
+                     spec.nchannels == 4 ? GL_RGBA : GL_RGB, width, height, 0,
                      spec.nchannels == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, &pixels[0]);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -377,6 +422,10 @@ UsdImagingRefEngine::_DrawImagePlanes()
     glPushAttrib(GL_LIGHTING_BIT);
     glDisable(GL_LIGHTING);
     glShadeModel(GL_FLAT);
+
+    // 2 and 3 are width and height
+    int viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
 
     for (auto& it : _imagePlanes)
     {
