@@ -170,6 +170,12 @@ struct ImagePlaneDef {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glBindTexture(GL_TEXTURE_2D, old_bound_texture);
+
+        // limiting settings
+        coverage[0] = std::min(std::max(0, coverage[0]), width);
+        coverage[1] = std::min(std::max(0, coverage[1]), height);
+        coverage_origin[0] = std::min(std::max(-width, coverage_origin[0]), width);
+        coverage_origin[1] = std::min(std::max(-height, coverage_origin[1]), height);
     }
 };
 
@@ -435,25 +441,81 @@ UsdImagingRefEngine::_DrawImagePlanes()
         glColor3f(1.0f, 1.0f, 1.0f);
         glBindTexture(GL_TEXTURE_2D, it.gl_texture);
 
-        const float min_x = -1.0f;
-        const float max_x = 1.0f;
-        const float min_y = -1.0f;
-        const float max_y = 1.0f;
+        float min_x = -1.0f;
+        float max_x = 1.0f;
+        float min_y = -1.0f;
+        float max_y = 1.0f;
 
-        const float min_uv = 0.0f;
-        const float max_uv = 1.0f;
+        float min_uv_x = 0.0f;
+        float max_uv_x = 1.0f;
+        float min_uv_y = 0.0f;
+        float max_uv_y = 1.0f;
+
+        switch (it.fit)
+        {
+            case IMAGE_PLANE_FIT_FILL:
+            {
+                const float image_ratio = static_cast<float>(it.width) / static_cast<float>(it.height);
+                const float viewport_ratio = static_cast<float>(viewport[2]) / static_cast<float>(viewport[3]);
+                if (image_ratio > viewport_ratio)
+                {
+                    max_x = image_ratio / viewport_ratio;
+                    min_x = -1.0f * max_x;
+                }
+                else
+                {
+                    max_y = viewport_ratio / image_ratio;
+                    min_y = -1.0f * max_y;
+                }
+            }
+            break;
+            case IMAGE_PLANE_FIT_BEST:
+            {
+                const float image_ratio = static_cast<float>(it.width) / static_cast<float>(it.height);
+                const float viewport_ratio = static_cast<float>(viewport[2]) / static_cast<float>(viewport[3]);
+                if (image_ratio > viewport_ratio)
+                {
+                    max_y = viewport_ratio / image_ratio;
+                    min_y = -1.0f * max_y;
+                }
+                else
+                {
+                    max_x = image_ratio / viewport_ratio;
+                    min_x = -1.0f * max_x;
+                }
+            }
+                break;
+            case IMAGE_PLANE_FIT_HORIZONTAL:
+                max_y = (static_cast<float>(viewport[2]) / static_cast<float>(viewport[3])) *
+                        (static_cast<float>(it.height) / static_cast<float>(it.width));
+                min_y = -1.0f * max_y;
+                break;
+            case IMAGE_PLANE_FIT_VERTICAL:
+                max_x = (static_cast<float>(viewport[3]) / static_cast<float>(viewport[2])) *
+                        (static_cast<float>(it.width) / static_cast<float>(it.height));
+                min_x = -1.0f * max_x;
+                break;
+            default:
+                assert("Invalid enum passed in ImagePlaneDef.fit!");
+        }
+
+        if (it.coverage[0] != 0)
+            max_uv_x = static_cast<float>(it.coverage[0]) / static_cast<float>(it.width);
+
+        if (it.coverage[1] != 0)
+            max_uv_y = static_cast<float>(it.coverage[1]) / static_cast<float>(it.height);
 
         glBegin(GL_QUADS);
-        glTexCoord2f(min_uv, max_uv);
+        glTexCoord2f(min_uv_x, max_uv_y);
         glVertex2f(min_x, min_y);
 
-        glTexCoord2f(max_uv, max_uv);
+        glTexCoord2f(max_uv_x, max_uv_y);
         glVertex2f(max_x, min_y);
 
-        glTexCoord2f(max_uv, min_uv);
+        glTexCoord2f(max_uv_x, min_uv_y);
         glVertex2f(max_x, max_y);
 
-        glTexCoord2f(min_uv, min_uv);
+        glTexCoord2f(min_uv_x, min_uv_y);
         glVertex2f(min_x, max_y);
         glEnd();
     }
