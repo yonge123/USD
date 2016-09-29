@@ -599,11 +599,15 @@ UsdImagingRefEngine::_DrawImagePlanes()
         }
 
         // TODO: this could be calculated at texture load time, we could also load up a smaller texture
-        // but be careful with that, opengl has a minimum valid texture size (32!)
+        // but be careful with that, opengl has a minimum valid texture size (32) !
         if (it.coverage_origin[0] > 0)
-            max_uv_x = static_cast<float>(it.width - it.coverage_origin[0]) / static_cast<float>(it.width);
+        {
+            min_uv_x = static_cast<float>(it.coverage_origin[0]) / static_cast<float>(it.width);
+            max_uv_x = std::max(static_cast<float>(std::min(it.coverage[0], it.width - it.coverage_origin[0])) /
+                                static_cast<float>(it.width - it.coverage_origin[0]), min_uv_x);
+        }
         else if (it.coverage_origin[0] < 0)
-            min_uv_x = static_cast<float>(-it.coverage_origin[0]) / static_cast<float>(it.width);
+            max_uv_x = static_cast<float>(it.coverage[0]) * static_cast<float>(it.width + it.coverage_origin[0]) / static_cast<float>(it.width * it.width);
         else
             max_uv_x = static_cast<float>(it.coverage[0]) / static_cast<float>(it.width);
 
