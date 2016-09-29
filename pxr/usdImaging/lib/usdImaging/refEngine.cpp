@@ -211,8 +211,14 @@ struct ImagePlaneDef {
         glBindTexture(GL_TEXTURE_2D, old_bound_texture);
 
         // limiting settings
-        coverage[0] = std::min(std::max(0, coverage[0]), width);
-        coverage[1] = std::min(std::max(0, coverage[1]), height);
+        if (coverage[0] <= 0)
+            coverage[0] = width;
+        else
+            coverage[0] = std::min(std::max(0, coverage[0]), width);
+        if (coverage[1] <= 0)
+            coverage[1] = height;
+        else
+            coverage[1] = std::min(std::max(0, coverage[1]), height);
         coverage_origin[0] = std::min(std::max(-width, coverage_origin[0]), width);
         coverage_origin[1] = std::min(std::max(-height, coverage_origin[1]), height);
     }
@@ -542,12 +548,6 @@ UsdImagingRefEngine::_DrawImagePlanes()
                 assert("Invalid enum passed in ImagePlaneDef.fit!");
         }
 
-        if (it.coverage[0] != 0)
-            max_uv_x = static_cast<float>(it.coverage[0]) / static_cast<float>(it.width);
-
-        if (it.coverage[1] != 0)
-            max_uv_y = static_cast<float>(it.coverage[1]) / static_cast<float>(it.height);
-
         const float size_ratio_x = it.size[0] / it.camera_aperture[0];
         const float size_ratio_y = it.size[1] / it.camera_aperture[1];
 
@@ -597,6 +597,22 @@ UsdImagingRefEngine::_DrawImagePlanes()
             rotate_corner(upper_left);
             rotate_corner(upper_right);
         }
+
+        // TODO: this could be calculated at texture load time, we could also load up a smaller texture
+        // but be careful with that, opengl has a minimum valid texture size (32!)
+        if (it.coverage_origin[0] > 0)
+            max_uv_x = static_cast<float>(it.width - it.coverage_origin[0]) / static_cast<float>(it.width);
+        else if (it.coverage_origin[0] < 0)
+            min_uv_x = static_cast<float>(-it.coverage_origin[0]) / static_cast<float>(it.width);
+        else
+            max_uv_x = static_cast<float>(it.coverage[0]) / static_cast<float>(it.width);
+
+        if (it.coverage_origin[1] > 0)
+            max_uv_y = static_cast<float>(it.height - it.coverage_origin[1]) / static_cast<float>(it.height);
+        else if (it.coverage_origin[1] < 0)
+            min_uv_y = static_cast<float>(-it.coverage_origin[1]) / static_cast<float>(it.height);
+        else
+            max_uv_y = static_cast<float>(it.coverage[1]) / static_cast<float>(it.height);
 
         glBegin(GL_QUADS);
         glTexCoord2f(min_uv_x, max_uv_y);
