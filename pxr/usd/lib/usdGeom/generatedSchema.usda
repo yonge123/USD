@@ -89,7 +89,7 @@ class "Imageable" (
 class ImagePlane "ImagePlane"
 {
     rel camera = None (
-        doc = "Link to the camera."
+        doc = "Link to the camera from where aperture sizes are queried."
     )
     int2 coverage = (0, 0) (
         doc = "Coverage of the image in pixels. 0 is equal to the image's size."
@@ -104,7 +104,7 @@ class ImagePlane "ImagePlane"
     double frame = 0 (
         doc = "The frame offset for animated textures."
     )
-    uniform asset info:filename = @@ (
+    asset info:filename = @@ (
         doc = "Asset path to the file containg the image data."
     )
     float2 offset = (0, 0) (

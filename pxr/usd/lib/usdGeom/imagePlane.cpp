@@ -105,7 +105,7 @@ UsdGeomImagePlane::CreateFilenameAttr(VtValue const &defaultValue, bool writeSpa
     return UsdSchemaBase::_CreateAttr(UsdGeomTokens->infoFilename,
                        SdfValueTypeNames->Asset,
                        /* custom = */ false,
-                       SdfVariabilityUniform,
+                       SdfVariabilityVarying,
                        defaultValue,
                        writeSparsely);
 }

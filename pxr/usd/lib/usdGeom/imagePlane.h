@@ -143,7 +143,7 @@ public:
     ///
     /// \n  C++ Type: SdfAssetPath
     /// \n  Usd Type: SdfValueTypeNames->Asset
-    /// \n  Variability: SdfVariabilityUniform
+    /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: @@
     UsdAttribute GetFilenameAttr() const;
 
@@ -292,7 +292,7 @@ public:
     // --------------------------------------------------------------------- //
     // CAMERA 
     // --------------------------------------------------------------------- //
-    /// Link to the camera.
+    /// Link to the camera from where aperture sizes are queried.
     ///
     UsdRelationship GetCameraRel() const;
 

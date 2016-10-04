@@ -195,7 +195,7 @@ class "Imageable" (
 class ImagePlane "ImagePlane" (
     inherits = </Imageable>
 ) {
-    uniform asset info:filename = @@ (
+    asset info:filename = @@ (
         customData = {
             string apiName = "filename"
         }
