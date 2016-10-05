@@ -482,6 +482,9 @@ UsdImagingRefEngine::_DrawImagePlanes()
     int viewport[4];
     glGetIntegerv(GL_VIEWPORT, viewport);
 
+    const float width = static_cast<float>(viewport[2]);
+    const float height = static_cast<float>(viewport[3]);
+
     for (auto& it : _imagePlanes)
     {
         if (it.gl_texture == invalid_texture)
@@ -490,59 +493,62 @@ UsdImagingRefEngine::_DrawImagePlanes()
         glColor3f(1.0f, 1.0f, 1.0f);
         glBindTexture(GL_TEXTURE_2D, it.gl_texture);
 
-        float min_x = -1.0f;
-        float max_x = 1.0f;
-        float min_y = -1.0f;
-        float max_y = 1.0f;
+        float min_x = -width;
+        float max_x = width;
+        float min_y = -height;
+        float max_y = height;
 
         float min_uv_x = 0.0f;
         float max_uv_x = 1.0f;
         float min_uv_y = 0.0f;
         float max_uv_y = 1.0f;
 
+        const float image_width = static_cast<float>(it.width);
+        const float image_height = static_cast<float>(it.height);
+
         switch (it.fit)
         {
             case IMAGE_PLANE_FIT_FILL:
             {
-                const float image_ratio = static_cast<float>(it.width) / static_cast<float>(it.height);
-                const float viewport_ratio = static_cast<float>(viewport[2]) / static_cast<float>(viewport[3]);
+                const float image_ratio = image_width / image_height;
+                const float viewport_ratio = width / height;
                 if (image_ratio > viewport_ratio)
                 {
-                    max_x = image_ratio / viewport_ratio;
+                    max_x = image_width * height / image_height;
                     min_x = -1.0f * max_x;
                 }
                 else
                 {
-                    max_y = viewport_ratio / image_ratio;
+                    max_y = image_height * width / image_width;
                     min_y = -1.0f * max_y;
                 }
             }
             break;
             case IMAGE_PLANE_FIT_BEST:
             {
-                const float image_ratio = static_cast<float>(it.width) / static_cast<float>(it.height);
-                const float viewport_ratio = static_cast<float>(viewport[2]) / static_cast<float>(viewport[3]);
+                const float image_ratio = image_width / image_height;
+                const float viewport_ratio = width / height;
                 if (image_ratio > viewport_ratio)
                 {
-                    max_y = viewport_ratio / image_ratio;
+                    max_y = image_height * width / image_width;
                     min_y = -1.0f * max_y;
                 }
                 else
                 {
-                    max_x = image_ratio / viewport_ratio;
+                    max_x = image_width * height / image_height;
                     min_x = -1.0f * max_x;
                 }
             }
                 break;
             case IMAGE_PLANE_FIT_HORIZONTAL:
-                max_y = (static_cast<float>(viewport[2]) / static_cast<float>(viewport[3])) *
-                        (static_cast<float>(it.height) / static_cast<float>(it.width));
+                max_y = image_height * width / image_width;
                 min_y = -1.0f * max_y;
                 break;
             case IMAGE_PLANE_FIT_VERTICAL:
-                max_x = (static_cast<float>(viewport[3]) / static_cast<float>(viewport[2])) *
-                        (static_cast<float>(it.width) / static_cast<float>(it.height));
+                max_x = image_width * height / image_height;
                 min_x = -1.0f * max_x;
+                break;
+            case IMAGE_PLANE_FIT_TO_SIZE:
                 break;
             default:
                 assert("Invalid enum passed in ImagePlaneDef.fit!");
@@ -563,26 +569,21 @@ UsdImagingRefEngine::_DrawImagePlanes()
             max_y *= size_ratio_y;
         }
 
-        const float offset_x = it.offset[0] / it.camera_aperture[0];
-        const float offset_y = it.offset[1] / it.camera_aperture[1];
-
-        min_x += offset_x;
-        max_x += offset_x;
-
-        min_y += offset_y;
-        max_y += offset_y;
-
         GfVec2f lower_left(min_x, min_y);
         GfVec2f lower_right(max_x, min_y);
 
         GfVec2f upper_left(min_x, max_y);
         GfVec2f upper_right(max_x, max_y);
 
+        auto lerp = [] (float v, float lo, float hi) -> float {
+            return lo * (1.0f - v) + hi * v;
+        };
+
         // TODO: we need a global define for "epsilon"
         if (it.rotate < -0.0001f || it.rotate > 0.0001f)
         { // TODO: due to how these coordinates are converted to screen space ones
           // we need to compensate for the from window => screen coordinates transform
-            // we want to match the maya rotation order
+            // we want to match the maya rotation order, so that's why the negate
             const float dsin = sinf(-it.rotate);
             const float dcos = cosf(-it.rotate);
 
@@ -598,9 +599,28 @@ UsdImagingRefEngine::_DrawImagePlanes()
             rotate_corner(upper_right);
         }
 
-        auto lerp = [] (float v, float lo, float hi) -> float {
-            return lo * (1.0f - v) + hi * v;
+        auto convert_back = [&](GfVec2f& corner) {
+            corner[0] = corner[0] / width;
+            corner[1] = corner[1] / height;
         };
+
+        convert_back(lower_left);
+        convert_back(lower_right);
+        convert_back(upper_left);
+        convert_back(upper_right);
+
+        const float offset_x = it.offset[0] / it.camera_aperture[0];
+        const float offset_y = it.offset[1] / it.camera_aperture[1];
+
+        lower_left[0] += offset_x;
+        lower_right[0] += offset_x;
+        upper_left[0] += offset_x;
+        upper_right[0] += offset_x;
+
+        lower_left[1] += offset_y;
+        lower_right[1] += offset_y;
+        upper_left[1] += offset_y;
+        upper_right[1] += offset_y;
 
         // TODO: this could be calculated at texture load time, we could also load up a smaller texture
         // but be careful with that, opengl has a minimum valid texture size (32) !
@@ -629,18 +649,21 @@ UsdImagingRefEngine::_DrawImagePlanes()
         else
             min_uv_y = 1.0f - static_cast<float>(it.coverage[1]) / static_cast<float>(it.height);
 
+        const float depth = 1.0f;
+        const float w = 1.0f;
+
         glBegin(GL_QUADS);
         glTexCoord2f(min_uv_x, max_uv_y);
-        glVertex2f(lower_left[0], lower_left[1]);
+        glVertex4f(lower_left[0], lower_left[1], depth, w);
 
         glTexCoord2f(max_uv_x, max_uv_y);
-        glVertex2f(lower_right[0], lower_right[1]);
+        glVertex4f(lower_right[0], lower_right[1], depth, w);
 
         glTexCoord2f(max_uv_x, min_uv_y);
-        glVertex2f(upper_right[0], upper_right[1]);
+        glVertex4f(upper_right[0], upper_right[1], depth, w);
 
         glTexCoord2f(min_uv_x, min_uv_y);
-        glVertex2f(upper_left[0], upper_left[1]);
+        glVertex4f(upper_left[0], upper_left[1], depth, w);
         glEnd();
     }
 
