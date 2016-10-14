@@ -2688,12 +2688,10 @@ SdfLayer::_OpenLayerAndUnlockRegistry(
         if (not isAnonymous) {
             // Grab modification time.
             struct stat fileInfo;
-            if (stat(readFilePath.c_str(), &fileInfo) != 0) {
-                layer->_FinishInitialization(/* success = */ false);
-                return TfNullPtr;
-            }
-            layer->_assetModificationTime =
-                ArchGetModificationTime(fileInfo);
+            if (stat(readFilePath.c_str(), &fileInfo))
+                layer->_assetModificationTime = ArchGetModificationTime(fileInfo);
+            else
+                layer->_assetModificationTime = std::time(nullptr);
         }
     }
 
