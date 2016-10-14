@@ -21,33 +21,4 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-
-/// \file meshUtil.h
-
-#ifndef PXRUSDMAYA_MESH_UTIL_H
-#define PXRUSDMAYA_MESH_UTIL_H
-
-#include "pxr/base/tf/token.h"
-
-class MFnMesh;
-class MString;
-class UsdGeomMesh;
-
-namespace PxrUsdMayaMeshUtil
-{
-
-    bool getEmitNormals(const MFnMesh &mesh);
-    TfToken setEmitNormals(const UsdGeomMesh &primSchema, MFnMesh &meshFn, TfToken defaultValue);
-    
-    TfToken getSubdivScheme(const MFnMesh &mesh, TfToken defaultValue);
-    TfToken setSubdivScheme(const UsdGeomMesh &primSchema, MFnMesh &meshFn, TfToken defaultValue);
-
-    TfToken getSubdivInterpBoundary(const MFnMesh &mesh,  TfToken defaultValue);
-    TfToken setSubdivInterpBoundary(const UsdGeomMesh &primSchema, MFnMesh &meshFn, TfToken defaultValue);
-
-    TfToken getSubdivFVLinearInterpolation(const MFnMesh& mesh);
-    TfToken setSubdivFVLinearInterpolation(const UsdGeomMesh& primSchema, MFnMesh& meshFn);
-
-} // namespace PxrUsdMayaMeshUtil
-
-#endif // PXRUSDMAYA_MESH_UTIL_H
+#include "pxr/base/tf/pyAnnotatedBoolResult.h"

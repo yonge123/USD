@@ -128,6 +128,8 @@
     (render) \
     (right) \
     (rightHanded) \
+    ((shutterClose, "shutter:close")) \
+    ((shutterOpen, "shutter:open")) \
     (rotate) \
     (size) \
     (stereoRole) \
@@ -280,6 +282,9 @@
 /// \li <b>rightHanded</b> - Possible value for UsdGeomGprim::GetOrientationAttr(), Default value for UsdGeomGprim::GetOrientationAttr()
 /// \li <b>rotate</b> - UsdGeomImagePlane
 /// \li <b>size</b> - UsdGeomCube, UsdGeomImagePlane
+/// \li <b>shutterClose</b> - UsdGeomCamera
+/// \li <b>shutterOpen</b> - UsdGeomCamera
+/// \li <b>size</b> - UsdGeomCube
 /// \li <b>stereoRole</b> - UsdGeomCamera
 /// \li <b>subdivisionScheme</b> - UsdGeomMesh
 /// \li <b>toSize</b> - Possible value for UsdGeomImagePlane::GetFitAttr()

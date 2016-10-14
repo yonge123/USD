@@ -22,32 +22,29 @@
 // language governing permissions and limitations under the Apache License.
 //
 
-/// \file meshUtil.h
+#include "pxr/base/tf/pyAnnotatedBoolResult.h"
+#include <boost/python/def.hpp>
+#include <string>
 
-#ifndef PXRUSDMAYA_MESH_UTIL_H
-#define PXRUSDMAYA_MESH_UTIL_H
+using namespace boost::python;
 
-#include "pxr/base/tf/token.h"
+struct Tf_TestAnnotatedBoolResult : TfPyAnnotatedBoolResult<std::string> {
+    Tf_TestAnnotatedBoolResult(bool value, const std::string& annotation)
+        : TfPyAnnotatedBoolResult<std::string>(value, annotation) { }
+};
 
-class MFnMesh;
-class MString;
-class UsdGeomMesh;
-
-namespace PxrUsdMayaMeshUtil
+static Tf_TestAnnotatedBoolResult
+_TestAnnotatedBoolResult(
+    bool value,
+    const std::string& annotation)
 {
+    return Tf_TestAnnotatedBoolResult(value, annotation);
+}
 
-    bool getEmitNormals(const MFnMesh &mesh);
-    TfToken setEmitNormals(const UsdGeomMesh &primSchema, MFnMesh &meshFn, TfToken defaultValue);
-    
-    TfToken getSubdivScheme(const MFnMesh &mesh, TfToken defaultValue);
-    TfToken setSubdivScheme(const UsdGeomMesh &primSchema, MFnMesh &meshFn, TfToken defaultValue);
+void wrapTf_TestPyAnnotatedBoolResult()
+{
+    def("_TestAnnotatedBoolResult", &_TestAnnotatedBoolResult);
 
-    TfToken getSubdivInterpBoundary(const MFnMesh &mesh,  TfToken defaultValue);
-    TfToken setSubdivInterpBoundary(const UsdGeomMesh &primSchema, MFnMesh &meshFn, TfToken defaultValue);
-
-    TfToken getSubdivFVLinearInterpolation(const MFnMesh& mesh);
-    TfToken setSubdivFVLinearInterpolation(const UsdGeomMesh& primSchema, MFnMesh& meshFn);
-
-} // namespace PxrUsdMayaMeshUtil
-
-#endif // PXRUSDMAYA_MESH_UTIL_H
+    Tf_TestAnnotatedBoolResult::Wrap<Tf_TestAnnotatedBoolResult>(
+        "Tf_TestAnnotatedBoolResult", "annotation");
+}
