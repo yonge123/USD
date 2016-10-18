@@ -88,7 +88,6 @@
 #include "pxr/base/work/utils.h"
 
 #include <boost/bind.hpp>
-#include <boost/foreach.hpp>
 #include <boost/optional.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/utility/in_place_factory.hpp>
@@ -126,8 +125,7 @@ TF_MAKE_STATIC_DATA(PcpVariantFallbackMap, _usdGlobalVariantFallbackMap)
     PcpVariantFallbackMap fallbacks;
 
     PlugPluginPtrVector plugs = PlugRegistry::GetInstance().GetAllPlugins();
-    TF_FOR_ALL(plugIter, plugs) {
-        PlugPluginPtr plug = *plugIter;
+    for (const auto& plug : plugs) {
         JsObject metadata = plug->GetMetadata();
         JsValue dictVal;
         if (TfMapLookup(metadata, "UsdVariantFallbacks", &dictVal)) {
@@ -138,9 +136,9 @@ TF_MAKE_STATIC_DATA(PcpVariantFallbackMap, _usdGlobalVariantFallbackMap)
                 continue;
             }
             JsObject dict = dictVal.Get<JsObject>();
-            TF_FOR_ALL(d, dict) {
-                std::string vset = d->first;
-                if (not d->second.IsArray()) {
+            for (const auto& d : dict) {
+                std::string vset = d.first;
+                if (not d.second.IsArray()) {
                     TF_CODING_ERROR(
                             "%s[UsdVariantFallbacks] value for %s must "
                             "be an arrays.",
@@ -148,7 +146,7 @@ TF_MAKE_STATIC_DATA(PcpVariantFallbackMap, _usdGlobalVariantFallbackMap)
                     continue;
                 }
                 std::vector<std::string> vsels =
-                    d->second.GetArrayOf<std::string>();
+                    d.second.GetArrayOf<std::string>();
                 if (not vsels.empty()) {
                     fallbacks[vset] = vsels;
                 }
@@ -531,8 +529,7 @@ UsdStage::_InstantiateStage(const SdfLayerRefPtr &rootLayer,
     stage->_RegisterPerLayerNotices();
 
     // Publish this stage into all current writable caches.
-    BOOST_FOREACH(UsdStageCache *cache,
-                  UsdStageCacheContext::_GetWritableCaches()) {
+    for (const auto cache : UsdStageCacheContext::_GetWritableCaches()) {
         cache->Insert(stage);
     }
 
@@ -716,6 +713,110 @@ UsdStage::Open(const std::string& filePath,
     return Open(rootLayer, pathResolverContext, load);
 }
 
+class Usd_StageOpenRequest : public UsdStageCacheRequest
+{
+public:
+    Usd_StageOpenRequest(UsdStage::InitialLoadSet load,
+                         SdfLayerHandle const &rootLayer)
+        : _rootLayer(rootLayer)
+        , _initialLoadSet(load) {}
+    Usd_StageOpenRequest(UsdStage::InitialLoadSet load,
+                         SdfLayerHandle const &rootLayer,
+                         SdfLayerHandle const &sessionLayer)
+        : _rootLayer(rootLayer)
+        , _sessionLayer(sessionLayer)
+        , _initialLoadSet(load) {}
+    Usd_StageOpenRequest(UsdStage::InitialLoadSet load,
+                         SdfLayerHandle const &rootLayer,
+                         ArResolverContext const &pathResolverContext)
+        : _rootLayer(rootLayer)
+        , _pathResolverContext(pathResolverContext)
+        , _initialLoadSet(load) {}
+    Usd_StageOpenRequest(UsdStage::InitialLoadSet load,
+                         SdfLayerHandle const &rootLayer,
+                         SdfLayerHandle const &sessionLayer,
+                         ArResolverContext const &pathResolverContext)
+        : _rootLayer(rootLayer)
+        , _sessionLayer(sessionLayer)
+        , _pathResolverContext(pathResolverContext)
+        , _initialLoadSet(load) {}
+
+    virtual ~Usd_StageOpenRequest() {}
+    virtual bool IsSatisfiedBy(UsdStageRefPtr const &stage) const {
+        // Works if other stage's root layer matches and we either don't care
+        // about the session layer or it matches, and we either don't care about
+        // the path resolverContext or it matches.
+        return _rootLayer == stage->GetRootLayer() &&
+            (!_sessionLayer || (*_sessionLayer == stage->GetSessionLayer())) &&
+            (!_pathResolverContext || (*_pathResolverContext ==
+                                       stage->GetPathResolverContext()));
+    }
+    virtual bool IsSatisfiedBy(UsdStageCacheRequest const &other) const {
+        auto req = dynamic_cast<Usd_StageOpenRequest const *>(&other);
+        if (!req)
+            return false;
+
+        // Works if other's root layer matches and we either don't care about
+        // the session layer or it matches, and we either don't care about the
+        // path resolverContext or it matches.
+        return _rootLayer == req->_rootLayer &&
+            (!_sessionLayer || (_sessionLayer == req->_sessionLayer)) &&
+            (!_pathResolverContext || (_pathResolverContext ==
+                                       req->_pathResolverContext));
+    }
+    virtual UsdStageRefPtr Manufacture() {
+        return UsdStage::_InstantiateStage(
+            SdfLayerRefPtr(_rootLayer),
+            _sessionLayer ? SdfLayerRefPtr(*_sessionLayer) :
+            _CreateAnonymousSessionLayer(_rootLayer),
+            _pathResolverContext ? *_pathResolverContext :
+            _CreatePathResolverContext(_rootLayer),
+            _initialLoadSet);
+    }
+
+private:
+    SdfLayerHandle _rootLayer;
+    boost::optional<SdfLayerHandle> _sessionLayer;
+    boost::optional<ArResolverContext> _pathResolverContext;
+    UsdStage::InitialLoadSet _initialLoadSet;
+};
+
+/* static */
+template <class... Args>
+UsdStageRefPtr
+UsdStage::_OpenImpl(InitialLoadSet load, Args const &... args)
+{
+    // Try to find a matching stage in read-only caches.
+    for (const UsdStageCache *cache:
+             UsdStageCacheContext::_GetReadableCaches()) {
+        if (UsdStageRefPtr stage = cache->FindOneMatching(args...))
+            return stage;
+    }
+
+    // If none found, request the stage in all the writable caches.  If we
+    // manufacture a stage, we'll publish it to all the writable caches, so
+    // subsequent requests will get the same stage out.
+    UsdStageRefPtr stage;
+    auto writableCaches = UsdStageCacheContext::_GetWritableCaches();
+    if (writableCaches.empty()) {
+        stage = Usd_StageOpenRequest(load, args...).Manufacture();
+    }
+    else {
+        for (UsdStageCache *cache: writableCaches) {
+            auto r = cache->RequestStage(Usd_StageOpenRequest(load, args...));
+            if (!stage)
+                stage = r.first;
+            if (r.second) {
+                // We manufactured the stage -- we published it to all the other
+                // caches too, so nothing left to do.
+                break;
+            }
+        }
+    }
+    TF_VERIFY(stage);
+    return stage;
+}
+
 /* static */
 UsdStageRefPtr
 UsdStage::Open(const SdfLayerHandle& rootLayer, InitialLoadSet load)
@@ -730,19 +831,7 @@ UsdStage::Open(const SdfLayerHandle& rootLayer, InitialLoadSet load)
              rootLayer->GetIdentifier().c_str(),
              TfStringify(load).c_str());
 
-    // Try to find a matching stage in any caches.
-    BOOST_FOREACH(const UsdStageCache *cache,
-                  UsdStageCacheContext::_GetReadableCaches()) {
-        if (UsdStageRefPtr stage = cache->FindOneMatching(rootLayer))
-            return stage;
-    }
-
-    // No cached stages.  Make a new stage, and populate caches with it.
-    return _InstantiateStage(
-        rootLayer,
-        _CreateAnonymousSessionLayer(rootLayer),
-        _CreatePathResolverContext(rootLayer),
-        load);
+    return _OpenImpl(load, rootLayer);
 }
 
 /* static */
@@ -762,21 +851,7 @@ UsdStage::Open(const SdfLayerHandle& rootLayer,
              sessionLayer ? sessionLayer->GetIdentifier().c_str() : "<null>",
              TfStringify(load).c_str());
 
-    // Try to find a matching stage in any caches.
-    BOOST_FOREACH(const UsdStageCache *cache,
-                  UsdStageCacheContext::_GetReadableCaches()) {
-        if (UsdStageRefPtr stage =
-            cache->FindOneMatching(rootLayer, sessionLayer)) {
-            return stage;
-        }
-    }
-
-    // No cached stages.  Make a new stage, and populate caches with it.
-    return _InstantiateStage(
-        rootLayer,
-        sessionLayer,
-        _CreatePathResolverContext(rootLayer),
-        load);
+    return _OpenImpl(load, rootLayer, sessionLayer);
 }
 
 /* static */
@@ -797,21 +872,7 @@ UsdStage::Open(const SdfLayerHandle& rootLayer,
              pathResolverContext.GetDebugString().c_str(), 
              TfStringify(load).c_str());
 
-    // Try to find a matching stage in any caches.
-    BOOST_FOREACH(const UsdStageCache *cache,
-                  UsdStageCacheContext::_GetReadableCaches()) {
-        if (UsdStageRefPtr stage =
-            cache->FindOneMatching(rootLayer, pathResolverContext)) {
-            return stage;
-        }
-    }
-
-    // No cached stages.  Make a new stage, and populate caches with it.
-    return _InstantiateStage(
-        rootLayer,
-        _CreateAnonymousSessionLayer(rootLayer),
-        pathResolverContext,
-        load);
+    return _OpenImpl(load, rootLayer, pathResolverContext);
 }
 
 /* static */
@@ -834,21 +895,7 @@ UsdStage::Open(const SdfLayerHandle& rootLayer,
              pathResolverContext.GetDebugString().c_str(),
              TfStringify(load).c_str());
 
-    // Try to find a matching stage in any caches.
-    BOOST_FOREACH(const UsdStageCache *cache,
-                  UsdStageCacheContext::_GetReadableCaches()) {
-        if (UsdStageRefPtr stage = cache->FindOneMatching(
-                rootLayer, sessionLayer, pathResolverContext)) {
-            return stage;
-        }
-    }
-
-    // No cached stages.  Make a new stage, and populate caches with it.
-    return _InstantiateStage(
-        rootLayer,
-        sessionLayer,
-        pathResolverContext,
-        load);
+    return _OpenImpl(load, rootLayer, sessionLayer, pathResolverContext);
 }
 
 SdfPropertySpecHandle
@@ -1696,23 +1743,24 @@ UsdStage::_LoadAndUnload(const SdfPathSet &loadSet,
     // loaded because we need to iterate and will enter an infinite loop if we
     // do not reduce the load set on each iteration. This manifests below in
     // the unloadedOnly=true argument.
-    TF_FOR_ALL(pathIt, loadSet) {
-        if (not _IsValidForLoadUnload(*pathIt))
+    for (const auto& path : loadSet) {
+        if (not _IsValidForLoadUnload(path)) {
             continue;
+        }
 
-        _DiscoverPayloads(*pathIt, &finalLoadSet, true /*unloadedOnly*/);
-        _DiscoverAncestorPayloads(*pathIt, &finalLoadSet,
-                                  true /*unloadedOnly*/);
+        _DiscoverPayloads(path, &finalLoadSet, true /*unloadedOnly*/);
+        _DiscoverAncestorPayloads(path, &finalLoadSet, true /*unloadedOnly*/);
     }
 
     // Recursively populate the unload set.
-    TF_FOR_ALL(pathIt, unloadSet) {
-        if (not _IsValidForLoadUnload(*pathIt))
+    for (const auto& path : unloadSet) {
+        if (not _IsValidForLoadUnload(path)) {
             continue;
+        }
 
         // PERFORMANCE: This should exclude any paths in the load set,
         // to avoid unloading and then reloading the same path.
-        _DiscoverPayloads(*pathIt, &finalUnloadSet);
+        _DiscoverPayloads(path, &finalUnloadSet);
     }
 
     // If we aren't changing the load set, terminate recursion.
@@ -1725,21 +1773,21 @@ UsdStage::_LoadAndUnload(const SdfPathSet &loadSet,
     if (TfDebug::IsEnabled(USD_PAYLOADS)) {
         TF_DEBUG(USD_PAYLOADS).Msg("PAYLOAD: Load/Unload payload sets\n"
                                    "  Include set:\n");
-        TF_FOR_ALL(pathIt, loadSet) {
-            TF_DEBUG(USD_PAYLOADS).Msg("\t<%s>\n", pathIt->GetString().c_str());
+        for (const auto& path : loadSet) {
+            TF_DEBUG(USD_PAYLOADS).Msg("\t<%s>\n", path.GetString().c_str());
         }
         TF_DEBUG(USD_PAYLOADS).Msg("  Final Include set:\n");
-        TF_FOR_ALL(pathIt, finalLoadSet) {
-            TF_DEBUG(USD_PAYLOADS).Msg("\t<%s>\n", pathIt->GetString().c_str());
+        for (const auto& path : finalLoadSet) {
+            TF_DEBUG(USD_PAYLOADS).Msg("\t<%s>\n", path.GetString().c_str());
         }
 
         TF_DEBUG(USD_PAYLOADS).Msg("  Exclude set:\n");
-        TF_FOR_ALL(pathIt, unloadSet) {
-            TF_DEBUG(USD_PAYLOADS).Msg("\t<%s>\n", pathIt->GetString().c_str());
+        for (const auto& path : unloadSet) {
+            TF_DEBUG(USD_PAYLOADS).Msg("\t<%s>\n", path.GetString().c_str());
         }
         TF_DEBUG(USD_PAYLOADS).Msg("  Final Exclude set:\n");
-        TF_FOR_ALL(pathIt, finalUnloadSet) {
-            TF_DEBUG(USD_PAYLOADS).Msg("\t<%s>\n", pathIt->GetString().c_str());
+        for (const auto& path : finalUnloadSet) {
+            TF_DEBUG(USD_PAYLOADS).Msg("\t<%s>\n", path.GetString().c_str());
         }
     }
 
@@ -1776,7 +1824,7 @@ SdfPathSet
 UsdStage::GetLoadSet()
 {
     SdfPathSet loadSet;
-    BOOST_FOREACH(const SdfPath& primIndexPath, _cache->GetIncludedPayloads()) {
+    for (const auto& primIndexPath : _cache->GetIncludedPayloads()) {
         const SdfPath primPath = _GetPrimPathUsingPrimIndexAtPath(primIndexPath);
         if (TF_VERIFY(not primPath.IsEmpty(), "Unable to get prim path using "
             "prim index at path <%s>.", primIndexPath.GetText())) {
@@ -1808,7 +1856,7 @@ UsdStage::GetMasters() const
     std::sort(masterPaths.begin(), masterPaths.end());
 
     vector<UsdPrim> masterPrims;
-    BOOST_FOREACH(const SdfPath& path, masterPaths) {
+    for (const auto& path : masterPaths) {
         UsdPrim p = GetPrimAtPath(path);
         if (TF_VERIFY(p)) {
             masterPrims.push_back(p);
@@ -1859,7 +1907,7 @@ UsdStage::_GetPrimPathUsingPrimIndexAtPath(const SdfPath& primIndexPath) const
             _instanceCache->GetPrimsInMastersUsingPrimIndexAtPath(
                 primIndexPath);
 
-        BOOST_FOREACH(const SdfPath& pathInMaster, mastersUsingPrimIndex) {
+        for (const auto& pathInMaster : mastersUsingPrimIndex) {
             // If this path is a root prim path, it must be the path of a
             // master prim. This function wants to ignore master prims,
             // since they appear to have no prim index to the outside
@@ -1990,15 +2038,17 @@ UsdStage::_ComposeChildren(Usd_PrimDataPtr prim, bool recurse)
                                       prim->GetPath().GetText());
         SdfPath parentPath = prim->GetPath();
         Usd_PrimDataPtr head = NULL, prev = NULL, cur = NULL;
-        TF_FOR_ALL(i, nameOrder) {
-            cur = _InstantiatePrim(parentPath.AppendChild(*i));
+        for (const auto& child : nameOrder) {
+            cur = _InstantiatePrim(parentPath.AppendChild(child));
             if (recurse) {
                 _ComposeChildSubtree(cur, prim);
             }
-            if (not prev)
+            if (not prev) {
                 head = cur;
-            else
+            }
+            else {
                 prev->_SetSiblingLink(cur);
+            }
             prev = cur;
         }
         prim->_firstChild = head;
@@ -2152,13 +2202,12 @@ UsdStage::_ReportErrors(const PcpErrorVector &errors,
     // Report any errors.
     if (not errors.empty() or not otherErrors.empty()) {
         std::string message = context + ":\n";
-        BOOST_FOREACH(const PcpErrorBasePtr &err, errors) {
-            message += "    " +
-                TfStringReplace(err->ToString(), "\n", "\n    ") + '\n';
+        for (const auto& err : errors) {
+            message += "    " + TfStringReplace(err->ToString(), "\n", "\n    ") 
+                       + '\n';
         }
-        BOOST_FOREACH(const std::string &str, otherErrors) {
-            message += "    " +
-                TfStringReplace(str, "\n", "\n    ") + '\n';
+        for (const auto& err : otherErrors) {
+            message += "    " + TfStringReplace(err, "\n", "\n    ") + '\n';
         }
         TF_WARN(message);
     }
@@ -2305,7 +2354,7 @@ UsdStage::_DestroyPrimsInParallel(const vector<SdfPath>& paths)
     _primMapMutex = boost::in_place();
     _dispatcher = boost::in_place();
 
-    BOOST_FOREACH(const SdfPath& path, paths) {
+    for (const auto& path : paths) {
         Usd_PrimDataPtr prim = _GetPrimDataAtPath(path);
         _dispatcher->Run(&UsdStage::_DestroyPrim, this, prim);
     }
@@ -2767,7 +2816,7 @@ _AddDependentPaths(const SdfLayerHandle &layer, const SdfPath &path,
     const PcpLayerStackPtrVector& layerStacks =
         cache.FindAllLayerStacksUsingLayer(layer);
 
-    BOOST_FOREACH(const PcpLayerStackPtr &layerStack, layerStacks) {
+    for (const auto& layerStack : layerStacks) {
         // If this path is in the cache's LayerStack, we always add it.
         if (layerStack == cache.GetLayerStack())
             output->insert(path.StripAllVariantSelections());
@@ -2822,20 +2871,22 @@ UsdStage::_HandleLayersDidChange(
 
     // Add dependent paths for any PrimSpecs whose fields have changed that may
     // affect cached prim information.
-    TF_FOR_ALL(itr, n.GetChangeListMap()) {
-
+    for(const auto& layerAndChangelist : n.GetChangeListMap()) {
         // If this layer does not pertain to us, skip.
-        if (_cache->FindAllLayerStacksUsingLayer(itr->first).empty())
+        if (_cache->FindAllLayerStacksUsingLayer(
+                layerAndChangelist.first).empty()) {
             continue;
+        }
 
-        TF_FOR_ALL(entryIter, itr->second.GetEntryList()) {
+        for (const auto& entryList : layerAndChangelist.second.GetEntryList()) {
 
-            const SdfPath &path = entryIter->first;
-            const SdfChangeList::Entry &entry = entryIter->second;
+            const SdfPath &path = entryList.first;
+            const SdfChangeList::Entry &entry = entryList.second;
 
             TF_DEBUG(USD_CHANGES).Msg(
                 "<%s> in @%s@ changed.\n",
-                path.GetText(), itr->first->GetIdentifier().c_str());
+                path.GetText(), 
+                layerAndChangelist.first->GetIdentifier().c_str());
 
             bool willRecompose = false;
             if (path == SdfPath::AbsoluteRootPath() or
@@ -2844,20 +2895,21 @@ UsdStage::_HandleLayersDidChange(
                 if (entry.flags.didReorderChildren) {
                     willRecompose = true;
                 } else {
-                    TF_FOR_ALL(infoIter, entry.infoChanged) {
-                        if ((infoIter->first == SdfFieldKeys->Active) or
-                            (infoIter->first == SdfFieldKeys->Kind) or
-                            (infoIter->first == SdfFieldKeys->TypeName) or
-                            (infoIter->first == SdfFieldKeys->Specifier) or
+                    for (const auto& info : entry.infoChanged) {
+                        const auto infoKey = info.first;
+                        if ((infoKey == SdfFieldKeys->Active) or
+                            (infoKey == SdfFieldKeys->Kind) or
+                            (infoKey == SdfFieldKeys->TypeName) or
+                            (infoKey == SdfFieldKeys->Specifier) or
                             
                             // XXX: Could be more specific when recomposing due
                             //      to clip changes. E.g., only update the clip
                             //      resolver and bits on each prim.
-                            UsdIsClipRelatedField(infoIter->first)) {
+                            UsdIsClipRelatedField(infoKey)) {
 
                             TF_DEBUG(USD_CHANGES).Msg(
                                 "Changed field: %s\n",
-                                infoIter->first.GetText());
+                                infoKey.GetText());
 
                             willRecompose = true;
                             break;
@@ -2866,8 +2918,8 @@ UsdStage::_HandleLayersDidChange(
                 }
 
                 if (willRecompose) {
-                    _AddDependentPaths(
-                        itr->first, path, *_cache, &pathsToRecompose);
+                    _AddDependentPaths(layerAndChangelist.first, path, 
+                                       *_cache, &pathsToRecompose);
                 }
             }
 
@@ -2875,8 +2927,8 @@ UsdStage::_HandleLayersDidChange(
             // scene paths separately so we can notify clients about the
             // changes.
             if (not willRecompose) {
-                _AddDependentPaths(
-                    itr->first, path, *_cache, &otherChangedPaths);
+                _AddDependentPaths(layerAndChangelist.first, path, 
+                                   *_cache, &otherChangedPaths);
             }
         }
     }
@@ -2971,25 +3023,25 @@ void UsdStage::_Recompose(const PcpChanges &changes,
     if (not cacheChanges.empty()) {
         const PcpCacheChanges &ourChanges = cacheChanges.begin()->second;
 
-        TF_FOR_ALL(itr, ourChanges.didChangeSignificantly) {
+        for (const auto& path : ourChanges.didChangeSignificantly) {
             // Translate the real path from Pcp into a stage-relative path
-            pathsToRecompose->insert(*itr);
+            pathsToRecompose->insert(path);
             TF_DEBUG(USD_CHANGES).Msg("Did Change Significantly: %s\n",
-                                          itr->GetText());
+                                      path.GetText());
         }
 
-        TF_FOR_ALL(itr, ourChanges.didChangeSpecs) {
+        for (const auto& path : ourChanges.didChangeSpecs) {
             // Translate the real path from Pcp into a stage-relative path
-            pathsToRecompose->insert(*itr);
+            pathsToRecompose->insert(path);
             TF_DEBUG(USD_CHANGES).Msg("Did Change Spec: %s\n",
-                                          itr->GetText());
+                                      path.GetText());
         }
 
-        TF_FOR_ALL(itr, ourChanges.didChangePrims) {
+        for (const auto& path : ourChanges.didChangePrims) {
             // Translate the real path from Pcp into a stage-relative path
-            pathsToRecompose->insert(*itr);
+            pathsToRecompose->insert(path);
             TF_DEBUG(USD_CHANGES).Msg("Did Change Prim: %s\n",
-                                          itr->GetText());
+                                      path.GetText());
         }
 
         if (pathsToRecompose->empty()) {
@@ -3008,8 +3060,8 @@ void UsdStage::_Recompose(const PcpChanges &changes,
     // of recomposition in the (likely) case that clip data hasn't changed
     // and the underlying clip layer can be reused.
     Usd_ClipCache::Lifeboat clipLifeboat;
-    TF_FOR_ALL(it, pathVecToRecompose) {
-        _clipCache->InvalidateClipsForPrim(*it, &clipLifeboat);
+    for (const auto& path : pathVecToRecompose) {
+        _clipCache->InvalidateClipsForPrim(path, &clipLifeboat);
     }
 
     typedef TfHashMap<SdfPath, SdfPath, SdfPath::Hash> _MasterToPrimIndexMap;
@@ -3020,7 +3072,7 @@ void UsdStage::_Recompose(const PcpChanges &changes,
         // stuff that's not active.
         SdfPathVector primPathsToRecompose;
         primPathsToRecompose.reserve(pathVecToRecompose.size());
-        BOOST_FOREACH(const SdfPath &path, pathVecToRecompose) {
+        for (const SdfPath& path : pathVecToRecompose) {
             if (not path.IsAbsoluteRootOrPrimPath() or
                 path.ContainsPrimVariantSelection()) {
                 continue;
@@ -3057,10 +3109,9 @@ void UsdStage::_Recompose(const PcpChanges &changes,
         // Determine what instance master prims on this stage need to
         // be recomposed due to instance prim index changes.
         SdfPathVector masterPrimsToRecompose;
-        BOOST_FOREACH(const SdfPath &path, primPathsToRecompose) {
-            BOOST_FOREACH(
-                const SdfPath& masterPath, 
-                _instanceCache->GetPrimsInMastersUsingPrimIndexAtPath(path)) {
+        for (const SdfPath& path : primPathsToRecompose) {
+            for (const SdfPath& masterPath :
+                 _instanceCache->GetPrimsInMastersUsingPrimIndexAtPath(path)) {
                 masterPrimsToRecompose.push_back(masterPath);
                 masterToPrimIndexMap[masterPath] = path;
             }
@@ -3114,7 +3165,7 @@ void UsdStage::_Recompose(const PcpChanges &changes,
 
         SdfPathVector primIndexPathsForSubtrees;
         primIndexPathsForSubtrees.reserve(subtreesToRecompose.size());
-        BOOST_FOREACH(const Usd_PrimDataPtr prim, subtreesToRecompose) {
+        for (const auto& prim : subtreesToRecompose) {
             primIndexPathsForSubtrees.push_back(TfMapLookupByValue(
                 masterToPrimIndexMap, prim->GetPath(), prim->GetPath()));
         }
@@ -3789,8 +3840,9 @@ static void _ApplyLayerOffset(Storage storage,
         const SdfTimeSampleMap &samples =
             _UncheckedGet<SdfTimeSampleMap>(storage);
         SdfTimeSampleMap transformed;
-        TF_FOR_ALL(i, samples)
-            transformed[offset * i->first] = i->second;
+        for (const auto& sample : samples) {
+            transformed[offset * sample.first] = sample.second;
+        }
         _Set(storage, transformed);
     }
 }
@@ -4602,7 +4654,7 @@ UsdStage::_ListMetadataFields(const UsdObject &obj, bool useFallbacks) const
         if (specType == SdfSpecTypeUnknown)
             specType = layer->GetSpecType(specId);
 
-        BOOST_FOREACH(const TfToken &fieldName, layer->ListFields(specId)) {
+        for (const auto& fieldName : layer->ListFields(specId)) {
             if (not _IsPrivateFieldKey(fieldName))
                 result.push_back(fieldName);
         }
@@ -4612,7 +4664,7 @@ UsdStage::_ListMetadataFields(const UsdObject &obj, bool useFallbacks) const
     const SdfSchema::SpecDefinition* specDef = NULL;
     specDef = SdfSchema::GetInstance().GetSpecDefinition(specType);
     if (specDef) {
-        BOOST_FOREACH(const TfToken &fieldName, specDef->GetRequiredFields()) {
+        for (const auto& fieldName : specDef->GetRequiredFields()) {
             if (not _IsPrivateFieldKey(fieldName))
                 result.push_back(fieldName);
         }
@@ -4621,7 +4673,7 @@ UsdStage::_ListMetadataFields(const UsdObject &obj, bool useFallbacks) const
     // If this is a builtin property, add any defined metadata fields.
     // XXX: this should handle prim definitions too.
     if (useFallbacks and propDef) {
-        BOOST_FOREACH(const TfToken &fieldName, propDef->ListFields()) {
+        for (const auto& fieldName : propDef->ListFields()) {
             if (not _IsPrivateFieldKey(fieldName))
                 result.push_back(fieldName);
         }
@@ -4644,7 +4696,7 @@ UsdStage::_GetAllMetadata(const UsdObject &obj,
     UsdMetadataValueMap &result = *resultMap;
 
     TfTokenVector fieldNames = _ListMetadataFields(obj, useFallbacks);
-    BOOST_FOREACH(const TfToken &fieldName, fieldNames) {
+    for (const auto& fieldName : fieldNames) {
         VtValue val;
         StrongestValueComposer<VtValue *> composer(&val);
         _GetMetadataImpl(obj, fieldName, TfToken(), useFallbacks, &composer);
@@ -5304,8 +5356,8 @@ UsdStage::_GetValueFromResolveInfoImpl(const Usd_ResolveInfo &info,
         const std::vector<Usd_ClipCache::Clips>& clipsAffectingPrim =
             _clipCache->GetClipsForPrim(prim.GetPath());
 
-        TF_FOR_ALL(clipsIt, clipsAffectingPrim) {
-            const Usd_ClipRefPtrVector& clips = clipsIt->valueClips;
+        for (const auto& clipAffectingPrim : clipsAffectingPrim) {
+            const Usd_ClipRefPtrVector& clips = clipAffectingPrim.valueClips;
             for (size_t i = 0, numClips = clips.size(); i < numClips; ++i) {
                 // Note that we do not apply layer offsets to the time.
                 // Because clip metadata may be authored in different 
@@ -5392,12 +5444,12 @@ UsdStage::_GetTimeSampleMap(const UsdAttribute &attr,
         // for values on times where we know there are authored time samples.
         Usd_NullInterpolator nullInterpolator;
 
-        TF_FOR_ALL(t, timeSamples) {
+        for (const auto& timeSample : timeSamples) {
             VtValue value;
-            if (_GetValueImpl(*t, attr, &nullInterpolator, &value)) {
-                (*out)[*t] = value;
+            if (_GetValueImpl(timeSample, attr, &nullInterpolator, &value)) {
+                (*out)[timeSample] = value;
             } else {
-                (*out)[*t] = VtValue(SdfValueBlock());
+                (*out)[timeSample] = VtValue(SdfValueBlock());
             }
         }
         return true;
@@ -5482,9 +5534,8 @@ UsdStage::_GetTimeSamplesInIntervalFromResolveInfo(
 
         // Loop through all the clips that apply to this node and
         // combine all the time samples that are provided.
-        TF_FOR_ALL(clipsIt, clipsAffectingPrim) {
-            TF_FOR_ALL(clipIt, clipsIt->valueClips) {
-                const Usd_ClipRefPtr& clip = *clipIt;
+        for (const auto& clipAffectingPrim : clipsAffectingPrim) {
+            for (const auto& clip : clipAffectingPrim.valueClips) {
                 if (not _ClipAppliesToLayerStackSite(
                         clip, info.layerStack, info.primPathInLayerStack)) {
                     continue;
@@ -5514,14 +5565,12 @@ UsdStage::_GetTimeSamplesInIntervalFromResolveInfo(
                 // See _GetBracketingTimeSamplesFromResolveInfo for more
                 // details.
                 if (interval.Contains(clipInterval.GetMin())
-                    and clipInterval.GetMin() 
-                        != -std::numeric_limits<double>::max()) {
+                    and clipInterval.GetMin() != Usd_ClipTimesEarliest) {
                     timesFromAllClips.push_back(clip->startTime);
                 }
 
                 if (interval.Contains(clipInterval.GetMax())
-                    and clipInterval.GetMax() 
-                        != std::numeric_limits<double>::max()){
+                    and clipInterval.GetMax() != Usd_ClipTimesLatest){
                     timesFromAllClips.push_back(clip->endTime);
                 }
             }
@@ -5685,10 +5734,8 @@ UsdStage::_GetBracketingTimeSamplesFromResolveInfo(const Usd_ResolveInfo &info,
         const std::vector<Usd_ClipCache::Clips>& clipsAffectingPrim =
             _clipCache->GetClipsForPrim(prim.GetPath());
 
-        TF_FOR_ALL(clipsIt, clipsAffectingPrim) {
-            TF_FOR_ALL(clipIt, clipsIt->valueClips) {
-                const Usd_ClipRefPtr& clip = *clipIt;
-
+        for (const auto& clipAffectingPrim : clipsAffectingPrim) {
+            for (const auto& clip : clipAffectingPrim.valueClips) {
                 if (not _ClipAppliesToLayerStackSite(
                         clip, info.layerStack, info.primPathInLayerStack)
                     or desiredTime < clip->startTime
@@ -5728,13 +5775,13 @@ UsdStage::_GetBracketingTimeSamplesFromResolveInfo(const Usd_ResolveInfo &info,
                 }
 
                 if (not foundLower and 
-                    clip->startTime != -std::numeric_limits<double>::max()) {
+                    clip->startTime != Usd_ClipTimesEarliest) {
                     *lower = clip->startTime;
                     foundLower = true;
                 }
 
                 if (not foundUpper and
-                    clip->endTime != std::numeric_limits<double>::max()) {
+                    clip->endTime != Usd_ClipTimesLatest) {
                     *upper = clip->endTime;
                     foundUpper = true;
                 }
@@ -5786,8 +5833,8 @@ _ValueFromClipsMightBeTimeVarying(const Usd_ClipRefPtr &firstClipWithSamples,
     // clip that affects this attribute) and it has more than one time
     // sample, then it might be time varying. If it only has one sample,
     // its value must be constant over all time.
-    if (firstClipWithSamples->startTime == -std::numeric_limits<double>::max()
-      and firstClipWithSamples->endTime == std::numeric_limits<double>::max()) {
+    if (firstClipWithSamples->startTime == Usd_ClipTimesEarliest
+        and firstClipWithSamples->endTime == Usd_ClipTimesLatest) {
         return firstClipWithSamples->GetNumTimeSamplesForPath(attrSpecId) > 1;
     }
 
@@ -5837,9 +5884,8 @@ UsdStage::_ValueMightBeTimeVaryingFromResolveInfo(const Usd_ResolveInfo &info,
 
         const std::vector<Usd_ClipCache::Clips>& clipsAffectingPrim =
             _clipCache->GetClipsForPrim(attr.GetPrim().GetPath());
-        TF_FOR_ALL(clipsIt, clipsAffectingPrim) {
-            TF_FOR_ALL(clipIt, clipsIt->valueClips) {
-                const Usd_ClipRefPtr& clip = *clipIt;
+        for (const auto& clipAffectingPrim : clipsAffectingPrim) {
+            for (const auto& clip : clipAffectingPrim.valueClips) {
                 if (_ClipAppliesToLayerStackSite(
                         clip, info.layerStack, info.primPathInLayerStack)
                     and _HasTimeSamples(clip, specId)) {

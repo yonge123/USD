@@ -24,7 +24,6 @@
 #include "pxr/usd/usdUtils/stitchClips.h"
 #include "pxr/usd/usdUtils/stitch.h"
 
-#include "pxr/base/vt/value.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/sdf/layer.h"
 #include "pxr/usd/sdf/spec.h"
@@ -41,6 +40,8 @@
 #include "pxr/base/tf/pyLock.h"
 #include "pxr/base/tf/fileUtils.h"
 #include "pxr/base/tf/nullPtr.h"
+#include "pxr/base/arch/fileSystem.h"
+#include "pxr/base/vt/value.h"
 #include "pxr/base/gf/vec2d.h"
 #include "pxr/base/work/loops.h"
 
@@ -62,6 +63,9 @@ namespace {
     // constants
     // ------------------------------------------------------------------------
     constexpr double TIME_MAX = std::numeric_limits<double>::max();
+
+    // We insert the topology layer as the strongest
+    constexpr size_t TOPOLOGY_SUBLAYER_STRENGTH = 0;
 
     // keys for indexing into the clip info
     // XXX: This code is shared in usd/clip.h
@@ -391,29 +395,18 @@ namespace {
     }
 
     void
-    _StitchClipTopologyLayerReference(const SdfLayerRefPtr& resultLayer,
-                                      const SdfPath& rootPath,
-                                      const std::string& topIdentifier)
+    _StitchClipsTopologySubLayerPath(const SdfLayerRefPtr& resultLayer,
+                                     const std::string& topIdentifier)
     {
-        if (not resultLayer->GetPrimAtPath(rootPath)) {
-            TF_CODING_ERROR("Invalid prim path referenced in result layer");
-            return;
+        auto sublayers = resultLayer->GetSubLayerPaths();
+
+        // We only want to add the topology layer if it hasn't been
+        // previously sublayered into this result layer.
+        if (std::find(sublayers.begin(), sublayers.end(), topIdentifier) 
+            == sublayers.end()) {
+            resultLayer->InsertSubLayerPath(topIdentifier, 
+                                            TOPOLOGY_SUBLAYER_STRENGTH);
         }
-
-        // fetch any available references at the prim
-        SdfReferencesProxy currentReferenceVec 
-            = resultLayer
-                ->GetPrimAtPath(rootPath)
-                ->GetReferenceList();
-
-        // insert the new reference to the topology file
-        currentReferenceVec
-            .Add(SdfReference(topIdentifier, rootPath));
-
-        // make the ref owning prim a def
-        resultLayer
-            ->GetPrimAtPath(rootPath)
-            ->SetSpecifier(SdfSpecifierDef);
     }
 
     // Add the clipAssetPath metadata at the specified \p stitchPath
@@ -580,37 +573,6 @@ namespace {
             delimiter+topologyFileBaseName);
     }
 
-    std::tuple<SdfLayerRefPtr, bool>
-    _CreateTopologyLayer(const SdfLayerHandle& resultLayer,
-                         const bool reuseExistingTopology)
-    {
-        const auto topologyName 
-            = _CreateTopologyName(resultLayer->GetIdentifier());
-
-        bool topologyWasGenerated = false;
-
-        SdfLayerRefPtr topologyLayer = SdfLayer::FindOrOpen(topologyName);
-
-        if (not _LayerIsWritable(topologyLayer)) {
-            return std::make_tuple(TfNullPtr, topologyWasGenerated); 
-        }
-
-        if (not reuseExistingTopology) {
-            topologyWasGenerated = true;
-            if (topologyLayer) {
-                topologyLayer->Clear();
-            } else {
-                topologyLayer = SdfLayer::CreateNew(topologyName);
-            }
-
-        } else if (not topologyLayer) {
-            topologyWasGenerated = true;
-            topologyLayer = SdfLayer::CreateNew(topologyName); 
-        }
-
-        return std::make_tuple(topologyLayer, topologyWasGenerated);
-    }
-
     struct _StitchLayersResult {
         SdfPath clipPath;
         SdfLayerRefPtr topology; 
@@ -709,7 +671,8 @@ namespace {
                 = _GetRelativePathIfPossible(topologyLayer->GetIdentifier(),
                                              topologyLayer->GetRealPath(),
                                              resultLayer->GetRealPath());
-            _StitchClipTopologyLayerReference(resultLayer, rootPath, topologyId); 
+
+            _StitchClipsTopologySubLayerPath(resultLayer, topologyId); 
         }
     }
 
@@ -717,12 +680,14 @@ namespace {
     _UsdUtilsStitchClipsTopologyImpl(const SdfLayerRefPtr& topologyLayer,
                                      const SdfLayerRefPtrVector& clipLayers)
     {
+        TfErrorMark errorMark;
+
         // Note that we don't specify a unique clipPath since we're only
         // interested in aggregating topology. 
         auto result  = _AggregateDataFromClips(topologyLayer, clipLayers);
         UsdUtilsStitchLayers(topologyLayer, result.topology, true);
-        topologyLayer->Save();
-        return true;
+
+        return errorMark.IsClean();
     }
 
     bool 
@@ -733,13 +698,12 @@ namespace {
                              const double startTimeCode,
                              const double endTimeCode)
     {
-        _StitchLayers(resultLayer, topologyLayer, clipLayers, clipPath); 
+        TfErrorMark errorMark;
+
+        _StitchLayers(resultLayer, topologyLayer, clipLayers, clipPath);
         _SetTimeCodeRange(resultLayer, clipPath, startTimeCode, endTimeCode);
 
-        topologyLayer->Save();
-        resultLayer->Save();
-
-        return true;
+        return errorMark.IsClean();
     }
 
     bool 
@@ -776,6 +740,8 @@ namespace {
                     const _ClipFileVector& clipLayerFiles,
                     const SdfPath& clipPath)
     {
+        TfErrorMark errorMark;
+
         // Pre-allocate our destination vector for the clip layer handles
         clipLayers->resize(clipLayerFiles.size());
 
@@ -788,7 +754,8 @@ namespace {
                 }
             });
 
-        return _ClipLayersAreValid(*clipLayers, clipLayerFiles, clipPath);
+        return errorMark.IsClean() 
+               && _ClipLayersAreValid(*clipLayers, clipLayerFiles, clipPath);
     }
 }
 
@@ -804,54 +771,79 @@ UsdUtilsStitchClipsTopology(const SdfLayerHandle& topologyLayer,
     // will need to acquire the GIL, we need to explicitly release it.
     TF_PY_ALLOW_THREADS_IN_SCOPE();
 
-    if (not _LayerIsWritable(topologyLayer)) {
+    // Prepare topology layer for editing
+    if (!_LayerIsWritable(topologyLayer)) {
         return false;
+    } else {
+        topologyLayer->Clear();
     }
 
+    // Open all clip layers and validate clipPath
     SdfLayerRefPtrVector clipLayers;
     const bool clipLayersAreValid = _OpenClipLayers(&clipLayers, 
         clipLayerFiles, SdfPath::AbsoluteRootPath());
 
-    if (not clipLayersAreValid) {
+    if (!clipLayersAreValid
+        || !_UsdUtilsStitchClipsTopologyImpl(topologyLayer, clipLayers)) {
         return false;
     }
 
-    return _UsdUtilsStitchClipsTopologyImpl(topologyLayer, clipLayers);
+    topologyLayer->Save();
+
+    return true;
 }
 
 bool 
 UsdUtilsStitchClips(const SdfLayerHandle& resultLayer, 
                     const _ClipFileVector& clipLayerFiles,
                     const SdfPath& clipPath, 
-                    const bool reuseExistingTopology,
                     const double startTimeCode,
                     const double endTimeCode)
 {
     // XXX: See comment in UsdUtilsStitchClipsTopology above.
     TF_PY_ALLOW_THREADS_IN_SCOPE();
 
-    if (not _LayerIsWritable(resultLayer)) {
+    // Prepare result layer for editing
+    if (!_LayerIsWritable(resultLayer)) {
         return false;
+    } else {
+        resultLayer->Clear();
     }
 
-    SdfLayerRefPtr topologyLayer;
-    bool topologyWasGenerated;
+    // Prepare topology layer for editing, create if necessary
+    bool topologyPreExisting = true;
+    std::string topologyLayerId 
+        = _CreateTopologyName(resultLayer->GetIdentifier());
+    SdfLayerRefPtr topologyLayer = SdfLayer::FindOrOpen(topologyLayerId);
+    if (!topologyLayer) {
+        topologyPreExisting = false;
+        topologyLayer = SdfLayer::CreateNew(topologyLayerId);
+    } 
 
-    std::tie(topologyLayer, topologyWasGenerated) = _CreateTopologyLayer(
-        resultLayer, reuseExistingTopology);
+    if (!_LayerIsWritable(topologyLayer)) {
+        return false;
+    } else {
+        topologyLayer->Clear();
+    }
 
+    // Open all clip layers and validate clipPath
     SdfLayerRefPtrVector clipLayers;
-    const bool clipLayersAreValid = _OpenClipLayers(&clipLayers, 
-        clipLayerFiles, clipPath);
+    const bool clipLayersAreValid 
+        = _OpenClipLayers(&clipLayers, clipLayerFiles, clipPath);
 
-    if (not clipLayersAreValid) {
-        if (topologyWasGenerated) {
+    if (!clipLayersAreValid
+        || !_UsdUtilsStitchClipsImpl(resultLayer, topologyLayer, clipLayers, 
+                                     clipPath, startTimeCode, endTimeCode)) {
+        if (!topologyPreExisting) {
             TfDeleteFile(topologyLayer->GetIdentifier());
         }
 
         return false;
     }
 
-    return _UsdUtilsStitchClipsImpl(resultLayer, topologyLayer, clipLayers, 
-        clipPath, startTimeCode, endTimeCode);
+    // Note that we don't apply edits until all other 
+    // actions have completed. 
+    topologyLayer->Save();
+    resultLayer->Save();
+    return true;
 }
