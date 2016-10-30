@@ -47,6 +47,7 @@
     (bilinear) \
     (boundaries) \
     (bspline) \
+    (camera) \
     (card) \
     (catmullClark) \
     (catmullRom) \
@@ -96,6 +97,7 @@
     (horizontalApertureOffset) \
     (ids) \
     (inactiveIds) \
+    ((infoFilename, "info:filename")) \
     (inherited) \
     (interpolateBoundary) \
     (interpolation) \
@@ -137,10 +139,10 @@
     (render) \
     (right) \
     (rightHanded) \
+    (rotate) \
     (scales) \
     ((shutterClose, "shutter:close")) \
     ((shutterOpen, "shutter:open")) \
-    (rotate) \
     (size) \
     (stereoRole) \
     (subdivisionScheme) \
@@ -209,6 +211,7 @@
 /// \li <b>bilinear</b> - Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->all., Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr()
 /// \li <b>boundaries</b> - Possible value for UsdGeomMesh::GetFaceVaryingLinearInterpolationAttr()
 /// \li <b>bspline</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr()
+/// \li <b>camera</b> - UsdGeomImagePlane
 /// \li <b>card</b> - Possible value for UsdGeomPointInstancer::GetPrototypeDrawModeAttr()
 /// \li <b>catmullClark</b> - Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr(), Default value for UsdGeomMesh::GetSubdivisionSchemeAttr()
 /// \li <b>catmullRom</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr()
@@ -258,6 +261,7 @@
 /// \li <b>horizontalApertureOffset</b> - UsdGeomCamera
 /// \li <b>ids</b> - UsdGeomPointInstancer, UsdGeomPoints
 /// \li <b>inactiveIds</b> - int64listop prim metadata that specifies the PointInstancer ids that should be masked (unrenderable) over all time.
+/// \li <b>infoFilename</b> - UsdGeomImagePlane
 /// \li <b>inherited</b> - Possible value for UsdGeomImageable::GetVisibilityAttr(), Default value for UsdGeomImageable::GetVisibilityAttr()
 /// \li <b>interpolateBoundary</b> - UsdGeomMesh
 /// \li <b>interpolation</b> - UsdGeomPrimvar - How a Primvar interpolates across a primitive; equivalent to RenderMan's \ref Usd_InterpolationVals "class specifier" 
@@ -299,10 +303,11 @@
 /// \li <b>render</b> - Possible value for UsdGeomImageable::GetPurposeAttr()
 /// \li <b>right</b> - Possible value for UsdGeomCamera::GetStereoRoleAttr()
 /// \li <b>rightHanded</b> - Possible value for UsdGeomGprim::GetOrientationAttr(), Default value for UsdGeomGprim::GetOrientationAttr()
+/// \li <b>rotate</b> - UsdGeomImagePlane
 /// \li <b>scales</b> - UsdGeomPointInstancer
 /// \li <b>shutterClose</b> - UsdGeomCamera
 /// \li <b>shutterOpen</b> - UsdGeomCamera
-/// \li <b>size</b> - UsdGeomCube
+/// \li <b>size</b> - UsdGeomCube, UsdGeomImagePlane
 /// \li <b>stereoRole</b> - UsdGeomCamera
 /// \li <b>subdivisionScheme</b> - UsdGeomMesh
 /// \li <b>toSize</b> - Possible value for UsdGeomImagePlane::GetFitAttr()
