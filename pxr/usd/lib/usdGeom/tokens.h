@@ -39,6 +39,7 @@
 #define USDGEOM_TOKENS \
     (all) \
     (alwaysSharp) \
+    (angularVelocities) \
     (axis) \
     (basis) \
     (best) \
@@ -46,7 +47,7 @@
     (bilinear) \
     (boundaries) \
     (bspline) \
-    (camera) \
+    (card) \
     (catmullClark) \
     (catmullRom) \
     (clippingPlanes) \
@@ -85,6 +86,7 @@
     (focusDistance) \
     (frame) \
     (fStop) \
+    (fullGeom) \
     (guide) \
     (height) \
     (hermite) \
@@ -93,11 +95,12 @@
     (horizontalAperture) \
     (horizontalApertureOffset) \
     (ids) \
-    ((infoFilename, "info:filename")) \
+    (inactiveIds) \
     (inherited) \
     (interpolateBoundary) \
     (interpolation) \
     (invisible) \
+    (invisibleIds) \
     (knots) \
     (left) \
     (leftHanded) \
@@ -111,15 +114,21 @@
     (open) \
     (order) \
     (orientation) \
+    (orientations) \
     (orthographic) \
     (periodic) \
     (perspective) \
+    (point) \
     (points) \
     (pointWeights) \
+    (positions) \
     (power) \
     ((primvarsDisplayColor, "primvars:displayColor")) \
     ((primvarsDisplayOpacity, "primvars:displayOpacity")) \
     (projection) \
+    (protoIndices) \
+    (prototypeDrawMode) \
+    (prototypes) \
     (proxy) \
     (proxyPrim) \
     (purpose) \
@@ -128,6 +137,7 @@
     (render) \
     (right) \
     (rightHanded) \
+    (scales) \
     ((shutterClose, "shutter:close")) \
     ((shutterOpen, "shutter:open")) \
     (rotate) \
@@ -191,6 +201,7 @@
 /// The tokens are:
 /// \li <b>all</b> - Possible value for UsdGeomMesh::GetFaceVaryingLinearInterpolationAttr()
 /// \li <b>alwaysSharp</b> - Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->boundaries.
+/// \li <b>angularVelocities</b> - UsdGeomPointInstancer
 /// \li <b>axis</b> - UsdGeomCone, UsdGeomCapsule, UsdGeomCylinder
 /// \li <b>basis</b> - UsdGeomBasisCurves
 /// \li <b>best</b> - Possible value for UsdGeomImagePlane::GetFitAttr(), Default value for UsdGeomImagePlane::GetFitAttr()
@@ -198,7 +209,7 @@
 /// \li <b>bilinear</b> - Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->all., Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr()
 /// \li <b>boundaries</b> - Possible value for UsdGeomMesh::GetFaceVaryingLinearInterpolationAttr()
 /// \li <b>bspline</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr()
-/// \li <b>camera</b> - UsdGeomImagePlane
+/// \li <b>card</b> - Possible value for UsdGeomPointInstancer::GetPrototypeDrawModeAttr()
 /// \li <b>catmullClark</b> - Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr(), Default value for UsdGeomMesh::GetSubdivisionSchemeAttr()
 /// \li <b>catmullRom</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr()
 /// \li <b>clippingPlanes</b> - UsdGeomCamera
@@ -237,6 +248,7 @@
 /// \li <b>focusDistance</b> - UsdGeomCamera
 /// \li <b>frame</b> - UsdGeomImagePlane
 /// \li <b>fStop</b> - UsdGeomCamera
+/// \li <b>fullGeom</b> - Possible value for UsdGeomPointInstancer::GetPrototypeDrawModeAttr(), Default value for UsdGeomPointInstancer::GetPrototypeDrawModeAttr()
 /// \li <b>guide</b> - Possible value for UsdGeomImageable::GetPurposeAttr()
 /// \li <b>height</b> - UsdGeomCone, UsdGeomCapsule, UsdGeomCylinder
 /// \li <b>hermite</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr()
@@ -244,12 +256,13 @@
 /// \li <b>horizontal</b> - Possible value for UsdGeomImagePlane::GetFitAttr()
 /// \li <b>horizontalAperture</b> - UsdGeomCamera
 /// \li <b>horizontalApertureOffset</b> - UsdGeomCamera
-/// \li <b>ids</b> - UsdGeomPoints
-/// \li <b>infoFilename</b> - UsdGeomImagePlane
+/// \li <b>ids</b> - UsdGeomPointInstancer, UsdGeomPoints
+/// \li <b>inactiveIds</b> - int64listop prim metadata that specifies the PointInstancer ids that should be masked (unrenderable) over all time.
 /// \li <b>inherited</b> - Possible value for UsdGeomImageable::GetVisibilityAttr(), Default value for UsdGeomImageable::GetVisibilityAttr()
 /// \li <b>interpolateBoundary</b> - UsdGeomMesh
 /// \li <b>interpolation</b> - UsdGeomPrimvar - How a Primvar interpolates across a primitive; equivalent to RenderMan's \ref Usd_InterpolationVals "class specifier" 
 /// \li <b>invisible</b> - Possible value for UsdGeomImageable::GetVisibilityAttr()
+/// \li <b>invisibleIds</b> - UsdGeomPointInstancer
 /// \li <b>knots</b> - UsdGeomNurbsCurves
 /// \li <b>left</b> - Possible value for UsdGeomCamera::GetStereoRoleAttr()
 /// \li <b>leftHanded</b> - Possible value for UsdGeomGprim::GetOrientationAttr()
@@ -263,15 +276,21 @@
 /// \li <b>open</b> - Possible value for UsdGeomNurbsPatch::GetVFormAttr(), Default value for UsdGeomNurbsPatch::GetVFormAttr(), Possible value for UsdGeomNurbsPatch::GetUFormAttr(), Default value for UsdGeomNurbsPatch::GetUFormAttr()
 /// \li <b>order</b> - UsdGeomNurbsCurves
 /// \li <b>orientation</b> - UsdGeomGprim
+/// \li <b>orientations</b> - UsdGeomPointInstancer
 /// \li <b>orthographic</b> - Possible value for UsdGeomCamera::GetProjectionAttr()
 /// \li <b>periodic</b> - Possible value for UsdGeomBasisCurves::GetWrapAttr(), Possible value for UsdGeomNurbsPatch::GetVFormAttr(), Possible value for UsdGeomNurbsPatch::GetUFormAttr()
 /// \li <b>perspective</b> - Possible value for UsdGeomCamera::GetProjectionAttr(), Default value for UsdGeomCamera::GetProjectionAttr()
+/// \li <b>point</b> - Possible value for UsdGeomPointInstancer::GetPrototypeDrawModeAttr()
 /// \li <b>points</b> - UsdGeomPointBased
 /// \li <b>pointWeights</b> - UsdGeomNurbsPatch
+/// \li <b>positions</b> - UsdGeomPointInstancer
 /// \li <b>power</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr()
 /// \li <b>primvarsDisplayColor</b> - UsdGeomGprim
 /// \li <b>primvarsDisplayOpacity</b> - UsdGeomGprim
 /// \li <b>projection</b> - UsdGeomCamera
+/// \li <b>protoIndices</b> - UsdGeomPointInstancer
+/// \li <b>prototypeDrawMode</b> - UsdGeomPointInstancer
+/// \li <b>prototypes</b> - UsdGeomPointInstancer
 /// \li <b>proxy</b> - Possible value for UsdGeomImageable::GetPurposeAttr()
 /// \li <b>proxyPrim</b> - UsdGeomImageable
 /// \li <b>purpose</b> - UsdGeomImageable
@@ -280,8 +299,7 @@
 /// \li <b>render</b> - Possible value for UsdGeomImageable::GetPurposeAttr()
 /// \li <b>right</b> - Possible value for UsdGeomCamera::GetStereoRoleAttr()
 /// \li <b>rightHanded</b> - Possible value for UsdGeomGprim::GetOrientationAttr(), Default value for UsdGeomGprim::GetOrientationAttr()
-/// \li <b>rotate</b> - UsdGeomImagePlane
-/// \li <b>size</b> - UsdGeomCube, UsdGeomImagePlane
+/// \li <b>scales</b> - UsdGeomPointInstancer
 /// \li <b>shutterClose</b> - UsdGeomCamera
 /// \li <b>shutterOpen</b> - UsdGeomCamera
 /// \li <b>size</b> - UsdGeomCube
@@ -304,7 +322,7 @@
 /// \li <b>uRange</b> - UsdGeomNurbsPatch
 /// \li <b>uVertexCount</b> - UsdGeomNurbsPatch
 /// \li <b>varying</b> - Possible value for UsdGeomPrimvar::SetInterpolation. Four values are interpolated over each uv patch segment of the  surface. Bilinear interpolation is used for interpolation  between the four values.
-/// \li <b>velocities</b> - UsdGeomPointBased
+/// \li <b>velocities</b> - UsdGeomPointInstancer, UsdGeomPointBased
 /// \li <b>vertex</b> - Possible value for UsdGeomPrimvar::SetInterpolation. Values are interpolated between each vertex in the surface primitive. The basis function of the surface is used for  interpolation between vertices.
 /// \li <b>vertical</b> - Possible value for UsdGeomImagePlane::GetFitAttr()
 /// \li <b>verticalAperture</b> - UsdGeomCamera
