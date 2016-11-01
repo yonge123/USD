@@ -32,9 +32,9 @@ def Main():
     gprim.GetAttribute("faceVertexIndices").Set([0,1,3,2])
     gprim.GetAttribute("points").Set([(-2, -2, -2), (2, -2, -2), (-2, -2, 2), (2, -2, 2)])
     UsdGeom.Gprim(gprim).CreatePrimvar("somePrimvar",
-            Sdf.ValueTypeNames.Color3fArray, UsdGeom.Tokens.constant).Set([1.0, 1.0, 1.0])
+            Sdf.ValueTypeNames.Color3fArray, UsdGeom.Tokens.constant).Set([(1.0, 1.0, 1.0)])
     UsdGeom.Gprim(gprim).CreatePrimvar("map1", Sdf.ValueTypeNames.Float2Array,
-            UsdGeom.Tokens.faceVarying).Set([1.0, 1.0])
+            UsdGeom.Tokens.faceVarying).Set([(1.0, 1.0)])
 
     lookPrim = UsdShade.Look.Define(s, "/Model/Looks/Pbs")
     lookPrim.Bind(gprim)
@@ -87,12 +87,12 @@ def Main():
     param.ConnectToSource(ptex, "color", False)
     #
     color = UsdHydra.Primvar(UsdShade.Shader.Define(s, "/Model/Looks/Pbs/ColorPrimvar"))
-    attr = uv.CreateVarnameAttr("displayColor")
     param = hydraShader.CreateParameter("colorFromPrimvar", Sdf.ValueTypeNames.Color3f)
     param.ConnectToSource(color, "result", False)
 
-    print hydraShader.GetConnectedPrimvar(param.GetAttr())
-    print hydraShader.IsConnectedToPrimvar(param.GetAttr())
+    # attr = uv.CreateVarnameAttr("displayColor")
+    # print hydraShader.GetConnectedPrimvar(param.GetAttr())
+    # print hydraShader.IsConnectedToPrimvar(param.GetAttr())
 
 
     print s.GetRootLayer().ExportToString()
