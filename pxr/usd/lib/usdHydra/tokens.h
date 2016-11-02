@@ -45,6 +45,7 @@
     (frame) \
     (HwPrimvar_1) \
     (HwPtexTexture_1) \
+    (HwUdimTexture_1) \
     (HwUvTexture_1) \
     ((infoFilename, "info:filename")) \
     ((infoVarname, "info:varname")) \
@@ -59,6 +60,7 @@
     (nearestMipmapNearest) \
     (repeat) \
     (textureMemory) \
+    (uDimension) \
     (uv) \
     (wrapS) \
     (wrapT)
@@ -91,6 +93,7 @@
 /// \li <b>frame</b> - UsdHydraTexture
 /// \li <b>HwPrimvar_1</b> - Special token for the usdHydra library.
 /// \li <b>HwPtexTexture_1</b> - Special token for the usdHydra library.
+/// \li <b>HwUdimTexture_1</b> - Special token for the usdHydra library.
 /// \li <b>HwUvTexture_1</b> - Special token for the usdHydra library.
 /// \li <b>infoFilename</b> - UsdHydraTexture, UsdHydraShader
 /// \li <b>infoVarname</b> - UsdHydraPrimvar
@@ -105,6 +108,7 @@
 /// \li <b>nearestMipmapNearest</b> - See https://www.opengl.org/wiki/Sampler_Object , Possible value for UsdHydraUvTexture::GetMinFilterAttr()
 /// \li <b>repeat</b> - The texture coordinate wraps around the texture. So a texture coordinate of -0.2 becomes the equivalent of 0.8. , Possible value for UsdHydraUvTexture::GetWrapTAttr(), Possible value for UsdHydraUvTexture::GetWrapSAttr()
 /// \li <b>textureMemory</b> - UsdHydraTexture
+/// \li <b>uDimension</b> - UsdHydraUdimTexture
 /// \li <b>uv</b> - UsdHydraUvTexture
 /// \li <b>wrapS</b> - UsdHydraUvTexture
 /// \li <b>wrapT</b> - UsdHydraUvTexture

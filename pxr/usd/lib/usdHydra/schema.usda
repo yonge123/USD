@@ -18,6 +18,7 @@ over "GLOBAL" (
             dictionary HwUvTexture_1 = { }
             dictionary HwPtexTexture_1 = { }
             dictionary HwPrimvar_1 = { }
+            dictionary HwUdimTexture_1 = { }
 
             //
             // Texture Sampler Tokens
@@ -190,5 +191,16 @@ class "PtexTexture" (
     uniform int faceOffset (
         doc = """The Ptex face offset to be applied to the face index. By
         default, this parameter will be bound to the ptexFaceOffset primvar."""
+    )
+}
+
+class "UdimTexture" (
+    inherits = [</UvTexture>]
+    customData = {
+        string className = "UdimTexture"
+    }
+) {
+    int uDimension = 10 (
+        doc = "Specifies the U dimension when generating the texture name."
     )
 }

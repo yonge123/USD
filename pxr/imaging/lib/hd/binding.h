@@ -60,9 +60,11 @@ public:
                 TEXTURE_2D,          // non-bindless uv texture
                 TEXTURE_PTEX_TEXEL,  // non-bindless ptex texels
                 TEXTURE_PTEX_LAYOUT, // non-bindless ptex layout
+                TEXTURE_UDIM,        // non-bindless udim layout
                 BINDLESS_TEXTURE_2D,          // bindless uv texture
                 BINDLESS_TEXTURE_PTEX_TEXEL,  // bindless ptex texels
                 BINDLESS_TEXTURE_PTEX_LAYOUT, // bindless ptex layout
+                BINDLESS_TEXTURE_UDIM,        // bindless udim layout
                 PRIMVAR_REDIRECT     // primvar redirection
     };
     enum Location {
