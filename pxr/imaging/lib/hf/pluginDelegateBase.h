@@ -21,47 +21,31 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/base/tf/errorMark.h"
-#include "pxr/base/tf/diagnostic.h"
-#include "pxr/base/arch/stackTrace.h"
+#ifndef HF_PLUGIN_DELEGATE_BASE_H
+#define HF_PLUGIN_DELEGATE_BASE_H
 
-#include <thread>
-
-#include <iostream>
-
-/**
- * This executable performs an invalid memory reference (SIGSEGV)
- * for testing of the Tf crash handler
- */
-
-static void
-_ThreadTask()
+///
+/// \class HfPluginDelegate
+///
+/// Base class for all delegates that are provided through plugins.
+/// This class provides no functionality other than to serve as
+/// a polymorphic type for the delegate registry.
+///
+class HfPluginDelegateBase
 {
-    TfErrorMark m;
-    TF_RUNTIME_ERROR("Pending secondary thread error for crash report!");
-    sleep(600); // 10 minutes.
-}
+public:
+    virtual ~HfPluginDelegateBase();  // = default: See workaround in cpp file
 
-int
-main(int argc, char **argv)
-{
-    ArchSetFatalStackLogging( true );
+protected:
+    // Pure virtual class, must be derived
+    HfPluginDelegateBase() = default;
 
-    // Make sure handlers have been installed
-    // This isn't guaranteed in external environments
-    // as we leave them off by default.
-    TfInstallTerminateAndCrashHandlers();
+private:
+    ///
+    /// This class is not intended to be copied.
+    ///
+    HfPluginDelegateBase(const HfPluginDelegateBase &)            = delete;
+    HfPluginDelegateBase &operator=(const HfPluginDelegateBase &) = delete;
+};
 
-    TfErrorMark m;
-
-    TF_RUNTIME_ERROR("Pending error to report in crash output!");
-
-    std::thread t(_ThreadTask);
-
-    sleep(1);
-
-    int* bunk(0);
-    std::cout << *bunk << '\n';
-}
-
-
+#endif // HF_PLUGIN_DELEGATE_BASE_H

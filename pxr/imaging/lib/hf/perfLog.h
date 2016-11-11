@@ -21,47 +21,29 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/base/tf/errorMark.h"
-#include "pxr/base/tf/diagnostic.h"
-#include "pxr/base/arch/stackTrace.h"
+#ifndef HF_PERF_LOG_H
+#define HF_PERF_LOG_H
 
-#include <thread>
+#include "pxr/base/tf/mallocTag.h"
+#include <boost/preprocessor/stringize.hpp>
 
-#include <iostream>
+///
+/// Creates an auto-mallocTag with the function, including template params.
+///
+#define HF_MALLOC_TAG_FUNCTION() \
+    TfAutoMallocTag2 tagFunc(BOOST_PP_STRINGIZE(MFB_PACKAGE_NAME), \
+                             __PRETTY_FUNCTION__);
 
-/**
- * This executable performs an invalid memory reference (SIGSEGV)
- * for testing of the Tf crash handler
- */
+///
+/// Creates an auto-mallocTag with the given named tag.
+///
+#define HF_MALLOC_TAG(x) \
+    TfAutoMallocTag2 tag2(BOOST_PP_STRINGIZE(MFB_PACKAGE_NAME), x);
 
-static void
-_ThreadTask()
-{
-    TfErrorMark m;
-    TF_RUNTIME_ERROR("Pending secondary thread error for crash report!");
-    sleep(600); // 10 minutes.
-}
+///
+/// Overrides operator new/delete and injects malloc tags.
+///
+#define HF_MALLOC_TAG_NEW(x) \
+    TF_MALLOC_TAG_NEW(BOOST_PP_STRINGIZE(MFB_PACKAGE_NAME), x);
 
-int
-main(int argc, char **argv)
-{
-    ArchSetFatalStackLogging( true );
-
-    // Make sure handlers have been installed
-    // This isn't guaranteed in external environments
-    // as we leave them off by default.
-    TfInstallTerminateAndCrashHandlers();
-
-    TfErrorMark m;
-
-    TF_RUNTIME_ERROR("Pending error to report in crash output!");
-
-    std::thread t(_ThreadTask);
-
-    sleep(1);
-
-    int* bunk(0);
-    std::cout << *bunk << '\n';
-}
-
-
+#endif // HF_PERF_LOG_H

@@ -21,47 +21,26 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/base/tf/errorMark.h"
-#include "pxr/base/tf/diagnostic.h"
-#include "pxr/base/arch/stackTrace.h"
+#include "pxr/imaging/hf/pluginDelegateBase.h"
 
-#include <thread>
+#include "pxr/base/tf/registryManager.h"
+#include "pxr/base/tf/type.h"
 
-#include <iostream>
-
-/**
- * This executable performs an invalid memory reference (SIGSEGV)
- * for testing of the Tf crash handler
- */
-
-static void
-_ThreadTask()
+// Register the base type with Tf.
+TF_REGISTRY_FUNCTION(TfType)
 {
-    TfErrorMark m;
-    TF_RUNTIME_ERROR("Pending secondary thread error for crash report!");
-    sleep(600); // 10 minutes.
+    TfType::Define<HfPluginDelegateBase>();
 }
 
-int
-main(int argc, char **argv)
-{
-    ArchSetFatalStackLogging( true );
-
-    // Make sure handlers have been installed
-    // This isn't guaranteed in external environments
-    // as we leave them off by default.
-    TfInstallTerminateAndCrashHandlers();
-
-    TfErrorMark m;
-
-    TF_RUNTIME_ERROR("Pending error to report in crash output!");
-
-    std::thread t(_ThreadTask);
-
-    sleep(1);
-
-    int* bunk(0);
-    std::cout << *bunk << '\n';
-}
-
-
+//
+// WORKAROUND: As this class is a pure interface class, it does not need a
+// vtable.  However, it is possible that some users will use rtti.
+// This will cause a problem for some of our compilers:
+//
+// In particular clang will throw a warning: -wweak-vtables
+// For gcc, there is an issue were the rtti typeid's are different.
+//
+// As destruction of the class is not on the performance path,
+// the body of the deleter is provided here, so a vtable is created
+// in this compilation unit.
+HfPluginDelegateBase::~HfPluginDelegateBase() = default;

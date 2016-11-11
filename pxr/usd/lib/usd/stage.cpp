@@ -1144,6 +1144,16 @@ UsdStage::_SetMetadataImpl(const UsdObject &obj,
         return false;
     }
 
+    const auto& schema = spec->GetSchema();
+    const auto specType = spec->GetSpecType();
+    if (not schema.IsValidFieldForSpec(fieldName, specType)) {
+        TF_CODING_ERROR("Cannot set metadata. '%s' is not registered "
+                        "as valid metadata for spec type %s.",
+                        fieldName.GetText(),
+                        TfStringify(specType).c_str());
+        return false;
+    }
+
     if (keyPath.IsEmpty()) {
         spec->GetLayer()->SetField(spec->GetPath(), fieldName, newValue);
     } else {
@@ -1405,6 +1415,16 @@ UsdStage::_ClearMetadata(const UsdObject &obj, const TfToken& fieldName,
                       "No spec at <%s> in layer @%s@",
                       editTarget.MapToSpecPath(obj.GetPath()).GetText(),
                       GetEditTarget().GetLayer()->GetIdentifier().c_str())) {
+        return false;
+    }
+
+    const auto& schema = spec->GetSchema();
+    const auto specType = spec->GetSpecType();
+    if (not schema.IsValidFieldForSpec(fieldName, specType)) {
+        TF_CODING_ERROR("Cannot clear metadata. '%s' is not registered "
+                        "as valid metadata for spec type %s.",
+                        fieldName.GetText(),
+                        TfStringify(specType).c_str());
         return false;
     }
 
@@ -2826,16 +2846,29 @@ _AddDependentPaths(const SdfLayerHandle &layer, const SdfPath &path,
 {
     // We include virtual dependencies so that we can process
     // changes like adding missing defaultPrim metadata.
-    const PcpDependencyFlags depTypes = PcpDependencyTypeAnyIncludingVirtual;
+    const PcpDependencyFlags depTypes =
+        PcpDependencyTypeDirect
+        | PcpDependencyTypeAncestral
+        | PcpDependencyTypeNonVirtual
+        | PcpDependencyTypeVirtual;
+
     // Do not filter dependencies against the indexes cached in PcpCache,
     // because Usd does not cache PcpPropertyIndex entries.
     const bool filterForExistingCachesOnly = false;
 
+    // If this site is in the cache's layerStack, we always add it here.
+    // We do this instead of including PcpDependencyTypeRoot in depTypes
+    // because we do not want to include root deps on those sites, just
+    // the other kinds of inbound deps.
+    if (cache.GetLayerStack()->HasLayer(layer)) {
+        output->insert(path.StripAllVariantSelections());
+    }
+
     for (const PcpDependency& dep:
-         cache.FindDependentPaths(layer, path, depTypes,
-                                  /* recurseOnSite */ true,
-                                  /* recurseOnIndex */ true,
-                                  filterForExistingCachesOnly)) {
+         cache.FindSiteDependencies(layer, path, depTypes,
+                                    /* recurseOnSite */ true,
+                                    /* recurseOnIndex */ false,
+                                    filterForExistingCachesOnly)) {
         output->insert(dep.indexPath);
     }
 
@@ -3499,13 +3532,22 @@ UsdStage::_GetDefiningSpecType(const UsdPrim& prim,
         return specType;
 
     // Otherwise look for the strongest authored property spec.
-    for (Usd_Resolver res(
-             &prim.GetPrimIndex()); res.IsValid(); res.NextLayer()) {
+    Usd_Resolver res(&prim.GetPrimIndex(), /*skipEmptyNodes=*/true);
+    SdfPath curPath;
+    bool curPathValid = false;
+    while (res.IsValid()) {
         const SdfLayerRefPtr& layer = res.GetLayer();
-        SdfAbstractDataSpecId specId(&res.GetLocalPath(), &propName);
-        specType = layer->GetSpecType(specId);
-        if (specType != SdfSpecTypeUnknown)
-            return specType;
+        if (layer->HasSpec(SdfAbstractDataSpecId(&res.GetLocalPath()))) {
+            if (!curPathValid) {
+                curPath = res.GetLocalPath().AppendProperty(propName);
+                curPathValid = true;
+            }
+            specType = layer->GetSpecType(SdfAbstractDataSpecId(&curPath));
+            if (specType != SdfSpecTypeUnknown)
+                return specType;
+        }
+        if (res.NextLayer())
+            curPathValid = false;
     }
 
     // Unknown.
@@ -5059,12 +5101,12 @@ struct UsdStage::_PropertyStackResolver {
                 const double* time) 
     {
         // If given a time, do a range check on the clip first.
-        if (time && (*time < clip->startTime || *time >= clip->endTime))
+        if (time && (*time < clip->startTime || *time >= clip->endTime)) 
             return false;
 
         double lowerSample = 0.0, upperSample = 0.0;
         if (_HasTimeSamples(clip, specId, time, &lowerSample, &upperSample)) {
-            if (const auto propertySpec = clip->GetPropertyAtPath(specId))
+            if (const auto propertySpec = clip->GetPropertyAtPath(specId)) 
                 propertyStack.push_back(propertySpec);    
         }
      
@@ -6029,7 +6071,7 @@ _ClearLayerFieldOrDictKey(const SdfLayerHandle &layer, const TfToken &key,
 static
 bool
 _SetStageMetadataOrDictKey(const UsdStage &stage, const TfToken &key,
-                      const TfToken &keyPath, const VtValue &val)
+                           const TfToken &keyPath, const VtValue &val)
 {
     SdfLayerHandle rootLayer = stage.GetRootLayer();
     SdfLayerHandle sessionLayer = stage.GetSessionLayer();
