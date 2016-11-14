@@ -26,6 +26,7 @@
 #include "usdKatana/usdInPrivateData.h"
 #include "usdKatana/utils.h"
 #include "usdKatana/tokens.h"
+#include "usdKatana/blindDataObject.h"
 
 
 #include "pxr/usd/usd/prim.h"
@@ -335,29 +336,27 @@ _BuildCollections(
     std::vector<UsdGeomCollectionAPI> collections = 
         UsdGeomCollectionAPI::GetCollections(prim);
 
-    std::string prefix;
-    // in instances, collection targets are on the master
-    if (prim.IsInstance()) {
-        prefix = prim.GetMaster().GetPath().GetString();
-    } else {
-        prefix = prim.GetPath().GetString();
-    }
-    int prefixLength = prefix.length();
-    
+    size_t prefixLength = prim.GetPath().GetString().length();
     for (size_t iCollection = 0; iCollection < collections.size(); ++iCollection)
     {
         SdfPathVector targets;
         FnKat::StringBuilder collectionBuilder;
         UsdGeomCollectionAPI &collection = collections[iCollection];
         TfToken name = collection.GetCollectionName();
-        collection.GetTargets(&targets);
+        collection.GetTargets(&targets, false);
         for (size_t iTarget = 0; iTarget < targets.size(); ++iTarget)
         {
             std::string targetPath = targets[iTarget].GetString();
             
-            if (targetPath.size() >= static_cast<size_t>(prefixLength))
+            if (targetPath.size() >= prefixLength)
             {
                 std::string relativePath = targetPath.substr(prefixLength);
+                // follow katana convention for collections
+                // the "self" location relative path is "/". 
+                // Absolute paths start with "/root/"
+                // relative paths start without the "/" though.
+                if (relativePath == "")
+                    relativePath = "/";
                 collectionBuilder.push_back(relativePath);
             }
         }
@@ -565,6 +564,17 @@ PxrUsdKatanaGeomGetPrimvarGroup(
 
     std::vector<UsdGeomPrimvar> primvarAttrs = imageable.GetPrimvars();
     TF_FOR_ALL(primvar, primvarAttrs) {
+        // If there is a block from blind data, skip to avoid the cost
+        UsdKatanaBlindDataObject kbd(imageable.GetPrim());
+        UsdAttribute blindAttr = kbd.GetKbdAttribute("geometry.arbitrary." + 
+                                        primvar->GetBaseName().GetString());
+        if (blindAttr) {
+            VtValue vtValue;
+            if (!blindAttr.Get(&vtValue) and blindAttr.HasAuthoredValueOpinion()) {
+                continue;
+            }
+        }
+        
         TfToken          name, interpolation;
         SdfValueTypeName typeName;
         int              elementSize;

@@ -51,6 +51,7 @@ pxr_shared_library(usdImaging
         instanceAdapter
         meshAdapter
         pointsAdapter
+        pointInstancerAdapter
         primAdapter
         sphereAdapter
         nurbsPatchAdapter
