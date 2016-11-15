@@ -204,3 +204,74 @@ class "UdimTexture" (
         doc = "Specifies the U dimension when generating the texture name."
     )
 }
+
+class "PhysicalLight" (
+    inherits = </Xformable>
+)
+{
+    color3f color = (1.0, 1.0, 1.0) (
+        doc = "Color of the light."
+    )
+
+    float intensity = 1.0 (
+        doc = "Intensity of the light."
+    )
+
+    float specular = 1.0 (
+        doc = "Weight of the specular contribution."
+    )
+
+    float diffuse = 1.0 (
+        doc = "Weight of the diffuse contribution."
+    )
+
+    float indirect = 1.0 (
+        doc = "Weight of the indirect contribution."
+    )
+
+    float3 attenuation = (0.0, 0.0, 1.0) (
+        doc = "Attenuation weights. Constant, linear and quadratic in order."
+    )
+
+    bool hasShadows = true (
+        doc = "Enables shadow casting."
+    )
+}
+
+class DistantLight "DistantLight" (
+    inherits = </PhysicalLight>
+)
+{
+    float3 direction = (-1.0, 0.0, 0.0) (
+        doc = "Direction of the distant light."
+    )
+
+    float spread = 0.0 (
+        doc = "Spread of the distant light."
+    )
+}
+
+class SphereLight "SphereLight" (
+    inherits = </PhysicalLight>
+)
+{
+    float radius = 1.0 (
+        doc = "Radius of the sphere light."
+    )
+}
+
+class QuadLight "QuadLight" (
+    inherits = </PhysicalLight>
+)
+{
+    float3[] vertices = [(-0.5, -0.5, 0.0), (0.5, -0.5, 0.0), (0.5, 0.5, 0.0), (0.5, -0.5, 0.0)] (
+        doc = "Vertices of the quad light, needs 4 values."
+    )
+}
+
+class SkydomeLight "SkydomeLight" (
+    inherits = </PhysicalLight>
+)
+{
+
+}

@@ -32,4 +32,9 @@ TF_WRAP_MODULE
     TF_WRAP(UsdHydraUvTexture); 
     TF_WRAP(UsdHydraPtexTexture);
     TF_WRAP(UsdHydraTokens);
+    TF_WRAP(UsdHydraPhysicalLight);
+    TF_WRAP(UsdHydraDistantLight);
+    TF_WRAP(UsdHydraSphereLight);
+    TF_WRAP(UsdHydraQuadLight);
+    TF_WRAP(UsdHydraSkydomeLight);
 }
