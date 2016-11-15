@@ -233,7 +233,7 @@ class "PhysicalLight" (
         doc = "Attenuation weights. Constant, linear and quadratic in order."
     )
 
-    bool hasShadows = true (
+    bool hasShadows = false (
         doc = "Enables shadow casting."
     )
 }
@@ -257,6 +257,23 @@ class SphereLight "SphereLight" (
 {
     float radius = 1.0 (
         doc = "Radius of the sphere light."
+    )
+}
+
+class SpotLight "SpotLight" (
+    inherits = </SphereLight>
+)
+{
+    float3 direction = (-1.0, 0.0, 0.0) (
+        doc = "Direction of the distant light."
+    )
+
+    float coneAngle = 65.0 (
+        doc = "Cone angle of the spotlight in degrees."
+    )
+
+    float penumbraAngle = 0.0 (
+        doc = "Penumbra angle of the spotlight in degrees."
     )
 }
 

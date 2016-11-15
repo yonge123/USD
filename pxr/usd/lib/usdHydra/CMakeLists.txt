@@ -20,6 +20,7 @@ pxr_shared_library(usdHydra
         physicalLight
         distantLight
         sphereLight
+        spotLight
         quadLight
         skydomeLight
         tokens
@@ -40,6 +41,7 @@ pxr_shared_library(usdHydra
         wrapPhysicalLight.cpp
         wrapDistantLight.cpp
         wrapSphereLight.cpp
+        wrapSpotLight.cpp
         wrapQuadLight.cpp
         wrapSkydomeLight.cpp
 

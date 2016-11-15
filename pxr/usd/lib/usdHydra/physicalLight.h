@@ -111,7 +111,7 @@ public:
     // --------------------------------------------------------------------- //
     // COLOR 
     // --------------------------------------------------------------------- //
-    /// Color of the light. Can be connected to UV Texture if Quad or Skydome.
+    /// Color of the light.
     ///
     /// \n  C++ Type: GfVec3f
     /// \n  Usd Type: SdfValueTypeNames->Color3f
@@ -230,7 +230,7 @@ public:
     /// \n  C++ Type: bool
     /// \n  Usd Type: SdfValueTypeNames->Bool
     /// \n  Variability: SdfVariabilityVarying
-    /// \n  Fallback Value: True
+    /// \n  Fallback Value: False
     UsdAttribute GetHasShadowsAttr() const;
 
     /// See GetHasShadowsAttr(), and also 

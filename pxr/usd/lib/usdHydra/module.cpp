@@ -35,6 +35,7 @@ TF_WRAP_MODULE
     TF_WRAP(UsdHydraPhysicalLight);
     TF_WRAP(UsdHydraDistantLight);
     TF_WRAP(UsdHydraSphereLight);
+    TF_WRAP(UsdHydraSpotLight);
     TF_WRAP(UsdHydraQuadLight);
     TF_WRAP(UsdHydraSkydomeLight);
 }
