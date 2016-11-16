@@ -229,8 +229,8 @@ class "PhysicalLight" (
         doc = "Weight of the indirect contribution."
     )
 
-    float3 attenuation = (0.0, 0.0, 1.0) (
-        doc = "Attenuation weights. Constant, linear and quadratic in order."
+    float2 attenuation = (0.0, 1.0) (
+        doc = "Attenuation weights. Constant, and quadratic in order."
     )
 
     bool hasShadows = false (

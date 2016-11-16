@@ -49,6 +49,8 @@ pxr_shared_library(glf
         package
         ptexTexture
         ptexMipmapTextureLoader
+        physicalLight
+        physicalLightingContext
         simpleLight
         simpleLightingContext
         simpleMaterial
@@ -83,6 +85,7 @@ pxr_shared_library(glf
         wrapDrawTarget.cpp
         wrapGlew.cpp
         wrapSimpleLight.cpp
+        wrapPhysicalLight.cpp
         wrapSimpleMaterial.cpp
         wrapTexture.cpp
         wrapTextureRegistry.cpp
@@ -98,4 +101,5 @@ pxr_shared_library(glf
         shaders/pcfShader.glslfx
         shaders/simpleLighting.glslfx
         shaders/simpleShadowMapShader.glslfx
+        shaders/physicalLighting.glslfx
 )
