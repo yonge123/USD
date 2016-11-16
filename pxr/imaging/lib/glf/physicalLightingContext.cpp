@@ -1,5 +1,14 @@
 #include "pxr/imaging/lib/glf/physicalLightingContext.h"
 
+#include "pxr/base/tf/stringUtils.h"
+#include "pxr/base/tf/staticData.h"
+#include "pxr/base/tf/staticTokens.h"
+
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    ((lightingUB, "PhysicalLighting"))
+);
+
 GlfPhysicalLightingContextRefPtr GlfPhysicalLightingContext::New()
 {
     return TfCreateRefPtr(new This());
