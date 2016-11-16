@@ -22,7 +22,7 @@ pxr_shared_library(usdHydra
         sphereLight
         spotLight
         quadLight
-        skydomeLight
+        skyLight
         tokens
 
     CPPFILES
@@ -43,7 +43,7 @@ pxr_shared_library(usdHydra
         wrapSphereLight.cpp
         wrapSpotLight.cpp
         wrapQuadLight.cpp
-        wrapSkydomeLight.cpp
+        wrapSkyLight.cpp
 
     PYTHON_FILES
         __init__.py

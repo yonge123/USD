@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdHydra/skydomeLight.h"
+#include "pxr/usd/usdHydra/skyLight.h"
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/typed.h"
 
@@ -31,56 +31,56 @@
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
-    TfType::Define<UsdHydraSkydomeLight,
+    TfType::Define<UsdHydraSkyLight,
         TfType::Bases< UsdHydraPhysicalLight > >();
     
     // Register the usd prim typename to associate it with the TfType, under
-    // UsdSchemaBase. This enables one to call TfType::FindByName("SkydomeLight") to find
-    // TfType<UsdHydraSkydomeLight>, which is how IsA queries are answered.
-    TfType::AddAlias<UsdSchemaBase, UsdHydraSkydomeLight>("SkydomeLight");
+    // UsdSchemaBase. This enables one to call TfType::FindByName("SkyLight") to find
+    // TfType<UsdHydraSkyLight>, which is how IsA queries are answered.
+    TfType::AddAlias<UsdSchemaBase, UsdHydraSkyLight>("SkyLight");
 }
 
 /* virtual */
-UsdHydraSkydomeLight::~UsdHydraSkydomeLight()
+UsdHydraSkyLight::~UsdHydraSkyLight()
 {
 }
 
 /* static */
-UsdHydraSkydomeLight
-UsdHydraSkydomeLight::Get(const UsdStagePtr &stage, const SdfPath &path)
+UsdHydraSkyLight
+UsdHydraSkyLight::Get(const UsdStagePtr &stage, const SdfPath &path)
 {
     if (not stage) {
         TF_CODING_ERROR("Invalid stage");
-        return UsdHydraSkydomeLight();
+        return UsdHydraSkyLight();
     }
-    return UsdHydraSkydomeLight(stage->GetPrimAtPath(path));
+    return UsdHydraSkyLight(stage->GetPrimAtPath(path));
 }
 
 /* static */
-UsdHydraSkydomeLight
-UsdHydraSkydomeLight::Define(
+UsdHydraSkyLight
+UsdHydraSkyLight::Define(
     const UsdStagePtr &stage, const SdfPath &path)
 {
-    static TfToken usdPrimTypeName("SkydomeLight");
+    static TfToken usdPrimTypeName("SkyLight");
     if (not stage) {
         TF_CODING_ERROR("Invalid stage");
-        return UsdHydraSkydomeLight();
+        return UsdHydraSkyLight();
     }
-    return UsdHydraSkydomeLight(
+    return UsdHydraSkyLight(
         stage->DefinePrim(path, usdPrimTypeName));
 }
 
 /* static */
 const TfType &
-UsdHydraSkydomeLight::_GetStaticTfType()
+UsdHydraSkyLight::_GetStaticTfType()
 {
-    static TfType tfType = TfType::Find<UsdHydraSkydomeLight>();
+    static TfType tfType = TfType::Find<UsdHydraSkyLight>();
     return tfType;
 }
 
 /* static */
 bool 
-UsdHydraSkydomeLight::_IsTypedSchema()
+UsdHydraSkyLight::_IsTypedSchema()
 {
     static bool isTyped = _GetStaticTfType().IsA<UsdTyped>();
     return isTyped;
@@ -88,14 +88,14 @@ UsdHydraSkydomeLight::_IsTypedSchema()
 
 /* virtual */
 const TfType &
-UsdHydraSkydomeLight::_GetTfType() const
+UsdHydraSkyLight::_GetTfType() const
 {
     return _GetStaticTfType();
 }
 
 /*static*/
 const TfTokenVector&
-UsdHydraSkydomeLight::GetSchemaAttributeNames(bool includeInherited)
+UsdHydraSkyLight::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames;
     static TfTokenVector allNames =

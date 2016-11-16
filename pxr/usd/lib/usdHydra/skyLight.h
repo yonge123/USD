@@ -21,10 +21,10 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef USDHYDRA_GENERATED_SKYDOMELIGHT_H
-#define USDHYDRA_GENERATED_SKYDOMELIGHT_H
+#ifndef USDHYDRA_GENERATED_SKYLIGHT_H
+#define USDHYDRA_GENERATED_SKYLIGHT_H
 
-/// \file usdHydra/skydomeLight.h
+/// \file usdHydra/skyLight.h
 
 #include "pxr/usd/usdHydra/physicalLight.h"
 #include "pxr/usd/usd/prim.h"
@@ -42,13 +42,13 @@
 class SdfAssetPath;
 
 // -------------------------------------------------------------------------- //
-// SKYDOMELIGHT                                                               //
+// SKYLIGHT                                                                   //
 // -------------------------------------------------------------------------- //
 
-/// \class UsdHydraSkydomeLight
+/// \class UsdHydraSkyLight
 ///
 ///
-class UsdHydraSkydomeLight : public UsdHydraPhysicalLight
+class UsdHydraSkyLight : public UsdHydraPhysicalLight
 {
 public:
     /// Compile-time constant indicating whether or not this class corresponds
@@ -57,25 +57,25 @@ public:
     /// a non-empty typeName.
     static const bool IsConcrete = true;
 
-    /// Construct a UsdHydraSkydomeLight on UsdPrim \p prim .
-    /// Equivalent to UsdHydraSkydomeLight::Get(prim.GetStage(), prim.GetPath())
+    /// Construct a UsdHydraSkyLight on UsdPrim \p prim .
+    /// Equivalent to UsdHydraSkyLight::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
-    explicit UsdHydraSkydomeLight(const UsdPrim& prim=UsdPrim())
+    explicit UsdHydraSkyLight(const UsdPrim& prim=UsdPrim())
         : UsdHydraPhysicalLight(prim)
     {
     }
 
-    /// Construct a UsdHydraSkydomeLight on the prim held by \p schemaObj .
-    /// Should be preferred over UsdHydraSkydomeLight(schemaObj.GetPrim()),
+    /// Construct a UsdHydraSkyLight on the prim held by \p schemaObj .
+    /// Should be preferred over UsdHydraSkyLight(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
-    explicit UsdHydraSkydomeLight(const UsdSchemaBase& schemaObj)
+    explicit UsdHydraSkyLight(const UsdSchemaBase& schemaObj)
         : UsdHydraPhysicalLight(schemaObj)
     {
     }
 
     /// Destructor.
-    virtual ~UsdHydraSkydomeLight();
+    virtual ~UsdHydraSkyLight();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
@@ -83,16 +83,16 @@ public:
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
-    /// Return a UsdHydraSkydomeLight holding the prim adhering to this
+    /// Return a UsdHydraSkyLight holding the prim adhering to this
     /// schema at \p path on \p stage.  If no prim exists at \p path on
     /// \p stage, or if the prim at that path does not adhere to this schema,
     /// return an invalid schema object.  This is shorthand for the following:
     ///
     /// \code
-    /// UsdHydraSkydomeLight(stage->GetPrimAtPath(path));
+    /// UsdHydraSkyLight(stage->GetPrimAtPath(path));
     /// \endcode
     ///
-    static UsdHydraSkydomeLight
+    static UsdHydraSkyLight
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
     /// Attempt to ensure a \a UsdPrim adhering to this schema at \p path
@@ -117,7 +117,7 @@ public:
     /// specify this schema class, in case a stronger typeName opinion overrides
     /// the opinion at the current EditTarget.
     ///
-    static UsdHydraSkydomeLight
+    static UsdHydraSkyLight
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 private:

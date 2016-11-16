@@ -730,7 +730,7 @@ class QuadLight "QuadLight"
     )
 }
 
-class SkydomeLight "SkydomeLight"
+class SkyLight "SkyLight"
 {
     float3 attenuation = (0, 0, 1) (
         doc = "Attenuation weights. Constant, linear and quadratic in order."

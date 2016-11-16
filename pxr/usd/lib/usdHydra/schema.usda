@@ -286,7 +286,7 @@ class QuadLight "QuadLight" (
     )
 }
 
-class SkydomeLight "SkydomeLight" (
+class SkyLight "SkyLight" (
     inherits = </PhysicalLight>
 )
 {

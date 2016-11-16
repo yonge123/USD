@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdHydra/skydomeLight.h"
+#include "pxr/usd/usdHydra/skyLight.h"
 
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/conversions.h"
@@ -46,12 +46,12 @@ using namespace boost::python;
 WRAP_CUSTOM;
 
 
-void wrapUsdHydraSkydomeLight()
+void wrapUsdHydraSkyLight()
 {
-    typedef UsdHydraSkydomeLight This;
+    typedef UsdHydraSkyLight This;
 
     class_<This, bases<UsdHydraPhysicalLight> >
-        cls("SkydomeLight");
+        cls("SkyLight");
 
     cls
         .def(init<UsdPrim>(arg("prim")))
