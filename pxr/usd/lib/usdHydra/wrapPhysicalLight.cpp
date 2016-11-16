@@ -85,7 +85,7 @@ static UsdAttribute
 _CreateAttenuationAttr(UsdHydraPhysicalLight &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateAttenuationAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float3), writeSparsely);
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float2), writeSparsely);
 }
         
 static UsdAttribute

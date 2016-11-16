@@ -206,12 +206,12 @@ public:
     // --------------------------------------------------------------------- //
     // ATTENUATION 
     // --------------------------------------------------------------------- //
-    /// Attenuation weights. Constant, linear and quadratic in order.
+    /// Attenuation weights. Constant, and quadratic in order.
     ///
-    /// \n  C++ Type: GfVec3f
-    /// \n  Usd Type: SdfValueTypeNames->Float3
+    /// \n  C++ Type: GfVec2f
+    /// \n  Usd Type: SdfValueTypeNames->Float2
     /// \n  Variability: SdfVariabilityVarying
-    /// \n  Fallback Value: (0, 0, 1)
+    /// \n  Fallback Value: (0, 1)
     UsdAttribute GetAttenuationAttr() const;
 
     /// See GetAttenuationAttr(), and also 

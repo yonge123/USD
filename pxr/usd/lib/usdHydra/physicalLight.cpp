@@ -171,7 +171,7 @@ UsdAttribute
 UsdHydraPhysicalLight::CreateAttenuationAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
     return UsdSchemaBase::_CreateAttr(UsdHydraTokens->attenuation,
-                       SdfValueTypeNames->Float3,
+                       SdfValueTypeNames->Float2,
                        /* custom = */ false,
                        SdfVariabilityVarying,
                        defaultValue,

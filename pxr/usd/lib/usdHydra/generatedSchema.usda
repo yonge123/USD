@@ -183,8 +183,8 @@ class Shader "UdimTexture"
 
 class "PhysicalLight"
 {
-    float3 attenuation = (0, 0, 1) (
-        doc = "Attenuation weights. Constant, linear and quadratic in order."
+    float2 attenuation = (0, 1) (
+        doc = "Attenuation weights. Constant, and quadratic in order."
     )
     color3f color = (1, 1, 1) (
         doc = "Color of the light."
@@ -288,8 +288,8 @@ class "PhysicalLight"
 
 class DistantLight "DistantLight"
 {
-    float3 attenuation = (0, 0, 1) (
-        doc = "Attenuation weights. Constant, linear and quadratic in order."
+    float2 attenuation = (0, 1) (
+        doc = "Attenuation weights. Constant, and quadratic in order."
     )
     color3f color = (1, 1, 1) (
         doc = "Color of the light."
@@ -399,8 +399,8 @@ class DistantLight "DistantLight"
 
 class SphereLight "SphereLight"
 {
-    float3 attenuation = (0, 0, 1) (
-        doc = "Attenuation weights. Constant, linear and quadratic in order."
+    float2 attenuation = (0, 1) (
+        doc = "Attenuation weights. Constant, and quadratic in order."
     )
     color3f color = (1, 1, 1) (
         doc = "Color of the light."
@@ -507,8 +507,8 @@ class SphereLight "SphereLight"
 
 class SpotLight "SpotLight"
 {
-    float3 attenuation = (0, 0, 1) (
-        doc = "Attenuation weights. Constant, linear and quadratic in order."
+    float2 attenuation = (0, 1) (
+        doc = "Attenuation weights. Constant, and quadratic in order."
     )
     color3f color = (1, 1, 1) (
         doc = "Color of the light."
@@ -624,8 +624,8 @@ class SpotLight "SpotLight"
 
 class QuadLight "QuadLight"
 {
-    float3 attenuation = (0, 0, 1) (
-        doc = "Attenuation weights. Constant, linear and quadratic in order."
+    float2 attenuation = (0, 1) (
+        doc = "Attenuation weights. Constant, and quadratic in order."
     )
     color3f color = (1, 1, 1) (
         doc = "Color of the light."
@@ -732,8 +732,8 @@ class QuadLight "QuadLight"
 
 class SkyLight "SkyLight"
 {
-    float3 attenuation = (0, 0, 1) (
-        doc = "Attenuation weights. Constant, linear and quadratic in order."
+    float2 attenuation = (0, 1) (
+        doc = "Attenuation weights. Constant, and quadratic in order."
     )
     color3f color = (1, 1, 1) (
         doc = "Color of the light."
