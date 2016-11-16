@@ -20,26 +20,27 @@
 // distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
-//
+#ifndef HDSTREAM_RENDER_DELEGATE_H
+#define HDSTREAM_RENDER_DELEGATE_H
+
 #include "pxr/imaging/hd/renderDelegate.h"
 
-#include "pxr/base/tf/registryManager.h"
-#include "pxr/base/tf/type.h"
+///
+/// HdStreamRenderDelegate
+///
+/// The Stream Render Delegate provides a Hydra render that uses a
+/// streaming graphics implementation (abstracted by the Gal) to draw the scene.
+///
+class HdStreamRenderDelegate final : public HdRenderDelegate {
+public:
+    HdStreamRenderDelegate()          = default;
+    virtual ~HdStreamRenderDelegate() = default;
 
-TF_REGISTRY_FUNCTION(TfType)
-{
-    TfType::Define<HdRenderDelegate>();
-}
+    virtual TfToken GetDefaultGalId() const override;
 
-//
-// WORKAROUND: As this class is a pure interface class, it does not need a
-// vtable.  However, it is possible that some users will use rtti.
-// This will cause a problem for some of our compilers:
-//
-// In particular clang will throw a warning: -wweak-vtables
-// For gcc, there is an issue were the rtti typeid's are different.
-//
-// As destruction of the class is not on the performance path,
-// the body of the deleter is provided here, so a vtable is created
-// in this compilation unit.
-HdRenderDelegate::~HdRenderDelegate() = default;
+private:
+    HdStreamRenderDelegate(const HdStreamRenderDelegate &)             = delete;
+    HdStreamRenderDelegate &operator =(const HdStreamRenderDelegate &) = delete;
+};
+
+#endif // HDSTREAM_RENDER_DELEGATE_H
