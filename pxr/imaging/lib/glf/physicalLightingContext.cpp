@@ -4,6 +4,9 @@
 #include "pxr/base/tf/staticData.h"
 #include "pxr/base/tf/staticTokens.h"
 
+#include <map>
+#include <array>
+
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
     ((lightingUB, "PhysicalLighting"))
@@ -53,6 +56,30 @@ void GlfPhysicalLightingContext::SetUseLighting(bool val)
 bool GlfPhysicalLightingContext::GetUseLigthing() const
 {
     return _useLighting;
+}
+
+void GlfPhysicalLightingContext::WriteDefinitions(std::ostream& os) const
+{
+    // performance is not critical here, so we are going for an approach
+    // that's simpler to define
+    const size_t numLights = _useLighting ? _lights.size() : 0;
+    os << "#define NUM_PHYSICAL_LIGHTS " << numLights << std::endl;
+    if (numLights != 0)
+    {
+        std::map<PhysicalLightTypes, std::pair<size_t, std::string>> definitions = {
+            {PHYSICAL_LIGHT_DISTANT, {0, "NUM_DISTANT_LIGHTS"}},
+            {PHYSICAL_LIGHT_SPHERE, {0, "NUM_DISTANT_SPHERE"}},
+            {PHYSICAL_LIGHT_SPOT, {0, "NUM_DISTANT_SPOT"}},
+            {PHYSICAL_LIGHT_QUAD, {0, "NUM_DISTANT_QUAD"}},
+            {PHYSICAL_LIGHT_SKY, {0, "NUM_DISTANT_SKY"}},
+        };
+
+        for (const auto& light : _lights)
+            ++(definitions[light.GetLightType()].first);
+
+        for (const auto& definition : definitions)
+            os << "#define " << definition.second.second << " " << definition.second.first << std::endl;
+    }
 }
 
 GlfPhysicalLightingContext::GlfPhysicalLightingContext() :

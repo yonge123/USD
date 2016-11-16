@@ -14,7 +14,7 @@ void wrapPhysicalLight()
         .value("sphere", PHYSICAL_LIGHT_SPHERE)
         .value("spot", PHYSICAL_LIGHT_SPOT)
         .value("quad", PHYSICAL_LIGHT_QUAD)
-        .value("sky", PHSYICAL_LIGHT_SKY);
+        .value("sky", PHYSICAL_LIGHT_SKY);
 
     class_<This>("PhysicalLight", init<>())
         .add_property("transform",

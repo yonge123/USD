@@ -12,7 +12,8 @@ enum PhysicalLightTypes {
     PHYSICAL_LIGHT_SPHERE,
     PHYSICAL_LIGHT_SPOT,
     PHYSICAL_LIGHT_QUAD,
-    PHSYICAL_LIGHT_SKY
+    PHYSICAL_LIGHT_SKY,
+    PHYSICAL_LIGHT_MAX
 };
 
 class GlfPhysicalLight {

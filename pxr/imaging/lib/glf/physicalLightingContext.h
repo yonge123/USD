@@ -10,6 +10,8 @@
 #include "pxr/base/tf/refBase.h"
 #include "pxr/base/tf/weakBase.h"
 
+#include <ostream>
+
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfPhysicalLightingContext);
 
 class GlfPhysicalLightingContext : public TfRefBase, public TfWeakBase {
@@ -27,6 +29,8 @@ public:
 
     void SetUseLighting(bool val);
     bool GetUseLigthing() const;
+
+    void WriteDefinitions(std::ostream& os) const;
 protected:
     GlfPhysicalLightingContext();
     ~GlfPhysicalLightingContext();
