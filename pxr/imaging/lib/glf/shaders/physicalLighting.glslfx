@@ -1,0 +1,79 @@
+-- glslfx version 0.1
+
+-- glsl PhysicalLighting.PhysicalLighting
+
+#ifndef NUM_PHYSICAL_LIGHTS
+#define NUM_PHYSICAL_LIGHTS 0
+#endif
+
+#ifndef NUM_DISTANT_LIGHTS
+#define NUM_DISTANT_LIGHTS 0
+#endif
+
+#ifndef NUM_SPHERE_LIGHTS
+#define NUM_SPHERE_LIGHTS 0
+#endif
+
+#ifndef NUM_SPOT_LIGHTS
+#define NUM_SPOT_LIGHTS 0
+#endif
+
+#ifndef NUM_QUAD_LIGHTS
+#define NUM_QUAD_LIGHTS 0
+#endif
+
+#ifndef NUM_SKY_LIGHTS
+#define NUM_SKY_LIGHTS 0
+#endif
+
+struct PhysicalLight {
+    vec4 position;
+    vec4 color;
+    float intensity; float specular; float diffuse; float indirect;
+    vec2 attenuation; int hasShadows; int padding;
+};
+
+struct DistantLight {
+    PhysicalLight base;
+    float spread; int padding[3];
+};
+
+struct SphereLight {
+    PhysicalLight base;
+    float radius; int padding[3];
+};
+
+struct SpotLight {
+    PhysicalLight base;
+    vec4 direction;
+    float radius; float coneAngle; float penumbraAngle; int padding;
+};
+
+struct QuadLight {
+    PhysicalLight base;
+    vec4 vertex0;
+    vec4 vertex1;
+    vec4 vertex2;
+    vec4 vertex3;
+};
+
+struct SkyLight {
+    PhysicalLight base;
+};
+
+
+#if NUM_PHYSICAL_LIGHTS == 0
+
+#else // NUM_PHYSICAL_LIGHTS
+
+layout(std140) uniform PhysicalLighting {
+    int useLighting;
+    int padding[3];
+    DistantLight distantLights[NUM_DISTANT_LIGHTS];
+    SphereLight distantLights[NUM_SPHERE_LIGHTS];
+    SpotLight distantLights[NUM_SPOT_LIGHTS];
+    QuadLight distantLights[NUM_QUAD_LIGHTS];
+    SkyLight distantLights[NUM_SKY_LIGHTS];
+};
+
+#endif

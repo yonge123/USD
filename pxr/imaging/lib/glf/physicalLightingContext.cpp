@@ -127,8 +127,8 @@ void GlfPhysicalLightingContext::BindUniformBlocks(const GlfBindingMapPtr &bindi
 
         struct SpotLight {
             PhysicalLight base;
-            float direction[3]; int padding;
-            float radius; float coneAngle; float penumbraAngle; int padding2;
+            float direction[4];
+            float radius; float coneAngle; float penumbraAngle; int padding;
         };
 
         struct QuadLight {
