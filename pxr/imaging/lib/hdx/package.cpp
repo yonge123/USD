@@ -69,3 +69,11 @@ HdxPackageSimpleLightingShader()
         _GetShaderPath("simpleLightingShader.glslfx");
     return simpleLightingShader;
 }
+
+TfToken
+HdxPackagePhysicalLightingShader()
+{
+    static TfToken physicalLightingShader =
+        _GetShaderPath("physicalLightingShader.glslfx");
+    return physicalLightingShader;
+}
