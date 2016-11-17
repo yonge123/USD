@@ -140,7 +140,7 @@ public:
     /// \n  C++ Type: VtArray<GfVec3f>
     /// \n  Usd Type: SdfValueTypeNames->Float3Array
     /// \n  Variability: SdfVariabilityVarying
-    /// \n  Fallback Value: [(-0.5, -0.5, 0), (0.5, -0.5, 0), (0.5, 0.5, 0), (0.5, -0.5, 0)]
+    /// \n  Fallback Value: [(-0.5, -0.5, 0), (0.5, -0.5, 0), (0.5, 0.5, 0), (-0.5, 0.5, 0)]
     UsdAttribute GetVerticesAttr() const;
 
     /// See GetVerticesAttr(), and also 

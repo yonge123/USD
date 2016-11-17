@@ -281,7 +281,7 @@ class QuadLight "QuadLight" (
     inherits = </PhysicalLight>
 )
 {
-    float3[] vertices = [(-0.5, -0.5, 0.0), (0.5, -0.5, 0.0), (0.5, 0.5, 0.0), (0.5, -0.5, 0.0)] (
+    float3[] vertices = [(-0.5, -0.5, 0.0), (0.5, -0.5, 0.0), (0.5, 0.5, 0.0), (-0.5, 0.5, 0.0)] (
         doc = "Vertices of the quad light, needs 4 values."
     )
 }

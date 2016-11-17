@@ -36,6 +36,9 @@ public:
     PhysicalLightTypes GetLightType() const;
     void SetLightType(PhysicalLightTypes lightType);
 
+    float GetIntensity() const;
+    void SetIntensity(float intensity);
+
     float GetDiffuse() const;
     void SetDiffuse(float diffuse);
 

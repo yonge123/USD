@@ -42,6 +42,11 @@ void wrapPhysicalLight()
                           &This::GetLightType,
                           return_value_policy<return_by_value>()),
                       &This::SetLightType)
+        .add_property("intensity",
+                      make_function(
+                          &This::GetIntensity,
+                          return_value_policy<return_by_value>()),
+                      &This::SetIntensity)
         .add_property("diffuse",
                       make_function(
                           &This::GetDiffuse,

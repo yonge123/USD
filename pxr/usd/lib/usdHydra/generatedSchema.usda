@@ -705,7 +705,7 @@ class QuadLight "QuadLight"
     float specular = 1 (
         doc = "Weight of the specular contribution."
     )
-    float3[] vertices = [(-0.5, -0.5, 0), (0.5, -0.5, 0), (0.5, 0.5, 0), (0.5, -0.5, 0)] (
+    float3[] vertices = [(-0.5, -0.5, 0), (0.5, -0.5, 0), (0.5, 0.5, 0), (-0.5, 0.5, 0)] (
         doc = "Vertices of the quad light, needs 4 values."
     )
     token visibility = "inherited" (

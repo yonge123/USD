@@ -83,6 +83,16 @@ void GlfPhysicalLight::SetLightType(PhysicalLightTypes lightType)
     _lightType = lightType;
 }
 
+float GlfPhysicalLight::GetIntensity() const
+{
+    return _intensity;
+}
+
+void GlfPhysicalLight::SetIntensity(float intensity)
+{
+    _intensity = std::max(0.0f, intensity);
+}
+
 float GlfPhysicalLight::GetDiffuse() const
 {
     return _diffuse;
