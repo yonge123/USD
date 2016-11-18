@@ -29,23 +29,15 @@ public:
     HdxPhysicalLightingShader();
     virtual ~HdxPhysicalLightingShader();
 
-    virtual void SetCamera(const GfMatrix4d& worldToViewMatrix,
-                           const GfMatrix4d& projectionMatrix);
-
     /// HdShader overrides
     virtual ID ComputeHash() const;
     virtual std::string GetSource(TfToken const &shaderStageKey) const;
     virtual void BindResources(const Hd_ResourceBinder& binder, int program);
-    /*virtual void UnbindResources(Hd_ResourceBinder const &binder, int program);
-    virtual void AddBindings(HdBindingRequestVector *customBindings);
-
-    /// HdLightingShader overrides
-    virtual void SetCamera(GfMatrix4d const &worldToViewMatrix,
-                           GfMatrix4d const &projectionMatrix);
-
-    void SetLightingStateFromOpenGL();
-    void SetLightingState(GlfSimpleLightingContextPtr const &lightingContext);*/
-
+    virtual void UnbindResources(const Hd_ResourceBinder& binder, int program);
+    virtual void AddBindings(HdBindingRequestVector* customBindings);
+    virtual void SetCamera(const GfMatrix4d& worldToViewMatrix,
+                           const GfMatrix4d& projectionMatrix);
+    void SetLightingState(const GlfPhysicalLightingContextPtr& lightingContext);
     GlfPhysicalLightingContextRefPtr GetLightingContext() {
         return _lightingContext;
     };

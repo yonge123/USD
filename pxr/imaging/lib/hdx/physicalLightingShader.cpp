@@ -41,6 +41,28 @@ void HdxPhysicalLightingShader::BindResources(const Hd_ResourceBinder& binder, i
     _lightingContext->BindUniformBlocks(_bindingMap);
 }
 
+void HdxPhysicalLightingShader::UnbindResources(const Hd_ResourceBinder& binder, int program)
+{
+
+}
+
+void HdxPhysicalLightingShader::AddBindings(HdBindingRequestVector* customBindings)
+{
+
+}
+
+void HdxPhysicalLightingShader::SetLightingState(const GlfPhysicalLightingContextPtr& lightingContext)
+{
+    if (lightingContext)
+    {
+        _useLighting = true;
+        _lightingContext->SetUseLighting(lightingContext->GetNumLightsUsed() != 0);
+        _lightingContext->SetLights(lightingContext->GetLights());
+    }
+    else
+        _useLighting = false;
+}
+
 void HdxPhysicalLightingShader::SetCamera(const GfMatrix4d& worldToViewMatrix,
                        const GfMatrix4d& projectionMatrix)
 {
