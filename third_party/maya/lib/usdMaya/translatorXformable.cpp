@@ -31,6 +31,8 @@
 
 #include "pxr/usd/usdGeom/xformCommonAPI.h"
 
+#include "usdMaya/debugCodes.h"
+
 #include <maya/MDagModifier.h>
 #include <maya/MFnAnimCurve.h>
 #include <maya/MFnTransform.h>
@@ -439,8 +441,8 @@ static bool _pushUSDXformToMayaXform(
                                                    time)) {
                 xlate=GfVec3d(0); rotate=GfVec3d(0); scale=GfVec3d(1);
                 if (not _isIdentityMatrix(localXform)) {
-                     MGlobal::displayWarning("Decomposing non identity 4X4 matrix at: " 
-                    + MString(xformSchema.GetPath().GetText()) + " At sample: " + tSamples[ti]);
+                    TF_DEBUG(PXRUSDMAYA_TRANSLATION).Msg("Decomposing non identity 4X4 matrix at: %s At Sample: %d\n",
+                                                         xformSchema.GetPath().GetText(), tSamples[ti]);
                      PxrUsdMayaTranslatorXformable::ConvertUsdMatrixToComponents(
                              localXform, &xlate, &rotate, &scale);
                 }
@@ -458,8 +460,8 @@ static bool _pushUSDXformToMayaXform(
         if (xformSchema.GetLocalTransformation(&localXform, &resetsXformStack)) {
             xlate=GfVec3d(0); rotate=GfVec3d(0); scale=GfVec3d(1);
             if (not _isIdentityMatrix(localXform)) {
-                MGlobal::displayWarning("Decomposing non identity 4X4 matrix at: " 
-                    + MString(xformSchema.GetPath().GetText()));
+                TF_DEBUG(PXRUSDMAYA_TRANSLATION).Msg("Decomposing non identity 4X4 matrix at: %s\n",
+                                                     xformSchema.GetPath().GetText());
                 PxrUsdMayaTranslatorXformable::ConvertUsdMatrixToComponents(
                         localXform, &xlate, &rotate, &scale);
             }

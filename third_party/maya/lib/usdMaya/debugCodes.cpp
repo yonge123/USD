@@ -29,4 +29,6 @@ TF_REGISTRY_FUNCTION(TfDebug)
 {
     TF_DEBUG_ENVIRONMENT_SYMBOL(PXRUSDMAYA_REGISTRY,
             "UsdMaya registration for usd types.");
+    TF_DEBUG_ENVIRONMENT_SYMBOL(PXRUSDMAYA_TRANSLATION,
+            "Translating USD prims to UsdMaya.");
 }
