@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pxr/imaging/lib/glf/physicalLight.h"
-#include "pxr/imaging/lib/glf/uniformBlock.h"
-#include "pxr/imaging/lib/glf/bindingMap.h"
+#include "physicalLight.h"
+#include "uniformBlock.h"
+#include "bindingMap.h"
 
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/gf/vec4f.h"

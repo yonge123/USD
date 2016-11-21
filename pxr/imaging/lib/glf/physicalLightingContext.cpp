@@ -1,4 +1,4 @@
-#include "pxr/imaging/lib/glf/physicalLightingContext.h"
+#include "physicalLightingContext.h"
 
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/staticData.h"

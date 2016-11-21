@@ -1,4 +1,4 @@
-#include "pxr/imaging/glf/physicalLight.h"
+#include "physicalLight.h"
 
 #include <algorithm>
 

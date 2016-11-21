@@ -1,4 +1,4 @@
-#include "pxr/imaging/lib/hdx/physicalLightingShader.h"
+#include "physicalLightingShader.h"
 
 #include "pxr/imaging/hdx/package.h"
 
