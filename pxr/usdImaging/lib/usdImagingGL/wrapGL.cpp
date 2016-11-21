@@ -88,6 +88,12 @@ _SetLightingState(UsdImagingGL &self, GlfSimpleLightVector const &lights,
     self.SetLightingState(lights, material, sceneAmbient);
 }
 
+static void
+_SetPhysicalLightingState(UsdImagingGL& self, const GlfPhysicalLightVector& lights)
+{
+    self.SetLightingState(lights);
+}
+
 void wrapGL()
 {
     { 
@@ -101,6 +107,7 @@ void wrapGL()
             .def("SetLightingStateFromOpenGL",
                  &UsdImagingGL::SetLightingStateFromOpenGL)
             .def("SetLightingState", &_SetLightingState)
+            .def("SetPhysicalLightingState", &_SetPhysicalLightingState)
             .def("SetCameraStateFromOpenGL", &UsdImagingGL::SetCameraStateFromOpenGL)
             .def("SetSelected", &UsdImagingGL::SetSelected)
             .def("ClearSelected", &UsdImagingGL::ClearSelected)

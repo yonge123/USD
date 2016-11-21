@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include <pxr/imaging/lib/hdx/physicalLightBypassTask.h>
 #include "pxr/usdImaging/usdImagingGL/defaultTaskDelegate.h"
 
 #include "pxr/imaging/hd/version.h"
@@ -467,8 +468,23 @@ UsdImagingGL_DefaultTaskDelegate::SetLightingState(
 }
 
 void
+UsdImagingGL_DefaultTaskDelegate::SetLightingState(const GlfPhysicalLightingContextPtr& src)
+{
+    // TODO: do the setups and dirty the number of lights
+}
+
+void
 UsdImagingGL_DefaultTaskDelegate::SetBypassedLightingState(const GlfPhysicalLightingContextPtr& src)
 {
+    HdxPhysicalLightBypassTaskParams params;
+    params.cameraPath = _cameraId;
+    params.physicalLightingContext = src;
+    _SetValue(_physicalLightBypassTaskId, HdTokens->params, params);
+
+    GetRenderIndex().GetChangeTracker().MarkTaskDirty(
+        _physicalLightBypassTaskId, HdChangeTracker::DirtyParams);
+
+    _activePhysicalLightTaskId = _physicalLightBypassTaskId;
 }
 
 void

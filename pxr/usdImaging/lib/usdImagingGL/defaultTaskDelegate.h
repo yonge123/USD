@@ -58,6 +58,11 @@ public:
     // render index
     virtual void SetLightingState(const GlfSimpleLightingContextPtr &src);
 
+    // set the phsyical lighting state using GlfSimpleLightingContext
+    // HdLights are extracted from the lighting context and injected into
+    // render index
+    virtual void SetLightingState(const GlfPhysicalLightingContextPtr &src);
+
     // bypasses the lighting context down to HdxRenderTask (transitional method)
     void SetBypassedLightingState(const GlfSimpleLightingContextPtr &src);
 
@@ -127,6 +132,10 @@ private:
     SdfPath _simpleLightTaskId;
     SdfPath _simpleLightBypassTaskId;
     SdfPath _activeSimpleLightTaskId;
+
+    SdfPath _physicalLightTaskId;
+    SdfPath _physicalLightBypassTaskId;
+    SdfPath _activePhysicalLightTaskId;
 
     SdfPath _cameraId;
 

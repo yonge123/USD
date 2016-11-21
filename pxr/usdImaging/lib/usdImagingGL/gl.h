@@ -119,6 +119,12 @@ public:
                                   GlfSimpleMaterial const &material,
                                   GfVec4f const &sceneAmbient);
 
+    /// Copy physical lighting state from another physical lighting context.
+    virtual void SetLightingState(const GlfPhysicalLightingContextPtr& src);
+
+    /// Setting up physical lighting state
+    virtual void SetLightingState(const GlfPhysicalLightVector& lights);
+
     virtual void SetRootTransform(GfMatrix4d const& xf);
 
     virtual void SetRootVisibility(bool isVisible);

@@ -241,6 +241,20 @@ UsdImagingGL::SetLightingState(GlfSimpleLightingContextPtr const &src)
 
 /* virtual */
 void
+UsdImagingGL::SetLightingState(const GlfPhysicalLightingContextPtr& src)
+{
+    _engine->SetLightingState(src);
+}
+
+/* virtual */
+void
+UsdImagingGL::SetLightingState(const GlfPhysicalLightVector& lights)
+{
+    _engine->SetLightingState(lights);
+}
+
+/* virtual */
+void
 UsdImagingGL::SetRootTransform(GfMatrix4d const& xf)
 {
     _engine->SetRootTransform(xf);

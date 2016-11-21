@@ -37,6 +37,7 @@
 #include <boost/shared_ptr.hpp>
 
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfSimpleLightingContext);
+TF_DECLARE_WEAK_AND_REF_PTRS(GlfPhysicalLightingContext);
 
 class HdRenderIndex;
 typedef boost::shared_ptr<class UsdImagingGLTaskDelegate>
@@ -86,7 +87,9 @@ public:
 
     virtual void SetLightingStateFromOpenGL();
 
-    virtual void SetPhysicalLightingState(const GlfPhysicalLightingContextPtr& src);
+    virtual void SetLightingState(const GlfPhysicalLightingContextPtr& src);
+
+    virtual void SetLightingState(const GlfPhysicalLightVector& lights);
 
     virtual void SetLightingState(GlfSimpleLightingContextPtr const &src);
 
@@ -188,6 +191,7 @@ private:
     UsdImagingGLTaskDelegateSharedPtr _currentPluginTaskDelegate;
 
     GlfSimpleLightingContextRefPtr _lightingContextForOpenGLState;
+    GlfPhysicalLightingContextRefPtr _physicalLightingContextForOpenGLState;
 
     SdfPath _rootPath;
     SdfPathVector _excludedPrimPaths;

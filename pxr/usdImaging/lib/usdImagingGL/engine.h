@@ -181,7 +181,11 @@ public:
     /// call SetLights.
     virtual void SetLightingStateFromOpenGL();
 
-    virtual void SetPhysicalLightingState(const GlfPhysicalLightingContextPtr& src);
+    /// Copy phsyical lighting state from another lighting context.
+    virtual void SetLightingState(const GlfPhysicalLightingContextPtr& src);
+
+    /// Set physical lighting state
+    virtual void SetLightingState(const GlfPhysicalLightVector& lights);
 
     /// Copy lighting state from another lighting context.
     virtual void SetLightingState(GlfSimpleLightingContextPtr const &src);

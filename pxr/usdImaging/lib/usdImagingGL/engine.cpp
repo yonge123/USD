@@ -76,10 +76,18 @@ UsdImagingGLEngine::SetLightingStateFromOpenGL()
 
 /* virtual */
 void
-UsdImagingGLEngine::SetPhysicalLightingState(const GlfPhysicalLightingContextPtr& src)
+UsdImagingGLEngine::SetLightingState(const GlfPhysicalLightingContextPtr& src)
 {
     // By default, do nothing.
 }
+
+/* virtual */
+void
+UsdImagingGLEngine::SetLightingState(const GlfPhysicalLightVector& lights)
+{
+    // By default, do nothing.
+}
+
 
 /* virtual */
 void
@@ -96,7 +104,6 @@ UsdImagingGLEngine::SetLightingState(GlfSimpleLightVector const &lights,
 {
     // By default, do nothing.
 }
-
 
 /* virtual */
 void

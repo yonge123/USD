@@ -47,6 +47,7 @@
 #include "pxr/imaging/glf/diagnostic.h"
 #include "pxr/imaging/glf/info.h"
 #include "pxr/imaging/glf/simpleLightingContext.h"
+#include "pxr/imaging/glf/physicalLightingContext.h"
 
 UsdImagingGLHdEngine::UsdImagingGLHdEngine(
         const SdfPath& rootPath,
@@ -630,9 +631,22 @@ UsdImagingGLHdEngine::SetLightingState(GlfSimpleLightVector const &lights,
 
 /* virtual */
 void
-UsdImagingGLHdEngine::SetPhysicalLightingState(const GlfPhysicalLightingContextPtr& src)
+UsdImagingGLHdEngine::SetLightingState(const GlfPhysicalLightVector& lights)
 {
+    if (not _physicalLightingContextForOpenGLState) {
+        _physicalLightingContextForOpenGLState = GlfPhysicalLightingContext::New();
+    }
 
+    _physicalLightingContextForOpenGLState->SetLights(lights);
+
+    _defaultTaskDelegate->SetLightingState(_physicalLightingContextForOpenGLState);
+}
+
+/* virtual */
+void
+UsdImagingGLHdEngine::SetLightingState(const GlfPhysicalLightingContextPtr& src)
+{
+    _defaultTaskDelegate->SetBypassedLightingState(src);
 }
 
 /* virtual */
