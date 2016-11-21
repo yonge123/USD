@@ -467,6 +467,11 @@ UsdImagingGL_DefaultTaskDelegate::SetLightingState(
 }
 
 void
+UsdImagingGL_DefaultTaskDelegate::SetBypassedLightingState(const GlfPhysicalLightingContextPtr& src)
+{
+}
+
+void
 UsdImagingGL_DefaultTaskDelegate::SetBypassedLightingState(
     const GlfSimpleLightingContextPtr &src)
 {

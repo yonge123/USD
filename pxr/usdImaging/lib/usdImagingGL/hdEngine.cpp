@@ -630,6 +630,13 @@ UsdImagingGLHdEngine::SetLightingState(GlfSimpleLightVector const &lights,
 
 /* virtual */
 void
+UsdImagingGLHdEngine::SetPhysicalLightingState(const GlfPhysicalLightingContextPtr& src)
+{
+
+}
+
+/* virtual */
+void
 UsdImagingGLHdEngine::SetLightingState(GlfSimpleLightingContextPtr const &src)
 {
     // leave all lighting plumbing work to the incoming lighting context.

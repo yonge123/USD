@@ -86,6 +86,8 @@ public:
 
     virtual void SetLightingStateFromOpenGL();
 
+    virtual void SetPhysicalLightingState(const GlfPhysicalLightingContextPtr& src);
+
     virtual void SetLightingState(GlfSimpleLightingContextPtr const &src);
 
     virtual void SetLightingState(GlfSimpleLightVector const &lights,

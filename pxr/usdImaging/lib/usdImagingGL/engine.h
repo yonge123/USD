@@ -29,6 +29,7 @@
 #include "pxr/usdImaging/usdImaging/version.h"
 
 #include "pxr/imaging/glf/simpleLight.h"
+#include "pxr/imaging/glf/physicalLight.h"
 #include "pxr/imaging/glf/simpleMaterial.h"
 
 #include "pxr/base/tf/declarePtrs.h"
@@ -51,6 +52,7 @@ class UsdPrim;
 typedef boost::shared_ptr<class GlfGLContext> GlfGLContextSharedPtr;
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfDrawTarget);
 TF_DECLARE_WEAK_PTRS(GlfSimpleLightingContext);
+TF_DECLARE_WEAK_PTRS(GlfPhysicalLightingContext);
 
 /// \class UsdImagingGLEngine
 ///
@@ -178,6 +180,8 @@ public:
     /// Helper function to extract lighting state from opengl and then
     /// call SetLights.
     virtual void SetLightingStateFromOpenGL();
+
+    virtual void SetPhysicalLightingState(const GlfPhysicalLightingContextPtr& src);
 
     /// Copy lighting state from another lighting context.
     virtual void SetLightingState(GlfSimpleLightingContextPtr const &src);

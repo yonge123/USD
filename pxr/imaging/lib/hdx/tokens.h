@@ -32,6 +32,8 @@
     (imagerVersion)             \
     (lightingContext)           \
     (lightingShader)            \
+    (physicalLightingContext)   \
+    (physicalLightingShader)    \
     (renderPassState)           \
     (renderIndexVersion)        \
     (selection)                 \
