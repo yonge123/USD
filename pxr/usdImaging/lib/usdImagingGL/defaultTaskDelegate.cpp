@@ -33,10 +33,15 @@
 #include "pxr/imaging/hdx/selectionTask.h"
 #include "pxr/imaging/hdx/simpleLightTask.h"
 #include "pxr/imaging/hdx/simpleLightBypassTask.h"
+#include "pxr/imaging/hdx/physicalLightTask.h"
+#include "pxr/imaging/hdx/physicalLightBypassTask.h"
 #include "pxr/imaging/hdx/tokens.h"
 
 #include "pxr/imaging/glf/simpleLight.h"
 #include "pxr/imaging/glf/simpleLightingContext.h"
+
+#include "pxr/imaging/glf/physicalLight.h"
+#include "pxr/imaging/glf/physicalLightingContext.h"
 
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
@@ -51,6 +56,8 @@ TF_DEFINE_PRIVATE_TOKENS(
     (selectionTask)
     (simpleLightTask)
     (simpleLightBypassTask)
+    (physicalLightTask)
+    (physicalLightBypassTask)
     (camera)
 );
 
@@ -84,6 +91,7 @@ UsdImagingGL_DefaultTaskDelegate::UsdImagingGL_DefaultTaskDelegate(
     _simpleLightBypassTaskId    = _rootId.AppendChild(_tokens->simpleLightBypassTask);
     _cameraId                   = _rootId.AppendChild(_tokens->camera);
     _activeSimpleLightTaskId    = SdfPath();
+    _activePhysicalLightTaskId  = SdfPath();
 
     // TODO: tasks of shadow map generation, accumulation etc will be
     // prepared here.
@@ -121,12 +129,33 @@ UsdImagingGL_DefaultTaskDelegate::UsdImagingGL_DefaultTaskDelegate(
         cache[HdTokens->children] = VtValue(SdfPathVector());
     }
 
+    // physical lighting task
+    {
+        renderIndex.InsertTask<HdxPhysicalLightTask>(this, _physicalLightTaskId);
+        _ValueCache& cache = _valueCacheMap[_physicalLightTaskId];
+        HdxPhysicalLightTaskParams params;
+        params.cameraPath = _cameraId;
+        cache[HdTokens->params] = VtValue(params);
+        cache[HdTokens->children] = VtValue(SdfPathVector());
+    }
+
     // simple lighting task (for Presto UsdBaseIc compatible)
     {
         renderIndex.InsertTask<HdxSimpleLightBypassTask>(this,
                                                          _simpleLightBypassTaskId);
         _ValueCache &cache = _valueCacheMap[_simpleLightBypassTaskId];
         HdxSimpleLightBypassTaskParams params;
+        params.cameraPath = _cameraId;
+        cache[HdTokens->params] = VtValue(params);
+        cache[HdTokens->children] = VtValue(SdfPathVector());
+    }
+
+    // physical lighting task (for Presto UsdBaseIc compatible)
+    {
+        renderIndex.InsertTask<HdxPhysicalLightBypassTask>(this,
+                                                           _physicalLightBypassTaskId);
+        _ValueCache &cache = _valueCacheMap[_physicalLightBypassTaskId];
+        HdxPhysicalLightBypassTaskParams params;
         params.cameraPath = _cameraId;
         cache[HdTokens->params] = VtValue(params);
         cache[HdTokens->children] = VtValue(SdfPathVector());
@@ -193,11 +222,15 @@ UsdImagingGL_DefaultTaskDelegate::GetRenderTasks(
     UsdImagingGLEngine::RenderParams const &params)
 {
     HdTaskSharedPtrVector tasks; // XXX: we can cache this vector
-    tasks.reserve(3);
+    tasks.reserve(4);
 
     // light
     if (not _activeSimpleLightTaskId.IsEmpty()) {
         tasks.push_back(GetRenderIndex().GetTask(_activeSimpleLightTaskId));
+    }
+
+    if (not _activePhysicalLightTaskId.IsEmpty()) {
+        tasks.push_back(GetRenderIndex().GetTask(_activePhysicalLightTaskId));
     }
 
     // render
@@ -470,7 +503,62 @@ UsdImagingGL_DefaultTaskDelegate::SetLightingState(
 void
 UsdImagingGL_DefaultTaskDelegate::SetLightingState(const GlfPhysicalLightingContextPtr& src)
 {
-    // TODO: do the setups and dirty the number of lights
+    if (not TF_VERIFY(src)) return;
+
+    // cache the GlfSimpleLight vector
+    GlfPhysicalLightVector const &lights = src->GetLights();
+
+    bool hasNumLightsChanged = false;
+
+    // Insert the light Ids into HdRenderIndex for those not yet exist.
+    while (_lightIds.size() < lights.size()) {
+        SdfPath lightId(
+            TfStringPrintf("%s/light%d", _rootId.GetText(),
+                           (int)_lightIds.size()));
+        _lightIds.push_back(lightId);
+
+        GetRenderIndex().InsertSprim<HdxLight>(this, lightId);
+        hasNumLightsChanged = true;
+    }
+    // Remove unused light Ids from HdRenderIndex
+    while (_lightIds.size() > lights.size()) {
+        GetRenderIndex().RemoveSprim(_lightIds.back());
+        _lightIds.pop_back();
+        hasNumLightsChanged = true;
+    }
+
+    // invalidate HdLights
+    for (size_t i = 0; i < lights.size(); ++i) {
+        _ValueCache &cache = _valueCacheMap[_lightIds[i]];
+        // store GlfSimpleLight directly.
+        cache[HdxLightTokens->params] = VtValue(lights[i]);
+        cache[HdxLightTokens->transform] = VtValue();
+        cache[HdxLightTokens->shadowParams] = VtValue(HdxShadowParams());
+        cache[HdxLightTokens->shadowCollection] = VtValue();
+
+        // Only mark as dirty the parameters to avoid unnecessary invalidation
+        // specially marking as dirty lightShadowCollection will trigger
+        // a collection dirty on geometry and we don't want that to happen
+        // always
+        GetRenderIndex().GetChangeTracker().MarkSprimDirty(
+            _lightIds[i], HdxLight::DirtyParams);
+    }
+
+    // sadly the material also comes from lighting context right now...
+    HdxPhysicalLightTaskParams params
+        = _GetValue<HdxPhysicalLightTaskParams>(_simpleLightTaskId,
+                                              HdTokens->params);
+
+    // invalidate HdxSimpleLightTask too
+    if (hasNumLightsChanged) {
+        _SetValue(_simpleLightTaskId, HdTokens->params, params);
+
+        GetRenderIndex().GetChangeTracker().MarkTaskDirty(
+            _simpleLightTaskId, HdChangeTracker::DirtyParams);
+    }
+
+    // set HdxSimpleLightTask as the lighting task
+    _activePhysicalLightTaskId = _physicalLightTaskId;
 }
 
 void

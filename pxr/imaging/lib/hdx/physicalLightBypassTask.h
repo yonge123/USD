@@ -21,7 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#pragma once
+#ifndef HDX_PHYSICAL_LIGHT_BYPASS_TASK_H
+#define HDX_PHYSICAL_LIGHT_BYPASS_TASK_H
 
 #include "pxr/imaging/hdx/version.h"
 #include "pxr/imaging/hd/task.h"
@@ -66,3 +67,5 @@ bool operator==(const HdxPhysicalLightBypassTaskParams& lhs,
                 const HdxPhysicalLightBypassTaskParams& rhs);
 bool operator!=(const HdxPhysicalLightBypassTaskParams& lhs,
                 const HdxPhysicalLightBypassTaskParams& rhs);
+
+#endif
