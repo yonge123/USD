@@ -41,6 +41,7 @@ pxr_shared_library(hdx
         simpleLightBypassTask
         physicalLightingShader
         physicalLightBypassTask
+        physicalLightTask
         tokens
         types
 
