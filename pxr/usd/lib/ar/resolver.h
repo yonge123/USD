@@ -162,6 +162,39 @@ public:
         const std::string& fileVersion,
         ArAssetInfo* assetInfo) = 0;
 
+    /// Returns a value representing the last time the asset identified
+    /// by \p path was modified. \p resolvedPath is the resolved path
+    /// of the asset.
+    ///
+    /// Implementations may use whatever value is most appropriate
+    /// for this timestamp. The value must be equality comparable, 
+    /// and this function must return a different timestamp whenever 
+    /// an asset has been modified. For instance, if an asset is stored 
+    /// as a file on disk, the timestamp may simply be that file's mtime. 
+    ///
+    /// If a timestamp cannot be retrieved, returns an empty VtValue.
+    virtual VtValue GetModificationTimestamp(
+        const std::string& path,
+        const std::string& resolvedPath) = 0;
+
+    /// Fetch the asset identified by \p path to the filesystem location
+    /// specified by \p resolvedPath. \p resolvedPath is the resolved path
+    /// that results from calling Resolve or ResolveWithAssetInfo on 
+    /// \p path.
+    ///
+    /// This method provides a way for consumers that expect assets 
+    /// to exist as physical files on disk to retrieve data from 
+    /// systems that store data in external data stores, e.g. databases,
+    /// etc. 
+    ///
+    /// Returns true if the asset was successfully fetched to the specified
+    /// \p resolvedPath or if no fetching was required. If \p resolvedPath 
+    /// is not a local path or the asset could not be fetched to that path, 
+    /// returns false.
+    virtual bool FetchToLocalResolvedPath(
+        const std::string& path,
+        const std::string& resolvedPath) = 0;
+
     /// Returns true if a file may be written to the given \p path, false
     /// otherwise. 
     /// 

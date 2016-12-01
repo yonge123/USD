@@ -24,6 +24,8 @@
 #include "pxr/usd/usdUtils/stitchClips.h"
 #include "pxr/usd/usdUtils/stitch.h"
 
+#include "pxr/usd/usd/tokens.h"
+
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/sdf/layer.h"
 #include "pxr/usd/sdf/spec.h"
@@ -64,15 +66,6 @@ namespace {
 
     // We insert the topology layer as the strongest
     constexpr size_t TOPOLOGY_SUBLAYER_STRENGTH = 0;
-
-    // keys for indexing into the clip info
-    // XXX: This code is shared in usd/clip.h
-    // ------------------------------------------------------------------------
-    const TfToken clipActiveKey = TfToken("clipActive");
-    const TfToken clipPrimPathKey = TfToken("clipPrimPath");
-    const TfToken clipTimeKey = TfToken("clipTimes");
-    const TfToken clipAssetPathsKey = TfToken("clipAssetPaths");
-    const TfToken clipManifestAssetPath = TfToken("clipManifestAssetPath");
 
     // Convenience function for wrapping up nice error message
     // when checking os permissions of a layers backing file.
@@ -146,14 +139,14 @@ namespace {
                       const SdfPath& path) 
     {
         size_t timer = 0; 
-        auto result = _GetUnboxedValue<VtVec2dArray>(layer, path, clipActiveKey);
+        auto result = _GetUnboxedValue<VtVec2dArray>(layer, path, UsdTokens->clipActive);
 
         for (auto& clipActive : result) {
             clipActive[1] = timer;
             timer++;
         }
 
-        layer->GetPrimAtPath(path)->SetInfo(clipActiveKey, VtValue(result));
+        layer->GetPrimAtPath(path)->SetInfo(UsdTokens->clipActive, VtValue(result));
     }
 
     // Try to determine if we should use a relative path for this
@@ -197,7 +190,7 @@ namespace {
     {
         const auto currentAssetPaths 
             = _GetUnboxedValue<_SdfAssetArray>(resultLayer, clipPath, 
-                                               clipAssetPathsKey);
+                                               UsdTokens->clipAssetPaths);
         const auto diff = currentAssetPaths.size() - clipLayers.size();
 
         _SdfAssetArray result;
@@ -219,7 +212,7 @@ namespace {
             result.push_back(SdfAssetPath(path));
         }
 
-        resultLayer->GetPrimAtPath(clipPath)->SetInfo(clipAssetPathsKey, 
+        resultLayer->GetPrimAtPath(clipPath)->SetInfo(UsdTokens->clipAssetPaths, 
                                                       VtValue(result));
     }
 
@@ -236,9 +229,9 @@ namespace {
                             const SdfLayerRefPtr& rhs,
                             const SdfPath& clipPath) 
     {
-        _AppendCollection<_SdfAssetArray>(lhs, rhs, clipPath, clipAssetPathsKey);
-        _AppendCollection<VtVec2dArray>(lhs, rhs, clipPath, clipTimeKey);
-        _AppendCollection<VtVec2dArray>(lhs, rhs, clipPath, clipActiveKey);
+        _AppendCollection<_SdfAssetArray>(lhs, rhs, clipPath, UsdTokens->clipAssetPaths);
+        _AppendCollection<VtVec2dArray>(lhs, rhs, clipPath, UsdTokens->clipTimes);
+        _AppendCollection<VtVec2dArray>(lhs, rhs, clipPath, UsdTokens->clipActive);
     }
 
     // Add the clipPrimPath metadata at the specified \p stitchPath
@@ -251,7 +244,7 @@ namespace {
             = resultLayer->GetPrimAtPath(stitchPath);       
 
         if (clipPrim) {
-            clipPrim->SetInfo(clipPrimPathKey, 
+            clipPrim->SetInfo(UsdTokens->clipPrimPath, 
                               VtValue(stitchPath.GetString()));
         }
     }
@@ -328,7 +321,7 @@ namespace {
         VtVec2dArray currentClipActive 
             = _GetUnboxedValue<VtVec2dArray>(resultLayer,
                                              stitchPath,
-                                             clipActiveKey);
+                                             UsdTokens->clipActive);
 
         // grab the number of elements in clipAssetPaths
         // note that this code is contingent on _StitchClipAssetPath()
@@ -336,7 +329,7 @@ namespace {
         const double clipIndex = static_cast<double> (
                                     resultLayer
                                         ->GetPrimAtPath(stitchPath)
-                                        ->GetInfo(clipAssetPathsKey)
+                                        ->GetInfo(UsdTokens->clipAssetPaths)
                                         .Get<VtArray<SdfAssetPath> >()
                                         .size()) - 1;
 
@@ -355,7 +348,7 @@ namespace {
             }
             resultLayer
                 ->GetPrimAtPath(stitchPath)
-                ->SetInfo(clipActiveKey, VtValue(currentClipActive));
+                ->SetInfo(UsdTokens->clipActive, VtValue(currentClipActive));
         }
     }
 
@@ -370,7 +363,7 @@ namespace {
         VtVec2dArray currentClipTimes 
             = _GetUnboxedValue<VtVec2dArray>(resultLayer,
                                              stitchPath,
-                                             clipTimeKey);
+                                             UsdTokens->clipTimes);
 
         if (resultLayer->GetPrimAtPath(stitchPath)) {
             const double startTimeCode = _GetStartTimeCode(clipLayer);
@@ -388,7 +381,7 @@ namespace {
 
             resultLayer
                 ->GetPrimAtPath(stitchPath)
-                ->SetInfo(clipTimeKey, VtValue(currentClipTimes));
+                ->SetInfo(UsdTokens->clipTimes, VtValue(currentClipTimes));
         }
     }
 
@@ -417,7 +410,7 @@ namespace {
        _SdfAssetArray currentAssets 
             = _GetUnboxedValue<_SdfAssetArray>(resultLayer,
                                                stitchPath,
-                                               clipAssetPathsKey);
+                                               UsdTokens->clipAssetPaths);
        
        if (resultLayer->GetPrimAtPath(stitchPath)) {
             std::string clipId = 
@@ -428,7 +421,7 @@ namespace {
             currentAssets.push_back(SdfAssetPath(clipId));
             resultLayer
                 ->GetPrimAtPath(stitchPath)
-                ->SetInfo(clipAssetPathsKey, VtValue(currentAssets));
+                ->SetInfo(UsdTokens->clipAssetPaths, VtValue(currentAssets));
         }
     }
 
@@ -446,7 +439,7 @@ namespace {
 
         resultLayer
            ->GetPrimAtPath(stitchPath) 
-           ->SetInfo(clipManifestAssetPath, 
+           ->SetInfo(UsdTokens->clipManifestAssetPath, 
                      VtValue(SdfAssetPath(manifestAssetPath)));
     }
 
@@ -524,7 +517,7 @@ namespace {
         VtVec2dArray currentClipTimes 
             = _GetUnboxedValue<VtVec2dArray>(resultLayer,
                                              clipDataPath,
-                                             clipTimeKey);
+                                             UsdTokens->clipTimes);
 
         // sort based on stage frame number
         std::sort(currentClipTimes.begin(), currentClipTimes.end(),
@@ -549,27 +542,7 @@ namespace {
         resultLayer->SetStartTimeCode(startTimeCode);
     }
 
-    // Generates a toplogy file name based on an input file name
-    // 
-    // For example, if given 'foo.usd', it generates 'foo.topology.usd'
-    // 
-    // Note: this will not strip preceding paths off of a file name
-    // so /bar/baze/foo.usd will produce /bar/baze/foo.topology.usd
-    std::string
-    _CreateTopologyName(const std::string& baseFileName)
-    {
-        // XXX: perhaps we have do/could have a file delimiter defined in Tf
-        //  as well as our topology convention.
-        const std::string delimiter = ".";
-        const std::size_t delimiterPos = baseFileName.rfind(".");
-        const std::string topologyFileBaseName = "topology";
-        if (delimiterPos == std::string::npos) {
-            return std::string();
-        }
 
-        return std::string(baseFileName).insert(delimiterPos,
-            delimiter+topologyFileBaseName);
-    }
 
     struct _StitchLayersResult {
         SdfPath clipPath;
@@ -759,7 +732,6 @@ namespace {
 
 // public facing API
 // ----------------------------------------------------------------------------
-
 bool
 UsdUtilsStitchClipsTopology(const SdfLayerHandle& topologyLayer,
                             const _ClipFileVector& clipLayerFiles)
@@ -811,7 +783,7 @@ UsdUtilsStitchClips(const SdfLayerHandle& resultLayer,
     // Prepare topology layer for editing, create if necessary
     bool topologyPreExisting = true;
     std::string topologyLayerId 
-        = _CreateTopologyName(resultLayer->GetIdentifier());
+        = UsdUtilsGenerateClipTopologyName(resultLayer->GetIdentifier());
     SdfLayerRefPtr topologyLayer = SdfLayer::FindOrOpen(topologyLayerId);
     if (!topologyLayer) {
         topologyPreExisting = false;
@@ -842,6 +814,59 @@ UsdUtilsStitchClips(const SdfLayerHandle& resultLayer,
     // Note that we don't apply edits until all other 
     // actions have completed. 
     topologyLayer->Save();
+    resultLayer->Save();
+    return true;
+}
+
+std::string
+UsdUtilsGenerateClipTopologyName(const std::string& baseFileName)
+{
+    const std::string delimiter = ".";
+    const std::size_t delimiterPos = baseFileName.rfind(".");
+    const std::string topologyFileBaseName = "topology";
+    if (delimiterPos == std::string::npos) {
+        return std::string();
+    }
+
+    return std::string(baseFileName).insert(delimiterPos,
+        delimiter+topologyFileBaseName);
+}
+
+bool
+UsdUtilsStitchClipsTemplate(const SdfLayerHandle& resultLayer,
+                            const SdfLayerHandle& topologyLayer,
+                            const SdfPath& clipPath,
+                            const std::string& templatePath,
+                            const double startTime,
+                            const double endTime,
+                            const double stride)
+{
+    // XXX: See comment in UsdUtilsStitchClipsTopology above.
+    TF_PY_ALLOW_THREADS_IN_SCOPE();  
+
+    if (!_LayerIsWritable(resultLayer)) {
+        return false;
+    } else {
+        resultLayer->Clear();
+    }
+
+    if (!topologyLayer) {
+        return false;
+    }
+
+    // set prim level metadata
+    auto prim = SdfCreatePrimInLayer(resultLayer, clipPath);
+    prim->SetInfo(UsdTokens->clipPrimPath, VtValue(clipPath.GetString()));
+    prim->SetInfo(UsdTokens->clipTemplateAssetPath, VtValue(templatePath));
+    prim->SetInfo(UsdTokens->clipTemplateStartTime, VtValue(startTime));
+    prim->SetInfo(UsdTokens->clipTemplateEndTime, VtValue(endTime));
+    prim->SetInfo(UsdTokens->clipTemplateStride, VtValue(stride));
+
+    // set root layer metadata
+    _StitchClipsTopologySubLayerPath(resultLayer, 
+                                     topologyLayer->GetIdentifier());
+    resultLayer->SetStartTimeCode(startTime);
+    resultLayer->SetEndTimeCode(endTime);
     resultLayer->Save();
     return true;
 }

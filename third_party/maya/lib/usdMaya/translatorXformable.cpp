@@ -24,6 +24,7 @@
 #include "usdMaya/translatorXformable.h"
 
 #include "usdMaya/translatorPrim.h"
+#include "usdMaya/translatorUtil.h"
 
 #include "pxr/usd/usdGeom/xformable.h"
 #include "pxr/usd/usdGeom/xform.h"
@@ -332,7 +333,7 @@ static bool _pushUSDXformOpToMayaXform(
         const std::string& opName, 
         MFnDagNode &MdagNode,
         bool *importedPivots,
-        bool readAnimData,
+        const PxrUsdMayaPrimReaderArgs& args,
         const PxrUsdMayaPrimReaderContext* context)
 {
     std::vector<double> xValue;
@@ -340,8 +341,8 @@ static bool _pushUSDXformOpToMayaXform(
     std::vector<double> zValue;
     GfVec3d value;
     std::vector<double> timeSamples;
-    if (readAnimData) {
-        xformop.GetTimeSamples(&timeSamples);
+    if (args.GetReadAnimData()) {
+        PxrUsdMayaTranslatorUtil::GetTimeSamples(xformop, args, &timeSamples);
     }
     MTimeArray timeArray;
     if (not timeSamples.empty()) {
@@ -417,6 +418,7 @@ static bool _isIdentityMatrix(GfMatrix4d m)
 static bool _pushUSDXformToMayaXform(
         const UsdGeomXformable &xformSchema, 
         MFnDagNode &MdagNode,
+        const PxrUsdMayaPrimReaderArgs& args,
         const PxrUsdMayaPrimReaderContext* context)
 {
     std::vector<double> TxVal, TyVal, TzVal;
@@ -427,7 +429,7 @@ static bool _pushUSDXformToMayaXform(
     GfMatrix4d localXform(1.0);
 
     std::vector<double> tSamples;
-    xformSchema.GetTimeSamples(&tSamples);
+    PxrUsdMayaTranslatorUtil::GetTimeSamples(xformSchema, args, &tSamples);
     MTimeArray timeArray;
     if (not tSamples.empty()) {
         timeArray.setLength(tSamples.size());
@@ -552,11 +554,12 @@ PxrUsdMayaTranslatorXformable::Read(
                 }
             }
             _pushUSDXformOpToMayaXform(xformop, opName, MdagNode, &importedPivots,
-                    args.GetReadAnimData(), context);
+                    args, context);
         }
     } else {
         // This xform can't be safely interpreted by Maya. Decompose Matrix
-        if (_pushUSDXformToMayaXform(xformSchema, MdagNode, context)==false) {
+        if (_pushUSDXformToMayaXform(xformSchema, MdagNode, args, context) == 
+                false) {
             MGlobal::displayError(
                     "Unable to successfully decompose matrix at USD Prim:" 
                     + MString(xformSchema.GetPath().GetText()));

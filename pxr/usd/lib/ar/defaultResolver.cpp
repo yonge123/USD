@@ -26,6 +26,7 @@
 #include "pxr/usd/ar/assetInfo.h"
 #include "pxr/usd/ar/resolverContext.h"
 
+#include "pxr/base/arch/fileSystem.h"
 #include "pxr/base/arch/systemInfo.h"
 #include "pxr/base/tf/getenv.h"
 #include "pxr/base/tf/fileUtils.h"
@@ -220,6 +221,33 @@ ArDefaultResolver::UpdateAssetInfo(
             resolveInfo->version = fileVersion;
         }
     }
+}
+
+VtValue
+ArDefaultResolver::GetModificationTimestamp(
+    const std::string& path,
+    const std::string& resolvedPath)
+{
+    // Since the default resolver always resolves paths to local
+    // paths, we can just look at the mtime of the file indicated
+    // by resolvedPath.
+    struct stat fileInfo;
+    if (stat(resolvedPath.c_str(), &fileInfo) == 0) {
+        return VtValue(ArchGetModificationTime(fileInfo));
+    }
+    return VtValue();
+}
+
+bool 
+ArDefaultResolver::FetchToLocalResolvedPath(
+    const std::string& path,
+    const std::string& resolvedPath)
+{
+    // ArDefaultResolver always resolves paths to a file on the
+    // local filesystem. Because of this, we know the asset specified 
+    // by the given path already exists on the filesystem at 
+    // resolvedPath, so no further data fetching is needed.
+    return true;
 }
 
 bool
