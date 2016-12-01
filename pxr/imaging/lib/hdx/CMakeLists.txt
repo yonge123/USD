@@ -55,6 +55,7 @@ pxr_shared_library(hdx
     RESOURCE_FILES
         plugInfo.json
         shaders/simpleLightingShader.glslfx
+        shaders/physicalLightingShader.glslfx
         shaders/renderPass.glslfx
         shaders/renderPassShader.glslfx
         shaders/renderPassIdShader.glslfx
