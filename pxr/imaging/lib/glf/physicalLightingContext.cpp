@@ -14,7 +14,8 @@ TF_DEFINE_PRIVATE_TOKENS(
 
 GlfPhysicalLightingContextRefPtr GlfPhysicalLightingContext::New()
 {
-    return TfCreateRefPtr(new This());
+    struct enable_make_shared : public GlfPhysicalLightingContext {};
+    return std::make_shared<enable_make_shared>();
 }
 
 void GlfPhysicalLightingContext::SetLights(const GlfPhysicalLightVector& lights)
@@ -53,7 +54,7 @@ void GlfPhysicalLightingContext::SetUseLighting(bool val)
     }
 }
 
-bool GlfPhysicalLightingContext::GetUseLigthing() const
+bool GlfPhysicalLightingContext::GetUseLighting() const
 {
     return _useLighting;
 }

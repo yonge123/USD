@@ -53,11 +53,12 @@ void HdxPhysicalLightingShader::AddBindings(HdBindingRequestVector* customBindin
 
 void HdxPhysicalLightingShader::SetLightingState(const GlfPhysicalLightingContextPtr& lightingContext)
 {
-    if (lightingContext)
+    auto lightingContextLocked = lightingContext.lock();
+    if (lightingContextLocked)
     {
         _useLighting = true;
-        _lightingContext->SetUseLighting(lightingContext->GetNumLightsUsed() != 0);
-        _lightingContext->SetLights(lightingContext->GetLights());
+        _lightingContext->SetUseLighting(lightingContextLocked->GetNumLightsUsed() != 0);
+        _lightingContext->SetLights(lightingContextLocked->GetLights());
     }
     else
         _useLighting = false;

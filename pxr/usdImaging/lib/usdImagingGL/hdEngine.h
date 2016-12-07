@@ -31,13 +31,12 @@
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/engine.h"
 #include "pxr/imaging/hdx/selectionTracker.h"
+#include "pxr/imaging/glf/simpleLightingContext.h"
+#include "pxr/imaging/glf/physicalLightingContext.h"
 
 #include "pxr/base/tf/declarePtrs.h"
 
 #include <boost/shared_ptr.hpp>
-
-TF_DECLARE_WEAK_AND_REF_PTRS(GlfSimpleLightingContext);
-TF_DECLARE_WEAK_AND_REF_PTRS(GlfPhysicalLightingContext);
 
 class HdRenderIndex;
 typedef boost::shared_ptr<class UsdImagingGLTaskDelegate>

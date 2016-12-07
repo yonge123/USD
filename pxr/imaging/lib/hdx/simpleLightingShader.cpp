@@ -138,8 +138,9 @@ HdxSimpleLightingShader::SetLightingStateFromOpenGL()
 
 void
 HdxSimpleLightingShader::SetLightingState(
-    GlfSimpleLightingContextPtr const &src)
+    GlfSimpleLightingContextPtr const &_src)
 {
+    auto src = _src.lock();
     if (src) {
         _useLighting = true;
         _lightingContext->SetUseLighting(not src->GetLights().empty());

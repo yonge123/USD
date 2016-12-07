@@ -3,6 +3,7 @@
 #include "physicalLight.h"
 #include "uniformBlock.h"
 #include "bindingMap.h"
+#include "lightingContext.h"
 
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/gf/vec4f.h"
@@ -13,10 +14,12 @@
 
 #include <ostream>
 #include <array>
+#include <memory>
 
-TF_DECLARE_WEAK_AND_REF_PTRS(GlfPhysicalLightingContext);
+typedef std::shared_ptr<class GlfPhysicalLightingContext> GlfPhysicalLightingContextRefPtr;
+typedef std::weak_ptr<class GlfPhysicalLightingContext> GlfPhysicalLightingContextPtr;
 
-class GlfPhysicalLightingContext : public TfRefBase, public TfWeakBase {
+class GlfPhysicalLightingContext : public GlfLightingContext {
 public:
     typedef GlfPhysicalLightingContext This;
     static GlfPhysicalLightingContextRefPtr New();
@@ -30,12 +33,22 @@ public:
     int GetNumLightsUsed() const;
 
     void SetUseLighting(bool val);
-    bool GetUseLigthing() const;
+    bool GetUseLighting() const;
 
     void WriteDefinitions(std::ostream& os) const;
 
-    void InitUniformBlockBindings(const GlfBindingMapPtr&bindingMap) const;
-    void BindUniformBlocks(const GlfBindingMapPtr &bindingMap);
+    bool GetUseShadows() const { return false; };
+
+    void InitUniformBlockBindings(GlfBindingMapPtr const &bindingMap) const;
+    void InitSamplerUnitBindings(GlfBindingMapPtr const &bindingMap) const { }
+
+    void BindUniformBlocks(GlfBindingMapPtr const &bindingMap);
+    void BindSamplers(GlfBindingMapPtr const &bindingMap) { }
+
+    void UnbindSamplers(GlfBindingMapPtr const &bindingMap) { }
+
+    void SetStateFromOpenGL() { }
+
 protected:
     GlfPhysicalLightingContext();
     ~GlfPhysicalLightingContext();

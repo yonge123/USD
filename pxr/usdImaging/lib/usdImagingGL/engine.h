@@ -31,6 +31,8 @@
 #include "pxr/imaging/glf/simpleLight.h"
 #include "pxr/imaging/glf/physicalLight.h"
 #include "pxr/imaging/glf/simpleMaterial.h"
+#include "pxr/imaging/hdx/simpleLightingShader.h"
+#include "pxr/imaging/hdx/physicalLightingShader.h"
 
 #include "pxr/base/tf/declarePtrs.h"
 #include "pxr/base/tf/type.h"
@@ -51,8 +53,6 @@ class UsdPrim;
 
 typedef boost::shared_ptr<class GlfGLContext> GlfGLContextSharedPtr;
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfDrawTarget);
-TF_DECLARE_WEAK_PTRS(GlfSimpleLightingContext);
-TF_DECLARE_WEAK_PTRS(GlfPhysicalLightingContext);
 
 /// \class UsdImagingGLEngine
 ///

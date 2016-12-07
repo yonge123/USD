@@ -72,7 +72,7 @@ public:
     };
 
 private:
-    GlfSimpleLightingContextRefPtr _lightingContext; 
+    GlfSimpleLightingContextRefPtr _lightingContext;
     GlfBindingMapRefPtr _bindingMap;
     bool _useLighting;
     boost::scoped_ptr<GlfGLSLFX> _glslfx;

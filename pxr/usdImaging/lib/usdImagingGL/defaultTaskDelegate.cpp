@@ -437,9 +437,10 @@ UsdImagingGL_DefaultTaskDelegate::_UpdateRenderParams(
 
 void
 UsdImagingGL_DefaultTaskDelegate::SetLightingState(
-    const GlfSimpleLightingContextPtr &src)
+    const GlfSimpleLightingContextPtr &_src)
 {
-    if (not TF_VERIFY(src)) return;
+    auto src = _src.lock();
+    if (not src) return;
 
     // cache the GlfSimpleLight vector
     GlfSimpleLightVector const &lights = src->GetLights();
@@ -500,9 +501,10 @@ UsdImagingGL_DefaultTaskDelegate::SetLightingState(
 }
 
 void
-UsdImagingGL_DefaultTaskDelegate::SetLightingState(const GlfPhysicalLightingContextPtr& src)
+UsdImagingGL_DefaultTaskDelegate::SetLightingState(const GlfPhysicalLightingContextPtr& _src)
 {
-    if (not TF_VERIFY(src)) return;
+    auto src = _src.lock();
+    if (not src) return;
 
     // cache the GlfSimpleLight vector
     GlfPhysicalLightVector const &lights = src->GetLights();
@@ -565,7 +567,7 @@ UsdImagingGL_DefaultTaskDelegate::SetBypassedLightingState(const GlfPhysicalLigh
 {
     HdxPhysicalLightBypassTaskParams params;
     params.cameraPath = _cameraId;
-    params.physicalLightingContext = src;
+    params.physicalLightingContext = src.lock();
     _SetValue(_physicalLightBypassTaskId, HdTokens->params, params);
 
     GetRenderIndex().GetChangeTracker().MarkTaskDirty(
@@ -580,7 +582,7 @@ UsdImagingGL_DefaultTaskDelegate::SetBypassedLightingState(
 {
     HdxSimpleLightBypassTaskParams params;
     params.cameraPath = _cameraId;
-    params.simpleLightingContext = src;
+    params.simpleLightingContext = src.lock();
     _SetValue(_simpleLightBypassTaskId, HdTokens->params, params);
 
     // invalidate HdxSimpleLightBypassTask

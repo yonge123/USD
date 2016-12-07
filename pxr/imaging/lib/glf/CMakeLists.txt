@@ -49,6 +49,7 @@ pxr_shared_library(glf
         package
         ptexTexture
         ptexMipmapTextureLoader
+        lightingContext
         physicalLight
         physicalLightingContext
         simpleLight

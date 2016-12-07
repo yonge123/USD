@@ -29,6 +29,7 @@
 #include "pxr/imaging/glf/simpleLight.h"
 #include "pxr/imaging/glf/simpleMaterial.h"
 #include "pxr/imaging/glf/simpleShadowArray.h"
+#include "pxr/imaging/glf/lightingContext.h"
 
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/gf/vec4f.h"
@@ -37,12 +38,16 @@
 #include "pxr/base/tf/refBase.h"
 #include "pxr/base/tf/weakBase.h"
 
+#include <memory>
+
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfBindingMap);
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfUniformBlock);
-TF_DECLARE_WEAK_AND_REF_PTRS(GlfSimpleLightingContext);
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfSimpleShadowArray);
 
-class GlfSimpleLightingContext : public TfRefBase, public TfWeakBase {
+typedef std::shared_ptr<class GlfSimpleLightingContext> GlfSimpleLightingContextRefPtr;
+typedef std::weak_ptr<class GlfSimpleLightingContext> GlfSimpleLightingContextPtr;
+
+class GlfSimpleLightingContext : public GlfLightingContext{
 public:
     typedef GlfSimpleLightingContext This;
 

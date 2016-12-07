@@ -58,10 +58,12 @@ TF_DEFINE_PRIVATE_TOKENS(
 static const int _maxLightsUsed = 16;
 
 /* static */
+
 GlfSimpleLightingContextRefPtr
 GlfSimpleLightingContext::New()
 {
-    return TfCreateRefPtr(new This());
+    struct enable_make_shared : public GlfSimpleLightingContext {};
+    return std::make_shared<enable_make_shared>();
 }
 
 GlfSimpleLightingContext::GlfSimpleLightingContext() :

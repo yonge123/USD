@@ -72,6 +72,8 @@ HdGLSLProgram::ComputeHash(TfToken const &sourceFile)
     return hash;
 }
 
+#include <map>
+
 bool
 HdGLSLProgram::CompileShader(GLenum type,
                              std::string const &shaderSource)
@@ -120,9 +122,14 @@ HdGLSLProgram::CompileShader(GLenum type,
         _program.SetAllocation(program, 0);
     }
 
+    static std::map<int, int> shader_counter;
     // create a shader, compile it
     const char *shaderSources[1];
     shaderSources[0] = shaderSource.c_str();
+    std::stringstream ss;
+    ss << "/home/palm/data/usd/shaders/" << (shaderType + 3) << "_" << shader_counter[type]++ << ".glsl";
+    std::fstream fs(ss.str(), std::ios::out);
+    fs << shaderSource;
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, sizeof(shaderSources)/sizeof(const char *), shaderSources, NULL);
     glCompileShader(shader);
