@@ -49,6 +49,8 @@ public:
 
     void SetStateFromOpenGL() { }
 
+    void CopyFromContext(const GlfLightingContextPtr& other) { }
+
 protected:
     GlfPhysicalLightingContext();
     ~GlfPhysicalLightingContext();

@@ -91,6 +91,8 @@ public:
 
     void SetStateFromOpenGL();
 
+    void CopyFromContext(const GlfLightingContextPtr& other) { }
+
 protected:
     GlfSimpleLightingContext();
     ~GlfSimpleLightingContext();

@@ -10,7 +10,8 @@
 #include "pxr/base/tf/refBase.h"
 #include "pxr/base/tf/weakBase.h"
 
-typedef std::shared_ptr<class GlfLightingContext> GlfLightingContextSharedPtr;
+typedef std::shared_ptr<class GlfLightingContext> GlfLightingContextRefPtr;
+typedef std::weak_ptr<class GlfLightingContext> GlfLightingContextPtr;
 
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfBindingMap);
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfUniformBlock);
@@ -39,6 +40,8 @@ public:
     virtual void UnbindSamplers(GlfBindingMapPtr const &bindingMap) = 0;
 
     virtual void SetStateFromOpenGL() = 0;
+
+    virtual void CopyFromContext(const GlfLightingContextPtr& other) = 0;
 };
 
 #endif
