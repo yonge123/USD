@@ -162,7 +162,6 @@ if __name__ == '__main__':
     physical_light.direction.Normalize()
     lights = []
     lights.append(physical_light)
-    renderer.SetPhysicalLightingState(lights)
 
     '''simple_lights = []
     l = Glf.SimpleLight()
@@ -196,6 +195,7 @@ if __name__ == '__main__':
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
         renderer.SetLightingStateFromOpenGL()
+        renderer.SetPhysicalLightingState(lights)
         renderer.Render(render_root, render_params)
 
         gl.glFlush()

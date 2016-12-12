@@ -88,6 +88,8 @@ UsdImagingGL_DefaultTaskDelegate::UsdImagingGL_DefaultTaskDelegate(
     _selectionTaskId            = _rootId.AppendChild(_tokens->selectionTask);
     _simpleLightTaskId          = _rootId.AppendChild(_tokens->simpleLightTask);
     _simpleLightBypassTaskId    = _rootId.AppendChild(_tokens->simpleLightBypassTask);
+    _physicalLightTaskId        = _rootId.AppendChild(_tokens->physicalLightTask);
+    _physicalLightBypassTaskId  = _rootId.AppendChild(_tokens->physicalLightBypassTask);
     _cameraId                   = _rootId.AppendChild(_tokens->camera);
     _activeSimpleLightTaskId    = SdfPath();
     _activePhysicalLightTaskId  = SdfPath();
@@ -188,8 +190,12 @@ UsdImagingGL_DefaultTaskDelegate::~UsdImagingGL_DefaultTaskDelegate()
     renderIndex.RemoveTask(_renderTaskId);
     renderIndex.RemoveTask(_idRenderTaskId);
 
-    TF_FOR_ALL (id, _lightIds) {
-        renderIndex.RemoveSprim(*id);
+    for (const auto& id : _lightIds) {
+        renderIndex.RemoveSprim(id);
+    }
+
+    for (const auto& id : _physicalLightIds) {
+        renderIndex.RemoveSprim(id);
     }
 }
 
@@ -512,53 +518,49 @@ UsdImagingGL_DefaultTaskDelegate::SetLightingState(const GlfPhysicalLightingCont
     bool hasNumLightsChanged = false;
 
     // Insert the light Ids into HdRenderIndex for those not yet exist.
-    while (_lightIds.size() < lights.size()) {
+    while (_physicalLightIds.size() < lights.size()) {
         SdfPath lightId(
-            TfStringPrintf("%s/light%d", _rootId.GetText(),
-                           (int)_lightIds.size()));
-        _lightIds.push_back(lightId);
+            TfStringPrintf("%s/physicalLight%d", _rootId.GetText(),
+                           (int)_physicalLightIds.size()));
+        _physicalLightIds.push_back(lightId);
 
         GetRenderIndex().InsertSprim<HdxLight>(this, lightId);
         hasNumLightsChanged = true;
     }
     // Remove unused light Ids from HdRenderIndex
-    while (_lightIds.size() > lights.size()) {
-        GetRenderIndex().RemoveSprim(_lightIds.back());
-        _lightIds.pop_back();
+    while (_physicalLightIds.size() > lights.size()) {
+        GetRenderIndex().RemoveSprim(_physicalLightIds.back());
+        _physicalLightIds.pop_back();
         hasNumLightsChanged = true;
     }
 
     // invalidate HdLights
     for (size_t i = 0; i < lights.size(); ++i) {
-        _ValueCache &cache = _valueCacheMap[_lightIds[i]];
+        _ValueCache &cache = _valueCacheMap[_physicalLightIds[i]];
         // store GlfSimpleLight directly.
         cache[HdxLightTokens->params] = VtValue(lights[i]);
         cache[HdxLightTokens->transform] = VtValue();
         cache[HdxLightTokens->shadowParams] = VtValue(HdxShadowParams());
         cache[HdxLightTokens->shadowCollection] = VtValue();
 
-        // Only mark as dirty the parameters to avoid unnecessary invalidation
-        // specially marking as dirty lightShadowCollection will trigger
-        // a collection dirty on geometry and we don't want that to happen
-        // always
         GetRenderIndex().GetChangeTracker().MarkSprimDirty(
-            _lightIds[i], HdxLight::DirtyParams);
+            _physicalLightIds[i], HdxLight::DirtyParams);
     }
 
     // sadly the material also comes from lighting context right now...
     HdxPhysicalLightTaskParams params
-        = _GetValue<HdxPhysicalLightTaskParams>(_simpleLightTaskId,
+        = _GetValue<HdxPhysicalLightTaskParams>(_physicalLightTaskId,
                                               HdTokens->params);
 
-    // invalidate HdxSimpleLightTask too
+    // invalidate HdxPhysicalLightTask too
     if (hasNumLightsChanged) {
-        _SetValue(_simpleLightTaskId, HdTokens->params, params);
+        _SetValue(_physicalLightTaskId, HdTokens->params, params);
 
         GetRenderIndex().GetChangeTracker().MarkTaskDirty(
-            _simpleLightTaskId, HdChangeTracker::DirtyParams);
+            _physicalLightTaskId, HdChangeTracker::DirtyParams);
     }
 
-    // set HdxSimpleLightTask as the lighting task
+    // set HdxPhysicalLightTask as the lighting task
     _activePhysicalLightTaskId = _physicalLightTaskId;
 }
 

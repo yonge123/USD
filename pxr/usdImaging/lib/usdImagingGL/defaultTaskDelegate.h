@@ -140,6 +140,7 @@ private:
     SdfPath _cameraId;
 
     SdfPathVector _lightIds;
+    SdfPathVector _physicalLightIds;
 
     typedef TfHashMap<TfToken, VtValue, TfToken::HashFunctor> _ValueCache;
     typedef TfHashMap<SdfPath, _ValueCache, SdfPath::Hash> _ValueCacheMap;

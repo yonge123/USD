@@ -176,11 +176,11 @@ HdxSimpleLightTask::_Sync(HdTaskContext* ctx)
         // update it with viewer-dependant values.
         VtValue vtLightParams = _lights[lightId]->Get(HdxLightTokens->params);
 
-        if (TF_VERIFY(vtLightParams.IsHolding<GlfSimpleLight>())) {
+        if (vtLightParams.IsHolding<GlfSimpleLight>()) {
             _glfSimpleLights.push_back(
                 vtLightParams.UncheckedGet<GlfSimpleLight>());
         } else {
-            _glfSimpleLights.push_back(GlfSimpleLight());
+            continue;
         }
 
         // Get a reference to the light, so we can patch it.
