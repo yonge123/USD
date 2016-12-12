@@ -157,6 +157,12 @@ if __name__ == '__main__':
     gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_SPECULAR, (0.5, 0.5, 0.5, 1.0))
     gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_SHININESS, 32.0)
 
+    physical_light = Glf.PhysicalLight()
+    physical_light.direction = Gf.Vec3f(-1.0, -1.0, -1.0)
+    physical_light.direction.Normalize()
+    lights = []
+    lights.append(physical_light)
+
     for frame in range(args.firstframe, args.lastframe + 1):
         render_params.frame = frame
         render_params.forceRefresh = True
@@ -176,6 +182,7 @@ if __name__ == '__main__':
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
         renderer.SetLightingStateFromOpenGL()
+        renderer.SetPhysicalLightingState(lights)
         renderer.Render(render_root, render_params)
 
         gl.glFlush()

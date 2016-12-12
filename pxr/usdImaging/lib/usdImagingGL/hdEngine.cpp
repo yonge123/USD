@@ -646,6 +646,7 @@ UsdImagingGLHdEngine::SetLightingState(const GlfPhysicalLightVector& lights)
 void
 UsdImagingGLHdEngine::SetLightingState(const GlfPhysicalLightingContextPtr& src)
 {
+    std::cerr << "Setting up physical lighting state" << std::endl;
     _defaultTaskDelegate->SetBypassedLightingState(src);
 }
 

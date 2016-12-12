@@ -89,7 +89,7 @@ _SetLightingState(UsdImagingGL &self, GlfSimpleLightVector const &lights,
 }
 
 static void
-_SetPhysicalLightingState(UsdImagingGL& self, const GlfPhysicalLightVector& lights)
+_SetPhysicalLightingState(UsdImagingGL& self, GlfPhysicalLightVector const &lights)
 {
     self.SetLightingState(lights);
 }

@@ -35,4 +35,5 @@ TF_WRAP_MODULE
     TF_WRAP( Glew );
     TF_WRAP( SimpleLight );
     TF_WRAP( SimpleMaterial );
+    TF_WRAP( PhysicalLight );
 }
