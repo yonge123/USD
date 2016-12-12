@@ -162,6 +162,20 @@ if __name__ == '__main__':
     physical_light.direction.Normalize()
     lights = []
     lights.append(physical_light)
+    renderer.SetPhysicalLightingState(lights)
+
+    '''simple_lights = []
+    l = Glf.SimpleLight()
+    l.ambient = (0, 0, 0, 0)
+    l.position = (0.0, 0.0, 0.0, 1)
+    simple_lights.append(l)
+
+    material = Glf.SimpleMaterial()
+    material.ambient = (0.2, 0.2, 0.2, 1.0)
+    material.specular = (0.5, 0.5, 0.5, 1.0)
+    material.shininess = 32.0
+    sceneAmbient = (0.01, 0.01, 0.01, 1.0)
+    renderer.SetLightingState(simple_lights, material, sceneAmbient)'''
 
     for frame in range(args.firstframe, args.lastframe + 1):
         render_params.frame = frame
@@ -182,7 +196,6 @@ if __name__ == '__main__':
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
         renderer.SetLightingStateFromOpenGL()
-        renderer.SetPhysicalLightingState(lights)
         renderer.Render(render_root, render_params)
 
         gl.glFlush()

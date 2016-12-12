@@ -89,7 +89,7 @@ _SetLightingState(UsdImagingGL &self, GlfSimpleLightVector const &lights,
 }
 
 static void
-_SetPhysicalLightingState(UsdImagingGL& self, GlfPhysicalLightVector const &lights)
+_SetPhysicalLightingState(UsdImagingGL& self, const GlfPhysicalLightVector& lights)
 {
     self.SetLightingState(lights);
 }
@@ -174,5 +174,9 @@ void wrapGL()
         TfPyContainerConversions::from_python_sequence<
             std::vector<GlfSimpleLight>,
                 TfPyContainerConversions::variable_capacity_policy>();
+
+        TfPyContainerConversions::from_python_sequence<
+            std::vector<GlfPhysicalLight>,
+            TfPyContainerConversions::variable_capacity_policy>();
     }
 }
