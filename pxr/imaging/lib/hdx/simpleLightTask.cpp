@@ -133,7 +133,7 @@ HdxSimpleLightTask::_Sync(HdTaskContext* ctx)
     }
 
     GlfSimpleLightingContextRefPtr const& lightingContext = 
-                                    _lightingShader->GetLightingContext(); 
+                                    _lightingShader->GetLightingContext();
     if (not TF_VERIFY(lightingContext)) {
         return;
     }
@@ -241,6 +241,7 @@ HdxSimpleLightTask::_Sync(HdTaskContext* ctx)
         }
     }
 
+    numLights = _glfSimpleLights.size();
     lightingContext->SetUseLighting(numLights > 0);
     lightingContext->SetLights(_glfSimpleLights);
     lightingContext->SetCamera(modelViewMatrix.Get<GfMatrix4d>(),
