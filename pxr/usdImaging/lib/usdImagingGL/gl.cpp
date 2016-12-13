@@ -26,6 +26,7 @@
 #include "pxr/usdImaging/usdImagingGL/gl.h"
 #include "pxr/usdImaging/usdImagingGL/hdEngine.h"
 #include "pxr/usdImaging/usdImagingGL/refEngine.h"
+#include "pxr/usdImaging/usdImagingGL/hkEngine.h"
 
 #include "pxr/imaging/hd/renderContextCaps.h"
 
@@ -57,8 +58,26 @@ _IsEnabledHydra()
 
 /*static*/
 bool
+UsdImagingGL::IsEnabledHk()
+{
+    GlfGlewInit();
+    // we'll draw into opengl from vulkan using the NV extensions
+    GlfGLContextSharedPtr context = GlfGLContext::GetCurrentGLContext();
+    if (!context) {
+        TF_CODING_ERROR("OpenGL context required, using reference renderer");
+        return false;
+    }
+
+    return TfGetenv("HK_ENABLED", "0") == "1";
+}
+
+/*static*/
+bool
 UsdImagingGL::IsEnabledHydra()
 {
+    if (UsdImagingGL::IsEnabledHk())
+        return false;
+
     GlfGlewInit();
 
     static bool isEnabledHydra = _IsEnabledHydra();
@@ -74,7 +93,9 @@ UsdImagingGLEngine* _InitEngine(const SdfPath& rootPath,
                               const UsdImagingGLEngineSharedPtr& sharedEngine =
                                         UsdImagingGLEngineSharedPtr())
 {
-    if (UsdImagingGL::IsEnabledHydra()) {
+    if (UsdImagingGL::IsEnabledHk()) {
+        return new UsdImagingGLHkEngine();
+    } else if (UsdImagingGL::IsEnabledHydra()) {
         return new UsdImagingGLHdEngine(rootPath, excludedPaths, invisedPaths, 
             sharedId, 
             boost::dynamic_pointer_cast<UsdImagingGLHdEngine>(sharedEngine));

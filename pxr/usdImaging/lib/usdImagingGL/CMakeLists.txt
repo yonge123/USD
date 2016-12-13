@@ -42,6 +42,7 @@ pxr_shared_library(usdImagingGL
         gl
         hdEngine
         refEngine
+        hkEngine
         taskDelegate
 
     PRIVATE_CLASSES
