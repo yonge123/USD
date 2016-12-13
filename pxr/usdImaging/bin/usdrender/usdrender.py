@@ -60,51 +60,53 @@ if __name__ == '__main__':
     Rendering a sequence of images using usdImaging.
     ''')
     parser.add_argument(
-        '--width', dest = 'width', type = int, action = 'store',
-        default = 512, help = 'Width of the rendered image.'
+        '--width', dest='width', type=int, action='store',
+        default=512, help='Width of the rendered image.'
     )
     parser.add_argument(
-        '--height', dest = 'height', type = int, action = 'store',
-        default = 512, help = 'Height of the rendered image.'
+        '--height', dest='height', type=int, action='store',
+        default=512, help='Height of the rendered image.'
     )
     parser.add_argument(
-        '--output', '-o', dest = 'output', type = str, action = 'store',
-        default = 'output_%04d.png', help = 'Output path, including frame number formatting.'
+        '--output', '-o', dest='output', type=str, action='store',
+        default='output_%04d.png', help='Output path, including frame number formatting.'
     )
     parser.add_argument(
-        '--firstframe', '--ff', '-ff', dest = 'firstframe', type = int, action = 'store',
-        default = 1, help = 'First frame of the rendered sequence'
+        '--firstframe', '--ff', '-ff', dest='firstframe', type=int, action='store',
+        default=1, help='First frame of the rendered sequence'
     )
     parser.add_argument(
-        '--lastframe', '--lf', '-lf', dest = 'lastframe', type = int, action = 'store',
-        default = 1, help = 'First frame of the rendered sequence'
+        '--lastframe', '--lf', '-lf', dest='lastframe', type=int, action='store',
+        default=1, help='First frame of the rendered sequence'
     )
     parser.add_argument(
-        '--numThreads', '-n', dest = 'numthreads', type = int, action = 'store',
-        default = 0, help = 'Number of threads used for processing.'
+        '--numThreads', '-n', dest='numthreads', type=int, action='store',
+        default=0, help='Number of threads used for processing.'
     )
     parser.add_argument(
-        '--select', '-s', dest = 'select', type = str, action = 'store',
-        default = '/', help = 'Select a prim to render.'
+        '--select', '-s', dest='select', type=str, action='store',
+        default='/', help='Select a prim to render.'
     )
     parser.add_argument(
-        '--camera', '-c', dest = 'camera', type = str, action = 'store',
-        default = '', help = 'Camera to render from.'
+        '--camera', '-c', dest='camera', type=str, action='store',
+        default='', help='Camera to render from.'
     )
     parser.add_argument(
-        '--complexity', dest = 'complexity', type = float, action = 'store',
-        default = 1.0, help = 'Subdivision complexity. [1.0, 2.0]'
+        '--complexity', dest='complexity', type=float, action='store',
+        default=1.0, help='Subdivision complexity. [1.0, 2.0]'
     )
     parser.add_argument(
-        '--renderer', '-r', dest = 'renderer', type = str, action = 'store',
-        choices = ['opt', 'simple'], default = 'opt', help = 'Which renderer to use.'
+        '--renderer', '-r', dest='renderer', type=str, action='store',
+        choices=['opt', 'simple', 'hk'], default='opt', help='Which renderer to use.'
     )
     parser.add_argument(
-        'usdfile', type = str, action = 'store',
-        help = 'USD file to render.'
+        'usdfile', type=str, action='store',
+        help='USD file to render.'
     )
     args = parser.parse_args()
-    if args.renderer == 'simple':
+    if args.renderer == 'hk':
+        os.environ['HK_ENABLED'] = "1"
+    elif args.renderer == 'simple':
         os.environ['HD_ENABLED'] = '0'
 
 
