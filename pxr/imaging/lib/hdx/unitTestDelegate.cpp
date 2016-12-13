@@ -35,6 +35,7 @@
 #include "pxr/imaging/hdx/drawTarget.h"
 #include "pxr/imaging/hdx/drawTargetAttachmentDescArray.h"
 #include "pxr/imaging/hdx/drawTargetTask.h"
+#include "pxr/imaging/hdx/drawTargetResolveTask.h"
 #include "pxr/imaging/hdx/light.h"
 #include "pxr/imaging/hdx/renderTask.h"
 #include "pxr/imaging/hdx/selectionTask.h"
@@ -271,7 +272,13 @@ Hdx_UnitTestDelegate::AddDrawTarget(SdfPath const &id)
     _ValueCache &cache = _valueCacheMap[id];
 
     HdxDrawTargetAttachmentDescArray attachments;
-    attachments.AddAttachment("color", HdFormatR8G8B8A8UNorm, VtValue(GfVec4f(1,1,0,1)));
+    attachments.AddAttachment("color",
+                              HdFormatR8G8B8A8UNorm,
+                              VtValue(GfVec4f(1,1,0,1)),
+                              HdWrapRepeat,
+                              HdWrapRepeat,
+                              HdMinFilterLinear,
+                              HdMagFilterLinear);
 
     cache[HdxDrawTargetTokens->enable]          = VtValue(true);
     cache[HdxDrawTargetTokens->camera]          = VtValue(SdfPath());
@@ -382,7 +389,14 @@ Hdx_UnitTestDelegate::AddDrawTargetTask(SdfPath const &id)
     HdxDrawTargetTaskParams params;
     params.enableLighting = true;
     cache[HdTokens->params] = params;
+}
 
+void
+Hdx_UnitTestDelegate::AddDrawTargetResolveTask(SdfPath const &id)
+{
+    GetRenderIndex().InsertTask<HdxDrawTargetResolveTask>(this, id);
+    _ValueCache &cache = _valueCacheMap[id];
+    cache[HdTokens->children] = VtValue(SdfPathVector());
 }
 
 void

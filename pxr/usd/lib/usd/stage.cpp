@@ -2420,7 +2420,12 @@ UsdStage::Reload()
 
     PcpChanges changes;
     _cache->Reload(&changes);
-        
+
+    // XXX: Usd should ideally be doing the reloads for both clip layers
+    // as well as any that need to be reloaded as noticed by Pcp.
+    // See bug/140498 for more info.
+    SdfLayer::ReloadLayers(_clipCache->GetUsedLayers()); 
+
     // Process changes.  This won't be invoked automatically if we didn't
     // reload any layers but only loaded layers that we failed to load
     // previously (because loading a previously unloaded layer doesn't
@@ -2708,12 +2713,20 @@ UsdStage::GetLayerStack(bool includeSessionLayers) const
 }
 
 SdfLayerHandleVector
-UsdStage::GetUsedLayers() const
+UsdStage::GetUsedLayers(bool includeClipLayers) const
 {
     if (not _cache)
         return SdfLayerHandleVector();
     
-    const SdfLayerHandleSet &usedLayers = _cache->GetUsedLayers();
+    SdfLayerHandleSet usedLayers = _cache->GetUsedLayers();
+
+    if (includeClipLayers && _clipCache){
+        SdfLayerHandleSet clipLayers = _clipCache->GetUsedLayers();
+        if (!clipLayers.empty()){
+            usedLayers.insert(clipLayers.begin(), clipLayers.end());
+        }
+    }
+
     return SdfLayerHandleVector(usedLayers.begin(), usedLayers.end());
 }
 
