@@ -60,6 +60,7 @@ _IsEnabledHydra()
 bool
 UsdImagingGL::IsEnabledHk()
 {
+#ifdef ENABLE_HK_ENGINE
     GlfGlewInit();
     // we'll draw into opengl from vulkan using the NV extensions
     GlfGLContextSharedPtr context = GlfGLContext::GetCurrentGLContext();
@@ -69,14 +70,18 @@ UsdImagingGL::IsEnabledHk()
     }
 
     return TfGetenv("HK_ENABLED", "0") == "1";
+#else
+    return false;
+#endif
 }
 
 /*static*/
 bool
 UsdImagingGL::IsEnabledHydra()
 {
-    if (UsdImagingGL::IsEnabledHk())
+    if (UsdImagingGL::IsEnabledHk()) {
         return false;
+    }
 
     GlfGlewInit();
 

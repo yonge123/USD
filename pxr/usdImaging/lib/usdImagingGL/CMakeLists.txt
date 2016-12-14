@@ -1,6 +1,9 @@
 set(PXR_PREFIX pxr/usdImaging)
 set(PXR_PACKAGE usdImagingGL)
 
+# I couldn't find a flag to append definitions to the compiled code
+add_compile_options("-DENABLE_HK_ENGINE")
+
 # Note: both python include directives are included for compatibility.
 pxr_shared_library(usdImagingGL
     LIBRARIES
