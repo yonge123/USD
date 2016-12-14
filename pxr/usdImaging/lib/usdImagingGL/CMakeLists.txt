@@ -1,8 +1,20 @@
 set(PXR_PREFIX pxr/usdImaging)
 set(PXR_PACKAGE usdImagingGL)
 
-# I couldn't find a flag to append definitions to the compiled code
-add_compile_options("-DENABLE_HK_ENGINE")
+# TODO: do this properly in the future
+find_path(VULKAN_HEADER
+          NAMES vulkan/vulkan.h)
+find_path(VULKAN_HPP_HEADER
+          NAMES vulkan/vulkan.hpp)
+if (VULKAN_HEADER AND VULKAN_HPP_HEADER)
+    # I couldn't find a flag to append definitions to the compiled code
+    add_compile_options("-DENABLE_HK_ENGINE")
+    set(VULKAN_LIBRARIES vulkan)
+    set(HK_CLASSES hkEngine)
+else ()
+    set(VULKAN_LIBRARIES "")
+    set(HK_CLASSES "")
+endif ()
 
 # Note: both python include directives are included for compatibility.
 pxr_shared_library(usdImagingGL
@@ -32,6 +44,7 @@ pxr_shared_library(usdImagingGL
         ${GLEW_LIBRARY}
         ${TBB_tbb_LIBRARY}
         ${TBB_tbbmalloc_LIBRARY}
+        ${VULKAN_LIBRARIES}
 
     INCLUDE_DIRS
         ${PYTHON_INCLUDE_PATH}
@@ -45,11 +58,11 @@ pxr_shared_library(usdImagingGL
         gl
         hdEngine
         refEngine
-        hkEngine
         taskDelegate
 
     PRIVATE_CLASSES
         defaultTaskDelegate
+        ${HK_CLASSES}
 
     PRIVATE_HEADERS
         unitTestGLDrawing.h
