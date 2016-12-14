@@ -5,7 +5,7 @@
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/sprim.h"
 #include "pxr/imaging/hdx/light.h"
-#include "pxr/base/lib/vt/value.h"
+#include "pxr/base/vt/value.h"
 
 HdxPhysicalLightTask::HdxPhysicalLightTask(HdSceneDelegate* delegate, const SdfPath& id) :
     HdSceneTask(delegate, id),
