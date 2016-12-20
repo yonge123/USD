@@ -30,6 +30,9 @@
 
 #include "pxr/base/tf/staticTokens.h"
 #include "pxr/base/tf/token.h"
+#include "pxr/usd/usdGeom/tokens.h"
+
+#include <maya/MGlobal.h>
 
 #define PXRUSDMAYA_TRANSLATOR_TOKENS \
     ((UsdFileExtensionDefault, "usd")) \
@@ -113,5 +116,21 @@ struct JobImportArgs
     bool importWithProxyShapes;
 };
 
+template<typename JobArgs>
+void setDefaultMeshScheme(JobArgs& jobArgs, const MString& stringVal)
+{
+    if (stringVal=="none") {
+        jobArgs.defaultMeshScheme = UsdGeomTokens->none;
+    } else if (stringVal=="catmullClark") {
+        jobArgs.defaultMeshScheme = UsdGeomTokens->catmullClark;
+    } else if (stringVal=="loop") {
+        jobArgs.defaultMeshScheme = UsdGeomTokens->loop;
+    } else if (stringVal=="bilinear") {
+        jobArgs.defaultMeshScheme = UsdGeomTokens->bilinear;
+    } else {
+        MGlobal::displayWarning("Incorrect Default Mesh Schema: " + stringVal +
+                                " defaulting to: " + MString(jobArgs.defaultMeshScheme.GetText()));
+    }
+}
 
 #endif // PXRUSDMAYA_JOBARGS_H
