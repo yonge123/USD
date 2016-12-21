@@ -123,15 +123,7 @@ usdTranslatorExport::writer(const MFileObject &file,
                 jobArgs.mergeTransformAndShape = theOption[1].asInt();
             }
             if (theOption[0] == MString("defaultMeshScheme")) {            
-                if (theOption[1]=="Polygonal Mesh") {
-                    jobArgs.defaultMeshScheme = UsdGeomTokens->none;
-                } else if (theOption[1]=="Bilinear SubDiv") {
-                    jobArgs.defaultMeshScheme = UsdGeomTokens->bilinear;
-                } else if (theOption[1]=="CatmullClark SDiv") {
-                    jobArgs.defaultMeshScheme = UsdGeomTokens->catmullClark;
-                } else if (theOption[1]=="Loop SDiv") {
-                    jobArgs.defaultMeshScheme = UsdGeomTokens->loop;
-                }
+                setDefaultMeshScheme(jobArgs, theOption[1]);
             }
             if (theOption[0] == MString("exportVisibility")) {
                 jobArgs.exportVisibility = theOption[1].asInt();

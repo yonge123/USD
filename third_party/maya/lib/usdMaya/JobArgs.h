@@ -126,13 +126,13 @@ struct JobImportArgs
 template<typename JobArgs>
 void setDefaultMeshScheme(JobArgs& jobArgs, const MString& stringVal)
 {
-    if (stringVal=="none") {
+    if (stringVal=="none" || stringVal=="Polygonal Mesh") {
         jobArgs.defaultMeshScheme = UsdGeomTokens->none;
-    } else if (stringVal=="catmullClark") {
+    } else if (stringVal=="catmullClark" || stringVal=="CatmullClark SDiv") {
         jobArgs.defaultMeshScheme = UsdGeomTokens->catmullClark;
-    } else if (stringVal=="loop") {
+    } else if (stringVal=="loop" || stringVal=="Loop SDiv") {
         jobArgs.defaultMeshScheme = UsdGeomTokens->loop;
-    } else if (stringVal=="bilinear") {
+    } else if (stringVal=="bilinear" || stringVal=="Bilinear SubDiv") {
         jobArgs.defaultMeshScheme = UsdGeomTokens->bilinear;
     } else {
         MGlobal::displayWarning("Incorrect Default Mesh Schema: " + stringVal +
