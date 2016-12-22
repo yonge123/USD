@@ -107,6 +107,8 @@ MStatus usdTranslatorImport::reader(const MFileObject & file,
                 setDefaultMeshScheme(jobArgs, theOption[1]);
             } else if (theOption[0] == MString("importWithProxyShapes")) {
                 jobArgs.importWithProxyShapes = theOption[1].asInt();
+            } else if (theOption[0] == MString("primPath")) {
+                primPath = theOption[1].asChar();
             }
         }
     }
