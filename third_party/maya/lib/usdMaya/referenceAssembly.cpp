@@ -71,7 +71,8 @@
 
 
 TF_DEFINE_ENV_SETTING(PIXMAYA_USE_USD_REF_ASSEMBLIES, true,
-                      "Uses USD scene assemblies for set dressing");
+                      "Use maya assemblies when importing USD scenes, instead"
+                      " of maya references");
 
 TF_DEFINE_ENV_SETTING(PIXMAYA_USE_USD_ASSEM_NAMESPACE, true,
                       "Prefixes unrolled USD assemblies with namespaces");

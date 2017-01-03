@@ -109,6 +109,8 @@ MStatus usdTranslatorImport::reader(const MFileObject & file,
                 jobArgs.importWithProxyShapes = theOption[1].asInt();
             } else if (theOption[0] == MString("primPath")) {
                 primPath = theOption[1].asChar();
+            } else if (theOption[0] == MString("topLayerUsd")) {
+                fileName = theOption[1].asChar();
             }
         }
     }

@@ -64,6 +64,12 @@
 #include <string>
 #include <vector>
 
+// TODO: instead of hardcoding this, switch based on context and
+// PIXMAYA_USE_USD_REF_ASSEMBLIES: ie, if the result of a reference or assembly
+// operation, do that, but if importing, use the PIXMAYA_USE_USD_REF_ASSEMBLIES
+// setting
+#define PIXMAYA_FORCE_MAYA_REFERENCES 1
+
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((FilePathPlugName, "filePath"))
     ((PrimPathPlugName, "primPath"))
@@ -323,6 +329,51 @@ PxrUsdMayaTranslatorModelAssembly::Read(
         return false;
     }
 
+
+#if (PIXMAYA_FORCE_MAYA_REFERENCES)
+    // The primitivePath and the topLayerUsd are passed in as options in the
+    // option string; note that this is all the information USD actually needs /
+    // uses... the refPath is actually just a dummy path we need for maya's
+    // referencing system. It needs a path that actually exists on disk, and it
+    // needs to not be the same as the parent reference (or else maya freaks
+    // outs, trying to recursively load the ref).
+
+    // Currently, we're just using the next file on the layer stack...
+
+    // (Wanted to look at references, but apparently that's not easy to get?
+    // GetMetadata('references') seems to return an empty list, and
+    // UsdPrim.GetReferences() has this note:
+    //    /// Return a UsdReferences object that allows one to add, remove, or
+    //    /// mutate references <em>at the currently set UsdEditTarget</em>.
+    //    ///
+    //    /// There is currently no facility for \em listing the currently authored
+    //    /// references on a prim... the problem is somewhat ill-defined, and
+    //    /// requires some thought.
+
+    // TODO: make sure we're not just getting the same top-level usd out of the
+    // stack - ie, search for it, then get the next entry in the stack... and if
+    // not found, take the top entry
+    MString refPath = modelPrim.GetPrimStack()[0].GetSpec().GetLayer()->GetIdentifier().c_str();
+
+    // Don't know of a way to pass in an option string using MFileIO::reference,
+    // so just uisng mel...
+    MString cmd = (MString("file -reference -options \"primPath=")
+                   // TODO: properly escape these strings
+                   // Pass in the primitive path...
+                   + modelPrim.GetPath().GetText()
+                   // ...and the top-level usd file in the option string.
+                   // Note that that's all the information that USD actually
+                   // needs / uses - the refPath is actually just a dummy. See
+                   // note above where we generate the refPath.
+                   + ";topLayerUsd="
+                   + assetIdentifier.c_str()
+                   + "\" \""
+                   + refPath
+                   + "\";");
+    CHECK_MSTATUS_AND_RETURN(MGlobal::executeCommand(cmd), false);
+
+    // TODO: re-parent and re-name toplevel node
+#else // PIXMAYA_FORCE_MAYA_REFERENCES
     MStatus status;
     MDagModifier dagMod;
 
@@ -410,9 +461,10 @@ PxrUsdMayaTranslatorModelAssembly::Read(
     status = dagMod.doIt();
     CHECK_MSTATUS_AND_RETURN(status, false);
 
-    if (context) {
-        context->RegisterNewMayaNode(prim.GetPath().GetString(), assemblyObj);
-        context->SetPruneChildren(true);
+    if (context)
+    {
+        context->RegisterNewMayaNode(prim.GetPath().GetString(),
+                                     assemblyObj);
     }
 
     // If a representation was supplied, activate it.
@@ -423,6 +475,12 @@ PxrUsdMayaTranslatorModelAssembly::Read(
             status = assemblyFn.activate(assemblyRep.c_str());
             CHECK_MSTATUS_AND_RETURN(status, false);
         }
+    }
+
+#endif // PIXMAYA_FORCE_MAYA_REFERENCES
+
+    if (context) {
+        context->SetPruneChildren(true);
     }
 
     // XXX: right now, we lose any edits that may be introduced from
