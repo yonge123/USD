@@ -51,6 +51,8 @@
 #include "pxr/usd/usdGeom/capsule.h"
 #include "pxr/usd/usdGeom/points.h"
 #include "pxr/usd/usdGeom/nurbsPatch.h"
+#include "pxr/usd/usdGeom/camera.h"
+#include "pxr/usd/usdGeom/imagePlane.h"
 
 // Shader Schema
 #include "pxr/usd/usdShade/pShader.h"
@@ -70,6 +72,162 @@
 #include "pxr/base/gf/gamma.h"
 #include "pxr/base/tf/stl.h"
 
+static const GLuint invalid_texture = 0;
+
+namespace {
+    enum {
+        IMAGE_PLANE_FIT_FILL,
+        IMAGE_PLANE_FIT_BEST,
+        IMAGE_PLANE_FIT_HORIZONTAL,
+        IMAGE_PLANE_FIT_VERTICAL,
+        IMAGE_PLANE_FIT_TO_SIZE
+    };
+
+    const TfToken image_plane_fill("fill");
+    const TfToken image_plane_best("best");
+    const TfToken image_plane_horizontal("horizontal");
+    const TfToken image_plane_vertical("vertical");
+    const TfToken image_plane_to_size("to size");
+}
+
+struct ImagePlaneDef {
+    SdfAssetPath asset;
+    GfVec2f size;
+    GfVec2f offset;
+    GfVec2i coverage;
+    GfVec2i coverage_origin;
+    GfVec2f camera_aperture;
+    GLuint gl_texture;
+    float rotate;
+    int width;
+    int height;
+    int fit;
+
+    ImagePlaneDef(const UsdPrim &prim, const UsdImagingGLEngine::RenderParams& _params, const UsdPrim& _root)
+        : camera_aperture(1.0f, 1.0f), gl_texture(invalid_texture), width(0), height(0)
+    { // TODO: use try to use the functions from Hydra to loadup these images
+// Hydra's memory manager might not exists at this point
+// Right now using the simples approach to load the texture to video memory
+        UsdGeomImagePlane image_plane(prim);
+
+        double frame = 0.0;
+        image_plane.GetFrameAttr().Get(&frame, _params.frame);
+        image_plane.GetFilenameAttr().Get(&asset, UsdTimeCode(_params.frame.GetValue() + frame));
+        image_plane.GetSizeAttr().Get(&size, _params.frame);
+        image_plane.GetOffsetAttr().Get(&offset, _params.frame);
+        image_plane.GetRotateAttr().Get(&rotate, _params.frame);
+        image_plane.GetCoverageAttr().Get(&coverage, _params.frame);
+        image_plane.GetCoverageOriginAttr().Get(&coverage_origin, _params.frame);
+        TfToken fit_token;
+        image_plane.GetFitAttr().Get(&fit_token, _params.frame);
+        if (fit_token == image_plane_fill)
+            fit = IMAGE_PLANE_FIT_FILL;
+        else if (fit_token == image_plane_best)
+            fit = IMAGE_PLANE_FIT_BEST;
+        else if (fit_token == image_plane_horizontal)
+            fit = IMAGE_PLANE_FIT_HORIZONTAL;
+        else if (fit_token == image_plane_vertical)
+            fit = IMAGE_PLANE_FIT_VERTICAL;
+        else if (fit_token == image_plane_to_size)
+            fit = IMAGE_PLANE_FIT_TO_SIZE;
+        else
+            fit = IMAGE_PLANE_FIT_BEST;
+        rotate = static_cast<float>(M_PI) * rotate / 180.0f;
+
+        bool found_camera = false;
+        constexpr float mm_to_inch = 1.0f / 25.4f;
+
+        auto read_camera = [&](const UsdPrim& camera_prim) {
+            UsdGeomCamera camera(camera_prim);
+            camera.GetHorizontalApertureAttr().Get(&camera_aperture[0], _params.frame);
+            camera.GetVerticalApertureAttr().Get(&camera_aperture[1], _params.frame);
+            camera_aperture[0] *= mm_to_inch;
+            camera_aperture[1] *= mm_to_inch;
+
+            found_camera = true;
+        };
+
+        SdfPathVector camera_paths;
+        image_plane.GetCameraRel().GetForwardedTargets(&camera_paths);
+        if (camera_paths.size() > 0)
+        {
+            const UsdPrim camera_prim = _root.GetStage()->GetPrimAtPath(camera_paths[0]);
+            if (camera_prim.IsValid() && camera_prim.IsA<UsdGeomCamera>())
+                read_camera(camera_prim);
+        }
+
+        // traverse upwards in the hierarchy to find the camera above the image plane
+        if (!found_camera)
+        {
+            for (UsdPrim parent = prim.GetParent(); parent.IsValid(); parent = parent.GetParent())
+            {
+                if (parent.IsA<UsdGeomCamera>())
+                    read_camera(parent);
+            }
+        }
+    }
+
+    void release()
+    {
+        if (gl_texture != invalid_texture)
+        {
+            glDeleteTextures(1, &gl_texture);
+            gl_texture = invalid_texture;
+        }
+    }
+
+    void read_texture(OIIO::ImageCache* cache)
+    {
+        // This is cleared at a different stage, so if it exists, just skip loading the texture.
+        if (gl_texture != invalid_texture)
+            return;
+        OIIO::ImageSpec spec;
+        const OIIO::ustring image_path(asset.GetResolvedPath());
+        if (!cache->get_imagespec(image_path, spec))
+            return;
+        width = spec.width;
+        height = spec.height;
+        // oiio gives back invalid textures sometimes
+        if (width < 32 ||
+            height < 32 ||
+            width > 4096 ||
+            height > 4096 ||
+            spec.nchannels > 4 ||
+            spec.nchannels < 3) {
+            return;
+        }
+
+        std::vector<unsigned char> pixels(static_cast<size_t>(width * height * spec.nchannels), 0);
+        cache->get_pixels(image_path, 0, 0, 0, width, 0, height, 0, 1, OIIO::TypeDesc::UINT8, &pixels[0]);
+
+        GLint old_bound_texture = 0;
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &old_bound_texture);
+
+        glGenTextures(1, &gl_texture);
+        glBindTexture(GL_TEXTURE_2D, gl_texture);
+        glTexImage2D(GL_TEXTURE_2D, 0,
+                     spec.nchannels == 4 ? GL_RGBA : GL_RGB, width, height, 0,
+                     spec.nchannels == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, &pixels[0]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindTexture(GL_TEXTURE_2D, old_bound_texture);
+
+        // limiting settings
+        if (coverage[0] <= 0)
+            coverage[0] = width;
+        else
+            coverage[0] = std::min(std::max(0, coverage[0]), width);
+        if (coverage[1] <= 0)
+            coverage[1] = height;
+        else
+            coverage[1] = std::min(std::max(0, coverage[1]), height);
+        coverage_origin[0] = std::min(std::max(-width, coverage_origin[0]), width);
+        coverage_origin[1] = std::min(std::max(-height, coverage_origin[1]), height);
+    }
+};
+
 // Sentinel value for prim restarts, so that multiple prims can be lumped into a
 // single draw call, if the hardware supports it.
 #define _PRIM_RESTART_INDEX 0xffffffff 
@@ -85,12 +243,17 @@ UsdImagingGLRefEngine::UsdImagingGLRefEngine(const SdfPathVector &excludedPrimPa
     TF_FOR_ALL(pathIt, excludedPrimPaths) {
         _excludedSet.insert(*pathIt);
     }
+
+    _imageCache = OIIO::ImageCache::create(false);
+    _imageCache->attribute("max_memory_MB", 1024.0);
+    _imageCache->attribute("max_open_files", 256);
 }
 
 UsdImagingGLRefEngine::~UsdImagingGLRefEngine()
 {
     TfNotice::Revoke(_objectsChangedNoticeKey);
     InvalidateBuffers();
+    OIIO::ImageCache::destroy(_imageCache);
 }
 
 bool
@@ -271,6 +434,245 @@ UsdImagingGLRefEngine::_DrawLines(bool drawID)
 }
 
 void
+UsdImagingGLRefEngine::_DrawImagePlanes()
+{
+    // Since the viewport can change independently from the
+    // image plane / camera settings without trigger a recalculation
+    // it's better to calculate this here. Optionally we could cache the calculations
+    // based on the viewport, but it's not too heavy anyway.
+    if (_imagePlanes.empty()) {
+        return;
+    }
+
+    GLint old_matrix_mode = GL_PROJECTION;
+    glGetIntegerv(GL_MATRIX_MODE, &old_matrix_mode);
+    const bool old_texture_enabled = glIsEnabled(GL_TEXTURE_2D);
+
+    GLint old_bound_texture = 0;
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &old_bound_texture);
+
+    if (!old_texture_enabled) {
+        glEnable(GL_TEXTURE_2D);
+    }
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    glMatrixMode(GL_TEXTURE);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+
+    glPushAttrib(GL_LIGHTING_BIT);
+    glDisable(GL_LIGHTING);
+    glShadeModel(GL_FLAT);
+
+    // 2 and 3 are width and height
+    int viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+
+    const float width = static_cast<float>(viewport[2]);
+    const float height = static_cast<float>(viewport[3]);
+
+    for (auto& it : _imagePlanes)
+    {
+        if (it.gl_texture == invalid_texture) {
+            continue;
+        }
+
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glBindTexture(GL_TEXTURE_2D, it.gl_texture);
+
+        float min_x = -width;
+        float max_x = width;
+        float min_y = -height;
+        float max_y = height;
+
+        float min_uv_x = 0.0f;
+        float max_uv_x = 1.0f;
+        float min_uv_y = 0.0f;
+        float max_uv_y = 1.0f;
+
+        const float image_width = static_cast<float>(it.width);
+        const float image_height = static_cast<float>(it.height);
+
+        switch (it.fit) {
+            case IMAGE_PLANE_FIT_FILL:
+            {
+                const float image_ratio = image_width / image_height;
+                const float viewport_ratio = width / height;
+                if (image_ratio > viewport_ratio) {
+                    max_x = image_width * height / image_height;
+                    min_x = -1.0f * max_x;
+                } else {
+                    max_y = image_height * width / image_width;
+                    min_y = -1.0f * max_y;
+                }
+            }
+                break;
+            case IMAGE_PLANE_FIT_BEST:
+            {
+                const float image_ratio = image_width / image_height;
+                const float viewport_ratio = width / height;
+                if (image_ratio > viewport_ratio) {
+                    max_y = image_height * width / image_width;
+                    min_y = -1.0f * max_y;
+                } else {
+                    max_x = image_width * height / image_height;
+                    min_x = -1.0f * max_x;
+                }
+            }
+                break;
+            case IMAGE_PLANE_FIT_HORIZONTAL:
+                max_y = image_height * width / image_width;
+                min_y = -1.0f * max_y;
+                break;
+            case IMAGE_PLANE_FIT_VERTICAL:
+                max_x = image_width * height / image_height;
+                min_x = -1.0f * max_x;
+                break;
+            case IMAGE_PLANE_FIT_TO_SIZE:
+                break;
+            default:
+                assert("Invalid enum passed in ImagePlaneDef.fit!");
+        }
+
+        const float size_ratio_x = it.size[0] / it.camera_aperture[0];
+        const float size_ratio_y = it.size[1] / it.camera_aperture[1];
+
+        if (it.size[0] >= 0.0f) {
+            min_x *= size_ratio_x;
+            max_x *= size_ratio_x;
+        }
+
+        if (it.size[1] >= 0.0f) {
+            min_y *= size_ratio_y;
+            max_y *= size_ratio_y;
+        }
+
+        GfVec2f lower_left(min_x, min_y);
+        GfVec2f lower_right(max_x, min_y);
+
+        GfVec2f upper_left(min_x, max_y);
+        GfVec2f upper_right(max_x, max_y);
+
+        auto lerp = [] (float v, float lo, float hi) -> float {
+            return lo * (1.0f - v) + hi * v;
+        };
+
+        // TODO: we need a global define for "epsilon"
+        if (it.rotate < -0.0001f || it.rotate > 0.0001f) {
+            // TODO: due to how these coordinates are converted to screen space ones
+            // we need to compensate for the from window => screen coordinates transform
+            // we want to match the maya rotation order, so that's why the negate
+            const float dsin = sinf(-it.rotate);
+            const float dcos = cosf(-it.rotate);
+
+            auto rotate_corner = [&](GfVec2f& corner) {
+                const float t = corner[0] * dcos - corner[1] * dsin;
+                corner[1] = corner[0] * dsin + corner[1] * dcos;
+                corner[0] = t;
+            };
+
+            rotate_corner(lower_left);
+            rotate_corner(lower_right);
+            rotate_corner(upper_left);
+            rotate_corner(upper_right);
+        }
+
+        auto convert_back = [&](GfVec2f& corner) {
+            corner[0] = corner[0] / width;
+            corner[1] = corner[1] / height;
+        };
+
+        convert_back(lower_left);
+        convert_back(lower_right);
+        convert_back(upper_left);
+        convert_back(upper_right);
+
+        const float offset_x = it.offset[0] / it.camera_aperture[0];
+        const float offset_y = it.offset[1] / it.camera_aperture[1];
+
+        lower_left[0] += offset_x;
+        lower_right[0] += offset_x;
+        upper_left[0] += offset_x;
+        upper_right[0] += offset_x;
+
+        lower_left[1] += offset_y;
+        lower_right[1] += offset_y;
+        upper_left[1] += offset_y;
+        upper_right[1] += offset_y;
+
+        // TODO: this could be calculated at texture load time, we could also load up a smaller texture
+        // but be careful with that, opengl has a minimum valid texture size (32) !
+        if (it.coverage_origin[0] > 0) {
+            min_uv_x = static_cast<float>(it.coverage_origin[0]) / static_cast<float>(it.width);
+            max_uv_x = lerp(static_cast<float>(std::min(it.coverage[0], it.width - it.coverage_origin[0])) /
+                            static_cast<float>(it.width - it.coverage_origin[0]), min_uv_x, 1.0f);
+        }
+        else if (it.coverage_origin[0] < 0) {
+            max_uv_x = static_cast<float>(it.coverage[0]) * static_cast<float>(it.width + it.coverage_origin[0]) / static_cast<float>(it.width * it.width);
+        }
+        else {
+            max_uv_x = static_cast<float>(it.coverage[0]) / static_cast<float>(it.width);
+        }
+
+        if (it.coverage_origin[1] > 0) {
+            max_uv_y = static_cast<float>(it.height - it.coverage_origin[1]) / static_cast<float>(it.height);
+            min_uv_y = lerp(static_cast<float>(std::min(it.coverage[1], it.height - it.coverage_origin[1])) /
+                            static_cast<float>(it.height - it.coverage_origin[1]), max_uv_y, 0.0f);
+        }
+        else if (it.coverage_origin[1] < 0) {
+            min_uv_y = std::min(1.0f, static_cast<float>(-it.coverage_origin[1]) / static_cast<float>(it.height) +
+                                      (1.0f - static_cast<float>(it.coverage[1]) / static_cast<float>(it.height)));
+        }
+        else {
+            min_uv_y = 1.0f - static_cast<float>(it.coverage[1]) / static_cast<float>(it.height);
+        }
+
+        const float depth = 1.0f;
+        const float w = 1.0f;
+
+        glBegin(GL_QUADS);
+        glTexCoord2f(min_uv_x, max_uv_y);
+        glVertex4f(lower_left[0], lower_left[1], depth, w);
+
+        glTexCoord2f(max_uv_x, max_uv_y);
+        glVertex4f(lower_right[0], lower_right[1], depth, w);
+
+        glTexCoord2f(max_uv_x, min_uv_y);
+        glVertex4f(upper_right[0], upper_right[1], depth, w);
+
+        glTexCoord2f(min_uv_x, min_uv_y);
+        glVertex4f(upper_left[0], upper_left[1], depth, w);
+        glEnd();
+    }
+
+    glPopAttrib(); // GL_LIGHTING_BIT
+    glBindTexture(GL_TEXTURE_2D, old_bound_texture);
+
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+
+    glMatrixMode(old_matrix_mode);
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+
+    if (!old_texture_enabled)
+        glDisable(GL_TEXTURE_2D);
+}
+
+void
 UsdImagingGLRefEngine::Render(const UsdPrim& root, RenderParams params)
 {
     TRACE_FUNCTION();
@@ -297,6 +699,10 @@ UsdImagingGLRefEngine::Render(const UsdPrim& root, RenderParams params)
     glPushAttrib( GL_POLYGON_BIT );
     glPushAttrib( GL_CURRENT_BIT );
     glPushAttrib( GL_ENABLE_BIT );
+
+    if (_params.displayImagePlanes) {
+        _DrawImagePlanes();
+    }
 
     if (params.cullStyle == CULL_STYLE_NOTHING) {
         glDisable( GL_CULL_FACE );

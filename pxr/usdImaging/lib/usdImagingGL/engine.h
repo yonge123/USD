@@ -102,6 +102,7 @@ public:
         float alphaThreshold; // threshold < 0 implies automatic
         ClipPlanesVector clipPlanes;
         bool enableHardwareShading;
+        bool displayImagePlanes;
 
         RenderParams() : 
             frame(UsdTimeCode::Default()),
@@ -122,7 +123,8 @@ public:
             wireframeColor(.0f, .0f, .0f, .0f),
             alphaThreshold(-1),
             clipPlanes(),
-            enableHardwareShading(true)
+            enableHardwareShading(true),
+            displayImagePlanes(true)
         {
         }
 
