@@ -124,18 +124,19 @@ struct ImagePlaneDef {
         image_plane.GetCoverageOriginAttr().Get(&coverage_origin, _params.frame);
         TfToken fit_token;
         image_plane.GetFitAttr().Get(&fit_token, _params.frame);
-        if (fit_token == image_plane_fill)
+        if (fit_token == image_plane_fill) {
             fit = IMAGE_PLANE_FIT_FILL;
-        else if (fit_token == image_plane_best)
+        } else if (fit_token == image_plane_best) {
             fit = IMAGE_PLANE_FIT_BEST;
-        else if (fit_token == image_plane_horizontal)
+        } else if (fit_token == image_plane_horizontal) {
             fit = IMAGE_PLANE_FIT_HORIZONTAL;
-        else if (fit_token == image_plane_vertical)
+        } else if (fit_token == image_plane_vertical) {
             fit = IMAGE_PLANE_FIT_VERTICAL;
-        else if (fit_token == image_plane_to_size)
+        } else if (fit_token == image_plane_to_size) {
             fit = IMAGE_PLANE_FIT_TO_SIZE;
-        else
+        } else {
             fit = IMAGE_PLANE_FIT_BEST;
+        }
         rotate = static_cast<float>(M_PI) * rotate / 180.0f;
 
         bool found_camera = false;
