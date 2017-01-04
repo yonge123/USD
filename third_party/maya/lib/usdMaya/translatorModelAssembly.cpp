@@ -373,6 +373,11 @@ PxrUsdMayaTranslatorModelAssembly::Read(
         return false;
     }
 
+    MStatus status;
+    MFnDagNode parentMFn(parentNode, &status);
+    CHECK_MSTATUS_AND_RETURN(status, false);
+    MString parentName = parentMFn.partialPathName();
+
     // Don't know of a way to pass in an option string using MFileIO::reference,
     // so just uisng mel...
     MString cmd = (MString("file -reference -options \"primPath=")
@@ -385,9 +390,12 @@ PxrUsdMayaTranslatorModelAssembly::Read(
                    // note above where we generate the refPath.
                    + ";topLayerUsd="
                    + assetIdentifier.c_str()
+                   + ";parent="
+                   + parentName
                    + "\" \""
                    + refPath
                    + "\";");
+    DEBUG_PRINT(cmd);
     CHECK_MSTATUS_AND_RETURN(MGlobal::executeCommand(cmd), false);
 
     // TODO: re-parent and re-name toplevel node

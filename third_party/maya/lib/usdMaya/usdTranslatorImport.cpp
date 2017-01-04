@@ -34,9 +34,11 @@
 #include "usdMaya/usdWriteJob.h"
 #include "JobArgs.h"
 
+#include <maya/MFnDagNode.h>
 #include <maya/MFileObject.h>
 #include <maya/MPxFileTranslator.h>
 #include <maya/MString.h>
+#include <maya/MSelectionList.h>
 
 #include <map>
 #include <string>
@@ -63,6 +65,7 @@ MStatus usdTranslatorImport::reader(const MFileObject & file,
                          MPxFileTranslator::FileAccessMode mode ) {
     std::string fileName(file.fullName().asChar());
     std::string primPath("/");
+    MString parentNode;
     std::map<std::string,std::string> variants;
     JobImportArgs jobArgs;
         
@@ -111,12 +114,30 @@ MStatus usdTranslatorImport::reader(const MFileObject & file,
                 primPath = theOption[1].asChar();
             } else if (theOption[0] == MString("topLayerUsd")) {
                 fileName = theOption[1].asChar();
+            } else if (theOption[0] == MString("parent")) {
+                parentNode = theOption[1];
             }
         }
     }
 
     usdReadJob *mUsdReadJob = new usdReadJob(fileName, primPath, variants, jobArgs,
             _assemblyTypeName, _proxyShapeTypeName);
+    if (parentNode.length())
+    {
+        // Get the value
+        MSelectionList selList;
+        selList.add(parentNode);
+        MDagPath dagPath;
+        MStatus status = selList.getDagPath(0, dagPath);
+        if (status != MS::kSuccess) {
+            std::string errorStr = TfStringPrintf(
+                    "Invalid path \"%s\" for parent option.",
+                    parentNode.asChar());
+            MGlobal::displayError(MString(errorStr.c_str()));
+            return MS::kFailure;
+        }
+        mUsdReadJob->setMayaRootDagPath( dagPath );
+    }
     std::vector<MDagPath> addedDagPaths;
     bool success = mUsdReadJob->doIt(&addedDagPaths);
     return (success) ? MS::kSuccess : MS::kFailure;
