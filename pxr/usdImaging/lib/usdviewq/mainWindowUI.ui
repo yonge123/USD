@@ -1185,7 +1185,7 @@
      <x>0</x>
      <y>0</y>
      <width>1145</width>
-     <height>27</height>
+     <height>25</height>
     </rect>
    </property>
    <property name="minimumSize">
@@ -1385,6 +1385,7 @@
     <addaction name="actionEnable_Hardware_Shading"/>
     <addaction name="actionDisplay_PrimId"/>
     <addaction name="actionCull_Backfaces"/>
+    <addaction name="actionDisplay_Image_Planes"/>
    </widget>
    <widget class="QMenu" name="menuWindow">
     <property name="minimumSize">
@@ -2504,6 +2505,17 @@
    </property>
    <property name="text">
     <string>Camera Oracles</string>
+   </property>
+  </action>
+  <action name="actionDisplay_Image_Planes">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Display Image Planes</string>
    </property>
   </action>
  </widget>

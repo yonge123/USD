@@ -733,7 +733,11 @@ class MainWindow(QtGui.QMainWindow):
 
         QtCore.QObject.connect(self._ui.actionEnable_Hardware_Shading,
                                QtCore.SIGNAL('toggled(bool)'),
-                               self._toggleEnableHardwareShading)        
+                               self._toggleEnableHardwareShading)
+
+        QtCore.QObject.connect(self._ui.actionDisplay_Image_Planes,
+                               QtCore.SIGNAL('toggled(bool)'),
+                               self._toggleDisplayImagePlanes)
 
         QtCore.QObject.connect(self._ui.actionCull_Backfaces,
                                QtCore.SIGNAL('toggled(bool)'),
@@ -1877,6 +1881,10 @@ class MainWindow(QtGui.QMainWindow):
         self._ui.actionEnable_Hardware_Shading.setChecked(enableHardwareShading)
         self._stageView.setEnableHardwareShading(enableHardwareShading)
 
+        displayImagePlanes = self._settings.get("DisplayImagePlanes", True)
+        self._ui.actionDisplay_Image_Planes.setChecked(displayImagePlanes)
+        self._stageView.setDisplayImagePlanes(displayImagePlanes)
+
         cullBackfaces = self._settings.get("CullBackfaces", False)
         self._ui.actionCull_Backfaces.setChecked(cullBackfaces)
         self._stageView.setCullBackfaces(cullBackfaces)
@@ -2212,6 +2220,11 @@ class MainWindow(QtGui.QMainWindow):
     def _toggleEnableHardwareShading(self, checked):
         self._settings.setAndSave(EnableHardwareShading=checked)
         self._stageView.setEnableHardwareShading(checked)
+        self._stageView.update()
+
+    def _toggleDisplayImagePlanes(self, checked):
+        self._settings.setAndSave(DisplayImagePlanes=checked)
+        self._stageView.setDisplayImagePlanes(checked)
         self._stageView.update()
 
     def _toggleCullBackfaces(self, checked):
