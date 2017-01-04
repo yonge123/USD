@@ -165,6 +165,7 @@ struct JobImportArgs : JobSharedArgs
     bool readAnimData;
     bool useCustomFrameRange;
     bool importWithProxyShapes;
+    std::string parentNode;
 };
 
 

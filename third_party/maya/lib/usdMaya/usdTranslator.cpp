@@ -36,6 +36,7 @@
 
 #include <maya/MAnimControl.h>
 #include <maya/MFileObject.h>
+#include <maya/MFnDagNode.h>
 #include <maya/MPxFileTranslator.h>
 #include <maya/MSelectionList.h>
 #include <maya/MString.h>

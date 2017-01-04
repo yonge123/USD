@@ -197,6 +197,8 @@ void JobImportArgs::parseSingleOption(const MStringArray& theOption)
         primPath = theOption[1].asChar();
     } else if (theOption[0] == MString("topLayerUsd")) {
         fileName = theOption[1].asChar();
+    } else if (theOption[0] == MString("parent")) {
+        parentNode = theOption[1].asChar();
     }
 }
 

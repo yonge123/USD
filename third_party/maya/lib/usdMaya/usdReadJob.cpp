@@ -80,6 +80,21 @@ usdReadJob::usdReadJob(
     _assemblyTypeName(assemblyTypeName),
     _proxyShapeTypeName(proxyShapeTypeName)
 {
+    if (mArgs.parentNode.length())
+    {
+        // Get the value
+        MSelectionList selList;
+        selList.add(mArgs.parentNode.c_str());
+        MDagPath dagPath;
+        MStatus status = selList.getDagPath(0, dagPath);
+        if (status != MS::kSuccess) {
+            std::string errorStr = TfStringPrintf(
+                    "Invalid path \"%s\" for parent option.",
+                    mArgs.parentNode.c_str());
+            MGlobal::displayError(MString(errorStr.c_str()));
+        }
+        setMayaRootDagPath( dagPath );
+    }
 }
 
 usdReadJob::~usdReadJob()
