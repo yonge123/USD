@@ -350,17 +350,35 @@ PxrUsdMayaTranslatorModelAssembly::Read(
     //    /// references on a prim... the problem is somewhat ill-defined, and
     //    /// requires some thought.
 
-    // TODO: make sure we're not just getting the same top-level usd out of the
-    // stack - ie, search for it, then get the next entry in the stack... and if
-    // not found, take the top entry
-    MString refPath = modelPrim.GetPrimStack()[0].GetSpec().GetLayer()->GetIdentifier().c_str();
+    // TODO: pass in the parent reference, so we can check up the reference
+    // stack to make sure we're not creating a recursive loop, instead of this
+    // hacky check to make sure that we're not just getting the RootLayer again
+    const std::string& rootPath = usdStage->GetRootLayer()->GetRealPath();
+
+    MString refPath;
+    for (const auto& layerSpec : prim.GetPrimStack()) {
+        const std::string& layerPath = layerSpec->GetLayer()->GetRealPath();
+        if (layerPath != rootPath) {
+            refPath = layerPath.c_str();
+            break;
+        }
+    }
+    if (!refPath.length())
+    {
+        MString errorMsg("Failed to find a non-recursive reference path for ");
+        errorMsg += prim.GetPath().GetText();
+        errorMsg += " in top-level usd file ";
+        errorMsg += rootPath.c_str();
+        MGlobal::displayError(errorMsg);
+        return false;
+    }
 
     // Don't know of a way to pass in an option string using MFileIO::reference,
     // so just uisng mel...
     MString cmd = (MString("file -reference -options \"primPath=")
                    // TODO: properly escape these strings
                    // Pass in the primitive path...
-                   + modelPrim.GetPath().GetText()
+                   + prim.GetPath().GetText()
                    // ...and the top-level usd file in the option string.
                    // Note that that's all the information that USD actually
                    // needs / uses - the refPath is actually just a dummy. See
@@ -461,8 +479,7 @@ PxrUsdMayaTranslatorModelAssembly::Read(
     status = dagMod.doIt();
     CHECK_MSTATUS_AND_RETURN(status, false);
 
-    if (context)
-    {
+    if (context) {
         context->RegisterNewMayaNode(prim.GetPath().GetString(),
                                      assemblyObj);
     }
