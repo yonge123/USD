@@ -80,6 +80,7 @@ pxr_shared_library(${PXR_PACKAGE}
     PRIVATE_CLASSES
         registryHelper
         MayaCameraWriter
+        MayaImagePlaneWriter
         MayaMeshWriter
         MayaNurbsCurveWriter
         MayaNurbsSurfaceWriter
