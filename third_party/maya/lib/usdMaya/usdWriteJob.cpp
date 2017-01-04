@@ -30,6 +30,7 @@
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
 #include "usdMaya/MayaTransformWriter.h"
 #include "usdMaya/MayaCameraWriter.h"
+#include "usdMaya/MayaImagePlaneWriter.h"
 
 #include "usdMaya/translatorMaterial.h"
 #include "usdMaya/primWriterRegistry.h"
@@ -583,6 +584,23 @@ bool usdWriteJob::createPrimWriter(
         if (primPtr->isValid() ) {
             *primWriterOut = primPtr;
             return true;
+        }
+    }
+    else if (ob.hasFn(MFn::kImagePlane)) {
+        if (!mArgs.exportDefaultCameras) {
+            MString fullPathName = curDag.fullPathName();
+            if (fullPathName.indexW("|persp|perspShape") == 0 ||
+                fullPathName.indexW("|top|topShape") == 0 ||
+                fullPathName.indexW("|fron|frontShape") == 0 ||
+                fullPathName.indexW("|side|sideShape") == 0) {
+                *primWriterOut = nullptr;
+                return false;
+            }
+            MayaImagePlaneWriterPtr primPtr(new MayaImagePlaneWriter(curDag, mStage, mArgs));
+            if (primPtr->isValid()) {
+                *primWriterOut = primPtr;
+                return true;
+            }
         }
     }
 
