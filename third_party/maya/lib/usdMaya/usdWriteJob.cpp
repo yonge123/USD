@@ -201,7 +201,9 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
     // Now do a depth-first traversal of the Maya DAG from the world root.
     // We keep a reference to arg dagPaths as we encounter them.
     MDagPath curLeafDagPath;
-    for (MItDag itDag(MItDag::kDepthFirst, MFn::kInvalid); !itDag.isDone(); itDag.next()) {
+    MItDag itDag(MItDag::kDepthFirst, MFn::kInvalid);
+    itDag.traverseUnderWorld(true);
+    for (; !itDag.isDone(); itDag.next()) {
         MDagPath curDagPath;
         itDag.getPath(curDagPath);
         std::string curDagPathStr(curDagPath.partialPathName().asChar());
@@ -214,11 +216,24 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
             // This dagPath IS one of the arg dagPaths. It AND all of its
             // children should be included in the export.
             curLeafDagPath = curDagPath;
-        } else if (!MFnDagNode(curDagPath).hasParent(curLeafDagPath.node())) {
-            // This dagPath is not a child of one of the arg dagPaths, so prune
-            // it and everything below it from the traversal.
-            itDag.prune();
-            continue;
+        } else {
+            MFnDagNode dagNode(curDagPath);
+            auto hasParent = false;
+            if (dagNode.inUnderWorld()) {
+                for (auto dagPathCopy = curDagPath; dagPathCopy.pathCount(); dagPathCopy.pop()) {
+                    MFnDagNode dagNodeCopy(dagPathCopy);
+                    if (!dagNodeCopy.inUnderWorld()) {
+                        hasParent = dagNodeCopy.hasParent(curLeafDagPath.node());
+                        break;
+                    }
+                }
+            } else {
+                hasParent = dagNode.hasParent(curLeafDagPath.node());
+            }
+            if (!hasParent) {
+                itDag.prune();
+                continue;
+            }
         }
 
         MayaPrimWriterPtr primWriter = nullptr;
@@ -375,9 +390,8 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
 
     // Get the usdVariantRootPrimPath (optionally filter by renderLayer prefix)
     MayaPrimWriterPtr firstPrimWriterPtr = *mMayaPrimWriterList.begin();
-    std::string firstPrimWriterPathStr( firstPrimWriterPtr->getDagPath().fullPathName().asChar() );
-    std::replace( firstPrimWriterPathStr.begin(), firstPrimWriterPathStr.end(), '|', '/');
-    std::replace( firstPrimWriterPathStr.begin(), firstPrimWriterPathStr.end(), ':', '_'); // replace namespace ":" with "_"
+    std::string firstPrimWriterPathStr(PxrUsdMayaUtil::MDagPathToUsdPathString(
+        firstPrimWriterPtr->getDagPath()));
     SdfPath usdVariantRootPrimPath(firstPrimWriterPathStr);
     usdVariantRootPrimPath = usdVariantRootPrimPath.GetPrefixes()[0];
 
