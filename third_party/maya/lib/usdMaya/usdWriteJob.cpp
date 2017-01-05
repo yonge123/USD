@@ -216,19 +216,19 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
             curLeafDagPath = curDagPath;
         } else {
             MFnDagNode dagNode(curDagPath);
-            auto has_parent = false;
+            auto hasParent = false;
             if (dagNode.inUnderWorld()) {
                 for (auto dagPathCopy = curDagPath; dagPathCopy.pathCount(); dagPathCopy.pop()) {
                     MFnDagNode dagNodeCopy(dagPathCopy);
                     if (!dagNodeCopy.inUnderWorld()) {
-                        has_parent = dagNodeCopy.hasParent(curLeafDagPath.node());
+                        hasParent = dagNodeCopy.hasParent(curLeafDagPath.node());
                         break;
                     }
                 }
             } else {
-                has_parent = dagNode.hasParent(curLeafDagPath.node());
+                hasParent = dagNode.hasParent(curLeafDagPath.node());
             }
-            if (!has_parent) {
+            if (!hasParent) {
                 itDag.prune();
                 continue;
             }
