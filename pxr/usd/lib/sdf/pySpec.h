@@ -346,12 +346,17 @@ struct SpecVisitor : bp::def_visitor<SpecVisitor<Abstract> > {
 
         static bool IsExpired(const HeldType& self)
         {
-            return not self;
+            return !self;
         }
 
         static bool NonZero(const HeldType& self)
         {
             return self;
+        }
+
+        static size_t __hash__(const HeldType& self)
+        {
+            return hash_value(self);
         }
 
         static bool __eq__(const HeldType& a, const HeldType& b)
@@ -404,6 +409,7 @@ public:
         // Add methods.
         c.add_property("expired", &_Helper<CLS>::IsExpired);
         c.def("__nonzero__", &_Helper<CLS>::NonZero);
+        c.def("__hash__", &_Helper<CLS>::__hash__);
         c.def("__eq__", &_Helper<CLS>::__eq__);
         c.def("__ne__", &_Helper<CLS>::__ne__);
         c.def("__lt__", &_Helper<CLS>::__lt__);

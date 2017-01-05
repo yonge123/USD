@@ -350,16 +350,11 @@ public:
     /// '/E/F.a'
     void GetAllTargetPathsRecursively(SdfPathVector *result) const;
 
-    /// Returns the variant selection for this path.
-    ///
+    /// Returns the variant selection for this path, if this is a variant
+    /// selection path.
     /// Returns a pair of empty strings if this path is not a variant
     /// selection path.
-    ///
-    /// Note that it is possible for a path to have more than one variant
-    /// selection, that is, when a variant prim spec defines a variant set.
-    /// In such cases, "deepest" or right-most variant selection will be
-    /// returned.
-    const std::pair<std::string, std::string> GetVariantSelection() const;
+    std::pair<std::string, std::string> GetVariantSelection() const;
 
     /// Return true if both this path and \a prefix are not the empty
     /// path and this path has \a prefix as a prefix.  Return false otherwise.
@@ -625,7 +620,7 @@ public:
     inline bool operator<(const SdfPath &rhs) const {
         if (_pathNode == rhs._pathNode)
             return false;
-        if (not _pathNode or not rhs._pathNode)
+        if (!_pathNode || !rhs._pathNode)
             return static_cast<bool>(rhs._pathNode);
         return _LessThanInternal(_pathNode, rhs._pathNode);
     }
@@ -763,7 +758,7 @@ SdfPathFindLongestPrefix(BidirectionalIterator begin,
     BidirectionalIterator result = std::lower_bound(begin, end, path);
 
     // If we didn't get the end, check to see if we got the path exactly.
-    if (result != end and *result == path)
+    if (result != end && *result == path)
         return result;
 
     // If we got begin and didn't match then there's no prefix.

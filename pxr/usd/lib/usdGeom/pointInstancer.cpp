@@ -51,7 +51,7 @@ UsdGeomPointInstancer::~UsdGeomPointInstancer()
 UsdGeomPointInstancer
 UsdGeomPointInstancer::Get(const UsdStagePtr &stage, const SdfPath &path)
 {
-    if (not stage) {
+    if (!stage) {
         TF_CODING_ERROR("Invalid stage");
         return UsdGeomPointInstancer();
     }
@@ -64,7 +64,7 @@ UsdGeomPointInstancer::Define(
     const UsdStagePtr &stage, const SdfPath &path)
 {
     static TfToken usdPrimTypeName("PointInstancer");
-    if (not stage) {
+    if (!stage) {
         TF_CODING_ERROR("Invalid stage");
         return UsdGeomPointInstancer();
     }
@@ -470,11 +470,13 @@ std::vector<bool>
 UsdGeomPointInstancer::ComputeMaskAtTime(UsdTimeCode time, 
                                          VtInt64Array const *ids) const
 {
-    VtInt64Array       idVals, inactiveIds, invisedIds;
+    VtInt64Array       idVals, invisedIds;
     std::vector<bool>  mask;
-    
+    SdfInt64ListOp     inactiveIdsListOp;
+
     // XXX Note we could be doing all three fetches in parallel
-    GetPrim().GetMetadata(UsdGeomTokens->inactiveIds, &inactiveIds);
+    GetPrim().GetMetadata(UsdGeomTokens->inactiveIds, &inactiveIdsListOp);
+    std::vector<int64_t> inactiveIds = inactiveIdsListOp.GetExplicitItems();
     GetInvisibleIdsAttr().Get(&invisedIds, time);
     if (inactiveIds.size() > 0 || invisedIds.size() > 0){
         bool anyPruned = false;

@@ -29,7 +29,7 @@
 
 #include "pxr/usd/usd/prim.h"
 
-#include "pxr/usd/usdShade/look.h"
+#include "pxr/usd/usdShade/material.h"
 
 #include "pxr/usd/usdRi/lookAPI.h"
 #include "pxr/usd/usdRi/risBxdf.h"
@@ -55,7 +55,7 @@ _GetShaderTypeName(const MFnDependencyNode& depNode)
 {
     std::string risShaderType(depNode.typeName().asChar());
     // Now look into the RIS TABLE if the typeName doesn't starts with Pxr
-    if (not TfStringStartsWith(risShaderType, "Pxr")) {
+    if (!TfStringStartsWith(risShaderType, "Pxr")) {
         for (size_t i=0;i<_RFM_RISNODE_TABLE.size();i++) {
             if (_RFM_RISNODE_TABLE[i].first==risShaderType) {
                 risShaderType=_RFM_RISNODE_TABLE[i].second;
@@ -91,7 +91,7 @@ _ExportShadingNode(const UsdPrim& lookPrim,
     // Determie the risShaderType that will correspont to the USD FilePath
     std::string risShaderType(_GetShaderTypeName(depNode));
     
-    if (not TfStringStartsWith(risShaderType, "Pxr")) {
+    if (!TfStringStartsWith(risShaderType, "Pxr")) {
         MGlobal::displayError(TfStringPrintf(
                 "_ExportShadingNode: skipping '%s' because it's type '%s' is not Pxr.\n",
                 depNode.name().asChar(),
@@ -127,13 +127,13 @@ _ExportShadingNode(const UsdPrim& lookPrim,
 
         TfToken attrName = TfToken(context->GetStandardAttrName(attrPlug));
         SdfValueTypeName attrTypeName = PxrUsdMayaWriteUtil::GetUsdTypeName(attrPlug);
-        if (not attrTypeName) {
+        if (!attrTypeName) {
             // unsupported type
             continue;
         }
 
         UsdShadeParameter param = risObj.CreateParameter(attrName, attrTypeName);
-        if (not param) {
+        if (!param) {
             continue;
         }
 
@@ -142,7 +142,7 @@ _ExportShadingNode(const UsdPrim& lookPrim,
                 param.GetAttr(),
                 UsdTimeCode::Default());
 
-        if (attrPlug.isConnected() and attrPlug.isDestination()) {
+        if (attrPlug.isConnected() && attrPlug.isDestination()) {
             MPlug connected(PxrUsdMayaUtil::GetConnected(attrPlug));
             MFnDependencyNode c(connected.node(), &status);
             if (status) {
@@ -174,12 +174,12 @@ DEFINE_SHADING_MODE_EXPORTER(pxrRis, context)
     }
 
     UsdPrim lookPrim = context->MakeStandardLookPrim(assignments);
-    if (not lookPrim) {
+    if (!lookPrim) {
         return;
     }
 
     MFnDependencyNode ssDepNode(context->GetSurfaceShader(), &status);
-    if (not status) {
+    if (!status) {
         return;
     }
     SdfPathSet  processedShaders;
@@ -226,31 +226,12 @@ _ImportAttr(
     MStatus status;
 
     MPlug mayaAttrPlug = fnDep.findPlug(mayaAttrName.c_str(), &status);
-    if (not status) {
+    if (!status) {
         return MPlug();
     }
 
     PxrUsdMayaUtil::setPlugValue(usdAttr, mayaAttrPlug);
     return mayaAttrPlug;
-}
-
-static void
-_GetParameterConnections(
-        const UsdShadeParameter& param,
-        std::vector<UsdShadeShader>* sources,
-        std::vector<TfToken>* sourceOutputNames)
-{
-    if (not param.IsArray()) {
-        UsdShadeShader source;
-        TfToken sourceOutputName;
-        if (param.GetConnectedSource(&source, &sourceOutputName)) {
-            sources->push_back(source);
-            sourceOutputNames->push_back(sourceOutputName);
-        }
-    }
-    else {
-        param.GetConnectedSources(sources, sourceOutputNames);
-    }
 }
 
 // Should only be called by _GetOrCreateShaderObject, no one else.
@@ -279,7 +260,7 @@ _CreateShaderObject(
             MString(risShader.GetPrim().GetName().GetText()),
             &status);
 
-    if (not status) {
+    if (!status) {
         // we need to make sure assumes those types are loaded..
         MGlobal::displayError(TfStringPrintf(
                 "Could not create node of type '%s' for shader '%s'. "
@@ -298,19 +279,14 @@ _CreateShaderObject(
             continue;
         }
 
-        std::vector<UsdShadeShader> sources;
-        std::vector<TfToken> sourceOutputNames;
-        _GetParameterConnections(param, &sources, &sourceOutputNames);
-
+        UsdShadeShader source;
+        TfToken sourceOutputName;
         // follow shader connections and recurse.
-        for (size_t i = 0; i < sources.size(); ++i) {
-            const UsdShadeShader& source = sources[i];
-            const TfToken& sourceOutputName = sourceOutputNames[i];
-
+        if (param.GetConnectedSource(&source, &sourceOutputName)) {
             if (UsdRiRisObject sourceRisObj = UsdRiRisObject(source.GetPrim())) {
                 MObject sourceObj = _GetOrCreateShaderObject(sourceRisObj, context);
                 MFnDependencyNode sourceDep(sourceObj, &status);
-                if (not status) {
+                if (!status) {
                     continue;
                 }
 
@@ -329,7 +305,7 @@ DEFINE_SHADING_MODE_IMPORTER(pxrRis, context)
 {
     // This expects the renderman for maya plugin is loaded.
     // How do we ensure that it is?
-    const UsdShadeLook& shadeLook = context->GetShadeLook();
+    const UsdShadeMaterial& shadeLook = context->GetShadeLook();
 
     MStatus status;
     UsdRiLookAPI riLookAPI(shadeLook);

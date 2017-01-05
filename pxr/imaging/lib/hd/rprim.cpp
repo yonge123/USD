@@ -40,7 +40,7 @@ HdRprim::HdRprim(HdSceneDelegate* delegate, SdfPath const& id,
     , _instancerID(instancerID)
     , _surfaceShaderID()
     , _sharedData(HdDrawingCoord::DefaultNumSlots,
-                  /*hasInstancer=*/(not instancerID.IsEmpty()),
+                  /*hasInstancer=*/(!instancerID.IsEmpty()),
                   /*visible=*/true)
 {
     _sharedData.rprimID = id;
@@ -96,12 +96,12 @@ HdRprim::_GetReprName(TfToken const &defaultReprName, bool forced,
 
     // if not forced, the prim's authored reprname wins.
     // otherewise we respect defaultReprName (used for shadowmap drawing etc)
-    if (not forced) {
+    if (!forced) {
         SdfPath const& id = GetId();
         if (HdChangeTracker::IsReprDirty(*dirtyBits, id)) {
             _authoredReprName = _delegate->GetReprName(id);
         }
-        if (not _authoredReprName.IsEmpty()) {
+        if (!_authoredReprName.IsEmpty()) {
             return _authoredReprName;
         }
     }
@@ -151,11 +151,6 @@ HdRprim::SetPrimId(int32_t primId)
 {
     _primId = primId;
     // Don't set DirtyPrimID here, to avoid undesired variability tracking.
-}
-
-HdSceneDelegate* 
-HdRprim::GetDelegate() {
-    return _delegate;
 }
 
 HdSceneDelegate*
@@ -213,7 +208,7 @@ HdRprim::_PopulateConstantPrimVars(HdDrawItem *drawItem,
 
         // if this is a prototype (has instancer),
         // also push the instancer transform separately.
-        if (not _instancerID.IsEmpty()) {
+        if (!_instancerID.IsEmpty()) {
             // gather all instancer transforms in the instancing hierarchy
             VtMatrix4dArray rootTransforms = _GetInstancerTransforms();
             VtMatrix4dArray rootInverseTransforms(rootTransforms.size());
@@ -303,7 +298,7 @@ HdRprim::_PopulateConstantPrimVars(HdDrawItem *drawItem,
         return;
 
     // Allocate a new uniform buffer if not exists.
-    if (not drawItem->GetConstantPrimVarRange()) {
+    if (!drawItem->GetConstantPrimVarRange()) {
         // establish a buffer range
         HdBufferSpecVector bufferSpecs;
         TF_FOR_ALL(srcIt, sources) {
@@ -339,7 +334,7 @@ HdRprim::_PopulateInstancePrimVars(HdDrawItem *drawItem,
     }
 
     HdInstancerSharedPtr instancer = _GetRenderIndex().GetInstancer(_instancerID);
-    if (not TF_VERIFY(instancer)) return;
+    if (!TF_VERIFY(instancer)) return;
 
     HdDrawingCoord *drawingCoord = drawItem->GetDrawingCoord();
 
@@ -384,7 +379,7 @@ HdRprim::_GetInstancerTransforms()
     VtMatrix4dArray transforms;
     HdSceneDelegate* delegate = GetDelegate();
 
-    while (not instancerID.IsEmpty()) {
+    while (!instancerID.IsEmpty()) {
         transforms.push_back(delegate->GetInstancerTransform(instancerID, id));
         HdInstancerSharedPtr instancer
             = _GetRenderIndex().GetInstancer(instancerID);

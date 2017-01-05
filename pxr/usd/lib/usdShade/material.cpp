@@ -51,7 +51,7 @@ UsdShadeMaterial::~UsdShadeMaterial()
 UsdShadeMaterial
 UsdShadeMaterial::Get(const UsdStagePtr &stage, const SdfPath &path)
 {
-    if (not stage) {
+    if (!stage) {
         TF_CODING_ERROR("Invalid stage");
         return UsdShadeMaterial();
     }
@@ -64,7 +64,7 @@ UsdShadeMaterial::Define(
     const UsdStagePtr &stage, const SdfPath &path)
 {
     static TfToken usdPrimTypeName("Material");
-    if (not stage) {
+    if (!stage) {
         TF_CODING_ERROR("Invalid stage");
         return UsdShadeMaterial();
     }
@@ -118,16 +118,11 @@ UsdShadeMaterial::GetSchemaAttributeNames(bool includeInherited)
 #include "pxr/usd/usd/variantSets.h"
 #include "pxr/usd/usd/editContext.h"
 #include "pxr/base/tf/envSetting.h"
+#include "pxr/usd/usdShade/tokens.h"
 
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
     (material)
-    ((bindingRelationshipName, "material:binding"))
-    ((legacyBindingRelationshipName, "look:binding"))
-    ((materialVariantName, "materialVariant"))
-    ((derivesFromName, "derivesFrom"))
-    ((surfaceTerminal, "surface"))
-    ((displacementTerminal, "displacement"))
 );
 
 TF_DEFINE_ENV_SETTING(
@@ -139,7 +134,7 @@ static
 UsdRelationship
 _CreateBindingRel(UsdPrim& prim)
 {
-    return prim.CreateRelationship(_tokens->bindingRelationshipName,
+    return prim.CreateRelationship(UsdShadeTokens->materialBinding,
                                    /* custom = */ false);
 }
 
@@ -158,7 +153,7 @@ UsdShadeMaterial::Bind(UsdPrim& prim) const
 
     // delete old relationship, if any
     UsdRelationship oldRel = 
-        prim.GetRelationship(_tokens->legacyBindingRelationshipName);
+        prim.GetRelationship(UsdShadeTokens->lookBinding);
     if (oldRel) {
         oldRel.BlockTargets();
     }
@@ -176,7 +171,7 @@ UsdShadeMaterial::Unbind(UsdPrim& prim)
 {
     // delete old relationship too, if any
     UsdRelationship oldRel = 
-        prim.GetRelationship(_tokens->legacyBindingRelationshipName);
+        prim.GetRelationship(UsdShadeTokens->lookBinding);
     if (oldRel) {
         oldRel.BlockTargets();
     }
@@ -187,11 +182,12 @@ UsdShadeMaterial::Unbind(UsdPrim& prim)
 UsdRelationship
 UsdShadeMaterial::GetBindingRel(const UsdPrim& prim)
 {
-    UsdRelationship rel = prim.GetRelationship(_tokens->bindingRelationshipName);
+    UsdRelationship rel = prim.GetRelationship(
+            UsdShadeTokens->materialBinding);
     if (TfGetEnvSetting(USD_HONOR_LEGACY_USD_LOOK)) {
-        if (not rel) {
+        if (!rel) {
             // honor legacy assets using UsdShadeLook
-            return prim.GetRelationship(_tokens->legacyBindingRelationshipName);
+            return prim.GetRelationship(UsdShadeTokens->lookBinding);
         }
     }
     return rel;
@@ -203,7 +199,7 @@ UsdShadeMaterial::GetBoundMaterial(const UsdPrim &prim)
     if (UsdRelationship rel = UsdShadeMaterial::GetBindingRel(prim)) {
         SdfPathVector targetPaths;
         rel.GetForwardedTargets(&targetPaths);
-        if ((targetPaths.size() == 1) and targetPaths.front().IsPrimPath()) {
+        if ((targetPaths.size() == 1) && targetPaths.front().IsPrimPath()) {
             return UsdShadeMaterial(
                 prim.GetStage()->GetPrimAtPath(targetPaths.front()));
         }
@@ -219,9 +215,10 @@ UsdShadeMaterial::GetEditContextForVariant(const TfToken &materialVariation,
     UsdPrim         prim = GetPrim();
     UsdStageWeakPtr stage = prim.GetStage();
     
-    UsdVariantSet materialVariant = prim.GetVariantSet(_tokens->materialVariantName);
+    UsdVariantSet materialVariant = prim.GetVariantSet(
+            UsdShadeTokens->materialVariant);
     UsdEditTarget target = stage->GetEditTarget();
-    if (materialVariant.FindOrCreateVariant(materialVariation) and
+    if (materialVariant.AppendVariant(materialVariation) && 
         materialVariant.SetVariantSelection(materialVariation)) {
         target = materialVariant.GetVariantEditTarget(layer);
     }
@@ -240,7 +237,7 @@ _GetRootPath(const UsdPrim & prim)
     if (path == SdfPath::AbsoluteRootPath())
         return path;
 
-    while (not path.IsRootPrimPath())
+    while (!path.IsRootPrimPath())
         path = path.GetParentPath();
 
     return path;
@@ -249,7 +246,7 @@ _GetRootPath(const UsdPrim & prim)
 UsdVariantSet
 UsdShadeMaterial::GetMaterialVariant() const
 {
-    return GetPrim().GetVariantSet(_tokens->materialVariantName);
+    return GetPrim().GetVariantSet(UsdShadeTokens->materialVariant);
 }
 
 /* static */
@@ -258,12 +255,12 @@ UsdShadeMaterial::CreateMasterMaterialVariant(const UsdPrim &masterPrim,
                                       const std::vector<UsdPrim> &materials,
                                       const TfToken &masterVariantSetName)
 {
-    if (not masterPrim){
+    if (!masterPrim){
         TF_CODING_ERROR("MasterPrim is not a valid UsdPrim.");
         return false;
     }
     TfToken  masterSetName = masterVariantSetName.IsEmpty() ? 
-        _tokens->materialVariantName : masterVariantSetName;
+        UsdShadeTokens->materialVariant : masterVariantSetName;
     UsdStagePtr  stage = masterPrim.GetStage();
     std::vector<std::string>  allMaterialVariants;
     
@@ -273,7 +270,7 @@ UsdShadeMaterial::CreateMasterMaterialVariant(const UsdPrim &masterPrim,
         return false;
     }
     TF_FOR_ALL(material, materials){
-        if (not *material){
+        if (!*material){
             TF_CODING_ERROR("Unable to process invalid material: %s",
                             material->GetDescription().c_str());
             return false;
@@ -288,7 +285,8 @@ UsdShadeMaterial::CreateMasterMaterialVariant(const UsdPrim &masterPrim,
         }
 
         std::vector<std::string>   materialVariants = 
-            material->GetVariantSet(_tokens->materialVariantName).GetVariantNames();
+            material->GetVariantSet(
+                    UsdShadeTokens->materialVariant).GetVariantNames();
         if (materialVariants.size() == 0){
             TF_CODING_ERROR("All Material prims to be switched by master "
                             "materialVariant must actually possess a "
@@ -311,7 +309,7 @@ UsdShadeMaterial::CreateMasterMaterialVariant(const UsdPrim &masterPrim,
 
     UsdVariantSet masterSet = masterPrim.GetVariantSet(masterSetName);
     TF_FOR_ALL(varName, allMaterialVariants){
-        if (not masterSet.FindOrCreateVariant(*varName)){
+        if (!masterSet.AppendVariant(*varName)){
             TF_RUNTIME_ERROR("Unable to create Material variant %s on prim %s. "
                              "Aborting master materialVariant creation.",
                              varName->c_str(),
@@ -324,7 +322,7 @@ UsdShadeMaterial::CreateMasterMaterialVariant(const UsdPrim &masterPrim,
             UsdEditContext  ctxt(masterSet.GetVariantEditContext());
             
             TF_FOR_ALL(material, materials){
-                if (not *material){
+                if (!*material){
                     // Somehow, switching the variant caused this prim
                     // to expire.
                     TF_RUNTIME_ERROR("Switching master variant %s to %s "
@@ -338,14 +336,16 @@ UsdShadeMaterial::CreateMasterMaterialVariant(const UsdPrim &masterPrim,
 
                 // Here's the heart of the whole thing
                 if (material->GetPath().HasPrefix(masterPrim.GetPath())){
-                    material->GetVariantSet(_tokens->materialVariantName).
+                    material->GetVariantSet(
+                            UsdShadeTokens->materialVariant).
                         SetVariantSelection(*varName);
                 }
                 else {
                     SdfPath derivedPath = material->GetPrimPath().
                         ReplacePrefix(_GetRootPath(*material), masterPrim.GetPath());
                     if (UsdPrim over = stage->OverridePrim(derivedPath)) {
-                        over.GetVariantSet(_tokens->materialVariantName).
+                        over.GetVariantSet(
+                                UsdShadeTokens->materialVariant).
                             SetVariantSelection(*varName);
                     }
                     else {
@@ -376,7 +376,7 @@ SdfPath
 UsdShadeMaterial::GetBaseMaterialPath() const 
 {
     UsdRelationship baseRel = GetPrim().GetRelationship(
-            _tokens->derivesFromName);
+            UsdShadeTokens->derivesFrom);
     if (baseRel.IsValid()) {
         SdfPathVector targets;
         baseRel.GetTargets(&targets);
@@ -391,7 +391,7 @@ void
 UsdShadeMaterial::SetBaseMaterialPath(const SdfPath& baseMaterialPath) const 
 {
     UsdRelationship baseRel = GetPrim().CreateRelationship(
-        _tokens->derivesFromName, /* custom = */ false);
+        UsdShadeTokens->derivesFrom, /* custom = */ false);
 
     if (!baseMaterialPath.IsEmpty()) {
         SdfPathVector targets(1, baseMaterialPath);
@@ -456,29 +456,29 @@ UsdShadeMaterial::HasMaterialFaceSet(const UsdPrim &prim)
 {
     UsdGeomFaceSetAPI faceSet(prim, _tokens->material);
     bool isPartition=false;
-    return faceSet.GetIsPartitionAttr().Get(&isPartition) and isPartition;
+    return faceSet.GetIsPartitionAttr().Get(&isPartition) && isPartition;
 }
 
 UsdRelationship
 UsdShadeMaterial::GetSurfaceTerminal() const
 {
-    return GetTerminal(_tokens->surfaceTerminal);
+    return GetTerminal(UsdShadeTokens->surface);
 }
 
 UsdRelationship
 UsdShadeMaterial::CreateSurfaceTerminal(const SdfPath& targetPath) const
 {
-    return CreateTerminal(_tokens->surfaceTerminal, targetPath);
+    return CreateTerminal(UsdShadeTokens->surface, targetPath);
 }
 
 UsdRelationship
 UsdShadeMaterial::GetDisplacementTerminal() const
 {
-    return GetTerminal(_tokens->displacementTerminal);
+    return GetTerminal(UsdShadeTokens->displacement);
 }
 
 UsdRelationship
 UsdShadeMaterial::CreateDisplacementTerminal(const SdfPath& targetPath) const
 {
-    return CreateTerminal(_tokens->displacementTerminal, targetPath);
+    return CreateTerminal(UsdShadeTokens->displacement, targetPath);
 }

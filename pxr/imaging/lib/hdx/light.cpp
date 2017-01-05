@@ -51,7 +51,7 @@ HdxLight::Sync()
     SdfPath const &id = GetID();
     HdSceneDelegate *delegate = GetDelegate();
 
-    if (not TF_VERIFY(delegate)) {
+    if (!TF_VERIFY(delegate)) {
         return;
     }
 
@@ -118,4 +118,11 @@ HdxLight::Get(TfToken const &token) const
     VtValue val;
     TfMapLookup(_params, token, &val);
     return val;
+}
+
+/* virtual */
+int
+HdxLight::GetInitialDirtyBitsMask() const
+{
+    return AllDirty;
 }

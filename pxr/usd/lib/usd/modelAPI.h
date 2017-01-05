@@ -128,7 +128,7 @@ public:
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 
     //
-    // Just remember to close the class delcaration with }; and complete the
+    // Just remember to close the class declaration with }; and complete the
     // include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
@@ -262,7 +262,7 @@ protected:
     template<typename T>
     bool _GetAssetInfoByKey(const TfToken &key, T *val) const {
         VtValue vtVal = GetPrim().GetAssetInfoByKey(key);
-        if (not vtVal.IsEmpty() and vtVal.IsHolding<T>()) {
+        if (!vtVal.IsEmpty() && vtVal.IsHolding<T>()) {
             *val = vtVal.UncheckedGet<T>();
             return true;
         }

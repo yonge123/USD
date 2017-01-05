@@ -24,6 +24,8 @@
 #ifndef USD_STAGE_H
 #define USD_STAGE_H
 
+/// \file usd/stage.h
+
 #include "pxr/usd/usd/common.h"
 #include "pxr/usd/usd/editTarget.h"
 #include "pxr/usd/usd/interpolation.h"
@@ -381,7 +383,7 @@ public:
     ///       some recomposition cost. Similarly, unloading an unloaded prim
     ///       is legal.
     ///     - Specifying a path that does not target a prim is legal as long it
-    ///       has at least one ancestor in the scene graph (not including the
+    ///       has at least one ancestor in the scene graph (!including the
     ///       absolute root). If the given path has no ancestors, it is an
     ///       error.
     ///     - Loading an inactive prim is an error.
@@ -703,7 +705,7 @@ public:
     /// if it has one. If \a includeClipLayers is true, we will also include
     /// all of the layers that this stage has had to open so far to perform
     /// value resolution of attributes affected by 
-    /// \ref Usd_AdvanedFeatures_ClipsOverview "Value Clips"
+    /// \ref Usd_AdvancedFeatures_ClipsOverview "Value Clips"
     SdfLayerHandleVector GetUsedLayers(bool includeClipLayers=true) const;
 
     /// Return true if \a layer is one of the layers in this stage's local,
@@ -1100,7 +1102,7 @@ public:
     // --------------------------------------------------------------------- //
     /// \anchor Usd_instancing
     /// \name Instancing
-    /// See \ref Usd_Instancing for more details.
+    /// See \ref Usd_ExplicitInstancing for more details.
     /// @{
     // --------------------------------------------------------------------- //
 
@@ -1700,7 +1702,7 @@ bool
 UsdStage::GetMetadata(const TfToken& key, T* value) const
 {
     VtValue result;
-    if (not GetMetadata(key, &result)){
+    if (!GetMetadata(key, &result)){
         return false;
     }
 
@@ -1731,7 +1733,7 @@ UsdStage::GetMetadataByDictKey(const TfToken& key, const TfToken &keyPath,
                                T* value) const
 {
     VtValue result;
-    if (not GetMetadataByDictKey(key, keyPath, &result)){
+    if (!GetMetadataByDictKey(key, keyPath, &result)){
         return false;
     }
 

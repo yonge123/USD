@@ -23,15 +23,93 @@
 //
 #include "pxr/imaging/hdStream/renderDelegate.h"
 #include "pxr/imaging/hd/renderDelegateRegistry.h"
+#include "pxr/imaging/hd/mesh.h"
+#include "pxr/imaging/hd/basisCurves.h"
+#include "pxr/imaging/hd/points.h"
+#include "pxr/imaging/hd/texture.h"
+#include "pxr/imaging/hdx/camera.h"
+#include "pxr/imaging/hdx/drawTarget.h"
+#include "pxr/imaging/hdx/light.h"
+
 
 TF_REGISTRY_FUNCTION(TfType)
 {
     HdRenderDelegateRegistry::Define<HdStreamRenderDelegate>();
 }
 
-
 TfToken
 HdStreamRenderDelegate::GetDefaultGalId() const
 {
     return TfToken();
 }
+
+HdRprim *
+HdStreamRenderDelegate::CreateRprim(TfToken const& typeId,
+                                    HdSceneDelegate* delegate,
+                                    SdfPath const& rprimId,
+                                    SdfPath const& instancerId)
+{
+    if (typeId == HdPrimTypeTokens->mesh) {
+        return new HdMesh(delegate, rprimId, instancerId);
+    } else if (typeId == HdPrimTypeTokens->basisCurves) {
+        return new HdBasisCurves(delegate, rprimId, instancerId);
+    } else  if (typeId == HdPrimTypeTokens->points) {
+        return new HdPoints(delegate, rprimId, instancerId);
+    } else {
+        TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
+    }
+
+    return nullptr;
+}
+
+void
+HdStreamRenderDelegate::DestroyRprim(HdRprim *rPrim)
+{
+    delete rPrim;
+}
+
+HdSprim *
+HdStreamRenderDelegate::CreateSprim(TfToken const& typeId,
+                                    HdSceneDelegate* delegate,
+                                    SdfPath const& sprimId)
+{
+    if (typeId == HdPrimTypeTokens->camera) {
+        return new HdxCamera(delegate, sprimId);
+    } else if (typeId == HdPrimTypeTokens->light) {
+        return new HdxLight(delegate, sprimId);
+    } else  if (typeId == HdPrimTypeTokens->drawTarget) {
+        return new HdxDrawTarget(delegate, sprimId);
+    } else {
+        TF_CODING_ERROR("Unknown Sprim Type %s", typeId.GetText());
+    }
+
+    return nullptr;
+}
+
+void
+HdStreamRenderDelegate::DestroySprim(HdSprim *sPrim)
+{
+    delete sPrim;
+}
+
+HdBprim *
+HdStreamRenderDelegate::CreateBprim(TfToken const& typeId,
+                                    HdSceneDelegate* delegate,
+                                    SdfPath const& bprimId)
+{
+    if (typeId == HdPrimTypeTokens->texture) {
+        return new HdTexture(delegate, bprimId);
+    } else  {
+        TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
+    }
+
+
+    return nullptr;
+}
+
+void
+HdStreamRenderDelegate::DestroyBprim(HdBprim *bPrim)
+{
+    delete bPrim;
+}
+

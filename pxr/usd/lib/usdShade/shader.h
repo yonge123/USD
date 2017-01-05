@@ -183,16 +183,13 @@ public:
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 
     //
-    // Just remember to close the class delcaration with }; and complete the
+    // Just remember to close the class declaration with }; and complete the
     // include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
 
     /// Create a parameter which can either have a value or can be
     /// connected.
-    ///
-    /// This will infer whether the parameter should be scalar or array from
-    /// the \p typeName.
     ///
     /// \note parameter names should not be namespaced, as, to keep things
     /// simple, the criterion we use to enumerate parameters on a Shader is

@@ -121,7 +121,7 @@ static pthread_mutex_t _progInfoForErrorsMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Key-value map for extra log info.  Stores unowned pointers to text to be
 // emitted in stack trace logs in case of fatal errors or crashes.
-typedef std::map<std::string, char const *> Arch_LogInfoMap;
+typedef std::map<std::string, std::vector<std::string> const *> Arch_LogInfoMap;
 static Arch_LogInfoMap _logInfoForErrors;
 // Mutex for above:
 static pthread_mutex_t _logInfoForErrorsMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -144,7 +144,10 @@ _EmitAnyExtraLogInfo(FILE* outFile)
     Locker lock(_logInfoForErrorsMutex);
     for (Arch_LogInfoMap::const_iterator i = _logInfoForErrors.begin(),
              end = _logInfoForErrors.end(); i != end; ++i) {
-        fprintf(outFile, "\n%s:\n%s", i->first.c_str(), i->second);
+        fprintf(outFile, "\n%s:\n", i->first.c_str());
+        for (std::string const &line: *i->second) {
+            fprintf(outFile, "%s", line.c_str());
+        }
     }
 }
 
@@ -157,13 +160,15 @@ _EmitAnyExtraLogInfo(FILE* outFile, size_t max)
     for (Arch_LogInfoMap::const_iterator i = _logInfoForErrors.begin(),
              end = _logInfoForErrors.end(); i != end; ++i) {
         // We limit the # of errors printed to avoid spam.
-        if (n++ >= max) {
-            fprintf(
-                outFile,
-                "...more diagnostic information is in the stack trace file.\n");
-            break;
+        fprintf(outFile, "%s:\n", i->first.c_str());
+        for (std::string const &line: *i->second) {
+            if (n++ >= max) {
+                fprintf(outFile, "... full diagnostics reported in the "
+                        "stack trace file.\n");
+                return;
+            }
+            fprintf(outFile, "%s", line.c_str());
         }
-        fprintf(outFile, "%s:\n%s", i->first.c_str(), i->second);
     }
 }
 
@@ -229,10 +234,10 @@ char* asstrcpy(char* dst, const char* src)
 // Compare the strings for equality.
 bool asstreq(const char* dst, const char* src)
 {
-    if (not dst or not src) {
+    if (!dst || !src) {
         return dst == src;
     }
-    while (*dst or *src) {
+    while (*dst || *src) {
         if (*dst++ != *src++) {
             return false;
         }
@@ -243,10 +248,10 @@ bool asstreq(const char* dst, const char* src)
 // Compare the strings for equality up to n characters.
 bool asstrneq(const char* dst, const char* src, size_t n)
 {
-    if (not dst or not src) {
+    if (!dst || !src) {
         return dst == src;
     }
-    while ((*dst or *src) and n) {
+    while ((*dst || *src) && n) {
         if (*dst++ != *src++) {
             return false;
         }
@@ -361,7 +366,7 @@ int _GetStackTraceName(char* buf, size_t len)
     // the empty file.
     int suffix = 0;
     int fd = open(buf, O_CREAT|O_WRONLY|O_TRUNC|O_EXCL, 0640);
-    while (fd == -1 and errno == EEXIST) {
+    while (fd == -1 && errno == EEXIST) {
         // File exists.  Try a new suffix if there's space.
         ++suffix;
         if (len < required + 1 + asNumDigits(suffix)) {
@@ -390,7 +395,7 @@ _MakeArgv(
     const char* const substitutions[][2],
     size_t numSubstitutions)
 {
-    if (not cmd or not srcArgv) {
+    if (!cmd || !srcArgv) {
         return false;
     }
 
@@ -537,10 +542,10 @@ int _LogStackTraceForPid(const char *logfile)
 {
     // Get the command to run.
     const char* cmd = asgetenv("ARCH_POSTMORTEM");
-    if (not cmd) {
+    if (!cmd) {
         cmd = stackTraceCmd;
     }
-    if (not cmd or not stackTraceArgv) {
+    if (!cmd || !stackTraceArgv) {
         // Silently do nothing.
         return 0;
     }
@@ -556,7 +561,7 @@ int _LogStackTraceForPid(const char *logfile)
     // Build the argument list.
     static constexpr size_t maxArgs = 32;
     const char* argv[maxArgs];
-    if (not _MakeArgv(argv, maxArgs, cmd, stackTraceArgv, substitutions, 2)) {
+    if (!_MakeArgv(argv, maxArgs, cmd, stackTraceArgv, substitutions, 2)) {
         static const char msg[] = "Too many arguments to postmortem command\n";
         write(2, msg, sizeof(msg) - 1);
         return 0;
@@ -669,13 +674,14 @@ ArchGetProgramInfoForErrors(const std::string& key) {
 } 
 
 void
-ArchSetExtraLogInfoForErrors(const std::string &key, char const *text)
+ArchSetExtraLogInfoForErrors(const std::string &key,
+                             std::vector<std::string> const *lines)
 {
     Locker lock(_logInfoForErrorsMutex);
-    if (not text or not strlen(text)) {
+    if (!lines || lines->empty()) {
         _logInfoForErrors.erase(key);
     } else {
-        _logInfoForErrors[key] = text;
+        _logInfoForErrors[key] = lines;
     }
 }
 
@@ -741,10 +747,10 @@ _InvokeSessionLogger(const char* progname, const char *stackTrace)
     const char* cmd = asgetenv("ARCH_LOGSESSION");
     const char* const* srcArgv =
         stackTrace ? _sessionCrashLogArgv : _sessionLogArgv;
-    if (not cmd) {
+    if (!cmd) {
         cmd = _logStackToDbCmd;
     }
-    if (not cmd or not srcArgv) {
+    if (!cmd || !srcArgv) {
         // Silently do nothing.
         return;
     }
@@ -761,7 +767,7 @@ _InvokeSessionLogger(const char* progname, const char *stackTrace)
     // Build the argument list.
     static constexpr size_t maxArgs = 32;
     const char* argv[maxArgs];
-    if (not _MakeArgv(argv, maxArgs, cmd, srcArgv, substitutions, 4)) {
+    if (!_MakeArgv(argv, maxArgs, cmd, srcArgv, substitutions, 4)) {
         static const char msg[] = "Too many arguments to log session command\n";
         write(2, msg, sizeof(msg) - 1);
         return;
@@ -1169,7 +1175,7 @@ Arch_DefaultStackTraceCallback(uintptr_t address)
     void* baseAddress, *symbolAddress;
     if (ArchGetAddressInfo(reinterpret_cast<void*>(address - 1),
                    &objectPath, &baseAddress,
-                   &symbolName, &symbolAddress) and symbolAddress) {
+                   &symbolName, &symbolAddress) && symbolAddress) {
         Arch_DemangleFunctionName(&symbolName);
         const uintptr_t symbolOffset =
             (uint64_t)(address - (uintptr_t)symbolAddress);
@@ -1237,7 +1243,7 @@ Arch_GetStackTrace(const vector<uintptr_t> &frames)
     }
 
     ArchStackTraceCallback callback = *Arch_GetStackTraceCallback();
-    if (not callback) {
+    if (!callback) {
         callback = Arch_DefaultStackTraceCallback;
     }
     for (size_t i = 0; i < frames.size(); i++) {

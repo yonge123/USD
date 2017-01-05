@@ -32,7 +32,6 @@
 #include "pxr/base/gf/vec2f.h"
 #include "pxr/base/gf/vec4f.h"
 
-typedef boost::weak_ptr<class HdxDrawTarget> HdxDrawTargetWeakPtr;
 typedef std::unique_ptr<HdxDrawTargetRenderPass> HdxDrawTargetRenderPassUniquePtr;
 typedef boost::shared_ptr<class HdxSimpleLightingShader> HdxSimpleLightingShaderSharedPtr;
 
@@ -52,21 +51,17 @@ protected:
     virtual void _Execute(HdTaskContext* ctx);
 
 private:
-    // Uses unique_ptr for pass to avoid copy constructor
-    // use by std::vector::reserve().
-
     struct RenderPassInfo {
-        HdxDrawTargetRenderPassUniquePtr  pass;
         HdRenderPassStateSharedPtr        renderPassState;
         HdxSimpleLightingShaderSharedPtr  simpleLightingShader;
-        HdxDrawTargetWeakPtr              target;
+        const HdxDrawTarget              *target;
         unsigned int                      version;
     };
     unsigned _currentDrawTargetSetVersion;
 
-
-    typedef std::vector< RenderPassInfo > RenderPassArray;
-    RenderPassArray _renderPasses;
+    typedef std::vector< RenderPassInfo > RenderPassInfoArray;
+    RenderPassInfoArray _renderPassesInfo;
+    std::vector< HdxDrawTargetRenderPassUniquePtr > _renderPasses;
 
     // Raster State - close match to render task
     // but doesn't have enableHardwareShading

@@ -27,7 +27,7 @@
 
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usdGeom/scope.h"
-#include "pxr/usd/usdShade/look.h"
+#include "pxr/usd/usdShade/material.h"
 #include "pxr/usd/usdShade/parameter.h"
 #include "pxr/usd/usdShade/shader.h"
 
@@ -77,12 +77,12 @@ PxrUsdMayaShadingModeExportContext::GetSurfaceShader() const
 {
     MStatus status;
     MFnDependencyNode seDepNode(_shadingEngine, &status);
-    if (not status) {
+    if (!status) {
         return MObject();
     }
 
     MPlug ssPlug = seDepNode.findPlug("surfaceShader", true, &status);
-    if (not status) {
+    if (!status) {
         return MObject();
     }
 
@@ -101,12 +101,12 @@ PxrUsdMayaShadingModeExportContext::GetAssignments() const
 
     MStatus status;
     MFnDependencyNode seDepNode(_shadingEngine, &status);
-    if (not status) {
+    if (!status) {
         return ret;
     }
 
     MPlug dsmPlug = seDepNode.findPlug("dagSetMembers", true, &status);
-    if (not status) {
+    if (!status) {
         return ret;
     }
 
@@ -115,12 +115,12 @@ PxrUsdMayaShadingModeExportContext::GetAssignments() const
         MPlug dsmElemPlug(dsmPlug.connectionByPhysicalIndex(i));
         MStatus status = MS::kFailure;
         MFnDagNode dagNode(PxrUsdMayaUtil::GetConnected(dsmElemPlug).node(), &status);
-        if (not status) {
+        if (!status) {
             continue;
         }
 
         MDagPath dagPath;
-        if (not dagNode.getPath(dagPath))
+        if (!dagNode.getPath(dagPath))
             continue;
 
         SdfPath usdPath = PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, 
@@ -132,7 +132,7 @@ PxrUsdMayaShadingModeExportContext::GetAssignments() const
         }
         
         // If this path has already been processed, skip it.
-        if (not seenBoundPrimPaths.insert(usdPath).second)
+        if (!seenBoundPrimPaths.insert(usdPath).second)
             continue;
 
         // If the bound prim's path is not below a bindable root, skip it.
@@ -144,7 +144,7 @@ PxrUsdMayaShadingModeExportContext::GetAssignments() const
         MObjectArray sgObjs, compObjs;
         // Assuming that instancing is not involved.
         status = dagNode.getConnectedSetsAndMembers(0, sgObjs, compObjs, true);
-        if (not status)
+        if (!status)
             continue;
 
         for (size_t j = 0; j < sgObjs.length(); j++) {
@@ -153,7 +153,7 @@ PxrUsdMayaShadingModeExportContext::GetAssignments() const
                 continue;
 
             VtIntArray faceIndices;
-            if (not compObjs[j].isNull()) {
+            if (!compObjs[j].isNull()) {
                 MItMeshPolygon faceIt(dagPath, compObjs[j]);
                 faceIndices.reserve(faceIt.count());
                 for ( faceIt.reset() ; !faceIt.isDone() ; faceIt.next() ) {
@@ -192,7 +192,7 @@ _GetLookParent(const UsdStageRefPtr& stage,
     }
 
     SdfPath shaderExportLocation = commonAncestor;
-    while (not shaderExportLocation.IsRootPrimPath()) {
+    while (!shaderExportLocation.IsRootPrimPath()) {
         shaderExportLocation = shaderExportLocation.GetParentPath();
     }
     shaderExportLocation = shaderExportLocation.AppendChild(TfToken("Looks"));
@@ -211,7 +211,7 @@ PxrUsdMayaShadingModeExportContext::MakeStandardLookPrim(
     if (lookName.empty()) {
         MStatus status;
         MFnDependencyNode seDepNode(_shadingEngine, &status);
-        if (not status) {
+        if (!status) {
             return ret;
         }
         MString seName = seDepNode.name();
@@ -222,7 +222,7 @@ PxrUsdMayaShadingModeExportContext::MakeStandardLookPrim(
     UsdStageRefPtr stage = GetUsdStage();
     if (UsdPrim lookParent = _GetLookParent(stage, assignmentsToBind)) {
         SdfPath lookPath = lookParent.GetPath().AppendChild(TfToken(lookName));
-        UsdShadeLook look = UsdShadeLook::Define(GetUsdStage(), lookPath);
+        UsdShadeMaterial look = UsdShadeMaterial::Define(GetUsdStage(), lookPath);
 
         UsdPrim lookPrim = look.GetPrim();
 
@@ -235,7 +235,7 @@ PxrUsdMayaShadingModeExportContext::MakeStandardLookPrim(
             if (faceIndices.empty()) {
                 look.Bind(boundPrim);
             } else {
-                UsdGeomFaceSetAPI faceSet = look.CreateLookFaceSet(boundPrim);
+                UsdGeomFaceSetAPI faceSet = look.CreateMaterialFaceSet(boundPrim);
                 faceSet.AppendFaceGroup(faceIndices, lookPath);
             }
         }

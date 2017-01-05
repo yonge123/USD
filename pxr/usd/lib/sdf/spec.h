@@ -176,7 +176,7 @@ public:
     template <class T>
     bool HasField(const TfToken &name, T* value) const
     {
-        if (not value) {
+        if (!value) {
             return HasField(name);
         }
         
@@ -194,7 +194,7 @@ public:
     T GetFieldAs(const TfToken & name, const T& defaultValue = T()) const
     {
         VtValue v = GetField(name);
-        if (v.IsEmpty() or not v.IsHolding<T>())
+        if (v.IsEmpty() || !v.IsHolding<T>())
             return defaultValue;
         return v.UncheckedGet<T>();
     }
@@ -221,6 +221,11 @@ public:
     bool operator<(const SdfSpec& rhs) const;
 
     /// @}
+
+    /// Hash.
+    friend size_t hash_value(const SdfSpec &x) {
+        return hash_value(x._id);
+    }
 
 private:
     bool _HasField(const TfToken& name, SdfAbstractDataValue* value) const;

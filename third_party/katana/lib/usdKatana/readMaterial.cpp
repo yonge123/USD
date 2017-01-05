@@ -133,47 +133,28 @@ _GatherShadingParameters(
         // only material interface attributes should bother recording such.
         
         if (shaderParam.IsConnected()) {
+            UsdShadeShader source;
+            TfToken outputName;
 
-            std::vector<UsdShadeShader> sources;
-            std::vector<TfToken> outputNames;
-            if (shaderParam.GetConnectedSources(&sources, &outputNames)) {
+            if (shaderParam.GetConnectedSource(&source, &outputName)) {
+                std::string targetHandle = _CreateShadingNode(
+                        source.GetPrim(), 
+                        currentTime,
+                        nodesBuilder, 
+                        interfaceBuilder,
+                        targetName);
 
-                if (shaderParam.IsArray() and sources.size() > 1) {
-                    FnLogWarn("ShaderParam " 
-                            << shaderParam.GetAttr().GetPath()
-                            << " IsArray() but has "
-                            << sources.size()
-                            << " (>1) sources.");
-                }
-
-                for (size_t i = 0; i < sources.size(); i++) {
-                    const UsdShadeShader& source = sources[i];
-                    const TfToken& outputName = outputNames[i];
-
-                    std::string targetHandle = _CreateShadingNode(
-                            source.GetPrim(), 
-                            currentTime,
-                            nodesBuilder, 
-                            interfaceBuilder,
-                            targetName);
-
-                    std::string which;
-                    if (shaderParam.IsArray()) {
-                        which = TfStringPrintf(":%zu", i);
-                    }
-
-                    // Check the relationship representing this connection
-                    // to see if the targets come from a base material.
-                    // Ignore them if so.
-                    const TfToken relName = shaderParam.GetConnectionRelName(i);
-                    const UsdRelationship rel = prim.GetRelationship(relName);
-                    if (!PxrUsdKatana_AreRelTargetsFromBaseMaterial(rel)) {
-                        // These targets are local, so include them.
-                        connectionsBuilder.set(
-                            inputParamId + which, 
-                            FnKat::StringAttribute(
-                                outputName.GetString() + "@" + targetHandle));
-                    }
+                // Check the relationship representing this connection
+                // to see if the targets come from a base material.
+                // Ignore them if so.
+                const TfToken relName = shaderParam.GetConnectionRelName();
+                const UsdRelationship rel = prim.GetRelationship(relName);
+                if (!PxrUsdKatana_AreRelTargetsFromBaseMaterial(rel)) {
+                    // These targets are local, so include them.
+                    connectionsBuilder.set(
+                        inputParamId, 
+                        FnKat::StringAttribute(
+                            outputName.GetString() + "@" + targetHandle));
                 }
             }
         }
@@ -182,7 +163,7 @@ _GatherShadingParameters(
         // correctly..
         UsdAttribute attr = shaderParam.GetAttr();
         VtValue vtValue;
-        if (not attr.Get(&vtValue, currentTime)) {
+        if (!attr.Get(&vtValue, currentTime)) {
             continue;
         }
 
@@ -209,7 +190,7 @@ _GatherShadingParameters(
             if (UsdAttribute attr = prop.As<UsdAttribute>())
             {
                 VtValue vtValue;
-                if (not attr.Get(&vtValue, currentTime))
+                if (!attr.Get(&vtValue, currentTime))
                 {
                     continue;
                 }
@@ -381,7 +362,7 @@ _CreateShadingNode(
         }
     }
 
-    if (validData and !PxrUsdKatana_IsPrimDefFromBaseMaterial(shadingNode)) {
+    if (validData && !PxrUsdKatana_IsPrimDefFromBaseMaterial(shadingNode)) {
         shdNodeAttr.set("name", FnKat::StringAttribute(handle));
         shdNodeAttr.set("srcName", FnKat::StringAttribute(handle));
         shdNodeAttr.set("target", FnKat::StringAttribute(targetName));
@@ -583,7 +564,7 @@ _GetMaterialAttr(
     // into the schema?
     std::stack<UsdPrim> dfs;
     dfs.push(materialPrim);
-    while (not dfs.empty()) {
+    while (!dfs.empty()) {
         UsdPrim curr = dfs.top();
         dfs.pop();
 
@@ -600,7 +581,7 @@ _GetMaterialAttr(
                         nodesBuilder, interfaceBuilder, "prman");
             }
 
-            if (not curr.IsA<UsdGeomScope>()) {
+            if (!curr.IsA<UsdGeomScope>()) {
                 continue;
             }
 
@@ -697,7 +678,7 @@ _UnrollInterfaceFromPrim(const UsdPrim& prim,
 
         // handle parameters with values 
         VtValue attrVal;
-        if (interfaceAttribute.Get(&attrVal) and not attrVal.IsEmpty()) {
+        if (interfaceAttribute.Get(&attrVal) && !attrVal.IsEmpty()) {
             materialBuilder.set(
                     TfStringPrintf("parameters.%s", renamedParam.c_str()),
                     PxrUsdKatanaUtils::ConvertVtValueToKatAttr(attrVal, true));
@@ -740,13 +721,13 @@ _UnrollInterfaceFromPrim(const UsdPrim& prim,
         // USD's group delimeter is :, whereas Katana's is .
         std::string page = TfStringReplace(
                 interfaceAttribute.GetDisplayGroup(), ":", ".");
-        if (not page.empty()) {
+        if (!page.empty()) {
             std::string pageKey = renamedParam + ".hints.page";
             interfaceBuilder.set(pageKey, FnKat::StringAttribute(page), true);
         }
 
         std::string doc = interfaceAttribute.GetDocumentation();
-        if (not doc.empty()) {
+        if (!doc.empty()) {
             std::string docKey = renamedParam + ".hints.help";
 
             doc = TfStringReplace(doc, "'", "\"");

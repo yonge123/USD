@@ -23,6 +23,7 @@
 //
 #include "pxr/imaging/hdx/simpleLightBypassTask.h"
 
+#include "pxr/imaging/hdx/camera.h"
 #include "pxr/imaging/hdx/simpleLightingShader.h"
 #include "pxr/imaging/hdx/tokens.h"
 
@@ -57,23 +58,26 @@ HdxSimpleLightBypassTask::_Sync(HdTaskContext* ctx)
 
     if (bits & HdChangeTracker::DirtyParams) {
         HdxSimpleLightBypassTaskParams params;
-        if (not _GetSceneDelegateValue(HdTokens->params, &params)) {
+        if (!_GetSceneDelegateValue(HdTokens->params, &params)) {
             return;
         }
 
         _simpleLightingContext = params.simpleLightingContext;
-        _camera = GetDelegate()->GetRenderIndex().GetSprim(params.cameraPath);
+        const HdRenderIndex &renderIndex = GetDelegate()->GetRenderIndex();
+        _camera = static_cast<const HdxCamera *>(
+                    renderIndex.GetSprim(HdPrimTypeTokens->camera,
+                                         params.cameraPath));
     }
 
     if (_simpleLightingContext) {
-        if (not TF_VERIFY(_camera)) {
+        if (!TF_VERIFY(_camera)) {
             return;
         }
 
         VtValue modelViewMatrix = _camera->Get(HdShaderTokens->worldToViewMatrix);
-        if (not TF_VERIFY(modelViewMatrix.IsHolding<GfMatrix4d>())) return;
+        if (!TF_VERIFY(modelViewMatrix.IsHolding<GfMatrix4d>())) return;
         VtValue projectionMatrix = _camera->Get(HdShaderTokens->projectionMatrix);
-        if (not TF_VERIFY(projectionMatrix.IsHolding<GfMatrix4d>())) return;
+        if (!TF_VERIFY(projectionMatrix.IsHolding<GfMatrix4d>())) return;
 
         // need camera matrices to compute lighting paramters in the eye-space.
         //
@@ -110,10 +114,10 @@ std::ostream& operator<<(std::ostream& out,
 bool operator==(const HdxSimpleLightBypassTaskParams& lhs,
                 const HdxSimpleLightBypassTaskParams& rhs) {
     return lhs.cameraPath == rhs.cameraPath 
-        and lhs.simpleLightingContext == rhs.simpleLightingContext;
+        && lhs.simpleLightingContext == rhs.simpleLightingContext;
 }
 
 bool operator!=(const HdxSimpleLightBypassTaskParams& lhs,
                 const HdxSimpleLightBypassTaskParams& rhs) {
-    return not(lhs == rhs);
+    return !(lhs == rhs);
 }

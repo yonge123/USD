@@ -106,8 +106,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
 
     // Make sure the file name is a valid one with a proper USD extension.
     const std::string iFileExtension = TfStringGetSuffix(iFileName, '.');
-    if (iFileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault or
-            iFileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionASCII or
+    if (iFileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault   || 
+            iFileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionASCII || 
             iFileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionCrate) {
         mFileName = iFileName;
     } else {
@@ -280,7 +280,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
                 mArgs.mergeTransformAndShape,
                 mArgs.usdModelRootOverridePath);
 
-    if (not mModelKindWriter.MakeModelHierarchy(mStage)) {
+    if (!mModelKindWriter.MakeModelHierarchy(mStage)) {
         return false;
     }
 
@@ -300,7 +300,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
     }
 
     for (const PxrUsdMayaChaserRefPtr& chaser : mChasers) {
-        if (not chaser->ExportDefault()) {
+        if (!chaser->ExportDefault()) {
             return false;
         }
     }
@@ -396,7 +396,7 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
     //   This is done for reasons as described above under mArgs.usdModelRootOverridePath
     UsdPrim usdVariantRootPrim = mStage->DefinePrim(usdVariantRootPrimPath);
     TfToken defaultPrim = usdVariantRootPrim.GetName();
-    usdVariantRootPrim.GetReferences().AddInternal(usdRootPrim.GetPath());
+    usdVariantRootPrim.GetReferences().AppendInternalReference(usdRootPrim.GetPath());
     usdVariantRootPrim.SetActive(true);
     usdRootPrim.SetActive(false);
 
@@ -445,8 +445,8 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
         if (!tableOfActivePaths.empty()) {
             { // == BEG: Scope for Variant EditContext
                 // Create the variantSet and variant
-                UsdVariantSet modelingVariantSet = usdVariantRootPrim.GetVariantSets().FindOrCreate("modelingVariant");
-                modelingVariantSet.FindOrCreateVariant(variantName);
+                UsdVariantSet modelingVariantSet = usdVariantRootPrim.GetVariantSets().AppendVariantSet("modelingVariant");
+                modelingVariantSet.AppendVariant(variantName);
                 modelingVariantSet.SetVariantSelection(variantName);
                 // Set the Edit Context
                 UsdEditTarget editTarget = modelingVariantSet.GetVariantEditTarget();

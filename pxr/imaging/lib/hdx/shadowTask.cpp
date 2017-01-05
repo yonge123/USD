@@ -59,7 +59,7 @@ HdxShadowTask::_Execute(HdTaskContext* ctx)
 
     // Extract the lighting context information from the task context
     GlfSimpleLightingContextRefPtr lightingContext;
-    if (not _GetTaskContextData(ctx, HdxTokens->lightingContext, &lightingContext)) {
+    if (!_GetTaskContextData(ctx, HdxTokens->lightingContext, &lightingContext)) {
         return;
     }
 
@@ -114,7 +114,7 @@ HdxShadowTask::_Sync(HdTaskContext* ctx)
 
     // Extract the lighting context information from the task context
     GlfSimpleLightingContextRefPtr lightingContext;
-    if (not _GetTaskContextData(ctx, HdxTokens->lightingContext, &lightingContext)) {
+    if (!_GetTaskContextData(ctx, HdxTokens->lightingContext, &lightingContext)) {
         return;
     }
     GlfSimpleShadowArrayRefPtr const shadows = lightingContext->GetShadows();
@@ -136,7 +136,7 @@ HdxShadowTask::_Sync(HdTaskContext* ctx)
 
         // Extract the new shadow task params from exec
         HdxShadowTaskParams params;
-        if (not _GetSceneDelegateValue(HdTokens->params, &params)) {
+        if (!_GetSceneDelegateValue(HdTokens->params, &params)) {
             return;
         }
 
@@ -153,6 +153,7 @@ HdxShadowTask::_Sync(HdTaskContext* ctx)
         _renderPassStates.clear();
 
         HdSceneDelegate* delegate = GetDelegate();
+        const HdRenderIndex &renderIndex = delegate->GetRenderIndex();
         
         // Extract the HD lights used to render the scene from the 
         // task context, we will use them to find out what
@@ -160,21 +161,23 @@ HdxShadowTask::_Sync(HdTaskContext* ctx)
         // collection for shadows mapping
         
         // XXX: This is inefficient, need to be optimized
-        SdfPathVector sprimPaths = delegate->GetRenderIndex().GetSprimSubtree(
-            SdfPath::AbsoluteRootPath());
+        SdfPathVector sprimPaths = renderIndex.GetSprimSubtree(
+                                                   HdPrimTypeTokens->light,
+                                                   SdfPath::AbsoluteRootPath());
         SdfPathVector lightPaths =
             HdxSimpleLightTask::ComputeIncludedLights(
                 sprimPaths,
                 params.lightIncludePaths,
                 params.lightExcludePaths);
         
-        HdSprimSharedPtrVector lights;
+        HdxLightPtrConstVector lights;
         TF_FOR_ALL (it, lightPaths) {
-            HdSprimSharedPtr const &sprim = delegate->GetRenderIndex().GetSprim(*it);
-            // XXX: or we could say instead of downcast,
-            //      sprim->Has(HdxLightInterface) ?
-            if (boost::dynamic_pointer_cast<HdxLight>(sprim)) {
-                lights.push_back(sprim);
+             const HdxLight *light = static_cast<const HdxLight *>(
+                                         renderIndex.GetSprim(
+                                                 HdPrimTypeTokens->light, *it));
+
+             if (light != nullptr) {
+                lights.push_back(light);
             }
         }
         
@@ -188,7 +191,7 @@ HdxShadowTask::_Sync(HdTaskContext* ctx)
         // it will be used for generating each shadowmap
         for (size_t lightId = 0; lightId < glfLights.size(); lightId++) {
             
-            if (not glfLights[lightId].HasShadow()) {
+            if (!glfLights[lightId].HasShadow()) {
                 continue;
             }
             
@@ -271,26 +274,26 @@ std::ostream& operator<<(std::ostream& out, const HdxShadowTaskParams& pv)
 
 bool operator==(const HdxShadowTaskParams& lhs, const HdxShadowTaskParams& rhs) 
 {
-    return  lhs.overrideColor == rhs.overrideColor and
-            lhs.wireframeColor == rhs.wireframeColor and
-            lhs.enableLighting == rhs.enableLighting and
-            lhs.enableIdRender == rhs.enableIdRender and
-            lhs.alphaThreshold == rhs.alphaThreshold and
-            lhs.tessLevel == rhs.tessLevel and
-            lhs.drawingRange == rhs.drawingRange and
-            lhs.depthBiasEnable == rhs.depthBiasEnable and
-            lhs.depthBiasConstantFactor == rhs.depthBiasConstantFactor and
-            lhs.depthBiasSlopeFactor == rhs.depthBiasSlopeFactor and
-            lhs.depthFunc == rhs.depthFunc and
-            lhs.cullStyle == rhs.cullStyle and
-            lhs.camera == rhs.camera and
-            lhs.viewport == rhs.viewport and
-            lhs.lightIncludePaths == rhs.lightIncludePaths and
+    return  lhs.overrideColor == rhs.overrideColor                      && 
+            lhs.wireframeColor == rhs.wireframeColor                    &&                     
+            lhs.enableLighting == rhs.enableLighting                    &&
+            lhs.enableIdRender == rhs.enableIdRender                    &&
+            lhs.alphaThreshold == rhs.alphaThreshold                    &&
+            lhs.tessLevel == rhs.tessLevel                              && 
+            lhs.drawingRange == rhs.drawingRange                        && 
+            lhs.depthBiasEnable == rhs.depthBiasEnable                  && 
+            lhs.depthBiasConstantFactor == rhs.depthBiasConstantFactor  && 
+            lhs.depthBiasSlopeFactor == rhs.depthBiasSlopeFactor        && 
+            lhs.depthFunc == rhs.depthFunc                              && 
+            lhs.cullStyle == rhs.cullStyle                              && 
+            lhs.camera == rhs.camera                                    && 
+            lhs.viewport == rhs.viewport                                && 
+            lhs.lightIncludePaths == rhs.lightIncludePaths              && 
             lhs.lightExcludePaths == rhs.lightExcludePaths
             ;
 }
 
 bool operator!=(const HdxShadowTaskParams& lhs, const HdxShadowTaskParams& rhs) 
 {
-    return not(lhs == rhs);
+    return !(lhs == rhs);
 }

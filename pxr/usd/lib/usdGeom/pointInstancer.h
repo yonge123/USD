@@ -568,7 +568,7 @@ public:
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 
     //
-    // Just remember to close the class delcaration with }; and complete the
+    // Just remember to close the class declaration with }; and complete the
     // include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
@@ -719,12 +719,12 @@ UsdGeomPointInstancer::ApplyMaskToArray(std::vector<bool> const &mask,
                                         VtArray<T> *dataArray,
                                         const int elementSize)
 {
-    if (not dataArray){
+    if (!dataArray){
         TF_CODING_ERROR("NULL dataArray.");
         return false;
     }
     size_t size = mask.size();
-    if (size == 0 or dataArray->size() == elementSize){
+    if (size == 0 || dataArray->size() == elementSize){
         return true;
     }
     else if ((size * elementSize) != dataArray->size()){
