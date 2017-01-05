@@ -49,7 +49,8 @@ extern TfEnvSetting<bool> PIXMAYA_DEBUG_USD_ASSEM;
 { \
     if( TfGetEnvSetting(PIXMAYA_DEBUG_USD_ASSEM) ) \
     { \
-        MString msg_var(msg); \
+        MString msg_var("PXRUSD: "); \
+        msg_var += msg; \
         MGlobal::displayInfo(msg_var); \
         std::cout << msg_var.asChar() << std::endl; \
     } \
