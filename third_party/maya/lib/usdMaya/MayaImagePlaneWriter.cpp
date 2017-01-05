@@ -45,9 +45,13 @@ bool MayaImagePlaneWriter::isShapeAnimated() const {
 }
 
 bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdGeomImagePlane& primSchema) {
+    if (usdTime.IsDefault() == isShapeAnimated()) {
+        return true;
+    }
+
     MFnDependencyNode dnode(getDagPath().node());
     const auto sizePlug = dnode.findPlug("size");
-    primSchema.GetFilenameAttr().Set(std::string(dnode.findPlug("imageName").asString().asChar()));
+    primSchema.GetFilenameAttr().Set(SdfAssetPath(std::string(dnode.findPlug("imageName").asString().asChar())));
     const auto fit = dnode.findPlug("fit").asShort();
     if (fit == IMAGE_PLANE_FIT_BEST) {
         primSchema.GetFitAttr().Set(image_plane_best, usdTime);
