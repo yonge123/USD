@@ -26,6 +26,26 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(MDagPath& iDag, UsdStageRefPtr stage,
         MObject obj = getDagPath().node();
         mIsShapeAnimated = PxrUsdMayaUtil::isAnimated(obj);
     }
+
+    if (iArgs.mergeTransformAndShape) {
+        // the path will always look like :
+        // camera transform -> camera shape -> image plane transform -> image plane shape
+        // So first we pop the image plane shape if possible,
+        // then we are removing the camera shape
+        auto iDagCopy = iDag;
+        std::string shapeName = MFnDependencyNode(iDagCopy.node()).name().asChar();
+        iDagCopy.pop();
+        std::string transformName = MFnDependencyNode(iDagCopy.node()).name().asChar();
+        unsigned int numberOfShapesDirectlyBelow = 0;
+        iDagCopy.numberOfShapesDirectlyBelow(numberOfShapesDirectlyBelow);
+        auto usdPath = getUsdPath().GetParentPath().GetParentPath().GetParentPath();
+        if (numberOfShapesDirectlyBelow == 1) {
+            usdPath = usdPath.AppendChild(TfToken(transformName));
+        } else {
+            usdPath = usdPath.AppendChild(TfToken(transformName)).AppendChild(TfToken(shapeName));
+        }
+        setUsdPath(usdPath);
+    }
 }
 
 UsdPrim MayaImagePlaneWriter::write(const UsdTimeCode& usdTime) {
