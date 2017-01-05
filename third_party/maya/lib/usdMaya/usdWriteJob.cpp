@@ -596,11 +596,11 @@ bool usdWriteJob::createPrimWriter(
                 *primWriterOut = nullptr;
                 return false;
             }
-            MayaImagePlaneWriterPtr primPtr(new MayaImagePlaneWriter(curDag, mStage, mArgs));
-            if (primPtr->isValid()) {
-                *primWriterOut = primPtr;
-                return true;
-            }
+        }
+        MayaImagePlaneWriterPtr primPtr(new MayaImagePlaneWriter(curDag, mStage, mArgs));
+        if (primPtr->isValid()) {
+            *primWriterOut = primPtr;
+            return true;
         }
     }
 
