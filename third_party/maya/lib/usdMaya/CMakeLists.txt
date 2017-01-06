@@ -40,6 +40,7 @@ pxr_shared_library(${PXR_PACKAGE}
         primWriterRegistry
         query
         translatorCamera
+        translatorImagePlane
         translatorCurves
         translatorGprim
         translatorLook
@@ -95,6 +96,7 @@ pxr_shared_library(${PXR_PACKAGE}
         MayaMeshWriter_PrimVars.cpp
         MayaMeshWriter_SubDiv.cpp
         primReaderCamera.cpp
+        primReaderImagePlane.cpp
         primReaderLook.cpp
         primReaderMesh.cpp
         primReaderNurbsCurves.cpp
