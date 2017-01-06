@@ -385,6 +385,9 @@ PxrUsdMayaTranslatorModelAssembly::Read(
     auto isParentPath = [](const std::string& layerPath, const std::vector<std::string>& parentPaths) -> bool {
         for (unsigned int i = 0; i < parentPaths.size(); ++i)
         {
+            if (parentPaths[i].empty()) {
+                continue;
+            }
             if (layerPath == parentPaths[i]) {
                 return true;
             }
@@ -400,18 +403,36 @@ PxrUsdMayaTranslatorModelAssembly::Read(
                       const char delimiter, std::string& result) {
         result.clear();
         unsigned int new_len = 0;
+
+        auto addStrLen = [](unsigned int& len, const std::string& str) {
+            if (!str.empty()) {
+                // +1 for the delimiter character
+                if (len != 0)
+                    ++len;
+                len += str.length();
+            }
+        };
+
         for (auto& str : strings) {
-            // +1 for the delimiter character
-            new_len += str.length() + 1;
+            addStrLen(new_len, str);
         }
-        new_len += lastString.length();
+        addStrLen(new_len, lastString);
 
         result.reserve(new_len);
-        for (unsigned int i = 0; i < strings.size(); ++i) {
-            result += strings[i];
-            result += delimiter;
+
+        auto appendStr = [](std::string& aggregate, const std::string& str,
+                            const char delim) {
+            if (!str.empty()) {
+                if (!aggregate.empty())
+                    aggregate += delim;
+                aggregate += str;
+            }
+        };
+
+        for (auto& str : strings) {
+            appendStr(result, str, delimiter);
         }
-        result += lastString;
+        appendStr(result, lastString, delimiter);
     };
 
     for (const auto& layerSpec : prim.GetPrimStack()) {
