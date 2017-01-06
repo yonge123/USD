@@ -245,6 +245,16 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
 }
 
 
+void usdReadJob::setJoinedParentRefPaths(const std::string& joinedRefPaths)
+{
+    mParentRefPaths.clear();
+    std::stringstream stream(joinedRefPaths);
+    std::string str;
+    while (std::getline(stream, str, ',')) {
+        mParentRefPaths.push_back(str);
+    }
+}
+
 bool usdReadJob::_DoImport(UsdPrimRange& primIt,
                            const UsdPrim& usdRootPrim)
 {
@@ -292,7 +302,8 @@ bool usdReadJob::_DoImport(UsdPrimRange& primIt,
                                                         args,
                                                         &ctx,
                                                         _assemblyTypeName,
-                                                        mArgs.assemblyRep)) {
+                                                        mArgs.assemblyRep,
+                                                        mParentRefPaths)) {
                 if (ctx.GetPruneChildren()) {
                     primIt.PruneChildren();
                 }

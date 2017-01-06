@@ -199,6 +199,18 @@ void JobImportArgs::parseSingleOption(const MStringArray& theOption)
         fileName = theOption[1].asChar();
     } else if (theOption[0] == MString("parent")) {
         parentNode = theOption[1].asChar();
+    } else if (theOption[0] == MString("parentRefPaths")) {
+        setJoinedParentRefPaths(theOption[1].asChar());
+    }
+}
+
+void JobImportArgs::setJoinedParentRefPaths(const std::string& joinedRefPaths)
+{
+    parentRefPaths.clear();
+    std::stringstream stream(joinedRefPaths);
+    std::string str;
+    while (std::getline(stream, str, ',')) {
+        parentRefPaths.push_back(str);
     }
 }
 

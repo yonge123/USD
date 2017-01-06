@@ -160,12 +160,15 @@ struct JobImportArgs : JobSharedArgs
 
     void parseSingleOption(const MStringArray& theOption);
 
+    void setJoinedParentRefPaths(const std::string& joinedRefPaths);
+
     std::string primPath;
     TfToken assemblyRep;
     bool readAnimData;
     bool useCustomFrameRange;
     bool importWithProxyShapes;
     std::string parentNode;
+    std::vector<std::string> parentRefPaths;
 };
 
 

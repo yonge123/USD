@@ -71,6 +71,7 @@ class usdReadJob
 
     // Getters/Setters
     void setMayaRootDagPath(const MDagPath &mayaRootDagPath) { mMayaRootDagPath = mayaRootDagPath; };
+    void setJoinedParentRefPaths(const std::string& joinedRefPaths);
 
   private:
     // XXX: Activating the 'Expanded' representation of a USD reference
@@ -100,6 +101,7 @@ class usdReadJob
     typedef PxrUsdMayaPrimReaderContext::ObjectRegistry PathNodeMap;
     PathNodeMap mNewNodeRegistry;
     MDagPath mMayaRootDagPath;
+    std::vector<std::string> mParentRefPaths;
 
     const std::string _assemblyTypeName;
     const std::string _proxyShapeTypeName;
