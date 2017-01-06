@@ -18,7 +18,8 @@ struct PxrUsdMayaTranslatorImagePlane
         const UsdGeomImagePlane& usdImagePlane,
         MObject parentNode,
         const PxrUsdMayaPrimReaderArgs& args,
-        PxrUsdMayaPrimReaderContext* context);
+        PxrUsdMayaPrimReaderContext* context,
+        bool isCompacted);
 };
 
 #endif // PXRUSDMAYA_TRANSLATOR_IMAGEPLANE_H

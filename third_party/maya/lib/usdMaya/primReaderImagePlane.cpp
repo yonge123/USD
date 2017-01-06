@@ -15,6 +15,7 @@ PXRUSDMAYA_DEFINE_READER(UsdGeomImagePlane, args, context)
     const auto& parent = usdPrim.GetParent();
     const auto& grandParent = usdPrim.GetParent();
     MObject parentNode = MObject::kNullObj;
+    bool isCompacted = false;
     // We want to call the imageplane function on a camera shape always, because that's going to be the
     // root of the underworld.
     // Transforms were compacted, and we need to lookup the camera
@@ -31,6 +32,7 @@ PXRUSDMAYA_DEFINE_READER(UsdGeomImagePlane, args, context)
         if (!status) { return false; }
 
         parentNode = shapePath.node();
+        isCompacted = true;
     // No they were not, this will be equal to the camera shape path
     } else if (grandParent && grandParent.IsA<UsdGeomCamera>()) {
         parentNode = context->GetMayaNode(grandParent.GetPath(), true);
@@ -42,6 +44,8 @@ PXRUSDMAYA_DEFINE_READER(UsdGeomImagePlane, args, context)
             UsdGeomImagePlane(usdPrim),
             parentNode,
             args,
-            context);
+            context,
+            isCompacted
+        );
     }
 }
