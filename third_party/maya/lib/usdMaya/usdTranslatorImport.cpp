@@ -66,6 +66,7 @@ MStatus usdTranslatorImport::reader(const MFileObject & file,
     std::string fileName(file.fullName().asChar());
     std::string primPath("/");
     MString parentNode;
+    std::string parentRefPaths;
     std::map<std::string,std::string> variants;
     JobImportArgs jobArgs;
         
@@ -116,6 +117,8 @@ MStatus usdTranslatorImport::reader(const MFileObject & file,
                 fileName = theOption[1].asChar();
             } else if (theOption[0] == MString("parent")) {
                 parentNode = theOption[1];
+            } else if (theOption[0] == MString("parentRefPaths")) {
+                parentRefPaths = theOption[1].asChar();
             }
         }
     }
@@ -137,6 +140,10 @@ MStatus usdTranslatorImport::reader(const MFileObject & file,
             return MS::kFailure;
         }
         mUsdReadJob->setMayaRootDagPath( dagPath );
+    }
+    if (parentRefPaths.length())
+    {
+        mUsdReadJob->setJoinedParentRefPaths(parentRefPaths);
     }
     std::vector<MDagPath> addedDagPaths;
     bool success = mUsdReadJob->doIt(&addedDagPaths);

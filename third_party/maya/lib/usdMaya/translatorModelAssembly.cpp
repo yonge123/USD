@@ -306,7 +306,8 @@ PxrUsdMayaTranslatorModelAssembly::Read(
     const PxrUsdMayaPrimReaderArgs& args,
     PxrUsdMayaPrimReaderContext* context,
     const std::string& assemblyTypeName,
-    const std::string& assemblyRep)
+    const std::string& assemblyRep,
+    const std::vector<std::string>& parentRefs)
 {
     UsdStageCacheContext stageCacheContext(UsdMayaStageCache::Get());
     UsdStageRefPtr usdStage = UsdStage::Open(assetIdentifier);
@@ -350,16 +351,52 @@ PxrUsdMayaTranslatorModelAssembly::Read(
     //    /// references on a prim... the problem is somewhat ill-defined, and
     //    /// requires some thought.
 
-    // TODO: pass in the parent reference, so we can check up the reference
-    // stack to make sure we're not creating a recursive loop, instead of this
-    // hacky check to make sure that we're not just getting the RootLayer again
-    const std::string& rootPath = usdStage->GetRootLayer()->GetRealPath();
+    MStatus status;
+    MFnDagNode parentMFn(parentNode, &status);
+    CHECK_MSTATUS_AND_RETURN(status, false);
+    MString parentName = parentMFn.partialPathName();
 
-    MString refPath;
+    std::string refPath;
+
+    auto isParentPath = [](const std::string& layerPath, const std::vector<std::string>& parentPaths) -> bool {
+        for (unsigned int i = 0; i < parentPaths.size(); ++i)
+        {
+            if (layerPath == parentPaths[i]) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    // For a more general purpose case, we would have only taken a vector of
+    // strings and a delimiter... but in our case, we will always be adding
+    // a new "lastString", so may as well assume this for speed
+    auto joinStrs = [](const std::vector<std::string>& strings,
+                      const std::string& lastString,
+                      const char delimiter, std::string& result) {
+        result.clear();
+        unsigned int new_len = 0;
+        for (auto& str : strings) {
+            // +1 for the delimiter character
+            new_len += str.length() + 1;
+        }
+        new_len += lastString.length();
+
+        result.reserve(new_len);
+        for (unsigned int i = 0; i < strings.size(); ++i) {
+            result += strings[i];
+            result += delimiter;
+        }
+        result += lastString;
+    };
+
     for (const auto& layerSpec : prim.GetPrimStack()) {
         const std::string& layerPath = layerSpec->GetLayer()->GetRealPath();
-        if (layerPath != rootPath) {
-            refPath = layerPath.c_str();
+        if (layerPath.empty())
+            continue;
+        if (!isParentPath(layerPath, parentRefs))
+        {
+            refPath = layerPath;
             break;
         }
     }
@@ -368,18 +405,15 @@ PxrUsdMayaTranslatorModelAssembly::Read(
         MString errorMsg("Failed to find a non-recursive reference path for ");
         errorMsg += prim.GetPath().GetText();
         errorMsg += " in top-level usd file ";
-        errorMsg += rootPath.c_str();
+        errorMsg += usdStage->GetRootLayer()->GetRealPath().c_str();
         MGlobal::displayError(errorMsg);
         return false;
     }
 
-    MStatus status;
-    MFnDagNode parentMFn(parentNode, &status);
-    CHECK_MSTATUS_AND_RETURN(status, false);
-    MString parentName = parentMFn.partialPathName();
-
     // Don't know of a way to pass in an option string using MFileIO::reference,
     // so just uisng mel...
+    std::string joinedParentRefs;
+    joinStrs(parentRefs, refPath, ',', joinedParentRefs);
     MString cmd = (MString("file -reference -options \"primPath=")
                    // TODO: properly escape these strings
                    // Pass in the primitive path...
@@ -392,8 +426,10 @@ PxrUsdMayaTranslatorModelAssembly::Read(
                    + assetIdentifier.c_str()
                    + ";parent="
                    + parentName
+                   + ";parentRefPaths="
+                   + joinedParentRefs.c_str()
                    + "\" \""
-                   + refPath
+                   + refPath.c_str()
                    + "\";");
     DEBUG_PRINT(cmd);
     CHECK_MSTATUS_AND_RETURN(MGlobal::executeCommand(cmd), false);

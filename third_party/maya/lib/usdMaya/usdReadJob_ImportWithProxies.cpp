@@ -268,7 +268,8 @@ usdReadJob::_ProcessSubAssemblyPrims(const std::vector<UsdPrim>& subAssemblyPrim
                                                         args,
                                                         &ctx,
                                                         _assemblyTypeName,
-                                                        mArgs.assemblyRep)) {
+                                                        mArgs.assemblyRep,
+                                                        mParentRefPaths)) {
             return false;
         }
     }
