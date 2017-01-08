@@ -277,6 +277,8 @@ class MainWindow(QtGui.QMainWindow):
         self._nodeViewHelpDlg = None
         
         MainWindow._renderer = parserData.renderer
+        if MainWindow._renderer == 'hk':
+            os.environ['HK_ENABLED'] = '1'
         if MainWindow._renderer == 'simple':
             os.environ['HD_ENABLED'] = '0'
  

@@ -37,17 +37,26 @@
 
 /// \hideinitializer
 #define USDHYDRA_TOKENS \
+    (attenuation) \
     (black) \
     (clamp) \
+    (color) \
+    (coneAngle) \
+    (diffuse) \
+    (direction) \
     ((displayLookBxdf, "displayLook:bxdf")) \
     (faceIndex) \
     (faceOffset) \
     (frame) \
+    (hasShadows) \
     (HwPrimvar_1) \
     (HwPtexTexture_1) \
+    (HwUdimTexture_1) \
     (HwUvTexture_1) \
+    (indirect) \
     ((infoFilename, "info:filename")) \
     ((infoVarname, "info:varname")) \
+    (intensity) \
     (linear) \
     (linearMipmapLinear) \
     (linearMipmapNearest) \
@@ -57,9 +66,15 @@
     (nearest) \
     (nearestMipmapLinear) \
     (nearestMipmapNearest) \
+    (penumbraAngle) \
+    (radius) \
     (repeat) \
+    (specular) \
+    (spread) \
     (textureMemory) \
+    (uDimension) \
     (uv) \
+    (vertices) \
     (wrapS) \
     (wrapT)
 
@@ -83,17 +98,26 @@
 /// \endcode
 ///
 /// The tokens are:
+/// \li <b>attenuation</b> - UsdHydraPhysicalLight
 /// \li <b>black</b> - Return black when sampling outside the bounds of the texture., Possible value for UsdHydraUvTexture::GetWrapTAttr(), Possible value for UsdHydraUvTexture::GetWrapSAttr()
 /// \li <b>clamp</b> - The texture coordinate is clamped to [0,1]. , Possible value for UsdHydraUvTexture::GetWrapTAttr(), Possible value for UsdHydraUvTexture::GetWrapSAttr()
+/// \li <b>color</b> - UsdHydraPhysicalLight
+/// \li <b>coneAngle</b> - UsdHydraSpotLight
+/// \li <b>diffuse</b> - UsdHydraPhysicalLight
+/// \li <b>direction</b> - UsdHydraSpotLight, UsdHydraDistantLight
 /// \li <b>displayLookBxdf</b> - UsdHydraLookAPI
 /// \li <b>faceIndex</b> - UsdHydraPtexTexture
 /// \li <b>faceOffset</b> - UsdHydraPtexTexture
 /// \li <b>frame</b> - UsdHydraTexture
+/// \li <b>hasShadows</b> - UsdHydraPhysicalLight
 /// \li <b>HwPrimvar_1</b> - Special token for the usdHydra library.
 /// \li <b>HwPtexTexture_1</b> - Special token for the usdHydra library.
+/// \li <b>HwUdimTexture_1</b> - Special token for the usdHydra library.
 /// \li <b>HwUvTexture_1</b> - Special token for the usdHydra library.
+/// \li <b>indirect</b> - UsdHydraPhysicalLight
 /// \li <b>infoFilename</b> - UsdHydraTexture, UsdHydraShader
 /// \li <b>infoVarname</b> - UsdHydraPrimvar
+/// \li <b>intensity</b> - UsdHydraPhysicalLight
 /// \li <b>linear</b> - A weighted linear blend of nearest adjacent samples. , Possible value for UsdHydraUvTexture::GetMinFilterAttr(), Possible value for UsdHydraUvTexture::GetMagFilterAttr()
 /// \li <b>linearMipmapLinear</b> - See https://www.opengl.org/wiki/Sampler_Object , Possible value for UsdHydraUvTexture::GetMinFilterAttr()
 /// \li <b>linearMipmapNearest</b> - See https://www.opengl.org/wiki/Sampler_Object , Possible value for UsdHydraUvTexture::GetMinFilterAttr()
@@ -103,9 +127,15 @@
 /// \li <b>nearest</b> - Selects the nearest sample for the given coordinate , Possible value for UsdHydraUvTexture::GetMinFilterAttr(), Possible value for UsdHydraUvTexture::GetMagFilterAttr()
 /// \li <b>nearestMipmapLinear</b> - See https://www.opengl.org/wiki/Sampler_Object , Possible value for UsdHydraUvTexture::GetMinFilterAttr()
 /// \li <b>nearestMipmapNearest</b> - See https://www.opengl.org/wiki/Sampler_Object , Possible value for UsdHydraUvTexture::GetMinFilterAttr()
+/// \li <b>penumbraAngle</b> - UsdHydraSpotLight
+/// \li <b>radius</b> - UsdHydraSphereLight
 /// \li <b>repeat</b> - The texture coordinate wraps around the texture. So a texture coordinate of -0.2 becomes the equivalent of 0.8. , Possible value for UsdHydraUvTexture::GetWrapTAttr(), Possible value for UsdHydraUvTexture::GetWrapSAttr()
+/// \li <b>specular</b> - UsdHydraPhysicalLight
+/// \li <b>spread</b> - UsdHydraDistantLight
 /// \li <b>textureMemory</b> - UsdHydraTexture
+/// \li <b>uDimension</b> - UsdHydraUdimTexture
 /// \li <b>uv</b> - UsdHydraUvTexture
+/// \li <b>vertices</b> - UsdHydraQuadLight
 /// \li <b>wrapS</b> - UsdHydraUvTexture
 /// \li <b>wrapT</b> - UsdHydraUvTexture
 TF_DECLARE_PUBLIC_TOKENS(UsdHydraTokens, USDHYDRA_TOKENS);

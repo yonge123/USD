@@ -72,7 +72,7 @@ class Launcher(object):
         register optional arguments on the ArgParser
         '''
         parser.add_argument('--renderer', action='store',
-                            type=str, choices=['opt', 'simple'], dest='renderer',
+                            type=str, choices=['opt', 'simple', 'hk'], dest='renderer',
                             help='Which renderer to use', default='opt')
 
         parser.add_argument('--select', action='store', default='/',

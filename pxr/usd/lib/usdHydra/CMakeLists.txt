@@ -7,6 +7,7 @@ pxr_shared_library(usdHydra
         tf
         usd
         usdShade
+        usdGeom
 
     PUBLIC_CLASSES
         lookAPI
@@ -15,6 +16,13 @@ pxr_shared_library(usdHydra
         texture
         uvTexture
         ptexTexture
+        udimTexture
+        physicalLight
+        distantLight
+        sphereLight
+        spotLight
+        quadLight
+        skyLight
         tokens
 
     CPPFILES
@@ -29,6 +37,13 @@ pxr_shared_library(usdHydra
         wrapUvTexture.cpp
         wrapPtexTexture.cpp
         wrapTokens.cpp
+        wrapUdimTexture.cpp
+        wrapPhysicalLight.cpp
+        wrapDistantLight.cpp
+        wrapSphereLight.cpp
+        wrapSpotLight.cpp
+        wrapQuadLight.cpp
+        wrapSkyLight.cpp
 
     PYTHON_FILES
         __init__.py

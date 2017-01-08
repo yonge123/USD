@@ -57,6 +57,7 @@ public:
 
     /// Returns true if Hydra is enabled for GL drawing.
     static bool IsEnabledHydra();
+    static bool IsEnabledHk();
 
     UsdImagingGL();
     UsdImagingGL(const SdfPath& rootPath,

@@ -26,6 +26,9 @@
 #include "pxr/usdImaging/usdImagingGL/gl.h"
 #include "pxr/usdImaging/usdImagingGL/hdEngine.h"
 #include "pxr/usdImaging/usdImagingGL/refEngine.h"
+#ifdef ENABLE_HK_ENGINE
+#include "pxr/usdImaging/usdImagingGL/hkEngine.h"
+#endif
 
 #include "pxr/imaging/hd/renderContextCaps.h"
 
@@ -65,25 +68,52 @@ UsdImagingGL::IsEnabledHydra()
     return isEnabledHydra;
 }
 
+/*static*/
+bool
+UsdImagingGL::IsEnabledHk()
+{
+#ifdef ENABLE_HK_ENGINE
+    GlfGlewInit();
+    // we'll draw into opengl from vulkan using the NV extensions
+    GlfGLContextSharedPtr context = GlfGLContext::GetCurrentGLContext();
+    if (!context) {
+        TF_CODING_ERROR("OpenGL context required, using reference renderer");
+        return false;
+    }
+
+    return TfGetenv("HK_ENABLED", "0") == "1";
+#else
+    return false;
+#endif
+}
+
 static
 UsdImagingGLEngine* _InitEngine(const SdfPath& rootPath,
-                              const SdfPathVector& excludedPaths,
-                              const SdfPathVector& invisedPaths,
-                              const SdfPath& sharedId =
-                                        SdfPath::AbsoluteRootPath(),
-                              const UsdImagingGLEngineSharedPtr& sharedEngine =
-                                        UsdImagingGLEngineSharedPtr())
+                                const SdfPathVector& excludedPaths,
+                                const SdfPathVector& invisedPaths,
+                                const SdfPath& sharedId =
+                                SdfPath::AbsoluteRootPath(),
+                                const UsdImagingGLEngineSharedPtr& sharedEngine =
+                                UsdImagingGLEngineSharedPtr())
 {
+#ifdef ENABLE_HK_ENGINE
+    if (UsdImagingGL::IsEnabledHk()) {
+        SdfPathVector pathsToExclude = excludedPaths;
+        pathsToExclude.insert(pathsToExclude.end(),
+            invisedPaths.begin(), invisedPaths.end());
+        return new UsdImagingGLHkEngine(pathsToExclude);
+    } else
+#endif
     if (UsdImagingGL::IsEnabledHydra()) {
-        return new UsdImagingGLHdEngine(rootPath, excludedPaths, invisedPaths, 
-            sharedId, 
-            boost::dynamic_pointer_cast<UsdImagingGLHdEngine>(sharedEngine));
+        return new UsdImagingGLHdEngine(rootPath, excludedPaths, invisedPaths,
+                                        sharedId,
+                                        boost::dynamic_pointer_cast<UsdImagingGLHdEngine>(sharedEngine));
     } else {
         // In the refEngine, both excluded paths and invised paths are treated
         // the same way.
         SdfPathVector pathsToExclude = excludedPaths;
-        pathsToExclude.insert(pathsToExclude.end(), 
-            invisedPaths.begin(), invisedPaths.end());
+        pathsToExclude.insert(pathsToExclude.end(),
+                              invisedPaths.begin(), invisedPaths.end());
         return new UsdImagingGLRefEngine(pathsToExclude);
     }
 }
