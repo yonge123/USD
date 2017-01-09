@@ -387,8 +387,9 @@ Glf_OIIOImage::_OpenForReading(std::string const & filename, int subimage)
     _filename = filename;
     _subimage = subimage;
     _imagebuf.clear();
-    return _imagebuf.init_spec(_filename, subimage, /*mipmap*/0)
-           && (_imagebuf.nsubimages() > subimage);
+    return _imagebuf.init_spec(_filename, /*subimage*/0, /*mipmap*/0)
+           && (_imagebuf.nsubimages() > subimage)
+           && _imagebuf.init_spec(_filename, subimage, /*mipmap*/0);
 }
 
 /* virtual */
