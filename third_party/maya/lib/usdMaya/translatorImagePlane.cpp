@@ -12,6 +12,12 @@
 
 namespace {
     // From the camera translator code, cleaned the code up a bit
+    const TfToken frameOffsetToken("frameOffset");
+    const TfToken widthToken("width");
+    const TfToken heightToken("height");
+    const TfToken alphaGainToken("alphaGain");
+    const TfToken depthToken("depth");
+    const TfToken squeezeCorrectionToken("squeezeCorrection");
     const TfToken sizeToken("size");
     const TfToken offsetToken("offset");
     const TfToken rotateToken("rotate");
@@ -19,6 +25,7 @@ namespace {
     const TfToken coverageOriginToken("coverageOrigin");
 
     const TfType floatType = TfType::Find<float>();
+    const TfType intType = TfType::Find<int>();
     const TfType float2Type = TfType::Find<GfVec2f>();
     const TfType int2Type = TfType::Find<GfVec2i>();
 
@@ -101,6 +108,33 @@ namespace {
             timeArray[1].set(MTime(timeSample), static_cast<unsigned int>(i));
             valueArray[0].set(attrValue[0], static_cast<unsigned int>(i));
             valueArray[1].set(attrValue[1], static_cast<unsigned int>(i));
+        }
+
+        return true;
+    }
+
+    bool
+    get_time_and_value_for_int(
+        const UsdAttribute& usdAttr,
+        const PxrUsdMayaPrimReaderArgs& args,
+        MTimeArray* timeArray,
+        MDoubleArray* valueArray)
+    {
+        std::vector<double> timeSamples;
+        if (!resize_arrays(usdAttr, args, timeSamples, 1, timeArray, valueArray)) {
+            return false;
+        }
+
+        const auto numTimeSamples = timeSamples.size();
+
+        for (auto i = 0; i < numTimeSamples; ++i) {
+            const auto timeSample = timeSamples[i];
+            int attrValue = 0;
+            if (!usdAttr.Get(&attrValue, timeSample)) {
+                return false;
+            }
+            timeArray->set(MTime(timeSample), static_cast<unsigned int>(i));
+            valueArray->set(static_cast<double>(attrValue), static_cast<unsigned int>(i));
         }
 
         return true;
@@ -211,10 +245,9 @@ namespace {
         UsdTimeCode timeCode = UsdTimeCode::EarliestTime();
         GfVec2f attrValue(0.0f, 0.0f);
         usdAttr.Get(&attrValue, timeCode);
-        auto status = plug.child(0).setFloat(attrValue[0]);
+        const auto status = plug.child(0).setFloat(attrValue[0]);
         CHECK_MSTATUS_AND_RETURN(status, false);
-        status = plug.child(1).setFloat(attrValue[1]);
-        return status;
+        return plug.child(1).setFloat(attrValue[1]);
     }
 
     bool translate_animated_int2(MPlug& plug, const UsdAttribute& usdAttr,
@@ -244,14 +277,38 @@ namespace {
         UsdTimeCode timeCode = UsdTimeCode::EarliestTime();
         GfVec2i attrValue(0, 0);
         usdAttr.Get(&attrValue, timeCode);
-        auto status = plug.child(0).setInt(attrValue[0]);
+        const auto status = plug.child(0).setInt(attrValue[0]);
         CHECK_MSTATUS_AND_RETURN(status, false);
-        status = plug.child(1).setInt(attrValue[1]);
-        return status;
+        return plug.child(1).setInt(attrValue[1]);
     }
 
-    bool
-    TranslateUsdAttributeToPlug(
+    bool translate_animated_int(MPlug& plug, const UsdAttribute& usdAttr,
+                                const PxrUsdMayaPrimReaderArgs& args,
+                                PxrUsdMayaPrimReaderContext* context)
+    {
+        if (!args.GetReadAnimData()) {
+            return false;
+        }
+
+        MTimeArray time_array;
+        MDoubleArray value_array;
+        if (!get_time_and_value_for_int(usdAttr, args,
+                                        &time_array, &value_array)) {
+            return false;
+        }
+
+        return create_anim_curve_plug(plug, time_array, value_array, context);
+    }
+
+    bool translate_int_attribute(MPlug& plug, const UsdAttribute& usdAttr)
+    {
+        UsdTimeCode timeCode = UsdTimeCode::EarliestTime();
+        int attrValue = 0;
+        usdAttr.Get(&attrValue, timeCode);
+        return plug.setInt(attrValue);
+    }
+
+    void translate_usd_attribute(
         const UsdAttribute& usdAttr,
         const MFnDependencyNode& depNode,
         TfToken plugName,
@@ -261,24 +318,28 @@ namespace {
         MStatus status;
 
         auto plug = depNode.findPlug(plugName.GetText(), true, &status);
-        CHECK_MSTATUS_AND_RETURN(status, false);
+        if (!status) {
+            return;
+        }
 
         const auto typeName = usdAttr.GetTypeName().GetType();
         if (typeName == floatType) {
             if (!translate_animated_float(plug, usdAttr, args, context)) {
-                return translate_float_attribute(plug, usdAttr);
+                translate_float_attribute(plug, usdAttr);
+            }
+        } else if (typeName == intType) {
+            if (!translate_animated_int(plug, usdAttr, args, context)) {
+                translate_int_attribute(plug, usdAttr);
             }
         } else if (typeName == float2Type) {
             if (!translate_animated_float2(plug, usdAttr, args, context)) {
-                return translate_float2_attribute(plug, usdAttr);
+                translate_float2_attribute(plug, usdAttr);
             }
         } else if  (typeName == int2Type) {
             if (!translate_animated_int2(plug, usdAttr, args, context)) {
-                return translate_int2_attribute(plug, usdAttr);
+                translate_int2_attribute(plug, usdAttr);
             }
         }
-
-        return true;
     }
 }
 
@@ -343,31 +404,30 @@ bool PxrUsdMayaTranslatorImagePlane::Read(
         fitPlug.setShort(MayaImagePlaneWriter::IMAGE_PLANE_FIT_TO_SIZE);
     }
 
-    auto imageNamePlug = imagePlaneNode.findPlug("imageName");
     SdfAssetPath imageAssetPath;
     usdImagePlane.GetFilenameAttr().Get(&imageAssetPath, earliestTimeCode);
-    imageNamePlug.setString(imageAssetPath.GetAssetPath().c_str());
+    imagePlaneNode.findPlug("imageName").setString(imageAssetPath.GetAssetPath().c_str());
+    bool useFrameExtension = false;
+    usdImagePlane.GetUseFrameExtensionAttr().Get(&useFrameExtension, earliestTimeCode);
+    imagePlaneNode.findPlug("useFrameExtension").setBool(useFrameExtension);
+    int frameCache = 45;
+    usdImagePlane.GetFrameCacheAttr().Get(&frameCache, earliestTimeCode);
+    imagePlaneNode.findPlug("frameCache").setInt(frameCache);
 
-    if (!TranslateUsdAttributeToPlug(
-        usdImagePlane.GetSizeAttr(), imagePlaneNode, sizeToken, args, context)) {
-        return false;
-    }
+    auto set_attribute = [&imagePlaneNode, &args, &context] (const UsdAttribute& attr, const TfToken& token) {
+        translate_usd_attribute(attr, imagePlaneNode, token, args, context);
+    };
+    set_attribute(usdImagePlane.GetFrameOffsetAttr(), frameOffsetToken);
+    set_attribute(usdImagePlane.GetWidthAttr(), widthToken);
+    set_attribute(usdImagePlane.GetHeightAttr(), heightToken);
+    set_attribute(usdImagePlane.GetAlphaGainAttr(), alphaGainToken);
+    set_attribute(usdImagePlane.GetDepthAttr(), depthToken);
+    set_attribute(usdImagePlane.GetSqueezeCorrectionAttr(), squeezeCorrectionToken);
+    set_attribute(usdImagePlane.GetSizeAttr(), sizeToken);
+    set_attribute(usdImagePlane.GetOffsetAttr(), offsetToken);
+    set_attribute(usdImagePlane.GetRotateAttr(), rotateToken);
+    set_attribute(usdImagePlane.GetCoverageAttr(), coverageToken);
+    set_attribute(usdImagePlane.GetCoverageOriginAttr(), coverageOriginToken);
 
-     if (!TranslateUsdAttributeToPlug(
-        usdImagePlane.GetOffsetAttr(), imagePlaneNode, offsetToken, args, context)) {
-        return false;
-    }
-
-    if (!TranslateUsdAttributeToPlug(
-        usdImagePlane.GetRotateAttr(), imagePlaneNode, rotateToken, args, context)) {
-        return false;
-    }
-
-    if (!TranslateUsdAttributeToPlug(
-        usdImagePlane.GetCoverageAttr(), imagePlaneNode, coverageToken, args, context)) {
-        return false;
-    }
-
-    return TranslateUsdAttributeToPlug(
-        usdImagePlane.GetCoverageOriginAttr(), imagePlaneNode, coverageOriginToken, args, context);
+    return true;
 }
