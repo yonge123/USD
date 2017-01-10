@@ -43,10 +43,7 @@ class usdWriteJob
     ~usdWriteJob();
 
     // returns true if the stage can be created successfully
-    bool beginJob(const std::string &fileName,
-            bool append, 
-            double startTime,
-            double endTime);
+    bool beginJob(bool append);
     void evalJob(double iFrame);
     void endJob();
     TfToken writeVariants(const UsdPrim &usdRootPrim);
@@ -65,9 +62,6 @@ class usdWriteJob
     // Stage used to write out USD file
     UsdStageRefPtr mStage;
 
-    // Name of the created/appended USD file
-    std::string mFileName;
-    
     // Name of current layer since it should be restored after looping over them
     MString mCurrentRenderLayerName;
     

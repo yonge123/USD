@@ -44,9 +44,7 @@ class usdReadJob
 {
   public:
 
-    usdReadJob(const std::string& iFileName, 
-        const std::string& iPrimPath, 
-        const std::map<std::string, std::string>& iVariants,
+    usdReadJob(const std::map<std::string, std::string>& iVariants,
         const JobImportArgs & iArgs,
 
         // We need to know the names of the assembly and proxy shape types for
@@ -63,7 +61,6 @@ class usdReadJob
 
     // Getters/Setters
     void setMayaRootDagPath(const MDagPath &mayaRootDagPath) { mMayaRootDagPath = mayaRootDagPath; };
-    void setJoinedParentRefPaths(const std::string& joinedRefPaths);
 
   private:
     // XXX: Activating the 'Expanded' representation of a USD reference
@@ -87,15 +84,12 @@ class usdReadJob
 
     // Data
     JobImportArgs mArgs;
-    std::string mFileName;
-    std::string mPrimPath;
     std::map<std::string,std::string> mVariants;
     MDagModifier mDagModifierUndo;
     bool mDagModifierSeeded;
     typedef PxrUsdMayaPrimReaderContext::ObjectRegistry PathNodeMap;
     PathNodeMap mNewNodeRegistry;
     MDagPath mMayaRootDagPath;
-    std::vector<std::string> mParentRefPaths;
 
     const std::string _assemblyTypeName;
     const std::string _proxyShapeTypeName;

@@ -193,7 +193,7 @@ try
         MString stringVal;
 
         argData.getFlagArgument("defaultMeshScheme", 0, stringVal);
-        setDefaultMeshScheme(jobArgs, stringVal);
+        jobArgs.setDefaultMeshScheme(stringVal);
     }
 
     if (argData.isFlagSet("exportVisibility")) {
@@ -203,7 +203,6 @@ try
     }
 
     bool append = false;
-    std::string fileName;
 
     if (argData.isFlagSet("append")) {
         argData.getFlagArgument("append", 0, append);
@@ -219,12 +218,12 @@ try
         MFileObject absoluteFile;
         absoluteFile.setRawFullName(tmpVal);
         absoluteFile.setRawFullName( absoluteFile.resolvedFullName() ); // Make sure an absolute path
-        fileName = absoluteFile.resolvedFullName().asChar();
+        jobArgs.fileName = absoluteFile.resolvedFullName().asChar();
 
-        if (fileName.empty()) {
-            fileName = tmpVal.asChar();
+        if (jobArgs.fileName.empty()) {
+            jobArgs.fileName = tmpVal.asChar();
         }
-        MGlobal::displayInfo(MString("Saving as ") + MString(fileName.c_str()));
+        MGlobal::displayInfo(MString("Saving as ") + MString(jobArgs.fileName.c_str()));
     }
     else {
         MString error = "-file not specified.";
@@ -232,19 +231,17 @@ try
         return MS::kFailure;
     }
 
-    if (fileName.empty()) {
+    if (jobArgs.fileName.empty()) {
         return MS::kFailure;
     }
 
-    double startTime=1;
-    double endTime=1;
     double preRoll=0;
     
     // If you provide a frame range we consider this an anim
     // export even if start and end are the same
     if (argData.isFlagSet("frameRange")) {
-        argData.getFlagArgument("frameRange", 0, startTime);
-        argData.getFlagArgument("frameRange", 1, endTime);
+        argData.getFlagArgument("frameRange", 0, jobArgs.startTime);
+        argData.getFlagArgument("frameRange", 1, jobArgs.endTime);
         jobArgs.exportAnimation=true;
     } else {
         jobArgs.exportAnimation=false;
@@ -371,10 +368,10 @@ try
     computation.beginComputation();
 
     // Create stage and process static data
-    if (usdWriteJob.beginJob(fileName, append, startTime, endTime)) {
+    if (usdWriteJob.beginJob(append)) {
         if (jobArgs.exportAnimation) {
             MTime oldCurTime = MAnimControl::currentTime();
-            for (double i=startTime;i<(endTime+1);i++) {
+            for (double i=jobArgs.startTime;i<(jobArgs.endTime+1);i++) {
                 if (verbose) {
                     MString info;
                     info = i;

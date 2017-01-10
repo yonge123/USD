@@ -22,10 +22,10 @@
 // language governing permissions and limitations under the Apache License.
 //
 
-#ifndef PXRUSDMAYA_TRANSLATOR_IMPORT_H
-#define PXRUSDMAYA_TRANSLATOR_IMPORT_H
+#ifndef PXRUSDMAYA_TRANSLATOR_H
+#define PXRUSDMAYA_TRANSLATOR_H
 
-/// \file usdTranslatorImport.h
+/// \file usdTranslator.h
 
 #include "usdMaya/JobArgs.h"
 
@@ -36,20 +36,38 @@
 
 #include <string>
 
-
-const char* const usdTranslatorImportDefaults =
+const char* const usdTranslatorDefaults =
+        // Shared options
         "shadingMode=GPrim Colors;"
+        "defaultMeshScheme=CatmullClark SDiv;"
+
+        // import options
         "readAnimData=0;"
         "useCustomFrameRange=0;"
-        "assemblyRep=Collapsed";
+        "assemblyRep=Collapsed;"
+
+        // export options
+        "animation=0;"
+        "exportRefsAsInstanceable=0;"
+        "exportUVs=1;"
+        "normalizeUVs=0;"
+        "exportColorSets=1;"
+        "renderableOnly=0;"
+        "allCameras=0;"
+        "renderLayerMode=Use Default Layer;"
+        "mergeXForm=1;"
+        "defaultMeshScheme=CatmullClark SDiv;"
+        "exportVisibility=1;"
+        "startTime=1;"
+        "endTime=1";
 
 
-class usdTranslatorImport : public MPxFileTranslator
+class usdTranslator : public MPxFileTranslator
 {
     public:
 
         /**
-         * method to create usdTranslatorImport file translator
+         * method to create usdTranslator file translator
          */
         static void* creator(const std::string& assemblyTypeName,
                              const std::string& proxyShapeTypeName);
@@ -59,8 +77,13 @@ class usdTranslatorImport : public MPxFileTranslator
                 const MString& optionsString,
                 MPxFileTranslator::FileAccessMode mode);
 
+        MStatus writer(
+                const MFileObject& file,
+                const MString& optionsString,
+                MPxFileTranslator::FileAccessMode mode);
+
         bool haveReadMethod() const { return true; }
-        bool haveWriteMethod() const { return false; }
+        bool haveWriteMethod() const { return true; }
 
         MFileKind identifyFile(
                 const MFileObject& file,
@@ -76,15 +99,15 @@ class usdTranslatorImport : public MPxFileTranslator
 
     private:
 
-        usdTranslatorImport(
+        usdTranslator(
                 const std::string& assemblyTypeName,
                 const std::string& proxyShapeTypeName);
-        usdTranslatorImport(const usdTranslatorImport&);
-        ~usdTranslatorImport();
-        usdTranslatorImport& operator=(const usdTranslatorImport&);
+        usdTranslator(const usdTranslator&);
+        ~usdTranslator();
+        usdTranslator& operator=(const usdTranslator&);
 
         const std::string _assemblyTypeName;
         const std::string _proxyShapeTypeName;
 };
 
-#endif // PXRUSDMAYA_TRANSLATOR_IMPORT_H
+#endif // PXRUSDMAYA_TRANSLATOR_H
