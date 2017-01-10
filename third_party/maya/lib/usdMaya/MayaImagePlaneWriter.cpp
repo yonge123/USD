@@ -64,16 +64,24 @@ bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdG
     primSchema.GetFilenameAttr().Set(SdfAssetPath(std::string(dnode.findPlug("imageName").asString().asChar())));
     const auto fit = dnode.findPlug("fit").asShort();
     if (fit == IMAGE_PLANE_FIT_BEST) {
-        primSchema.GetFitAttr().Set(image_plane_best, usdTime);
+        primSchema.GetFitAttr().Set(image_plane_best);
     } else if (fit == IMAGE_PLANE_FIT_FILL) {
-        primSchema.GetFitAttr().Set(image_plane_fill, usdTime);
+        primSchema.GetFitAttr().Set(image_plane_fill);
     } else if (fit == IMAGE_PLANE_FIT_HORIZONTAL) {
-        primSchema.GetFitAttr().Set(image_plane_horizontal, usdTime);
+        primSchema.GetFitAttr().Set(image_plane_horizontal);
     } else if (fit == IMAGE_PLANE_FIT_VERTICAL) {
-        primSchema.GetFitAttr().Set(image_plane_vertical, usdTime);
+        primSchema.GetFitAttr().Set(image_plane_vertical);
     } else if (fit == IMAGE_PLANE_FIT_TO_SIZE) {
-        primSchema.GetFitAttr().Set(image_plane_to_size, usdTime);
+        primSchema.GetFitAttr().Set(image_plane_to_size);
     }
+    primSchema.GetUseFrameExtensionAttr().Set(dnode.findPlug("useFrameExtension").asBool());
+    primSchema.GetFrameOffsetAttr().Set(dnode.findPlug("frameOffset").asInt(), usdTime);
+    primSchema.GetFrameCacheAttr().Set(dnode.findPlug("frameCache").asInt());
+    primSchema.GetWidthAttr().Set(dnode.findPlug("width").asFloat(), usdTime);
+    primSchema.GetHeightAttr().Set(dnode.findPlug("height").asFloat(), usdTime);
+    primSchema.GetAlphaGainAttr().Set(dnode.findPlug("alphaGain").asFloat(), usdTime);
+    primSchema.GetDepthAttr().Set(dnode.findPlug("depth").asFloat(), usdTime);
+    primSchema.GetSqueezeCorrectionAttr().Set(dnode.findPlug("squeezeCorrection").asFloat(), usdTime);
     const auto offsetPlug = dnode.findPlug("offset");
     primSchema.GetOffsetAttr().Set(GfVec2f(offsetPlug.child(0).asFloat(), offsetPlug.child(1).asFloat()), usdTime);
     primSchema.GetSizeAttr().Set(GfVec2f(sizePlug.child(0).asFloat(), sizePlug.child(1).asFloat()), usdTime);
