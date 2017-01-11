@@ -115,6 +115,9 @@ struct PxrUsdMayaTranslatorUtil
             return source.GetTimeSamples(outSamples);
         }
     }
+
+    static std::string
+    GetNamespace(const std::string& primPathStr);
 };
 
 
