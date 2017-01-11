@@ -473,6 +473,12 @@ PxrUsdMayaTranslatorModelAssembly::Read(
                    + parentName
                    + ";parentRefPaths="
                    + joinedParentRefs.c_str()
+                   + ";readAnimData="
+                   + int(args.GetReadAnimData())
+                   + ";startTime="
+                   + args.GetStartTime()
+                   + ";endTime="
+                   + args.GetEndTime()
                    + "\" \""
                    + refPath.c_str()
                    + "\";");
