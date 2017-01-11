@@ -30,6 +30,7 @@
 #include "usdMaya/translatorMaterial.h"
 #include "usdMaya/translatorModelAssembly.h"
 #include "usdMaya/translatorXformable.h"
+#include "usdMaya/translatorUtil.h"
 
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/token.h"
@@ -52,6 +53,8 @@
 #include <maya/MObject.h>
 #include <maya/MTime.h>
 #include <maya/MSelectionList.h>
+#include <maya/MFileIO.h>
+#include <maya/MFnDependencyNode.h>
 
 #include <map>
 #include <string>
@@ -238,6 +241,46 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
             if (obj.hasFn(MFn::kDagNode)) {
                 addedDagPaths->push_back(MDagPath::getAPathTo(obj));
             }
+        }
+    }
+
+    if (MFileIO::isReferencingFile())
+    {
+        // TODO: figure out what to do with "byproduct" DG nodes
+        // For nodes for which there is a one-to-one mapping to a USD node, there
+        // should hopefully be entry in mNewNodeRegistry, which is it's usd path;
+        // these paths are guaranteed to be unique, so after replacing the "/"
+        // with ":", we can guarantee a namespaced name that is unique (within
+        // a USD reference tree, at least)
+
+        // However, for many maya nodes there is not a direct mapping to a USD
+        // node - examples include AnimCurves, CreaseSets, and GroupIds.  These
+        // nodes are created as "byproducts" of creating of a USD node - they
+        // may contain data which is an attribute in USD (ie, AnimCurves,
+        // CreaseSets), or may be a wholly maya concept (GroupId). They may not
+        // exist in mNewNodeRegistry at all... and even if they do, we have no
+        // guarantee that the name there is unique.
+
+        // Such nodes may eventually create problems, because the names might not
+        // be unique (within a top-level USD reference), and therfore, they may
+        // change depending on the order in which subreferences are loaded (ie, if
+        // we have two subrefs which try to create "myNode1", one will actually
+        // get named "myNode2").  If there is a reference edit on one of these
+        // nodes, this will create problems...
+
+        MFnDependencyNode depNode;
+        MString newName;
+        // Need to find all DG nodes created, and add the appropriate
+        // namespace
+        for (PathNodeMap::iterator it=mNewNodeRegistry.begin(); it!=mNewNodeRegistry.end(); ++it) {
+            DEBUG_PRINT(MString("made node: ") + it->first.c_str());
+            MObject& mobj = it->second;
+            if (! mobj.hasFn(MFn::kDagNode)) {
+                depNode.setObject(mobj);
+                newName = MString(PxrUsdMayaTranslatorUtil::GetNamespace(it->first).c_str()) + depNode.name();
+                depNode.setName(newName, true);
+            }
+
         }
     }
 
