@@ -30,6 +30,11 @@
 
 #include "pxr/base/tf/staticTokens.h"
 #include "pxr/base/tf/token.h"
+#include "pxr/usd/usdGeom/tokens.h"
+
+#include <maya/MGlobal.h>
+#include <maya/MString.h>
+#include <maya/MStringArray.h>
 
 #define PXRUSDMAYA_TRANSLATOR_TOKENS \
     ((UsdFileExtensionDefault, "usd")) \
@@ -51,14 +56,54 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
 TF_DECLARE_PUBLIC_TOKENS(PxUsdExportJobArgsTokens, 
         PXRUSDMAYA_JOBARGS_TOKENS);
 
-struct JobExportArgs
+struct JobSharedArgs
+{
+    JobSharedArgs();
+
+    // Templating since we know at compile time which subclass we have
+    template<typename JobArgClass>
+    void parseOptionsString(const MString &optionsString)
+    {
+        if ( optionsString.length() > 0 ) {
+            MStringArray optionList;
+            MStringArray theOption;
+            optionsString.split(';', optionList);
+            for (unsigned int i = 0; i < optionList.length(); ++i) {
+                theOption.clear();
+                optionList[i].split('=', theOption);
+                static_cast<JobArgClass*>(this)->parseSingleOption(theOption);
+            }
+        }
+    }
+
+    bool parseSharedOption(const MStringArray& theOption);
+
+    void setDefaultMeshScheme(const MString& stringVal);
+
+    std::string fileName;
+    TfToken shadingMode;
+    TfToken defaultMeshScheme;
+    double startTime;
+    double endTime;
+
+};
+
+struct JobExportArgs : JobSharedArgs
 {
     JobExportArgs();
 
+    inline void parseExportOptions(const MString &optionsString)
+    {
+        parseOptionsString<JobExportArgs>(optionsString);
+    }
+
+    void parseSingleOption(const MStringArray& theOption);
+
+    std::set<double> frameSamples;
+
     bool exportRefsAsInstanceable;
     bool exportDisplayColor;
-    TfToken shadingMode;
-    
+
     bool mergeTransformAndShape;
 
     bool exportAnimation;
@@ -67,16 +112,14 @@ struct JobExportArgs
 
     bool exportMeshUVs;
     bool normalizeMeshUVs;
-    
+
     bool normalizeNurbs;
     bool exportNurbsExplicitUV;
     TfToken nurbsExplicitUVType;
-    
+
     bool exportColorSets;
 
     TfToken renderLayerMode;
-    
-    TfToken defaultMeshScheme;
 
     bool exportVisibility;
 
@@ -90,7 +133,7 @@ struct JobExportArgs
     std::vector<std::string> chaserNames;
     typedef std::map<std::string, std::string> ChaserArgs;
     std::map< std::string, ChaserArgs > allChaserArgs;
-    
+
     // This path is provided when dealing with variants
     // where a _BaseModel_ root path is used instead of
     // the model path. This to allow a proper internal reference
@@ -99,18 +142,26 @@ struct JobExportArgs
     TfToken rootKind;
 };
 
-struct JobImportArgs
+struct JobImportArgs : JobSharedArgs
 {
     JobImportArgs();
 
-    TfToken shadingMode;
-    TfToken defaultMeshScheme;
+    inline void parseImportOptions(const MString &optionsString)
+    {
+        parseOptionsString<JobImportArgs>(optionsString);
+    }
+
+    void parseSingleOption(const MStringArray& theOption);
+
+    void setJoinedParentRefPaths(const std::string& joinedRefPaths);
+
+    std::string primPath;
     TfToken assemblyRep;
     bool readAnimData;
     bool useCustomFrameRange;
-    double startTime;
-    double endTime;
     bool importWithProxyShapes;
+    std::string parentNode;
+    std::vector<std::string> parentRefPaths;
 };
 
 

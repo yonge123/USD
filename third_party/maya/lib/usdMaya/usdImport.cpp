@@ -98,7 +98,6 @@ MStatus usdImport::doIt(const MArgList & args)
     JobImportArgs jobArgs;
     //bool verbose = argData.isFlagSet("verbose");
     
-    std::string mFileName;
     if (argData.isFlagSet("file"))
     {
         // Get the value
@@ -116,11 +115,11 @@ MStatus usdImport::doIt(const MArgList & args)
         }
 
         // Set the fileName
-        mFileName = absoluteFile.resolvedFullName().asChar();
-        MGlobal::displayInfo(MString("Importing ") + MString(mFileName.c_str()));
+        jobArgs.fileName = absoluteFile.resolvedFullName().asChar();
+        MGlobal::displayInfo(MString("Importing ") + MString(jobArgs.fileName.c_str()));
     }
     
-    if (mFileName.empty()) {
+    if (jobArgs.fileName.empty()) {
         MString error = "Non empty file specified. Skipping...";
         MGlobal::displayError(error);
         return MS::kFailure;
@@ -153,13 +152,12 @@ MStatus usdImport::doIt(const MArgList & args)
     }
 
     // Specify usd PrimPath.  Default will be "/<useFileBasename>"
-    std::string mPrimPath;
     if (argData.isFlagSet("primPath"))
     {
         // Get the value
         MString tmpVal;
         argData.getFlagArgument("primPath", 0, tmpVal);
-        mPrimPath = tmpVal.asChar();
+        jobArgs.primPath = tmpVal.asChar();
     }
 
     // Add variant (variantSet, variant).  Multi-use
@@ -198,7 +196,7 @@ MStatus usdImport::doIt(const MArgList & args)
 
 
     // pass in assemblyTypeName and proxyShapeTypeName
-    mUsdReadJob = new usdReadJob(mFileName, mPrimPath, mVariants, jobArgs,
+    mUsdReadJob = new usdReadJob(mVariants, jobArgs,
             _assemblyTypeName, _proxyShapeTypeName);
 
 
@@ -216,7 +214,7 @@ MStatus usdImport::doIt(const MArgList & args)
             status = selList.getDagPath(0, dagPath);
             if (status != MS::kSuccess) {
                 std::string errorStr = TfStringPrintf(
-                        "Invalid path \"%s\"for -parent.",
+                        "Invalid path \"%s\" for -parent.",
                         tmpVal.asChar());
                 MGlobal::displayError(MString(errorStr.c_str()));
                 return MS::kFailure;

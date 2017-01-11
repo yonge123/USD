@@ -65,6 +65,12 @@
 #include <string>
 #include <vector>
 
+// TODO: instead of hardcoding this, switch based on context and
+// PIXMAYA_USE_USD_REF_ASSEMBLIES: ie, if the result of a reference or assembly
+// operation, do that, but if importing, use the PIXMAYA_USE_USD_REF_ASSEMBLIES
+// setting
+#define PIXMAYA_FORCE_MAYA_REFERENCES 1
+
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((FilePathPlugName, "filePath"))
     ((PrimPathPlugName, "primPath"))
@@ -301,7 +307,8 @@ PxrUsdMayaTranslatorModelAssembly::Read(
     const PxrUsdMayaPrimReaderArgs& args,
     PxrUsdMayaPrimReaderContext* context,
     const std::string& assemblyTypeName,
-    const std::string& assemblyRep)
+    const std::string& assemblyRep,
+    const std::vector<std::string>& parentRefs)
 {
     UsdStageCacheContext stageCacheContext(UsdMayaStageCache::Get());
     UsdStageRefPtr usdStage = UsdStage::Open(assetIdentifier);
@@ -324,6 +331,133 @@ PxrUsdMayaTranslatorModelAssembly::Read(
         return false;
     }
 
+
+#if (PIXMAYA_FORCE_MAYA_REFERENCES)
+    // The primitivePath and the topLayerUsd are passed in as options in the
+    // option string; note that this is all the information USD actually needs /
+    // uses... the refPath is actually just a dummy path we need for maya's
+    // referencing system. It needs a path that actually exists on disk, and it
+    // needs to not be the same as the parent reference (or else maya freaks
+    // outs, trying to recursively load the ref).
+
+    // Currently, we're just using the next file on the layer stack...
+
+    // (Wanted to look at references, but apparently that's not easy to get?
+    // GetMetadata('references') seems to return an empty list, and
+    // UsdPrim.GetReferences() has this note:
+    //    /// Return a UsdReferences object that allows one to add, remove, or
+    //    /// mutate references <em>at the currently set UsdEditTarget</em>.
+    //    ///
+    //    /// There is currently no facility for \em listing the currently authored
+    //    /// references on a prim... the problem is somewhat ill-defined, and
+    //    /// requires some thought.
+
+    MStatus status;
+    MFnDagNode parentMFn(parentNode, &status);
+    CHECK_MSTATUS_AND_RETURN(status, false);
+    MString parentName = parentMFn.partialPathName();
+
+    std::string refPath;
+
+    auto isParentPath = [](const std::string& layerPath, const std::vector<std::string>& parentPaths) -> bool {
+        for (unsigned int i = 0; i < parentPaths.size(); ++i)
+        {
+            if (parentPaths[i].empty()) {
+                continue;
+            }
+            if (layerPath == parentPaths[i]) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    // For a more general purpose case, we would have only taken a vector of
+    // strings and a delimiter... but in our case, we will always be adding
+    // a new "lastString", so may as well assume this for speed
+    auto joinStrs = [](const std::vector<std::string>& strings,
+                      const std::string& lastString,
+                      const char delimiter, std::string& result) {
+        result.clear();
+        unsigned int new_len = 0;
+
+        auto addStrLen = [](unsigned int& len, const std::string& str) {
+            if (!str.empty()) {
+                // +1 for the delimiter character
+                if (len != 0)
+                    ++len;
+                len += str.length();
+            }
+        };
+
+        for (auto& str : strings) {
+            addStrLen(new_len, str);
+        }
+        addStrLen(new_len, lastString);
+
+        result.reserve(new_len);
+
+        auto appendStr = [](std::string& aggregate, const std::string& str,
+                            const char delim) {
+            if (!str.empty()) {
+                if (!aggregate.empty())
+                    aggregate += delim;
+                aggregate += str;
+            }
+        };
+
+        for (auto& str : strings) {
+            appendStr(result, str, delimiter);
+        }
+        appendStr(result, lastString, delimiter);
+    };
+
+    for (const auto& layerSpec : prim.GetPrimStack()) {
+        const std::string& layerPath = layerSpec->GetLayer()->GetRealPath();
+        if (layerPath.empty())
+            continue;
+        if (!isParentPath(layerPath, parentRefs))
+        {
+            refPath = layerPath;
+            break;
+        }
+    }
+    if (!refPath.length())
+    {
+        MString errorMsg("Failed to find a non-recursive reference path for ");
+        errorMsg += prim.GetPath().GetText();
+        errorMsg += " in top-level usd file ";
+        errorMsg += usdStage->GetRootLayer()->GetRealPath().c_str();
+        MGlobal::displayError(errorMsg);
+        return false;
+    }
+
+    // Don't know of a way to pass in an option string using MFileIO::reference,
+    // so just uisng mel...
+    std::string joinedParentRefs;
+    joinStrs(parentRefs, refPath, ',', joinedParentRefs);
+    MString cmd = (MString("file -reference -options \"primPath=")
+                   // TODO: properly escape these strings
+                   // Pass in the primitive path...
+                   + prim.GetPath().GetText()
+                   // ...and the top-level usd file in the option string.
+                   // Note that that's all the information that USD actually
+                   // needs / uses - the refPath is actually just a dummy. See
+                   // note above where we generate the refPath.
+                   + ";topLayerUsd="
+                   + assetIdentifier.c_str()
+                   + ";parent="
+                   + parentName
+                   + ";parentRefPaths="
+                   + joinedParentRefs.c_str()
+                   + "\" \""
+                   + refPath.c_str()
+                   + "\";");
+    DEBUG_PRINT(cmd);
+    CHECK_MSTATUS_AND_RETURN(MGlobal::executeCommand(cmd), false);
+
+    // TODO: re-parent and re-name toplevel node
+#else // PIXMAYA_FORCE_MAYA_REFERENCES
     // We have to create the new assembly node with the assembly command as
     // opposed to using MDagModifier's createNode() or any other method. That
     // seems to be the only way to ensure that the assembly's namespace and
@@ -410,8 +544,8 @@ PxrUsdMayaTranslatorModelAssembly::Read(
     CHECK_MSTATUS_AND_RETURN(status, false);
 
     if (context) {
-        context->RegisterNewMayaNode(prim.GetPath().GetString(), assemblyObj);
-        context->SetPruneChildren(true);
+        context->RegisterNewMayaNode(prim.GetPath().GetString(),
+                                     assemblyObj);
     }
 
     // If a representation was supplied, activate it.
@@ -422,6 +556,12 @@ PxrUsdMayaTranslatorModelAssembly::Read(
             status = assemblyFn.activate(assemblyRep.c_str());
             CHECK_MSTATUS_AND_RETURN(status, false);
         }
+    }
+
+#endif // PIXMAYA_FORCE_MAYA_REFERENCES
+
+    if (context) {
+        context->SetPruneChildren(true);
     }
 
     // XXX: right now, we lose any edits that may be introduced from

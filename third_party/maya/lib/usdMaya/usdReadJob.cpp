@@ -50,6 +50,7 @@
 #include <maya/MGlobal.h>
 #include <maya/MObject.h>
 #include <maya/MTime.h>
+#include <maya/MSelectionList.h>
 
 #include <map>
 #include <string>
@@ -63,15 +64,11 @@
 const static TfToken ASSEMBLY_SHADING_MODE = PxrUsdMayaShadingModeTokens->displayColor;
 
 usdReadJob::usdReadJob(
-    const std::string &iFileName,
-    const std::string &iPrimPath,
     const std::map<std::string, std::string>& iVariants,
     const JobImportArgs &iArgs,
     const std::string& assemblyTypeName,
     const std::string& proxyShapeTypeName) :
     mArgs(iArgs),
-    mFileName(iFileName),
-    mPrimPath(iPrimPath),
     mVariants(iVariants),
     mDagModifierUndo(),
     mDagModifierSeeded(false),
@@ -79,6 +76,21 @@ usdReadJob::usdReadJob(
     _assemblyTypeName(assemblyTypeName),
     _proxyShapeTypeName(proxyShapeTypeName)
 {
+    if (mArgs.parentNode.length())
+    {
+        // Get the value
+        MSelectionList selList;
+        selList.add(mArgs.parentNode.c_str());
+        MDagPath dagPath;
+        MStatus status = selList.getDagPath(0, dagPath);
+        if (status != MS::kSuccess) {
+            std::string errorStr = TfStringPrintf(
+                    "Invalid path \"%s\" for parent option.",
+                    mArgs.parentNode.c_str());
+            MGlobal::displayError(MString(errorStr.c_str()));
+        }
+        setMayaRootDagPath( dagPath );
+    }
 }
 
 usdReadJob::~usdReadJob()
@@ -89,7 +101,7 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
 {
     MStatus status;
 
-    SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(mFileName);
+    SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(mArgs.fileName);
     if (!rootLayer) {
         return false;
     }
@@ -146,9 +158,9 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
     }
 
     // Use the primPath to get the root usdNode
-    UsdPrim usdRootPrim = mPrimPath.empty() ? stage->GetDefaultPrim() :
-        stage->GetPrimAtPath(SdfPath(mPrimPath));
-    if (!usdRootPrim && !(mPrimPath.empty() || mPrimPath == "/")) {
+    UsdPrim usdRootPrim = mArgs.primPath.empty() ? stage->GetDefaultPrim() :
+        stage->GetPrimAtPath(SdfPath(mArgs.primPath));
+    if (!usdRootPrim && !(mArgs.primPath.empty() || mArgs.primPath == "/")) {
         usdRootPrim = stage->GetPseudoRoot();
     }
 
@@ -157,7 +169,7 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
     if (!usdRootPrim) {
         std::string errorMsg = TfStringPrintf(
             "No default prim found in USD file \"%s\"",
-            mFileName.c_str());
+            mArgs.fileName.c_str());
         MGlobal::displayError(errorMsg.c_str());
         return false;
     }
@@ -250,7 +262,7 @@ bool usdReadJob::_DoImport(UsdTreeIterator& primIt,
             // We use the file path of the file currently being imported and
             // the path to the prim within that file when creating the
             // reference assembly.
-            const std::string refFilePath = mFileName;
+            const std::string refFilePath = mArgs.fileName;
             const SdfPath refPrimPath = prim.GetPath();
 
             // XXX: At some point, if assemblyRep == "import" we'd like
@@ -265,7 +277,8 @@ bool usdReadJob::_DoImport(UsdTreeIterator& primIt,
                                                         args,
                                                         &ctx,
                                                         _assemblyTypeName,
-                                                        mArgs.assemblyRep)) {
+                                                        mArgs.assemblyRep,
+                                                        mArgs.parentRefPaths)) {
                 if (ctx.GetPruneChildren()) {
                     primIt.PruneChildren();
                 }

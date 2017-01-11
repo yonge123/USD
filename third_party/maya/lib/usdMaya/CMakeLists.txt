@@ -67,8 +67,7 @@ pxr_shared_library(${PXR_PACKAGE}
         referenceAssembly
         usdImport
         usdExport
-        usdTranslatorExport
-        usdTranslatorImport
+        usdTranslator
 
         Chaser
         ChaserRegistry
@@ -125,7 +124,8 @@ pxr_shared_library(${PXR_PACKAGE}
 
     RESOURCE_FILES
         AEpxrUsdProxyShapeTemplate.mel 
-        usdMaya.mel 
+        usdMaya.mel
+        usdTranslator.mel
         usdTranslatorExport.mel 
         usdTranslatorImport.mel 
 )

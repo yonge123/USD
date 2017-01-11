@@ -71,7 +71,8 @@
 
 
 TF_DEFINE_ENV_SETTING(PIXMAYA_USE_USD_REF_ASSEMBLIES, true,
-                      "Uses USD scene assemblies for set dressing");
+                      "Use maya assemblies when importing USD scenes, instead"
+                      " of maya references");
 
 TF_DEFINE_ENV_SETTING(PIXMAYA_USE_USD_ASSEM_NAMESPACE, true,
                       "Prefixes unrolled USD assemblies with namespaces");
@@ -1212,10 +1213,10 @@ bool UsdMayaRepresentationHierBase::activate()
         // In this mode, sub-assembly nodes we create should come in unloaded.
         importArgs.assemblyRep = TfToken();
     }
+    importArgs.fileName = usdFilePath.asChar();
+    importArgs.primPath = usdPrimPath.asChar();
 
-    usdReadJob readJob(usdFilePath.asChar(),
-                       usdPrimPath.asChar(),
-                       variantSetSelections,
+    usdReadJob readJob(variantSetSelections,
                        importArgs,
                        _psData.typeName.asChar(),
                        _psData.proxyShape.typeName.asChar());
