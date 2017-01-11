@@ -22,7 +22,8 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/usd/usdShade/parameter.h"
-#include "pxr/usd/usdShade/shader.h"
+#include "pxr/usd/usdShade/output.h"
+#include "pxr/usd/usdShade/connectableAPI.h"
 
 #include "pxr/usd/usd/conversions.h"
 
@@ -47,7 +48,7 @@ _Set(const UsdShadeParameter &self, object val, const UsdTimeCode &time) {
 static object
 _GetConnectedSource(const UsdShadeParameter &self)
 {
-    UsdShadeShader  source;
+    UsdShadeConnectableAPI  source;
     TfToken         outputName;
     
     if (self.GetConnectedSource(&source, &outputName)){
@@ -62,6 +63,16 @@ void wrapUsdShadeParameter()
 {
     typedef UsdShadeParameter Parameter;
 
+    bool (Parameter::*ConnectToSource_1)(UsdShadeConnectableAPI const &,
+                                   TfToken const &,
+                                   bool) const = &Parameter::ConnectToSource;
+    bool (Parameter::*ConnectToSource_2)(UsdShadeOutput const &) const =
+                                    &Parameter::ConnectToSource;
+    bool (Parameter::*ConnectToSource_3)(UsdShadeParameter const &) const =
+                                    &Parameter::ConnectToSource;
+    bool (Parameter::*ConnectToSource_4)(SdfPath const &) const =
+                                    &Parameter::ConnectToSource;
+
     class_<Parameter>("Parameter")
         .def(init<UsdAttribute>(arg("attr")))
         .def(!self)
@@ -75,8 +86,16 @@ void wrapUsdShadeParameter()
         .def("HasRenderType", &Parameter::HasRenderType)
 
         .def("IsConnected", &Parameter::IsConnected)
-        .def("ConnectToSource", &Parameter::ConnectToSource,
+
+        .def("ConnectToSource", ConnectToSource_1,
              (arg("source"), arg("outputName"), arg("outputIsParameter")=false))
+        .def("ConnectToSource", ConnectToSource_2,
+             (arg("output")))
+        .def("ConnectToSource", ConnectToSource_3,
+             (arg("param")))
+        .def("ConnectToSource", ConnectToSource_4,
+             (arg("path")))
+
         .def("DisconnectSource", &Parameter::DisconnectSource)
         .def("ClearSource", &Parameter::ClearSource)
 

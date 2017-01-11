@@ -148,17 +148,5 @@ WRAP_CUSTOM {
 
         .def("HasMaterialFaceSet", &UsdShadeMaterial::HasMaterialFaceSet)
             .staticmethod("HasMaterialFaceSet")
-
-        .def("CreateSurfaceTerminal", 
-             &UsdShadeMaterial::CreateSurfaceTerminal,
-             (arg("targetPath")))
-        .def("GetSurfaceTerminal",
-             &UsdShadeMaterial::GetSurfaceTerminal)
-
-        .def("CreateDisplacementTerminal", 
-             &UsdShadeMaterial::CreateDisplacementTerminal,
-             (arg("targetPath")))
-        .def("GetDisplacementTerminal",
-             &UsdShadeMaterial::GetDisplacementTerminal)
         ;
 }

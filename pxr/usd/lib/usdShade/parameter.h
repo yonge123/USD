@@ -28,7 +28,8 @@
 
 #include <vector>
 
-class UsdShadeShader;
+class UsdShadeConnectableAPI;
+class UsdShadeOutput;
 
 /// \class UsdShadeParameter
 ///
@@ -60,8 +61,16 @@ public:
     /// \name Configuring the Parameter's Type
     /// @{
     
-    /// Set the value for the shade parameter.
-    bool Set(const VtValue& value, UsdTimeCode time = UsdTimeCode::Default()) const;
+    /// Set the value for the shade parameter at \p time.
+    bool Set(const VtValue& value, UsdTimeCode time = UsdTimeCode::Default()) const {
+        return _attr.Set(value, time);
+    }
+
+    /// Set the value of the shade parameter at \p time.
+    template <typename T>
+    bool Set(const T & value, UsdTimeCode time = UsdTimeCode::Default()) const {
+        return _attr.Set(value, time);
+    }
 
     /// Specify an alternative, renderer-specific type to use when
     /// emitting/translating this parameter, rather than translating based
@@ -114,10 +123,34 @@ public:
     ///        with a value of \c true.
     /// \sa GetConnectedSource(), GetConnectedSources()
     bool ConnectToSource(
-            UsdShadeShader const &source, 
+            UsdShadeConnectableAPI const &source, 
             TfToken const &outputName,
             bool outputIsParameter=false) const;
-    
+
+    /// \overload
+    /// Connect parameter to the source, whose location is specified by \p
+    /// sourcePath.
+    /// 
+    /// This is useful in contexts where the prim types are unknown.
+    /// 
+    bool ConnectToSource(const SdfPath &sourcePath) const;
+
+    /// \overload
+    ///
+    /// Connects this parameter to the given parameter.
+    /// 
+    /// Once we flip the directionality of interface attributes and replace 
+    /// them with inputs (that are simply UsdShadeParameters), we will 
+    /// have parameter-to-parameter (or input-to-input) connections.
+    /// 
+    bool ConnectToSource(UsdShadeParameter const &param) const;
+
+    /// \overload
+    ///
+    /// Connects this parameter to the given output.
+    /// 
+    bool ConnectToSource(UsdShadeOutput const &output) const;
+
     /// Disconnect source for this Parameter.
     ///
     /// This may author more scene description than you might expect - we define
@@ -151,7 +184,7 @@ public:
     /// (source, ouputName) tuple if the parameter is connected, else
     /// \c None
     bool GetConnectedSource(
-            UsdShadeShader *source, 
+            UsdShadeConnectableAPI *source, 
             TfToken *outputName) const;
 
     /// Returns true if and only if the parameter is currently connected to the
@@ -171,18 +204,6 @@ public:
     /// Return the name of the sibling relationship that would encode
     /// the connection for this parameter.
     TfToken GetConnectionRelName() const;
-    
-    // TODO:
-    /// @}
-    /// \name Shader Parameter Values API
-    /// @{
-
-    /// This API is still in progress.  UsdLookInterfaceMap will likely be a
-    /// map from ShaderParameters -> values.
-    typedef bool UsdLookInterfaceMap;
-    //void GetValue(UsdTimeCode time, UsdLookInterfaceMap const &interfaceValues) const;
-
-    /// @}
 
     // ---------------------------------------------------------------
     /// \name UsdAttribute API
@@ -224,7 +245,7 @@ public:
     /// @}
 
     /// \anchor UsdShadeParameter_bool_type
-    /// Return true if this Primvar is valid for querying and authoring
+    /// Return true if this parameter is valid for querying and authoring
     /// values and metadata, which is identically equivalent to IsDefined().
 #ifdef doxygen
     operator unspecified-bool-type() const();
@@ -241,10 +262,6 @@ private:
             UsdPrim prim,
             TfToken const &name,
             SdfValueTypeName const &typeName);
-
-
-    bool _Connect(UsdRelationship const &rel, UsdShadeShader const &source, 
-                  TfToken const &outputName, bool outputIsParameter) const;
     
     UsdAttribute _attr;
 };

@@ -151,12 +151,6 @@ function(pxr_shared_library LIBRARY_NAME)
     )
 
     if(WIN32)
-        # If we're building a DLL we want to add a module entry point to it.
-        # We don't do this for Python PYDs though.
-        if (NOT sl_PYTHON_LIBRARY)
-            target_sources(${LIBRARY_NAME} PRIVATE "DllMain.cpp")
-        endif()
-
         if(MSVC)
             set_target_properties(
                 ${LIBRARY_NAME}
@@ -219,7 +213,7 @@ function(pxr_shared_library LIBRARY_NAME)
                     PREFIX ""
                     SUFFIX ".pyd"
                     FOLDER "${PXR_PREFIX}/_python"
-                    INSTALL_RPATH ${rpath}
+                    INSTALL_RPATH "${rpath}"
                     LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS"
             )
         else()
@@ -228,7 +222,7 @@ function(pxr_shared_library LIBRARY_NAME)
                     PREFIX ""
                     SUFFIX ".so"
                     FOLDER "${PXR_PREFIX}/_python"
-                    INSTALL_RPATH ${rpath}
+                    INSTALL_RPATH "${rpath}"
             )
         endif()
     else()
@@ -604,7 +598,7 @@ function(pxr_plugin PLUGIN_NAME)
 
         set_target_properties(${PLUGIN_NAME} 
             PROPERTIES 
-                INSTALL_RPATH ${rpath}
+                INSTALL_RPATH "${rpath}"
         )
     else()
         # Ensure this plugin can find the libs for its matching component.

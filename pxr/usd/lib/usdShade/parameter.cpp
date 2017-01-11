@@ -22,10 +22,11 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/usd/usdShade/parameter.h"
+#include "pxr/usd/usdShade/output.h"
 
 #include "pxr/usd/sdf/schema.h"
 #include "pxr/usd/usd/relationship.h"
-#include "pxr/usd/usdShade/shader.h"
+#include "pxr/usd/usdShade/connectableAPI.h"
 
 #include <stdlib.h>
 #include <algorithm>
@@ -33,11 +34,6 @@
 #include "pxr/base/tf/envSetting.h"
 
 #include "debugCodes.h"
-
-TF_DEFINE_ENV_SETTING(
-    USD_SHADE_BACK_COMPAT, true,
-    "Set to false to terminate support for older encodings of the UsdShading model.");
-
 
 using std::vector;
 using std::string;
@@ -94,14 +90,6 @@ UsdShadeParameter::UsdShadeParameter(
     }
 }
 
-bool
-UsdShadeParameter::Set(
-        const VtValue& value,
-        UsdTimeCode time) const
-{
-    return _attr.Set(value, time);
-}
-
 bool 
 UsdShadeParameter::SetRenderType(
         TfToken const& renderType) const
@@ -124,78 +112,51 @@ UsdShadeParameter::HasRenderType() const
 }
 
 bool 
-UsdShadeParameter::_Connect(
-        UsdRelationship const &rel,
-        UsdShadeShader const &sourceShader, 
-        TfToken const &outputName, 
-        bool outputIsParameter) const
-{
-
-    UsdPrim sourcePrim = sourceShader.GetPrim();
-    bool  success = true;
-    
-    // XXX it WBN to be able to validate source itself, guaranteeing
-    // that the source is, in fact, a shader.  However, it remains useful to
-    // be able to target a pure-over.
-    if (rel && sourcePrim) {
-        TfToken sourceName = outputIsParameter ? outputName :
-            TfToken(UsdShadeTokens->outputs.GetString() +
-                    outputName.GetString());
-        UsdAttribute  sourceAttr = sourcePrim.GetAttribute(sourceName);
-
-        // First make sure there is a source attribute of the proper type
-        // on the sourcePrim.
-        if (sourceAttr){
-            const SdfValueTypeName sourceType = sourceAttr.GetTypeName();
-            const SdfValueTypeName sinkType   = _attr.GetTypeName();
-            // Comparing the TfType allows us to connect parameters with 
-            // different "roles" of the same underlying type, 
-            // e.g. float3 and color3f
-            if (sourceType.GetType() != sinkType.GetType()) {
-                TF_DEBUG(KATANA_USDBAKE_CONNECTIONS).Msg(
-                        "Connecting parameter <%s> of type %s to source <%s>, "
-                        "of potentially incompatible type %s. \n",
-                        _attr.GetPath().GetText(),
-                        sinkType.GetAsToken().GetText(),
-                        sourceAttr.GetPath().GetText(),
-                        sourceType.GetAsToken().GetText());
-            }
-        } else {
-            sourceAttr =
-                sourcePrim.CreateAttribute(sourceName, _attr.GetTypeName(),
-                                           /* custom = */ false);
-        }
-        SdfPathVector  target(1, sourceAttr.GetPath());
-        success = rel.SetTargets(target);
-    }
-    else if (!sourceShader){
-        TF_CODING_ERROR("Failed connecting parameter <%s>. "
-                        "The given source shader prim <%s> is not defined", 
-                        _attr.GetPath().GetText(),
-                        sourcePrim ? sourcePrim.GetPath().GetText() :
-                        "invalid-prim");
-        return false;
-    }
-    else if (!rel){
-        TF_CODING_ERROR("Failed connecting parameter <%s>. "
-                        "Unable to make the connection to source <%s>.", 
-                        _attr.GetPath().GetText(),
-                        sourcePrim.GetPath().GetText());
-        return false;
-    }
-
-    return success;
-}
-
-bool 
 UsdShadeParameter::ConnectToSource(
-        UsdShadeShader const &source, 
+        UsdShadeConnectableAPI const &source, 
         TfToken const &outputName,
         bool outputIsParameter) const
 {
     UsdRelationship rel = _GetParameterConnection(*this, true);
 
-    return _Connect(rel, source, outputName, outputIsParameter);
+    return UsdShadeConnectableAPI::MakeConnection(rel, source, outputName,
+                                                  _attr.GetTypeName(),
+                                                  outputIsParameter);
+}
+
+bool 
+UsdShadeParameter::ConnectToSource(const SdfPath &sourcePath) const
+{
+    // sourcePath must be a property path for us to make a connection.
+    if (not sourcePath.IsPropertyPath())
+        return false;
+
+    UsdPrim sourcePrim = GetAttr().GetStage()->GetPrimAtPath(
+        sourcePath.GetPrimPath());
+    UsdShadeConnectableAPI source(sourcePrim);
+    // We don't validate UsdShadeConnectableAPI the type of the source prim 
+    // may be unknown. (i.e. it could be a pure over or a typeless def).
+    return ConnectToSource(source, sourcePath.GetNameToken(), 
+                           // We don't want to transform the name by appending 
+                           // the outputs namespace prefix, since sourcePath 
+                           // should already point to an attribute.
+                           /* outputIsParameter */ true);
+}
+
+bool 
+UsdShadeParameter::ConnectToSource(UsdShadeOutput const &output) const
+{
+    UsdShadeConnectableAPI source(output.GetAttr().GetPrim());
+    return ConnectToSource(source, output.GetOutputName(), 
+                           /* outputIsParameter */ false);
+}
+
+bool 
+UsdShadeParameter::ConnectToSource(UsdShadeParameter const &param) const
+{
+    UsdShadeConnectableAPI source(param.GetAttr().GetPrim());
+    return ConnectToSource(source, param.GetName(),
+                           /* outputIsParameter */ true);
 }
     
 bool 
@@ -218,49 +179,9 @@ UsdShadeParameter::ClearSource() const
     return success;
 }
 
-static
-bool
-_EvaluateConnection(
-    UsdRelationship const &connection,
-    UsdShadeShader *source, 
-    TfToken *outputName)
-{
-    *source = UsdShadeShader();
-    SdfPathVector targets;
-    // There should be no possibility of forwarding, here, since the API
-    // only allows targetting prims
-    connection.GetTargets(&targets);
-    // XXX(validation)  targets.size() <= 1, also outputName
-    if (targets.size() == 1) {
-        SdfPath const & path = targets[0];
-        *source = UsdShadeShader::Get(connection.GetStage(), 
-                                      path.GetPrimPath());
-        if (path.IsPropertyPath()){
-            const size_t prefixLen = (
-                    UsdShadeTokens->outputs.GetString().size());
-            TfToken const &attrName(path.GetNameToken());
-            if (TfStringStartsWith(attrName,
-                        UsdShadeTokens->outputs.GetString())){
-                *outputName = TfToken(attrName.GetString().substr(prefixLen));
-            }
-            else {
-                *outputName = attrName;
-            }
-        } 
-        else {
-            // XXX validation error
-            if ( TfGetEnvSetting(USD_SHADE_BACK_COMPAT) ) {
-                return connection.GetMetadata(_tokens->outputName, outputName)
-                    && *source;
-            }
-        }
-    }
-    return *source;
-}
-
 bool 
 UsdShadeParameter::GetConnectedSource(
-        UsdShadeShader *source, 
+        UsdShadeConnectableAPI *source, 
         TfToken *outputName) const
 {
     if (!(source && outputName)){
@@ -269,10 +190,11 @@ UsdShadeParameter::GetConnectedSource(
         return false;
     }
     if (UsdRelationship rel = _GetParameterConnection(*this, false)) {
-        return _EvaluateConnection(rel, source, outputName);
+        return UsdShadeConnectableAPI::EvaluateConnection(rel, source, 
+            outputName);
     }
     else {
-        *source = UsdShadeShader();
+        *source = UsdShadeConnectableAPI();
         return false;
     }
 }
@@ -283,7 +205,7 @@ UsdShadeParameter::IsConnected() const
     /// This MUST have the same semantics as GetConnectedSource(s).
     /// XXX someday we might make this more efficient through careful
     /// refactoring, but safest to just call the exact same code.
-    UsdShadeShader source;
+    UsdShadeConnectableAPI source;
     TfToken        outputName;
     return GetConnectedSource(&source, &outputName);
 }
