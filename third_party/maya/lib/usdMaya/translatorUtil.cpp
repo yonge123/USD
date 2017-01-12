@@ -145,3 +145,30 @@ PxrUsdMayaTranslatorUtil::GetNamespace(
     }
     return nameSpace;
 }
+
+/* static */
+std::string
+PxrUsdMayaTranslatorUtil::GetNamespace(
+        const std::string& primPathStr)
+{
+    // TODO: make the root namespace a configurable option
+
+    // We need a "root" namespace because otherwise we will have naming
+    // conflicts with dg/dagNodes.  Ie, no top-level namespace can share the
+    // name with ANY dg/dagNode (even dagNodes which aren't parented under the
+    // world). However, there does not seem to be a restriction on sub-
+    // namespace... so we create a top-level namespace to avoid conflicts.
+    std::string rootNS = "usd";
+    std::string nameSpace;
+    std::string parentName = TfGetPathName(primPathStr);
+    std::replace(parentName.begin(), parentName.end(), '/', ':');
+    nameSpace.reserve(rootNS.length() + 1 + parentName.length() + 1);
+    nameSpace = rootNS;
+    nameSpace += ":";
+    nameSpace += parentName;
+    if (nameSpace.back() != ':')
+    {
+        nameSpace += ':';
+    }
+    return nameSpace;
+}
