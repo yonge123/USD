@@ -580,7 +580,7 @@ bool usdWriteJob::createPrimWriter(
             MString fullPathName = curDag.fullPathName();
             if (fullPathName.indexW("|persp|perspShape") == 0 ||
                 fullPathName.indexW("|top|topShape") == 0 ||
-                fullPathName.indexW("|fron|frontShape") == 0 ||
+                fullPathName.indexW("|front|frontShape") == 0 ||
                 fullPathName.indexW("|side|sideShape") == 0) {
                 *primWriterOut = nullptr;
                 return false;
