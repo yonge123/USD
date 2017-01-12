@@ -210,7 +210,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
             // This dagPath is a parent of one of the arg dagPaths. It should
             // be included in the export, but not necessarily all of its
             // children should be, so we continue to traverse down.
-            if (!mArgs.exportRootPath.IsEmpty() and curDagPath.isValid()){
+            if (!mArgs.exportRootPath.IsEmpty() && curDagPath.isValid()){
                 // However if an export root is specified, we skip any dag
                 // parents that are above that root.
                 SdfPath sdfDagPath = SdfPath(PxrUsdMayaUtil::MDagPathToUsdPath(curDagPath, false));
