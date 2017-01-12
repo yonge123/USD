@@ -69,6 +69,7 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-cls" , "-exportColorSets", MSyntax::kBoolean);
     syntax.addFlag("-dms" , "-defaultMeshScheme", MSyntax::kString);
     syntax.addFlag("-vis" , "-exportVisibility", MSyntax::kBoolean);
+    syntax.addFlag("-rt" , "-root", MSyntax::kString);
 
     syntax.addFlag("-fr" , "-frameRange"   , MSyntax::kDouble, MSyntax::kDouble);
     syntax.addFlag("-pr" , "-preRoll"   , MSyntax::kDouble);
@@ -201,6 +202,16 @@ try
 
     if (argData.isFlagSet("exportVisibility")) {
         argData.getFlagArgument("exportVisibility", 0, jobArgs.exportVisibility);
+    }
+
+    if (argData.isFlagSet("root")) {
+        MString stringVal;
+        argData.getFlagArgument("root", 0, stringVal);
+        TfToken exportRootPath(stringVal.asChar());
+
+        if (!exportRootPath.IsEmpty()) {
+            jobArgs.exportRootPath = SdfPath(exportRootPath);
+        }
     }
 
     bool append = false;
