@@ -210,7 +210,9 @@ try
         TfToken exportRootPath(stringVal.asChar());
 
         if (!exportRootPath.IsEmpty()) {
-            jobArgs.exportRootPath = SdfPath(exportRootPath);
+            MDagPath rootDagPath;
+            PxrUsdMayaUtil::GetDagPathByName(exportRootPath, rootDagPath);
+            jobArgs.exportRootPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false);
         }
     }
 
