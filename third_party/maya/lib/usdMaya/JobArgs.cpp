@@ -58,7 +58,8 @@ JobExportArgs::JobExportArgs()
         renderLayerMode(PxUsdExportJobArgsTokens->defaultLayer),
         defaultMeshScheme(UsdGeomTokens->catmullClark),
         exportVisibility(true),
-        exportRootPath(SdfPath())
+        exportRootPath(""),
+        exportRootSdfPath(SdfPath())
 {
 }
 

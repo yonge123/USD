@@ -149,7 +149,7 @@ usdTranslatorExport::writer(const MFileObject &file,
                 frameSamples.insert(theOption[1].asDouble());
             }
             if (theOption[0] == MString("root")) {
-                jobArgs.exportRootPath = SdfPath(theOption[1].asChar());
+                jobArgs.exportRootPath = theOption[1].asChar();
             }
         }
         // Now resync start and end frame based on animation mode
