@@ -213,7 +213,12 @@ try
         if (!exportRootPath.IsEmpty()) {
             MDagPath rootDagPath;
             PxrUsdMayaUtil::GetDagPathByName(exportRootPath, rootDagPath);
-            jobArgs.exportRootPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false);
+            if (rootDagPath.isValid()){
+                jobArgs.exportRootPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false);
+            } else {
+                MGlobal::displayError(MString("Invalid dag path provided for root: ") + stringVal);
+                return MS::kFailure;
+            }
         }
     }
 
