@@ -115,7 +115,8 @@ JobExportArgs::JobExportArgs()
         exportColorSets(true),
         renderLayerMode(PxUsdExportJobArgsTokens->defaultLayer),
         exportVisibility(true),
-        exportRootPath(SdfPath())
+        exportRootPath(""),
+        exportRootSdfPath(SdfPath())
 {
 }
 
@@ -165,7 +166,7 @@ void JobExportArgs::parseSingleOption(const MStringArray& theOption)
         frameSamples.insert(theOption[1].asDouble());
     }
     else if (theOption[0] == MString("root")) {
-        exportRootPath = SdfPath(theOption[1].asChar());
+        exportRootPath = theOption[1].asChar();
     }
 }
 

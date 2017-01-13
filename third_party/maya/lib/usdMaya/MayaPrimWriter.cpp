@@ -66,9 +66,9 @@ MayaPrimWriter::MayaPrimWriter(MDagPath & iDag,
         mUsdPath = mUsdPath.ReplacePrefix(mUsdPath.GetPrefixes()[0], mArgs.usdModelRootOverridePath);
     }
 
-    if (!mArgs.exportRootPath.IsEmpty() ) {
+    if (!mArgs.exportRootPath.empty() ) {
         // trim the prim path to start at export root
-        mUsdPath = mUsdPath.ReplacePrefix(mArgs.exportRootPath.GetParentPath(), SdfPath("/"));
+        mUsdPath = mUsdPath.ReplacePrefix(mArgs.exportRootSdfPath.GetParentPath(), SdfPath("/"));
     }
 }
 

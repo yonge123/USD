@@ -196,6 +196,14 @@ bool usdWriteJob::beginJob(bool append)
     MDagPath curLeafDagPath;
     MItDag itDag(MItDag::kDepthFirst, MFn::kInvalid);
     itDag.traverseUnderWorld(true);
+
+    if (!mArgs.exportRootPath.empty()){
+        // If a root is specified, start iteration there
+        MDagPath rootDagPath;
+        PxrUsdMayaUtil::GetDagPathByName(mArgs.exportRootPath, rootDagPath);
+        itDag.reset(rootDagPath, MItDag::kDepthFirst, MFn::kInvalid);
+    }
+
     for (; !itDag.isDone(); itDag.next()) {
         MDagPath curDagPath;
         itDag.getPath(curDagPath);
@@ -205,15 +213,6 @@ bool usdWriteJob::beginJob(bool append)
             // This dagPath is a parent of one of the arg dagPaths. It should
             // be included in the export, but not necessarily all of its
             // children should be, so we continue to traverse down.
-            if (!mArgs.exportRootPath.IsEmpty() && curDagPath.length() > 0){
-                // However if an export root is specified, we skip any dag
-                // parents that are above that root.
-                SdfPath sdfDagPath = SdfPath(PxrUsdMayaUtil::MDagPathToUsdPath(curDagPath, false));
-                if (mArgs.exportRootPath.GetCommonPrefix(sdfDagPath) !=
-                        mArgs.exportRootPath) {
-                    continue;
-                }
-            }
         } else if (argDagPaths.find(curDagPathStr) != argDagPaths.end()) {
             // This dagPath IS one of the arg dagPaths. It AND all of its
             // children should be included in the export.

@@ -39,6 +39,7 @@
 #include <maya/MTime.h>
 
 #include "pxr/usd/usdGeom/tokens.h"
+#include "JobArgs.h"
 
 usdExport::usdExport()
 {
@@ -208,13 +209,17 @@ try
     if (argData.isFlagSet("root")) {
         MString stringVal;
         argData.getFlagArgument("root", 0, stringVal);
-        TfToken exportRootPath(stringVal.asChar());
+        std::string rootPath = stringVal.asChar();
 
-        if (!exportRootPath.IsEmpty()) {
+        if (!rootPath.empty()) {
             MDagPath rootDagPath;
-            PxrUsdMayaUtil::GetDagPathByName(exportRootPath, rootDagPath);
+            PxrUsdMayaUtil::GetDagPathByName(rootPath, rootDagPath);
             if (rootDagPath.isValid()){
-                jobArgs.exportRootPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false);
+                SdfPath rootSdfPath;
+                PxrUsdMayaUtil::GetDagPathByName(rootPath, rootDagPath);
+                rootSdfPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false);
+                jobArgs.exportRootPath = rootPath;
+                jobArgs.exportRootSdfPath = rootSdfPath;
             } else {
                 MGlobal::displayError(MString("Invalid dag path provided for root: ") + stringVal);
                 return MS::kFailure;
