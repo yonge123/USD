@@ -196,6 +196,14 @@ bool usdWriteJob::beginJob(bool append)
     MDagPath curLeafDagPath;
     MItDag itDag(MItDag::kDepthFirst, MFn::kInvalid);
     itDag.traverseUnderWorld(true);
+
+    if (!mArgs.exportRootPath.empty()){
+        // If a root is specified, start iteration there
+        MDagPath rootDagPath;
+        PxrUsdMayaUtil::GetDagPathByName(mArgs.exportRootPath, rootDagPath);
+        itDag.reset(rootDagPath, MItDag::kDepthFirst, MFn::kInvalid);
+    }
+
     for (; !itDag.isDone(); itDag.next()) {
         MDagPath curDagPath;
         itDag.getPath(curDagPath);

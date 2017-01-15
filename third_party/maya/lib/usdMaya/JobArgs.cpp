@@ -114,7 +114,9 @@ JobExportArgs::JobExportArgs()
         nurbsExplicitUVType(PxUsdExportJobArgsTokens->Uniform),
         exportColorSets(true),
         renderLayerMode(PxUsdExportJobArgsTokens->defaultLayer),
-        exportVisibility(true)
+        exportVisibility(true),
+        exportRootPath(""),
+        exportRootSdfPath(SdfPath())
 {
 }
 
@@ -162,6 +164,9 @@ void JobExportArgs::parseSingleOption(const MStringArray& theOption)
     }
     else if (theOption[0] == MString("frameSample")) {
         frameSamples.insert(theOption[1].asDouble());
+    }
+    else if (theOption[0] == MString("root")) {
+        exportRootPath = theOption[1].asChar();
     }
 }
 
