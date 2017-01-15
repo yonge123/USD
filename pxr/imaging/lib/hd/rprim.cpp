@@ -153,15 +153,11 @@ HdRprim::SetPrimId(int32_t primId)
     // Don't set DirtyPrimID here, to avoid undesired variability tracking.
 }
 
-HdSceneDelegate*
-HdRprim::GetDelegate() const {
-    return _delegate;
-}
-
 HdRenderIndex& 
 HdRprim::_GetRenderIndex() {
     return _delegate->GetRenderIndex();
 }
+
 HdRenderIndex const& 
 HdRprim::_GetRenderIndex() const {
     return _delegate->GetRenderIndex();
@@ -183,7 +179,7 @@ HdRprim::_PopulateConstantPrimVars(HdDrawItem *drawItem,
                                    HdChangeTracker::DirtyBits *dirtyBits)
 {
     HD_TRACE_FUNCTION();
-    HD_MALLOC_TAG_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
     SdfPath const& id = GetId();
     HdSceneDelegate* delegate = GetDelegate();
@@ -325,7 +321,7 @@ HdRprim::_PopulateInstancePrimVars(HdDrawItem *drawItem,
                                    int instancePrimVarSlot)
 {
     HD_TRACE_FUNCTION();
-    HD_MALLOC_TAG_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
     SdfPath const& id = GetId();
 

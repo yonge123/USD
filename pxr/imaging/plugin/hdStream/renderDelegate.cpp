@@ -23,10 +23,10 @@
 //
 #include "pxr/imaging/hdStream/renderDelegate.h"
 #include "pxr/imaging/hd/renderDelegateRegistry.h"
-#include "pxr/imaging/hd/mesh.h"
-#include "pxr/imaging/hd/basisCurves.h"
-#include "pxr/imaging/hd/points.h"
 #include "pxr/imaging/hd/texture.h"
+#include "pxr/imaging/hdSt/mesh.h"
+#include "pxr/imaging/hdSt/basisCurves.h"
+#include "pxr/imaging/hdSt/points.h"
 #include "pxr/imaging/hdx/camera.h"
 #include "pxr/imaging/hdx/drawTarget.h"
 #include "pxr/imaging/hdx/light.h"
@@ -35,6 +35,12 @@
 TF_REGISTRY_FUNCTION(TfType)
 {
     HdRenderDelegateRegistry::Define<HdStreamRenderDelegate>();
+}
+
+HdStreamRenderDelegate::HdStreamRenderDelegate()
+{
+    static std::once_flag reprsOnce;
+    std::call_once(reprsOnce, _ConfigureReprs);
 }
 
 TfToken
@@ -50,11 +56,11 @@ HdStreamRenderDelegate::CreateRprim(TfToken const& typeId,
                                     SdfPath const& instancerId)
 {
     if (typeId == HdPrimTypeTokens->mesh) {
-        return new HdMesh(delegate, rprimId, instancerId);
+        return new HdStMesh(delegate, rprimId, instancerId);
     } else if (typeId == HdPrimTypeTokens->basisCurves) {
-        return new HdBasisCurves(delegate, rprimId, instancerId);
+        return new HdStBasisCurves(delegate, rprimId, instancerId);
     } else  if (typeId == HdPrimTypeTokens->points) {
-        return new HdPoints(delegate, rprimId, instancerId);
+        return new HdStPoints(delegate, rprimId, instancerId);
     } else {
         TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
     }
@@ -113,3 +119,83 @@ HdStreamRenderDelegate::DestroyBprim(HdBprim *bPrim)
     delete bPrim;
 }
 
+// static
+void
+HdStreamRenderDelegate::_ConfigureReprs()
+{
+    // pre-defined reprs (to be deprecated or minimalized)
+    HdStMesh::ConfigureRepr(HdTokens->hull,
+                            HdStMeshReprDesc(HdMeshGeomStyleHull,
+                                             HdCullStyleDontCare,
+                                             /*lit=*/true,
+                                             /*smoothNormals=*/false,
+                                             /*blendWireframeColor=*/false));
+    HdStMesh::ConfigureRepr(HdTokens->smoothHull,
+                            HdStMeshReprDesc(HdMeshGeomStyleHull,
+                                             HdCullStyleDontCare,
+                                             /*lit=*/true,
+                                             /*smoothNormals=*/true,
+                                             /*blendWireframeColor=*/false));
+    HdStMesh::ConfigureRepr(HdTokens->wire,
+                            HdStMeshReprDesc(HdMeshGeomStyleHullEdgeOnly,
+                                             HdCullStyleDontCare,
+                                             /*lit=*/true,
+                                             /*smoothNormals=*/true,
+                                             /*blendWireframeColor=*/true));
+    HdStMesh::ConfigureRepr(HdTokens->wireOnSurf,
+                            HdStMeshReprDesc(HdMeshGeomStyleHullEdgeOnSurf,
+                                             HdCullStyleDontCare,
+                                             /*lit=*/true,
+                                             /*smoothNormals=*/true,
+                                             /*blendWireframeColor=*/true));
+
+    HdStMesh::ConfigureRepr(HdTokens->refined,
+                            HdStMeshReprDesc(HdMeshGeomStyleSurf,
+                                             HdCullStyleDontCare,
+                                             /*lit=*/true,
+                                             /*smoothNormals=*/true,
+                                             /*blendWireframeColor=*/false));
+    HdStMesh::ConfigureRepr(HdTokens->refinedWire,
+                            HdStMeshReprDesc(HdMeshGeomStyleEdgeOnly,
+                                             HdCullStyleDontCare,
+                                             /*lit=*/true,
+                                             /*smoothNormals=*/true,
+                                             /*blendWireframeColor=*/true));
+    HdStMesh::ConfigureRepr(HdTokens->refinedWireOnSurf,
+                            HdStMeshReprDesc(HdMeshGeomStyleEdgeOnSurf,
+                                             HdCullStyleDontCare,
+                                             /*lit=*/true,
+                                             /*smoothNormals=*/true,
+                                             /*blendWireframeColor=*/true));
+
+    HdStBasisCurves::ConfigureRepr(HdTokens->hull,
+                                   HdBasisCurvesGeomStyleLine);
+    HdStBasisCurves::ConfigureRepr(HdTokens->smoothHull,
+                                   HdBasisCurvesGeomStyleLine);
+    HdStBasisCurves::ConfigureRepr(HdTokens->wire,
+                                   HdBasisCurvesGeomStyleLine);
+    HdStBasisCurves::ConfigureRepr(HdTokens->wireOnSurf,
+                                   HdBasisCurvesGeomStyleLine);
+    HdStBasisCurves::ConfigureRepr(HdTokens->refined,
+                                   HdBasisCurvesGeomStyleRefined);
+    // XXX: draw coarse line for refinedWire (filed as bug 129550)
+    HdStBasisCurves::ConfigureRepr(HdTokens->refinedWire,
+                                   HdBasisCurvesGeomStyleLine);
+    HdStBasisCurves::ConfigureRepr(HdTokens->refinedWireOnSurf,
+                                   HdBasisCurvesGeomStyleRefined);
+
+    HdStPoints::ConfigureRepr(HdTokens->hull,
+                              HdPointsGeomStylePoints);
+    HdStPoints::ConfigureRepr(HdTokens->smoothHull,
+                              HdPointsGeomStylePoints);
+    HdStPoints::ConfigureRepr(HdTokens->wire,
+                              HdPointsGeomStylePoints);
+    HdStPoints::ConfigureRepr(HdTokens->wireOnSurf,
+                              HdPointsGeomStylePoints);
+    HdStPoints::ConfigureRepr(HdTokens->refined,
+                              HdPointsGeomStylePoints);
+    HdStPoints::ConfigureRepr(HdTokens->refinedWire,
+                              HdPointsGeomStylePoints);
+    HdStPoints::ConfigureRepr(HdTokens->refinedWireOnSurf,
+                              HdPointsGeomStylePoints);
+}

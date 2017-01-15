@@ -85,85 +85,6 @@ HdRenderIndex::HdRenderIndex()
     //      leave geometry collection for a while.
     _tracker.AddCollection(HdTokens->geometry);
 
-    // pre-defined reprs (to be deprecated or minimalized)
-    static std::once_flag reprsOnce;
-    std::call_once(reprsOnce, [](){
-        HdMesh::ConfigureRepr(HdTokens->hull,
-                              HdMeshReprDesc(HdMeshGeomStyleHull,
-                                             HdCullStyleDontCare,
-                                             /*lit=*/true,
-                                             /*smoothNormals=*/false,
-                                             /*blendWireframeColor=*/false));
-        HdMesh::ConfigureRepr(HdTokens->smoothHull,
-                              HdMeshReprDesc(HdMeshGeomStyleHull,
-                                             HdCullStyleDontCare,
-                                             /*lit=*/true,
-                                             /*smoothNormals=*/true,
-                                             /*blendWireframeColor=*/false));
-        HdMesh::ConfigureRepr(HdTokens->wire,
-                              HdMeshReprDesc(HdMeshGeomStyleHullEdgeOnly,
-                                             HdCullStyleDontCare,
-                                             /*lit=*/true,
-                                             /*smoothNormals=*/true,
-                                             /*blendWireframeColor=*/true));
-        HdMesh::ConfigureRepr(HdTokens->wireOnSurf,
-                              HdMeshReprDesc(HdMeshGeomStyleHullEdgeOnSurf,
-                                             HdCullStyleDontCare,
-                                             /*lit=*/true,
-                                             /*smoothNormals=*/true,
-                                             /*blendWireframeColor=*/true));
-
-        HdMesh::ConfigureRepr(HdTokens->refined,
-                              HdMeshReprDesc(HdMeshGeomStyleSurf,
-                                             HdCullStyleDontCare,
-                                             /*lit=*/true,
-                                             /*smoothNormals=*/true,
-                                             /*blendWireframeColor=*/false));
-        HdMesh::ConfigureRepr(HdTokens->refinedWire,
-                              HdMeshReprDesc(HdMeshGeomStyleEdgeOnly,
-                                             HdCullStyleDontCare,
-                                             /*lit=*/true,
-                                             /*smoothNormals=*/true,
-                                             /*blendWireframeColor=*/true));
-        HdMesh::ConfigureRepr(HdTokens->refinedWireOnSurf,
-                              HdMeshReprDesc(HdMeshGeomStyleEdgeOnSurf,
-                                             HdCullStyleDontCare,
-                                             /*lit=*/true,
-                                             /*smoothNormals=*/true,
-                                             /*blendWireframeColor=*/true));
-
-
-        HdBasisCurves::ConfigureRepr(HdTokens->hull,
-                                     HdBasisCurvesGeomStyleLine);
-        HdBasisCurves::ConfigureRepr(HdTokens->smoothHull,
-                                     HdBasisCurvesGeomStyleLine);
-        HdBasisCurves::ConfigureRepr(HdTokens->wire,
-                                     HdBasisCurvesGeomStyleLine);
-        HdBasisCurves::ConfigureRepr(HdTokens->wireOnSurf,
-                                     HdBasisCurvesGeomStyleLine);
-        HdBasisCurves::ConfigureRepr(HdTokens->refined,
-                                     HdBasisCurvesGeomStyleRefined);
-        // XXX: draw coarse line for refinedWire (filed as bug 129550)
-        HdBasisCurves::ConfigureRepr(HdTokens->refinedWire,
-                                     HdBasisCurvesGeomStyleLine);
-        HdBasisCurves::ConfigureRepr(HdTokens->refinedWireOnSurf,
-                                     HdBasisCurvesGeomStyleRefined);
-
-        HdPoints::ConfigureRepr(HdTokens->hull,
-                                HdPointsGeomStylePoints);
-        HdPoints::ConfigureRepr(HdTokens->smoothHull,
-                                HdPointsGeomStylePoints);
-        HdPoints::ConfigureRepr(HdTokens->wire,
-                                HdPointsGeomStylePoints);
-        HdPoints::ConfigureRepr(HdTokens->wireOnSurf,
-                                HdPointsGeomStylePoints);
-        HdPoints::ConfigureRepr(HdTokens->refined,
-                                HdPointsGeomStylePoints);
-        HdPoints::ConfigureRepr(HdTokens->refinedWire,
-                                HdPointsGeomStylePoints);
-        HdPoints::ConfigureRepr(HdTokens->refinedWireOnSurf,
-                                HdPointsGeomStylePoints);
-    });
 }
 
 HdRenderIndex::~HdRenderIndex()
@@ -194,7 +115,7 @@ HdRenderIndex::InsertRprim(TfToken const& typeId,
                  SdfPath const& instancerId /*= SdfPath()*/)
 {
     HD_TRACE_FUNCTION();
-    HD_MALLOC_TAG_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
 #if 0
     // TODO: enable this after patching.
@@ -438,7 +359,7 @@ void
 HdRenderIndex::RemoveShader(SdfPath const& id)
 {
     HD_TRACE_FUNCTION();
-    HD_MALLOC_TAG_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
     _ShaderMap::iterator it = _shaderMap.find(id);
     if (it == _shaderMap.end())
@@ -486,7 +407,7 @@ void
 HdRenderIndex::RemoveTask(SdfPath const& id)
 {
     HD_TRACE_FUNCTION();
-    HD_MALLOC_TAG_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
     _TaskMap::iterator it = _taskMap.find(id);
     if (it == _taskMap.end())
@@ -506,7 +427,7 @@ HdRenderIndex::InsertSprim(TfToken const& typeId,
                            SdfPath const& sprimId)
 {
     HD_TRACE_FUNCTION();
-    HD_MALLOC_TAG_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
     if (sprimId.IsEmpty()) {
         return;
@@ -553,7 +474,7 @@ void
 HdRenderIndex::RemoveSprim(TfToken const& typeId, SdfPath const& id)
 {
     HD_TRACE_FUNCTION();
-    HD_MALLOC_TAG_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
     _SprimTypeMap::iterator typeIt = _sprimTypeMap.find(typeId);
     if (typeIt == _sprimTypeMap.end()) {
@@ -601,7 +522,7 @@ HdRenderIndex::GetSprimSubtree(TfToken const& typeId,
                                SdfPath const& rootPath) const
 {
     HD_TRACE_FUNCTION();
-    HD_MALLOC_TAG_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
     _SprimTypeMap::const_iterator typeIt = _sprimTypeMap.find(typeId);
     if (typeIt == _sprimTypeMap.end()) {
@@ -637,7 +558,7 @@ HdRenderIndex::InsertBprim(TfToken const& typeId,
                            SdfPath const& bprimId)
 {
     HD_TRACE_FUNCTION();
-    HD_MALLOC_TAG_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
     if (bprimId.IsEmpty()) {
         return;
@@ -684,7 +605,7 @@ void
 HdRenderIndex::RemoveBprim(TfToken const& typeId, SdfPath const& id)
 {
     HD_TRACE_FUNCTION();
-    HD_MALLOC_TAG_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
     _BprimTypeMap::iterator typeIt = _bprimTypeMap.find(typeId);
     if (typeIt == _bprimTypeMap.end()) {
@@ -732,7 +653,7 @@ HdRenderIndex::GetBprimSubtree(TfToken const& typeId,
                                SdfPath const& rootPath) const
 {
     HD_TRACE_FUNCTION();
-    HD_MALLOC_TAG_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
     _BprimTypeMap::const_iterator typeIt = _bprimTypeMap.find(typeId);
     if (typeIt == _bprimTypeMap.end()) {
@@ -1387,7 +1308,7 @@ HdRenderIndex::InsertInstancer(HdSceneDelegate* delegate,
                                SdfPath const &parentId)
 {
     HD_TRACE_FUNCTION();
-    HD_MALLOC_TAG_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
 #if 0
     // TODO: enable this after patching.
@@ -1409,7 +1330,7 @@ void
 HdRenderIndex::RemoveInstancer(SdfPath const& id)
 {
     HD_TRACE_FUNCTION();
-    HD_MALLOC_TAG_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
     _InstancerMap::iterator it = _instancerMap.find(id);
     if (it == _instancerMap.end())
@@ -1423,7 +1344,7 @@ HdInstancerSharedPtr
 HdRenderIndex::GetInstancer(SdfPath const &id) const
 {
     HD_TRACE_FUNCTION();
-    HD_MALLOC_TAG_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
     HdInstancerSharedPtr instancer;
     TfMapLookup(_instancerMap, id, &instancer);
@@ -1435,7 +1356,7 @@ HdRprim const *
 HdRenderIndex::GetRprim(SdfPath const &id) const
 {
     HD_TRACE_FUNCTION();
-    HD_MALLOC_TAG_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
     _RprimMap::const_iterator it = _rprimMap.find(id);
     if (it != _rprimMap.end())

@@ -35,7 +35,9 @@ pxr_shared_library(hd
 
     PUBLIC_CLASSES
         basisCurves
+        basisCurvesComputations
         basisCurvesTopology
+        basisCurvesShaderKey
         binding
         bprim
         bufferArray
@@ -60,6 +62,7 @@ pxr_shared_library(hd
         drawItemInstance
         drawItemState
         engine
+        geometricShader
         glslProgram
         glslfxShader
         glUtils
@@ -70,12 +73,15 @@ pxr_shared_library(hd
         interleavedMemoryManager
         lightingShader
         mesh
+        meshShaderKey
         meshTopology
         package
         patchIndex
         perfLog
         persistentBuffer
         points
+        pointsShaderKey
+        quadrangulate
         renderContextCaps
         renderDelegate
         renderDelegateRegistry
@@ -97,7 +103,6 @@ pxr_shared_library(hd
         sprim
         strategyBase
         surfaceShader
-
         task
         texture
         textureResource
@@ -106,6 +111,7 @@ pxr_shared_library(hd
         triangulate
         vboMemoryManager
         vboSimpleMemoryManager
+        vertexAdjacency
         vtBufferSource
 
     PUBLIC_HEADERS
@@ -113,21 +119,14 @@ pxr_shared_library(hd
         version.h
 
     PRIVATE_CLASSES
-        basisCurvesComputations
-        basisCurvesShaderKey
         cullingShaderKey
         fallbackLightingShader
-        geometricShader
-        meshShaderKey
-        pointsShaderKey
-        quadrangulate
         renderIndexManager
         smoothNormals
         subdivision
         subdivision3
         unitTestDelegate
         unitTestHelper
-        vertexAdjacency
         ${optionalPrivateClasses}
 
     PRIVATE_HEADERS
