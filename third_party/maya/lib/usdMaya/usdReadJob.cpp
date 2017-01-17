@@ -66,6 +66,8 @@
 // (usdMaya/referenceAssembly.cpp)
 const static TfToken ASSEMBLY_SHADING_MODE = PxrUsdMayaShadingModeTokens->displayColor;
 
+const static TfToken MAYA_NATIVE_FILE_REF_ATTR("maya:reference");
+
 usdReadJob::usdReadJob(
     const std::map<std::string, std::string>& iVariants,
     const JobImportArgs &iArgs,
@@ -273,7 +275,7 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
             MObject& mobj = it->second;
             if (! mobj.hasFn(MFn::kDagNode)) {
                 depNode.setObject(mobj);
-                newName = MString(PxrUsdMayaTranslatorUtil::GetNamespace(it->first).c_str()) + depNode.name();
+                newName = MString(PxrUsdMayaTranslatorUtil::GetParentNamespace(it->first).c_str()) + depNode.name();
                 depNode.setName(newName, true);
             }
 
@@ -336,6 +338,29 @@ bool usdReadJob::_DoImport(UsdTreeIterator& primIt,
                 primIt.PruneChildren();
             }
         }
+
+        if (UsdAttribute mayaRefAttr = prim.GetAttribute(
+                MAYA_NATIVE_FILE_REF_ATTR)) {
+            SdfAssetPath mayaRefAssetPath;
+
+            if (mayaRefAttr.Get(&mayaRefAssetPath)) {
+                const std::string* pMayaPath = &mayaRefAssetPath.GetResolvedPath();
+                if (pMayaPath->empty()) {
+                    pMayaPath = &mayaRefAssetPath.GetAssetPath();
+                }
+                if (!pMayaPath->empty()) {
+                    // TODO: get grouping / parenting of native maya references
+                    // working
+                    if (PxrUsdMayaTranslatorModelAssembly::CreateNativeMayaRef(
+                            prim, *pMayaPath, ctx)) {
+                        if (ctx.GetPruneChildren()) {
+                            primIt.PruneChildren();
+                        }
+                    }
+                }
+            }
+        }
+
     }
 
     return true;

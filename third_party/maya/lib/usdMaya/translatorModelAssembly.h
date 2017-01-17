@@ -85,6 +85,13 @@ struct PxrUsdMayaTranslatorModelAssembly
         const PxrUsdMayaPrimReaderArgs& args,
         PxrUsdMayaPrimReaderContext* context,
         const std::string& proxyShapeTypeName);
+
+    // Creates a native Maya reference to the maya file at \p mayaFilePath,
+    // grouped under the maya object corresponding to \p prim.
+    static bool CreateNativeMayaRef(
+        const UsdPrim& prim,
+        const std::string& mayaFilePath,
+        PxrUsdMayaPrimReaderContext& context);
 };
 
 

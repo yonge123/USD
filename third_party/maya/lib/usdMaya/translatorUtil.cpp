@@ -33,6 +33,7 @@
 #include <maya/MDagModifier.h>
 #include <maya/MObject.h>
 #include <maya/MString.h>
+#include <maya/MNamespace.h>
 
 
 /* static */
@@ -122,7 +123,7 @@ PxrUsdMayaTranslatorUtil::CreateNode(
 /* static */
 std::string
 PxrUsdMayaTranslatorUtil::GetNamespace(
-        const std::string& primPathStr)
+        const std::string& primPathStr, bool trailingColon)
 {
     // TODO: make the root namespace a configurable option
 
@@ -131,17 +132,90 @@ PxrUsdMayaTranslatorUtil::GetNamespace(
     // name with ANY dg/dagNode (even dagNodes which aren't parented under the
     // world). However, there does not seem to be a restriction on sub-
     // namespace... so we create a top-level namespace to avoid conflicts.
-    std::string rootNS = "usd";
+    std::string rootNS = ":usd";
     std::string nameSpace;
-    std::string parentName = TfGetPathName(primPathStr);
-    std::replace(parentName.begin(), parentName.end(), '/', ':');
-    nameSpace.reserve(rootNS.length() + 1 + parentName.length() + 1);
+    nameSpace.reserve(rootNS.length() + 1 + primPathStr.length() + 1);
+    std::replace(nameSpace.begin(), nameSpace.end(), '/', ':');
     nameSpace = rootNS;
     nameSpace += ":";
-    nameSpace += parentName;
-    if (nameSpace.back() != ':')
+    nameSpace += TfStringTrim(primPathStr, "/:");
+    std::replace(nameSpace.begin(), nameSpace.end(), '/', ':');
+    if (!trailingColon)
     {
-        nameSpace += ':';
+        while(nameSpace.back() == ':')
+        {
+            nameSpace.pop_back();
+        }
+    }
+    else
+    {
+        if (nameSpace.back() != ':')
+        {
+            nameSpace += ':';
+        }
     }
     return nameSpace;
+}
+
+/* static */
+std::string
+PxrUsdMayaTranslatorUtil::GetNamespace(
+        const SdfPath& primPath, bool trailingColon)
+{
+    return GetNamespace(primPath.GetString(), trailingColon);
+}
+
+/* static */
+std::string
+PxrUsdMayaTranslatorUtil::GetParentNamespace(
+        const std::string& primPathStr, bool trailingColon)
+{
+    // ensure no leading/trailing "/", so TfGetPathName return nothing if no parent
+    return GetNamespace(TfGetPathName(TfStringTrim(primPathStr, "/")), trailingColon);
+}
+
+/* static */
+std::string
+PxrUsdMayaTranslatorUtil::GetParentNamespace(
+        const SdfPath& primPath, bool trailingColon)
+{
+    return GetNamespace(primPath.GetParentPath(), trailingColon);
+}
+
+/* static */
+bool
+PxrUsdMayaTranslatorUtil::CreateNamespace(const std::string& fullNamespace)
+{
+    std::string absoluteNS = std::string(":") + TfStringTrim(fullNamespace, ":");
+    if (absoluteNS.length() == 1) return true;
+
+    if(MNamespace::namespaceExists(absoluteNS.c_str())) return true;
+
+    std::string finalNS = TfStringGetSuffix(absoluteNS, ':');
+    std::string parentNS;
+    if (absoluteNS.length() > (finalNS.length() + 1))
+    {
+        std::string parentNS = absoluteNS.substr(0, absoluteNS.length()
+                                                    - finalNS.length() - 1);
+        if (!CreateNamespace(parentNS)) return false;
+        MString parentMstring(parentNS.c_str());
+        CHECK_MSTATUS_AND_RETURN(MNamespace::addNamespace(finalNS.c_str(),
+                                                          &parentMstring),
+                                 false);
+    }
+    else
+    {
+        CHECK_MSTATUS_AND_RETURN(MNamespace::addNamespace(finalNS.c_str()),
+                                 false);
+    }
+    return true;
+}
+
+/* static */
+bool
+PxrUsdMayaTranslatorUtil::CreateParentNamespace(const std::string& fullNamespace)
+{
+    // ensure ns starts with ":", so TfStringGetBeforeSuffix return nothing if no parent
+    std::string absoluteNS = std::string(":") + TfStringTrim(fullNamespace, ":");
+    return CreateNamespace(TfStringGetBeforeSuffix(absoluteNS, ':'));
 }

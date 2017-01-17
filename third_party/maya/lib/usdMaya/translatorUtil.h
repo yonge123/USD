@@ -116,8 +116,38 @@ struct PxrUsdMayaTranslatorUtil
         }
     }
 
+    /// \brief Helper to get a maya namespace string from a usd path string
+    /// \p primPathStr - essentially just replaces '/' with ':'
     static std::string
-    GetNamespace(const std::string& primPathStr);
+    GetNamespace(const std::string& primPathStr, bool trailingColon=true);
+
+    /// \brief Helper to get a maya namespace name from a usd path
+    /// \p primPath - essentially just replaces '/' with ':'
+    static std::string
+    GetNamespace(const SdfPath& primPath, bool trailingColon=true);
+
+    /// \brief Helper to get a maya namespace string from the parent of a usd path
+    /// string \p primPathStr - essentially just calls
+    /// GetNamespace(TfGetPathName(\p primPathStr))
+    static std::string
+    GetParentNamespace(const std::string& primPathStr, bool trailingColon=true);
+
+    /// \brief Helper to get a maya namespace string from the parent of a usd path
+    /// string \p primPath - essentially just calls
+    /// GetNamespace(\p primPath.ParentPath())
+    static std::string
+    GetParentNamespace(const SdfPath& primPath, bool trailingColon=true);
+
+    /// \brief Helper to create a maya namespace recursively, including all
+    /// parent namespaces. Returns true if the namespace was successfully created.
+    static bool
+    CreateNamespace(const std::string& fullNamespace);
+
+    /// \brief Helper to create the parent namespace of the given maya namespace
+    /// \p fullNamespace recursively. Returns true if the parent namespace was
+    /// successfully created.
+    static bool
+    CreateParentNamespace(const std::string& fullNamespace);
 };
 
 

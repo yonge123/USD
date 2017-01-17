@@ -147,7 +147,7 @@ MStatus initializePlugin(
                                     }, 
                                     "usdTranslator", // options script name
                                     const_cast<char*>(usdTranslatorDefaults),
-                                    false);
+                                    false); // requiresFullMel
 
     if (!status) {
         status.perror("pxrUsd: unable to register USD translator.");

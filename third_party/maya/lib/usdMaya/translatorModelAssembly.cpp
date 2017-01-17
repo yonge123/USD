@@ -60,6 +60,7 @@
 #include <maya/MObject.h>
 #include <maya/MPlug.h>
 #include <maya/MString.h>
+#include <maya/MFileIO.h>
 
 #include <map>
 #include <string>
@@ -462,7 +463,6 @@ PxrUsdMayaTranslatorModelAssembly::Read(
     DEBUG_PRINT(cmd);
     CHECK_MSTATUS_AND_RETURN(MGlobal::executeCommand(cmd), false);
 
-    // TODO: re-parent and re-name toplevel node
 #else // PIXMAYA_FORCE_MAYA_REFERENCES
     // We have to create the new assembly node with the assembly command as
     // opposed to using MDagModifier's createNode() or any other method. That
@@ -664,3 +664,39 @@ PxrUsdMayaTranslatorModelAssembly::ReadAsProxy(
 
     return true;
 }
+
+/* static */
+bool
+PxrUsdMayaTranslatorModelAssembly::CreateNativeMayaRef(
+    const UsdPrim& prim,
+    const std::string& mayaFilePath,
+    PxrUsdMayaPrimReaderContext& context)
+{
+    MStatus status;
+
+    // TODO: implement proper grouping / parenting
+    std::string nameSpace = PxrUsdMayaTranslatorUtil::GetNamespace(prim.GetPath(),
+                                                                   false);
+
+    if (!PxrUsdMayaTranslatorUtil::CreateParentNamespace(nameSpace))
+    {
+        std::string errorMsg = TfStringPrintf(
+                "Error creating parent namespace of: \"%s\"",
+                nameSpace.c_str());
+        MGlobal::displayError(errorMsg.c_str());
+        return false;
+    }
+    MFileIO::reference(mayaFilePath.c_str(), false, false, nameSpace.c_str());
+
+    // We currently always prune, regardless of the mstatus result of this command,
+    // because maya often has errors loading scenes even when they "mostly" load
+    // correctly, and we don't want to bring in the usd-standin version of the
+    // scene in these situations.
+
+    // When we implement proper grouping / parenting, this function may return
+    // false in some situations...
+
+    context.SetPruneChildren(true);
+    return true;
+}
+
