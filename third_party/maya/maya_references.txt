@@ -1,0 +1,50 @@
+Our goal at Luma was to use maya as our primary content authoring tool, but use usd as our means of storing relationships between assets.  However, that means we quickly ran into a problem: there are certain types of maya assets (for instance, rigs) that it will be impractical to completely represent as a pure usd entity.
+
+In order to be able to continue using these assets within a usd framework, we wanted a way to define a "native maya references" - ie, to a .ma or .mb file. Ideally, applications other than maya that encounter such a reference would bring in a "placeholder" pure-usd reprentation for that maya asset... but inside of maya, we would reference in the actual .ma or .mb.
+
+Ie, we want to be able to do something like this:
+
+shot.usd
+    references rig.usd
+
+rig.usd
+    contains pure-usd "static" placeholder representation of rig
+    contains a "maya_reference" tag, pointing to rig.ma
+
+rig.ma
+    contains full, operational maya version of rig
+
+Then, if someone opened "shot.usd" in usdview, they would see the static placeholder representation of the rig contained in rig.usd; but if they open "shot.usd" in maya, then they have a reference to the full "rig.ma" automatically brought in.
+
+However, there is an additional wrinkle: due to scalability issues with assemblies, we wanted to use maya references as our means of bringing in other maya scenes.  And maya references have some differences to usd references: namely, usd references require you to select a single top-level node to bring in, while maya references always bring in ALL nodes; and usd references allow renaming of that top-level node, whereas no nodes brought in from a maya reference may be renamed.
+
+Thefore, if we want the scene representations to remain consistent between maya and non-maya contexts, certain best-practices should be followed in how the native maya references are used - namely, that the usd placeholder file should specify a top-level group to place all nodes in the native maya reference in.
+
+If the maya scene is referenced in, it's entire contents will be placed under
+this top-level group; and since this top-level group is not part of the
+(maya) reference, it may be mapped to a different name when the usd file is
+referenced by other usd files.
+
+The main downside is that it makes the export of the usd placeholder file
+slightly more complicated, as it now needs to create an extra top-level group,
+under which all the usd-baked proxy geo is placed under, that does NOT exist in
+the source maya scene. That is, you want to end up with scenes that look like
+this:
+
+rig.ma
+|SomeGuy
+    |SubTransform
+        |Hand
+            (maya mesh data)
+
+rig.usd
+/NewTopLevelGroup (maya_reference=rig.ma)
+    /SomeGuy
+        /SubTransform
+            /Hand
+                (usd mesh data)
+
+Note that you are not REQUIRED to set up your scenes like this, but it is recommended if you want to ensure similar naming / layout between maya and usd. From a functional level, the usd maya plugin will create a maya reference under any usd prim which has a custom "maya_reference" attribute that looks like this:
+
+    custom asset maya_reference = @/Path/to/maya.mb@
+
