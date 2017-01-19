@@ -48,7 +48,7 @@ namespace {
             return false;
         }
 
-        for (auto i = 0; i < array_count; ++i) {
+        for (auto i = 0u; i < array_count; ++i) {
             timeArray[i].setLength(static_cast<unsigned int>(numTimeSamples));
             valueArray[i].setLength(static_cast<unsigned int>(numTimeSamples));
         }
@@ -98,7 +98,7 @@ namespace {
 
         const auto numTimeSamples = timeSamples.size();
 
-        for (auto i = 0; i < numTimeSamples; ++i) {
+        for (auto i = 0u; i < numTimeSamples; ++i) {
             const auto timeSample = timeSamples[i];
             GfVec2f attrValue;
             if (!usdAttr.Get(&attrValue, timeSample)) {
@@ -127,7 +127,7 @@ namespace {
 
         const auto numTimeSamples = timeSamples.size();
 
-        for (auto i = 0; i < numTimeSamples; ++i) {
+        for (auto i = 0u; i < numTimeSamples; ++i) {
             const auto timeSample = timeSamples[i];
             int attrValue = 0;
             if (!usdAttr.Get(&attrValue, timeSample)) {
@@ -154,7 +154,7 @@ namespace {
 
         const auto numTimeSamples = timeSamples.size();
 
-        for (auto i = 0; i < numTimeSamples; ++i) {
+        for (auto i = 0u; i < numTimeSamples; ++i) {
             const auto timeSample = timeSamples[i];
             GfVec2i attrValue;
             if (!usdAttr.Get(&attrValue, timeSample)) {
