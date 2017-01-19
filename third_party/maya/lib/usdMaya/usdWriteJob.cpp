@@ -103,12 +103,10 @@ bool usdWriteJob::beginJob(bool append)
 
     // Make sure the file name is a valid one with a proper USD extension.
     const std::string iFileExtension = TfStringGetSuffix(mArgs.fileName, '.');
-    if (iFileExtension != PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault &&
-            iFileExtension != PxrUsdMayaTranslatorTokens->UsdFileExtensionASCII &&
-            iFileExtension != PxrUsdMayaTranslatorTokens->UsdFileExtensionCrate) {
+    if (!UsdStage::IsSupportedFile(mArgs.fileName)) {
         mArgs.fileName = TfStringPrintf("%s.%s",
-                                   TfStringGetBeforeSuffix(mArgs.fileName, '.').c_str(),
-                                   PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault.GetText());
+                                        TfStringGetBeforeSuffix(mArgs.fileName, '.').c_str(),
+                                        PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault.GetText());
     }
 
     MGlobal::displayInfo("usdWriteJob::beginJob: Create stage file "+MString(mArgs.fileName.c_str()));
