@@ -1319,9 +1319,10 @@ PxrUsdMayaUtil::MDagPathToString(
     // We may want to have another option that allows us to drop namespace's
     // instead of making them part of the path.
     std::replace( usdPathStr.begin(), usdPathStr.end(), ':', '_'); // replace namespace ":" with "_"
-    // Replacing characters because of underworld
+    // Replacing characters because of underworld (transform|shapeNode->|underWorldNode)
+    // Because maya inserts "->|", we can safely eliminate both the "-" and ">"
     usdPathStr = std::string(usdPathStr.begin(), std::remove( usdPathStr.begin(), usdPathStr.end(), '-'));
-    std::replace(usdPathStr.begin(), usdPathStr.end(), '>', '/');
+    usdPathStr = std::string(usdPathStr.begin(), std::remove( usdPathStr.begin(), usdPathStr.end(), '>'));
     return usdPathStr;
 }
 
