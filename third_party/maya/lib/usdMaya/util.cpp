@@ -1064,7 +1064,7 @@ PxrUsdMayaUtil::MDagPathToString(const MDagPath& dagPath)
     std::replace( usdPathStr.begin(), usdPathStr.end(), ':', '_'); // replace namespace ":" with "_"
     // Replacing characters because of underworld
     usdPathStr = std::string(usdPathStr.begin(), std::remove( usdPathStr.begin(), usdPathStr.end(), '-'));
-    usdPathStr = std::string(usdPathStr.begin(), std::remove( usdPathStr.begin(), usdPathStr.end(), '>'));
+    std::replace(usdPathStr.begin(), usdPathStr.end(), '>', '/');
     return usdPathStr;
 }
 
