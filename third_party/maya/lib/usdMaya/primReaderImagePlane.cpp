@@ -13,7 +13,7 @@ PXRUSDMAYA_DEFINE_READER(UsdGeomImagePlane, args, context)
 {
     const UsdPrim& usdPrim = args.GetUsdPrim();
     const auto& parent = usdPrim.GetParent();
-    const auto& grandParent = usdPrim.GetParent();
+    const auto& grandParent = parent.GetParent();
     MObject parentNode = MObject::kNullObj;
     bool isCompacted = false;
     // We want to call the imageplane function on a camera shape always, because that's going to be the
@@ -35,7 +35,14 @@ PXRUSDMAYA_DEFINE_READER(UsdGeomImagePlane, args, context)
         isCompacted = true;
     // No they were not, this will be equal to the camera shape path
     } else if (grandParent && grandParent.IsA<UsdGeomCamera>()) {
-        parentNode = context->GetMayaNode(grandParent.GetPath(), true);
+        const auto transformObject = context->GetMayaNode(grandParent.GetPath(), true);
+        MStatus status;
+        MFnDagNode transformNode(transformObject, &status);
+        if (!status) { return false; }
+        MDagPath transformPath = transformNode.dagPath();
+        status = transformPath.extendToShapeDirectlyBelow(0);
+        if (!status) { return false; }
+        parentNode = transformPath.node();
     }
     if (parentNode == MObject::kNullObj || !parentNode.hasFn(MFn::kCamera)) {
         return false;
