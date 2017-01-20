@@ -39,7 +39,8 @@ PXRUSDMAYA_DEFINE_READER(UsdGeomImagePlane, args, context)
         MStatus status;
         MFnDagNode transformNode(transformObject, &status);
         if (!status) { return false; }
-        MDagPath transformPath = transformNode.dagPath();
+        MDagPath transformPath;
+        transformNode.getPath(transformPath);
         status = transformPath.extendToShapeDirectlyBelow(0);
         if (!status) { return false; }
         parentNode = transformPath.node();
