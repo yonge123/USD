@@ -116,7 +116,8 @@ JobExportArgs::JobExportArgs()
         renderLayerMode(PxUsdExportJobArgsTokens->defaultLayer),
         exportVisibility(true),
         exportRootPath(""),
-        exportRootSdfPath(SdfPath())
+        exportRootSdfPath(SdfPath()),
+        handleUsdNamespaces(false)
 {
 }
 
@@ -167,6 +168,9 @@ void JobExportArgs::parseSingleOption(const MStringArray& theOption)
     }
     else if (theOption[0] == MString("root")) {
         exportRootPath = theOption[1].asChar();
+    }
+    else if (theOption[0] == MString("handleUsdNamespaces")) {
+        handleUsdNamespaces = theOption[1].asInt();
     }
 }
 

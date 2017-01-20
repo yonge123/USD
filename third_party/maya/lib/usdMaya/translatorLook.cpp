@@ -307,6 +307,7 @@ PxrUsdMayaTranslatorLook::ExportShadingEngines(
         const PxrUsdMayaUtil::ShapeSet& bindableRoots,
         const TfToken& shadingMode,
         bool mergeTransformAndShape,
+        bool handleUsdNamespaces,
         SdfPath overrideRootPath)
 {
     if (shadingMode == PxrUsdMayaShadingModeTokens->none) {
@@ -324,6 +325,7 @@ PxrUsdMayaTranslatorLook::ExportShadingEngines(
                     shadingEngine,
                     stage,
                     mergeTransformAndShape,
+                    handleUsdNamespaces,
                     bindableRoots,
                     overrideRootPath);
 

@@ -49,6 +49,7 @@
 #include <maya/MString.h>
 #include <maya/MTime.h>
 
+
 #include <string>
 #include <unordered_map>
 
@@ -1054,10 +1055,266 @@ _IsShape(const MDagPath& dagPath) {
     return (numberOfShapesDirectlyBelow == 1);
 }
 
-std::string
-PxrUsdMayaUtil::MDagPathToString(const MDagPath& dagPath)
+MObject
+PxrUsdMayaUtil::GetReferenceNode(const MString& referencedNodeName)
 {
-    std::string usdPathStr(dagPath.fullPathName().asChar());
+    MStatus status;
+
+    // Don't know how to query a node's reference using OpenMaya
+    MString cmd("referenceQuery -referenceNode \"");
+    cmd += referencedNodeName;
+    cmd += "\";";
+    MString refNodeName = MGlobal::executeCommandStringResult(
+            cmd, false, false, &status);
+    // If the node is NOT from a ref - ie, '|persp' - then the command will error.
+    // This command is supposed to "check" if a node is referenced, so this is
+    // "normal" behavior, so don't use CHECK_MSTATUS
+    if (!status || refNodeName.length() == 0) return MObject::kNullObj;
+
+    MObject mObj;
+    MSelectionList selectionList;
+    status = selectionList.add(refNodeName);
+    CHECK_MSTATUS_AND_RETURN(status, MObject::kNullObj);
+    status = selectionList.getDependNode(0, mObj);
+    CHECK_MSTATUS_AND_RETURN(status, MObject::kNullObj);
+    return mObj;
+}
+
+MObject
+PxrUsdMayaUtil::GetReferenceNode(const MObject& mobj)
+{
+    MStatus status;
+    if (mobj.hasFn(MFn::kDagNode)) {
+        MFnDagNode mfn(mobj, &status);
+        CHECK_MSTATUS_AND_RETURN(status, MObject::kNullObj);
+        if (!mfn.isFromReferencedFile()) return MObject::kNullObj;
+        return GetReferenceNode(mfn.partialPathName());
+    }
+    else {
+        MFnDependencyNode mfn(mobj, &status);
+        CHECK_MSTATUS_AND_RETURN(status, MObject::kNullObj);
+        if (!mfn.isFromReferencedFile()) return MObject::kNullObj;
+        return GetReferenceNode(mfn.name());
+    }
+}
+
+bool
+PxrUsdMayaUtil::IsUsdReference(const MObject& mobj)
+{
+    // Would like to know a way to directly query a reference for what file type
+    // or translator was used to create it; however, since no such method seems
+    // to exist, we fall back on using usdTranslator::identifyFile. This is not
+    // foolproof, as in theory, there could be multiple translators registered
+    // for .usd files...
+    MStatus status;
+    MFnReference mfnRef(mobj, &status);
+    if (!status) return false;
+    MString fileName = mfnRef.fileName(
+            true, // resolvedName
+            true,  // includePath
+            false, // includeCopyNumber,
+            &status);
+    CHECK_MSTATUS_AND_RETURN(status, false);
+    return UsdStage::IsSupportedFile(fileName.asChar());
+}
+
+bool
+PxrUsdMayaUtil::IsNativeMayaReference(const MObject& mobj)
+{
+    MStatus status;
+    MFnReference mfnRef(mobj, &status);
+    if (!status) return false;
+    MString fileName = mfnRef.fileName(
+            true, // resolvedName
+            true,  // includePath
+            false, // includeCopyNumber,
+            &status);
+    CHECK_MSTATUS_AND_RETURN(status, false);
+
+    std::string extension = TfStringToLower(TfStringGetSuffix(fileName.asChar()));
+    if (extension != "ma" && extension != "mb")
+    {
+        return false;
+    }
+}
+
+std::vector<MObject>
+PxrUsdMayaUtil::FullReferenceChain(const MObject& origRefObj)
+{
+    MStatus status;
+    MObject currentRefObj = origRefObj;
+    std::vector<MObject> refs;
+    MFnReference mfnRef;
+
+    while (!currentRefObj.isNull()) {
+        status = mfnRef.setObject(currentRefObj);
+        if (!status) break;
+        refs.push_back(currentRefObj);
+        currentRefObj = mfnRef.parentReference(&status);
+        if (!status) break;
+    }
+    return refs;
+}
+
+// TODO: either get some sort of proof this works, or go to a system where
+// we store MObject => original USD path mapping. Additional considerations
+// are the fact that top-level-reference nodes may be reparented to a
+// non-referenced node (though THAT node may subsequently saved to a scene
+// which IS referenced, so...)
+
+// TODO: figure out what to do with a USD reference to an abc file - these may
+// "look" like a abc reference (because of it's extension) in maya... because
+// I don't know of a way to query the ACTUAL file translator used to create
+// a reference!
+
+// TODO: make work with assemblies?
+std::string
+PxrUsdMayaUtil::GetUsdNamespace(const MObject& mobj)
+{
+    // Ok, the conceptual goal here is that, if a node was originally a usd
+    // node, but had namespaces added by the usd-maya plugin, that on export,
+    // we strip out the namespaces we added, so we end up with the same original
+    // usd path on export. (Ie, round-tripping.)
+
+    // If the node is the direct result of a usd assembly / reference, (and
+    // all of it's parent assemblies / references are usd assemblies /
+    // references) then the logic becomes simple: usd has no namespaces (ie,
+    // you can't have a ':' in the name), so any namespaces MUST have been
+    // added by the usd-maya plugin, and we can strip ALL namespaces to end up
+    // with the original path.
+
+    // However, the introduction of native-maya-references complicates things
+    // slightly.  As soon as we have a native maya file, it might introduce
+    // arbitrary namespaces of it's own... so the only safe thing to do is
+    // to strip out the namespace assigned to the native maya reference itself,
+    // but nothing else.
+
+    // An additional wrinkle is the mixing of multiple levels of referencing,
+    // both usd and native-maya. Ie, say we have this referencing chain
+    // (from top to bottom):
+    //
+    //    usd1 (ns: None) => maya2 (ns: top:mayaObj) => maya3 (ns: subMaya)
+    //
+    // The "maya3" reference (whose total namespace is "top:mayaObj:subMaya")
+    // was created by a normal maya reference in "maya2" - and so it's "subMaya"
+    // namespace has (potentially) no relationship to USD paths, and so must
+    // be preserved to be safe.  The maya2 reference, however, is a "native maya"
+    // reference created by usd - and so it's namespace (top:mayaObj) is "safe"
+    // to remove from all it's objects (and all the objects in it's
+    // subreferences, ie, maya3).
+
+    // Now consider this chain:
+    //    usd1 (ns: None) => maya2 (ns: top:mayaObj) => maya3 (ns: subMaya) => usd4 (ns: None)
+    // For objects in usd3, it is NOT safe to strip all namespaces, as the
+    // "subMaya" part does not come from usd. However, it should be safe to strip
+    // the namespace from maya2.
+
+    // I think the common logic here is that we go to the top of the reference
+    // chain, and keep going downstream, looking for non-usd refs. If ALL the
+    // refs are USD, we can strip all namespaces from this node. If we find at
+    // least one USD ref, stop at the first non-usd ref - if THAT is a maya ref,
+    // then it is usd-native-maya ref, and we assume we can strip that ref's
+    // namespace.
+
+    // Finally, if it's a dag node, these rules apply ONLY for the node name
+    // of this exact node - to get the full dag path, we have to repeat this
+    // process for all parent nodes.
+
+    MStatus status;
+
+    MFnDependencyNode mfnDep(mobj, &status);
+    if (!status) return "";
+
+    std::string name = TfStringTrim(mfnDep.name().asChar(), ":");
+
+    // If there's no namespace, no sense worrying about anything else!
+    size_t last_colon = name.rfind(':');
+    if (last_colon == std::string::npos) return "";
+
+    MObject refObj = GetReferenceNode(mobj);
+    if (refObj.isNull()) return "";
+
+    std::vector<MObject> refs = FullReferenceChain(refObj);
+    bool foundUsd = false;
+    MObject mayaRefMObj;
+
+    // refs are in reverse order, from innermost to outermost (bottom to top)
+    for (auto reverseIt = refs.rbegin(); reverseIt != refs.rend(); ++reverseIt)
+    {
+        MObject& refMObj = *reverseIt;
+        if(IsUsdReference(refMObj)) {
+            foundUsd = true;
+        }
+        else if(IsNativeMayaReference(refMObj)) {
+            if (foundUsd) {
+                mayaRefMObj = refMObj;
+            }
+            break;
+        }
+        else {
+            // If we found something other than a maya or USD ref, assume we alter
+            // touch anything
+            return "";
+        }
+    }
+
+    if (!mayaRefMObj.isNull()) {
+        // We found a maya ref, that has ONLY usd refs above it - strip it's
+        // namespace, and nothing else...
+        MFnReference mfnRef(mayaRefMObj, &status);
+        CHECK_MSTATUS_AND_RETURN(status, "");
+        std::string toStrip = TfStringTrimLeft(mfnRef.associatedNamespace(false, &status).asChar(),
+                                               ":");
+        if (toStrip.back() != ':') toStrip += ':';
+        if (!status) return "";
+        if (TfStringStartsWith(name, toStrip)) {
+            return toStrip;
+        }
+    }
+
+    if (foundUsd) {
+        // If foundUsd is True, but usdMayaRef wasn't set, then ALL refs were
+        // usd refs, and we assume that usd added ALL namespaces
+        return name.substr(0, last_colon+1);
+    }
+    return "";
+}
+
+std::string
+PxrUsdMayaUtil::MDagPathToString(
+        const MDagPath& dagPath,
+        bool stripUsdNamespaces)
+{
+    std::string usdPathStr;
+    if (stripUsdNamespaces) {
+        // For each node in the dag path, strip usd-added namespaces...
+        MDagPath remainingPath = dagPath;
+        std::vector<std::string> pathElements;
+        while (remainingPath.length())
+        {
+            MObject mobj = remainingPath.node();
+            remainingPath.pop();
+            // Due to underworld nodes, it's possible to get an "underworld root"
+            // "node" which has no name...
+            std::string nodeName = MFnDependencyNode(mobj).name().asChar();
+            if (!nodeName.length()) continue;
+            std::string toStrip = GetUsdNamespace(mobj);
+            if (toStrip.length()) {
+                nodeName = nodeName.substr(toStrip.length());
+            }
+            pathElements.push_back(nodeName);
+        }
+        // Add a final empty string, so after joining, we have a leading "/"
+        pathElements.push_back("");
+
+        // The path elements are in reverse order, so join with the reversed
+        // iterator...
+        usdPathStr = TfStringJoin(pathElements.rbegin(), pathElements.rend(), "/");
+    }
+    else {
+        usdPathStr = dagPath.fullPathName().asChar();
+    }
+
     std::replace( usdPathStr.begin(), usdPathStr.end(), '|', '/');
     // We may want to have another option that allows us to drop namespace's
     // instead of making them part of the path.
@@ -1069,9 +1326,12 @@ PxrUsdMayaUtil::MDagPathToString(const MDagPath& dagPath)
 }
 
 SdfPath
-PxrUsdMayaUtil::MDagPathToUsdPath(const MDagPath& dagPath, bool mergeTransformAndShape)
+PxrUsdMayaUtil::MDagPathToUsdPath(
+        const MDagPath& dagPath,
+        bool mergeTransformAndShape,
+        bool stripUsdNamespaces)
 {
-    SdfPath usdPath(MDagPathToString(dagPath));
+    SdfPath usdPath(MDagPathToString(dagPath, stripUsdNamespaces));
     if (mergeTransformAndShape && _IsShape(dagPath)) {
         usdPath = usdPath.GetParentPath();
     }
