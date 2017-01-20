@@ -124,7 +124,8 @@ JobExportArgs::JobExportArgs()
         nurbsExplicitUVType(PxUsdExportJobArgsTokens->Uniform),
         exportColorSets(true),
         renderLayerMode(PxUsdExportJobArgsTokens->defaultLayer),
-        exportVisibility(true)
+        exportVisibility(true),
+        handleUsdNamespaces(false)
 {
 }
 
@@ -172,7 +173,10 @@ void JobExportArgs::parseSingleOption(const MStringArray& theOption)
     }
     else if (theOption[0] == MString("frameSample")) {
         frameSamples.insert(theOption[1].asDouble());
-    }    
+    }
+    else if (theOption[0] == MString("handleUsdNamespaces")) {
+        handleUsdNamespaces = theOption[1].asInt();
+    }
 }
 
 

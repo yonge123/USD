@@ -46,6 +46,7 @@ public:
     virtual void DoExport(const UsdStageRefPtr& stage,
                           const PxrUsdMayaUtil::ShapeSet& bindableRoots,
                           bool mergeTransformAndShape,
+                          bool handleUsdNamespaces,
                           const SdfPath& overrideRootPath);
 
     PXRUSDMAYA_API

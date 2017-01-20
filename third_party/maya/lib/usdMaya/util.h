@@ -40,6 +40,7 @@
 #include <maya/MFnDependencyNode.h>
 #include <maya/MFnMesh.h>
 #include <maya/MFnNumericData.h>
+#include <maya/MFnReference.h>
 #include <maya/MGlobal.h>
 #include <maya/MObject.h>
 #include <maya/MPlug.h>
@@ -131,6 +132,8 @@ ConvertInchesToMM(double inches) {
 // seconds per frame
 PXRUSDMAYA_API
 double spf();
+
+MObject GetReferenceNode(const MDagPath& dagPath);
 
 /// Gets the Maya MObject for the node named \p nodeName.
 PXRUSDMAYA_API
@@ -308,17 +311,61 @@ void Connect(
         const MPlug& dstPlug,
         bool clearDstPlug);
 
-std::string MDagPathToUsdPathString(const MDagPath& dagPath);
+
+/// Returns an MObject for the reference node which contains
+/// \p referencedNodeName; the returned node will be null if
+/// \p referencedNodeName is not referenced, or is invalid.
+MObject GetReferenceNode(const MString& referencedNodeName);
+
+/// Returns an MObject for the reference node which contains \p mobj; the
+/// returned node will be null if \p mobj is not referenced, or is invalid.
+MObject GetReferenceNode(const MObject& mobj);
+
+/// Returns true if the reference associated with \p mfnRef is loading a usd
+/// filetype.
+bool IsUsdReference(const MObject& mobj);
+
+/// Returns true if the reference associated with \p mfnRef is loading a
+/// native-maya filetype.
+bool IsNativeMayaReference(const MObject& mobj);
+
+/// If \p origRefObj is the object for a reference node, returns a vector of
+/// MObjects for the references and parent references for that node, starting with
+/// \p origRefObj, and going up to the top-level reference. If it is not a
+/// valid reference node, an empty list is returned.
+std::vector<MObject> FullReferenceChain(const MObject& origRefObj);
+
+/// Returns true if \p dagPath was created by a usd reference or assembly node.
+/// Note that nodes which were IMPORTED from a usd file will still return false.
+bool IsUsdReferenceOrAssemblyNode(const MDagPath& dagPath);
+
+/// For a given node, tries to determine the leading namespaces in the node's
+/// name that were added by USD. This will be always be an empty string if the
+/// node is not from a USD reference or assembly. Nodes IMPORTED from a USD file
+/// are no longer referenced, and will also return an empty string.
+///
+/// Note that for dag nodes, this only applies to THIS node's node-name - parent
+/// nodes will need to have this method called on them to determine which of
+/// THEIR namespaces are from USD.
+std::string GetUsdNamespace(const MObject& mobj);
+
+std::string MDagPathToUsdPathString(const MDagPath& dagPath,
+                                    bool stripUsdNamespaces);
 
 /// For \p dagPath, returns a UsdPath corresponding to it.  
 /// If \p mergeTransformAndShape and the dagPath is a shapeNode, it will return
 /// the same value as MDagPathToUsdPath(transformPath) where transformPath is
-/// the MDagPath for \p dagPath's transform node.
+/// the MDagPath for \p dagPath's transform node. If stripUsdNamespaces, then this
+/// node and all parent nodes will have namespace elements which were added by a
+/// USD reference or assembly (to get back the "original" usd name).
 ///
 /// Elements of the path will be sanitized such that it is a valid SdfPath.
 /// This means it will replace ':' with '_'.
 PXRUSDMAYA_API
-PXR_NS::SdfPath MDagPathToUsdPath(const MDagPath& dagPath, bool mergeTransformAndShape);
+PXR_NS::SdfPath MDagPathToUsdPath(
+            const MDagPath& dagPath,
+            bool mergeTransformAndShape,
+            bool stripUsdNamespaces);
 
 /// Conveniency function to retreive custom data
 PXRUSDMAYA_API
