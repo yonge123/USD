@@ -121,9 +121,7 @@ global proc int usdTranslatorExport (string $parent,
         checkBox -l "Export all cameras" allCamerasCheckBox;
 
         checkBox -l "Handle USD Namespaces"
-            -annotation "For any nodes which come from a USD reference or"
-                " assembly, trip to strip or convert namespaces added by USD,"
-                " so that exported paths match the original USD paths"
+            -annotation "For any nodes which come from a USD reference or assembly, trip to strip or convert namespaces added by USD, so that exported paths match the original USD paths"
             handleUsdNamespacesCheckBox;
 
         optionMenuGrp -l "Render Layer Mode:" renderLayerModePopup;
