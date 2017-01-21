@@ -10,10 +10,10 @@
 
 def "GLOBAL" (
     customData = {
-        string libraryName      = "usdAi"
-        string libraryPath      = "pxr/usd/usdAi"
-        string libraryPrefix  = "Usd"
-        string tokensPrefix   = "UsdAi"
+        string libraryName = "usdAi"
+        string libraryPath = "pxr/usd/usdAi"
+        string libraryPrefix = "Usd"
+        string tokensPrefix = "UsdAi"
         # dictionary libraryTokens = {}
     }
 )
