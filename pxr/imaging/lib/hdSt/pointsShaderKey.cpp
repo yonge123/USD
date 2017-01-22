@@ -21,16 +21,28 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef HD_SUBDIVISION3_H
-#define HD_SUBDIVISION3_H
+#include "pxr/imaging/hdSt/pointsShaderKey.h"
+#include "pxr/base/tf/staticTokens.h"
 
-#include "pxr/imaging/hd/version.h"
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    ((baseGLSLFX,    "points.glslfx"))
+    ((mainVS,        "Point.Vertex"))
+    ((mainFS,        "Point.Fragment"))
+    ((instancing,    "Instancing.Transform"))
+);
 
-class Hd_Subdivision;
+HdSt_PointsShaderKey::HdSt_PointsShaderKey()
+    : glslfx(_tokens->baseGLSLFX)
+{
+    VS[0] = _tokens->instancing;
+    VS[1] = _tokens->mainVS;
+    VS[2] = TfToken();
 
-class Hd_Osd3Factory {
-public:
-    static Hd_Subdivision *CreateSubdivision();
-};
+    FS[0] = _tokens->mainFS;
+    FS[1] = TfToken();
+}
 
-#endif // HD_SUBDIVISION3_H
+HdSt_PointsShaderKey::~HdSt_PointsShaderKey()
+{
+}

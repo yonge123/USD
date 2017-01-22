@@ -31,8 +31,9 @@
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usdShade/tokens.h"
 
-#include "pxr/usd/usdShade/output.h"
 #include "pxr/usd/usdShade/parameter.h"
+#include "pxr/usd/usdShade/output.h"
+    
 
 #include "pxr/base/vt/value.h"
 
@@ -44,7 +45,6 @@
 #include "pxr/base/tf/type.h"
 
 class SdfAssetPath;
-class UsdShadeConnectableAPI;
 
 // -------------------------------------------------------------------------- //
 // SHADER                                                                     //

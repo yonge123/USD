@@ -21,34 +21,24 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef HD_POINTS_SHADER_KEY_H
-#define HD_POINTS_SHADER_KEY_H
+#include <boost/python/def.hpp>
+#include <boost/python/enum.hpp>
 
-#include "pxr/imaging/hd/version.h"
-#include "pxr/imaging/hd/enums.h"
-#include "pxr/imaging/garch/gl.h"
-#include "pxr/base/tf/token.h"
+#include "pxr/usd/usdShade/utils.h"
 
-struct Hd_PointsShaderKey
+using namespace boost::python;
+
+void wrapUsdShadeUtils()
 {
-    Hd_PointsShaderKey();
-    ~Hd_PointsShaderKey();
+    enum_<UsdShadeAttributeType>("AttributeType")
+        .value("Parameter", UsdShadeAttributeType::Parameter)
+        .value("Output", UsdShadeAttributeType::Output)
+        .value("InterfaceAttribute", 
+            UsdShadeAttributeType::InterfaceAttribute)
+        ;
 
-    TfToken const &GetGlslfxFile() const { return glslfx; }
-    TfToken const *GetVS() const  { return VS; }
-    TfToken const *GetTCS() const { return NULL; }
-    TfToken const *GetTES() const { return NULL; }
-    TfToken const *GetGS() const  { return NULL; }
-    TfToken const *GetFS() const  { return FS; }
-    bool IsCullingPass() const { return false; }
-    GLenum GetPrimitiveMode() const { return GL_POINTS; }
-    int16_t GetPrimitiveIndexSize() const { return 1; }
-    HdCullStyle GetCullStyle() const { return HdCullStyleDontCare; }
-    HdPolygonMode GetPolygonMode() const { return HdPolygonModeFill; }
-
-    TfToken glslfx;
-    TfToken VS[3];
-    TfToken FS[2];
-};
-
-#endif  // HD_POINTS_SHADER_KEY
+    def("GetPrefixForAttributeType", 
+        UsdShadeUtilsGetPrefixForAttributeType);
+    def("GetBaseNameAndType", 
+        UsdShadeUtilsGetBaseNameAndType);
+}

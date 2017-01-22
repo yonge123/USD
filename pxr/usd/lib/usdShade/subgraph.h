@@ -37,6 +37,7 @@
 #include "pxr/usd/usdShade/parameter.h"
 #include "pxr/usd/usdShade/output.h"
 
+
 #include "pxr/base/vt/value.h"
 
 #include "pxr/base/gf/vec3d.h"
@@ -56,7 +57,7 @@ class SdfAssetPath;
 ///
 /// A subgraph is a container for shading nodes, as well as other 
 /// subgraphs. It has a public input interface and provides a list of public 
-/// outputs, called terminals.
+/// outputs.
 /// 
 /// <b>Subgraph Interfaces</b>
 /// 
@@ -66,11 +67,12 @@ class SdfAssetPath;
 /// explanation of what the interface provides, and how to construct and
 /// use it to effectively share/instance shader networks.
 /// 
-///    Subgraph Outputs
+/// <b>Subgraph Outputs</b>
 /// 
-/// Outputs on subgraphs typically connect to an output on a shader inside the 
-/// subgraph. 
+/// These behave like outputs on a shader and are typically connected to an 
+/// output on a shader inside the subgraph.
 /// 
+///
 class UsdShadeSubgraph : public UsdTyped
 {
 public:

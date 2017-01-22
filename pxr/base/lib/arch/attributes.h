@@ -30,7 +30,10 @@
 /// This file allows you to define architecture-specific or compiler-specific
 /// options to be used outside lib/arch.
 
+#include "pxr/pxr.h"
 #include "pxr/base/arch/export.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 #if defined(doxygen)
 
@@ -222,26 +225,33 @@
 #   pragma section(".pxrctor", read)
 #   pragma section(".pxrdtor", read)
 
-    // Emit a Arch_ConstructorEntry in the .pxrctor section.
+    // Emit a Arch_ConstructorEntry in the .pxrctor section.  The namespace
+    // and extern are to convince the compiler and linker to leave the object
+    // in the final library/executable instead of stripping it out.  In
+    // clang/gcc we use __attribute__((used)) to do that.
 #   define ARCH_CONSTRUCTOR(_name, _priority, ...) \
         static void _name(__VA_ARGS__); \
+        namespace { \
         __declspec(allocate(".pxrctor")) \
-        static Arch_ConstructorEntry arch_ctor_ ## _name = { \
+        extern const Arch_ConstructorEntry arch_ctor_ ## _name = { \
 	    reinterpret_cast<Arch_ConstructorEntry::Type>(&_name), \
             0u, \
             _priority \
         }; \
+        } \
         static void _name(__VA_ARGS__)
 
     // Emit a Arch_ConstructorEntry in the .pxrdtor section.
 #   define ARCH_DESTRUCTOR(_name, _priority, ...) \
         static void _name(__VA_ARGS__); \
+        namespace { \
         __declspec(allocate(".pxrdtor")) \
-        static Arch_ConstructorEntry arch_dtor_ ## _name = { \
+        extern const Arch_ConstructorEntry arch_dtor_ ## _name = { \
 	    reinterpret_cast<Arch_ConstructorEntry::Type>(&_name), \
             0u, \
             _priority \
         }; \
+        } \
         static void _name(__VA_ARGS__)
 
     // Objects of this type run the ARCH_CONSTRUCTOR and ARCH_DESTRUCTOR
@@ -253,9 +263,13 @@
     };
 
     // Ensure we run constructor/destructors for this library.  We only
-    // need one of these per library so we use selectany.
+    // need one of these per library so we use selectany.  The pragma
+    // prevents optimization from discarding the symbol.
+    extern "C" {
+    __pragma(comment(linker, "/include:_arch_constructor_init"))
     __declspec(selectany)
     Arch_ConstructorInit _arch_constructor_init;
+    }
 
 #elif defined(ARCH_COMPILER_GCC)
 
@@ -274,5 +288,7 @@
 // rather than fail mysteriously at runtime.
 
 #endif
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // ARCH_ATTRIBUTES_H

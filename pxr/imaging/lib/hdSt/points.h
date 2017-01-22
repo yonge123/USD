@@ -54,7 +54,7 @@ struct HdStPointsReprDesc {
 class HdStPoints final : public HdPoints {
 public:
     HF_MALLOC_TAG_NEW("new HdStPoints");
-    HdStPoints(HdSceneDelegate* delegate, SdfPath const& id,
+    HdStPoints(SdfPath const& id,
              SdfPath const& instancerId = SdfPath());
     virtual ~HdStPoints();
 
@@ -62,24 +62,25 @@ public:
     static void ConfigureRepr(TfToken const &reprName,
                               const HdStPointsReprDesc &desc);
 
-    /// Return the dirtyBits mask to be tracked for \p reprName
-    static int GetDirtyBitsMask(TfToken const &reprName);
-
 protected:
-    virtual HdReprSharedPtr const & _GetRepr(
-        TfToken const &reprName, HdChangeTracker::DirtyBits *dirtyBitsState);
+    virtual HdReprSharedPtr const &
+        _GetRepr(HdSceneDelegate *sceneDelegate,
+                 TfToken const &reprName,
+                 HdChangeTracker::DirtyBits *dirtyBitsState) override;
 
-    void _PopulateVertexPrimVars(HdDrawItem *drawItem,
+    void _PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
+                                 HdDrawItem *drawItem,
                                  HdChangeTracker::DirtyBits *dirtyBitsState);
 
-    virtual HdChangeTracker::DirtyBits _GetInitialDirtyBits() const final override;
+    virtual HdChangeTracker::DirtyBits _GetInitialDirtyBits() const override;
 
 private:
     enum DrawingCoord {
         InstancePrimVar = HdDrawingCoord::CustomSlotsBegin
     };
 
-    void _UpdateDrawItem(HdDrawItem *drawItem,
+    void _UpdateDrawItem(HdSceneDelegate *sceneDelegate,
+                         HdDrawItem *drawItem,
                          HdChangeTracker::DirtyBits *dirtyBits);
 
     typedef _ReprDescConfigs<HdStPointsReprDesc> _PointsReprConfig;

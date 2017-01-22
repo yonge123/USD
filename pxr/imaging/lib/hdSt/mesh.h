@@ -30,7 +30,6 @@
 #include "pxr/imaging/hd/drawingCoord.h"
 #include "pxr/imaging/hd/mesh.h"
 #include "pxr/imaging/hd/perfLog.h"
-#include "pxr/imaging/hd/topology.h"
 
 #include "pxr/usd/sdf/path.h"
 #include "pxr/base/vt/array.h"
@@ -39,8 +38,8 @@
 
 class HdSceneDelegate;
 
-typedef boost::shared_ptr<class HdMeshTopology> HdMeshTopologySharedPtr;
 typedef boost::shared_ptr<class Hd_VertexAdjacency> Hd_VertexAdjacencySharedPtr;
+typedef boost::shared_ptr<class HdSt_MeshTopology> HdSt_MeshTopologySharedPtr;
 
 /// \class HdStMeshReprDesc
 ///
@@ -74,28 +73,10 @@ public:
 
     /// Constructor. instancerId, if specified, is the instancer which uses
     /// this mesh as a prototype.
-    HdStMesh(HdSceneDelegate* delegate, SdfPath const& id,
+    HdStMesh(SdfPath const& id,
              SdfPath const& instancerId = SdfPath());
 
     virtual ~HdStMesh();
-
-    /// Returns whether computation of smooth normals is enabled on GPU.
-    static bool IsEnabledSmoothNormalsGPU();
-
-    /// Returns whether quadrangulation is enabled.
-    /// This is used temporarily for testing.
-    static bool IsEnabledQuadrangulationCPU();
-
-    /// Returns whether quadrangulation is enabled.
-    /// This is used temporarily for testing.
-    static bool IsEnabledQuadrangulationGPU();
-
-    static bool IsEnabledQuadrangulation() {
-        return IsEnabledQuadrangulationCPU() || IsEnabledQuadrangulationGPU();
-    }
-
-    /// Returns whether GPU refinement is enabled or not.
-    static bool IsEnabledRefineGPU();
 
     /// Returns whether packed (10_10_10 bits) normals to be used
     static bool IsEnabledPackedNormals();
@@ -107,54 +88,59 @@ public:
                               HdStMeshReprDesc desc1,
                               HdStMeshReprDesc desc2=HdStMeshReprDesc());
 
-    /// Return the dirtyBits mask to be tracked for \p reprName
-    static int GetDirtyBitsMask(TfToken const &reprName);
-
 protected:
-    virtual HdReprSharedPtr const & _GetRepr(
-        TfToken const &reprName, HdChangeTracker::DirtyBits *dirtyBitsState);
+    virtual HdReprSharedPtr const &
+        _GetRepr(HdSceneDelegate *sceneDelegate,
+                 TfToken const &reprName,
+                 HdChangeTracker::DirtyBits *dirtyBitsState) override;
 
     HdChangeTracker::DirtyBits _PropagateDirtyBits(
         HdChangeTracker::DirtyBits dirtyBits);
 
-    bool _UsePtexIndices() const;
+    bool _UsePtexIndices(const HdRenderIndex &renderIndex) const;
 
-    void _UpdateDrawItem(HdDrawItem *drawItem,
+    void _UpdateDrawItem(HdSceneDelegate *sceneDelegate,
+                         HdDrawItem *drawItem,
                          HdChangeTracker::DirtyBits *dirtyBits,
                          bool isNew,
                          HdStMeshReprDesc desc,
                          bool requireSmoothNormals);
 
-    void _UpdateDrawItemGeometricShader(HdDrawItem *drawItem,
+    void _UpdateDrawItemGeometricShader(HdRenderIndex &renderIndex,
+                                        HdDrawItem *drawItem,
                                         HdStMeshReprDesc desc);
 
-    void _SetGeometricShaders();
+    void _SetGeometricShaders(HdRenderIndex &renderIndex);
 
     void _ResetGeometricShaders();
 
-    void _PopulateTopology(HdDrawItem *drawItem,
+    void _PopulateTopology(HdSceneDelegate *sceneDelegate,
+                           HdDrawItem *drawItem,
                            HdChangeTracker::DirtyBits *dirtyBits,
                            HdStMeshReprDesc desc);
 
     void _PopulateAdjacency();
 
-    void _PopulateVertexPrimVars(HdDrawItem *drawItem,
+    void _PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
+                                 HdDrawItem *drawItem,
                                  HdChangeTracker::DirtyBits *dirtyBits,
                                  bool isNew,
                                  HdStMeshReprDesc desc,
                                  bool requireSmoothNormals);
 
-    void _PopulateFaceVaryingPrimVars(HdDrawItem *drawItem,
+    void _PopulateFaceVaryingPrimVars(HdSceneDelegate *sceneDelegate,
+                                      HdDrawItem *drawItem,
                                       HdChangeTracker::DirtyBits *dirtyBits,
                                       HdStMeshReprDesc desc);
 
-    void _PopulateElementPrimVars(HdDrawItem *drawItem,
+    void _PopulateElementPrimVars(HdSceneDelegate *sceneDelegate,
+                                  HdDrawItem *drawItem,
                                   HdChangeTracker::DirtyBits *dirtyBits,
                                   TfTokenVector const &primVarNames);
 
     int _GetRefineLevelForDesc(HdStMeshReprDesc desc);
 
-    virtual HdChangeTracker::DirtyBits _GetInitialDirtyBits() const final override;
+    virtual HdChangeTracker::DirtyBits _GetInitialDirtyBits() const override;
 
 private:
     enum DrawingCoord {
@@ -170,7 +156,7 @@ private:
         DirtyPointsIndices  = (DirtyHullIndices   << 1)
     };
 
-    HdMeshTopologySharedPtr _topology;
+    HdSt_MeshTopologySharedPtr _topology;
     Hd_VertexAdjacencySharedPtr _vertexAdjacency;
 
     HdTopology::ID _topologyId;
