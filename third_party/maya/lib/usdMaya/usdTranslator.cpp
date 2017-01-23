@@ -150,8 +150,14 @@ usdTranslator::identifyFile(
         short size) const
 {
     std::string fileName(file.fullName().asChar());
+
     if(UsdStage::IsSupportedFile(fileName))
     {
+        // leave directly imported/referenced alembic files to the alembic translator
+        std::string fileExtension = SdfFileFormat::GetFileExtension(fileName);
+        if (fileExtension == "abc") {
+            return kNotMyFileType;
+        }
         return kIsMyFileType;
     }
     return kNotMyFileType;
