@@ -46,5 +46,5 @@ rig.usd
 
 Note that you are not REQUIRED to set up your scenes like this, but it is recommended if you want to ensure similar naming / layout between maya and usd. From a functional level, the usd maya plugin will create a maya reference under any usd prim which has a custom "maya_reference" attribute that looks like this:
 
-    custom asset maya_reference = @/Path/to/maya.mb@
+    custom asset maya:reference = @/Path/to/maya.mb@
 
