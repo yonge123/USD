@@ -3,7 +3,6 @@
     "This file describes various Arnold USD schemata for code generation."
     subLayers = [
         @../usd/schema.usda@,
-        @../usdGeom/schema.usda@,
         @../usdShade/schema.usda@
     ]
 )
@@ -12,6 +11,9 @@ def "GLOBAL" (
     customData = {
         string libraryName = "usdAi"
         string libraryPath = "pxr/usd/usdAi"
+        # Because I'm including the "Ai" prefix in the schema class names, I'm
+        # omitting it from the library prefix so the classes don't end up with
+        # names like "UsdAiAiShader".
         string libraryPrefix = "Usd"
         string tokensPrefix = "UsdAi"
         # dictionary libraryTokens = {}
@@ -20,155 +22,9 @@ def "GLOBAL" (
 {
 }
 
-class "AiShape" (
-    inherits = </Gprim>
-    doc = """Non-concrete base schema class for Arnold shape nodes."""
-) {
-    bool opaque = true (
-        doc = """Whether the object is considered to be fully opaque."""
-    )
-
-    bool matte = false (
-        doc = """Whether the object should be treated as a holdout matte when
-                 tracing primary rays. The matte color is always black, and its
-                 opacity will be preserved."""
-    )
-}
-
-class "AiShader" (
-    doc = """Non-concrete base schema class for Arnold shader nodes."""
+class AiShader "AiShader" (
+    doc = """Represents an Arnold shader node."""
     inherits = </Shader>
-) {
-}
-
-# TODO: Could factor out a more generic "AiVolume" schema.
-#class AiVolume "AiVolume" (
-#    inherits = </AiShape>
-#    doc = """Arnold volumetric shape."""
-#) {
-#    uniform string dso (
-#        doc = """The volume procedural that should be used to load the data."""
-#    )
-#
-#    string data (
-#        doc = """Custom parameter data string for the volume procedural."""
-#    )
-#
-#    
-#}
-
-# TODO: Add arnold parameter names as parameter metadata?
-
-class AiVolumeOpenVDB "AiVolumeOpenVDB" (
-    doc = """Arnold volume shape using the `openvdb_volume` procedural."""
-    inherits = </AiShape>
-#    customData = {
-#        string className = "VolumeOpenVDB"
-#    }
-) {
-    asset vdb:filePath (
-        customData = {
-            string apiName = "filePath"
-        }
-        doc = """The location of the volume data file."""
-    )
-
-    uniform string[] vdb:grids (
-        customData = {
-            string apiName = "grids"
-        }
-        doc = """The names of the VDB grids to make available as channels in
-                 the volume shading context."""
-    )
-
-    float stepSize = 0 (
-        doc = """Sampling step size inside the volumne.
-                 I think 0 means automatic."""
-    )
-
-    uniform float boundsSlack = 0 (
-        doc = """I don't know what this is, but it seems to be exported by
-                 both MtoA and KtoA for every volume_openvdb procedural."""
-    )
-
-    uniform bool disableRayExtents = false (
-        doc = """Disable the ray extent optimization for this volume in
-                 order to minimize some types of artifacts that can arise
-                 with large step sizes."""
-    )
-
-    float velocityScale = 0 (
-        doc = """A scale factor for the velocity field. A value of 0 disables
-                 motion blur."""
-    )
-
-    
-}
-
-class AiOpenVDBSimpleShader "AiOpenVDBSimpleShader" (
-    doc = """An OpenVDB shader based on the FumeFX parameter model."""
-    inherits = </AiShader>
-#    customData = {
-#        string className = "OpenVDBSimpleShader"
-#    }
-) {
-    color3f smokeColor = (1, 1, 1) (
-        doc = """Smoke color"""
-    )
-
-    uniform string smokeChannel (
-        doc = """The volume grid channel to use for the smoke.
-                 Corresponds to a grid exported by the AiVolumeOpenVDB node."""
-    )
-
-    float smokeIntensity = 1 (
-        doc = """Smoke intensity"""
-    )
-
-    float anisotropy = 0 (
-        doc = """Shader anisotropy"""
-    )
-
-    color3f fireColor = (1, 1, 1) (
-        doc = """Fire color"""
-    )
-
-    uniform string fireChannel (
-        doc = """The volume grid channel to use for the fire.
-                 Corresponds to a grid exported by the AiVolumeOpenVDB node."""
-    )
-
-    float fireIntensity = 0 (
-        doc = """Fire intensity"""
-    )
-
-    color3f opacity = (1, 1, 1) (
-        doc = """Overall volumetric opacity"""
-    )
-
-    uniform string opacityChannel (
-        doc = """The volume grid channel to use for the volumetric opacity.
-                 Corresponds to a grid exported by the AiVolumeOpenVDB node."""
-    )
-
-    float opacityIntensity = 1 (
-        doc = """Opacity multiplier"""
-    )
-
-    color3f opacityShadow = (1, 1, 1) (
-        doc = """Opacity shadow"""
-    )
-
-    vector3f positionOffset = (0, 0, 0) (
-        doc = """Position offset"""
-    )
-    
-    uniform token interpolation = "trilinear" (
-        allowedTokens = ["closest", "trilinear", "tricubic"]
-        doc = """The interpolation method for the volumetric grid data."""
-    )
-
-    uniform bool compensateScaling = true (
-        doc = """Compensate for scaling"""
-    )
+)
+{
 }
