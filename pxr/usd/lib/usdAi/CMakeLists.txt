@@ -7,15 +7,20 @@ pxr_shared_library(usdAi
         vt
         sdf
         usd
-        usdGeom
         usdShade
 
     PUBLIC_CLASSES
-        aiOpenVDBVolumeShader
         aiShader
-        aiShape
-        aiVolumeOpenVDB
-        tokens
+
+    CPPFILES
+        moduleDeps.cpp
+
+    PYMODULE_CPPFILES
+        module.cpp
+        wrapAiShader.cpp
+
+    PYTHON_FILES
+        __init__.py
 
     RESOURCE_FILES
         plugInfo.json
