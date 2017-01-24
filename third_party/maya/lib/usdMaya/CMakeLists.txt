@@ -67,6 +67,9 @@ pxr_shared_library(${PXR_PACKAGE}
         referenceAssembly
         usdImport
         usdExport
+        usdTranslatorExport
+        usdTranslatorImport
+		usdCacheFormat
         usdTranslator
 
         Chaser

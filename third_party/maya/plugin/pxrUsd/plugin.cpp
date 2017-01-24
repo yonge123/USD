@@ -33,6 +33,9 @@
 #include "usdMaya/pluginStaticData.h"
 #include "usdMaya/usdImport.h"
 #include "usdMaya/usdExport.h"
+#include "usdMaya/usdTranslatorImport.h"
+#include "usdMaya/usdTranslatorExport.h"
+#include "usdMaya/usdCacheFormat.h"
 #include "usdMaya/usdTranslator.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -167,6 +170,18 @@ MStatus initializePlugin(
         status.perror("pxrUsd: unable to register USD translator.");
     }
 
+    if (!status) {
+        status.perror("pxrUsd: unable to register USD Export translator.");
+    }
+
+    // A MPxCacheFormat to save Maya point data to UsdGeomPoints
+	status = plugin.registerCacheFormat("pxrUsdCacheFormat",
+										usdCacheFormat::creator);
+
+    if (!status) {
+        status.perror("pxrUsd: unable to register USD Cache format.");
+    }
+
     return status;
 }
 
@@ -194,6 +209,11 @@ MStatus uninitializePlugin(
     status = plugin.deregisterFileTranslator("pxrUsdExport");
     if (!status) {
         status.perror("pxrUsd: unable to deregister USD Export translator.");
+    }
+
+	status = plugin.deregisterCacheFormat("pxrUsdCacheFormat");
+    if (!status) {
+        status.perror("pxrUsd: unable to deregister USD Cache format.");
     }
 
     status = MGlobal::executeCommand("assembly -e -deregister " + _data.referenceAssembly.typeName);
