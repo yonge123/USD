@@ -17,7 +17,6 @@ pxr_plugin(${PXR_PACKAGE}
         alembicChaser.cpp
         plugin.cpp
         usdTranslator.cpp
-        usdCacheFormat.cpp
 
     PYTHON_FILES
         plugInfo.json
