@@ -126,7 +126,7 @@ try
     }
 
     if (argData.isFlagSet("exportRefsAsInstanceable")) {
-        argData.getFlagArgument("exportRefsAsInstanceable", 0, jobArgs.mergeTransformAndShape);
+        argData.getFlagArgument("exportRefsAsInstanceable", 0, jobArgs.exportRefsAsInstanceable);
     }
 
     if (argData.isFlagSet("exportDisplayColor")) {
