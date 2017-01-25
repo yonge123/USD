@@ -23,16 +23,17 @@ usdCacheFormat::usdCacheFormat() {
 }
 
 usdCacheFormat::~usdCacheFormat() {
-	close();
 }
 
 MString usdCacheFormat::translatorName() {
-	return MString("pxrUsdCacheFormat");			// For presentation in GUI
+	// For presentation in GUI
+	return MString("pxrUsdCacheFormat");
 }
 
 MString usdCacheFormat::extension() {
+	// For filtering display of files on disk
 	return MString(
-	        PxrUsdMayaCacheFormatTokens->UsdFileExtensionDefault.GetText());// For filtering display of files on disk
+	        PxrUsdMayaCacheFormatTokens->UsdFileExtensionDefault.GetText());
 }
 
 bool usdCacheFormat::handlesDescription() {
@@ -112,7 +113,7 @@ MStatus usdCacheFormat::open(const MString& fileName, FileAccessMode mode) {
 		if (mLayerPtr) {
 			// Success, probably pointless to store opened file name
 			if (this->isValid()) {
-				mLayerPtr->SetPermissionToEdit(true);
+				mLayerPtr->SetPermissionToEdit(false);
 				mLayerPtr->SetPermissionToSave(false);
 				mFileName = iFileName;
 				mFileMode = mode;
@@ -137,7 +138,6 @@ MStatus usdCacheFormat::open(const MString& fileName, FileAccessMode mode) {
 void usdCacheFormat::closeLayer()
 {
 	if (mLayerPtr) {
-		mLayerPtr->Clear();
 		mPathMap.clear();
 		mDescript = false;
 		mLayerPtr.Reset();
@@ -146,14 +146,13 @@ void usdCacheFormat::closeLayer()
 
 void usdCacheFormat::close()
 {
-	// Maya can call close directly but we need to control when we dump a layer if ever
+	// Maya can call close file directly but we need to control when we dump a layer if ever
 }
 
 MStatus usdCacheFormat::isValid() {
 	// Check that the actual structures are actually there
 	if (mLayerPtr) {
-		this->readMetadata();
-		return MS::kSuccess;
+		return this->readHeader();
 	} else {
 		return MS::kFailure;
 	}
@@ -188,7 +187,7 @@ MStatus usdCacheFormat::rewind() {
 	if (mLayerPtr) {
 		// Do we want to refresh if layer changed on disk?
 		// mLayerPtr->Reload();
-		// Should we even do anythin
+		// Should we even do anything ?
 		if (mLayerPtr->HasStartTimeCode()) {
 			mCurrentTime = mLayerPtr->GetStartTimeCode();
 			return MS::kSuccess;
@@ -197,6 +196,21 @@ MStatus usdCacheFormat::rewind() {
 		}
 	} else {
 		return MS::kFailure;
+	}
+}
+
+SdfPrimSpecHandle usdCacheFormat::addPrim(const SdfPath& specPath,
+                                          const SdfSpecifier spec,
+                                          const std::string& typeName) {
+	if (specPath.IsPrimPath()) {
+		SdfPrimSpecHandle parent = this->addPrim(specPath.GetParentPath(), spec, typeName);
+		if (parent) {
+			return SdfPrimSpec::New(parent, specPath.GetName(), spec, typeName);
+		} else {
+			return SdfPrimSpec::New(mLayerPtr, specPath.GetName(), spec, typeName);
+		}
+	} else {
+		return SdfPrimSpecHandle();
 	}
 }
 
@@ -222,17 +236,18 @@ SdfPath usdCacheFormat::addChannel(const MString& channelName,
 	cachePrimPathStr = TfStringReplace(cachePrimPathStr, ":", "_");
 	if (!SdfPath::IsValidPathString(cachePrimPathStr)) {
 		MGlobal::displayError(
-				"usdCacheFormat::writeDescription: Can't make a valid layer specification path from "
+				"usdCacheFormat::writeDescription: Can't make a valid prim spec path from "
 						+ MString(mayaDag.c_str()));
 		return SdfPath();
 	}
 
-	SdfPath specPath(cachePrimPathStr);
+	SdfPath specPath = SdfPath(cachePrimPathStr).GetPrimPath();
 	SdfPrimSpecHandle geomPointsSpec = mLayerPtr->GetPrimAtPath(specPath);
 	if (not geomPointsSpec) {
-		// Declare "Points" or just a generic typeless prim for over
-		geomPointsSpec = SdfPrimSpec::New(mLayerPtr, specPath.GetString(),
-				SdfSpecifier::SdfSpecifierOver, "");
+		// No SdfPrimSpec declared yet we need to declare it
+		// Need an absolute path
+		specPath = specPath.MakeAbsolutePath(SdfPath::AbsoluteRootPath());
+		geomPointsSpec = this->addPrim(specPath, SdfSpecifierOver, "");
 	}
 	if (not geomPointsSpec) {
 		MGlobal::displayError(
@@ -494,17 +509,18 @@ MStatus usdCacheFormat::findTime(MTime& time, MTime& foundTime) {
 		mCurrentTime = lowerTime;
 		return MS::kSuccess;
 	} else {
-		this->rewind();
+		// this->rewind();
 		return MS::kFailure;
 	}
 }
 
 MStatus usdCacheFormat::readNextTime(MTime& foundTime) {
-	// Or use UsdTimeCode SafeStep ?
-	// double epsilonTime = mLayerPtr->GetFramePrecision();
 	// It's 1 at 6000 fps here. Maya seems to only use this setting
-	// when communicating with cache, so a fraction of a frame.
-	// Note: never seems to be called?
+	// when communicating with cache, so it's 1/250th of a frame
+	// at actual 24fps. Is it small enough for our needs, it must be small
+	// enough not to overshoot a possible sub frame sample.
+	// Or use UsdTimeCode SafeStep or calculate it from the SdfLayer
+	// FramePrecision field ?
 	double epsilonTime = 1;
 	double seekTime = mCurrentTime;
 	double lowerTime = mCurrentTime;
@@ -518,7 +534,7 @@ MStatus usdCacheFormat::readNextTime(MTime& foundTime) {
 			return MS::kSuccess;
 		}
 	}
-	MGlobal::displayError(MString("usdCacheFormat::readNextTime failure for ")+seekTime);
+	// MGlobal::displayError(MString("usdCacheFormat::readNextTime failure for ")+seekTime);
 	return MS::kFailure;
 }
 
@@ -577,7 +593,7 @@ void usdCacheFormat::endWriteChunk() {
 }
 
 MStatus usdCacheFormat::beginReadChunk() {
-	// Never seen it get called
+	// Nothing to do
 	return MS::kSuccess;
 }
 
