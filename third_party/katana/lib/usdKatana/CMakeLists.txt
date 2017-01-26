@@ -38,6 +38,7 @@ pxr_shared_library(${PXR_PACKAGE}
         usdInPrivateData
         usdInPluginRegistry
 
+        readAiProcedural
         readBasisCurves
         readBlindData
         readCamera
