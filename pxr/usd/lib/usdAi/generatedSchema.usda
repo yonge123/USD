@@ -17,3 +17,11 @@ class AiShader "AiShader" (
     )
 }
 
+class "AiMaterialAPI" (
+    doc = "API for Material prims encapsulating Arnold shading networks."
+)
+{
+    rel ai:displacement = None
+    rel ai:surface = None
+}
+

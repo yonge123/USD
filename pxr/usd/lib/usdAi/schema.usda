@@ -28,3 +28,18 @@ class AiShader "AiShader" (
 )
 {
 }
+class "AiMaterialAPI" (
+    doc = """API for Material prims encapsulating Arnold shading networks."""
+) {
+    rel ai:surface (
+        customData = {
+            string apiName = "surface"
+        }
+    )
+
+    rel ai:displacement (
+        customData = {
+            string apiName = "displacement"
+        }
+    )
+}
