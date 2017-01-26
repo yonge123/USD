@@ -10,6 +10,8 @@ pxr_shared_library(usdAi
         usdShade
 
     PUBLIC_CLASSES
+        tokens
+        aiMaterialAPI
         aiShader
 
     CPPFILES
@@ -17,7 +19,9 @@ pxr_shared_library(usdAi
 
     PYMODULE_CPPFILES
         module.cpp
+        wrapAiMaterialAPI.cpp
         wrapAiShader.cpp
+        wrapTokens.cpp
 
     PYTHON_FILES
         __init__.py
@@ -26,4 +30,3 @@ pxr_shared_library(usdAi
         plugInfo.json
         generatedSchema.usda
 )
-
