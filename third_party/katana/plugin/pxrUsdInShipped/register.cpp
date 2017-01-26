@@ -85,6 +85,7 @@ void registerPlugins()
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdGeomPoints>("PxrUsdInCore_PointsOp");
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdGeomBasisCurves>("PxrUsdInCore_BasisCurvesOp");
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdShadeLook>("PxrUsdInCore_LookOp");
+    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdShadeMaterial>("PxrUsdInCore_LookOp");
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdGeomCamera>("PxrUsdInCore_CameraOp");
 
     // register a default op to handle prims with unknown types
