@@ -41,7 +41,12 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \hideinitializer
 #define USDAI_TOKENS \
     ((aiDisplacement, "ai:displacement")) \
-    ((aiSurface, "ai:surface"))
+    ((aiSurface, "ai:surface")) \
+    (data) \
+    (dso) \
+    (loadAtInit) \
+    (stepSize) \
+    ((userPrefix, "user:"))
 
 /// \anchor UsdAiTokens
 ///
@@ -65,6 +70,11 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// The tokens are:
 /// \li <b>aiDisplacement</b> - UsdAiMaterialAPI
 /// \li <b>aiSurface</b> - UsdAiMaterialAPI
+/// \li <b>data</b> - UsdAiProcedural
+/// \li <b>dso</b> - UsdAiProcedural
+/// \li <b>loadAtInit</b> - UsdAiProcedural
+/// \li <b>stepSize</b> - UsdAiVolume
+/// \li <b>userPrefix</b> - The attribute prefix used to qualify user parameters on nodes using the AiNodeAPI.
 TF_DECLARE_PUBLIC_TOKENS(UsdAiTokens, USDAI_TOKENS);
 
 PXR_NAMESPACE_CLOSE_SCOPE
