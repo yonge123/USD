@@ -82,8 +82,14 @@ MStatus usdCacheFormat::open(const MString& fileName, FileAccessMode mode) {
 		if (mLayerPtr) {
 			mLayerPtr->SetPermissionToEdit(true);
 			mLayerPtr->SetPermissionToSave(true);
-			mFileName = iFileName;
-			mFileMode = mode;
+			// Add cache prim right away because writing cache frame 0 will
+			// happen before writeDefinition is called for the first time
+			const SdfPath specPath = this->findOrAddDefaultPrim();
+			if (not specPath.IsPrimPath()) {
+				MGlobal::displayError(
+					"usdCacheFormat::open: (write) could not find or create the cache default prim.");
+				return MS::kFailure;
+			}
 			return MS::kSuccess;
 		} else {
 			MGlobal::displayError(
@@ -115,8 +121,9 @@ MStatus usdCacheFormat::open(const MString& fileName, FileAccessMode mode) {
 			if (this->isValid()) {
 				mLayerPtr->SetPermissionToEdit(false);
 				mLayerPtr->SetPermissionToSave(false);
-				mFileName = iFileName;
-				mFileMode = mode;
+				// Initialize the channel to attribute path map because reading can
+				// occur without a call to readDescription
+				this->readMetadata();
 				return MS::kSuccess;
 			} else {
 				MGlobal::displayError("usdCacheFormat::open: (read) invalid cache format "
@@ -199,73 +206,28 @@ MStatus usdCacheFormat::rewind() {
 	}
 }
 
-SdfPrimSpecHandle usdCacheFormat::addPrim(const SdfPath& specPath,
-                                          const SdfSpecifier spec,
-                                          const std::string& typeName) {
-	if (specPath.IsPrimPath()) {
-		SdfPrimSpecHandle parent = this->addPrim(specPath.GetParentPath(), spec, typeName);
-		if (parent) {
-			return SdfPrimSpec::New(parent, specPath.GetName(), spec, typeName);
-		} else {
-			return SdfPrimSpec::New(mLayerPtr, specPath.GetName(), spec, typeName);
-		}
+SdfPath usdCacheFormat::findOrAddDefaultPrim() {
+	// We assume one node per file, fixed name used in cache
+	if (mLayerPtr->HasDefaultPrim()) {
+		return SdfPath(mLayerPtr->GetDefaultPrim());
 	} else {
-		return SdfPrimSpecHandle();
+		SdfPrimSpecHandle primSpec = mLayerPtr->GetPrimAtPath(SdfPath("cache"));
+		if (not primSpec) {
+			primSpec = SdfPrimSpec::New(mLayerPtr, "cache", SdfSpecifierDef, "Points");
+		}
+		if (primSpec) {
+			mLayerPtr->SetDefaultPrim(primSpec->GetNameToken());
+			return primSpec->GetPath();
+		} else {
+			return SdfPath();
+		}
 	}
 }
 
-SdfPath usdCacheFormat::addChannel(const MString& channelName,
-		const MString& interpretation,
-		const MCacheFormatDescription::CacheDataType dataType) {
-	const std::string channel(channelName.asChar());
-	std::string mayaDag;
-	const std::string attrName = interpretation.asChar();
-	const std::size_t attrPos = channel.rfind(attrName);
-	if (attrPos != std::string::npos) {
-		mayaDag = channel.substr(0, attrPos - 1);
-	} else {
-		MGlobal::displayError(
-				"usdCacheFormat::writeDescription: Can't extract a maya dag path from channel name "
-						+ channelName
-						+ " and interpretation name "
-						+ interpretation);
-		return SdfPath();
-	}
-	std::string cachePrimPathStr = mayaDag;
-	cachePrimPathStr = TfStringReplace(cachePrimPathStr, "|", "/");
-	cachePrimPathStr = TfStringReplace(cachePrimPathStr, ":", "_");
-	if (!SdfPath::IsValidPathString(cachePrimPathStr)) {
-		MGlobal::displayError(
-				"usdCacheFormat::writeDescription: Can't make a valid prim spec path from "
-						+ MString(mayaDag.c_str()));
-		return SdfPath();
-	}
-
-	SdfPath specPath = SdfPath(cachePrimPathStr).GetPrimPath();
-	SdfPrimSpecHandle geomPointsSpec = mLayerPtr->GetPrimAtPath(specPath);
-	if (not geomPointsSpec) {
-		// No SdfPrimSpec declared yet we need to declare it
-		// Need an absolute path
-		specPath = specPath.MakeAbsolutePath(SdfPath::AbsoluteRootPath());
-		geomPointsSpec = this->addPrim(specPath, SdfSpecifierOver, "");
-	}
-	if (not geomPointsSpec) {
-		MGlobal::displayError(
-				"usdCacheFormat::writeDescription: Could not create a specification to represent "
-						+ MString(specPath.GetString().c_str()));
-		return SdfPath();
-	}
-	if (!SdfAttributeSpec::IsValidName(attrName)) {
-		MGlobal::displayError(
-				"usdCacheFormat::writeDescription: Invalid attribute name "
-						+ MString(attrName.c_str()));
-		return SdfPath();
-	}
-	SdfPath ownerPath = geomPointsSpec->GetPath();
-	SdfPath attrPath = ownerPath.AppendProperty(TfToken(attrName));
-	if (not mLayerPtr->GetAttributeAtPath(attrPath)) {
-		SdfValueTypeName attrType;
-		switch (dataType) {
+SdfValueTypeName usdCacheFormat::mCacheDataTypeToSdfValueTypeName(
+	const MCacheFormatDescription::CacheDataType dataType) {
+	SdfValueTypeName attrType;
+	switch (dataType) {
 		case MCacheFormatDescription::kDouble:
 			attrType = SdfValueTypeNames->Double;
 			break;
@@ -284,25 +246,58 @@ SdfPath usdCacheFormat::addChannel(const MString& channelName,
 		case MCacheFormatDescription::kFloatVectorArray:
 			attrType = SdfValueTypeNames->Vector3fArray;
 			break;
+		case MCacheFormatDescription::kUnknownData:
 		default:
+			break;
+
+	}
+	return attrType;
+}
+
+SdfPath usdCacheFormat::findOrAddAttribute(const std::string& attrName,
+		MCacheFormatDescription::CacheDataType dataType,
+		const SdfPath& primPath) {
+	SdfPrimSpecHandle primSpec = mLayerPtr->GetPrimAtPath(primPath);
+	if (not primSpec) {
+		MGlobal::displayError(
+			"usdCacheFormat::findOrAddAttribute: Invalid owner prim path "
+			+ MString(primPath.GetString().c_str()));
+		return SdfPath();
+	}
+	if (not SdfAttributeSpec::IsValidName(attrName)) {
+		MGlobal::displayError(
+			"usdCacheFormat::findOrAddAttribute: Invalid attribute name "
+			+ MString(attrName.c_str()));
+		return SdfPath();
+	}
+	SdfPath ownerPath = primSpec->GetPath();
+	SdfPath attrPath = ownerPath.AppendProperty(TfToken(attrName));
+	SdfValueTypeName attrType = this->mCacheDataTypeToSdfValueTypeName(dataType);
+	if (not attrType) {
+		MGlobal::displayError(
+			"usdCacheFormat::findOrAddAttribute: Unknown attribute type for "
+			+ MString(attrName.c_str()));
+		return SdfPath();
+	}
+	SdfAttributeSpecHandle attrSpec = mLayerPtr->GetAttributeAtPath(attrPath);
+	if (attrSpec) {
+		if (attrSpec->GetTypeName() != attrType) {
 			MGlobal::displayError(
-					"usdCacheFormat::writeDescription: Unknown attribute type for "
-							+ MString(attrName.c_str()));
+				"usdCacheFormat::findOrAddAttribute: Attribute type mismatch on existing attribute "
+				+ MString(attrName.c_str()));
 			return SdfPath();
 		}
+	} else {
 		// I can get null returns though attribute is there when checking exported file?
-		SdfAttributeSpecHandle attrSpec = SdfAttributeSpec::New(geomPointsSpec,
-				attrName, attrType,
-				SdfVariability::SdfVariabilityVarying,
-				false);
+		attrSpec = SdfAttributeSpec::New(primSpec,
+		                                 attrName,
+		                                 attrType,
+		                                 SdfVariabilityVarying,
+		                                 false);
 	}
 	if (mLayerPtr->GetAttributeAtPath(attrPath)) {
-		// Cache it
-		mPathMap[channelName.asChar()] = attrPath;
 		return attrPath;
 	} else {
-		MGlobal::displayError("usdCacheFormat::writeDescription: Failed to add "
-				+ MString(attrPath.GetString().c_str()));
 		return SdfPath();
 	}
 }
@@ -373,6 +368,13 @@ MStatus usdCacheFormat::writeDescription(
 	}
 	mLayerPtr->SetDocumentation(documentation);
 
+	// We assume one prim per cache, used as default prim
+	const SdfPath specPath = this->findOrAddDefaultPrim();
+	if (not specPath.IsPrimPath()) {
+		MGlobal::displayError(
+			"usdCacheFormat::writeDescription: could not find or create the cache default prim.");
+		return MS::kFailure;
+	}
 	MStatus status = MS::kSuccess;
 	unsigned int channels = description.getNumChannels();
 	for (unsigned i = 0; i < channels; ++i) {
@@ -381,10 +383,17 @@ MStatus usdCacheFormat::writeDescription(
 		// MTime samplingRate = description.getChannelSamplingRate(i);
 		// MTime startTime = description.getChannelStartTime(i);
 		// MTime endTime = description.getChannelEndTime(i);
-		SdfPath attrPath = this->addChannel(description.getChannelName(i),
-				description.getChannelInterpretation(i),
-				description.getChannelDataType(i));
-		if (attrPath.IsEmpty()) {
+		const std::string channelName = description.getChannelName(i).asChar();
+		const std::string attrName = description.getChannelInterpretation(i).asChar();
+		MCacheFormatDescription::CacheDataType attrType = description.getChannelDataType(i);
+		SdfPath attrPath = this->findOrAddAttribute(attrName,
+		                                    attrType,
+		                                    specPath);
+		if (not attrPath.IsEmpty()) {
+			mPathMap[channelName] = attrPath;
+		} else {
+			MGlobal::displayError("usdCacheFormat::writeDescription: Failed to add "
+			                      + MString(attrPath.GetString().c_str()));
 			status = MS::kFailure;
 		}
 	}
@@ -410,12 +419,8 @@ MStatus usdCacheFormat::readDescription(MCacheFormatDescription& description,
 	}
 	// MCacheFormatDescription::kOneFilePerFrame not yet supported
 	description.setDistribution(MCacheFormatDescription::kOneFile);
-	// Store in metadata instead of recalculating, for safety?
 	double timePerFrame = mLayerPtr->GetTimeCodesPerSecond()
 	        / mLayerPtr->GetFramesPerSecond();
-	// Check for problems if cache is written and read in different settings
-	// Maya always seems to use this for passed times but should probably
-	// be stored as metadata on file during writeDescription ?
 	const MTime samplingRate(timePerFrame, mTimeUnit);
 	const MTime startTime(mLayerPtr->GetStartTimeCode(), mTimeUnit);
 	const MTime endTime(mLayerPtr->GetEndTimeCode(), mTimeUnit);
@@ -431,11 +436,11 @@ MStatus usdCacheFormat::readDescription(MCacheFormatDescription& description,
 
 	MStatus status = MS::kSuccess;
 	for (auto& channel : mPathMap) {
-		std::string channelName = channel.first;
-		SdfPath attrPath = channel.second;
+		const std::string channelName = channel.first;
+		const SdfPath attrPath = channel.second;
 		SdfAttributeSpecHandle attrSpec = mLayerPtr->GetAttributeAtPath(attrPath);
 		if (attrSpec) {
-			std::string attrName = attrSpec->GetName();
+			const std::string attrName = attrSpec->GetName();
 			SdfValueTypeName attrType = attrSpec->GetTypeName();
 			MCacheFormatDescription::CacheDataType dataType;
 			if (SdfValueTypeNames->Double == attrType) {
@@ -459,8 +464,13 @@ MStatus usdCacheFormat::readDescription(MCacheFormatDescription& description,
 			MCacheFormatDescription::CacheSamplingType samplingType;
 			samplingType = MCacheFormatDescription::kRegular;
 			description.addChannel(MString(channelName.c_str()),
-			        MString(attrName.c_str()), dataType, samplingType,
-			        samplingRate, startTime, endTime, &status);
+			                       MString(attrName.c_str()),
+			                       dataType,
+			                       samplingType,
+			                       samplingRate,
+			                       startTime,
+			                       endTime,
+			                       &status);
 			if (MS::kSuccess != status) {
 				MGlobal::displayError("usdCacheFormat::readDescription: Failed to map channel "
 						+ MString(channelName.c_str()));
@@ -474,7 +484,11 @@ MStatus usdCacheFormat::readDescription(MCacheFormatDescription& description,
 			continue;
 		}
 	}
-
+	// We set it to know we already initialized the channels dictionnary but we must still
+	// run readDescription and return a MCacheFormatDescription whenever Maya requests it
+	if (MS::kSuccess == status) {
+		mDescript = true;
+	}
 	return status;
 }
 
@@ -492,7 +506,6 @@ MStatus usdCacheFormat::writeTime(MTime& time) {
 }
 
 MStatus usdCacheFormat::readTime(MTime& time) {
-	// Never seen it get called in a read cache
 	time = MTime(mCurrentTime, mTimeUnit);
 	return MS::kSuccess;
 }
@@ -561,6 +574,7 @@ MStatus usdCacheFormat::findChannelName(const MString& name) {
 		mCurrentPath = it->second;
 		return MS::kSuccess;
 	} else {
+		mCurrentPath = SdfPath();
 		MGlobal::displayError(MString("usdCacheFormat::findChannelName failure for ")+ name);
 		return MS::kFailure;
 	}
@@ -603,7 +617,33 @@ void usdCacheFormat::endReadChunk() {
 	mCurrentPath = SdfPath();
 }
 
+SdfPath usdCacheFormat::addCurrentChannel(MCacheFormatDescription::CacheDataType attrType) {
+	// We will need something better if we have attributes with _ in their name
+	const std::string attrName = TfStringGetSuffix(mCurrentChannel, '_');
+	const SdfPath primPath = this->findOrAddDefaultPrim();
+	SdfPath attrPath = this->findOrAddAttribute(attrName,
+	                                        attrType,
+	                                        primPath);
+	if (attrPath.IsEmpty()) {
+		MGlobal::displayError("usdCacheFormat::addCurrentChannel: failed to add "
+		                      + MString(attrName.c_str())
+		                      + " for channel "
+		                      + MString(mCurrentChannel.c_str()));
+	}
+	else {
+		mPathMap[mCurrentChannel] = attrPath;
+	}
+	return attrPath;
+}
+
 MStatus usdCacheFormat::writeInt32(int i) {
+	// Try to add on the fly for writing first frame
+	if (mCurrentPath.IsEmpty()) {
+		mCurrentPath = this->addCurrentChannel(MCacheFormatDescription::kInt32Array);
+		if (mCurrentPath.IsEmpty()) {
+			return MS::kFailure;
+		}
+	}
 	mLayerPtr->SetTimeSample(mCurrentPath, mCurrentTime, i);
 	return MS::kSuccess;
 }
@@ -615,6 +655,12 @@ int usdCacheFormat::readInt32() {
 }
 
 MStatus usdCacheFormat::writeDoubleArray(const MDoubleArray& array) {
+	if (mCurrentPath.IsEmpty()) {
+		mCurrentPath = this->addCurrentChannel(MCacheFormatDescription::kDoubleArray);
+		if (mCurrentPath.IsEmpty()) {
+			return MS::kFailure;
+		}
+	}
 	int size = array.length();
 	VtArray<double> varray(size);
 	array.get(varray.data());
@@ -623,6 +669,12 @@ MStatus usdCacheFormat::writeDoubleArray(const MDoubleArray& array) {
 }
 
 MStatus usdCacheFormat::writeFloatArray(const MFloatArray& array) {
+	if (mCurrentPath.IsEmpty()) {
+		mCurrentPath = this->addCurrentChannel(MCacheFormatDescription::kFloatArray);
+		if (mCurrentPath.IsEmpty()) {
+			return MS::kFailure;
+		}
+	}
 	int size = array.length();
 	VtArray<float> varray(size);
 	array.get(varray.data());
@@ -631,6 +683,12 @@ MStatus usdCacheFormat::writeFloatArray(const MFloatArray& array) {
 }
 
 MStatus usdCacheFormat::writeDoubleVectorArray(const MVectorArray& array) {
+	if (mCurrentPath.IsEmpty()) {
+		mCurrentPath = this->addCurrentChannel(MCacheFormatDescription::kDoubleVectorArray);
+		if (mCurrentPath.IsEmpty()) {
+			return MS::kFailure;
+		}
+	}
 	size_t size = array.length();
 	VtArray<GfVec3d> varray(size);
 	for (size_t i = 0; i < size; i++) {
@@ -641,6 +699,12 @@ MStatus usdCacheFormat::writeDoubleVectorArray(const MVectorArray& array) {
 }
 
 MStatus usdCacheFormat::writeFloatVectorArray(const MFloatVectorArray& array) {
+	if (mCurrentPath.IsEmpty()) {
+		mCurrentPath = this->addCurrentChannel(MCacheFormatDescription::kFloatVectorArray);
+		if (mCurrentPath.IsEmpty()) {
+			return MS::kFailure;
+		}
+	}
 	size_t size = array.length();
 	VtArray<GfVec3f> varray(size);
 	for (size_t i = 0; i < size; i++) {

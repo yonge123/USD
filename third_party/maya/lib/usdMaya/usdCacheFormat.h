@@ -91,19 +91,18 @@ class usdCacheFormat: public MPxCacheFormat {
 		MStatus readChannelName(MString& name);
 
 	private:
-		SdfPrimSpecHandle addPrim(const SdfPath& specPath,
-		                          const SdfSpecifier spec,
-		                          const std::string& typeName);
-		SdfPath addChannel(const MString& channelName,
-		                   const MString& interpretation,
-		                   const MCacheFormatDescription::CacheDataType dataType);
+		SdfPath findOrAddDefaultPrim();
+		SdfValueTypeName mCacheDataTypeToSdfValueTypeName(
+			const MCacheFormatDescription::CacheDataType dataType);
+		SdfPath findOrAddAttribute(const std::string& interpretation,
+		                   MCacheFormatDescription::CacheDataType dataType,
+		                   const SdfPath& primPath);
+		SdfPath addCurrentChannel(MCacheFormatDescription::CacheDataType attrType);
 		void readMetadata();
 		void writeMetadata();
 		void closeLayer();
 
 		std::map<std::string, SdfPath> mPathMap;
-		std::string mFileName;
-		FileAccessMode mFileMode;
 		static const MTime::Unit mTimeUnit = MTime::k6000FPS;
 		SdfLayerRefPtr mLayerPtr;
 		bool mDescript;
