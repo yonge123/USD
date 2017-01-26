@@ -357,10 +357,14 @@ PxrUsdMayaTranslatorModelAssembly::Read(
     MFnDagNode parentMFn(parentNode, &status);
     CHECK_MSTATUS_AND_RETURN(status, false);
     MString parentName = parentMFn.partialPathName();
+    std::string thisScene = MFileIO::currentFile().asChar();
 
     std::string refPath;
 
-    auto isParentPath = [](const std::string& layerPath, const std::vector<std::string>& parentPaths) -> bool {
+    auto isParentPath = [](const std::string& layerPath,
+                           const std::string& thisScene,
+                           const std::vector<std::string>& parentPaths) -> bool {
+        if (layerPath == thisScene) return true;
         for (unsigned int i = 0; i < parentPaths.size(); ++i)
         {
             if (parentPaths[i].empty()) {
@@ -417,7 +421,7 @@ PxrUsdMayaTranslatorModelAssembly::Read(
         const std::string& layerPath = layerSpec->GetLayer()->GetRealPath();
         if (layerPath.empty())
             continue;
-        if (!isParentPath(layerPath, parentRefs))
+        if (!isParentPath(layerPath, thisScene, parentRefs))
         {
             refPath = layerPath;
             break;
