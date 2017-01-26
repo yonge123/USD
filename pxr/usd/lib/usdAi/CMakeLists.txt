@@ -7,12 +7,16 @@ pxr_shared_library(usdAi
         vt
         sdf
         usd
+        usdGeom
         usdShade
 
     PUBLIC_CLASSES
         tokens
         aiMaterialAPI
+        aiNodeAPI
+        aiProcedural
         aiShader
+        aiVolume
 
     CPPFILES
         moduleDeps.cpp
@@ -20,7 +24,10 @@ pxr_shared_library(usdAi
     PYMODULE_CPPFILES
         module.cpp
         wrapAiMaterialAPI.cpp
+        wrapAiNodeAPI.cpp
+        wrapAiProcedural.cpp
         wrapAiShader.cpp
+        wrapAiVolume.cpp
         wrapTokens.cpp
 
     PYTHON_FILES
