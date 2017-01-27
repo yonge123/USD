@@ -71,8 +71,8 @@
 
 
 TF_DEFINE_ENV_SETTING(PIXMAYA_USE_USD_REF_ASSEMBLIES, true,
-                      "Use maya assemblies when importing USD scenes, instead"
-                      " of maya references");
+                      "Use maya assemblies when opening / importing USD scenes,"
+                      " instead of maya references");
 
 TF_DEFINE_ENV_SETTING(PIXMAYA_USE_USD_ASSEM_NAMESPACE, true,
                       "Prefixes unrolled USD assemblies with namespaces");
@@ -1278,6 +1278,7 @@ bool UsdMayaRepresentationHierBase::activate()
     }
     importArgs.fileName = usdFilePath.asChar();
     importArgs.primPath = usdPrimPath.asChar();
+    importArgs.useAssemblies = true;
 
     usdReadJob readJob(variantSetSelections,
                        importArgs,

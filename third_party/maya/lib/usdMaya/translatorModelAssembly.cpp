@@ -307,6 +307,7 @@ PxrUsdMayaTranslatorModelAssembly::Read(
     MObject parentNode,
     const PxrUsdMayaPrimReaderArgs& args,
     PxrUsdMayaPrimReaderContext* context,
+    bool useAssemblies,
     const std::string& assemblyTypeName,
     const std::string& assemblyRep,
     const std::vector<std::string>& parentRefs)
@@ -332,243 +333,251 @@ PxrUsdMayaTranslatorModelAssembly::Read(
         return false;
     }
 
+    // Determine whether to use references or assemblies. If we're already
+    // creating a reference or assembly, do that... otherwise, if we're importing
+    // or opening, respect the PIXMAYA_USE_USD_REF_ASSEMBLIES setting
 
-#if (PIXMAYA_FORCE_MAYA_REFERENCES)
-    // The primitivePath and the topLayerUsd are passed in as options in the
-    // option string; note that this is all the information USD actually needs /
-    // uses... the refPath is actually just a dummy path we need for maya's
-    // referencing system. It needs a path that actually exists on disk, and it
-    // needs to not be the same as the parent reference (or else maya freaks
-    // outs, trying to recursively load the ref).
+    if (MFileIO::isReferencingFile()) useAssemblies = true;
 
-    // Currently, we're just using the next file on the layer stack...
 
-    // (Wanted to look at references, but apparently that's not easy to get?
-    // GetMetadata('references') seems to return an empty list, and
-    // UsdPrim.GetReferences() has this note:
-    //    /// Return a UsdReferences object that allows one to add, remove, or
-    //    /// mutate references <em>at the currently set UsdEditTarget</em>.
-    //    ///
-    //    /// There is currently no facility for \em listing the currently authored
-    //    /// references on a prim... the problem is somewhat ill-defined, and
-    //    /// requires some thought.
+    if (!useAssemblies) {
+        // Use maya references
+        // The primitivePath and the topLayerUsd are passed in as options in the
+        // option string; note that this is all the information USD actually needs /
+        // uses... the refPath is actually just a dummy path we need for maya's
+        // referencing system. It needs a path that actually exists on disk, and it
+        // needs to not be the same as the parent reference (or else maya freaks
+        // outs, trying to recursively load the ref).
 
-    MStatus status;
-    MFnDagNode parentMFn(parentNode, &status);
-    CHECK_MSTATUS_AND_RETURN(status, false);
-    MString parentName = parentMFn.partialPathName();
-    std::string thisScene = MFileIO::currentFile().asChar();
+        // Currently, we're just using the next file on the layer stack...
 
-    std::string refPath;
+        // (Wanted to look at references, but apparently that's not easy to get?
+        // GetMetadata('references') seems to return an empty list, and
+        // UsdPrim.GetReferences() has this note:
+        //    /// Return a UsdReferences object that allows one to add, remove, or
+        //    /// mutate references <em>at the currently set UsdEditTarget</em>.
+        //    ///
+        //    /// There is currently no facility for \em listing the currently authored
+        //    /// references on a prim... the problem is somewhat ill-defined, and
+        //    /// requires some thought.
 
-    auto isParentPath = [](const std::string& layerPath,
-                           const std::string& thisScene,
-                           const std::vector<std::string>& parentPaths) -> bool {
-        if (layerPath == thisScene) return true;
-        for (unsigned int i = 0; i < parentPaths.size(); ++i)
-        {
-            if (parentPaths[i].empty()) {
+        MStatus status;
+        MFnDagNode parentMFn(parentNode, &status);
+        CHECK_MSTATUS_AND_RETURN(status, false);
+        MString parentName = parentMFn.partialPathName();
+        std::string thisScene = MFileIO::currentFile().asChar();
+
+        std::string refPath;
+
+        auto isParentPath = [](const std::string& layerPath,
+                               const std::string& thisScene,
+                               const std::vector<std::string>& parentPaths) -> bool {
+            if (layerPath == thisScene) return true;
+            for (unsigned int i = 0; i < parentPaths.size(); ++i)
+            {
+                if (parentPaths[i].empty()) {
+                    continue;
+                }
+                if (layerPath == parentPaths[i]) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        // For a more general purpose case, we would have only taken a vector of
+        // strings and a delimiter... but in our case, we will always be adding
+        // a new "lastString", so may as well assume this for speed
+        auto joinStrs = [](const std::vector<std::string>& strings,
+                          const std::string& lastString,
+                          const char delimiter, std::string& result) {
+            result.clear();
+            unsigned int new_len = 0;
+
+            auto addStrLen = [](unsigned int& len, const std::string& str) {
+                if (!str.empty()) {
+                    // +1 for the delimiter character
+                    if (len != 0)
+                        ++len;
+                    len += str.length();
+                }
+            };
+
+            for (auto& str : strings) {
+                addStrLen(new_len, str);
+            }
+            addStrLen(new_len, lastString);
+
+            result.reserve(new_len);
+
+            auto appendStr = [](std::string& aggregate, const std::string& str,
+                                const char delim) {
+                if (!str.empty()) {
+                    if (!aggregate.empty())
+                        aggregate += delim;
+                    aggregate += str;
+                }
+            };
+
+            for (auto& str : strings) {
+                appendStr(result, str, delimiter);
+            }
+            appendStr(result, lastString, delimiter);
+        };
+
+        for (const auto& layerSpec : prim.GetPrimStack()) {
+            const std::string& layerPath = layerSpec->GetLayer()->GetRealPath();
+            if (layerPath.empty())
                 continue;
-            }
-            if (layerPath == parentPaths[i]) {
-                return true;
+            if (!isParentPath(layerPath, thisScene, parentRefs))
+            {
+                refPath = layerPath;
+                break;
             }
         }
-        return false;
-    };
-
-    // For a more general purpose case, we would have only taken a vector of
-    // strings and a delimiter... but in our case, we will always be adding
-    // a new "lastString", so may as well assume this for speed
-    auto joinStrs = [](const std::vector<std::string>& strings,
-                      const std::string& lastString,
-                      const char delimiter, std::string& result) {
-        result.clear();
-        unsigned int new_len = 0;
-
-        auto addStrLen = [](unsigned int& len, const std::string& str) {
-            if (!str.empty()) {
-                // +1 for the delimiter character
-                if (len != 0)
-                    ++len;
-                len += str.length();
-            }
-        };
-
-        for (auto& str : strings) {
-            addStrLen(new_len, str);
-        }
-        addStrLen(new_len, lastString);
-
-        result.reserve(new_len);
-
-        auto appendStr = [](std::string& aggregate, const std::string& str,
-                            const char delim) {
-            if (!str.empty()) {
-                if (!aggregate.empty())
-                    aggregate += delim;
-                aggregate += str;
-            }
-        };
-
-        for (auto& str : strings) {
-            appendStr(result, str, delimiter);
-        }
-        appendStr(result, lastString, delimiter);
-    };
-
-    for (const auto& layerSpec : prim.GetPrimStack()) {
-        const std::string& layerPath = layerSpec->GetLayer()->GetRealPath();
-        if (layerPath.empty())
-            continue;
-        if (!isParentPath(layerPath, thisScene, parentRefs))
+        if (!refPath.length())
         {
-            refPath = layerPath;
-            break;
+            MString errorMsg("Failed to find a non-recursive reference path for ");
+            errorMsg += prim.GetPath().GetText();
+            errorMsg += " in top-level usd file ";
+            errorMsg += usdStage->GetRootLayer()->GetRealPath().c_str();
+            MGlobal::displayError(errorMsg);
+            return false;
         }
+
+        // Don't know of a way to pass in an option string using MFileIO::reference,
+        // so just uisng mel...
+        std::string joinedParentRefs;
+        joinStrs(parentRefs, refPath, ',', joinedParentRefs);
+        MString cmd = (MString("file -reference -options \"primPath=")
+                       // TODO: properly escape these strings
+                       // Pass in the primitive path...
+                       + prim.GetPath().GetText()
+                       // ...and the top-level usd file in the option string.
+                       // Note that that's all the information that USD actually
+                       // needs / uses - the refPath is actually just a dummy. See
+                       // note above where we generate the refPath.
+                       + ";topLayerUsd="
+                       + assetIdentifier.c_str()
+                       + ";parent="
+                       + parentName
+                       + ";parentRefPaths="
+                       + joinedParentRefs.c_str()
+                       + ";readAnimData="
+                       + int(args.GetReadAnimData())
+                       + ";startTime="
+                       + args.GetStartTime()
+                       + ";endTime="
+                       + args.GetEndTime()
+                       + "\" \""
+                       + refPath.c_str()
+                       + "\";");
+        DEBUG_PRINT(cmd);
+        CHECK_MSTATUS_AND_RETURN(MGlobal::executeCommand(cmd), false);
     }
-    if (!refPath.length())
-    {
-        MString errorMsg("Failed to find a non-recursive reference path for ");
-        errorMsg += prim.GetPath().GetText();
-        errorMsg += " in top-level usd file ";
-        errorMsg += usdStage->GetRootLayer()->GetRealPath().c_str();
-        MGlobal::displayError(errorMsg);
-        return false;
-    }
+    else {
+        // Use Maya assemblies
 
-    // Don't know of a way to pass in an option string using MFileIO::reference,
-    // so just uisng mel...
-    std::string joinedParentRefs;
-    joinStrs(parentRefs, refPath, ',', joinedParentRefs);
-    MString cmd = (MString("file -reference -options \"primPath=")
-                   // TODO: properly escape these strings
-                   // Pass in the primitive path...
-                   + prim.GetPath().GetText()
-                   // ...and the top-level usd file in the option string.
-                   // Note that that's all the information that USD actually
-                   // needs / uses - the refPath is actually just a dummy. See
-                   // note above where we generate the refPath.
-                   + ";topLayerUsd="
-                   + assetIdentifier.c_str()
-                   + ";parent="
-                   + parentName
-                   + ";parentRefPaths="
-                   + joinedParentRefs.c_str()
-                   + ";readAnimData="
-                   + int(args.GetReadAnimData())
-                   + ";startTime="
-                   + args.GetStartTime()
-                   + ";endTime="
-                   + args.GetEndTime()
-                   + "\" \""
-                   + refPath.c_str()
-                   + "\";");
-    DEBUG_PRINT(cmd);
-    CHECK_MSTATUS_AND_RETURN(MGlobal::executeCommand(cmd), false);
-
-#else // PIXMAYA_FORCE_MAYA_REFERENCES
-    // We have to create the new assembly node with the assembly command as
-    // opposed to using MDagModifier's createNode() or any other method. That
-    // seems to be the only way to ensure that the assembly's namespace and
-    // container are setup correctly.
-    const std::string assemblyCmd =
-        TfStringPrintf("cmds.assembly(name=\'%s\', type=\'%s\')",
-                       prim.GetName().GetText(),
-                       assemblyTypeName.c_str());
-    MString newAssemblyName;
-    MStatus status = MGlobal::executePythonCommand(assemblyCmd.c_str(),
-                                                   newAssemblyName);
-    CHECK_MSTATUS_AND_RETURN(status, false);
-
-    // Now we get the MObject for the assembly node we just created.
-    MObject assemblyObj;
-    status = PxrUsdMayaUtil::GetMObjectByName(newAssemblyName.asChar(),
-                                              assemblyObj);
-    CHECK_MSTATUS_AND_RETURN(status, false);
-
-    // Re-parent the assembly node underneath parentNode.
-    MDagModifier dagMod;
-    status = dagMod.reparentNode(assemblyObj, parentNode);
-    CHECK_MSTATUS_AND_RETURN(status, false);
-
-    // Read xformable attributes from the UsdPrim on to the assembly node.
-    UsdGeomXformable xformable(prim);
-    PxrUsdMayaTranslatorXformable::Read(xformable, assemblyObj, args, context);
-
-    MFnDependencyNode depNodeFn(assemblyObj, &status);
-    CHECK_MSTATUS_AND_RETURN(status, false);
-
-    // Set the filePath and primPath attributes.
-    MPlug filePathPlug = depNodeFn.findPlug(_tokens->FilePathPlugName.GetText(),
-        true, &status);
-    CHECK_MSTATUS_AND_RETURN(status, false);
-    status = dagMod.newPlugValueString(filePathPlug, assetIdentifier.c_str());
-    CHECK_MSTATUS_AND_RETURN(status, false);
-
-    MPlug primPathPlug = depNodeFn.findPlug(_tokens->PrimPathPlugName.GetText(),
-        true, &status);
-    CHECK_MSTATUS_AND_RETURN(status, false);
-    status = dagMod.newPlugValueString(primPathPlug, modelPrim.GetPath().GetText());
-    CHECK_MSTATUS_AND_RETURN(status, false);
-
-    // Set the kind attribute.
-    TfToken modelKind;
-    UsdModelAPI usdModel(modelPrim);
-    if (!usdModel.GetKind(&modelKind) || modelKind.IsEmpty()) {
-        modelKind = KindTokens->component;
-    }
-
-    MPlug kindPlug = depNodeFn.findPlug(_tokens->KindPlugName.GetText(), true, &status);
-    CHECK_MSTATUS_AND_RETURN(status, false);
-    status = dagMod.newPlugValueString(kindPlug, modelKind.GetText());
-    CHECK_MSTATUS_AND_RETURN(status, false);
-
-    // Apply variant selections.
-    std::map<std::string, std::string> variantSelections = _GetVariantSelections(prim);
-    TF_FOR_ALL(iter, variantSelections) {
-        std::string variantSetName = iter->first;
-        std::string variantSelection = iter->second;
-
-        std::string variantSetPlugName = TfStringPrintf("%s%s",
-            _tokens->VariantSetPlugNamePrefix.GetText(), variantSetName.c_str());
-        MPlug varSetPlug = depNodeFn.findPlug(variantSetPlugName.c_str(), true, &status);
-        if (status != MStatus::kSuccess) {
-            MFnTypedAttribute typedAttrFn;
-            MObject attrObj = typedAttrFn.create(variantSetPlugName.c_str(),
-                                                 variantSetPlugName.c_str(),
-                                                 MFnData::kString,
-                                                 MObject::kNullObj,
-                                                 &status);
-            CHECK_MSTATUS_AND_RETURN(status, false);
-            status = depNodeFn.addAttribute(attrObj);
-            CHECK_MSTATUS_AND_RETURN(status, false);
-            varSetPlug = depNodeFn.findPlug(variantSetPlugName.c_str(), true, &status);
-            CHECK_MSTATUS_AND_RETURN(status, false);
-        }
-        status = dagMod.newPlugValueString(varSetPlug, variantSelection.c_str());
+        // We have to create the new assembly node with the assembly command as
+        // opposed to using MDagModifier's createNode() or any other method. That
+        // seems to be the only way to ensure that the assembly's namespace and
+        // container are setup correctly.
+        const std::string assemblyCmd =
+            TfStringPrintf("cmds.assembly(name=\'%s\', type=\'%s\')",
+                           prim.GetName().GetText(),
+                           assemblyTypeName.c_str());
+        MString newAssemblyName;
+        MStatus status = MGlobal::executePythonCommand(assemblyCmd.c_str(),
+                                                       newAssemblyName);
         CHECK_MSTATUS_AND_RETURN(status, false);
-    }
 
-    status = dagMod.doIt();
-    CHECK_MSTATUS_AND_RETURN(status, false);
-
-    if (context) {
-        context->RegisterNewMayaNode(prim.GetPath().GetString(),
-                                     assemblyObj);
-    }
-
-    // If a representation was supplied, activate it.
-    if (!assemblyRep.empty()) {
-        MFnAssembly assemblyFn(assemblyObj, &status);
+        // Now we get the MObject for the assembly node we just created.
+        MObject assemblyObj;
+        status = PxrUsdMayaUtil::GetMObjectByName(newAssemblyName.asChar(),
+                                                  assemblyObj);
         CHECK_MSTATUS_AND_RETURN(status, false);
-        if (assemblyFn.canActivate(&status)) {
-            status = assemblyFn.activate(assemblyRep.c_str());
+
+        // Re-parent the assembly node underneath parentNode.
+        MDagModifier dagMod;
+        status = dagMod.reparentNode(assemblyObj, parentNode);
+        CHECK_MSTATUS_AND_RETURN(status, false);
+
+        // Read xformable attributes from the UsdPrim on to the assembly node.
+        UsdGeomXformable xformable(prim);
+        PxrUsdMayaTranslatorXformable::Read(xformable, assemblyObj, args, context);
+
+        MFnDependencyNode depNodeFn(assemblyObj, &status);
+        CHECK_MSTATUS_AND_RETURN(status, false);
+
+        // Set the filePath and primPath attributes.
+        MPlug filePathPlug = depNodeFn.findPlug(_tokens->FilePathPlugName.GetText(),
+            true, &status);
+        CHECK_MSTATUS_AND_RETURN(status, false);
+        status = dagMod.newPlugValueString(filePathPlug, assetIdentifier.c_str());
+        CHECK_MSTATUS_AND_RETURN(status, false);
+
+        MPlug primPathPlug = depNodeFn.findPlug(_tokens->PrimPathPlugName.GetText(),
+            true, &status);
+        CHECK_MSTATUS_AND_RETURN(status, false);
+        status = dagMod.newPlugValueString(primPathPlug, modelPrim.GetPath().GetText());
+        CHECK_MSTATUS_AND_RETURN(status, false);
+
+        // Set the kind attribute.
+        TfToken modelKind;
+        UsdModelAPI usdModel(modelPrim);
+        if (!usdModel.GetKind(&modelKind) || modelKind.IsEmpty()) {
+            modelKind = KindTokens->component;
+        }
+
+        MPlug kindPlug = depNodeFn.findPlug(_tokens->KindPlugName.GetText(), true, &status);
+        CHECK_MSTATUS_AND_RETURN(status, false);
+        status = dagMod.newPlugValueString(kindPlug, modelKind.GetText());
+        CHECK_MSTATUS_AND_RETURN(status, false);
+
+        // Apply variant selections.
+        std::map<std::string, std::string> variantSelections = _GetVariantSelections(prim);
+        TF_FOR_ALL(iter, variantSelections) {
+            std::string variantSetName = iter->first;
+            std::string variantSelection = iter->second;
+
+            std::string variantSetPlugName = TfStringPrintf("%s%s",
+                _tokens->VariantSetPlugNamePrefix.GetText(), variantSetName.c_str());
+            MPlug varSetPlug = depNodeFn.findPlug(variantSetPlugName.c_str(), true, &status);
+            if (status != MStatus::kSuccess) {
+                MFnTypedAttribute typedAttrFn;
+                MObject attrObj = typedAttrFn.create(variantSetPlugName.c_str(),
+                                                     variantSetPlugName.c_str(),
+                                                     MFnData::kString,
+                                                     MObject::kNullObj,
+                                                     &status);
+                CHECK_MSTATUS_AND_RETURN(status, false);
+                status = depNodeFn.addAttribute(attrObj);
+                CHECK_MSTATUS_AND_RETURN(status, false);
+                varSetPlug = depNodeFn.findPlug(variantSetPlugName.c_str(), true, &status);
+                CHECK_MSTATUS_AND_RETURN(status, false);
+            }
+            status = dagMod.newPlugValueString(varSetPlug, variantSelection.c_str());
             CHECK_MSTATUS_AND_RETURN(status, false);
         }
-    }
 
-#endif // PIXMAYA_FORCE_MAYA_REFERENCES
+        status = dagMod.doIt();
+        CHECK_MSTATUS_AND_RETURN(status, false);
+
+        if (context) {
+            context->RegisterNewMayaNode(prim.GetPath().GetString(),
+                                         assemblyObj);
+        }
+
+        // If a representation was supplied, activate it.
+        if (!assemblyRep.empty()) {
+            MFnAssembly assemblyFn(assemblyObj, &status);
+            CHECK_MSTATUS_AND_RETURN(status, false);
+            if (assemblyFn.canActivate(&status)) {
+                status = assemblyFn.activate(assemblyRep.c_str());
+                CHECK_MSTATUS_AND_RETURN(status, false);
+            }
+        }
+    }
 
     if (context) {
         context->SetPruneChildren(true);

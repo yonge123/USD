@@ -71,6 +71,7 @@ struct PxrUsdMayaTranslatorModelAssembly
         MObject parentNode,
         const PxrUsdMayaPrimReaderArgs& args,
         PxrUsdMayaPrimReaderContext* context,
+        bool useAssemblies,
         const std::string& assemblyTypeName,
         const std::string& assemblyRep,
         const std::vector<std::string>& parentRefs);
