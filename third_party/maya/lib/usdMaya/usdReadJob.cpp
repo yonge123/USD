@@ -344,6 +344,7 @@ bool usdReadJob::_DoImport(UsdPrimRange& primIt,
                                                         parentNode,
                                                         args,
                                                         &ctx,
+                                                        mArgs.useAssemblies,
                                                         _assemblyTypeName,
                                                         mArgs.assemblyRep,
                                                         mParentRefPaths)) {

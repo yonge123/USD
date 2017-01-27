@@ -27,11 +27,14 @@
 #include "usdMaya/shadingModeRegistry.h"
 
 #include "pxr/base/tf/staticTokens.h"
+#include "pxr/base/tf/envSetting.h"
 #include "pxr/usd/usdGeom/tokens.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 
+
+extern TfEnvSetting<bool> PIXMAYA_USE_USD_REF_ASSEMBLIES;
 
 TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
         PXRUSDMAYA_TRANSLATOR_TOKENS);
@@ -176,7 +179,8 @@ JobImportArgs::JobImportArgs()
         assemblyRep(PxUsdExportJobArgsTokens->Collapsed),
         readAnimData(false),
         useCustomFrameRange(false),
-        importWithProxyShapes(false)
+        importWithProxyShapes(false),
+        useAssemblies(TfGetEnvSetting(PIXMAYA_USE_USD_REF_ASSEMBLIES))
 {
 }
 
