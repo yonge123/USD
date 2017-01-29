@@ -23,6 +23,7 @@
 //
 // Some header #define's Bool as int, which breaks stuff in sdf/types.h.
 // Include it first to sidestep the problem. :-/
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/types.h"
 
 #include "pxr/imaging/glf/glew.h"
@@ -34,7 +35,6 @@
 #include "pxr/imaging/hdx/renderTask.h"
 #include "pxr/imaging/hdx/selectionTask.h"
 #include "pxr/imaging/hdx/simpleLightTask.h"
-#include "pxr/usdImaging/usdImaging/version.h"
 
 #include "pxr/base/gf/gamma.h"
 #include "pxr/base/tf/staticTokens.h"
@@ -53,6 +53,9 @@
 #include <maya/MSceneMessage.h>
 
 #include <bitset>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
@@ -154,7 +157,6 @@ UsdMayaGLBatchRenderer::ShapeRenderer::PrepareForQueue(
     _baseParams.frame = time;
     _baseParams.refineLevel = refineLevel;
 
-#if USD_IMAGING_API >= 9
     // XXX Not yet adding ability to turn off display of proxy geometry, but
     // we should at some point, as in usdview
     if( showGuides )
@@ -165,16 +167,6 @@ UsdMayaGLBatchRenderer::ShapeRenderer::PrepareForQueue(
         _baseParams.geometryCol =
             showRenderGuides ? UsdImagingCollectionTokens->geometryAndProxyAndRender
                              : UsdImagingCollectionTokens->geometryAndProxy;
-#else
-    if( showGuides )
-        _baseParams.geometryCol =
-            showRenderGuides ? UsdImagingCollectionTokens->geometryAndGuides
-                             : UsdImagingCollectionTokens->geometryAndInteractiveGuides;
-    else
-        _baseParams.geometryCol =
-            showRenderGuides ? UsdImagingCollectionTokens->geometryAndRenderGuides
-                             : HdTokens->geometry;
-#endif    
     
     if( tint )
         _baseParams.overrideColor = tintColor;
@@ -1283,4 +1275,7 @@ UsdMayaGLBatchRenderer::_RenderBounds(
     glPopMatrix();
     glPopAttrib(); // GL_ENABLE_BIT | GL_CURRENT_BIT | GL_LIGHTING_BIT
 }
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 

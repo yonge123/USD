@@ -26,6 +26,7 @@
 
 /// \file translatorModelAssembly.h
 
+#include "pxr/pxr.h"
 #include "usdMaya/primReaderArgs.h"
 #include "usdMaya/primReaderContext.h"
 #include "usdMaya/primWriterArgs.h"
@@ -41,6 +42,7 @@
 #include <vector>
 #include <string>
 
+PXR_NAMESPACE_OPEN_SCOPE
 
 struct PxrUsdMayaTranslatorModelAssembly
 {
@@ -94,5 +96,8 @@ struct PxrUsdMayaTranslatorModelAssembly
         PxrUsdMayaPrimReaderContext& context);
 };
 
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_TRANSLATOR_MODELASSEMBLY_H

@@ -35,6 +35,9 @@
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 class Hd_BindlessSamplerBufferSource : public HdBufferSource {
 public:
     Hd_BindlessSamplerBufferSource(TfToken const &name, GLenum type, size_t value)
@@ -86,7 +89,8 @@ private:
 
 
 HdSurfaceShader::HdSurfaceShader(SdfPath const& id)
- : _id(id)
+ : HdShaderCode()
+ , _id(id)
 {
 }
 
@@ -284,7 +288,7 @@ HdSurfaceShader::GetShaderData() const
     return _paramArray;
 }
 /*virtual*/
-HdShader::TextureDescriptorVector 
+HdShaderCode::TextureDescriptorVector
 HdSurfaceShader::GetTextures() const
 {
     return _textureDescriptors;
@@ -357,7 +361,7 @@ HdSurfaceShader::AddBindings(HdBindingRequestVector *customBindings)
 }
 
 /*virtual*/
-HdShader::ID
+HdShaderCode::ID
 HdSurfaceShader::ComputeHash() const
 {
     size_t hash = 0;
@@ -375,8 +379,8 @@ HdSurfaceShader::ComputeHash() const
 
 /*static*/
 bool
-HdSurfaceShader::CanAggregate(HdShaderSharedPtr const &shaderA,
-                              HdShaderSharedPtr const &shaderB)
+HdSurfaceShader::CanAggregate(HdShaderCodeSharedPtr const &shaderA,
+                              HdShaderCodeSharedPtr const &shaderB)
 {
     bool bindlessTexture = HdRenderContextCaps::GetInstance()
                                                 .bindlessTextureEnabled;
@@ -397,3 +401,6 @@ HdSurfaceShader::CanAggregate(HdShaderSharedPtr const &shaderA,
     }
     return true;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

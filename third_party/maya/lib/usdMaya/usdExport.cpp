@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdMaya/usdExport.h"
 
 #include "usdMaya/usdWriteJob.h"
@@ -40,6 +41,9 @@
 
 #include "pxr/usd/usdGeom/tokens.h"
 #include "JobArgs.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 usdExport::usdExport()
 {
@@ -126,7 +130,7 @@ try
     }
 
     if (argData.isFlagSet("exportRefsAsInstanceable")) {
-        argData.getFlagArgument("exportRefsAsInstanceable", 0, jobArgs.mergeTransformAndShape);
+        argData.getFlagArgument("exportRefsAsInstanceable", 0, jobArgs.exportRefsAsInstanceable);
     }
 
     if (argData.isFlagSet("exportDisplayColor")) {
@@ -438,3 +442,6 @@ catch (std::exception & e)
     return MS::kFailure;
 }
 } // end of function
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

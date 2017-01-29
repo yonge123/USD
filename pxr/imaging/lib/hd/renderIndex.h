@@ -24,6 +24,7 @@
 #ifndef HD_RENDER_INDEX_H
 #define HD_RENDER_INDEX_H
 
+#include "pxr/pxr.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/imaging/hd/perfLog.h"
@@ -42,6 +43,9 @@
 
 #include <vector>
 #include <unordered_map>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 class HdRprim;
 class HdSprim;
@@ -67,9 +71,8 @@ typedef boost::shared_ptr<class HdTask> HdTaskSharedPtr;
 class HdRenderIndex : public boost::noncopyable {
 public:
 
-    // XXX: These should return iterator ranges, not vectors;
-    //      they also shouldn't be pointers.
-    typedef std::vector<HdDrawItem const*> HdDrawItemView;
+    typedef std::unordered_map<TfToken, std::vector<HdDrawItem const*>,
+                               boost::hash<TfToken> > HdDrawItemView;
 
     HdRenderIndex();
     ~HdRenderIndex();
@@ -450,10 +453,9 @@ class HdxLight;
 namespace HdRenderIndexInternal
 {  
     template <typename T>
-    static inline const TfToken & _GetTypeId();
+    inline const TfToken & _GetTypeId();
 
     template <>
-    //static
     inline
     const TfToken &
     _GetTypeId<HdMesh>()
@@ -462,7 +464,6 @@ namespace HdRenderIndexInternal
     }
     
     template <>
-    //static
     inline
     const TfToken &
     _GetTypeId<HdBasisCurves>()
@@ -471,7 +472,6 @@ namespace HdRenderIndexInternal
     }
     
     template <>
-    //static
     inline
     const TfToken &
     _GetTypeId<HdPoints>()
@@ -480,7 +480,6 @@ namespace HdRenderIndexInternal
     }
 
     template <>
-    //static
     inline
     const TfToken &
     _GetTypeId<HdxCamera>()
@@ -489,7 +488,6 @@ namespace HdRenderIndexInternal
     }
 
     template <>
-    //static
     inline
     const TfToken &
     _GetTypeId<HdxDrawTarget>()
@@ -498,7 +496,6 @@ namespace HdRenderIndexInternal
     }
 
     template <>
-    //static
     inline
     const TfToken &
     _GetTypeId<HdxLight>()
@@ -531,5 +528,8 @@ HdRenderIndex::InsertSprim(HdSceneDelegate* delegate, SdfPath const& id)
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //HD_RENDER_INDEX_H

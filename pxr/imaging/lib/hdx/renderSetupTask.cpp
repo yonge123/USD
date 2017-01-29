@@ -37,6 +37,9 @@
 
 #include "pxr/imaging/cameraUtil/conformWindow.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 HdxRenderSetupTask::HdxRenderSetupTask(HdSceneDelegate* delegate, SdfPath const& id)
     : HdSceneTask(delegate, id)
     , _viewport()
@@ -95,7 +98,7 @@ HdxRenderSetupTask::Sync(HdxRenderTaskParams const &params)
     _renderPassState->SetDrawingRange(params.drawingRange);
     _renderPassState->SetCullStyle(params.cullStyle);
     if (params.enableHardwareShading) {
-        _renderPassState->SetOverrideShader(HdShaderSharedPtr());
+        _renderPassState->SetOverrideShader(HdShaderCodeSharedPtr());
     } else {
         _renderPassState->SetOverrideShader(
             GetDelegate()->GetRenderIndex().GetShaderFallback());
@@ -223,3 +226,6 @@ bool operator!=(const HdxRenderTaskParams& lhs, const HdxRenderTaskParams& rhs)
 {
     return !(lhs == rhs);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

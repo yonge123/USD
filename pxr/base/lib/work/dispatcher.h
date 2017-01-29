@@ -27,6 +27,8 @@
 /// \file work/dispatcher.h
 
 #include "pxr/pxr.h"
+#include "pxr/base/work/threadLimits.h"
+
 #include "pxr/base/tf/errorMark.h"
 #include "pxr/base/tf/errorTransport.h"
 

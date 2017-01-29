@@ -24,13 +24,11 @@
 #ifndef PXRUSDKATANA_USDIN_ARGS_H
 #define PXRUSDKATANA_USDIN_ARGS_H
 
+#include "pxr/pxr.h"
 #include "pxr/usd/usdGeom/bboxCache.h"
 #include "pxr/base/tf/refPtr.h"
 
 #include <tbb/enumerable_thread_specific.h>
-
-class PxrUsdKatanaUsdInArgs;
-typedef TfRefPtr<PxrUsdKatanaUsdInArgs> PxrUsdKatanaUsdInArgsRefPtr;
 
 /// \brief Reference counted container for op state that should be constructed
 /// at an ops root and passed to read USD prims into Katana attributes.
@@ -41,6 +39,10 @@ typedef TfRefPtr<PxrUsdKatanaUsdInArgs> PxrUsdKatanaUsdInArgsRefPtr;
 
 #include <FnAttribute/FnAttribute.h>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+class PxrUsdKatanaUsdInArgs;
+typedef TfRefPtr<PxrUsdKatanaUsdInArgs> PxrUsdKatanaUsdInArgsRefPtr;
 
 /// The sessionAttr is a structured GroupAttribute argument for delivering
 /// edits to the session layer of the stage. It replaces the earlier
@@ -230,5 +232,63 @@ private:
     std::string _errorMessage;
 
 };
+
+
+// utility to make it easier to exit earlier from InitUsdInArgs
+struct ArgsBuilder
+{
+    UsdStageRefPtr stage;
+    std::string rootLocation;
+    std::string isolatePath;
+    FnAttribute::GroupAttribute sessionAttr;
+    std::string ignoreLayerRegex;
+    double currentTime;
+    double shutterOpen;
+    double shutterClose;
+    std::vector<double> motionSampleTimes;
+    std::set<std::string> defaultMotionPaths;
+    PxrUsdKatanaUsdInArgs::StringListMap extraAttributesOrNamespaces;
+    bool verbose;
+    const char * errorMessage;
+    
+    
+    ArgsBuilder()
+    : currentTime(0.0)
+    , shutterOpen(0.0)
+    , shutterClose(0.0)
+    , verbose(false)
+    , errorMessage(0)
+    {
+    }
+    
+    PxrUsdKatanaUsdInArgsRefPtr build()
+    {
+        return PxrUsdKatanaUsdInArgs::New(
+            stage,
+            rootLocation,
+            isolatePath,
+            sessionAttr.isValid() ? sessionAttr :
+                    FnAttribute::GroupAttribute(true),
+            ignoreLayerRegex,
+            currentTime,
+            shutterOpen,
+            shutterClose,
+            motionSampleTimes,
+            defaultMotionPaths,
+            extraAttributesOrNamespaces,
+            verbose,
+            errorMessage);
+    }
+    
+    PxrUsdKatanaUsdInArgsRefPtr buildWithError(std::string errorStr)
+    {
+        errorMessage = errorStr.c_str();
+        return build();
+    }
+    
+};
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDKATANA_USDIN_ARGS_H

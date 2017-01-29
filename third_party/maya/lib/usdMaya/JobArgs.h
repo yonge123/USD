@@ -26,6 +26,7 @@
 
 /// \file JobArgs.h
 
+#include "pxr/pxr.h"
 #include "usdMaya/util.h"
 
 #include "pxr/base/tf/staticTokens.h"
@@ -38,6 +39,9 @@
 #include <maya/MGlobal.h>
 #include <maya/MString.h>
 #include <maya/MStringArray.h>
+
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 
 #define PXRUSDMAYA_TRANSLATOR_TOKENS \
@@ -183,5 +187,8 @@ struct JobImportArgs : JobSharedArgs
     std::vector<std::string> parentRefPaths;
 };
 
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_JOBARGS_H

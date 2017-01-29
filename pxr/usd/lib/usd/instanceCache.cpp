@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/instanceCache.h"
 #include "pxr/usd/usd/debugCodes.h"
 
@@ -30,6 +31,9 @@
 #include "pxr/base/tracelite/trace.h"
 
 #include <utility>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 using std::make_pair;
 using std::pair;
@@ -147,13 +151,8 @@ Usd_InstanceCache::ProcessChanges(Usd_InstanceChanges* changes)
         for (_InstanceKeyToPrimIndexesMap::value_type& v:
                  _pendingAddedPrimIndexes) {
             const Usd_InstanceKey& key = v.first;
-            _PrimIndexPaths& primIndexes = v.second;
+            const _PrimIndexPaths& primIndexes = v.second;
             if (TF_VERIFY(!primIndexes.empty())) {
-                // Move the min element to the front, since the later call to
-                // _CreateOrUpdateMasterForInstances takes the front item for
-                // the master.
-                swap(primIndexes.front(),
-                     *std::min_element(primIndexes.begin(), primIndexes.end()));
                 TF_VERIFY(
                     keysToProcess.emplace(primIndexes.front(), key).second);
             }
@@ -635,3 +634,6 @@ Usd_InstanceCache::GetPrimInMasterForPrimIndexAtPath(
 
     return primInMasterPath;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

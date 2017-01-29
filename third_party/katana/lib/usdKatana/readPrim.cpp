@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdKatana/attrMap.h"
 #include "usdKatana/readPrim.h"
 #include "usdKatana/usdInPrivateData.h"
@@ -56,6 +57,9 @@
 
 #include <pystring/pystring.h>
 #include <FnLogging/FnLogging.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 FnLogSetup("PxrUsdKatanaReadPrim");
 
@@ -682,18 +686,11 @@ PxrUsdKatanaReadPrim(
 
     TfToken visibility;
     UsdGeomImageable imageable = UsdGeomImageable(prim);
-    UsdAttribute visibilityAttr = imageable.GetVisibilityAttr();
-    if (imageable && visibilityAttr.HasAuthoredValueOpinion() &&
-        !visibilityAttr.GetResolveInfo().ValueIsBlocked())
+    if (imageable && imageable.GetVisibilityAttr().Get(&visibility, currentTime))
     {
-        visibilityAttr.Get(&visibility, currentTime);
         if (visibility == UsdGeomTokens->invisible)
         {
             attrs.set("visible", FnKat::IntAttribute(0));
-        }
-        else if (visibility == UsdGeomTokens->inherited)
-        {
-            attrs.set("visible", FnKat::IntAttribute(1));
         }
     }
 
@@ -767,3 +764,6 @@ PxrUsdKatanaReadPrim(
 
     _AddExtraAttributesOrNamespaces(prim, data, attrs);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

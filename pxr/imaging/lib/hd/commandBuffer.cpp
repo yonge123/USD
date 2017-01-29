@@ -45,6 +45,9 @@
 #include <boost/functional/hash.hpp>
 #include <boost/make_shared.hpp>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 HdCommandBuffer::HdCommandBuffer()
     : _visibleSize(0)
     , _visChangeCount(0)
@@ -163,7 +166,7 @@ HdCommandBuffer::_RebuildDrawBatches()
         HdDrawItemInstance* drawItemInstance = &_drawItemInstances[i];
 
         Hd_DrawBatchSharedPtr batch;
-        HdShaderSharedPtr const &geometricShader
+        HdShaderCodeSharedPtr const &geometricShader
             = drawItem->GetGeometricShader();
         TF_VERIFY(geometricShader);
 
@@ -290,3 +293,6 @@ HdCommandBuffer::FrustumCull(GfMatrix4d const &viewProjMatrix)
         }
     }
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

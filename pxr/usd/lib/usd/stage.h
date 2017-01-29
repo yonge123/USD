@@ -26,6 +26,7 @@
 
 /// \file usd/stage.h
 
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/common.h"
 #include "pxr/usd/usd/editTarget.h"
 #include "pxr/usd/usd/interpolation.h"
@@ -57,6 +58,9 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 class ArResolverContext;
 class GfInterval;
@@ -1460,7 +1464,18 @@ private:
 
     // return true if the path is valid for load/unload operations.
     // This method will emit errors when invalid paths are encountered.
-    bool _IsValidForLoadUnload(const SdfPath& path) const;
+    bool _IsValidForLoad(const SdfPath& path) const;
+    bool _IsValidForUnload(const SdfPath& path) const;
+
+    template <class Callback>
+    void _WalkPrimsWithMasters(const SdfPath &, Callback const &) const;
+
+    template <class Callback>
+    void _WalkPrimsWithMastersImpl(
+        UsdPrim const &prim,
+        Callback const &cb,
+        tbb::concurrent_unordered_set<SdfPath, SdfPath::Hash>
+        *seenMasterPrimPaths) const;
 
     // Discover all payloads in a given subtree, adding the path of each
     // discovered prim index to the \p primIndexPaths set. If specified,
@@ -1474,15 +1489,6 @@ private:
                            SdfPathSet* primIndexPaths,
                            bool unloadedOnly = false,
                            SdfPathSet* usdPrimPaths = nullptr) const;
-
-    void
-    _DiscoverPayloadsInternal(
-        UsdPrim const &prim,
-        tbb::concurrent_vector<SdfPath> *primIndexPaths,
-        bool unloadedOnly,
-        tbb::concurrent_vector<SdfPath> *usdPrimPaths,
-        tbb::concurrent_unordered_set<SdfPath, SdfPath::Hash> *seenMasterPrimPaths
-        ) const;
 
     // Discover all ancestral payloads above a given root, adding the path
     // of each discovered prim index to the \p result set. The root path
@@ -1861,6 +1867,9 @@ UsdStage::SetMetadataByDictKey(const TfToken& key, const TfToken &keyPath,
     return SetMetadataByDictKey(key, keyPath, in);
 }
 
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //USD_STAGE_H
 

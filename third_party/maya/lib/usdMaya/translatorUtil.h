@@ -24,6 +24,7 @@
 #ifndef PXRUSDMAYA_TRANSLATOR_UTIL_H
 #define PXRUSDMAYA_TRANSLATOR_UTIL_H
 
+#include "pxr/pxr.h"
 #include "usdMaya/primReaderArgs.h"
 #include "usdMaya/primReaderContext.h"
 
@@ -33,6 +34,7 @@
 #include <maya/MObject.h>
 #include <maya/MString.h>
 
+PXR_NAMESPACE_OPEN_SCOPE
 extern TfEnvSetting<bool> PIXMAYA_DEBUG_USD_ASSEM;
 
 // TODO: determine if the TfEnvSetting check here is performant, and cache if
@@ -150,5 +152,8 @@ struct PxrUsdMayaTranslatorUtil
     CreateParentNamespace(const std::string& fullNamespace);
 };
 
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_TRANSLATOR_UTIL_H

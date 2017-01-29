@@ -31,7 +31,7 @@
 #include "pxr/imaging/hd/glslProgram.h"
 #include "pxr/imaging/hd/renderPassShader.h"
 #include "pxr/imaging/hd/resourceRegistry.h"
-#include "pxr/imaging/hd/shader.h"
+#include "pxr/imaging/hd/shaderCode.h"
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
@@ -41,6 +41,9 @@
 #include "pxr/base/tf/stringUtils.h"
 
 #include <boost/functional/hash.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
@@ -301,15 +304,15 @@ HdRenderPassState::SetRenderPassShader(HdRenderPassShaderSharedPtr const &render
 }
 
 void 
-HdRenderPassState::SetOverrideShader(HdShaderSharedPtr const &overrideShader)
+HdRenderPassState::SetOverrideShader(HdShaderCodeSharedPtr const &overrideShader)
 {
     _overrideShader = overrideShader;
 }
 
-HdShaderSharedPtrVector
+HdShaderCodeSharedPtrVector
 HdRenderPassState::GetShaders() const
 {
-    HdShaderSharedPtrVector shaders;
+    HdShaderCodeSharedPtrVector shaders;
     shaders.reserve(2);
     shaders.push_back(_lightingShader);
     shaders.push_back(_renderPassShader);
@@ -414,4 +417,7 @@ HdRenderPassState::GetShaderHash() const
     boost::hash_combine(hash, _clipPlanes.size());
     return hash;
 }
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 

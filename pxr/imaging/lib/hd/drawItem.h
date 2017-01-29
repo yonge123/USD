@@ -24,6 +24,7 @@
 #ifndef HD_DRAW_ITEM_H
 #define HD_DRAW_ITEM_H
 
+#include "pxr/pxr.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/drawingCoord.h"
@@ -41,8 +42,11 @@
 
 #include <iosfwd>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 typedef boost::shared_ptr<class Hd_GeometricShader> Hd_GeometricShaderSharedPtr;
-typedef boost::shared_ptr<class HdShader> HdShaderSharedPtr;
+typedef boost::shared_ptr<class HdShaderCode> HdShaderCodeSharedPtr;
 
 /// \class HdDrawItem
 ///
@@ -68,7 +72,7 @@ public:
         return _geometricShader;
     }
 
-    HdShaderSharedPtr GetSurfaceShader() const;
+    HdShaderCodeSharedPtr GetSurfaceShader() const;
 
     GfBBox3d const & GetBounds() const { return _sharedData->bounds; }
 
@@ -174,5 +178,8 @@ private:
     //    bufferArrayRanges, bounds, visibility
     HdRprimSharedData const *_sharedData;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //HD_DRAW_ITEM_H

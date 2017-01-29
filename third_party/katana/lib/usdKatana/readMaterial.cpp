@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdKatana/attrMap.h"
 #include "usdKatana/readMaterial.h"
 #include "usdKatana/readPrim.h"
@@ -46,6 +47,9 @@
 #include "pxr/usd/usdHydra/tokens.h"
 
 #include <stack>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 FnLogSetup("PxrUsdKatanaReadMaterial");
 
@@ -85,20 +89,27 @@ PxrUsdKatanaReadMaterial(
     UsdStageRefPtr stage = material.GetPrim().GetStage();
     SdfPath primPath = material.GetPrim().GetPath();
 
-    // we do this before ReadPrim because ReadPrim calls ReadBlindData which we
-    // don't want to stomp here.
+    // we do this before ReadPrim because ReadPrim calls ReadBlindData 
+    // (primvars only) which we don't want to stomp here.
     attrs.set("material", _GetMaterialAttr(
         material, data.GetUsdInArgs()->GetCurrentTime(), flatten));
 
-    PxrUsdKatanaReadPrim(material.GetPrim(), data, attrs);
-
     const std::string& parentPrefix = (looksGroupLocation.empty()) ?
         data.GetUsdInArgs()->GetRootLocationPath() : looksGroupLocation;
-
-    attrs.set("katanaLookPath", FnKat::StringAttribute(
-        PxrUsdKatanaUtils::ConvertUsdMaterialPathToKatLocation(
-            primPath, data).substr(parentPrefix.size()+1)));
     
+    std::string katanaPath = 
+        PxrUsdKatanaUtils::ConvertUsdMaterialPathToKatLocation(
+            primPath, data).substr(parentPrefix.size()+1);
+
+    // these paths are relative in katana
+    if (!katanaPath.empty() > 0 && katanaPath[0] == '/') {
+        katanaPath = katanaPath.substr(1);
+    }
+
+    attrs.set("material.katanaPath", FnKat::StringAttribute(katanaPath));
+
+    PxrUsdKatanaReadPrim(material.GetPrim(), data, attrs);
+
     attrs.set("type", FnKat::StringAttribute("material"));
 
     // clears out prmanStatements.
@@ -738,4 +749,7 @@ _UnrollInterfaceFromPrim(const UsdPrim& prim,
         }
     }
 }
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 

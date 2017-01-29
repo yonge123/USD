@@ -21,26 +21,29 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/imaging/hd/shader.h"
+#include "pxr/imaging/hd/shaderCode.h"
 
 #include "pxr/base/tf/iterator.h"
 
 #include <boost/functional/hash.hpp>
 
-HdShader::HdShader()
+PXR_NAMESPACE_OPEN_SCOPE
+
+
+HdShaderCode::HdShaderCode()
 {
     /*NOTHING*/
 }
 
 /*virtual*/
-HdShader::~HdShader()
+HdShaderCode::~HdShaderCode()
 {
     /*NOTHING*/
 }
 
 /* static */
 size_t
-HdShader::ComputeHash(HdShaderSharedPtrVector const &shaders)
+HdShaderCode::ComputeHash(HdShaderCodeSharedPtrVector const &shaders)
 {
     size_t hash = 0;
     
@@ -53,7 +56,7 @@ HdShader::ComputeHash(HdShaderSharedPtrVector const &shaders)
 
 /*virtual*/
 HdShaderParamVector const&
-HdShader::GetParams() const
+HdShaderCode::GetParams() const
 {
     static HdShaderParamVector const empty;
     return empty;
@@ -61,16 +64,19 @@ HdShader::GetParams() const
 
 /*virtual*/
 HdBufferArrayRangeSharedPtr const&
-HdShader::GetShaderData() const
+HdShaderCode::GetShaderData() const
 {
     static HdBufferArrayRangeSharedPtr EMPTY;
     return EMPTY;
 }
 
 /*virtual*/
-HdShader::TextureDescriptorVector 
-HdShader::GetTextures() const
+HdShaderCode::TextureDescriptorVector
+HdShaderCode::GetTextures() const
 {
-    return HdShader::TextureDescriptorVector();
+    return HdShaderCode::TextureDescriptorVector();
 }
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 

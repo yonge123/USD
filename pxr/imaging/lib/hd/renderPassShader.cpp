@@ -39,13 +39,17 @@
 
 #include <string>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
     ((_uint, "uint"))
 );
 
 HdRenderPassShader::HdRenderPassShader()
-    : _glslfxFile(HdPackageRenderPassShader())
+    : HdShaderCode()
+    , _glslfxFile(HdPackageRenderPassShader())
     , _hash(0)
     , _hashValid(false)
     , _cullStyle(HdCullStyleNothing)
@@ -54,7 +58,8 @@ HdRenderPassShader::HdRenderPassShader()
 }
 
 HdRenderPassShader::HdRenderPassShader(TfToken const &glslfxFile)
-    : _glslfxFile(glslfxFile)   // user-defined
+    : HdShaderCode()
+    , _glslfxFile(glslfxFile)   // user-defined
     , _hash(0)
     , _hashValid(false)
     , _cullStyle(HdCullStyleNothing)
@@ -182,3 +187,6 @@ HdRenderPassShader::AddBindings(HdBindingRequestVector *customBindings)
         HdBindingRequest(HdBinding::UNIFORM,
                          HdShaderTokens->cullStyle, _tokens->_uint));
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

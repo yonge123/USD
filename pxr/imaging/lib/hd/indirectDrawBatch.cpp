@@ -36,7 +36,7 @@
 #include "pxr/imaging/hd/resourceRegistry.h"
 #include "pxr/imaging/hd/renderContextCaps.h"
 #include "pxr/imaging/hd/renderPassState.h"
-#include "pxr/imaging/hd/shader.h"
+#include "pxr/imaging/hd/shaderCode.h"
 #include "pxr/imaging/hd/shaderKey.h"
 #include "pxr/imaging/hd/tokens.h"
 
@@ -49,6 +49,9 @@
 #include "pxr/base/tf/iterator.h"
 
 #include <limits>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 static const GLuint64 HD_CULL_RESULT_TIMEOUT_NS = 5e9; // XXX how long to wait?
 
@@ -992,7 +995,7 @@ Hd_IndirectDrawBatch::ExecuteDraw(
     glUseProgram(programId);
 
     const Hd_ResourceBinder &binder = program.GetBinder();
-    const HdShaderSharedPtrVector &shaders = program.GetComposedShaders();
+    const HdShaderCodeSharedPtrVector &shaders = program.GetComposedShaders();
 
     // XXX: for surfaces shader, we need to iterate all drawItems to
     //      make textures resident, instead of just the first batchItem
@@ -1560,3 +1563,6 @@ Hd_IndirectDrawBatch::_CullingProgram::_Link(
 
     return Hd_DrawBatch::_DrawingProgram::_Link(glslProgram);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

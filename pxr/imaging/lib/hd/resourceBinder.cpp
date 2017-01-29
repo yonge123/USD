@@ -26,7 +26,7 @@
 
 #include "pxr/imaging/hd/drawBatch.h" // XXX: temp
 #include "pxr/imaging/hd/renderContextCaps.h"
-#include "pxr/imaging/hd/shader.h"
+#include "pxr/imaging/hd/shaderCode.h"
 
 #include "pxr/imaging/hd/drawItem.h"
 #include "pxr/imaging/hd/tokens.h"
@@ -34,6 +34,9 @@
 #include "pxr/base/tf/staticTokens.h"
 
 #include <boost/functional/hash.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
@@ -122,7 +125,7 @@ Hd_ResourceBinder::Hd_ResourceBinder()
 
 void
 Hd_ResourceBinder::ResolveBindings(HdDrawItem const *drawItem,
-                                   HdShaderSharedPtrVector const &shaders,
+                                   HdShaderCodeSharedPtrVector const &shaders,
                                    Hd_ResourceBinder::MetaData *metaDataOut,
                                    bool indirect,
                                    bool instanceDraw,
@@ -730,7 +733,7 @@ Hd_ResourceBinder::UnbindInstanceBufferArray(
 }
 
 void
-Hd_ResourceBinder::BindShaderResources(HdShader const *shader) const
+Hd_ResourceBinder::BindShaderResources(HdShaderCode const *shader) const
 {
     // bind fallback values and sampler uniforms (unit#? or bindless address)
 
@@ -738,7 +741,7 @@ Hd_ResourceBinder::BindShaderResources(HdShader const *shader) const
     //BindBufferArray(shader->GetShaderData());
 
     // bind textures
-    HdShader::TextureDescriptorVector textures = shader->GetTextures();
+    HdShaderCode::TextureDescriptorVector textures = shader->GetTextures();
     TF_FOR_ALL(it, textures) {
         HdBinding binding = GetBinding(it->name);
         HdBinding::Type type = binding.GetType();
@@ -758,11 +761,11 @@ Hd_ResourceBinder::BindShaderResources(HdShader const *shader) const
 }
 
 void
-Hd_ResourceBinder::UnbindShaderResources(HdShader const *shader) const
+Hd_ResourceBinder::UnbindShaderResources(HdShaderCode const *shader) const
 {
 //    UnbindBufferArray(shader->GetShaderData());
 
-    HdShader::TextureDescriptorVector textures = shader->GetTextures();
+    HdShaderCode::TextureDescriptorVector textures = shader->GetTextures();
     TF_FOR_ALL(it, textures) {
         HdBinding binding = GetBinding(it->name);
         HdBinding::Type type = binding.GetType();
@@ -1074,3 +1077,6 @@ Hd_ResourceBinder::MetaData::ComputeHash() const
 
     return hash;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

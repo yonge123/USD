@@ -51,7 +51,8 @@ static const char* crashArgument[] = {
 #endif
 
 using namespace std;
-PXR_NAMESPACE_USING_DIRECTIVE
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
 
@@ -146,7 +147,7 @@ ArchTestCrash(ArchTestCrashMode mode)
     // Make a command line for a new copy of this program with an argument
     // to tell it to crash.
     std::string cmdLine =
-        '"' + ArchGetExecutablePath() + '"' +
+        '"' + ArchGetExecutablePath() + "\" " +
         crashArgument[static_cast<int>(mode)];
 
     // Start a new copy of this program and tell it to crash.
@@ -209,3 +210,5 @@ ArchTestCrashArgParse(int argc, char** argv)
     // Non-windows platforms don't need this.
 #endif
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

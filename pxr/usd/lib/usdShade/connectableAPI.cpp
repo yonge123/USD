@@ -28,6 +28,8 @@
 #include "pxr/usd/sdf/types.h"
 #include "pxr/usd/sdf/assetPath.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
@@ -90,9 +92,14 @@ UsdShadeConnectableAPI::GetSchemaAttributeNames(bool includeInherited)
         return localNames;
 }
 
+PXR_NAMESPACE_CLOSE_SCOPE
+
 // ===================================================================== //
 // Feel free to add custom code below this line. It will be preserved by
 // the code generator.
+//
+// Just remember to wrap code in the appropriate delimiters:
+// 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
@@ -101,6 +108,8 @@ UsdShadeConnectableAPI::GetSchemaAttributeNames(bool includeInherited)
 #include "pxr/usd/usdShade/tokens.h"
 
 #include "debugCodes.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DEFINE_ENV_SETTING(
     USD_SHADE_BACK_COMPAT, true,
@@ -304,3 +313,5 @@ UsdShadeConnectableAPI::GetOutputs() const
     }
     return ret;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

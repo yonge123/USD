@@ -33,6 +33,9 @@
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 HdRprim::HdRprim(SdfPath const& id,
                  SdfPath const& instancerID)
     : _id(id)
@@ -127,6 +130,12 @@ HdRprim::_UpdateVisibility(HdSceneDelegate* delegate,
     }
 }
 
+
+TfToken
+HdRprim::GetRenderTag(HdSceneDelegate* delegate) const
+{
+    return delegate->GetRenderTag(_id);
+}
 
 void 
 HdRprim::_SetSurfaceShaderId(HdChangeTracker &changeTracker,
@@ -377,3 +386,6 @@ HdRprim::_GetInstancerTransforms(HdSceneDelegate* delegate)
     }
     return transforms;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
