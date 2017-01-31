@@ -31,9 +31,9 @@
 #include "pxr/usd/usdGeom/tokens.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+
 extern TfEnvSetting<bool> PIXMAYA_USE_USD_REF_ASSEMBLIES;
-
-
 
 TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
         PXRUSDMAYA_TRANSLATOR_TOKENS);

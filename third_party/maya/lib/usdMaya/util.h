@@ -335,7 +335,7 @@ std::string MDagPathToString(const MDagPath& dagPath,
 ///
 /// Elements of the path will be sanitized such that it is a valid SdfPath.
 /// This means it will replace ':' with '_'.
-SdfPath MDagPathToUsdPath(
+PXR_NS::SdfPath MDagPathToUsdPath(
             const MDagPath& dagPath,
             bool mergeTransformAndShape,
             bool stripUsdNamespaces);

@@ -124,9 +124,6 @@ PxrUsdMayaTranslatorUtil::CreateNode(
     return TF_VERIFY(!mayaNodeObj->isNull());
 }
 
-PXR_NAMESPACE_CLOSE_SCOPE
-
-
 /* static */
 std::string
 PxrUsdMayaTranslatorUtil::GetNamespace(
@@ -226,3 +223,6 @@ PxrUsdMayaTranslatorUtil::CreateParentNamespace(const std::string& fullNamespace
     std::string absoluteNS = std::string(":") + TfStringTrim(fullNamespace, ":");
     return CreateNamespace(TfStringGetBeforeSuffix(absoluteNS, ':'));
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

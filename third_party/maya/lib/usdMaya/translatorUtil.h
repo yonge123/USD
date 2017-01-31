@@ -35,6 +35,8 @@
 #include <maya/MString.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+
 extern TfEnvSetting<bool> PIXMAYA_DEBUG_USD_ASSEM;
 
 // TODO: determine if the TfEnvSetting check here is performant, and cache if

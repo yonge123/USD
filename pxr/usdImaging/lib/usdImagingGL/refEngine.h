@@ -40,10 +40,10 @@
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagecache.h>
 
-struct ImagePlaneDef;
-
 PXR_NAMESPACE_OPEN_SCOPE
 
+
+struct ImagePlaneDef;
 
 TF_DECLARE_WEAK_PTRS(UsdImagingGLRefEngine);
 
