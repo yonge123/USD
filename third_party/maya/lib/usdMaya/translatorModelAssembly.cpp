@@ -80,7 +80,6 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((FilePathPlugName, "filePath"))
     ((PrimPathPlugName, "primPath"))
     ((KindPlugName, "kind"))
-    ((VariantSetPlugNamePrefix, "usdVariantSet_"))
 
     ((MayaProxyShapeNameSuffix, "Proxy"))
 
@@ -183,7 +182,7 @@ PxrUsdMayaTranslatorModelAssembly::Create(
 
             const std::string& variantSetName = regVarSet.name;
             std::string variantSetPlugName = TfStringPrintf("%s%s",
-                _tokens->VariantSetPlugNamePrefix.GetText(), variantSetName.c_str());
+                PxrUsdMayaVariantSetTokens->PlugNamePrefix.GetText(), variantSetName.c_str());
 
             MPlug modelingVariantPlg = assemblyNode.findPlug(variantSetPlugName.c_str(), &status);
             if (status == MS::kSuccess) {
@@ -545,7 +544,7 @@ PxrUsdMayaTranslatorModelAssembly::Read(
             std::string variantSelection = iter->second;
 
             std::string variantSetPlugName = TfStringPrintf("%s%s",
-                _tokens->VariantSetPlugNamePrefix.GetText(), variantSetName.c_str());
+                PxrUsdMayaVariantSetTokens->PlugNamePrefix.GetText(), variantSetName.c_str());
             MPlug varSetPlug = depNodeFn.findPlug(variantSetPlugName.c_str(), true, &status);
             if (status != MStatus::kSuccess) {
                 MFnTypedAttribute typedAttrFn;
