@@ -67,12 +67,6 @@
 #include <string>
 #include <vector>
 
-// TODO: instead of hardcoding this, switch based on context and
-// PIXMAYA_USE_USD_REF_ASSEMBLIES: ie, if the result of a reference or assembly
-// operation, do that, but if importing, use the PIXMAYA_USE_USD_REF_ASSEMBLIES
-// setting
-#define PIXMAYA_FORCE_MAYA_REFERENCES 1
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 
