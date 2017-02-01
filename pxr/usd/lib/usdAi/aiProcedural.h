@@ -27,7 +27,7 @@
 /// \file usdAi/aiProcedural.h
 
 #include "pxr/pxr.h"
-#include "pxr/usd/usdGeom/gprim.h"
+#include "pxr/usd/usdGeom/boundable.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usdAi/tokens.h"
@@ -41,7 +41,7 @@
 #include "pxr/base/tf/token.h"
 #include "pxr/base/tf/type.h"
 
-PXR_NAMESPACE_OPEN_SCOPE
+
 
 class SdfAssetPath;
 
@@ -53,7 +53,7 @@ class SdfAssetPath;
 ///
 /// Represents an Arnold procedural shape node.
 ///
-class UsdAiProcedural : public UsdGeomGprim
+class UsdAiProcedural : public UsdGeomBoundable
 {
 public:
     /// Compile-time constant indicating whether or not this class corresponds
@@ -67,7 +67,7 @@ public:
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
     explicit UsdAiProcedural(const UsdPrim& prim=UsdPrim())
-        : UsdGeomGprim(prim)
+        : UsdGeomBoundable(prim)
     {
     }
 
@@ -75,7 +75,7 @@ public:
     /// Should be preferred over UsdAiProcedural(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
     explicit UsdAiProcedural(const UsdSchemaBase& schemaObj)
-        : UsdGeomGprim(schemaObj)
+        : UsdGeomBoundable(schemaObj)
     {
     }
 
@@ -209,7 +209,7 @@ public:
     //
     // Just remember to: 
     //  - Close the class declaration with }; 
-    //  - Close the namespace with PXR_NAMESPACE_CLOSE_SCOPE
+    //  - Close the namespace with 
     //  - Close the include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--

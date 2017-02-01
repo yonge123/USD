@@ -23,8 +23,7 @@
 //
 #include "pxr/usd/usdAi/tokens.h"
 
-PXR_NAMESPACE_OPEN_SCOPE
+
 
 TF_DEFINE_PUBLIC_TOKENS(UsdAiTokens, USDAI_TOKENS);
 
-PXR_NAMESPACE_CLOSE_SCOPE
