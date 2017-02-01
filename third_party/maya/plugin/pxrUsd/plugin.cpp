@@ -91,8 +91,8 @@ MStatus initializePlugin(
     CHECK_MSTATUS(status);
 
     status =
-	MHWRender::MDrawRegistry::registerDrawOverrideCreator(
-	    UsdMayaProxyDrawOverride::sm_drawDbClassification,
+    MHWRender::MDrawRegistry::registerDrawOverrideCreator(
+        UsdMayaProxyDrawOverride::sm_drawDbClassification,
             UsdMayaProxyDrawOverride::sm_drawRegistrantId,
             UsdMayaProxyDrawOverride::Creator);
     CHECK_MSTATUS(status);
@@ -175,8 +175,8 @@ MStatus initializePlugin(
     }
 
     // A MPxCacheFormat to save Maya point data to UsdGeomPoints
-	status = plugin.registerCacheFormat("pxrUsdCacheFormat",
-										usdCacheFormat::creator);
+    status = plugin.registerCacheFormat("pxrUsdCacheFormat",
+                                        usdCacheFormat::creator);
 
     if (!status) {
         status.perror("pxrUsd: unable to register USD Cache format.");
@@ -211,7 +211,7 @@ MStatus uninitializePlugin(
         status.perror("pxrUsd: unable to deregister USD Export translator.");
     }
 
-	status = plugin.deregisterCacheFormat("pxrUsdCacheFormat");
+    status = plugin.deregisterCacheFormat("pxrUsdCacheFormat");
     if (!status) {
         status.perror("pxrUsd: unable to deregister USD Cache format.");
     }
@@ -220,8 +220,8 @@ MStatus uninitializePlugin(
     CHECK_MSTATUS(status);
 
     status =
-	MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
-	    UsdMayaProxyDrawOverride::sm_drawDbClassification,
+    MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
+        UsdMayaProxyDrawOverride::sm_drawDbClassification,
             UsdMayaProxyDrawOverride::sm_drawRegistrantId);
 
     CHECK_MSTATUS(status);
