@@ -110,6 +110,7 @@ JobExportArgs::JobExportArgs()
         exportRefsAsInstanceable(false),
         exportDisplayColor(true),
         mergeTransformAndShape(true),
+        exportInstances(true),
         exportAnimation(false),
         excludeInvisible(false),
         exportDefaultCameras(false),

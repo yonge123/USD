@@ -118,6 +118,7 @@ struct JobExportArgs : JobSharedArgs
     bool exportDisplayColor;
 
     bool mergeTransformAndShape;
+    bool exportInstances;
 
     bool exportAnimation;
     bool excludeInvisible;
