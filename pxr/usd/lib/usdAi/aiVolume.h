@@ -51,9 +51,11 @@ class SdfAssetPath;
 
 /// \class UsdAiVolume
 ///
-/// Represents an Arnold volume node. This is basically a procedural
-/// node with a couple of slight variations, but it actually has its
-/// own typename in Arnold scene descriptions.
+/// Represents an Arnold volume node.
+/// 
+/// This class inherits AiProcedural because Arnold's volume node has
+/// essentially the same parameters as the procedural node, except for
+/// a couple of slight variations.
 ///
 class UsdAiVolume : public UsdAiProcedural
 {

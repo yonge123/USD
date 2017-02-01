@@ -21,7 +21,6 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/pxr.h"
 #include "pxr/usd/usdAi/aiProcedural.h"
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/conversions.h"
@@ -68,12 +67,33 @@ _CreateLoadAtInitAttr(UsdAiProcedural &self,
     return self.CreateLoadAtInitAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
 }
+        
+static UsdAttribute
+_CreateMatteAttr(UsdAiProcedural &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateMatteAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateReceiveShadowsAttr(UsdAiProcedural &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateReceiveShadowsAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateSelfShadowsAttr(UsdAiProcedural &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateSelfShadowsAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
+}
 
 void wrapUsdAiProcedural()
 {
     typedef UsdAiProcedural This;
 
-    class_<This, bases<UsdGeomGprim> >
+    class_<This, bases<UsdGeomBoundable> >
         cls("AiProcedural");
 
     cls
@@ -120,6 +140,27 @@ void wrapUsdAiProcedural()
              &_CreateLoadAtInitAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
+        
+        .def("GetMatteAttr",
+             &This::GetMatteAttr)
+        .def("CreateMatteAttr",
+             &_CreateMatteAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetReceiveShadowsAttr",
+             &This::GetReceiveShadowsAttr)
+        .def("CreateReceiveShadowsAttr",
+             &_CreateReceiveShadowsAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetSelfShadowsAttr",
+             &This::GetSelfShadowsAttr)
+        .def("CreateSelfShadowsAttr",
+             &_CreateSelfShadowsAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
 
     ;
 
@@ -141,8 +182,8 @@ PXR_NAMESPACE_CLOSE_SCOPE
 //
 // Of course any other ancillary or support code may be provided.
 // 
-// Just remember to wrap code in the pxr namespace macros:
-// PXR_NAMESPACE_OPEN_SCOPE, PXR_NAMESPACE_CLOSE_SCOPE.
+// Just remember to wrap code in the appropriate delimiters:
+// 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
 //
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--

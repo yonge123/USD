@@ -60,7 +60,7 @@ class AiShader "AiShader" (
 
 class AiProcedural "AiProcedural" (
     doc = """Represents an Arnold procedural shape node."""
-    inherits = </Gprim>
+    inherits = </Boundable>
 ) {
     uniform string dso (
         doc = """A procedural can point to ass, obj, and ply filetypes, or to a
@@ -79,20 +79,46 @@ class AiProcedural "AiProcedural" (
                  the procedural is through user data."""
     )
 
-    uniform bool loadAtInit = false (
+    uniform bool loat_at_init = false (
         doc = """Whether to force the loading of the procedural during the
                  initialization process."""
+        customData = {
+            string apiName = "loadAtInit"
+        }
+    )
+
+    uniform bool matte = false (
+        doc = """Enable or disable matte for the procedural."""
+    )
+
+    uniform bool receive_shadows = true (
+        doc = """Enable or disable receiving shadows for the procedural."""
+        customData = {
+            string apiName = "receiveShadows"
+        }
+    )
+
+    uniform bool self_shadows = true (
+        doc = """Enable or disable self shadows for the procedural."""
+        customData = {
+            string apiName = "selfShadows"
+        }
     )
 }
 
 class AiVolume "AiVolume" (
-    doc = """Represents an Arnold volume node. This is basically a procedural
-             node with a couple of slight variations, but it actually has its
-             own typename in Arnold scene descriptions."""
+    doc = """Represents an Arnold volume node.
+
+             This class inherits AiProcedural because Arnold's volume node has
+             essentially the same parameters as the procedural node, except for
+             a couple of slight variations."""
     inherits = </AiProcedural>
 ) {
-    float stepSize = 0 (
+    float step_size = 0 (
         doc = """Sampling step size inside the volume.
                  I think 0 means automatic."""
+        customData = {
+            string apiName = "stepSize"
+        }
     )
 }

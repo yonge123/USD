@@ -21,7 +21,6 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/pxr.h"
 #include "pxr/usd/usdAi/aiProcedural.h"
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/typed.h"
@@ -35,7 +34,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_REGISTRY_FUNCTION(TfType)
 {
     TfType::Define<UsdAiProcedural,
-        TfType::Bases< UsdGeomGprim > >();
+        TfType::Bases< UsdGeomBoundable > >();
     
     // Register the usd prim typename as an alias under UsdSchemaBase. This
     // enables one to call
@@ -135,13 +134,64 @@ UsdAiProcedural::CreateDataAttr(VtValue const &defaultValue, bool writeSparsely)
 UsdAttribute
 UsdAiProcedural::GetLoadAtInitAttr() const
 {
-    return GetPrim().GetAttribute(UsdAiTokens->loadAtInit);
+    return GetPrim().GetAttribute(UsdAiTokens->loat_at_init);
 }
 
 UsdAttribute
 UsdAiProcedural::CreateLoadAtInitAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdAiTokens->loadAtInit,
+    return UsdSchemaBase::_CreateAttr(UsdAiTokens->loat_at_init,
+                       SdfValueTypeNames->Bool,
+                       /* custom = */ false,
+                       SdfVariabilityUniform,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdAiProcedural::GetMatteAttr() const
+{
+    return GetPrim().GetAttribute(UsdAiTokens->matte);
+}
+
+UsdAttribute
+UsdAiProcedural::CreateMatteAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdAiTokens->matte,
+                       SdfValueTypeNames->Bool,
+                       /* custom = */ false,
+                       SdfVariabilityUniform,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdAiProcedural::GetReceiveShadowsAttr() const
+{
+    return GetPrim().GetAttribute(UsdAiTokens->receive_shadows);
+}
+
+UsdAttribute
+UsdAiProcedural::CreateReceiveShadowsAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdAiTokens->receive_shadows,
+                       SdfValueTypeNames->Bool,
+                       /* custom = */ false,
+                       SdfVariabilityUniform,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdAiProcedural::GetSelfShadowsAttr() const
+{
+    return GetPrim().GetAttribute(UsdAiTokens->self_shadows);
+}
+
+UsdAttribute
+UsdAiProcedural::CreateSelfShadowsAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdAiTokens->self_shadows,
                        SdfValueTypeNames->Bool,
                        /* custom = */ false,
                        SdfVariabilityUniform,
@@ -168,11 +218,14 @@ UsdAiProcedural::GetSchemaAttributeNames(bool includeInherited)
     static TfTokenVector localNames = {
         UsdAiTokens->dso,
         UsdAiTokens->data,
-        UsdAiTokens->loadAtInit,
+        UsdAiTokens->loat_at_init,
+        UsdAiTokens->matte,
+        UsdAiTokens->receive_shadows,
+        UsdAiTokens->self_shadows,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
-            UsdGeomGprim::GetSchemaAttributeNames(true),
+            UsdGeomBoundable::GetSchemaAttributeNames(true),
             localNames);
 
     if (includeInherited)
@@ -187,7 +240,7 @@ PXR_NAMESPACE_CLOSE_SCOPE
 // Feel free to add custom code below this line. It will be preserved by
 // the code generator.
 //
-// Just remember to wrap code in the pxr namespace macros:
-// PXR_NAMESPACE_OPEN_SCOPE, PXR_NAMESPACE_CLOSE_SCOPE.
+// Just remember to wrap code in the appropriate delimiters:
+// 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--

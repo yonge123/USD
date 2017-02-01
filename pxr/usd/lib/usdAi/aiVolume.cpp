@@ -21,7 +21,6 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/pxr.h"
 #include "pxr/usd/usdAi/aiVolume.h"
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/typed.h"
@@ -101,13 +100,13 @@ UsdAiVolume::_GetTfType() const
 UsdAttribute
 UsdAiVolume::GetStepSizeAttr() const
 {
-    return GetPrim().GetAttribute(UsdAiTokens->stepSize);
+    return GetPrim().GetAttribute(UsdAiTokens->step_size);
 }
 
 UsdAttribute
 UsdAiVolume::CreateStepSizeAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdAiTokens->stepSize,
+    return UsdSchemaBase::_CreateAttr(UsdAiTokens->step_size,
                        SdfValueTypeNames->Float,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -132,7 +131,7 @@ const TfTokenVector&
 UsdAiVolume::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdAiTokens->stepSize,
+        UsdAiTokens->step_size,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
@@ -151,7 +150,7 @@ PXR_NAMESPACE_CLOSE_SCOPE
 // Feel free to add custom code below this line. It will be preserved by
 // the code generator.
 //
-// Just remember to wrap code in the pxr namespace macros:
-// PXR_NAMESPACE_OPEN_SCOPE, PXR_NAMESPACE_CLOSE_SCOPE.
+// Just remember to wrap code in the appropriate delimiters:
+// 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--

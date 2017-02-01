@@ -44,8 +44,11 @@ PXR_NAMESPACE_OPEN_SCOPE
     ((aiSurface, "ai:surface")) \
     (data) \
     (dso) \
-    (loadAtInit) \
-    (stepSize) \
+    (loat_at_init) \
+    (matte) \
+    (receive_shadows) \
+    (self_shadows) \
+    (step_size) \
     ((userPrefix, "user:"))
 
 /// \anchor UsdAiTokens
@@ -72,8 +75,11 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \li <b>aiSurface</b> - UsdAiMaterialAPI
 /// \li <b>data</b> - UsdAiProcedural
 /// \li <b>dso</b> - UsdAiProcedural
-/// \li <b>loadAtInit</b> - UsdAiProcedural
-/// \li <b>stepSize</b> - UsdAiVolume
+/// \li <b>loat_at_init</b> - UsdAiProcedural
+/// \li <b>matte</b> - UsdAiProcedural
+/// \li <b>receive_shadows</b> - UsdAiProcedural
+/// \li <b>self_shadows</b> - UsdAiProcedural
+/// \li <b>step_size</b> - UsdAiVolume
 /// \li <b>userPrefix</b> - The attribute prefix used to qualify user parameters on nodes using the AiNodeAPI.
 TF_DECLARE_PUBLIC_TOKENS(UsdAiTokens, USDAI_TOKENS);
 

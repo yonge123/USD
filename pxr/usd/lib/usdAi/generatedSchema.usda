@@ -46,25 +46,6 @@ class AiProcedural "AiProcedural" (
                  better and more compact way of passing parameters and data to
                  the procedural is through user data."""
     )
-    uniform bool doubleSided = 0 (
-        doc = """Although some renderers treat all parametric or polygonal
-        surfaces as if they were effectively laminae with outward-facing
-        normals on both sides, some renderers derive significant optimizations
-        by considering these surfaces to have only a single outward side,
-        typically determined by control-point winding order and/or 
-        orientation.  By doing so they can perform \"backface culling\" to
-        avoid drawing the many polygons of most closed surfaces that face away
-        from the viewer.
-        
-        However, it is often advantageous to model thin objects such as paper
-        and cloth as single, open surfaces that must be viewable from both
-        sides, always.  Setting a gprim's doubleSided attribute to 
-        \\c true instructs all renderers to disable optimizations such as
-        backface culling for the gprim, and attempt (not all renderers are able
-        to do so, but the USD reference GL renderer always will) to provide
-        forward-facing normals on each side of the surface for lighting
-        calculations."""
-    )
     uniform string dso (
         doc = """A procedural can point to ass, obj, and ply filetypes, or to a
                  dll or so, which will be recognized as a compiled procedural
@@ -83,26 +64,12 @@ class AiProcedural "AiProcedural" (
         the extent of all children, as they will be pruned from BBox computation
         during traversal."""
     )
-    uniform bool loadAtInit = 0 (
+    uniform bool loat_at_init = 0 (
         doc = """Whether to force the loading of the procedural during the
                  initialization process."""
     )
-    uniform token orientation = "rightHanded" (
-        allowedTokens = ["rightHanded", "leftHanded"]
-        doc = "See: http://renderman.pixar.com/resources/current/rps/attributes.html#orientation-and-sides"
-    )
-    color3f[] primvars:displayColor (
-        doc = '''It is useful to have an "official" colorSet that can be used
-        as a display or modeling color, even in the absence of any specified
-        shader for a gprim.  DisplayColor serves this role; because it is a
-        UsdGeomPrimvar, it can also be used as a gprim override for any shader
-        that consumes a displayColor parameter.'''
-    )
-    float[] primvars:displayOpacity (
-        doc = """Companion to displayColor that specifies opacity, broken
-        out as an independent attribute rather than an rgba color, both so that
-        each can be indepedently overridden, and because shaders rarely consume
-        rgba parameters."""
+    uniform bool matte = 0 (
+        doc = "Enable or disable matte for the procedural."
     )
     rel proxyPrim = None (
         doc = '''The proxyPrim relationship allows us to link a
@@ -163,6 +130,12 @@ class AiProcedural "AiProcedural" (
         to a different runtime level of detail, and that does not interact
         well with the needs of multithreaded rendering. Purpose provides us with
         a better tool for dynamic, interactive complexity management.'''
+    )
+    uniform bool receive_shadows = 1 (
+        doc = "Enable or disable receiving shadows for the procedural."
+    )
+    uniform bool self_shadows = 1 (
+        doc = "Enable or disable self shadows for the procedural."
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
@@ -187,9 +160,11 @@ class AiProcedural "AiProcedural" (
 }
 
 class AiVolume "AiVolume" (
-    doc = """Represents an Arnold volume node. This is basically a procedural
-             node with a couple of slight variations, but it actually has its
-             own typename in Arnold scene descriptions."""
+    doc = """Represents an Arnold volume node.
+
+             This class inherits AiProcedural because Arnold's volume node has
+             essentially the same parameters as the procedural node, except for
+             a couple of slight variations."""
 )
 {
     string data = "" (
@@ -201,25 +176,6 @@ class AiVolume "AiVolume" (
                  the particular implementation of each procedural program. A
                  better and more compact way of passing parameters and data to
                  the procedural is through user data."""
-    )
-    uniform bool doubleSided = 0 (
-        doc = """Although some renderers treat all parametric or polygonal
-        surfaces as if they were effectively laminae with outward-facing
-        normals on both sides, some renderers derive significant optimizations
-        by considering these surfaces to have only a single outward side,
-        typically determined by control-point winding order and/or 
-        orientation.  By doing so they can perform \"backface culling\" to
-        avoid drawing the many polygons of most closed surfaces that face away
-        from the viewer.
-        
-        However, it is often advantageous to model thin objects such as paper
-        and cloth as single, open surfaces that must be viewable from both
-        sides, always.  Setting a gprim's doubleSided attribute to 
-        \\c true instructs all renderers to disable optimizations such as
-        backface culling for the gprim, and attempt (not all renderers are able
-        to do so, but the USD reference GL renderer always will) to provide
-        forward-facing normals on each side of the surface for lighting
-        calculations."""
     )
     uniform string dso (
         doc = """A procedural can point to ass, obj, and ply filetypes, or to a
@@ -239,26 +195,12 @@ class AiVolume "AiVolume" (
         the extent of all children, as they will be pruned from BBox computation
         during traversal."""
     )
-    uniform bool loadAtInit = 0 (
+    uniform bool loat_at_init = 0 (
         doc = """Whether to force the loading of the procedural during the
                  initialization process."""
     )
-    uniform token orientation = "rightHanded" (
-        allowedTokens = ["rightHanded", "leftHanded"]
-        doc = "See: http://renderman.pixar.com/resources/current/rps/attributes.html#orientation-and-sides"
-    )
-    color3f[] primvars:displayColor (
-        doc = '''It is useful to have an "official" colorSet that can be used
-        as a display or modeling color, even in the absence of any specified
-        shader for a gprim.  DisplayColor serves this role; because it is a
-        UsdGeomPrimvar, it can also be used as a gprim override for any shader
-        that consumes a displayColor parameter.'''
-    )
-    float[] primvars:displayOpacity (
-        doc = """Companion to displayColor that specifies opacity, broken
-        out as an independent attribute rather than an rgba color, both so that
-        each can be indepedently overridden, and because shaders rarely consume
-        rgba parameters."""
+    uniform bool matte = 0 (
+        doc = "Enable or disable matte for the procedural."
     )
     rel proxyPrim = None (
         doc = '''The proxyPrim relationship allows us to link a
@@ -320,7 +262,13 @@ class AiVolume "AiVolume" (
         well with the needs of multithreaded rendering. Purpose provides us with
         a better tool for dynamic, interactive complexity management.'''
     )
-    float stepSize = 0 (
+    uniform bool receive_shadows = 1 (
+        doc = "Enable or disable receiving shadows for the procedural."
+    )
+    uniform bool self_shadows = 1 (
+        doc = "Enable or disable self shadows for the procedural."
+    )
+    float step_size = 0 (
         doc = """Sampling step size inside the volume.
                  I think 0 means automatic."""
     )
