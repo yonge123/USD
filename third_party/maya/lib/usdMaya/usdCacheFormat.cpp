@@ -125,14 +125,6 @@ MStatus usdCacheFormat::open(const MString& fileName, FileAccessMode mode) {
 		if (mLayerPtr) {
 			mLayerPtr->SetPermissionToEdit(true);
 			mLayerPtr->SetPermissionToSave(true);
-			// Add cache prim right away because writing cache frame 0 will
-			// happen before writeDefinition is called for the first time
-			const SdfPath specPath = this->findOrAddDefaultPrim();
-			if (not specPath.IsPrimPath()) {
-				MGlobal::displayError(
-					"usdCacheFormat::open: (write) could not find or create the cache default prim.");
-				return MS::kFailure;
-			}
 			return MS::kSuccess;
 		} else {
 			MGlobal::displayError(
@@ -160,7 +152,6 @@ MStatus usdCacheFormat::open(const MString& fileName, FileAccessMode mode) {
 			mLayerPtr = SdfLayer::FindOrOpen(iFileName);
 		}
 		if (mLayerPtr) {
-			// Success, probably pointless to store opened file name
 			if (this->readHeader()) {
 				mLayerPtr->SetPermissionToEdit(false);
 				mLayerPtr->SetPermissionToSave(false);
@@ -197,6 +188,7 @@ void usdCacheFormat::close()
 
 MStatus usdCacheFormat::isValid() {
 	// Checking that it has a correct header is done just once at open
+	// since Maya seems to be calling it a lot, kept it minimal
 	if (mLayerPtr) {
 		return MS::kSuccess;
 	} else {
@@ -211,9 +203,11 @@ MStatus usdCacheFormat::writeHeader(const MString& version,
 		mLayerPtr->SetComment(std::string(this->translatorName().asChar())
 			+ std::string(" version ") + version.asChar());
 		// When writeHeader is called, we get a startTime of 0 and endTime of 1 ?
+		// These will be update at each call to writeTime anyway
 		mLayerPtr->SetStartTimeCode(startTime.asUnits(mTimeUnit));
 		mLayerPtr->SetEndTimeCode(endTime.asUnits(mTimeUnit));
 		mCurrentTime = startTime.asUnits(mTimeUnit);
+		// This will not change and can be done once and for all here
 		MTime oneSecond(1, MTime::kSeconds);
 		double framesPerSecond = oneSecond.asUnits(MTime::uiUnit());
 		double timesCodesPerSecond = oneSecond.asUnits(mTimeUnit);
@@ -221,8 +215,18 @@ MStatus usdCacheFormat::writeHeader(const MString& version,
 		mLayerPtr->SetFramesPerSecond(framesPerSecond);
 		mLayerPtr->SetTimeCodesPerSecond(timesCodesPerSecond);
 		mLayerPtr->SetFramePrecision(timeCodesPerFrame);
-		return MS::kSuccess;
+		// Create the default primitive
+		const SdfPath specPath = this->findOrAddDefaultPrim();
+		if (specPath.IsPrimPath()) {
+			return MS::kSuccess;
+		} else {
+			MGlobal::displayError(
+				"usdCacheFormat::writeHeader: could not find or create the cache default prim.");
+			return MS::kFailure;
+		}
 	} else {
+		MGlobal::displayError(
+			"usdCacheFormat::writeHeader: got called with no open layer.");
 		return MS::kFailure;
 	}
 }
@@ -232,7 +236,8 @@ MStatus usdCacheFormat::readHeader() {
 		const std::string comment = mLayerPtr->GetComment();
 		const std::string expected = this->translatorName().asChar();
 		if (TfStringStartsWith(comment, expected)) {
-			// If it looks like a proper cache file, read the attributes defined in it
+			// If it looks like a proper cache file, read the attributes decalred
+			// on the default prim
 			return this->readExistingAttributes();
 		}
 	}
@@ -241,9 +246,6 @@ MStatus usdCacheFormat::readHeader() {
 
 MStatus usdCacheFormat::rewind() {
 	if (mLayerPtr) {
-		// Do we want to refresh if layer changed on disk?
-		// mLayerPtr->Reload();
-		// Should we even do anything ?
 		if (mLayerPtr->HasStartTimeCode()) {
 			mCurrentTime = mLayerPtr->GetStartTimeCode();
 			return MS::kSuccess;
@@ -275,6 +277,9 @@ SdfPath usdCacheFormat::findOrAddDefaultPrim() {
 	}
 }
 
+// It's not complete, just handles the cases we need for the custom attrbites
+// that can be created on request by usdCacheFormat. Pre-defined attributes
+// come with a hardcoded type correspondance anyway
 SdfValueTypeName usdCacheFormat::MCacheDataTypeToSdfValueTypeName(
 	const MCacheFormatDescription::CacheDataType dataType) {
 	SdfValueTypeName attrType;
@@ -305,8 +310,6 @@ SdfValueTypeName usdCacheFormat::MCacheDataTypeToSdfValueTypeName(
 	return attrType;
 }
 
-// It's not complete, just handles the cases we need for the custom attrbites
-// that can be created by usdCacheFormat
 MCacheFormatDescription::CacheDataType usdCacheFormat::SdfValueTypeNameToMCacheDataType(
 	const SdfValueTypeName& attrType) {
 	MCacheFormatDescription::CacheDataType dataType;
@@ -426,8 +429,8 @@ usdCacheFormat::attrById::iterator usdCacheFormat::findOrAddMayaAttribute(
 			                                 attrDef.usdAttrType,
 			                                 SdfVariabilityVarying,
 			                                 false);
-			// Must be ordered in the order Maya will request them
-			primSpec->InsertInPropertyOrder(attrSpec->GetNameToken());
+			// re enable if order is a problem
+			// primSpec->InsertInPropertyOrder(attrSpec->GetNameToken());
 		}
 		// If add worked, add it to the cached attributes set
 		if (mLayerPtr->GetAttributeAtPath(attrPath)) {
@@ -516,11 +519,10 @@ void usdCacheFormat::writeMetadata()
 	mLayerPtr->SetCustomLayerData(attrCachedMeta);
 }
 
-// We need to use the same attributes order as the one that was used
-// during write, so either rely on some indexed meta data or defining
-// a PropertyOrder when creating attributes on the default prim
 MStatus usdCacheFormat::readExistingAttributes()
 {
+	// Get the existing attributes on the layer default prim
+	// and add them to the set of cached attributes
 	MStatus status = MS::kSuccess;
 	mCachedAttributes.clear();
 	SdfPath primPath(mLayerPtr->GetDefaultPrim());
@@ -622,6 +624,7 @@ MStatus usdCacheFormat::findChannelName(const MString& name) {
 	const std::string mayaAttrName = this->mayaAttrFromChannel(channel);
 	auto itName = mCachedAttributes.get<maya>().find(mayaAttrName);
 	if (itName != mCachedAttributes.get<maya>().end()) {
+		mFirstMayaAttr = mayaAttrFromChannel(channel);
 		mCurrentChannel = channel;
 		return MS::kSuccess;
 	} else {
@@ -641,7 +644,14 @@ MStatus usdCacheFormat::readChannelName(MString& name) {
 	auto itName = mCachedAttributes.get<maya>().find(mayaAttrName);
 	if (itName != mCachedAttributes.get<maya>().end()) {
 		usdCacheFormat::attrById::iterator itId = mCachedAttributes.project<0>(itName);
-		if (++itId !=  mCachedAttributes.end()) {
+		// We keep track of first requested attribute with mFirstMayaAttr
+		// and loop on the list so that we are not dependant on Maya order of attributes
+		if (++itId ==  mCachedAttributes.end()) {
+			itId = mCachedAttributes.begin();
+		}
+		// Just remove the above and instead check :
+		// if (++itId !=  mCachedAttributes.end()) if we don't want to loop
+		if (itId->mayaAttrName != mFirstMayaAttr) {
 			const std::string nextMayaAttrName = itId->mayaAttrName;
 			const std::string nextChannel = TfStringPrintf("%s_%s", mayaNodeName.c_str(), nextMayaAttrName.c_str());
 			// Advance by one channel
