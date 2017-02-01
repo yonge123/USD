@@ -33,8 +33,6 @@
 #include "usdMaya/pluginStaticData.h"
 #include "usdMaya/usdImport.h"
 #include "usdMaya/usdExport.h"
-#include "usdMaya/usdTranslatorImport.h"
-#include "usdMaya/usdTranslatorExport.h"
 #include "usdMaya/usdCacheFormat.h"
 #include "usdMaya/usdTranslator.h"
 
