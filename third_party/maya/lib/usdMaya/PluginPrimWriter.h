@@ -58,7 +58,7 @@ public:
     virtual ~PxrUsdExport_PluginPrimWriter();
 
     // Overrides for MayaTransformWriter
-    virtual UsdPrim write(const UsdTimeCode &usdTime);
+    virtual void write(const UsdTimeCode &usdTime);
     
     virtual bool exportsGprims() const override;
     

@@ -61,7 +61,7 @@ class MayaTransformWriter : public MayaPrimWriter
 {
   public:
 
-    MayaTransformWriter(MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs);
+    MayaTransformWriter(MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs, bool create);
     virtual ~MayaTransformWriter() {};
 
     virtual void pushTransformStack(
@@ -69,7 +69,7 @@ class MayaTransformWriter : public MayaPrimWriter
             const UsdGeomXformable& usdXForm, 
             bool writeAnim);
     
-    virtual UsdPrim write(const UsdTimeCode &usdTime);
+    virtual void write(const UsdTimeCode &usdTime);
 
     virtual bool isShapeAnimated()     const { return mIsShapeAnimated; };
 

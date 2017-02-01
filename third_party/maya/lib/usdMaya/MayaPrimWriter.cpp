@@ -77,6 +77,11 @@ MayaPrimWriter::MayaPrimWriter(MDagPath & iDag,
     }
 }
 
+const UsdPrim&
+MayaPrimWriter::getPrim() const {
+    return mUsdPrim;
+}
+
 bool
 MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime, UsdGeomImageable &primSchema) 
 {

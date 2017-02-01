@@ -251,7 +251,7 @@ bool usdWriteJob::beginJob(bool append)
             mMayaPrimWriterList.push_back(primWriter);
 
             // Write out data (non-animated/default values).
-            if (UsdPrim usdPrim = primWriter->write(UsdTimeCode::Default())) {
+            if (const auto& usdPrim = primWriter->getPrim()) {
                 MDagPath dag = primWriter->getDagPath();
                 mDagPathToUsdPathMap[dag] = usdPrim.GetPath();
 
@@ -268,13 +268,16 @@ bool usdWriteJob::beginJob(bool append)
                     }
                 }
 
-                mModelKindWriter.OnWritePrim(usdPrim, primWriter);
-
                 if (primWriter->shouldPruneChildren()) {
                     itDag.prune();
                 }
             }
         }
+    }
+
+    for (auto primWriter : mMayaPrimWriterList) {
+        primWriter->write(UsdTimeCode::Default());
+        mModelKindWriter.OnWritePrim(primWriter->getPrim(), primWriter);
     }
 
     // Writing Looks/Shading
@@ -542,7 +545,7 @@ bool usdWriteJob::createPrimWriter(
     }
 
     if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator)) {
-        MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, mStage, mArgs));
+        MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, mStage, mArgs, true));
         if (primPtr->isValid() ) {
             *primWriterOut = primPtr;
             return true;

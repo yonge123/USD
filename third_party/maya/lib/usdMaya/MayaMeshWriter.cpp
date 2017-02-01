@@ -53,27 +53,25 @@ MayaMeshWriter::MayaMeshWriter(
         MDagPath & iDag, 
         UsdStageRefPtr stage, 
         const JobExportArgs & iArgs) :
-    MayaTransformWriter(iDag, stage, iArgs)
+    MayaTransformWriter(iDag, stage, iArgs, false)
 {
-}
-
-//virtual 
-UsdPrim MayaMeshWriter::write(const UsdTimeCode &usdTime)
-{
-
     if ( !isMeshValid() ) {
-        return UsdPrim();
+        return;
     }
 
     // Get schema
     UsdGeomMesh primSchema = UsdGeomMesh::Define(getUsdStage(), getUsdPath());
     TF_AXIOM(primSchema);
-    UsdPrim meshPrim = primSchema.GetPrim();
-    TF_AXIOM(meshPrim);
+    mUsdPrim = primSchema.GetPrim();
+    TF_AXIOM(mUsdPrim);
+}
 
+//virtual 
+void MayaMeshWriter::write(const UsdTimeCode &usdTime)
+{
+    UsdGeomMesh primSchema(mUsdPrim);
     // Write the attrs
     writeMeshAttrs(usdTime, primSchema);
-    return meshPrim;
 }
 
 static

@@ -409,7 +409,8 @@ void MayaTransformWriter::pushTransformStack(
 MayaTransformWriter::MayaTransformWriter(
         MDagPath& iDag, 
         UsdStageRefPtr stage, 
-        const JobExportArgs& iArgs) :
+        const JobExportArgs& iArgs,
+        bool create) :
     MayaPrimWriter(iDag, stage, iArgs),
     mXformDagPath(iDag),
     mIsShapeAnimated(false)
@@ -459,20 +460,21 @@ MayaTransformWriter::MayaTransformWriter(
         if (iArgs.exportAnimation)
             mIsShapeAnimated = PxrUsdMayaUtil::isAnimated(obj);
     }
+
+    if (create) {
+        // Write to USD
+        UsdGeomXform primSchema = UsdGeomXform::Define(getUsdStage(), getUsdPath());
+        TF_AXIOM(primSchema);
+        mUsdPrim = primSchema.GetPrim();
+    }
 }
 
 //virtual 
-UsdPrim MayaTransformWriter::write(const UsdTimeCode &usdTime)
+void MayaTransformWriter::write(const UsdTimeCode &usdTime)
 {
-    TF_AXIOM( isValid() ); // should always be true if this code is reached
-    // Write to USD
-    UsdGeomXform primSchema = UsdGeomXform::Define(getUsdStage(), getUsdPath());
-    TF_AXIOM(primSchema);
-    
+    UsdGeomXform primSchema(mUsdPrim);
     // Set attrs
     writeTransformAttrs(usdTime, primSchema);
-
-    return primSchema.GetPrim();
 }
 
 bool MayaTransformWriter::writeTransformAttrs(

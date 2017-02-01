@@ -48,7 +48,8 @@ class MayaPrimWriter
             const JobExportArgs & iArgs);
     virtual ~MayaPrimWriter() {};
 
-    virtual UsdPrim write(const UsdTimeCode &usdTime) = 0;
+    const UsdPrim& getPrim() const;
+    virtual void write(const UsdTimeCode &usdTime) = 0;
     virtual bool isShapeAnimated()     const = 0;
 
     /// Does this PrimWriter directly create one or more gprims on the UsdStage?
@@ -80,10 +81,13 @@ protected:
     void setUsdPath(const SdfPath &newPath) { mUsdPath = newPath;};
     bool writePrimAttrs(const MDagPath & iDag2, const UsdTimeCode &usdTime, UsdGeomImageable &primSchema);
 
-  private:
+    UsdPrim mUsdPrim;
+
+private:
     MDagPath mDagPath;
     UsdStageRefPtr mStage;
     SdfPath mUsdPath;
+
     bool mIsValid;
 
     // This is just a reference to the JobExportArgs object of the UsdWriteJob

@@ -36,18 +36,18 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(MDagPath& iDag, UsdStageRefPtr stage,
         }
         setUsdPath(usdPath);
     }
-}
 
-UsdPrim MayaImagePlaneWriter::write(const UsdTimeCode& usdTime) {
     UsdGeomImagePlane primSchema =
         UsdGeomImagePlane::Define(getUsdStage(), getUsdPath());
     TF_AXIOM(primSchema);
-    UsdPrim prim = primSchema.GetPrim();
-    TF_AXIOM(prim);
+    mUsdPrim = primSchema.GetPrim();
+    TF_AXIOM(mUsdPrim);
+}
 
+void MayaImagePlaneWriter::write(const UsdTimeCode& usdTime) {
+    UsdGeomImagePlane primSchema(mUsdPrim);
     // Write the attrs
     writeImagePlaneAttrs(usdTime, primSchema);
-    return prim;
 }
 
 bool MayaImagePlaneWriter::isShapeAnimated() const {

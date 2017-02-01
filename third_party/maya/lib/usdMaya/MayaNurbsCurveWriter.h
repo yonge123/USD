@@ -39,7 +39,7 @@ class MayaNurbsCurveWriter : public MayaTransformWriter
     MayaNurbsCurveWriter(MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs);
     virtual ~MayaNurbsCurveWriter() {};
 
-    virtual UsdPrim write(const UsdTimeCode &usdTime);
+    virtual void write(const UsdTimeCode &usdTime);
     
     /// \override
     virtual bool exportsGprims() const;

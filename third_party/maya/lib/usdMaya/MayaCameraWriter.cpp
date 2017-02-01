@@ -41,26 +41,26 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 MayaCameraWriter::MayaCameraWriter(MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs) :
-    MayaTransformWriter(iDag, stage, iArgs)
+    MayaTransformWriter(iDag, stage, iArgs, false)
 {
-}
-
-/* virtual */
-UsdPrim MayaCameraWriter::write(const UsdTimeCode &usdTime)
-{
-    // == Write
     UsdGeomCamera primSchema =
         UsdGeomCamera::Define(getUsdStage(), getUsdPath());
     TF_AXIOM(primSchema);
-    UsdPrim prim = primSchema.GetPrim();
-    TF_AXIOM(prim);
+    mUsdPrim = primSchema.GetPrim();
+    TF_AXIOM(mUsdPrim);
+}
+
+/* virtual */
+void MayaCameraWriter::write(const UsdTimeCode &usdTime)
+{
+    // == Write
+    UsdGeomCamera primSchema(mUsdPrim);
 
     // Write parent class attrs
     writeTransformAttrs(usdTime, primSchema);
 
     // Write the attrs
     writeCameraAttrs(usdTime, primSchema);
-    return prim;
 }
 
 /* virtual */

@@ -47,7 +47,7 @@ class MayaMeshWriter : public MayaTransformWriter
             const JobExportArgs & iArgs);
     virtual ~MayaMeshWriter() {};
 
-    virtual UsdPrim write(const UsdTimeCode &usdTime);
+    virtual void write(const UsdTimeCode &usdTime);
     
     /// \override
     virtual bool exportsGprims() const;

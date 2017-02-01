@@ -33,19 +33,21 @@ PxrUsdExport_PluginPrimWriter::PxrUsdExport_PluginPrimWriter(
         UsdStageRefPtr& stage,
         const JobExportArgs& iArgs,
         PxrUsdMayaPrimWriterRegistry::WriterFn plugFn) :
-    MayaTransformWriter(iDag, stage, iArgs),
+    MayaTransformWriter(iDag, stage, iArgs, false),
     _plugFn(plugFn),
     _exportsGprims(false),
     _exportsReferences(false),
     _pruneChildren(false)
 {
+    SdfPath authorPath = getUsdPath();
+    mUsdPrim = stage->GetPrimAtPath(authorPath);
 }
 
 PxrUsdExport_PluginPrimWriter::~PxrUsdExport_PluginPrimWriter()
 {
 }
 
-UsdPrim
+void
 PxrUsdExport_PluginPrimWriter::write(
         const UsdTimeCode& usdTime)
 {
@@ -60,18 +62,15 @@ PxrUsdExport_PluginPrimWriter::write(
     _exportsReferences = ctx.GetExportsReferences();
     _pruneChildren = ctx.GetPruneChildren();
 
-    UsdPrim prim = stage->GetPrimAtPath(authorPath);
-    if (!prim) {
-        return prim;
+    if (!mUsdPrim) {
+        return;
     }
 
     // Write "parent" class attrs
-    UsdGeomXformable primSchema(prim);
+    UsdGeomXformable primSchema(mUsdPrim);
     if (primSchema) {
         writeTransformAttrs(usdTime, primSchema);
     }
-
-    return prim;
 }
 
 bool

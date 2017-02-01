@@ -41,7 +41,7 @@ class MayaNurbsSurfaceWriter : public MayaTransformWriter
             const JobExportArgs & iArgs);
     virtual ~MayaNurbsSurfaceWriter() {};
     
-    virtual UsdPrim write(const UsdTimeCode &usdTime);
+    virtual void write(const UsdTimeCode &usdTime);
 
     /// \override
     virtual bool exportsGprims() const;

@@ -13,7 +13,7 @@ class MayaImagePlaneWriter : public MayaPrimWriter {
 public:
     MayaImagePlaneWriter(MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs);
     virtual ~MayaImagePlaneWriter() {};
-    virtual UsdPrim write(const UsdTimeCode& usdTime);
+    virtual void write(const UsdTimeCode& usdTime);
     virtual bool isShapeAnimated() const;
 
     enum {
