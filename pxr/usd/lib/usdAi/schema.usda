@@ -57,7 +57,7 @@ class "AiMaterialAPI" (
 
 class AiProcedural "AiProcedural" (
     doc = """Represents an Arnold procedural shape node."""
-    inherits = </Gprim>
+    inherits = </Boundable>
 ) {
     uniform string dso (
         doc = """A procedural can point to ass, obj, and ply filetypes, or to a
@@ -83,9 +83,11 @@ class AiProcedural "AiProcedural" (
 }
 
 class AiVolume "AiVolume" (
-    doc = """Represents an Arnold volume node. This is basically a procedural
-             node with a couple of slight variations, but it actually has its
-             own typename in Arnold scene descriptions."""
+    doc = """Represents an Arnold volume node.
+
+             This class inherits AiProcedural because Arnold's volume node has
+             essentially the same parameters as the procedural node, except for
+             a couple of slight variations."""
     inherits = </AiProcedural>
 ) {
     float stepSize = 0 (
