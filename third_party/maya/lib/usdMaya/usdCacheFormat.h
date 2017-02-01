@@ -28,6 +28,11 @@
 #include "pxr/usd/sdf/path.h"
 
 #include <string>
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/sequenced_index.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index/identity.hpp>
+#include <boost/multi_index/member.hpp>
 
 #define PXRUSDMAYA_CACHEFORMAT_TOKENS \
     ((UsdFileExtensionDefault, "usd")) \
@@ -36,7 +41,9 @@
     ((UsdFileFilter, "*.usd *.usda *.usdc"))
 
 TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaCacheFormatTokens,
-        PXRUSDMAYA_CACHEFORMAT_TOKENS);
+                         PXRUSDMAYA_CACHEFORMAT_TOKENS);
+
+using namespace boost::multi_index;
 
 class usdCacheFormat: public MPxCacheFormat {
 	public:
@@ -57,13 +64,6 @@ class usdCacheFormat: public MPxCacheFormat {
 				MTime& startTime,
 				MTime& endTime);
 		MStatus readHeader();
-
-		MStatus writeDescription(const MCacheFormatDescription& description,
-				const MString& descriptionFileLocation,
-				const MString& baseFileName);
-		MStatus readDescription(MCacheFormatDescription& description,
-				const MString& descriptionFileLocation,
-				const MString& baseFileName);
 
 		MStatus writeTime(MTime& time);
 		MStatus readTime(MTime& time);
@@ -91,26 +91,93 @@ class usdCacheFormat: public MPxCacheFormat {
 		MStatus readChannelName(MString& name);
 
 	private:
-		SdfPath findOrAddDefaultPrim();
-		SdfValueTypeName mCacheDataTypeToSdfValueTypeName(
-			const MCacheFormatDescription::CacheDataType dataType);
-		SdfPath findOrAddAttribute(const std::string& interpretation,
-		                   MCacheFormatDescription::CacheDataType dataType,
-		                   const SdfPath& primPath);
-		SdfPath addCurrentChannel(MCacheFormatDescription::CacheDataType attrType);
-		void readMetadata();
-		void writeMetadata();
-		void closeLayer();
+		// Attributes correspondance and type do not follow a systematic rule
+		// so we need some structure to store their specificities.
+		// We will have to access sequentially,since order of creation is important
+		// for Maya readChannelName as well as by Maya or USD name for fast access
+		struct attributeDefinition {
+			std::string mayaAttrName = "";
+			MCacheFormatDescription::CacheDataType mayaDataType = MCacheFormatDescription::kUnknownData;
+			TfToken usdAttrName = TfToken();
+			SdfValueTypeName usdAttrType = SdfValueTypeName();
+			std::function<VtValue(VtValue x)> convertToUsd = NULL;
+			std::function<VtValue(VtValue x)> convertFromUsd = NULL;
 
-		std::map<std::string, SdfPath> mPathMap;
-		static const MTime::Unit mTimeUnit = MTime::k6000FPS;
+			attributeDefinition(const std::string& mayaAttrName = "",
+			                    MCacheFormatDescription::CacheDataType mayaDataType = MCacheFormatDescription::kUnknownData,
+			                    const std::string& usdAttrName = TfToken(),
+			                    const SdfValueTypeName& usdAttrType = SdfValueTypeName(),
+			                    const std::function<VtValue(VtValue x)> convertToUsd = NULL,
+			                    const std::function<VtValue(VtValue x)> convertFromUsd = NULL):
+				mayaAttrName(mayaAttrName),
+				mayaDataType(mayaDataType),
+				usdAttrName(usdAttrName),
+				usdAttrType(usdAttrType),
+				convertToUsd(convertToUsd),
+				convertFromUsd(convertFromUsd){}
+		};
+		struct maya{};
+		struct usd{};
+		typedef multi_index_container<
+			attributeDefinition,
+			indexed_by<
+				sequenced<>,
+				ordered_unique<
+					tag<maya>,
+					member<
+						attributeDefinition,
+						std::string,
+						&attributeDefinition::mayaAttrName
+					>
+				>,
+				ordered_unique<
+					tag<usd>,
+					member<
+						attributeDefinition,
+						TfToken,
+						&attributeDefinition::usdAttrName
+					>
+				>
+			>
+		> attributesSet;
+		typedef attributesSet::nth_index<0>::type attrById;
+		// Internal methods for lookup and conversion
+		SdfPath findOrAddDefaultPrim();
+		SdfValueTypeName MCacheDataTypeToSdfValueTypeName(
+			const MCacheFormatDescription::CacheDataType dataType);
+		MCacheFormatDescription::CacheDataType  SdfValueTypeNameToMCacheDataType(
+			const SdfValueTypeName& attrType);
+		std::string mayaNodeFromChannel(const std::string& channel);
+		std::string mayaAttrFromChannel(const std::string& channel);
+		SdfPath usdPathFromAttribute(const TfToken& attr);
+		attrById::iterator findOrAddMayaAttribute(const std::string& mayaAttrName,
+		                   const MCacheFormatDescription::CacheDataType mayaDataType);
+		attrById::iterator findOrAddUsdAttribute(const TfToken& usdAttrName,
+		                              const SdfValueTypeName& usdAttrType);
+		MStatus readExistingAttributes();
+		template <class T1, typename T2>
+		VtArray<T2> convertOutArray(const T1& array, std::function<VtValue(VtValue x)> convertFn);
+		template <class T1, typename T2>
+		VtArray<T2> convertOutVectorArray(const T1& array, std::function<VtValue(VtValue x)> convertFn);
+		template <typename T1, class T2>
+		void convertInArray(const VtValue& value, T2& array, std::function<VtValue(VtValue x)> convertFn);
+		template <typename T1, class T2>
+		void convertInVectorArray(const VtValue& value, T2& array, std::function<VtValue(VtValue x)> convertFn);
+	    void writeMetadata();
+		void closeLayer();
+		// Declare a set of predefined attributes for the specific cases
+		// ie usd 'ids' are maya's 'id', usd 'points' are maya's 'position' etc..
+		static const attributesSet mDefinedAttributes;
+		// Other static constants
+		static const std::string mTranslatorName;
+		static const MTime::Unit mTimeUnit;
+		static const std::string mDefaultPrimName;
+		static const std::string mDefaultPrimType;
+		// Dynamic set for keeping track of created attributes
+		attributesSet mCachedAttributes;
 		SdfLayerRefPtr mLayerPtr;
-		bool mDescript;
 		double mCurrentTime;
 		std::string mCurrentChannel;
-		SdfPath mCurrentPath;
 };
-
-
 
 #endif // PXRUSDMAYA_CACHE_FORMAT_H
