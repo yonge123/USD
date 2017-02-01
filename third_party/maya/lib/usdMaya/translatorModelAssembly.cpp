@@ -334,7 +334,7 @@ PxrUsdMayaTranslatorModelAssembly::Read(
     // creating a reference or assembly, do that... otherwise, if we're importing
     // or opening, respect the PIXMAYA_USE_USD_REF_ASSEMBLIES setting
 
-    if (MFileIO::isReferencingFile()) useAssemblies = true;
+    if (MFileIO::isReferencingFile()) useAssemblies = false;
 
 
     if (!useAssemblies) {
