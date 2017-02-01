@@ -22,11 +22,10 @@
 // language governing permissions and limitations under the Apache License.
 //
 // GENERATED FILE.  DO NOT EDIT.
-#include "pxr/pxr.h"
 #include "pxr/usd/usdAi/tokens.h"
 #include "pxr/base/tf/pyStaticTokens.h"
 
-PXR_NAMESPACE_OPEN_SCOPE
+
 
 void wrapUsdAiTokens()
 {
@@ -34,4 +33,3 @@ void wrapUsdAiTokens()
                              USDAI_TOKENS);
 }
 
-PXR_NAMESPACE_CLOSE_SCOPE
