@@ -24,7 +24,8 @@
 
 /// \file usdImagingGL/engine.h
 
-#pragma once
+#ifndef USDIMAGINGGL_ENGINE_H
+#define USDIMAGINGGL_ENGINE_H
 
 #include "pxr/pxr.h"
 #include "pxr/usdImaging/usdImaging/version.h"
@@ -344,3 +345,4 @@ protected:
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
+#endif // USDIMAGINGGL_ENGINE_H
