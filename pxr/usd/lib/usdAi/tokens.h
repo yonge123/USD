@@ -36,7 +36,7 @@
 #include "pxr/pxr.h"
 #include "pxr/base/tf/staticTokens.h"
 
-
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// \hideinitializer
 #define USDAI_TOKENS \
@@ -45,6 +45,9 @@
     (data) \
     (dso) \
     (loadAtInit) \
+    (matte) \
+    (receiveShadows) \
+    (selfShadows) \
     (stepSize) \
     ((userPrefix, "user:"))
 
@@ -73,10 +76,13 @@
 /// \li <b>data</b> - UsdAiProcedural
 /// \li <b>dso</b> - UsdAiProcedural
 /// \li <b>loadAtInit</b> - UsdAiProcedural
+/// \li <b>matte</b> - UsdAiProcedural
+/// \li <b>receiveShadows</b> - UsdAiProcedural
+/// \li <b>selfShadows</b> - UsdAiProcedural
 /// \li <b>stepSize</b> - UsdAiVolume
 /// \li <b>userPrefix</b> - The attribute prefix used to qualify user parameters on nodes using the AiNodeAPI.
 TF_DECLARE_PUBLIC_TOKENS(UsdAiTokens, USDAI_TOKENS);
 
-
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif

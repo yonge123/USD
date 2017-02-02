@@ -25,7 +25,7 @@
 #include "pxr/usd/usdAi/tokens.h"
 #include "pxr/base/tf/pyStaticTokens.h"
 
-
+PXR_NAMESPACE_OPEN_SCOPE
 
 void wrapUsdAiTokens()
 {
@@ -33,3 +33,4 @@ void wrapUsdAiTokens()
                              USDAI_TOKENS);
 }
 
+PXR_NAMESPACE_CLOSE_SCOPE
