@@ -916,9 +916,6 @@ unsigned usdCacheFormat::readArraySize() {
                 VtValue varray;
                 if (mLayerPtr->QueryTimeSample(attrPath, mCurrentTime, &varray)) {
                     result = varray.GetArraySize();
-                } else {
-                    MGlobal::displayError("usdCacheFormat::readArraySize: failed to query time sample for "
-                                          + MString(usdAttrName.GetString().c_str()));
                 }
             } else {
                 result = 1;
