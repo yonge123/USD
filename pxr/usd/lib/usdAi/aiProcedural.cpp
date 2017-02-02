@@ -28,7 +28,7 @@
 #include "pxr/usd/sdf/types.h"
 #include "pxr/usd/sdf/assetPath.h"
 
-
+PXR_NAMESPACE_OPEN_SCOPE
 
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
@@ -148,6 +148,57 @@ UsdAiProcedural::CreateLoadAtInitAttr(VtValue const &defaultValue, bool writeSpa
                        writeSparsely);
 }
 
+UsdAttribute
+UsdAiProcedural::GetMatteAttr() const
+{
+    return GetPrim().GetAttribute(UsdAiTokens->matte);
+}
+
+UsdAttribute
+UsdAiProcedural::CreateMatteAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdAiTokens->matte,
+                       SdfValueTypeNames->Bool,
+                       /* custom = */ false,
+                       SdfVariabilityUniform,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdAiProcedural::GetReceiveShadowsAttr() const
+{
+    return GetPrim().GetAttribute(UsdAiTokens->receiveShadows);
+}
+
+UsdAttribute
+UsdAiProcedural::CreateReceiveShadowsAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdAiTokens->receiveShadows,
+                       SdfValueTypeNames->Bool,
+                       /* custom = */ false,
+                       SdfVariabilityUniform,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdAiProcedural::GetSelfShadowsAttr() const
+{
+    return GetPrim().GetAttribute(UsdAiTokens->selfShadows);
+}
+
+UsdAttribute
+UsdAiProcedural::CreateSelfShadowsAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdAiTokens->selfShadows,
+                       SdfValueTypeNames->Bool,
+                       /* custom = */ false,
+                       SdfVariabilityUniform,
+                       defaultValue,
+                       writeSparsely);
+}
+
 namespace {
 static inline TfTokenVector
 _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
@@ -168,6 +219,9 @@ UsdAiProcedural::GetSchemaAttributeNames(bool includeInherited)
         UsdAiTokens->dso,
         UsdAiTokens->data,
         UsdAiTokens->loadAtInit,
+        UsdAiTokens->matte,
+        UsdAiTokens->receiveShadows,
+        UsdAiTokens->selfShadows,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
@@ -180,13 +234,13 @@ UsdAiProcedural::GetSchemaAttributeNames(bool includeInherited)
         return localNames;
 }
 
-
+PXR_NAMESPACE_CLOSE_SCOPE
 
 // ===================================================================== //
 // Feel free to add custom code below this line. It will be preserved by
 // the code generator.
 //
 // Just remember to wrap code in the appropriate delimiters:
-// '', ''.
+// 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--

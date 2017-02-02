@@ -12,6 +12,8 @@ public:
     virtual ~VdbVisualizerWriter() {};
 
     virtual void write(const UsdTimeCode& usdTime);
+private:
+    bool has_velocity_grids;
 };
 
 typedef shared_ptr<VdbVisualizerWriter> VdbVisualizerWriterPtr;

@@ -68,6 +68,9 @@ class AiProcedural "AiProcedural" (
         doc = """Whether to force the loading of the procedural during the
                  initialization process."""
     )
+    uniform bool matte = 0 (
+        doc = "Enable or disable matte for the procedural."
+    )
     rel proxyPrim = None (
         doc = '''The proxyPrim relationship allows us to link a
         prim whose purpose is "render" to its (single target)
@@ -127,6 +130,12 @@ class AiProcedural "AiProcedural" (
         to a different runtime level of detail, and that does not interact
         well with the needs of multithreaded rendering. Purpose provides us with
         a better tool for dynamic, interactive complexity management.'''
+    )
+    uniform bool receiveShadows = 1 (
+        doc = "Enable or disable receiving shadows for the procedural."
+    )
+    uniform bool selfShadows = 1 (
+        doc = "Enable or disable self shadows for the procedural."
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
@@ -190,6 +199,9 @@ class AiVolume "AiVolume" (
         doc = """Whether to force the loading of the procedural during the
                  initialization process."""
     )
+    uniform bool matte = 0 (
+        doc = "Enable or disable matte for the procedural."
+    )
     rel proxyPrim = None (
         doc = '''The proxyPrim relationship allows us to link a
         prim whose purpose is "render" to its (single target)
@@ -249,6 +261,12 @@ class AiVolume "AiVolume" (
         to a different runtime level of detail, and that does not interact
         well with the needs of multithreaded rendering. Purpose provides us with
         a better tool for dynamic, interactive complexity management.'''
+    )
+    uniform bool receiveShadows = 1 (
+        doc = "Enable or disable receiving shadows for the procedural."
+    )
+    uniform bool selfShadows = 1 (
+        doc = "Enable or disable self shadows for the procedural."
     )
     float stepSize = 0 (
         doc = """Sampling step size inside the volume.

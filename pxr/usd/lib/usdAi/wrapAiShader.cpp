@@ -38,7 +38,7 @@
 
 using namespace boost::python;
 
-
+PXR_NAMESPACE_OPEN_SCOPE
 
 #define WRAP_CUSTOM                                                     \
     template <class Cls> static void _CustomWrapCode(Cls &_class)
@@ -83,7 +83,7 @@ void wrapUsdAiShader()
     _CustomWrapCode(cls);
 }
 
-
+PXR_NAMESPACE_CLOSE_SCOPE
 
 // ===================================================================== //
 // Feel free to add custom code below this line, it will be preserved by 
@@ -99,7 +99,7 @@ void wrapUsdAiShader()
 // Of course any other ancillary or support code may be provided.
 // 
 // Just remember to wrap code in the appropriate delimiters:
-// '', ''.
+// 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
 //
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--

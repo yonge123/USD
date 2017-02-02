@@ -83,6 +83,18 @@ class AiProcedural "AiProcedural" (
         doc = """Whether to force the loading of the procedural during the
                  initialization process."""
     )
+
+    uniform bool matte = false (
+        doc = """Enable or disable matte for the procedural."""
+    )
+
+    uniform bool receiveShadows = true (
+        doc = """Enable or disable receiving shadows for the procedural."""
+    )
+
+    uniform bool selfShadows = true (
+        doc = """Enable or disable self shadows for the procedural."""
+    )
 }
 
 class AiVolume "AiVolume" (
