@@ -1,0 +1,100 @@
+#usda 1.0
+(
+    "This file describes various Arnold USD schemata for code generation."
+    subLayers = [
+        @../usd/schema.usda@,
+        @../usdGeom/schema.usda@,
+        @../usdShade/schema.usda@
+    ]
+)
+
+def "GLOBAL" (
+    customData = {
+        string libraryName = "usdAi"
+        string libraryPath = "pxr/usd/usdAi"
+        # Because I'm including the "Ai" prefix in the schema class names, I'm
+        # omitting it from the library prefix so the classes don't end up with
+        # names like "UsdAiAiShader".
+        string libraryPrefix = "Usd"
+        string tokensPrefix = "UsdAi"
+        dictionary libraryTokens = {
+            dictionary userPrefix = {
+                string value = "user:"
+                string doc = """The attribute prefix used to qualify user
+                                parameters on nodes using the AiNodeAPI."""
+            }
+        }
+    }
+)
+{
+}
+
+class "AiNodeAPI" (
+    doc = """API for treating prims as Arnold nodes. Provides a consistent
+             interface for getting and setting user parameters."""
+) {
+}
+
+class "AiMaterialAPI" (
+    doc = """API for Material prims encapsulating Arnold shading networks."""
+) {
+    rel ai:surface (
+        customData = {
+            string apiName = "surface"
+        }
+    )
+
+    rel ai:displacement (
+        customData = {
+            string apiName = "displacement"
+        }
+    )
+}
+
+class AiShader "AiShader" (
+    doc = """Represents an Arnold shader node."""
+    inherits = </Shader>
+)
+{
+}
+
+class AiProcedural "AiProcedural" (
+    doc = """Represents an Arnold procedural shape node."""
+    inherits = </Boundable>
+) {
+    uniform string dso (
+        doc = """A procedural can point to ass, obj, and ply filetypes, or to a
+                 dll or so, which will be recognized as a compiled procedural
+                 program."""
+    )
+
+    string data = "" (
+        doc = """This string parameter is used to pass parameters that are
+                 parsed by the procedural program and can be used for its
+                 creation/initialization.
+
+                 The format of this string is not standard and is dictated by
+                 the particular implementation of each procedural program. A
+                 better and more compact way of passing parameters and data to
+                 the procedural is through user data."""
+    )
+
+    uniform bool loadAtInit = false (
+        doc = """Whether to force the loading of the procedural during the
+                 initialization process."""
+    )
+}
+
+class AiVolume "AiVolume" (
+    doc = """Represents an Arnold volume node.
+
+             This class inherits AiProcedural because Arnold's volume node has
+             essentially the same parameters as the procedural node, except for
+             a couple of slight variations."""
+    inherits = </AiProcedural>
+) {
+    float stepSize = 0 (
+        doc = """Sampling step size inside the volume.
+                 I think 0 means automatic."""
+    )
+}

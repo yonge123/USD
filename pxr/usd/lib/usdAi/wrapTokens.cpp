@@ -21,25 +21,15 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef PXR_USDINSHIPPED_DECLARECOREOPS_H
-#define PXR_USDINSHIPPED_DECLARECOREOPS_H
+// GENERATED FILE.  DO NOT EDIT.
+#include "pxr/usd/usdAi/tokens.h"
+#include "pxr/base/tf/pyStaticTokens.h"
 
-#include "usdKatana/usdInPluginRegistry.h"
 
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_XformOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_ScopeOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_MeshOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_NurbsPatchOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_PointsOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_BasisCurvesOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_LookOp)
 
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_ModelOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_CameraOp)
+void wrapUsdAiTokens()
+{
+    TF_PY_WRAP_PUBLIC_TOKENS("Tokens", UsdAiTokens,
+                             USDAI_TOKENS);
+}
 
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_ConstraintsOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_LooksGroupOp)
-
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_AiProceduralOp)
-
-#endif // PXR_USDINSHIPPED_DECLARECOREOPS_H
