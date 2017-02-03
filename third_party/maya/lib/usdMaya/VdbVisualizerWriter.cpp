@@ -1,5 +1,6 @@
 #include "usdMaya/VdbVisualizerWriter.h"
 #include "pxr/usd/usdAi/aiVolume.h"
+#include "pxr/usd/usdAi/aiNodeAPI.h"
 #include "pxr/usd/sdf/types.h"
 
 #include <maya/MDataHandle.h>
@@ -10,22 +11,22 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
     const TfToken filename_token("filename");
-    const TfToken velocity_grids_token("velocityGrids");
-    const TfToken velocity_scale_token("velocityScale");
-    const TfToken velocity_fps_token("velocityFps");
-    const TfToken velocity_shutter_start_token("velocityShutterStart");
-    const TfToken velocity_shutter_end_token("velocityShutterEnd");
-    const TfToken bounds_slack_token("boundsSlack");
+    const TfToken velocity_grids_token("velocity_grids");
+    const TfToken velocity_scale_token("velocity_scale");
+    const TfToken velocity_fps_token("velocity_fps");
+    const TfToken velocity_shutter_start_token("velocity_shutter_start");
+    const TfToken velocity_shutter_end_token("velocity_shutter_end");
+    const TfToken bounds_slack_token("bounds_slack");
 
-    UsdAttribute get_attribute(UsdPrim& prim, const TfToken& attr_name, const SdfValueTypeName& type, SdfVariability variability) {
+    UsdAttribute get_attribute(UsdPrim& prim, UsdAiNodeAPI& api, const TfToken& attr_name, const SdfValueTypeName& type) {
         if (prim.HasAttribute(attr_name)) {
             return prim.GetAttribute(attr_name);
         } else {
-            return prim.CreateAttribute(attr_name, type, variability);
+            return api.CreateUserAttribute(attr_name, type);
         }
     }
 
-    bool export_grids(UsdPrim& prim, MFnDependencyNode& node, const char* maya_attr_name, const TfToken& usd_attr_name) {
+    bool export_grids(UsdPrim& prim, UsdAiNodeAPI& api, MFnDependencyNode& node, const char* maya_attr_name, const TfToken& usd_attr_name) {
         const auto grids_string = node.findPlug(maya_attr_name).asString();
         MStringArray grids;
         grids_string.split(' ', grids);
@@ -36,7 +37,7 @@ namespace {
             for (std::remove_const<decltype(grids_length)>::type i = 0; i < grids_length; ++i) {
                 grid_names.push_back(grids[i].asChar());
             }
-            get_attribute(prim, usd_attr_name, SdfValueTypeNames.Get()->StringArray, SdfVariabilityUniform)
+            get_attribute(prim, api, usd_attr_name, SdfValueTypeNames.Get()->StringArray)
                 .Set(grid_names);
             return true;
         } else {
@@ -56,13 +57,14 @@ VdbVisualizerWriter::VdbVisualizerWriter(MDagPath& iDag, UsdStageRefPtr stage, c
 
 void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
     UsdAiVolume primSchema(mUsdPrim);
+    UsdAiNodeAPI nodeApi(mUsdPrim);
     writeTransformAttrs(usdTime, primSchema);
 
     MFnDependencyNode volume_node(getDagPath().node());
 
     // some of the attributes that don't need to be animated has to be exported here
     if (usdTime.IsDefault()) {
-        has_velocity_grids = export_grids(mUsdPrim, volume_node, "velocity_grids", velocity_grids_token);
+        has_velocity_grids = export_grids(mUsdPrim, nodeApi, volume_node, "velocity_grids", velocity_grids_token);
     }
 
     if (usdTime.IsDefault() == isShapeAnimated()) {
@@ -83,20 +85,20 @@ void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
     primSchema.GetMatteAttr().Set(volume_node.findPlug("matte").asBool(), usdTime);
     primSchema.GetReceiveShadowsAttr().Set(volume_node.findPlug("receiveShadows").asBool(), usdTime);
     primSchema.GetSelfShadowsAttr().Set(volume_node.findPlug("selfShadows").asBool(), usdTime);
-    get_attribute(mUsdPrim, filename_token, SdfValueTypeNames.Get()->String, SdfVariabilityUniform)
+    get_attribute(mUsdPrim, nodeApi, filename_token, SdfValueTypeNames.Get()->String)
         .Set(std::string(out_vdb_path.asChar()), usdTime);
 
     if (has_velocity_grids) {
-        get_attribute(mUsdPrim, velocity_scale_token, SdfValueTypeNames.Get()->Float, SdfVariabilityUniform)
+        get_attribute(mUsdPrim, nodeApi, velocity_scale_token, SdfValueTypeNames.Get()->Float)
             .Set(volume_node.findPlug("velocityScale").asFloat(), usdTime);
-        get_attribute(mUsdPrim, velocity_fps_token, SdfValueTypeNames.Get()->Float, SdfVariabilityUniform)
+        get_attribute(mUsdPrim, nodeApi, velocity_fps_token, SdfValueTypeNames.Get()->Float)
             .Set(volume_node.findPlug("velocityFps").asFloat(), usdTime);
-        get_attribute(mUsdPrim, velocity_shutter_start_token, SdfValueTypeNames.Get()->Float, SdfVariabilityUniform)
+        get_attribute(mUsdPrim, nodeApi, velocity_shutter_start_token, SdfValueTypeNames.Get()->Float)
             .Set(volume_node.findPlug("velocityShutterStart").asFloat(), usdTime);
-        get_attribute(mUsdPrim, velocity_shutter_end_token, SdfValueTypeNames.Get()->Float, SdfVariabilityUniform)
+        get_attribute(mUsdPrim, nodeApi, velocity_shutter_end_token, SdfValueTypeNames.Get()->Float)
             .Set(volume_node.findPlug("velocityShutterEnd").asFloat(), usdTime);
     }
 
-    get_attribute(mUsdPrim, bounds_slack_token, SdfValueTypeNames.Get()->Float, SdfVariabilityUniform)
+    get_attribute(mUsdPrim, nodeApi, bounds_slack_token, SdfValueTypeNames.Get()->Float)
         .Set(volume_node.findPlug("boundsSlack").asFloat());
 }
