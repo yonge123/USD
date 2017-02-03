@@ -1322,7 +1322,7 @@ PxrUsdMayaUtil::GetUsdNamespace(const MObject& mobj)
 }
 
 std::string
-PxrUsdMayaUtil::MDagPathToString(
+PxrUsdMayaUtil::MDagPathToUsdPathString(
         const MDagPath& dagPath,
         bool stripUsdNamespaces)
 {
@@ -1373,7 +1373,7 @@ PxrUsdMayaUtil::MDagPathToUsdPath(
         bool mergeTransformAndShape,
         bool stripUsdNamespaces)
 {
-    SdfPath usdPath(MDagPathToString(dagPath, stripUsdNamespaces));
+    SdfPath usdPath(MDagPathToUsdPathString(dagPath, stripUsdNamespaces));
     if (mergeTransformAndShape && _IsShape(dagPath)) {
         usdPath = usdPath.GetParentPath();
     }

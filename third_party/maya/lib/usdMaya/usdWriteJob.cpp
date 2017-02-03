@@ -398,8 +398,8 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
 
     // Get the usdVariantRootPrimPath (optionally filter by renderLayer prefix)
     MayaPrimWriterPtr firstPrimWriterPtr = *mMayaPrimWriterList.begin();
-    std::string firstPrimWriterPathStr(PxrUsdMayaUtil::MDagPathToString(firstPrimWriterPtr->getDagPath(),
-                                                                        mArgs.handleUsdNamespaces));
+    std::string firstPrimWriterPathStr(PxrUsdMayaUtil::MDagPathToUsdPathString(
+        firstPrimWriterPtr->getDagPath(), mArgs.handleUsdNamespaces));
     SdfPath usdVariantRootPrimPath(firstPrimWriterPathStr);
     usdVariantRootPrimPath = usdVariantRootPrimPath.GetPrefixes()[0];
 

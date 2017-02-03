@@ -323,8 +323,8 @@ bool IsUsdReferenceOrAssemblyNode(const MDagPath& dagPath);
 /// THEIR namespaces are from USD.
 std::string GetUsdNamespace(const MObject& mobj);
 
-std::string MDagPathToString(const MDagPath& dagPath,
-                             bool stripUsdNamespaces);
+std::string MDagPathToUsdPathString(const MDagPath& dagPath,
+                                    bool stripUsdNamespaces);
 
 /// For \p dagPath, returns a UsdPath corresponding to it.  
 /// If \p mergeTransformAndShape and the dagPath is a shapeNode, it will return
