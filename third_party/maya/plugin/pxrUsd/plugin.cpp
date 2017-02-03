@@ -35,6 +35,7 @@
 #include "usdMaya/usdExport.h"
 #include "usdMaya/usdCacheFormat.h"
 #include "usdMaya/usdTranslator.h"
+#include "usdMaya/variantSelectionNode.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -87,6 +88,13 @@ MStatus initializePlugin(
             },
         MPxNode::kAssembly,
         &UsdMayaReferenceAssembly::_classification);
+    CHECK_MSTATUS(status);
+
+    status = plugin.registerNode(
+            VariantSelectionNode::typeName,
+            VariantSelectionNode::typeId,
+            VariantSelectionNode::creator,
+            VariantSelectionNode::initialize);
     CHECK_MSTATUS(status);
 
     status =
