@@ -14,7 +14,7 @@
 # You may obtain a copy of the License at
 # http://www.apache.org/licenses/LICENSE-2.0
 
-option(PTEX_PREFER_STATIC "Prefer static library when linking pTex" OFF)
+option(PTEX_PREFER_STATIC "Prefer static library when linking pTex on linux or osx" OFF)
 
 if (WIN32)
     find_path( PTEX_INCLUDE_DIR
@@ -27,8 +27,6 @@ if (WIN32)
             "$ENV{PROGRAMFILES}/Ptex/include"
             /usr/include
             DOC "The directory where Ptexture.h resides")
-    # TODO: figure out a way to add windows support for PTEX_PREFER_STATIC
-    # (since both static and dynamic libs can have a ".lib" suffix)
     find_library( PTEX_LIBRARY
         NAMES
             Ptex32 Ptex32s Ptex
