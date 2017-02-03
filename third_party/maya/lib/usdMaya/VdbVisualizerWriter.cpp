@@ -102,3 +102,5 @@ void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
     get_attribute(mUsdPrim, nodeApi, bounds_slack_token, SdfValueTypeNames.Get()->Float)
         .Set(volume_node.findPlug("boundsSlack").asFloat());
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
