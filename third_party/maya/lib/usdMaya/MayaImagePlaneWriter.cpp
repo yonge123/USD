@@ -4,6 +4,8 @@
 #include "pxr/usd/usdGeom/imagePlane.h"
 #include <maya/MFnDependencyNode.h>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 const TfToken MayaImagePlaneWriter::image_plane_fill("fill");
 const TfToken MayaImagePlaneWriter::image_plane_best("best");
 const TfToken MayaImagePlaneWriter::image_plane_horizontal("horizontal");
@@ -92,3 +94,5 @@ bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdG
     primSchema.GetCoverageOriginAttr().Set(GfVec2i(coverageOriginPlug.child(0).asInt(), coverageOriginPlug.child(1).asInt()), usdTime);
     return true;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
