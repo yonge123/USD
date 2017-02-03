@@ -11,7 +11,7 @@ public:
     VdbVisualizerWriter(MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs);
     virtual ~VdbVisualizerWriter() {};
 
-    virtual void write(const UsdTimeCode& usdTime);
+    virtual void write(const UsdTimeCode& usdTime) override;
 private:
     bool has_velocity_grids;
 };
