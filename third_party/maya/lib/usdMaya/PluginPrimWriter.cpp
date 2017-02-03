@@ -32,8 +32,10 @@ PxrUsdExport_PluginPrimWriter::PxrUsdExport_PluginPrimWriter(
         MDagPath& iDag,
         UsdStageRefPtr& stage,
         const JobExportArgs& iArgs,
+        // TODO: How will the _plugFn below get access to this?
+        RefEdits& refEdits,
         PxrUsdMayaPrimWriterRegistry::WriterFn plugFn) :
-    MayaTransformWriter(iDag, stage, iArgs),
+    MayaTransformWriter(iDag, stage, iArgs, refEdits),
     _plugFn(plugFn),
     _exportsGprims(false),
     _exportsReferences(false),

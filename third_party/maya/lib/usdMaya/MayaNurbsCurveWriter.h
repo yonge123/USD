@@ -25,6 +25,7 @@
 #define _usdExport_MayaNurbsCurveWriter_h_
 
 #include "pxr/pxr.h"
+#include "usdMaya/refEditUtil.h"
 #include "usdMaya/MayaTransformWriter.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -36,7 +37,8 @@ class UsdGeomNurbsCurves;
 class MayaNurbsCurveWriter : public MayaTransformWriter
 {
   public:
-    MayaNurbsCurveWriter(MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs);
+    MayaNurbsCurveWriter(MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs,
+                         RefEdits & refEdits);
     virtual ~MayaNurbsCurveWriter() {};
 
     virtual UsdPrim write(const UsdTimeCode &usdTime);

@@ -25,6 +25,7 @@
 #define _usdExport_MayaTransformWriter_h_
 
 #include "pxr/pxr.h"
+#include "usdMaya/refEditUtil.h"
 #include "usdMaya/MayaPrimWriter.h"
 
 #include "pxr/usd/usdGeom/xform.h"
@@ -61,7 +62,7 @@ class MayaTransformWriter : public MayaPrimWriter
 {
   public:
 
-    MayaTransformWriter(MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs);
+    MayaTransformWriter(MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs, RefEdits & refEdits);
     virtual ~MayaTransformWriter() {};
 
     virtual void pushTransformStack(

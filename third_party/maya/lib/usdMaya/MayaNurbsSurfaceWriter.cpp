@@ -43,8 +43,9 @@ PXR_NAMESPACE_OPEN_SCOPE
 MayaNurbsSurfaceWriter::MayaNurbsSurfaceWriter(
         MDagPath & iDag, 
         UsdStageRefPtr stage, 
-        const JobExportArgs & iArgs) :
-    MayaTransformWriter(iDag, stage, iArgs)
+        const JobExportArgs & iArgs,
+        RefEdits & refEdits) :
+    MayaTransformWriter(iDag, stage, iArgs, refEdits)
 {
 }
 

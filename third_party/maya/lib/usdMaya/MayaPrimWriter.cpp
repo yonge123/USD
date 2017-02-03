@@ -25,6 +25,7 @@
 #include "usdMaya/MayaPrimWriter.h"
 
 #include "usdMaya/util.h"
+#include "usdMaya/refEditUtil.h"
 #include "usdMaya/writeUtil.h"
 #include "usdMaya/translatorGprim.h"
 #include "usdMaya/primWriterContext.h"
@@ -55,11 +56,13 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 MayaPrimWriter::MayaPrimWriter(MDagPath & iDag, 
                                UsdStageRefPtr stage, 
-                               const JobExportArgs & iArgs) :
+                               const JobExportArgs & iArgs,
+                               RefEdits & refEdits) :
     mDagPath(iDag),
     mStage(stage),
     mIsValid(true),
-    mArgs(iArgs)
+    mArgs(iArgs),
+    mRefEdits(refEdits)
 {
     // XXX: see MayaTransformWriter where it will eventually muck with
     // this path to get the right behavior.  Ideally, we should have all the
@@ -153,6 +156,22 @@ bool
 MayaPrimWriter::shouldPruneChildren() const
 {
     return false;
+}
+
+bool
+MayaPrimWriter::isAttrExportable(const char* attrName) const
+{
+    if (!mRefEdits.isReferenced ||
+            mRefEdits.modifiedAttrs.find(attrName) != mRefEdits.modifiedAttrs.end()) {
+        return true;
+    }
+    return false;
+}
+
+bool
+MayaPrimWriter::isReferenced() const
+{
+    return mRefEdits.isReferenced;
 }
 
 

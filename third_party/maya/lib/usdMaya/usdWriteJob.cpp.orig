@@ -61,6 +61,7 @@
 //   XXX [bug 75864]
 #include "pxr/usd/sdf/variantSetSpec.h"
 #include "pxr/usd/sdf/variantSpec.h"
+// #include "../../../../pxr/usd/lib/sdf/types.h"
 
 #include <maya/MFnDagNode.h>
 #include <maya/MFnRenderLayer.h>
@@ -579,6 +580,26 @@ bool usdWriteJob::createPrimWriter(
             return true;
         }
     }
+<<<<<<< HEAD
+=======
+    else if (ob.hasFn(MFn::kImagePlane)) {
+        if (!mArgs.exportDefaultCameras) {
+            MString fullPathName = curDag.fullPathName();
+            if (fullPathName.indexW("|persp|perspShape->") == 0 ||
+                fullPathName.indexW("|top|topShape->") == 0 ||
+                fullPathName.indexW("|front|frontShape->") == 0 ||
+                fullPathName.indexW("|side|sideShape->") == 0) {
+                *primWriterOut = nullptr;
+                return false;
+            }
+        }
+        MayaImagePlaneWriterPtr primPtr(new MayaImagePlaneWriter(curDag, mStage, mArgs, refEdits));
+        if (primPtr->isValid()) {
+            *primWriterOut = primPtr;
+            return true;
+        }
+    }
+>>>>>>> initial sketch of how refedits will be used to export "overs"
 
     *primWriterOut = nullptr;
     return true;

@@ -52,8 +52,9 @@ const float MayaMeshWriter::_ColorSetDefaultAlpha = 1.0;
 MayaMeshWriter::MayaMeshWriter(
         MDagPath & iDag, 
         UsdStageRefPtr stage, 
-        const JobExportArgs & iArgs) :
-    MayaTransformWriter(iDag, stage, iArgs)
+        const JobExportArgs & iArgs,
+        RefEdits & refEdits) :
+    MayaTransformWriter(iDag, stage, iArgs, refEdits)
 {
 }
 

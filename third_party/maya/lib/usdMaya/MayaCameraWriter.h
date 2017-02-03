@@ -25,6 +25,7 @@
 #define _usdExport_MayaCameraWriter_h_
 
 #include "pxr/pxr.h"
+#include "usdMaya/refEditUtil.h"
 #include "usdMaya/MayaTransformWriter.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -36,7 +37,8 @@ class UsdGeomCamera;
 class MayaCameraWriter : public MayaTransformWriter
 {
   public:
-    MayaCameraWriter(MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs);
+    MayaCameraWriter(MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs,
+                     RefEdits & refEdits);
     virtual ~MayaCameraWriter() {};
 
     virtual UsdPrim write(const UsdTimeCode &usdTime);

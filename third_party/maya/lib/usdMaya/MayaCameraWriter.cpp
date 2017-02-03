@@ -40,8 +40,9 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 
-MayaCameraWriter::MayaCameraWriter(MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs) :
-    MayaTransformWriter(iDag, stage, iArgs)
+MayaCameraWriter::MayaCameraWriter(MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs,
+                                   RefEdits & refEdits) :
+    MayaTransformWriter(iDag, stage, iArgs, refEdits)
 {
 }
 
@@ -92,38 +93,53 @@ bool MayaCameraWriter::writeCameraAttrs(const UsdTimeCode &usdTime, UsdGeomCamer
     }
 
     // Setup the aperture.
-    primSchema.GetHorizontalApertureAttr().Set(
-        float(PxrUsdMayaUtil::ConvertInchesToMM(
-                camFn.horizontalFilmAperture() *
-                camFn.lensSqueezeRatio())),
-        usdTime);
-    primSchema.GetVerticalApertureAttr().Set(
-        float(PxrUsdMayaUtil::ConvertInchesToMM(
-                camFn.verticalFilmAperture() *
-                camFn.lensSqueezeRatio())),
-        usdTime);
+    if (isAttrExportable("lensSqueezeRatio") || isAttrExportable("horizontalFilmAperture")) {
+        primSchema.GetHorizontalApertureAttr().Set(
+            float(PxrUsdMayaUtil::ConvertInchesToMM(
+                    camFn.horizontalFilmAperture() *
+                    camFn.lensSqueezeRatio())),
+            usdTime);
+    }
+    if (isAttrExportable("lensSqueezeRatio") || isAttrExportable("verticalFilmAperture")) {
+        primSchema.GetVerticalApertureAttr().Set(
+            float(PxrUsdMayaUtil::ConvertInchesToMM(
+                    camFn.verticalFilmAperture() *
+                    camFn.lensSqueezeRatio())),
+            usdTime);
+    }
 
-    primSchema.GetHorizontalApertureOffsetAttr().Set(
-        float(camFn.horizontalFilmOffset()), usdTime);
-    primSchema.GetVerticalApertureOffsetAttr().Set(
-        float(camFn.verticalFilmOffset()), usdTime);
+    if (isAttrExportable("horizontalFilmOffset")) {
+        primSchema.GetHorizontalApertureOffsetAttr().Set(
+            float(camFn.horizontalFilmOffset()), usdTime);
+    }
+    if (isAttrExportable("verticalFilmOffset")) {
+        primSchema.GetVerticalApertureOffsetAttr().Set(
+            float(camFn.verticalFilmOffset()), usdTime);
+    }
 
     // Set the lens parameters.
-    primSchema.GetFocalLengthAttr().Set(
-        float(camFn.focalLength()), usdTime);
+    if (isAttrExportable("focalLength")) {
+        primSchema.GetFocalLengthAttr().Set(
+            float(camFn.focalLength()), usdTime);
+    }
 
-    // Always export focus distance and fStop regardless of what
-    // camFn.isDepthOfField() says. Downstream tools can choose to ignore or
-    // override them.
-    primSchema.GetFocusDistanceAttr().Set(
-        float(camFn.focusDistance()), usdTime);
-    primSchema.GetFStopAttr().Set(
-        float(camFn.fStop()), usdTime);
+        // Always export focus distance and fStop regardless of what
+        // camFn.isDepthOfField() says. Downstream tools can choose to ignore or
+        // override them.
+    if (isAttrExportable("focusDistance")) {
+        primSchema.GetFocusDistanceAttr().Set(
+            float(camFn.focusDistance()), usdTime);
+    }
+    if (isAttrExportable("fStop")) {
+        primSchema.GetFStopAttr().Set(
+            float(camFn.fStop()), usdTime);
+    }
 
     // Set the clipping planes.
-    GfVec2f clippingRange(camFn.nearClippingPlane(), camFn.farClippingPlane());
-    primSchema.GetClippingRangeAttr().Set(clippingRange, usdTime);
-
+    if (isAttrExportable("nearClippingPlane") || isAttrExportable("farClippingPlane")) {
+        GfVec2f clippingRange(camFn.nearClippingPlane(), camFn.farClippingPlane());
+        primSchema.GetClippingRangeAttr().Set(clippingRange, usdTime);
+    }
     return true;
 }
 

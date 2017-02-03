@@ -35,8 +35,9 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-MayaNurbsCurveWriter::MayaNurbsCurveWriter(MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs) :
-    MayaTransformWriter(iDag, stage, iArgs)
+MayaNurbsCurveWriter::MayaNurbsCurveWriter(MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs,
+                                           RefEdits & refEdits) :
+    MayaTransformWriter(iDag, stage, iArgs, refEdits)
 {
 }
 

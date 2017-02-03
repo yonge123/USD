@@ -409,8 +409,9 @@ void MayaTransformWriter::pushTransformStack(
 MayaTransformWriter::MayaTransformWriter(
         MDagPath& iDag, 
         UsdStageRefPtr stage, 
-        const JobExportArgs& iArgs) :
-    MayaPrimWriter(iDag, stage, iArgs),
+        const JobExportArgs& iArgs,
+        RefEdits& refEdits) :
+    MayaPrimWriter(iDag, stage, iArgs, refEdits),
     mXformDagPath(iDag),
     mIsShapeAnimated(false)
 

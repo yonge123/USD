@@ -25,6 +25,7 @@
 #define _usdExport_MayaNurbsSurfaceWriter_h_
 
 #include "pxr/pxr.h"
+#include "usdMaya/refEditUtil.h"
 #include "usdMaya/MayaTransformWriter.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -38,7 +39,8 @@ class MayaNurbsSurfaceWriter : public MayaTransformWriter
   public:
     MayaNurbsSurfaceWriter(MDagPath & iDag, 
             UsdStageRefPtr stage, 
-            const JobExportArgs & iArgs);
+            const JobExportArgs & iArgs,
+            RefEdits & refEdits);
     virtual ~MayaNurbsSurfaceWriter() {};
     
     virtual UsdPrim write(const UsdTimeCode &usdTime);

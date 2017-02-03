@@ -25,6 +25,7 @@
 #define PXRUSDMAYA_MAYAMESHWRITER_H
 
 #include "pxr/pxr.h"
+#include "usdMaya/refEditUtil.h"
 #include "usdMaya/MayaTransformWriter.h"
 
 #include <maya/MDagPath.h>
@@ -44,7 +45,8 @@ class MayaMeshWriter : public MayaTransformWriter
   public:
     MayaMeshWriter(MDagPath & iDag, 
             UsdStageRefPtr stage, 
-            const JobExportArgs & iArgs);
+            const JobExportArgs & iArgs,
+            RefEdits & refEdits);
     virtual ~MayaMeshWriter() {};
 
     virtual UsdPrim write(const UsdTimeCode &usdTime);

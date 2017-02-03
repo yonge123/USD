@@ -30,6 +30,7 @@
 #include "usdMaya/Chaser.h"
 
 #include "usdMaya/util.h"
+#include "usdMaya/refEditUtil.h"
 #include "usdMaya/MayaPrimWriter.h"
 #include "usdMaya/ModelKindWriter.h"
 
@@ -84,6 +85,8 @@ class usdWriteJob
     PxrUsdMayaChaserRefPtrVector mChasers;
 
     PxrUsdMaya_ModelKindWriter mModelKindWriter;
+
+    RefEditUtil mRefEditUtil;
 };
 
 typedef shared_ptr < usdWriteJob > usdWriteJobPtr;

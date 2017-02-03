@@ -25,6 +25,7 @@
 #define PXRUSDMAYA_MAYAPRIMWRITER_H
 #include "pxr/pxr.h"
 #include "usdMaya/JobArgs.h"
+#include "usdMaya/refEditUtil.h"
 
 #include "pxr/usd/usd/stage.h"
 
@@ -45,7 +46,8 @@ class MayaPrimWriter
     MayaPrimWriter(
             MDagPath & iDag, 
             UsdStageRefPtr stage, 
-            const JobExportArgs & iArgs);
+            const JobExportArgs & iArgs,
+            RefEdits& refEdits);
     virtual ~MayaPrimWriter() {};
 
     virtual UsdPrim write(const UsdTimeCode &usdTime) = 0;
@@ -67,6 +69,14 @@ class MayaPrimWriter
     ///
     /// Base implementation returns \c false.
     virtual bool shouldPruneChildren() const;
+
+    /// Should this PrimWriter write the attribute? It should if it is not
+    /// referenced or the value has not been modified in the current scene.
+    ///
+    /// Base implementation returns \c true.
+    virtual bool isAttrExportable(const char* attr) const;
+
+    virtual bool isReferenced() const;
 
 public:
     const MDagPath&        getDagPath()    const { return mDagPath;};
@@ -90,6 +100,8 @@ protected:
     // that creates this prim writer. This prevents copying when the set of
     // dagPaths can potentially be large.
     const JobExportArgs& mArgs;
+
+    RefEdits mRefEdits;
 };
 
 typedef shared_ptr < MayaPrimWriter > MayaPrimWriterPtr;

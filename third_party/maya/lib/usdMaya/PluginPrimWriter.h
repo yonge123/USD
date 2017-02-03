@@ -27,6 +27,7 @@
 /// \file PluginPrimWriter.h
 
 #include "pxr/pxr.h"
+#include "usdMaya/refEditUtil.h"
 #include "usdMaya/MayaTransformWriter.h"
 #include "usdMaya/JobArgs.h"
 
@@ -53,6 +54,7 @@ public:
             MDagPath& iDag,
             UsdStageRefPtr& stage,
             const JobExportArgs& iArgs,
+            RefEdits& refEdits,
             PxrUsdMayaPrimWriterRegistry::WriterFn plugFn);
 
     virtual ~PxrUsdExport_PluginPrimWriter();
