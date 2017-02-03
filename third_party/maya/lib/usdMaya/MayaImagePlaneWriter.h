@@ -16,8 +16,8 @@ class MayaImagePlaneWriter : public MayaPrimWriter {
 public:
     MayaImagePlaneWriter(MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs);
     virtual ~MayaImagePlaneWriter() {};
-    virtual UsdPrim write(const UsdTimeCode& usdTime);
-    virtual bool isShapeAnimated() const;
+    virtual UsdPrim write(const UsdTimeCode& usdTime) override;
+    virtual bool isShapeAnimated() const override;
 protected:
     bool writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdGeomImagePlane& primSchema);
 
