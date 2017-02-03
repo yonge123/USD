@@ -5,7 +5,10 @@
 #ifndef _usdExport_MayaImagePlaneWriter_h_
 #define _usdExport_MayaImagePlaneWriter_h_
 
+#include "pxr/pxr.h"
 #include "usdMaya/MayaPrimWriter.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class UsdGeomImagePlane;
 
@@ -22,5 +25,7 @@ protected:
 };
 
 typedef shared_ptr<MayaImagePlaneWriter> MayaImagePlaneWriterPtr;
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //_usdExport_MayaImagePlaneWriter_h_

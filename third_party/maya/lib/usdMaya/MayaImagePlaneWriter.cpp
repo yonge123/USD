@@ -4,6 +4,9 @@
 #include "pxr/usd/usdGeom/imagePlane.h"
 #include <maya/MFnDependencyNode.h>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 namespace {
     enum {
         IMAGE_PLANE_FIT_FILL,
@@ -102,3 +105,5 @@ bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdG
     primSchema.GetCoverageOriginAttr().Set(GfVec2i(coverageOriginPlug.child(0).asInt(), coverageOriginPlug.child(1).asInt()), usdTime);
     return true;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
