@@ -409,13 +409,11 @@ void MayaTransformWriter::pushTransformStack(
 MayaTransformWriter::MayaTransformWriter(
         MDagPath& iDag, 
         UsdStageRefPtr stage, 
-        const JobExportArgs& iArgs,
-        bool create) :
+        const JobExportArgs& iArgs) :
     MayaPrimWriter(iDag, stage, iArgs),
     mXformDagPath(iDag),
     mIsShapeAnimated(false)
-
-{    
+{
     // Merge shape and transform
     // If is a transform, then do not write
     // Return if has a single shape directly below xform 
@@ -449,6 +447,7 @@ MayaTransformWriter::MayaTransformWriter(
     if ( mXformDagPath.isValid()) {
         MFnTransform transFn(mXformDagPath);
         UsdGeomXform primSchema = UsdGeomXform::Define(getUsdStage(), getUsdPath());
+        mUsdPrim = primSchema.GetPrim();
         // Create a vector of AnimChannels based on the Maya transformation
         // ordering
         pushTransformStack(transFn, primSchema, iArgs.exportAnimation);
@@ -459,13 +458,6 @@ MayaTransformWriter::MayaTransformWriter(
         MObject obj = getDagPath().node();
         if (iArgs.exportAnimation)
             mIsShapeAnimated = PxrUsdMayaUtil::isAnimated(obj);
-    }
-
-    if (create) {
-        // Write to USD
-        UsdGeomXform primSchema = UsdGeomXform::Define(getUsdStage(), getUsdPath());
-        TF_AXIOM(primSchema);
-        mUsdPrim = primSchema.GetPrim();
     }
 }
 

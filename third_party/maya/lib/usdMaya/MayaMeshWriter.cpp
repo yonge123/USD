@@ -53,7 +53,7 @@ MayaMeshWriter::MayaMeshWriter(
         MDagPath & iDag, 
         UsdStageRefPtr stage, 
         const JobExportArgs & iArgs) :
-    MayaTransformWriter(iDag, stage, iArgs, false)
+    MayaTransformWriter(iDag, stage, iArgs)
 {
     if ( !isMeshValid() ) {
         return;
