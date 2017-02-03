@@ -69,6 +69,7 @@ pxr_shared_library(${PXR_PACKAGE}
 
         pluginStaticData
         proxyShape
+        variantSelectionNode
         referenceAssembly
         usdImport
         usdExport
