@@ -26,7 +26,7 @@ namespace {
         }
     }
 
-    bool export_grids(UsdPrim& prim, UsdAiNodeAPI& api, MFnDependencyNode& node, const char* maya_attr_name, const TfToken& usd_attr_name) {
+    bool export_grids(UsdPrim& prim, UsdAiNodeAPI& api, const MFnDependencyNode& node, const char* maya_attr_name, const TfToken& usd_attr_name) {
         const auto grids_string = node.findPlug(maya_attr_name).asString();
         MStringArray grids;
         grids_string.split(' ', grids);
@@ -60,7 +60,7 @@ void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
     UsdAiNodeAPI nodeApi(mUsdPrim);
     writeTransformAttrs(usdTime, primSchema);
 
-    MFnDependencyNode volume_node(getDagPath().node());
+    const MFnDependencyNode volume_node(getDagPath().node());
 
     // some of the attributes that don't need to be animated has to be exported here
     if (usdTime.IsDefault()) {
