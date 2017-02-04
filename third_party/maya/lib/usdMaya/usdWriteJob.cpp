@@ -546,7 +546,7 @@ bool usdWriteJob::createPrimWriter(
     }
 
     if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator)) {
-        MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, mStage, mArgs, true));
+        MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, mStage, mArgs));
         if (primPtr->isValid() ) {
             *primWriterOut = primPtr;
             return true;
