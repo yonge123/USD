@@ -165,7 +165,7 @@ void* UsdCacheFormat::creator() {
     return new UsdCacheFormat();
 }
 
-constexpr char const* UsdCacheFormat::translatorName() {
+char const* UsdCacheFormat::translatorName() {
     // For presentation in GUI
     return mTranslatorName;
 }
@@ -704,7 +704,7 @@ MStatus UsdCacheFormat::findChannelName(const MString& name) {
     const std::string mayaAttrName = mayaAttrFromChannel(channel);
     const auto itName = mCachedAttributes.get<maya>().find(mayaAttrName);
     if (itName != mCachedAttributes.get<maya>().end()) {
-        mFirstMayaAttr = mayaAttrFromChannel(channel);
+        mFirstMayaAttr = mCachedAttributes.project<0>(itName);
         mCurrentChannel = channel;
         return MS::kSuccess;
     } else {
@@ -731,7 +731,7 @@ MStatus UsdCacheFormat::readChannelName(MString& name) {
         }
         // Just remove the above and instead check :
         // if (++itId !=  mCachedAttributes.end()) if we don't want to loop
-        if (itId->mayaAttrName != mFirstMayaAttr) {
+        if (itId != mFirstMayaAttr) {
             const std::string nextMayaAttrName = itId->mayaAttrName;
             const std::string nextChannel = TfStringPrintf("%s_%s", mayaNodeName.c_str(), nextMayaAttrName.c_str());
             // Advance by one channel

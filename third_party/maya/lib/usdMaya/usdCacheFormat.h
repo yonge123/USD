@@ -48,7 +48,7 @@ class UsdCacheFormat: public MPxCacheFormat {
         UsdCacheFormat();
         ~UsdCacheFormat() override;
         static void* creator();
-        static constexpr char const* translatorName();
+        static char const* translatorName();
         MString extension() override;
         bool handlesDescription() override;
 
@@ -159,7 +159,9 @@ class UsdCacheFormat: public MPxCacheFormat {
         // State keeping during access
         SdfLayerRefPtr mLayerPtr;
         double mCurrentTime;
-        std::string mFirstMayaAttr;
+        attrById::iterator mFirstMayaAttr;
+        // We still need to store the name and not just the iterator for deferred add during kWrite,
+        // we could store both and iterator and a name to get a little bit of read speed
         std::string mCurrentChannel;
         // Dynamic set for keeping track of created attributes
         attributesSet mCachedAttributes;
