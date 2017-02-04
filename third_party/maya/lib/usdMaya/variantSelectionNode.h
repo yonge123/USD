@@ -47,19 +47,41 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///
 /// Note that for the same reasons, the node needs to store variant selection
 /// information for the entire usd tree, not just "top level" usd references.
-class VariantSelectionNode : public MPxNode {
+class UsdMayaVariantSelectionNode : public MPxNode {
 public:
-//    VariantSelectionNode();
-//    virtual ~VariantSelectionNode();
-    static const MTypeId typeId;
-    static const MString typeName;
 
-    static MObject selections;
+    struct PluginStaticData
+    {
+        // these get set in initialize()
+        MObject selections;
+
+        // this will not change once constructed.
+        const MTypeId typeId;
+        const MString typeName;
+
+        PluginStaticData(
+                const MTypeId& typeId,
+                const MString& typeName) :
+            typeId(typeId),
+            typeName(typeName)
+        { }
+    };
 
 //    virtual MStatus compute(const MPlug& plug, MDataBlock& data);
-    static void* creator();
-    static MStatus initialize();
+    static void*   creator(
+            const PluginStaticData& psData);
+    static MStatus initialize(
+            PluginStaticData* psData);
+
+private:
+    const PluginStaticData& _psData;
+
+    UsdMayaVariantSelectionNode(const PluginStaticData& psData);
+
+    UsdMayaVariantSelectionNode(const UsdMayaVariantSelectionNode&);
+//    virtual ~UsdMayaVariantSelectionNode();
 };
+
 PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_VARIANTSELECTIONNODE_H

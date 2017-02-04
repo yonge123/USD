@@ -91,10 +91,16 @@ MStatus initializePlugin(
     CHECK_MSTATUS(status);
 
     status = plugin.registerNode(
-            VariantSelectionNode::typeName,
-            VariantSelectionNode::typeId,
-            VariantSelectionNode::creator,
-            VariantSelectionNode::initialize);
+            _data.variantSelectionNode.typeName,
+            _data.variantSelectionNode.typeId,
+            []() {
+                return UsdMayaVariantSelectionNode::creator(
+                    _data.variantSelectionNode);
+            },
+            []() {
+                return UsdMayaVariantSelectionNode::initialize(
+                    &(_data.variantSelectionNode));
+            });
     CHECK_MSTATUS(status);
 
     status =
