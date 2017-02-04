@@ -91,9 +91,12 @@ class usdCacheFormat: public MPxCacheFormat {
 		MStatus readChannelName(MString& name);
 
 	private:
+		SdfPrimSpecHandle addPrim(const SdfPath& specPath,
+		                          const SdfSpecifier spec,
+		                          const std::string& typeName);
 		SdfPath addChannel(const MString& channelName,
-				const MString& interpretation,
-				const MCacheFormatDescription::CacheDataType dataType);
+		                   const MString& interpretation,
+		                   const MCacheFormatDescription::CacheDataType dataType);
 		void readMetadata();
 		void writeMetadata();
 		void closeLayer();
