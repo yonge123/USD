@@ -29,20 +29,19 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-// The following node ids are blocked off for usd development:
-// 0x00126400 - 0x001264ff
-
-const MTypeId VariantSelectionNode::typeId(0x00126400);
-const MString VariantSelectionNode::typeName("pxrUsdVariantSelection");
-
-MObject VariantSelectionNode::selection;
-
-void* VariantSelectionNode::creator()
+/* static */
+void*
+UsdMayaVariantSelectionNode::creator(
+        const PluginStaticData& psData)
 {
-    return new VariantSelectionNode();
+    return new UsdMayaVariantSelectionNode(psData);
 }
 
-MStatus VariantSelectionNode::initialize()
+
+/* static */
+MStatus
+UsdMayaVariantSelectionNode::initialize(
+        PluginStaticData* psData)
 {
     MStatus retValue = MS::kSuccess;
 
@@ -66,7 +65,7 @@ MStatus VariantSelectionNode::initialize()
     // reading / debugging by end users. All programmed interaction should use
     // the MPxData type, though. May need to make a MPxCommand to facilitate
     // this...
-    selections = typedAttrFn.create(
+    psData->selections = typedAttrFn.create(
         "selections",
         "sl",
         MFnData::kString,
@@ -77,9 +76,18 @@ MStatus VariantSelectionNode::initialize()
     typedAttrFn.setStorable(true);
     typedAttrFn.setWritable(true);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
-    retValue = addAttribute(selection);
+    retValue = addAttribute(psData->selections);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
 
     return retValue;
 }
+
+UsdMayaVariantSelectionNode::UsdMayaVariantSelectionNode(
+        const PluginStaticData& psData)
+    : _psData(psData)
+{
+}
+
+
+
 PXR_NAMESPACE_CLOSE_SCOPE
