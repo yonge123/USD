@@ -24,6 +24,7 @@
 #ifndef USD_RELATIONSHIPS_H
 #define USD_RELATIONSHIPS_H
 
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/common.h"
 #include "pxr/usd/usd/property.h"
 
@@ -32,6 +33,9 @@
 
 #include <string>
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 class UsdRelationship;
 
@@ -152,7 +156,7 @@ public:
     // validate those objects since it is easy to create a UsdAttribute
     // or UsdRelationship object not backed by scene description).
 
-    /// Adds \p target to the list of targets.
+    /// Appends \p target to the list of targets.
     ///
     /// Passing paths to master prims or any other objects in masters will 
     /// cause an error to be issued. It is not valid to author targets to
@@ -161,7 +165,7 @@ public:
     /// What data this actually authors depends on what data is currently
     /// authored in the authoring layer, with respect to list-editing
     /// semantics, which we will document soon 
-    bool AddTarget(const SdfPath& target) const;
+    bool AppendTarget(const SdfPath& target) const;
 
     /// Removes \p target from the list of targets.
     ///
@@ -259,6 +263,7 @@ private:
     friend class UsdObject;
     friend class UsdPrim;
     friend class Usd_PrimData;
+    friend struct UsdPrim_TargetFinder;
 
     UsdRelationship(const Usd_PrimDataHandle &prim,
                     const TfToken& relName)
@@ -271,13 +276,22 @@ private:
 
     SdfRelationshipSpecHandle _CreateSpec(bool fallbackCustom=true) const;
     bool _Create(bool fallbackCustom) const;
+
+    bool _GetForwardedTargets(SdfPathVector* targets,
+                              bool includeForwardingRels,
+                              bool forwardToObjectsInMasters) const;
+
     bool _GetForwardedTargets(SdfPathSet* visited, 
                               SdfPathSet* uniqueTargets,
                               SdfPathVector* targets,
+                              bool includeForwardingRels,
                               bool forwardToObjectsInMasters) const;
 
     SdfPath _GetTargetForAuthoring(const SdfPath &targetPath,
                                    std::string* whyNot = 0) const;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //USD_RELATIONSHIPS_H
