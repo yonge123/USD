@@ -54,7 +54,6 @@ function(_install_headers LIBRARY_NAME)
                 # copy does... so need an extra command to make dir
                 add_custom_command(
                         OUTPUT ${outfile}
-                        ${make_dirs_cmd}
                         COMMAND "${CMAKE_COMMAND}"
                         ARGS -E make_directory "${header_dest_dir}"
                         COMMAND "${CMAKE_COMMAND}"
@@ -66,7 +65,6 @@ function(_install_headers LIBRARY_NAME)
             else()
                 add_custom_command(
                         OUTPUT ${outfile}
-                        ${make_dirs_cmd}
                         COMMAND "${CMAKE_COMMAND}"
                         ARGS -E copy "${infile}" "${outfile}"
                         MAIN_DEPENDENCY "${infile}"

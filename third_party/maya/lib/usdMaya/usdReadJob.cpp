@@ -170,6 +170,10 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
     UsdPrim usdRootPrim = mArgs.primPath.empty() ? stage->GetDefaultPrim() :
         stage->GetPrimAtPath(SdfPath(mArgs.primPath));
     if (!usdRootPrim && !(mArgs.primPath.empty() || mArgs.primPath == "/")) {
+        std::string errorMsg = TfStringPrintf(
+            "Unable to set root prim to \"%s\" for USD file \"%s\" - using pseudo-root \"/\" instead",
+            mArgs.primPath.c_str(), mArgs.fileName.c_str());
+        MGlobal::displayError(errorMsg.c_str());
         usdRootPrim = stage->GetPseudoRoot();
     }
 
