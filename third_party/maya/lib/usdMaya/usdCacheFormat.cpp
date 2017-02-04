@@ -23,7 +23,7 @@ TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaCacheFormatTokens,
 
 
 // Some static inits
-const std::string usdCacheFormat::mTranslatorName = "pxrUsdCacheFormat";
+const std::string usdCacheFormat::mTranslatorName = "usd";
 const std::string usdCacheFormat::mDefaultPrimName = "cache";
 const std::string usdCacheFormat::mDefaultPrimType = "Points";
 const MTime::Unit usdCacheFormat::mTimeUnit = MTime::k6000FPS;
@@ -661,7 +661,7 @@ MStatus usdCacheFormat::readChannelName(MString& name) {
         }
     }
     // No more channels
-    mCurrentChannel = "";
+    // mCurrentChannel = "";
     name = MString("");
     return MS::kFailure;
 }

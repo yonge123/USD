@@ -50,7 +50,7 @@ class usdCacheFormat: public MPxCacheFormat {
         usdCacheFormat();
         ~usdCacheFormat();
         static void* creator();
-        MString translatorName();
+        static MString translatorName();
         MString extension();
         bool handlesDescription();
 
