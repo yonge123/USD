@@ -10,20 +10,10 @@
 
 /// \file usdCacheFormat.h
 
-#include <maya/MFileObject.h>
 #include <maya/MPxCacheFormat.h>
 #include <maya/MCacheFormatDescription.h>
 #include <maya/MStatus.h>
 #include <maya/MString.h>
-
-#include <string>
-#include <stack>
-#include <fstream>
-#include <sstream>
-#include <assert.h>
-#include <stdlib.h>
-
-// #include <maya/MGlobal.h>
 #include <maya/MTime.h>
 #include <maya/MFloatVectorArray.h>
 #include <maya/MDoubleArray.h>
@@ -31,7 +21,22 @@
 #include <maya/MIntArray.h>
 #include <maya/MVectorArray.h>
 
-using namespace std;
+#include "pxr/base/tf/staticTokens.h"
+#include "pxr/base/tf/token.h"
+
+#include "pxr/usd/sdf/layer.h"
+#include "pxr/usd/sdf/path.h"
+
+#include <string>
+
+#define PXRUSDMAYA_CACHEFORMAT_TOKENS \
+    ((UsdFileExtensionDefault, "usd")) \
+    ((UsdFileExtensionASCII, "usda")) \
+    ((UsdFileExtensionCrate, "usdc")) \
+    ((UsdFileFilter, "*.usd *.usda *.usdc"))
+
+TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaCacheFormatTokens,
+        PXRUSDMAYA_CACHEFORMAT_TOKENS);
 
 class usdCacheFormat: public MPxCacheFormat {
 	public:
@@ -40,30 +45,38 @@ class usdCacheFormat: public MPxCacheFormat {
 		static void* creator();
 		MString translatorName();
 		MString extension();
-
 		bool handlesDescription();
-		MStatus readDescription(MCacheFormatDescription& description,
-				const MString& descriptionFileLocation,
-				const MString& baseFileName);
+
+		MStatus open(const MString& fileName,
+				FileAccessMode mode);
+		void close();
+		MStatus isValid();
+		MStatus rewind();
+
+		MStatus writeHeader(const MString& version,
+				MTime& startTime,
+				MTime& endTime);
+		MStatus readHeader();
+
 		MStatus writeDescription(const MCacheFormatDescription& description,
 				const MString& descriptionFileLocation,
 				const MString& baseFileName);
+		MStatus readDescription(MCacheFormatDescription& description,
+				const MString& descriptionFileLocation,
+				const MString& baseFileName);
 
-
-		MStatus isValid();
-		MStatus open(const MString& fileName, FileAccessMode mode);
-		void close();
-		MStatus readHeader();
-		MStatus writeHeader(const MString& version, MTime& startTime,
-				MTime& endTime);
-		void beginWriteChunk();
-		void endWriteChunk();
-		MStatus beginReadChunk();
-		void endReadChunk();
 		MStatus writeTime(MTime& time);
 		MStatus readTime(MTime& time);
 		MStatus findTime(MTime& time, MTime& foundTime);
 		MStatus readNextTime(MTime& foundTime);
+
+		void beginWriteChunk();
+		void endWriteChunk();
+		MStatus beginReadChunk();
+		void endReadChunk();
+
+		MStatus writeInt32(int);
+		int readInt32();
 		unsigned readArraySize();
 		MStatus writeDoubleArray(const MDoubleArray&);
 		MStatus readDoubleArray(MDoubleArray&, unsigned size);
@@ -76,35 +89,26 @@ class usdCacheFormat: public MPxCacheFormat {
 		MStatus writeChannelName(const MString& name);
 		MStatus findChannelName(const MString& name);
 		MStatus readChannelName(MString& name);
-		MStatus writeInt32(int);
-		int readInt32();
-		MStatus rewind();
-
-	protected:
-		static MString comment(const MString& text);
-		static MString quote(const MString& text);
 
 	private:
-		void startXmlBlock(string& t);
-		void endXmlBlock();
-		void writeXmlTagValue(string& tag, string value);
-		void writeXmlTagValue(string& tag, int value);
-		bool readXmlTagValue(string tag, MStringArray& value);
-		bool readXmlTagValueInChunk(string tag, MStringArray& values);
-		void readXmlTag(string& value);
-		bool findXmlStartTag(string& tag);
-		bool findXmlStartTagInChunk(string& tag);
-		bool findXmlEndTag(string& tag);
-		void writeXmlValue(string& value);
-		void writeXmlValue(double value);
-		void writeXmlValue(float value);
-		void writeXmlValue(int value);
+		SdfPath addChannel(const MString& channelName,
+				const MString& interpretation,
+				const MCacheFormatDescription::CacheDataType dataType);
+		void readMetadata();
+		void writeMetadata();
+		void closeLayer();
 
-	MString fFileName;
-	fstream fFile;
-	stack<string> fXmlStack;
-	FileAccessMode fMode;
+		std::map<std::string, SdfPath> mPathMap;
+		std::string mFileName;
+		FileAccessMode mFileMode;
+		static const MTime::Unit mTimeUnit = MTime::k6000FPS;
+		SdfLayerRefPtr mLayerPtr;
+		bool mDescript;
+		double mCurrentTime;
+		std::string mCurrentChannel;
+		SdfPath mCurrentPath;
 };
+
 
 
 #endif // PXRUSDMAYA_CACHE_FORMAT_H
