@@ -94,7 +94,7 @@ class usdCacheFormat: public MPxCacheFormat {
 		// Attributes correspondance and type do not follow a systematic rule
 		// so we need some structure to store their specificities.
 		// We will have to access sequentially,since order of creation is important
-		// for Maya readChannelName as well as by Maya or USD name for fast access
+		// for Maya readChannelName, but also by Maya name or USD name for some calls
 		struct attributeDefinition {
 			std::string mayaAttrName = "";
 			MCacheFormatDescription::CacheDataType mayaDataType = MCacheFormatDescription::kUnknownData;
@@ -177,6 +177,7 @@ class usdCacheFormat: public MPxCacheFormat {
 		attributesSet mCachedAttributes;
 		SdfLayerRefPtr mLayerPtr;
 		double mCurrentTime;
+		std::string mFirstMayaAttr;
 		std::string mCurrentChannel;
 };
 
