@@ -29,6 +29,7 @@
 #include "usdMaya/MayaNurbsCurveWriter.h"
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
 #include "usdMaya/MayaTransformWriter.h"
+#include "usdMaya/MayaInstanceWriter.h"
 #include "usdMaya/MayaCameraWriter.h"
 #include "usdMaya/MayaImagePlaneWriter.h"
 #include "usdMaya/VdbVisualizerWriter.h"
@@ -548,6 +549,13 @@ bool usdWriteJob::createPrimWriter(
     if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator)) {
         MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, mStage, mArgs));
         if (primPtr->isValid() ) {
+            *primWriterOut = primPtr;
+            return true;
+        }
+    }
+    else if (mArgs.exportInstances && curDag.isInstanced() && curDag.instanceNumber() != 0) {
+        MayaInstanceWriterPtr primPtr(new MayaInstanceWriter(curDag, mStage, mArgs));
+        if (primPtr->isValid()) {
             *primWriterOut = primPtr;
             return true;
         }

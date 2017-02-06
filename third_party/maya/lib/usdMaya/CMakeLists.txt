@@ -88,6 +88,7 @@ pxr_shared_library(${PXR_PACKAGE}
         MayaNurbsCurveWriter
         MayaNurbsSurfaceWriter
         MayaTransformWriter
+        MayaInstanceWriter
         ModelKindWriter
         PluginPrimWriter
         VdbVisualizerWriter

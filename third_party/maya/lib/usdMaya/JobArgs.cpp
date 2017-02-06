@@ -133,24 +133,24 @@ void JobExportArgs::parseSingleOption(const MStringArray& theOption)
     if (parseSharedOption(theOption)) return;
 
     if (theOption[0] == MString("exportReferencesAsInstanceable")) {
-        exportRefsAsInstanceable = theOption[1].asInt();
+        exportRefsAsInstanceable = theOption[1].asInt() == 1;
     }
     else if (theOption[0] == MString("exportUVs")) {
-        exportMeshUVs = theOption[1].asInt();
-        exportNurbsExplicitUV = theOption[1].asInt();
+        exportMeshUVs = theOption[1].asInt() == 1;
+        exportNurbsExplicitUV = theOption[1].asInt() == 1;
     }
     else if (theOption[0] == MString("normalizeUVs")) {
-        normalizeMeshUVs = theOption[1].asInt();
+        normalizeMeshUVs = theOption[1].asInt() == 1;
         nurbsExplicitUVType = PxUsdExportJobArgsTokens->Uniform;
     }
     else if (theOption[0] == MString("exportColorSets")) {
-        exportColorSets = theOption[1].asInt();
+        exportColorSets = theOption[1].asInt() == 1;
     }
     else if (theOption[0] == MString("renderableOnly")) {
-        excludeInvisible = theOption[1].asInt();
+        excludeInvisible = theOption[1].asInt() == 1;
     }
     else if (theOption[0] == MString("allCameras")) {
-        exportDefaultCameras = theOption[1].asInt();
+        exportDefaultCameras = theOption[1].asInt() == 1;
     }
     else if (theOption[0] == MString("renderLayerMode")) {
         renderLayerMode = PxUsdExportJobArgsTokens->defaultLayer;
@@ -162,13 +162,16 @@ void JobExportArgs::parseSingleOption(const MStringArray& theOption)
         }
     }
     else if (theOption[0] == MString("mergeXForm")) {
-        mergeTransformAndShape = theOption[1].asInt();
+        mergeTransformAndShape = theOption[1].asInt() == 1;
+    }
+    else if (theOption[0] == MString("exportInstances")) {
+        exportInstances = theOption[1].asInt() == 1;
     }
     else if (theOption[0] == MString("exportVisibility")) {
-        exportVisibility = theOption[1].asInt();
+        exportVisibility = theOption[1].asInt() == 1;
     }
     else if (theOption[0] == MString("animation")) {
-        exportAnimation = theOption[1].asInt();
+        exportAnimation = theOption[1].asInt() == 1;
     }
     else if (theOption[0] == MString("frameSample")) {
         frameSamples.insert(theOption[1].asDouble());

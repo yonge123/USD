@@ -414,37 +414,76 @@ MayaTransformWriter::MayaTransformWriter(
     mXformDagPath(iDag),
     mIsShapeAnimated(false)
 {
-    // Merge shape and transform
-    // If is a transform, then do not write
-    // Return if has a single shape directly below xform 
-    if (getArgs().mergeTransformAndShape) {
-        if (iDag.hasFn(MFn::kTransform)) { // if is an actual transform
+    auto setup_merged_shape = [this] () {
+        // Use the parent transform if there is only a single shape under the shape's xform
+        this->mXformDagPath.pop();
+        unsigned int numberOfShapesDirectlyBelow = 0;
+        this->mXformDagPath.numberOfShapesDirectlyBelow(numberOfShapesDirectlyBelow);
+        if (numberOfShapesDirectlyBelow == 1) {
+            // Use the parent path (xform) instead of the shape path
+            this->setUsdPath( getUsdPath().GetParentPath() );
+        } else {
+            this->mXformDagPath = MDagPath(); // make path invalid
+        }
+    };
+
+    auto invalidate_transform = [this] () {
+        this->setValid(false); // no need to iterate over this Writer, as not writing it out
+        this->mXformDagPath = MDagPath(); // make path invalid
+    };
+
+    // it's more straightforward to separate code
+    if (iArgs.exportInstances) {
+        if (iDag.hasFn(MFn::kTransform)) {
             unsigned int numberOfShapesDirectlyBelow = 0;
             iDag.numberOfShapesDirectlyBelow(numberOfShapesDirectlyBelow);
             if (numberOfShapesDirectlyBelow == 1) {
-                setValid(false); // no need to iterate over this Writer, as not writing it out
-                mXformDagPath = MDagPath(); // make path invalid
+                auto copyDag = iDag;
+                copyDag.extendToShapeDirectlyBelow(0);
+                if (copyDag.isInstanced()) {
+                    if (copyDag.instanceNumber() != 0) {
+                        invalidate_transform();
+                    }
+                } else if (iArgs.mergeTransformAndShape) {
+                    invalidate_transform();
+                }
             }
-        } else { // must be a shape then
-            // Use the parent transform if there is only a single shape under the shape's xform
-            mXformDagPath.pop();
-            unsigned int numberOfShapesDirectlyBelow = 0;
-            mXformDagPath.numberOfShapesDirectlyBelow(numberOfShapesDirectlyBelow);
-            if (numberOfShapesDirectlyBelow == 1) {
-                // Use the parent path (xform) instead of the shape path
-                setUsdPath( getUsdPath().GetParentPath() );
+        } else {
+            if (iDag.isInstanced()) {
+                if (iDag.instanceNumber() == 0) {
+                    mXformDagPath = MDagPath();
+                } else {
+                    setup_merged_shape();
+                }
+            } else if (getArgs().mergeTransformAndShape) {
+                setup_merged_shape();
             } else {
-                mXformDagPath = MDagPath(); // make path invalid
+                mXformDagPath = MDagPath();
             }
         }
     } else {
-        if (!iDag.hasFn(MFn::kTransform)) { // if is NOT an actual transform
-            mXformDagPath = MDagPath(); // make path invalid
+        // Merge shape and transform
+        // If is a transform, then do not write
+        // Return if has a single shape directly below xform
+        if (getArgs().mergeTransformAndShape) {
+            if (iDag.hasFn(MFn::kTransform)) { // if is an actual transform
+                unsigned int numberOfShapesDirectlyBelow = 0;
+                iDag.numberOfShapesDirectlyBelow(numberOfShapesDirectlyBelow);
+                if (numberOfShapesDirectlyBelow == 1) {
+                    invalidate_transform();
+                }
+            } else { // must be a shape then
+                setup_merged_shape();
+            }
+        } else {
+            if (!iDag.hasFn(MFn::kTransform)) { // if is NOT an actual transform
+                mXformDagPath = MDagPath(); // make path invalid
+            }
         }
     }
 
     // Determine if transform is animated
-    if ( mXformDagPath.isValid()) {
+    if (mXformDagPath.isValid()) {
         MFnTransform transFn(mXformDagPath);
         UsdGeomXform primSchema = UsdGeomXform::Define(getUsdStage(), getUsdPath());
         mUsdPrim = primSchema.GetPrim();
@@ -454,7 +493,7 @@ MayaTransformWriter::MayaTransformWriter(
     }
 
     // Determine if shape is animated
-    if ( !getDagPath().hasFn(MFn::kTransform)) { // if is a shape
+    if (!iDag.hasFn(MFn::kTransform)) { // if is a shape
         MObject obj = getDagPath().node();
         if (iArgs.exportAnimation)
             mIsShapeAnimated = PxrUsdMayaUtil::isAnimated(obj);
