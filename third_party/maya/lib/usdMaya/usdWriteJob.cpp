@@ -309,7 +309,10 @@ void usdWriteJob::evalJob(double iFrame)
 {
     for ( MayaPrimWriterPtr const & primWriter :  mMayaPrimWriterList) {
         UsdTimeCode usdTime(iFrame);
-        primWriter->write(usdTime);
+        UsdPrim usdPrim = primWriter->write(usdTime);
+        if (primWriter->isReferenced()) {
+            usdPrim.SetSpecifier(SdfSpecifierOver);
+        }
     }
     for (PxrUsdMayaChaserRefPtr& chaser: mChasers) {
         chaser->ExportFrame(iFrame);
