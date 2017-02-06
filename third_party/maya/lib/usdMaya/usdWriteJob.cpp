@@ -76,7 +76,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 usdWriteJob::usdWriteJob(const JobExportArgs & iArgs) :
-    mArgs(iArgs), mModelKindWriter(iArgs)
+    mArgs(iArgs), mModelKindWriter(iArgs), mRefEditUtil(iArgs.mergeTransformAndShape, iArgs.handleUsdNamespaces)
 {
 }
 
