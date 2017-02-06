@@ -67,6 +67,7 @@
 #include <maya/MItDag.h>
 #include <maya/MObjectArray.h>
 #include <maya/MPxNode.h>
+#include <maya/MDagPathArray.h>
 
 #include <limits>
 #include <map>
@@ -547,7 +548,7 @@ bool usdWriteJob::createPrimWriter(
 
     if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator) ||
         (mArgs.exportInstances && curDag.isInstanced() && curDag.instanceNumber() != 0)) {
-        MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, mStage, mArgs, &mDagPathToUsdPathMap));
+        MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, mStage, mArgs, this));
         if (primPtr->isValid() ) {
             *primWriterOut = primPtr;
             return true;
@@ -612,6 +613,20 @@ bool usdWriteJob::createPrimWriter(
     
     *primWriterOut = nullptr;
     return true;
+}
+
+SdfPath usdWriteJob::getMasterPath(const MDagPath& dg)
+{
+    MDagPathArray allInstances;
+    MDagPath::getAllPathsTo(dg.node(), allInstances);
+    if (allInstances.length() > 0) {
+        allInstances[0].pop();
+        const auto it = mDagPathToUsdPathMap.find(allInstances[0]);
+        if (it != mDagPathToUsdPathMap.end()) {
+            return it->second;
+        }
+    }
+    return SdfPath();
 }
 
 

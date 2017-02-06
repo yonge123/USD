@@ -24,6 +24,7 @@
 #include "pxr/pxr.h"
 #include "usdMaya/MayaTransformWriter.h"
 #include "usdMaya/util.h"
+#include "usdMaya/usdWriteJob.h"
 
 #include "pxr/usd/usdGeom/xform.h"
 #include "pxr/usd/usdGeom/xformCommonAPI.h"
@@ -34,7 +35,6 @@
 #include <maya/MFnTransform.h>
 #include <maya/MPoint.h>
 #include <maya/MMatrix.h>
-#include <maya/MDagPathArray.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -413,12 +413,12 @@ MayaTransformWriter::MayaTransformWriter(
         MDagPath& iDag, 
         UsdStageRefPtr stage, 
         const JobExportArgs& iArgs,
-        const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type* pathMapPtr) :
+        usdWriteJob* jobPtr) :
     MayaPrimWriter(iDag, stage, iArgs),
     mXformDagPath(iDag),
     mIsShapeAnimated(false),
     mIsInstance(false),
-    mPathMap(pathMapPtr)
+    mJob(jobPtr)
 {
     auto setup_merged_shape = [this] () {
         // Use the parent transform if there is only a single shape under the shape's xform
@@ -510,16 +510,11 @@ MayaTransformWriter::MayaTransformWriter(
 //virtual 
 void MayaTransformWriter::write(const UsdTimeCode &usdTime)
 {
-    if (mIsInstance && mPathMap != nullptr && usdTime.IsDefault()) {
-        MDagPathArray allInstances;
-        MDagPath::getAllPathsTo(getDagPath().node(), allInstances);
-        if (allInstances.length() > 0) {
-            allInstances[0].pop();
-            const auto it = mPathMap->find(allInstances[0]);
-            if (it != mPathMap->end()) {
-                mUsdPrim.GetInherits().AppendInherit(it->second);
-                mUsdPrim.SetInstanceable(true);
-            }
+    if (mIsInstance && mJob != nullptr && usdTime.IsDefault()) {
+        const auto masterPath = mJob->getMasterPath(getDagPath());
+        if (!masterPath.IsEmpty()){
+            mUsdPrim.GetInherits().AppendInherit(masterPath);
+            mUsdPrim.SetInstanceable(true);
         }
     }
     UsdGeomXform primSchema(mUsdPrim);
