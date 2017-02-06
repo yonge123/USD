@@ -3,7 +3,7 @@
 //
 
 #include "refEditUtil.h"
-#include "util.h"
+#include "usdMaya/util.h"
 #include <maya/MFnAssembly.h>
 #include <maya/MFnReference.h>
 
@@ -11,7 +11,13 @@
 #include <maya/MEdit.h>
 #include <maya/MSetAttrEdit.h>
 
+RefEdits::RefEdits(): isReferenced(false)
+{}
+
 RefEditUtil::RefEditUtil(){
+}
+
+RefEditUtil::~RefEditUtil(){
 }
 
 void
@@ -19,7 +25,7 @@ RefEditUtil::GetDagNodeEdits(const MDagPath& dagPath, RefEdits& outEdits){
 
     // Get the Reference / Assembly that this node belongs to
     // Add switch
-    MObject referenceObj = PxrUsdMayaUtil::GetReferenceNode(dagPath);
+    MObject referenceObj = PxrUsdMayaUtil::GetReferenceNode(dagPath.node());
 
     if (!referenceObj.isNull()) {
         outEdits.isReferenced = true;
@@ -88,28 +94,26 @@ RefEditUtil::ProcessReference(
 
     while( !assemEdits.isDone() ) {
         MStatus status;
-        MSetAttrEdit mSetAttrEdit = assemEdits.setAttrEdit(&status);
-        if (!status){
-            // More connection types here
-            continue;
+        MEdit::EditType editType;
+        editType = assemEdits.currentEditType(&status);
+
+        if (editType == MEdit::kSetAttrEdit){
+            MSetAttrEdit mSetAttrEdit = assemEdits.setAttrEdit(&status);
+            MPlug mPlug = mSetAttrEdit.plug(&status);
+
+            if (status) {
+                MObject editedNode = mPlug.node(&status);
+                std::string attrName = mPlug.name(&status).asChar();
+
+                // Only keep the attribute name of node.attribute
+                attrName = TfStringSplit(attrName, ".")[1];
+
+                MDagPath editPath;
+                MDagPath::getAPathTo(editedNode, editPath);
+
+                _dagPathToRefEdits[editPath].insert(attrName);
+            }
         }
-
-        // TODO: add checking
-        MPlug mPlug = mSetAttrEdit.plug(&status);
-        if (!status){
-            continue;
-        }
-        MObject mObj = mPlug.node(&status);
-        std::string attrName = mPlug.name(&status).asChar();
-
-        // Only keep the attribute name of node.attribute
-        attrName = TfStringSplit(attrName, ".")[-1];
-
-        MDagPath editPath;
-        MDagPath::getAPathTo(mObj, editPath);
-
-//        (*_dagPathToRefEdits)[editPath].push_back(attrName);
-        _dagPathToRefEdits[editPath].insert(attrName);
 
         assemEdits.next();
     }

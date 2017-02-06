@@ -253,11 +253,11 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
                     }
                 }
 
+                mModelKindWriter.OnWritePrim(usdPrim, primWriter);
+
                 if (primWriter->isReferenced()) {
                     usdPrim.SetSpecifier(SdfSpecifierOver);
                 }
-
-                mModelKindWriter.OnWritePrim(usdPrim, primWriter);
 
                 if (primWriter->shouldPruneChildren()) {
                     itDag.prune();

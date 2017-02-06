@@ -11,7 +11,7 @@
 #include "pxr/base/tf/fileUtils.h"
 #include <maya/MObject.h>
 
-#include <usdMaya/util.h>
+#include "usdMaya/util.h"
 
 #include <string>
 #include <vector>
@@ -20,6 +20,8 @@
 /// Object that holds information needed for MayaPrimWriter to know whether
 /// to write out an attribute
 struct RefEdits{
+    RefEdits();
+
     bool isReferenced;
     // TfHashSet?
     TfHashSet<std::string, TfHash> modifiedAttrs;

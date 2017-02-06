@@ -75,13 +75,13 @@ MayaPrimWriter::MayaPrimWriter(MDagPath & iDag,
 }
 
 bool
-MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime, UsdGeomImageable &primSchema) 
+MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime, UsdGeomImageable &primSchema)
 {
     MStatus status;
     MFnDependencyNode depFn(getDagPath().node());
     MFnDependencyNode depFnT(dagT.node()); // optionally also scan a shape's transform if merging transforms
 
-    if (getArgs().exportVisibility) {
+    if (getArgs().exportVisibility && MayaPrimWriter::isAttrExportable("visibility")) {
         bool isVisible  = true;   // if BOTH shape or xform is animated, then visible
         bool isAnimated = false;  // if either shape or xform is animated, then animated
 
@@ -95,7 +95,7 @@ MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime,
             }
         }
 
-        TfToken const &visibilityTok = (isVisible ? UsdGeomTokens->inherited : 
+        TfToken const &visibilityTok = (isVisible ? UsdGeomTokens->inherited :
                                         UsdGeomTokens->invisible);
         if (usdTime.IsDefault() != isAnimated ) {
             if (usdTime.IsDefault())
@@ -112,6 +112,8 @@ MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime,
     UsdGeomGprim gprim = UsdGeomGprim(usdPrim);
     if (gprim && usdTime.IsDefault()){
 
+        // TODO: For References, only write "doubleSided" and "opposite" if they are modified
+        // Pass modifiedAttrs in context?
         PxrUsdMayaPrimWriterContext* unused = NULL;
         PxrUsdMayaTranslatorGprim::Write(
                 getDagPath().node(),
@@ -120,6 +122,7 @@ MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime,
 
     }
 
+    // TODO: For References, only write modified USD_ attrs
     // Process special "USD_" attributes.
     std::vector<const AttributeConverter*> converters =
             AttributeConverterRegistry::GetAllConverters();
@@ -127,7 +130,8 @@ MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime,
         // We want the node for the xform (depFnT).
         converter->MayaToUsd(depFnT, usdPrim, usdTime);
     }
-    
+
+    // TODO: For References, only write modified user tagged attrs
     // Write user-tagged export attributes. Write attributes on the transform
     // first, and then attributes on the shape node. This means that attribute
     // name collisions will always be handled by taking the shape node's value
@@ -161,8 +165,9 @@ MayaPrimWriter::shouldPruneChildren() const
 bool
 MayaPrimWriter::isAttrExportable(const char* attrName) const
 {
+    std::string attrStr(attrName);
     if (!mRefEdits.isReferenced ||
-            mRefEdits.modifiedAttrs.find(attrName) != mRefEdits.modifiedAttrs.end()) {
+            mRefEdits.modifiedAttrs.find(attrStr) != mRefEdits.modifiedAttrs.end()) {
         return true;
     }
     return false;
