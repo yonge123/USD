@@ -180,7 +180,7 @@ void JobExportArgs::parseSingleOption(const MStringArray& theOption)
         exportRootPath = theOption[1].asChar();
     }
     else if (theOption[0] == MString("handleUsdNamespaces")) {
-        handleUsdNamespaces = theOption[1].asInt();
+        handleUsdNamespaces = theOption[1].asInt() == 1;
     }
 }
 
@@ -202,7 +202,7 @@ void JobImportArgs::parseSingleOption(const MStringArray& theOption)
     if (parseSharedOption(theOption)) return;
 
     if (theOption[0] == MString("readAnimData")) {
-        readAnimData = theOption[1].asInt();
+        readAnimData = theOption[1].asInt() == 1;
     } else if (theOption[0] == MString("assemblyRep")) {
         assemblyRep = TfToken(theOption[1].asChar());
     } else if (theOption[0] == MString("startTime")) {
@@ -210,9 +210,9 @@ void JobImportArgs::parseSingleOption(const MStringArray& theOption)
     } else if (theOption[0] == MString("endTime")) {
         endTime = theOption[1].asDouble();
     } else if (theOption[0] == MString("useCustomFrameRange")) {
-        useCustomFrameRange = theOption[1].asInt();
+        useCustomFrameRange = theOption[1].asInt() == 1;
     } else if (theOption[0] == MString("importWithProxyShapes")) {
-        importWithProxyShapes = theOption[1].asInt();
+        importWithProxyShapes = theOption[1].asInt() == 1;
     } else if (theOption[0] == MString("primPath")) {
         primPath = theOption[1].asChar();
     } else if (theOption[0] == MString("topLayerUsd")) {
