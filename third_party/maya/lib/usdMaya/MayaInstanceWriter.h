@@ -9,8 +9,12 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class MayaInstanceWriter : public MayaTransformWriter {
 public:
-    MayaInstanceWriter(MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs);
+    MayaInstanceWriter(MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs,
+                       const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type* pathMapPtr);
     virtual void write(const UsdTimeCode& usdTime);
+
+private:
+    const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type* mPathMap;
 };
 
 typedef shared_ptr<MayaInstanceWriter> MayaInstanceWriterPtr;

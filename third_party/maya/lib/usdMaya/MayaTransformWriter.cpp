@@ -153,8 +153,9 @@ _GatherAnimChannel(
         MString parentName, 
         MString xName, MString yName, MString zName, 
         std::vector<AnimChannel>* oAnimChanList, 
-        bool isWritingAnimation, 
-        bool setOpName = true)
+        bool isWritingAnimation,
+        bool setOpName,
+        bool isInstance)
 {
     AnimChannel chan;
     chan.opType = opType;
@@ -197,7 +198,7 @@ _GatherAnimChannel(
             chan.sampleType[i] = ANIMATED; 
             validComponents++;
         } 
-        else if (!GfIsClose(chan.defValue[i], nullValue[i], 1e-7)) {
+        else if (!GfIsClose(chan.defValue[i], nullValue[i], 1e-7) || isInstance) {
             chan.sampleType[i] = STATIC; 
             validComponents++;
         }
@@ -274,7 +275,7 @@ void MayaTransformWriter::pushTransformStack(
     // additional xform (compensation translates for pivots, rotateAxis or
     // shear) we are not conforming anymore 
     bool conformsToCommonAPI = true;
-    
+
     // Keep track of where we have rotate and scale Pivots and their inverse so
     // that we can combine them later if possible
     unsigned int rotPivotIdx = -1, rotPivotINVIdx = -1, scalePivotIdx = -1, scalePivotINVIdx = -1;
@@ -288,24 +289,24 @@ void MayaTransformWriter::pushTransformStack(
     }
             
     // inspect the translate, no suffix to be closer compatibility with common API
-    _GatherAnimChannel(TRANSLATE, iTrans, "translate", "X", "Y", "Z", &mAnimChanList, writeAnim, false);
+    _GatherAnimChannel(TRANSLATE, iTrans, "translate", "X", "Y", "Z", &mAnimChanList, writeAnim, false, mIsInstance);
 
     // inspect the rotate pivot translate
-    if (_GatherAnimChannel(TRANSLATE, iTrans, "rotatePivotTranslate", "X", "Y", "Z", &mAnimChanList, writeAnim)) {
+    if (_GatherAnimChannel(TRANSLATE, iTrans, "rotatePivotTranslate", "X", "Y", "Z", &mAnimChanList, writeAnim, true, mIsInstance)) {
         conformsToCommonAPI = false;
     }
 
     // inspect the rotate pivot
-    bool hasRotatePivot = _GatherAnimChannel(TRANSLATE, iTrans, "rotatePivot", "X", "Y", "Z", &mAnimChanList, writeAnim);
+    bool hasRotatePivot = _GatherAnimChannel(TRANSLATE, iTrans, "rotatePivot", "X", "Y", "Z", &mAnimChanList, writeAnim, true, mIsInstance);
     if (hasRotatePivot) {
         rotPivotIdx = mAnimChanList.size()-1;
     }
 
     // inspect the rotate, no suffix to be closer compatibility with common API
-    _GatherAnimChannel(ROTATE, iTrans, "rotate", "X", "Y", "Z", &mAnimChanList, writeAnim, false);
+    _GatherAnimChannel(ROTATE, iTrans, "rotate", "X", "Y", "Z", &mAnimChanList, writeAnim, false, mIsInstance);
 
     // inspect the rotateAxis/orientation
-    if (_GatherAnimChannel(ROTATE, iTrans, "rotateAxis", "X", "Y", "Z", &mAnimChanList, writeAnim)) {
+    if (_GatherAnimChannel(ROTATE, iTrans, "rotateAxis", "X", "Y", "Z", &mAnimChanList, writeAnim, true, mIsInstance)) {
         conformsToCommonAPI = false;
     }
 
@@ -321,23 +322,23 @@ void MayaTransformWriter::pushTransformStack(
     }
 
     // inspect the scale pivot translation
-    if (_GatherAnimChannel(TRANSLATE, iTrans, "scalePivotTranslate", "X", "Y", "Z", &mAnimChanList, writeAnim)) {
+    if (_GatherAnimChannel(TRANSLATE, iTrans, "scalePivotTranslate", "X", "Y", "Z", &mAnimChanList, writeAnim, true, mIsInstance)) {
         conformsToCommonAPI = false;
     }
 
     // inspect the scale pivot point
-    bool hasScalePivot = _GatherAnimChannel(TRANSLATE, iTrans, "scalePivot", "X", "Y", "Z", &mAnimChanList, writeAnim);
+    bool hasScalePivot = _GatherAnimChannel(TRANSLATE, iTrans, "scalePivot", "X", "Y", "Z", &mAnimChanList, writeAnim, true, mIsInstance);
     if (hasScalePivot) {
         scalePivotIdx = mAnimChanList.size()-1;
     }
 
     // inspect the shear. Even if we have one xform on the xform list, it represents a share so we should name it
-    if (_GatherAnimChannel(SHEAR, iTrans, "shear", "XY", "XZ", "YZ", &mAnimChanList, writeAnim)) {
+    if (_GatherAnimChannel(SHEAR, iTrans, "shear", "XY", "XZ", "YZ", &mAnimChanList, writeAnim, true, mIsInstance)) {
         conformsToCommonAPI = false;
     }
 
     // add the scale. no suffix to be closer compatibility with common API
-    _GatherAnimChannel(SCALE, iTrans, "scale", "X", "Y", "Z", &mAnimChanList, writeAnim, false);
+    _GatherAnimChannel(SCALE, iTrans, "scale", "X", "Y", "Z", &mAnimChanList, writeAnim, false, mIsInstance);
 
     // inverse the scale pivot point
     if (hasScalePivot) {
@@ -412,7 +413,8 @@ MayaTransformWriter::MayaTransformWriter(
         const JobExportArgs& iArgs) :
     MayaPrimWriter(iDag, stage, iArgs),
     mXformDagPath(iDag),
-    mIsShapeAnimated(false)
+    mIsShapeAnimated(false),
+    mIsInstance(false)
 {
     auto setup_merged_shape = [this] () {
         // Use the parent transform if there is only a single shape under the shape's xform
@@ -453,6 +455,7 @@ MayaTransformWriter::MayaTransformWriter(
                 if (iDag.instanceNumber() == 0) {
                     mXformDagPath = MDagPath();
                 } else {
+                    mIsInstance = true;
                     setup_merged_shape();
                 }
             } else if (getArgs().mergeTransformAndShape) {

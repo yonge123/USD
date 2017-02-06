@@ -84,12 +84,13 @@ class MayaTransformWriter : public MayaPrimWriter
     bool mWriteTransformAttrs;
     MDagPath mXformDagPath;
     bool mIsShapeAnimated;
+    bool mIsInstance;
     std::vector<AnimChannel> mAnimChanList;
 
     size_t mJointOrientOpIndex[3];
     size_t mRotateOpIndex[3];
     size_t mRotateAxisOpIndex[3];
-    
+
 };
 
 typedef shared_ptr < MayaTransformWriter > MayaTransformWriterPtr;

@@ -554,7 +554,7 @@ bool usdWriteJob::createPrimWriter(
         }
     }
     else if (mArgs.exportInstances && curDag.isInstanced() && curDag.instanceNumber() != 0) {
-        MayaInstanceWriterPtr primPtr(new MayaInstanceWriter(curDag, mStage, mArgs));
+        MayaInstanceWriterPtr primPtr(new MayaInstanceWriter(curDag, mStage, mArgs, &mDagPathToUsdPathMap));
         if (primPtr->isValid()) {
             *primWriterOut = primPtr;
             return true;
