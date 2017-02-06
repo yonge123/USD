@@ -29,10 +29,12 @@
 #include "pxr/usd/usdGeom/xformCommonAPI.h"
 #include "pxr/usd/usdGeom/xformable.h"
 #include "pxr/usd/usd/stage.h"
+#include "pxr/usd/usd/inherits.h"
 
 #include <maya/MFnTransform.h>
 #include <maya/MPoint.h>
 #include <maya/MMatrix.h>
+#include <maya/MDagPathArray.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -410,11 +412,13 @@ void MayaTransformWriter::pushTransformStack(
 MayaTransformWriter::MayaTransformWriter(
         MDagPath& iDag, 
         UsdStageRefPtr stage, 
-        const JobExportArgs& iArgs) :
+        const JobExportArgs& iArgs,
+        const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type* pathMapPtr) :
     MayaPrimWriter(iDag, stage, iArgs),
     mXformDagPath(iDag),
     mIsShapeAnimated(false),
-    mIsInstance(false)
+    mIsInstance(false),
+    mPathMap(pathMapPtr)
 {
     auto setup_merged_shape = [this] () {
         // Use the parent transform if there is only a single shape under the shape's xform
@@ -506,6 +510,18 @@ MayaTransformWriter::MayaTransformWriter(
 //virtual 
 void MayaTransformWriter::write(const UsdTimeCode &usdTime)
 {
+    if (mIsInstance && mPathMap != nullptr && usdTime.IsDefault()) {
+        MDagPathArray allInstances;
+        MDagPath::getAllPathsTo(getDagPath().node(), allInstances);
+        if (allInstances.length() > 0) {
+            allInstances[0].pop();
+            const auto it = mPathMap->find(allInstances[0]);
+            if (it != mPathMap->end()) {
+                mUsdPrim.GetInherits().AppendInherit(it->second);
+                mUsdPrim.SetInstanceable(true);
+            }
+        }
+    }
     UsdGeomXform primSchema(mUsdPrim);
     // Set attrs
     writeTransformAttrs(usdTime, primSchema);
