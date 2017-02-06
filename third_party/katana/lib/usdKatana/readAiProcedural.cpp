@@ -94,27 +94,29 @@ PxrUsdKatanaReadAiProcedural(
         const PxrUsdKatanaUsdInPrivateData& data,
         PxrUsdKatanaAttrMap& attrs)
 {
-    // Read in general attributes for a Gprim.
+    // Read in general attributes for a transformable prim.
     PxrUsdKatanaReadXformable(procedural, data, attrs);
 
-    // TODO: Read in bounding box if defined. There's currently no op type for
-    // `UsdGeomBoundable`, so we may want to add one.
+    const double currentTime = data.GetUsdInArgs()->GetCurrentTime();
 
     // This plugin is registered for both AiProcedural and AiVolume, so check
     // which one we're dealing with, since the handling is slightly different.
     if (procedural.GetPrim().IsA<UsdAiVolume>()) {
         attrs.set("type", FnKat::StringAttribute("volume"));
         attrs.set("geometry.type", FnKat::StringAttribute("volumedso"));
+        // TODO: Find a way to check if the "bound" attribute is already set.
+        // The current plugin system doesn't give prim reader plugins any way to
+        // access the ``GeolibCookInterface`` from the base PxrUsdIn op.
         attrs.set("rendererProcedural.autoBounds", FnAttribute::IntAttribute(1));
 
         float stepSize = 0;
         if (UsdAttribute stepAttr = UsdAiVolume(procedural).GetStepSizeAttr()) {
-            stepAttr.Get<float>(&stepSize);
+            stepAttr.Get<float>(&stepSize, currentTime);
         }
         attrs.set("geometry.step_size", FnKat::FloatAttribute(stepSize));
+
     } else {
         attrs.set("type", FnKat::StringAttribute("renderer procedural"));
-        // TODO: Bounds?
     }
 
     // Read the DSO value.
@@ -131,6 +133,7 @@ PxrUsdKatanaReadAiProcedural(
 
     // Read all parameters in the "user:" namespace and convert their values to
     // attributes in the "rendererProcedural.args" group attribute.
+    // Note that these are only sampled once per frame.
     FnKat::GroupBuilder argsBuilder;
 
     UsdAiNodeAPI nodeAPI = UsdAiNodeAPI(procedural);
@@ -138,7 +141,7 @@ PxrUsdKatanaReadAiProcedural(
     TF_FOR_ALL(attrIter, userAttrs) {
         UsdAttribute userAttr = *attrIter;
         VtValue vtValue;
-        if (!userAttr.Get(&vtValue)) {
+        if (!userAttr.Get(&vtValue, currentTime)) {
             continue;
         }
 
