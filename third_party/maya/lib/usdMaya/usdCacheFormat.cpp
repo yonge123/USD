@@ -198,19 +198,19 @@ MStatus UsdCacheFormat::open(const MString& fileName, FileAccessMode mode) {
         // Would we need to use CreateIdentifier?
         if (mLayerPtr) {
             if ((mLayerPtr->GetIdentifier() != iFileName)
-                    or (not isValid())) {
+                    || (!isValid())) {
                 closeLayer();
             }
         }
-        if (not mLayerPtr) {
+        if (!mLayerPtr) {
             // If we are overwriting a file that already has been loaded
             // should we trash the layer or edit it?
             mLayerPtr = SdfLayer::Find(iFileName);
-            if (mLayerPtr and not isValid()) {
+            if (mLayerPtr && !isValid()) {
                 closeLayer();
             }
         }
-        if (not mLayerPtr) {
+        if (!mLayerPtr) {
             mLayerPtr = SdfLayer::CreateNew(iFileName);
         }
         if (mLayerPtr) {
@@ -231,7 +231,7 @@ MStatus UsdCacheFormat::open(const MString& fileName, FileAccessMode mode) {
         if (iFileExtension == "") {
             iFileExtension == usdExt;
             iFileName = TfStringPrintf("%s.%s", iFileName.c_str(), usdExt.c_str());
-        } else if ((iFileExtension == usdExt) and (TfStringGetSuffix(iFileBase, '.') == usdExt)) {
+        } else if ((iFileExtension == usdExt) && (TfStringGetSuffix(iFileBase, '.') == usdExt)) {
             iFileName = iFileBase;
         }
         if (mLayerPtr) {
@@ -239,7 +239,7 @@ MStatus UsdCacheFormat::open(const MString& fileName, FileAccessMode mode) {
                 closeLayer();
             }
         }
-        if (not mLayerPtr) {
+        if (!mLayerPtr) {
             mLayerPtr = SdfLayer::FindOrOpen(iFileName);
         }
         if (mLayerPtr) {
@@ -355,7 +355,7 @@ SdfPath UsdCacheFormat::findOrAddDefaultPrim() {
         return SdfPath(mLayerPtr->GetDefaultPrim());
     } else {
         SdfPrimSpecHandle primSpec = mLayerPtr->GetPrimAtPath(SdfPath(mDefaultPrimName));
-        if (not primSpec) {
+        if (!primSpec) {
             primSpec = SdfPrimSpec::New(mLayerPtr, mDefaultPrimName, SdfSpecifierDef, mDefaultPrimType);
         }
         if (primSpec) {
@@ -466,14 +466,14 @@ UsdCacheFormat::attrById::iterator UsdCacheFormat::findOrAddMayaAttribute(
             }
         } else {
             // Build a description for it
-            if (not SdfAttributeSpec::IsValidName(mayaAttrName)) {
+            if (!SdfAttributeSpec::IsValidName(mayaAttrName)) {
                 MGlobal::displayError(
                     "UsdCacheFormat::findOrAddMayaAttribute: Invalid attribute name "
                     + MString(mayaAttrName.c_str()));
                 return mCachedAttributes.end();
             }
             SdfValueTypeName usdAttrType = MCacheDataTypeToSdfValueTypeName(mayaDataType);
-            if (not usdAttrType) {
+            if (!usdAttrType) {
                 MGlobal::displayError(
                     "UsdCacheFormat::findOrAddMayaAttribute: Unknown attribute type for "
                     + MString(mayaAttrName.c_str()));
@@ -487,7 +487,7 @@ UsdCacheFormat::attrById::iterator UsdCacheFormat::findOrAddMayaAttribute(
         // Actually add it on the defaultPrim
         SdfPath primPath(mLayerPtr->GetDefaultPrim());
         SdfPrimSpecHandle primSpec = mLayerPtr->GetPrimAtPath(primPath);
-        if (not primSpec) {
+        if (!primSpec) {
             MGlobal::displayError(
                 "UsdCacheFormat::findOrAddMayaAttribute: Invalid default prim path "
                 + MString(primPath.GetString().c_str()));
@@ -620,7 +620,7 @@ MStatus UsdCacheFormat::readExistingAttributes()
             status = MS::kFailure;
         }
     }
-    if (not mCachedAttributes.empty()) {
+    if (!mCachedAttributes.empty()) {
         return status;
     } else {
         MGlobal::displayError(MString("UsdCacheFormat::readExistingAttributes found not attributes on default prim ")
@@ -632,12 +632,12 @@ MStatus UsdCacheFormat::readExistingAttributes()
 MStatus UsdCacheFormat::writeTime(MTime& time)
 {
     mCurrentTime = time.asUnits(mTimeUnit);
-    if ((not mLayerPtr->HasStartTimeCode())
-        or (mCurrentTime < mLayerPtr->GetStartTimeCode())) {
+    if ((!mLayerPtr->HasStartTimeCode())
+        || (mCurrentTime < mLayerPtr->GetStartTimeCode())) {
         mLayerPtr->SetStartTimeCode(mCurrentTime);
     }
-    if ((not mLayerPtr->HasEndTimeCode())
-        or (mCurrentTime > mLayerPtr->GetEndTimeCode())) {
+    if ((!mLayerPtr->HasEndTimeCode())
+        || (mCurrentTime > mLayerPtr->GetEndTimeCode())) {
         mLayerPtr->SetEndTimeCode(mCurrentTime);
     }
     return MS::kSuccess;
@@ -679,7 +679,7 @@ MStatus UsdCacheFormat::readNextTime(MTime& foundTime) {
     if (mLayerPtr->GetBracketingTimeSamples(seekTime,
             &lowerTime, &upperTime)) {
         if ((upperTime < std::numeric_limits<double>::infinity())
-                and (upperTime >= mCurrentTime + epsilonTime)) {
+                && (upperTime >= mCurrentTime + epsilonTime)) {
             mCurrentTime = upperTime;
             foundTime = MTime(upperTime, mTimeUnit);
             return MS::kSuccess;
@@ -812,7 +812,7 @@ MStatus UsdCacheFormat::writeDoubleArray(const MDoubleArray& array) {
         const SdfPath attrPath = usdPathFromAttribute(it->usdAttrName);
         const SdfValueTypeName usdAttrType = it->usdAttrType;
         if ((SdfValueTypeNames->DoubleArray == usdAttrType)
-            and (it->convertToUsd == nullptr)) {
+            && (it->convertToUsd == nullptr)) {
             // Fast case, 1:1 correspondance in type and value,
             // so we can use a direct memory copy
             VtDoubleArray varray(array.length());
@@ -852,7 +852,7 @@ MStatus UsdCacheFormat::writeFloatArray(const MFloatArray& array) {
         const SdfPath attrPath = usdPathFromAttribute(it->usdAttrName);
         const SdfValueTypeName usdAttrType = it->usdAttrType;
         if ((SdfValueTypeNames->FloatArray == usdAttrType)
-            and (it->convertToUsd == nullptr)) {
+            && (it->convertToUsd == nullptr)) {
             VtFloatArray varray(array.length());
             array.get(varray.data());
             mLayerPtr->SetTimeSample(attrPath,
@@ -890,16 +890,16 @@ MStatus UsdCacheFormat::writeDoubleVectorArray(const MVectorArray& array) {
         const SdfPath attrPath = usdPathFromAttribute(it->usdAttrName);
         const SdfValueTypeName usdAttrType = it->usdAttrType;
         if ((SdfValueTypeNames->Vector3dArray == usdAttrType)
-            or (SdfValueTypeNames->Point3dArray == usdAttrType)
-            or (SdfValueTypeNames->Normal3dArray == usdAttrType)
-            or (SdfValueTypeNames->Color3dArray == usdAttrType)) {
+            || (SdfValueTypeNames->Point3dArray == usdAttrType)
+            || (SdfValueTypeNames->Normal3dArray == usdAttrType)
+            || (SdfValueTypeNames->Color3dArray == usdAttrType)) {
             mLayerPtr->SetTimeSample(attrPath,
                                      mCurrentTime,
                                      convertOutVectorArray<MVectorArray, GfVec3d>(array, it->convertToUsd));
         } else if ((SdfValueTypeNames->Vector3fArray == usdAttrType)
-                   or (SdfValueTypeNames->Point3fArray == usdAttrType)
-                   or (SdfValueTypeNames->Normal3fArray == usdAttrType)
-                   or (SdfValueTypeNames->Color3fArray == usdAttrType)) {
+                   || (SdfValueTypeNames->Point3fArray == usdAttrType)
+                   || (SdfValueTypeNames->Normal3fArray == usdAttrType)
+                   || (SdfValueTypeNames->Color3fArray == usdAttrType)) {
             mLayerPtr->SetTimeSample(attrPath,
                                      mCurrentTime,
                                      convertOutVectorArray<MVectorArray, GfVec3f>(array, it->convertToUsd));
@@ -919,16 +919,16 @@ MStatus UsdCacheFormat::writeFloatVectorArray(const MFloatVectorArray& array) {
         const SdfPath attrPath = usdPathFromAttribute(it->usdAttrName);
         const SdfValueTypeName usdAttrType = it->usdAttrType;
         if ((SdfValueTypeNames->Vector3dArray == usdAttrType)
-            or (SdfValueTypeNames->Point3dArray == usdAttrType)
-            or (SdfValueTypeNames->Normal3dArray == usdAttrType)
-            or (SdfValueTypeNames->Color3dArray == usdAttrType)) {
+            || (SdfValueTypeNames->Point3dArray == usdAttrType)
+            || (SdfValueTypeNames->Normal3dArray == usdAttrType)
+            || (SdfValueTypeNames->Color3dArray == usdAttrType)) {
             mLayerPtr->SetTimeSample(attrPath,
                                      mCurrentTime,
                                      convertOutVectorArray<MFloatVectorArray, GfVec3d>(array, it->convertToUsd));
         } else if ((SdfValueTypeNames->Vector3fArray == usdAttrType)
-                   or (SdfValueTypeNames->Point3fArray == usdAttrType)
-                   or (SdfValueTypeNames->Normal3fArray == usdAttrType)
-                   or (SdfValueTypeNames->Color3fArray == usdAttrType)) {
+                   || (SdfValueTypeNames->Point3fArray == usdAttrType)
+                   || (SdfValueTypeNames->Normal3fArray == usdAttrType)
+                   || (SdfValueTypeNames->Color3fArray == usdAttrType)) {
             mLayerPtr->SetTimeSample(attrPath,
                                      mCurrentTime,
                                      convertOutVectorArray<MFloatVectorArray, GfVec3f>(array, it->convertToUsd));
@@ -942,7 +942,7 @@ MStatus UsdCacheFormat::writeFloatVectorArray(const MFloatVectorArray& array) {
 }
 
 unsigned UsdCacheFormat::readArraySize() {
-    // Might be able to pass back a default size and wait until the actual read for resizing
+    // Might be able to pass back a default size && wait until the actual read for resizing
     // All attributes should exist already on the defaultPrim since we're doing a read
     unsigned result = 0;
     const std::string mayaAttrName = mayaAttrFromChannel(mCurrentChannel);
@@ -1044,14 +1044,14 @@ MStatus UsdCacheFormat::readDoubleVectorArray(MVectorArray& array,
                                        &value)) {
             SdfValueTypeName usdAttrType = it->usdAttrType;
             if ((SdfValueTypeNames->Vector3dArray == usdAttrType)
-                or (SdfValueTypeNames->Point3dArray == usdAttrType)
-                or (SdfValueTypeNames->Normal3dArray == usdAttrType)
-                or (SdfValueTypeNames->Color3dArray == usdAttrType)) {
+                || (SdfValueTypeNames->Point3dArray == usdAttrType)
+                || (SdfValueTypeNames->Normal3dArray == usdAttrType)
+                || (SdfValueTypeNames->Color3dArray == usdAttrType)) {
                 convertInVectorArray<GfVec3d, MVectorArray>(value, array, it->convertFromUsd);
             } else if ((SdfValueTypeNames->Vector3fArray == usdAttrType)
-                       or (SdfValueTypeNames->Point3fArray == usdAttrType)
-                       or (SdfValueTypeNames->Normal3fArray == usdAttrType)
-                       or (SdfValueTypeNames->Color3fArray == usdAttrType)) {
+                       || (SdfValueTypeNames->Point3fArray == usdAttrType)
+                       || (SdfValueTypeNames->Normal3fArray == usdAttrType)
+                       || (SdfValueTypeNames->Color3fArray == usdAttrType)) {
                 convertInVectorArray<GfVec3f, MVectorArray>(value, array, it->convertFromUsd);
             } else {
                 return MS::kFailure;
@@ -1076,14 +1076,14 @@ MStatus UsdCacheFormat::readFloatVectorArray(MFloatVectorArray& array,
                                        &value)) {
             SdfValueTypeName usdAttrType = it->usdAttrType;
             if ((SdfValueTypeNames->Vector3dArray == usdAttrType)
-                or (SdfValueTypeNames->Point3dArray == usdAttrType)
-                or (SdfValueTypeNames->Normal3dArray == usdAttrType)
-                or (SdfValueTypeNames->Color3dArray == usdAttrType)) {
+                || (SdfValueTypeNames->Point3dArray == usdAttrType)
+                || (SdfValueTypeNames->Normal3dArray == usdAttrType)
+                || (SdfValueTypeNames->Color3dArray == usdAttrType)) {
                 convertInVectorArray<GfVec3d, MFloatVectorArray>(value, array, it->convertFromUsd);
             } else if ((SdfValueTypeNames->Vector3fArray == usdAttrType)
-                       or (SdfValueTypeNames->Point3fArray == usdAttrType)
-                       or (SdfValueTypeNames->Normal3fArray == usdAttrType)
-                       or (SdfValueTypeNames->Color3fArray == usdAttrType)) {
+                       || (SdfValueTypeNames->Point3fArray == usdAttrType)
+                       || (SdfValueTypeNames->Normal3fArray == usdAttrType)
+                       || (SdfValueTypeNames->Color3fArray == usdAttrType)) {
                 convertInVectorArray<GfVec3f, MFloatVectorArray>(value, array, it->convertFromUsd);
             } else {
                 return MS::kFailure;
