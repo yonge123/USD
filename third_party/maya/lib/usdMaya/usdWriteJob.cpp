@@ -255,10 +255,6 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
 
                 mModelKindWriter.OnWritePrim(usdPrim, primWriter);
 
-                if (primWriter->isReferenced()) {
-                    usdPrim.SetSpecifier(SdfSpecifierOver);
-                }
-
                 if (primWriter->shouldPruneChildren()) {
                     itDag.prune();
                 }
@@ -309,10 +305,7 @@ void usdWriteJob::evalJob(double iFrame)
 {
     for ( MayaPrimWriterPtr const & primWriter :  mMayaPrimWriterList) {
         UsdTimeCode usdTime(iFrame);
-        UsdPrim usdPrim = primWriter->write(usdTime);
-        if (primWriter->isReferenced()) {
-            usdPrim.SetSpecifier(SdfSpecifierOver);
-        }
+        primWriter->write(usdTime);
     }
     for (PxrUsdMayaChaserRefPtr& chaser: mChasers) {
         chaser->ExportFrame(iFrame);
@@ -352,6 +345,13 @@ void usdWriteJob::endJob()
     if (currentLayer.name() != mCurrentRenderLayerName) {
         MGlobal::executeCommand(MString("editRenderLayerGlobals -currentRenderLayer ")+
                                         mCurrentRenderLayerName, false, false);
+    }
+
+    // Set referenced prims to "over" specifier
+    for ( MayaPrimWriterPtr const & primWriter :  mMayaPrimWriterList) {
+        if (primWriter->isReferenced()) {
+            mStage->GetPrimAtPath(primWriter->getUsdPath()).SetSpecifier(SdfSpecifierOver);
+        }
     }
 
     postCallback();
