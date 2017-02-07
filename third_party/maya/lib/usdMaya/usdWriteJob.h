@@ -53,6 +53,7 @@ class usdWriteJob
     TfToken writeVariants(const UsdPrim &usdRootPrim);
 
     SdfPath getMasterPath(const MDagPath& dg);
+    bool isMasterInstance(const MDagPath& dg);
   private:
     void perFrameCallback(double iFrame);
     void postCallback();

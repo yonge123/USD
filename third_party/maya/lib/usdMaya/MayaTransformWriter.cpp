@@ -447,7 +447,7 @@ MayaTransformWriter::MayaTransformWriter(
                 auto copyDag = iDag;
                 copyDag.extendToShapeDirectlyBelow(0);
                 if (copyDag.isInstanced()) {
-                    if (copyDag.instanceNumber() != 0) {
+                    if (!mJob->isMasterInstance(copyDag)) {
                         invalidate_transform();
                     }
                 } else if (iArgs.mergeTransformAndShape) {
@@ -456,7 +456,7 @@ MayaTransformWriter::MayaTransformWriter(
             }
         } else {
             if (iDag.isInstanced()) {
-                if (iDag.instanceNumber() == 0) {
+                if (mJob->isMasterInstance(iDag)) {
                     mXformDagPath = MDagPath();
                 } else {
                     mIsInstance = true;

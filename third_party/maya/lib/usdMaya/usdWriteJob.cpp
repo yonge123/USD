@@ -503,6 +503,24 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
     return defaultPrim;
 }
 
+bool usdWriteJob::needToTraverse(MDagPath& curDag)
+{
+    MObject ob = curDag.node();
+    // NOTE: Already skipping all intermediate objects
+    // skip all intermediate nodes (and their children)
+    if (PxrUsdMayaUtil::isIntermediate(ob)) {
+        return false;
+    }
+
+    // skip nodes that aren't renderable (and their children)
+
+    if (mArgs.excludeInvisible && !PxrUsdMayaUtil::isRenderable(ob)) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
 // This method returns false if the given dagPath should be ignored and
 // its subgraph should be pruned from the traversal. Otherwise, it returns true.
 bool usdWriteJob::createPrimWriter(
@@ -630,6 +648,10 @@ SdfPath usdWriteJob::getMasterPath(const MDagPath& dg)
     return SdfPath();
 }
 
+bool usdWriteJob::isMasterInstance(const MDagPath& dg)
+{
+    return dg.instanceNumber() == 0;
+}
 
 void usdWriteJob::perFrameCallback(double iFrame)
 {
