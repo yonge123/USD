@@ -22,6 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "usdKatana/attrMap.h"
+#include "usdKatana/arnoldHelpers.h"
 #include "usdKatana/readAiProcedural.h"
 #include "usdKatana/readXformable.h"
 #include "usdKatana/usdInPrivateData.h"
@@ -34,59 +35,7 @@
 #include <FnAttribute/FnDataBuilder.h>
 #include <FnLogging/FnLogging.h>
 
-#include <sstream>
-
 FnLogSetup("PxrUsdKatanaReadAiProcedural");
-
-static std::string
-_GetArnoldAttrTypeHint(const SdfValueTypeName& scalarType) {
-    std::string hint;
-    if (scalarType == SdfValueTypeNames->Bool) {
-        hint = "boolean";
-    }
-    else if (scalarType == SdfValueTypeNames->UChar) {
-        hint = "byte";
-    }
-    else if (scalarType == SdfValueTypeNames->UInt ||
-             scalarType == SdfValueTypeNames->UInt64) {
-        hint = "uint";
-    }
-    else if (scalarType == SdfValueTypeNames->Matrix4d) {
-        hint = "matrix";
-    }
-    else if (scalarType == SdfValueTypeNames->Float3 ||
-             scalarType == SdfValueTypeNames->Double3 ||
-             scalarType == SdfValueTypeNames->Half3 ||
-             scalarType == SdfValueTypeNames->Vector3f ||
-             scalarType == SdfValueTypeNames->Vector3d ||
-             scalarType == SdfValueTypeNames->Vector3h ||
-             scalarType == SdfValueTypeNames->Normal3f ||
-             scalarType == SdfValueTypeNames->Normal3d ||
-             scalarType == SdfValueTypeNames->Normal3h) {
-        hint = "vector";
-    }
-    else if (scalarType == SdfValueTypeNames->Float2 ||
-             scalarType == SdfValueTypeNames->Double2 ||
-             scalarType == SdfValueTypeNames->Half2) {
-        hint = "point2";
-    }
-    else if (scalarType == SdfValueTypeNames->Point3h ||
-             scalarType == SdfValueTypeNames->Point3f ||
-             scalarType == SdfValueTypeNames->Point3d) {
-        hint = "point";
-    }
-    else if (scalarType == SdfValueTypeNames->Color3h ||
-             scalarType == SdfValueTypeNames->Color3f ||
-             scalarType == SdfValueTypeNames->Color3d) {
-        hint = "rgb";
-    }
-    else if (scalarType == SdfValueTypeNames->Color4h ||
-             scalarType == SdfValueTypeNames->Color4f ||
-             scalarType == SdfValueTypeNames->Color4d) {
-        hint = "rgba";
-    }
-    return hint;
-}
 
 void
 PxrUsdKatanaReadAiProcedural(
@@ -96,6 +45,13 @@ PxrUsdKatanaReadAiProcedural(
 {
     // Read in general attributes for a transformable prim.
     PxrUsdKatanaReadXformable(procedural, data, attrs);
+
+    // Ready in Arnold visibility attributes, etc.
+    FnKat::GroupAttribute arnoldStatements =
+        PxrUsdKatana_GetArnoldStatementsGroup(procedural.GetPrim());
+    if (arnoldStatements.isValid()) {
+        attrs.set("arnoldStatements", arnoldStatements);
+    }
 
     const double currentTime = data.GetUsdInArgs()->GetCurrentTime();
 
@@ -114,7 +70,6 @@ PxrUsdKatanaReadAiProcedural(
             stepAttr.Get<float>(&stepSize, currentTime);
         }
         attrs.set("geometry.step_size", FnKat::FloatAttribute(stepSize));
-
     } else {
         attrs.set("type", FnKat::StringAttribute("renderer procedural"));
     }
@@ -157,7 +112,7 @@ PxrUsdKatanaReadAiProcedural(
             attrHints.push_back("true");
         }
 
-        std::string typeHint = _GetArnoldAttrTypeHint(
+        std::string typeHint = PxrUsdKatana_GetArnoldAttrTypeHint(
                 userAttr.GetTypeName().GetScalarType());
         if (!typeHint.empty()) {
             attrHints.push_back("type");
