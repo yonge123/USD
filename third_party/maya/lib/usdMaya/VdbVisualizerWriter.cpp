@@ -1,7 +1,9 @@
 #include "usdMaya/VdbVisualizerWriter.h"
+#include "usdMaya/writeUtil.h"
 #include "pxr/usd/usdAi/aiVolume.h"
 #include "pxr/usd/usdAi/aiNodeAPI.h"
 #include "pxr/usd/sdf/types.h"
+#include "pxr/usd/usd/stage.h"
 
 #include <maya/MDataHandle.h>
 
@@ -23,6 +25,14 @@ namespace {
             return prim.GetAttribute(attr_name);
         } else {
             return api.CreateUserAttribute(attr_name, type);
+        }
+    }
+
+    UsdAttribute get_attribute(UsdPrim& prim, const TfToken& attr_name) {
+        if (prim.HasAttribute(attr_name)) {
+            return prim.GetAttribute(attr_name);
+        } else {
+            return UsdAttribute();
         }
     }
 
@@ -55,6 +65,23 @@ VdbVisualizerWriter::VdbVisualizerWriter(MDagPath& iDag, UsdStageRefPtr stage, c
     TF_AXIOM(mUsdPrim);
 }
 
+VdbVisualizerWriter::~VdbVisualizerWriter() {
+    const auto sinter = mUsdPrim.GetStage()->GetInterpolationType();
+    const static auto hinter = UsdInterpolationTypeHeld;
+    UsdAiVolume primSchema(mUsdPrim);
+    UsdAiNodeAPI nodeApi(mUsdPrim);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetStepSizeAttr(), sinter);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetMatteAttr(), sinter);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetReceiveShadowsAttr(), sinter, hinter);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetSelfShadowsAttr(), sinter, hinter);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(filename_token), sinter, hinter);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(velocity_scale_token), sinter);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(velocity_fps_token), sinter);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(velocity_shutter_start_token), sinter);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(velocity_shutter_end_token), sinter);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(bounds_slack_token), sinter);
+}
+
 void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
     UsdAiVolume primSchema(mUsdPrim);
     UsdAiNodeAPI nodeApi(mUsdPrim);
@@ -65,13 +92,13 @@ void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
     // some of the attributes that don't need to be animated has to be exported here
     if (usdTime.IsDefault()) {
         has_velocity_grids = export_grids(mUsdPrim, nodeApi, volume_node, "velocity_grids", velocity_grids_token);
+        primSchema.GetDsoAttr().Set(std::string("volume_openvdb"));
     }
 
     if (usdTime.IsDefault() == isShapeAnimated()) {
         return;
     }
 
-    primSchema.GetDsoAttr().Set(std::string("volume_openvdb"));
     const auto out_vdb_path = volume_node.findPlug("outVdbPath").asString();
     const auto& bbox_min = volume_node.findPlug("bboxMin").asMDataHandle().asFloat3();
     const auto& bbox_max = volume_node.findPlug("bboxMax").asMDataHandle().asFloat3();
