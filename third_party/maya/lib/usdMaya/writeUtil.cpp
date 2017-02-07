@@ -979,7 +979,6 @@ PxrUsdMayaWriteUtil::ReadMayaAttribute(
 
 void
 PxrUsdMayaWriteUtil::CleanupAttributeKeys(UsdAttribute attribute,
-                                          UsdInterpolationType stageInterpolation,
                                           UsdInterpolationType parameterInterpolation)
 {
     if (!attribute) {
@@ -990,8 +989,7 @@ PxrUsdMayaWriteUtil::CleanupAttributeKeys(UsdAttribute attribute,
     time_samples.clear();
     attribute.GetTimeSamples(&time_samples);
     const auto num_time_samples = time_samples.size();
-    if (parameterInterpolation == UsdInterpolationTypeHeld ||
-        stageInterpolation == UsdInterpolationTypeHeld) {
+    if (parameterInterpolation == UsdInterpolationTypeHeld) {
         if (num_time_samples < 2) {
             return;
         }

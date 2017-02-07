@@ -166,9 +166,7 @@ struct PxrUsdMayaWriteUtil
     /// \}
 
     /// Cleaning up attribute animation keys.
-    static void CleanupAttributeKeys(UsdAttribute attribute,
-                                     UsdInterpolationType stageInterpolation,
-                                     UsdInterpolationType parameterInterpolation = UsdInterpolationTypeHeld);
+    static void CleanupAttributeKeys(UsdAttribute attribute, UsdInterpolationType parameterInterpolation = UsdInterpolationTypeLinear);
 };
 
 
