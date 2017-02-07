@@ -46,10 +46,13 @@ PXR_NAMESPACE_OPEN_SCOPE
     (dso) \
     (loat_at_init) \
     (matte) \
+    (opaque) \
     (receive_shadows) \
     (self_shadows) \
+    (sidedness) \
     (step_size) \
-    ((userPrefix, "user:"))
+    ((userPrefix, "user:")) \
+    (visibility)
 
 /// \anchor UsdAiTokens
 ///
@@ -76,11 +79,14 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \li <b>data</b> - UsdAiProcedural
 /// \li <b>dso</b> - UsdAiProcedural
 /// \li <b>loat_at_init</b> - UsdAiProcedural
-/// \li <b>matte</b> - UsdAiProcedural
-/// \li <b>receive_shadows</b> - UsdAiProcedural
-/// \li <b>self_shadows</b> - UsdAiProcedural
+/// \li <b>matte</b> - UsdAiShapeAPI
+/// \li <b>opaque</b> - UsdAiShapeAPI
+/// \li <b>receive_shadows</b> - UsdAiShapeAPI
+/// \li <b>self_shadows</b> - UsdAiShapeAPI
+/// \li <b>sidedness</b> - UsdAiShapeAPI
 /// \li <b>step_size</b> - UsdAiVolume
 /// \li <b>userPrefix</b> - The attribute prefix used to qualify user parameters on nodes using the AiNodeAPI.
+/// \li <b>visibility</b> - UsdAiShapeAPI
 TF_DECLARE_PUBLIC_TOKENS(UsdAiTokens, USDAI_TOKENS);
 
 PXR_NAMESPACE_CLOSE_SCOPE

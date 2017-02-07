@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdAi/aiProcedural.h"
+#include "pxr/usd/usdAi/aiShapeAPI.h"
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/conversions.h"
 
@@ -48,32 +48,53 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
-_CreateDsoAttr(UsdAiProcedural &self,
+_CreateOpaqueAttr(UsdAiShapeAPI &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreateDsoAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->String), writeSparsely);
-}
-        
-static UsdAttribute
-_CreateDataAttr(UsdAiProcedural &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateDataAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->String), writeSparsely);
-}
-        
-static UsdAttribute
-_CreateLoadAtInitAttr(UsdAiProcedural &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateLoadAtInitAttr(
+    return self.CreateOpaqueAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
 }
+        
+static UsdAttribute
+_CreateMatteAttr(UsdAiShapeAPI &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateMatteAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateReceiveShadowsAttr(UsdAiShapeAPI &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateReceiveShadowsAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateSelfShadowsAttr(UsdAiShapeAPI &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateSelfShadowsAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateVisibilityAttr(UsdAiShapeAPI &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateVisibilityAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->UChar), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateSidednessAttr(UsdAiShapeAPI &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateSidednessAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->UChar), writeSparsely);
+}
 
-void wrapUsdAiProcedural()
+void wrapUsdAiShapeAPI()
 {
-    typedef UsdAiProcedural This;
+    typedef UsdAiShapeAPI This;
 
-    class_<This, bases<UsdGeomBoundable> >
-        cls("AiProcedural");
+    class_<This, bases<UsdSchemaBase> >
+        cls("AiShapeAPI");
 
     cls
         .def(init<UsdPrim>(arg("prim")))
@@ -83,8 +104,6 @@ void wrapUsdAiProcedural()
         .def("Get", &This::Get, (arg("stage"), arg("path")))
         .staticmethod("Get")
 
-        .def("Define", &This::Define, (arg("stage"), arg("path")))
-        .staticmethod("Define")
 
         .def("GetSchemaAttributeNames",
              &This::GetSchemaAttributeNames,
@@ -99,24 +118,45 @@ void wrapUsdAiProcedural()
         .def(!self)
 
         
-        .def("GetDsoAttr",
-             &This::GetDsoAttr)
-        .def("CreateDsoAttr",
-             &_CreateDsoAttr,
+        .def("GetOpaqueAttr",
+             &This::GetOpaqueAttr)
+        .def("CreateOpaqueAttr",
+             &_CreateOpaqueAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
-        .def("GetDataAttr",
-             &This::GetDataAttr)
-        .def("CreateDataAttr",
-             &_CreateDataAttr,
+        .def("GetMatteAttr",
+             &This::GetMatteAttr)
+        .def("CreateMatteAttr",
+             &_CreateMatteAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
-        .def("GetLoadAtInitAttr",
-             &This::GetLoadAtInitAttr)
-        .def("CreateLoadAtInitAttr",
-             &_CreateLoadAtInitAttr,
+        .def("GetReceiveShadowsAttr",
+             &This::GetReceiveShadowsAttr)
+        .def("CreateReceiveShadowsAttr",
+             &_CreateReceiveShadowsAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetSelfShadowsAttr",
+             &This::GetSelfShadowsAttr)
+        .def("CreateSelfShadowsAttr",
+             &_CreateSelfShadowsAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetVisibilityAttr",
+             &This::GetVisibilityAttr)
+        .def("CreateVisibilityAttr",
+             &_CreateVisibilityAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetSidednessAttr",
+             &This::GetSidednessAttr)
+        .def("CreateSidednessAttr",
+             &_CreateSidednessAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 
