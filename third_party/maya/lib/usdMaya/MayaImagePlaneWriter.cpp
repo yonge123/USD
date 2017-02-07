@@ -12,7 +12,7 @@ const TfToken MayaImagePlaneWriter::image_plane_horizontal("horizontal");
 const TfToken MayaImagePlaneWriter::image_plane_vertical("vertical");
 const TfToken MayaImagePlaneWriter::image_plane_to_size("to size");
 
-MayaImagePlaneWriter::MayaImagePlaneWriter(MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs)
+MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs)
     : MayaPrimWriter(iDag, stage, iArgs), mIsShapeAnimated(false) {
     if (iArgs.exportAnimation) {
         MObject obj = getDagPath().node();

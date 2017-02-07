@@ -57,8 +57,8 @@ class usdWriteJob
   private:
     void perFrameCallback(double iFrame);
     void postCallback();
-    MayaPrimWriterPtr createPrimWriter(MDagPath &curDag);
-    bool needToTraverse(MDagPath& curDag);
+    MayaPrimWriterPtr createPrimWriter(const MDagPath& curDag);
+    bool needToTraverse(const MDagPath& curDag);
     
   private:
     JobExportArgs mArgs;

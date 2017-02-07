@@ -8,7 +8,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class VdbVisualizerWriter : public MayaTransformWriter {
 public:
-    VdbVisualizerWriter(MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs);
+    VdbVisualizerWriter(const MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs);
     virtual ~VdbVisualizerWriter();
 
     virtual void write(const UsdTimeCode& usdTime) override;

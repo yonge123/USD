@@ -53,7 +53,7 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-MayaPrimWriter::MayaPrimWriter(MDagPath & iDag, 
+MayaPrimWriter::MayaPrimWriter(const MDagPath & iDag,
                                UsdStageRefPtr stage, 
                                const JobExportArgs & iArgs) :
     mDagPath(iDag),

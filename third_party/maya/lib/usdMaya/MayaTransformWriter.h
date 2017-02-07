@@ -62,7 +62,7 @@ class MayaTransformWriter : public MayaPrimWriter
 {
   public:
 
-    MayaTransformWriter(MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs,
+    MayaTransformWriter(const MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs,
                         usdWriteJob* jobPtr = nullptr);
     virtual ~MayaTransformWriter() {};
 

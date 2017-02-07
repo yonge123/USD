@@ -36,7 +36,7 @@ class UsdGeomNurbsPatch;
 class MayaNurbsSurfaceWriter : public MayaTransformWriter
 {
   public:
-    MayaNurbsSurfaceWriter(MDagPath & iDag, 
+    MayaNurbsSurfaceWriter(const MDagPath & iDag,
             UsdStageRefPtr stage, 
             const JobExportArgs & iArgs);
     virtual ~MayaNurbsSurfaceWriter() {};

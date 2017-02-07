@@ -250,7 +250,7 @@ bool usdWriteJob::beginJob(bool append)
         }
     }
 
-    for (auto dg : mMayaDagPathList) {
+    for (const auto& dg : mMayaDagPathList) {
         MayaPrimWriterPtr primWriter = createPrimWriter(dg);
 
         if (primWriter) {
@@ -277,7 +277,7 @@ bool usdWriteJob::beginJob(bool append)
         }
     }
 
-    for (auto primWriter : mMayaPrimWriterList) {
+    for (const auto& primWriter : mMayaPrimWriterList) {
         primWriter->write(UsdTimeCode::Default());
         mModelKindWriter.OnWritePrim(primWriter->getPrim(), primWriter);
     }
@@ -503,7 +503,7 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
     return defaultPrim;
 }
 
-bool usdWriteJob::needToTraverse(MDagPath& curDag)
+bool usdWriteJob::needToTraverse(const MDagPath& curDag)
 {
     MObject ob = curDag.node();
     // NOTE: Already skipping all intermediate objects
@@ -535,7 +535,7 @@ bool usdWriteJob::needToTraverse(MDagPath& curDag)
 // This method returns false if the given dagPath should be ignored and
 // its subgraph should be pruned from the traversal. Otherwise, it returns true.
 MayaPrimWriterPtr usdWriteJob::createPrimWriter(
-        MDagPath &curDag)
+        const MDagPath& curDag)
 {
     MObject ob = curDag.node();
 

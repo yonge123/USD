@@ -410,7 +410,7 @@ void MayaTransformWriter::pushTransformStack(
 }
 
 MayaTransformWriter::MayaTransformWriter(
-        MDagPath& iDag, 
+        const MDagPath& iDag,
         UsdStageRefPtr stage, 
         const JobExportArgs& iArgs,
         usdWriteJob* jobPtr) :

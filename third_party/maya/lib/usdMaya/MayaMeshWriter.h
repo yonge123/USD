@@ -42,7 +42,7 @@ class UsdGeomGprim;
 class MayaMeshWriter : public MayaTransformWriter
 {
   public:
-    MayaMeshWriter(MDagPath & iDag, 
+    MayaMeshWriter(const MDagPath & iDag,
             UsdStageRefPtr stage, 
             const JobExportArgs & iArgs);
     virtual ~MayaMeshWriter() {};

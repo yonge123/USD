@@ -50,7 +50,7 @@ class PxrUsdExport_PluginPrimWriter : public MayaTransformWriter
 public:
     typedef boost::shared_ptr<PxrUsdExport_PluginPrimWriter> Ptr;
     PxrUsdExport_PluginPrimWriter(
-            MDagPath& iDag,
+            const MDagPath& iDag,
             UsdStageRefPtr& stage,
             const JobExportArgs& iArgs,
             PxrUsdMayaPrimWriterRegistry::WriterFn plugFn);

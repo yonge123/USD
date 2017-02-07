@@ -29,7 +29,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 PxrUsdExport_PluginPrimWriter::PxrUsdExport_PluginPrimWriter(
-        MDagPath& iDag,
+        const MDagPath& iDag,
         UsdStageRefPtr& stage,
         const JobExportArgs& iArgs,
         PxrUsdMayaPrimWriterRegistry::WriterFn plugFn) :

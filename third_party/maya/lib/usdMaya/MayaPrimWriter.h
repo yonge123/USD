@@ -43,7 +43,7 @@ class MayaPrimWriter
 {
   public:
     MayaPrimWriter(
-            MDagPath & iDag, 
+            const MDagPath & iDag,
             UsdStageRefPtr stage, 
             const JobExportArgs & iArgs);
     virtual ~MayaPrimWriter() {};
