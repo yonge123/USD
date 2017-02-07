@@ -57,13 +57,15 @@ class usdWriteJob
   private:
     void perFrameCallback(double iFrame);
     void postCallback();
-    bool createPrimWriter(MDagPath &curDag, MayaPrimWriterPtr* primWriterOut);
+    MayaPrimWriterPtr createPrimWriter(MDagPath &curDag);
+    bool needToTraverse(MDagPath& curDag);
     
   private:
     JobExportArgs mArgs;
 
     // List of the primitive writers to iterate over
     std::vector<MayaPrimWriterPtr> mMayaPrimWriterList;
+    std::set<MDagPath, PxrUsdMayaUtil::cmpDag> mMayaDagPathList;
 
     // Stage used to write out USD file
     UsdStageRefPtr mStage;

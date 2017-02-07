@@ -241,13 +241,17 @@ bool usdWriteJob::beginJob(bool append)
             }
         }
 
-        MayaPrimWriterPtr primWriter = nullptr;
-        if (!createPrimWriter(curDagPath, &primWriter) &&
-                curDagPath.length() > 0) {
+        if (!needToTraverse(curDagPath) &&
+            curDagPath.length() > 0) {
             // This dagPath and all of its children should be pruned.
             itDag.prune();
-            continue;
+        } else {
+            mMayaDagPathList.insert(curDagPath);
         }
+    }
+
+    for (auto dg : mMayaDagPathList) {
+        MayaPrimWriterPtr primWriter = createPrimWriter(dg);
 
         if (primWriter) {
             mMayaPrimWriterList.push_back(primWriter);
@@ -262,16 +266,12 @@ bool usdWriteJob::beginJob(bool append)
                 // need to add its parent.
                 if (mArgs.mergeTransformAndShape) {
                     MayaTransformWriterPtr xformWriter =
-                            boost::dynamic_pointer_cast<MayaTransformWriter>(
-                                    primWriter);
+                        boost::dynamic_pointer_cast<MayaTransformWriter>(
+                            primWriter);
                     if (xformWriter) {
                         MDagPath xformDag = xformWriter->getTransformDagPath();
                         mDagPathToUsdPathMap[xformDag] = usdPrim.GetPath();
                     }
-                }
-
-                if (primWriter->shouldPruneChildren()) {
-                    itDag.prune();
                 }
             }
         }
@@ -516,32 +516,28 @@ bool usdWriteJob::needToTraverse(MDagPath& curDag)
 
     if (mArgs.excludeInvisible && !PxrUsdMayaUtil::isRenderable(ob)) {
         return false;
-    } else {
-        return true;
     }
+
+    if (ob.hasFn(MFn::kCamera) && !mArgs.exportDefaultCameras) {
+        // Ignore default cameras
+        MString fullPathName = curDag.fullPathName();
+        if (fullPathName == "|persp|perspShape" ||
+            fullPathName == "|top|topShape" ||
+            fullPathName == "|front|frontShape" ||
+            fullPathName == "|side|sideShape") {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 // This method returns false if the given dagPath should be ignored and
 // its subgraph should be pruned from the traversal. Otherwise, it returns true.
-bool usdWriteJob::createPrimWriter(
-        MDagPath &curDag, MayaPrimWriterPtr* primWriterOut)
+MayaPrimWriterPtr usdWriteJob::createPrimWriter(
+        MDagPath &curDag)
 {
     MObject ob = curDag.node();
-
-    // NOTE: Already skipping all intermediate objects
-    // skip all intermediate nodes (and their children)
-    if (PxrUsdMayaUtil::isIntermediate(ob))
-    {
-        *primWriterOut = nullptr;
-        return false;
-    }
-
-    // skip nodes that aren't renderable (and their children)
-    if (mArgs.excludeInvisible && !PxrUsdMayaUtil::isRenderable(ob))
-    {
-        *primWriterOut = nullptr;
-        return false;
-    }
 
     // Check whether a PluginPrimWriter exists for the node first, since plugin
     // nodes may provide the same function sets as native Maya nodes. If a
@@ -559,8 +555,7 @@ bool usdWriteJob::createPrimWriter(
             if (primPtr->isValid()) {
                 // We found a PluginPrimWriter that handles this node type, so
                 // return now.
-                *primWriterOut = primPtr;
-                return true;
+                return primPtr;
             }
         }
     }
@@ -569,54 +564,37 @@ bool usdWriteJob::createPrimWriter(
         (mArgs.exportInstances && curDag.isInstanced() && curDag.instanceNumber() != 0)) {
         MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, mStage, mArgs, this));
         if (primPtr->isValid() ) {
-            *primWriterOut = primPtr;
-            return true;
+            return primPtr = primPtr;
         }
     }
     else if (ob.hasFn(MFn::kMesh)) {
         MayaMeshWriterPtr primPtr(new MayaMeshWriter(curDag, mStage, mArgs));
         if (primPtr->isValid() ) {
-            *primWriterOut = primPtr;
-            return true;
+            return primPtr;
         }
     }
     else if (ob.hasFn(MFn::kNurbsCurve)) {
         MayaNurbsCurveWriterPtr primPtr(new MayaNurbsCurveWriter(curDag, mStage, mArgs));
         if (primPtr->isValid() ) {
-            *primWriterOut = primPtr;
-            return true;
+            return primPtr;
         }
     }
     else if (ob.hasFn(MFn::kNurbsSurface)) {
         MayaNurbsSurfaceWriterPtr primPtr(new MayaNurbsSurfaceWriter(curDag, mStage, mArgs));
         if (primPtr->isValid() ) {
-            *primWriterOut = primPtr;
-            return true;
+            return primPtr;
         }
     }
     else if (ob.hasFn(MFn::kCamera)) {
-        if (!mArgs.exportDefaultCameras) {
-            // Ignore default cameras
-            MString fullPathName = curDag.fullPathName();
-            if (fullPathName == "|persp|perspShape" ||
-                fullPathName == "|top|topShape"     ||
-                fullPathName == "|front|frontShape" ||
-                fullPathName == "|side|sideShape") {
-                *primWriterOut = nullptr;
-                return false;
-            }
-        }
         MayaCameraWriterPtr primPtr(new MayaCameraWriter(curDag, mStage, mArgs));
         if (primPtr->isValid() ) {
-            *primWriterOut = primPtr;
-            return true;
+            return primPtr;
         }
     }
     else if (ob.hasFn(MFn::kImagePlane)) {
         MayaImagePlaneWriterPtr primPtr(new MayaImagePlaneWriter(curDag, mStage, mArgs));
         if (primPtr->isValid()) {
-            *primWriterOut = primPtr;
-            return true;
+            return primPtr;
         }
     }
     else if (ob.hasFn(MFn::kPluginShape)) {
@@ -624,14 +602,12 @@ bool usdWriteJob::createPrimWriter(
         if (dn.typeName() == "vdb_visualizer") {
             VdbVisualizerWriterPtr primPtr(new VdbVisualizerWriter(curDag, mStage, mArgs));
             if (primPtr->isValid()) {
-                *primWriterOut = primPtr;
-                return true;
+                return primPtr;
             }
         }
     }
     
-    *primWriterOut = nullptr;
-    return true;
+    return nullptr;
 }
 
 SdfPath usdWriteJob::getMasterPath(const MDagPath& dg)
