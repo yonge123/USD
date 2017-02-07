@@ -66,20 +66,18 @@ VdbVisualizerWriter::VdbVisualizerWriter(MDagPath& iDag, UsdStageRefPtr stage, c
 }
 
 VdbVisualizerWriter::~VdbVisualizerWriter() {
-    const auto sinter = mUsdPrim.GetStage()->GetInterpolationType();
-    const static auto hinter = UsdInterpolationTypeHeld;
     UsdAiVolume primSchema(mUsdPrim);
     UsdAiNodeAPI nodeApi(mUsdPrim);
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetStepSizeAttr(), sinter);
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetMatteAttr(), sinter);
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetReceiveShadowsAttr(), sinter, hinter);
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetSelfShadowsAttr(), sinter, hinter);
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(filename_token), sinter, hinter);
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(velocity_scale_token), sinter);
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(velocity_fps_token), sinter);
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(velocity_shutter_start_token), sinter);
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(velocity_shutter_end_token), sinter);
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(bounds_slack_token), sinter);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetStepSizeAttr());
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetMatteAttr(), UsdInterpolationTypeHeld);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetReceiveShadowsAttr(), UsdInterpolationTypeHeld);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetSelfShadowsAttr(), UsdInterpolationTypeHeld);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(filename_token), UsdInterpolationTypeHeld);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(velocity_scale_token));
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(velocity_fps_token));
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(velocity_shutter_start_token));
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(velocity_shutter_end_token));
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(bounds_slack_token));
 }
 
 void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
