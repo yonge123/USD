@@ -27,7 +27,7 @@ void
 RefEditUtil::GetDagNodeEdits(const MDagPath& dagPath, RefEdits& outEdits){
 
     // Get the Reference / Assembly that this node belongs to
-    // Add switch
+    // TODO: Add ref/assembly switch
     MObject referenceObj = PxrUsdMayaUtil::GetReferenceNode(dagPath.node());
 
     if (!referenceObj.isNull()) {
@@ -38,19 +38,10 @@ RefEditUtil::GetDagNodeEdits(const MDagPath& dagPath, RefEdits& outEdits){
 
         // Check if we have not yet processed this ref and its edits
         if (_references.find(refNode.name().asChar()) == _references.end()) {
-
             // Get Edits from a reference / Assembly
             ProcessReference(referenceObj);
-
             _references.insert(refNode.name().asChar());
-
         }
-
-//        // debug
-//        MDagPath refDagPath;
-//        MDagPath::getAPathTo(referenceObj, refDagPath);
-//        std::cout << "dag path: " << dagPath.fullPathName() << endl;
-//        std::cout << "ref obj dag path: " << refDagPath.fullPathName() << endl;
 
         SdfPath usdPath;
         usdPath = PxrUsdMayaUtil::MDagPathToUsdPath(dagPath,
@@ -60,41 +51,16 @@ RefEditUtil::GetDagNodeEdits(const MDagPath& dagPath, RefEdits& outEdits){
         if (!TfMapLookup(_primPathToRefEdits, usdPath, &outEdits.modifiedAttrs)) {
             std::cout << "found no edits for path";
         }
-
     }
 }
 
 
-//            // Could try to reuse Proxy shape ref edit parsing...
-//            PxrUsdMayaEditUtil::PathEditMap *refEdits;
-//            std::vector<std::string> invalidEdits, failedEdits;
-//
-//            // TODO: would need to make this work with referencess
-//            PxrUsdMayaEditUtil::GetEditsForAssembly(assemObj, &refEdits, &invalidEdits);
 void
 RefEditUtil::ProcessReference(
         const MObject &mObj)
 {
     MStatus status;
 
-    // REF / Assembly switch
-//    if (mObj.hasFn(MFn::kAssembly)){
-//        MFnAssembly assemblyFn(mObj, &status);
-//        if( !status )
-//            return;
-//
-//        MObject editsOwner(mObj);
-//        MObject targetNode(mObj);
-//
-//    } else {
-//        MFnReference referenceFn(mObj, &status);
-//        if( !status )
-//            return;
-//        // TODO: find top level ref
-//        MObject editsOwner(mObj);
-//        // argument ref
-//        MObject targetNode(mObj);
-//    }
     MObject editsOwner(mObj);
     MObject targetNode(mObj);
 
