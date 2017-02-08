@@ -210,6 +210,7 @@ public:
     // Private Class functions
     MStatus computeInStageDataCached(MDataBlock& dataBlock);
     MStatus computeOutStageData(MDataBlock& dataBlock);
+    SdfPath getPrimPath(MDataBlock& dataBlock, SdfLayerRefPtr rootLayer);
 
     // Class member variables
     std::map<std::string, boost::shared_ptr<MPxRepresentation> > _representations;
