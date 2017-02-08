@@ -62,13 +62,13 @@ bool JobSharedArgs::parseSharedOption(const MStringArray& theOption)
         } else if (theOption[1]=="Look Colors") {
             shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
         } else if (theOption[1]=="RfM Shaders") {
-            TfToken shadingMode("pxrRis");
-            if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode)) {
-                shadingMode = shadingMode;
+            TfToken rfmShadingMode("pxrRis");
+            if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(rfmShadingMode)) {
+                shadingMode = rfmShadingMode;
             } else {
                 MGlobal::displayError(
                         TfStringPrintf("No shadingMode '%s' found.  Setting shadingMode='none'",
-                                       shadingMode.GetText()).c_str());
+                                       rfmShadingMode.GetText()).c_str());
                 shadingMode = PxrUsdMayaShadingModeTokens->none;
             }
         }
