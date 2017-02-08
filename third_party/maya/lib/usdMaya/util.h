@@ -282,6 +282,15 @@ void Connect(
         const MPlug& dstPlug,
         bool clearDstPlug);
 
+/// Returns an MObject for the reference node which contains
+/// \p referencedNodeName; the returned node will be null if
+/// \p referencedNodeName is not referenced, or is invalid.
+MObject GetReferenceNode(const MString& referencedNodeName);
+
+/// Returns an MObject for the reference node which contains \p mobj; the
+/// returned node will be null if \p mobj is not referenced, or is invalid.
+MObject GetReferenceNode(const MObject& mobj);
+
 /// For \p dagPath, returns a UsdPath corresponding to it.  
 /// If \p mergeTransformAndShape and the dagPath is a shapeNode, it will return
 /// the same value as MDagPathToUsdPath(transformPath) where transformPath is

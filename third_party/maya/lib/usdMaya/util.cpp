@@ -1095,6 +1095,49 @@ _IsShape(const MDagPath& dagPath) {
     return (numberOfShapesDirectlyBelow == 1);
 }
 
+MObject
+PxrUsdMayaUtil::GetReferenceNode(const MString& referencedNodeName)
+{
+    MStatus status;
+
+    // Don't know how to query a node's reference using OpenMaya
+    MString cmd("referenceQuery -referenceNode \"");
+    cmd += referencedNodeName;
+    cmd += "\";";
+    MString refNodeName = MGlobal::executeCommandStringResult(
+            cmd, false, false, &status);
+    // If the node is NOT from a ref - ie, '|persp' - then the command will error.
+    // This command is supposed to "check" if a node is referenced, so this is
+    // "normal" behavior, so don't use CHECK_MSTATUS
+    if (!status || refNodeName.length() == 0) return MObject::kNullObj;
+
+    MObject mObj;
+    MSelectionList selectionList;
+    status = selectionList.add(refNodeName);
+    CHECK_MSTATUS_AND_RETURN(status, MObject::kNullObj);
+    status = selectionList.getDependNode(0, mObj);
+    CHECK_MSTATUS_AND_RETURN(status, MObject::kNullObj);
+    return mObj;
+}
+
+MObject
+PxrUsdMayaUtil::GetReferenceNode(const MObject& mobj)
+{
+    MStatus status;
+    if (mobj.hasFn(MFn::kDagNode)) {
+        MFnDagNode mfn(mobj, &status);
+        CHECK_MSTATUS_AND_RETURN(status, MObject::kNullObj);
+        if (!mfn.isFromReferencedFile()) return MObject::kNullObj;
+        return GetReferenceNode(mfn.partialPathName());
+    }
+    else {
+        MFnDependencyNode mfn(mobj, &status);
+        CHECK_MSTATUS_AND_RETURN(status, MObject::kNullObj);
+        if (!mfn.isFromReferencedFile()) return MObject::kNullObj;
+        return GetReferenceNode(mfn.name());
+    }
+}
+
 SdfPath
 PxrUsdMayaUtil::MDagPathToUsdPath(const MDagPath& dagPath, bool mergeTransformAndShape)
 {
