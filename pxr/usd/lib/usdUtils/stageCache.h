@@ -32,6 +32,7 @@
 
 #include "pxr/base/tf/declarePtrs.h"
 #include "pxr/base/tf/token.h"
+#include "pxr/usd/sdf/path.h"
 
 #include <string>
 #include <vector>
@@ -58,7 +59,7 @@ public:
     /// given root modelName with the variant selections, or returns a cached
     /// session layer with those opinions.
     static SdfLayerRefPtr GetSessionLayerForVariantSelections(
-        const TfToken& modelName,
+        const SdfPath& primPath,
         const std::vector<std::pair<std::string, std::string> > &variantSelections);
 };
 
