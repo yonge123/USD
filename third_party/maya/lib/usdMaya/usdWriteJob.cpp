@@ -612,21 +612,46 @@ MayaPrimWriterPtr usdWriteJob::createPrimWriter(
 
 SdfPath usdWriteJob::getMasterPath(const MDagPath& dg)
 {
-    MDagPathArray allInstances;
-    MDagPath::getAllPathsTo(dg.node(), allInstances);
-    if (allInstances.length() > 0) {
-        allInstances[0].pop();
-        const auto it = mDagPathToUsdPathMap.find(allInstances[0]);
-        if (it != mDagPathToUsdPathMap.end()) {
-            return it->second;
-        }
+    auto dgCopy = getMayaMasterPath(dg);
+    dgCopy.pop();
+    const auto it = mDagPathToUsdPathMap.find(dgCopy);
+    if (it != mDagPathToUsdPathMap.end()) {
+        return it->second;
+    } else {
+        return SdfPath();
     }
-    return SdfPath();
+}
+
+MDagPath usdWriteJob::getMayaMasterPath(const MDagPath& dg)
+{
+    const auto instanceNumber = dg.instanceNumber();
+    // if instance number is zero, and we are querying it, then it's always the master
+    if (instanceNumber == 0) {
+        return dg;
+    }
+    const MObjectHandle handle(dg.node());
+    const auto it = mMasterDagMap.find(handle);
+    if (it != mMasterDagMap.end()) {
+        return it->second;
+    } else {
+        MDagPathArray allInstances;
+        MDagPath::getAllPathsTo(dg.node(), allInstances);
+        // we are looking for the instance with the lowest number here
+        // which is still exported
+        for (unsigned int i = 0; i <= instanceNumber; ++i) {
+            const auto& currDag = allInstances[i];
+            if (mMayaDagPathList.find(currDag) != mMayaDagPathList.end()) {
+                mMasterDagMap.insert(std::make_pair(handle, currDag));
+                return currDag;
+            }
+        }
+        return dg;
+    }
 }
 
 bool usdWriteJob::isMasterInstance(const MDagPath& dg)
 {
-    return dg.instanceNumber() == 0;
+    return getMayaMasterPath(dg) == dg;
 }
 
 void usdWriteJob::perFrameCallback(double iFrame)

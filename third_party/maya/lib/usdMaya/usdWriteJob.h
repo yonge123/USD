@@ -33,6 +33,8 @@
 #include "usdMaya/MayaPrimWriter.h"
 #include "usdMaya/ModelKindWriter.h"
 
+#include <maya/MObjectHandle.h>
+
 #include <string>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -59,13 +61,21 @@ class usdWriteJob
     void postCallback();
     MayaPrimWriterPtr createPrimWriter(const MDagPath& curDag);
     bool needToTraverse(const MDagPath& curDag);
+    MDagPath getMayaMasterPath(const MDagPath& dg);
     
   private:
+    struct MObjectComp {
+        bool operator()(const MObjectHandle& rhs, const MObjectHandle& lhs) {
+            return rhs.hashCode() < lhs.hashCode();
+        }
+    };
+
     JobExportArgs mArgs;
 
     // List of the primitive writers to iterate over
     std::vector<MayaPrimWriterPtr> mMayaPrimWriterList;
     std::set<MDagPath, PxrUsdMayaUtil::cmpDag> mMayaDagPathList;
+    std::map<MObjectHandle, MDagPath, MObjectComp> mMasterDagMap;
 
     // Stage used to write out USD file
     UsdStageRefPtr mStage;
