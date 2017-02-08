@@ -30,7 +30,7 @@ struct RefEdits{
 // class to store reference edits of assemblies
 class RefEditUtil {
 public:
-    RefEditUtil(const bool mergeTransformAndShape, const bool stripUsdNamespaces);
+    RefEditUtil(const bool mergeTransformAndShape);
     ~RefEditUtil();
 
     /// Get the refEdits that correspond to a specific dagNode
@@ -44,7 +44,6 @@ private:
     typedef std::unordered_map<SdfPath, TfHashSet<std::string, TfHash>, SdfPath::Hash> SdfPathHashSetMap;
 
     bool _mergeTransformAndShape;
-    bool _stripUsdNamespaces;
 
     TfHashSet<std::string, TfHash> _references;
     SdfPathHashSetMap _primPathToRefEdits;

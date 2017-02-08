@@ -14,9 +14,8 @@
 RefEdits::RefEdits(): isReferenced(false)
 {}
 
-RefEditUtil::RefEditUtil(bool mergeTransformAndShape, bool stripUsdNamespaces):
-        _mergeTransformAndShape(mergeTransformAndShape),
-        _stripUsdNamespaces(stripUsdNamespaces)
+RefEditUtil::RefEditUtil(bool mergeTransformAndShape):
+        _mergeTransformAndShape(mergeTransformAndShape)
 {
 }
 
@@ -45,8 +44,7 @@ RefEditUtil::GetDagNodeEdits(const MDagPath& dagPath, RefEdits& outEdits){
 
         SdfPath usdPath;
         usdPath = PxrUsdMayaUtil::MDagPathToUsdPath(dagPath,
-                                                    _mergeTransformAndShape,
-                                                    _stripUsdNamespaces);
+                                                    _mergeTransformAndShape);
 
         if (!TfMapLookup(_primPathToRefEdits, usdPath, &outEdits.modifiedAttrs)) {
             std::cout << "found no edits for path";
@@ -87,8 +85,7 @@ RefEditUtil::ProcessReference(
 
                 SdfPath usdPath;
                 usdPath = PxrUsdMayaUtil::MDagPathToUsdPath(editPath,
-                                                            _mergeTransformAndShape,
-                                                            _stripUsdNamespaces);
+                                                            _mergeTransformAndShape);
 
                 _primPathToRefEdits[usdPath].insert(attrName);
             }
