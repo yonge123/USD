@@ -74,7 +74,7 @@ class MayaPrimWriter
     /// referenced or the value has not been modified in the current scene.
     ///
     /// Base implementation returns \c true.
-    virtual bool isAttrExportable(const char* attr) const;
+    virtual bool isAttrExportable(const std::string& attrName) const;
 
     virtual bool isReferenced() const;
 

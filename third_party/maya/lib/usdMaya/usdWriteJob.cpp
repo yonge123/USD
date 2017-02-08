@@ -348,7 +348,7 @@ void usdWriteJob::endJob()
     }
 
     // Set referenced prims to "over" specifier
-    for ( MayaPrimWriterPtr const & primWriter :  mMayaPrimWriterList) {
+    for (const auto& primWriter :  mMayaPrimWriterList) {
         if (primWriter->isReferenced()) {
             mStage->GetPrimAtPath(primWriter->getUsdPath()).SetSpecifier(SdfSpecifierOver);
         }
@@ -512,7 +512,14 @@ bool usdWriteJob::createPrimWriter(
     }
 
     RefEdits refEdits;
-    mRefEditUtil.GetDagNodeEdits(curDag, refEdits);
+    // Get edits and skip if referenced, but no edits were found.
+    if (!mRefEditUtil.GetDagNodeEdits(curDag, refEdits))
+    {
+        // TODO: fix this so skipping doesnt loose overs for parent transform nodes.
+        //    *primWriterOut = nullptr;
+        //    // do not ignore nodes children
+        //    return true;
+    }
 
     // Check whether a PluginPrimWriter exists for the node first, since plugin
     // nodes may provide the same function sets as native Maya nodes. If a

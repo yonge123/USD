@@ -1124,18 +1124,16 @@ MObject
 PxrUsdMayaUtil::GetReferenceNode(const MObject& mobj)
 {
     MStatus status;
+    MFnDependencyNode mfn(mobj, &status);
+    CHECK_MSTATUS_AND_RETURN(status, MObject::kNullObj);
+    if (!mfn.isFromReferencedFile()) {
+        return MObject::kNullObj;
+    }
     if (mobj.hasFn(MFn::kDagNode)) {
-        MFnDagNode mfn(mobj, &status);
-        CHECK_MSTATUS_AND_RETURN(status, MObject::kNullObj);
-        if (!mfn.isFromReferencedFile()) return MObject::kNullObj;
-        return GetReferenceNode(mfn.partialPathName());
+        MFnDagNode dagMfn(mobj, &status);
+        return GetReferenceNode(dagMfn.partialPathName());
     }
-    else {
-        MFnDependencyNode mfn(mobj, &status);
-        CHECK_MSTATUS_AND_RETURN(status, MObject::kNullObj);
-        if (!mfn.isFromReferencedFile()) return MObject::kNullObj;
-        return GetReferenceNode(mfn.name());
-    }
+    return GetReferenceNode(mfn.name());
 }
 
 SdfPath

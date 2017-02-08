@@ -12,85 +12,80 @@
 #include <maya/MSetAttrEdit.h>
 
 RefEdits::RefEdits(): isReferenced(false)
-{}
-
-RefEditUtil::RefEditUtil(bool mergeTransformAndShape):
-        _mergeTransformAndShape(mergeTransformAndShape)
 {
 }
 
-RefEditUtil::~RefEditUtil(){
+RefEditUtil::RefEditUtil(const bool mergeTransformAndShape):
+        mMergeTransformAndShape(mergeTransformAndShape)
+{
 }
 
-void
-RefEditUtil::GetDagNodeEdits(const MDagPath& dagPath, RefEdits& outEdits){
+RefEditUtil::~RefEditUtil()
+{
+}
 
+bool
+RefEditUtil::GetDagNodeEdits(const MDagPath& dagPath, RefEdits& outEdits)
+{
     // Get the Reference / Assembly that this node belongs to
     // TODO: Add ref/assembly switch
     MObject referenceObj = PxrUsdMayaUtil::GetReferenceNode(dagPath.node());
 
+    // TODO: We probably only want to consider a node "referenced" if it is
+    // from a usd file reference, because the overs will need to be layered
+    // over a usd file.
     if (!referenceObj.isNull()) {
         outEdits.isReferenced = true;
-
-        MStatus status;
-        MFnDependencyNode refNode(referenceObj, &status);
-
+        MFnDependencyNode refNode(referenceObj);
         // Check if we have not yet processed this ref and its edits
-        if (_references.find(refNode.name().asChar()) == _references.end()) {
+        if (mReferences.find(refNode.name().asChar()) == mReferences.end()) {
             // Get Edits from a reference / Assembly
             ProcessReference(referenceObj);
-            _references.insert(refNode.name().asChar());
+            mReferences.insert(refNode.name().asChar());
         }
 
         SdfPath usdPath;
-        usdPath = PxrUsdMayaUtil::MDagPathToUsdPath(dagPath,
-                                                    _mergeTransformAndShape);
-
-        if (!TfMapLookup(_primPathToRefEdits, usdPath, &outEdits.modifiedAttrs)) {
-            std::cout << "found no edits for path";
+        usdPath = PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, mMergeTransformAndShape);
+        if (!TfMapLookup(mPrimPathToRefEdits, usdPath, &outEdits.modifiedAttrs)) {
+            return false;
         }
     }
+    return true;
 }
-
 
 void
 RefEditUtil::ProcessReference(
-        const MObject &mObj)
+        const MObject& referenceObj)
 {
-    MStatus status;
-
-    MObject editsOwner(mObj);
-    MObject targetNode(mObj);
-
+    MObject editsOwner(referenceObj);
+    MObject targetNode(referenceObj);
     MItEdits assemEdits(editsOwner, targetNode);
 
-    while( !assemEdits.isDone() ) {
-        MStatus status;
-        MEdit::EditType editType;
-        editType = assemEdits.currentEditType(&status);
+    while (!assemEdits.isDone()) {
+        MEdit::EditType editType = assemEdits.currentEditType();
+        if (editType == MEdit::kSetAttrEdit) {
+            MSetAttrEdit mSetAttrEdit = assemEdits.setAttrEdit();
 
-        if (editType == MEdit::kSetAttrEdit){
-            MSetAttrEdit mSetAttrEdit = assemEdits.setAttrEdit(&status);
+            MStatus status;
             MPlug mPlug = mSetAttrEdit.plug(&status);
-
             if (status) {
-                MObject editedNode = mPlug.node(&status);
-                std::string attrName = mPlug.name(&status).asChar();
+                MObject editedNode = mPlug.node();
+                std::string attrName = mPlug.name().asChar();
 
-                // Only keep the attribute name of node.attribute
-                attrName = TfStringSplit(attrName, ".")[1];
+                // Get the attribute name of "node.attribute"
+                std::vector<std::string> attrSplit = TfStringSplit(attrName, ".");
+                if (attrSplit.size() == 2) {
+                    attrName = attrSplit[1];
+                }
 
                 MDagPath editPath;
                 MDagPath::getAPathTo(editedNode, editPath);
-
                 SdfPath usdPath;
                 usdPath = PxrUsdMayaUtil::MDagPathToUsdPath(editPath,
-                                                            _mergeTransformAndShape);
-
-                _primPathToRefEdits[usdPath].insert(attrName);
+                                                            mMergeTransformAndShape);
+                mPrimPathToRefEdits[usdPath].insert(attrName);
             }
         }
-
         assemEdits.next();
     }
 }

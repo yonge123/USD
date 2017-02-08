@@ -22,31 +22,33 @@
 struct RefEdits{
     RefEdits();
 
-    bool isReferenced;
-    // TfHashSet?
     TfHashSet<std::string, TfHash> modifiedAttrs;
+    bool isReferenced;
 };
 
-// class to store reference edits of assemblies
+/// Class to store reference edits of assemblies or references
 class RefEditUtil {
 public:
     RefEditUtil(const bool mergeTransformAndShape);
     ~RefEditUtil();
 
     /// Get the refEdits that correspond to a specific dagNode
-    void GetDagNodeEdits(const MDagPath& dagPath, RefEdits& refEdits);
+    ///
+    /// Returns false if node is referenced and no edits were found.
+    bool GetDagNodeEdits(const MDagPath& dagPath, RefEdits& refEdits);
 
     /// Collect the refEdits of a reference or assembly
-    void ProcessReference(const MObject&);
+    void ProcessReference(const MObject& referenceObj);
 
 private:
 
-    typedef std::unordered_map<SdfPath, TfHashSet<std::string, TfHash>, SdfPath::Hash> SdfPathHashSetMap;
+    using SdfPathHashSetMap = std::unordered_map<SdfPath, TfHashSet<std::string, TfHash>, SdfPath::Hash>;
 
-    bool _mergeTransformAndShape;
+    SdfPathHashSetMap mPrimPathToRefEdits;
 
-    TfHashSet<std::string, TfHash> _references;
-    SdfPathHashSetMap _primPathToRefEdits;
+    TfHashSet<std::string, TfHash> mReferences;
+
+    bool mMergeTransformAndShape;
 
 };
 

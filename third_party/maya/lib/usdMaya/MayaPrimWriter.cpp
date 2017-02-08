@@ -81,15 +81,17 @@ MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime,
     MFnDependencyNode depFn(getDagPath().node());
     MFnDependencyNode depFnT(dagT.node()); // optionally also scan a shape's transform if merging transforms
 
-    if (getArgs().exportVisibility && MayaPrimWriter::isAttrExportable("visibility")) {
+    constexpr auto visibility = "visibility";
+
+    if (getArgs().exportVisibility && MayaPrimWriter::isAttrExportable(visibility)) {
         bool isVisible  = true;   // if BOTH shape or xform is animated, then visible
         bool isAnimated = false;  // if either shape or xform is animated, then animated
 
-        PxrUsdMayaUtil::getPlugValue(depFn, "visibility", &isVisible, &isAnimated);
+        PxrUsdMayaUtil::getPlugValue(depFn, visibility, &isVisible, &isAnimated);
 
         if ( dagT.isValid() ) {
             bool isVis, isAnim;
-            if (PxrUsdMayaUtil::getPlugValue(depFnT, "visibility", &isVis, &isAnim)){
+            if (PxrUsdMayaUtil::getPlugValue(depFnT, visibility, &isVis, &isAnim)){
                 isVisible = isVisible && isVis;
                 isAnimated = isAnimated || isAnim;
             }
@@ -163,14 +165,9 @@ MayaPrimWriter::shouldPruneChildren() const
 }
 
 bool
-MayaPrimWriter::isAttrExportable(const char* attrName) const
+MayaPrimWriter::isAttrExportable(const std::string& attrName) const
 {
-    std::string attrStr(attrName);
-    if (!mRefEdits.isReferenced ||
-            mRefEdits.modifiedAttrs.find(attrStr) != mRefEdits.modifiedAttrs.end()) {
-        return true;
-    }
-    return false;
+    return !mRefEdits.isReferenced || (mRefEdits.modifiedAttrs.find(attrName) != mRefEdits.modifiedAttrs.end());
 }
 
 bool

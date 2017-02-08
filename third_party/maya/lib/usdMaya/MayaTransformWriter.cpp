@@ -279,14 +279,25 @@ void MayaTransformWriter::pushTransformStack(
     // that we can combine them later if possible
     unsigned int rotPivotIdx = -1, rotPivotINVIdx = -1, scalePivotIdx = -1, scalePivotINVIdx = -1;
 
+    constexpr auto inheritsTransform = "inheritsTransform";
+    constexpr auto translate = "translate";
+    constexpr auto rotatePivotTranslate = "rotatePivotTranslate";
+    constexpr auto rotatePivot = "rotatePivot";
+    constexpr auto rotateAxis = "rotateAxis";
+    constexpr auto rotate = "rotate";
+    constexpr auto scalePivotTranslate = "scalePivotTranslate";
+    constexpr auto scalePivot = "scalePivot";
+    constexpr auto shear = "shear";
+    constexpr auto scale = "scale";
+
     // TODO: Sparse export is currently glossing over some complexities:
     //  - it writes all keys if any keys are set essentially overriding attr,
     //  - may have issues if the attributes are interrelated,
     //  - only detects non-common API if attrs are set in scene rather than reference.
 
-    if (isAttrExportable("inheritsTransform")) {
+    if (isAttrExportable(inheritsTransform)) {
         // Check if the Maya prim inheritTransform
-        MPlug inheritPlug = iTrans.findPlug("inheritsTransform");
+        MPlug inheritPlug = iTrans.findPlug(inheritsTransform);
         if (!inheritPlug.isNull()) {
             if (!inheritPlug.asBool()) {
                 usdXformable.SetResetXformStack(true);
@@ -294,36 +305,36 @@ void MayaTransformWriter::pushTransformStack(
         }
     }
 
-    if (isAttrExportable("translate")) {
+    if (isAttrExportable(translate)) {
         // inspect the translate, no suffix to be closer compatibility with common API
-        _GatherAnimChannel(TRANSLATE, iTrans, "translate", "X", "Y", "Z", &mAnimChanList, writeAnim, false);
+        _GatherAnimChannel(TRANSLATE, iTrans, translate, "X", "Y", "Z", &mAnimChanList, writeAnim, false);
     }
 
-    if (isAttrExportable("rotatePivotTransform")) {
+    if (isAttrExportable(rotatePivotTranslate)) {
         // inspect the rotate pivot translate
-        if (_GatherAnimChannel(TRANSLATE, iTrans, "rotatePivotTranslate", "X", "Y", "Z", &mAnimChanList, writeAnim)) {
+        if (_GatherAnimChannel(TRANSLATE, iTrans, rotatePivotTranslate, "X", "Y", "Z", &mAnimChanList, writeAnim)) {
             conformsToCommonAPI = false;
         }
     }
 
     bool hasRotatePivot = false;
-    if (isAttrExportable("rotatePivot")) {
+    if (isAttrExportable(rotatePivot)) {
         // inspect the rotate pivot
-        hasRotatePivot = _GatherAnimChannel(TRANSLATE, iTrans, "rotatePivot", "X", "Y", "Z", &mAnimChanList,
+        hasRotatePivot = _GatherAnimChannel(TRANSLATE, iTrans, rotatePivot, "X", "Y", "Z", &mAnimChanList,
                                                  writeAnim);
         if (hasRotatePivot) {
             rotPivotIdx = mAnimChanList.size() - 1;
         }
     }
 
-    if (isAttrExportable("rotate")) {
+    if (isAttrExportable(rotate)) {
         // inspect the rotate, no suffix to be closer compatibility with common API
-        _GatherAnimChannel(ROTATE, iTrans, "rotate", "X", "Y", "Z", &mAnimChanList, writeAnim, false);
+        _GatherAnimChannel(ROTATE, iTrans, rotate, "X", "Y", "Z", &mAnimChanList, writeAnim, false);
     }
 
-    if (isAttrExportable("rotateAxis")) {
+    if (isAttrExportable(rotateAxis)) {
         // inspect the rotateAxis/orientation
-        if (_GatherAnimChannel(ROTATE, iTrans, "rotateAxis", "X", "Y", "Z", &mAnimChanList, writeAnim)) {
+        if (_GatherAnimChannel(ROTATE, iTrans, rotateAxis, "X", "Y", "Z", &mAnimChanList, writeAnim)) {
             conformsToCommonAPI = false;
         }
     }
@@ -333,39 +344,39 @@ void MayaTransformWriter::pushTransformStack(
         AnimChannel chan;
         chan.usdOpType = UsdGeomXformOp::TypeTranslate;
         chan.precision = UsdGeomXformOp::PrecisionFloat;
-        chan.opName = "rotatePivot";
+        chan.opName = rotatePivot;
         chan.isInverse = true;
         mAnimChanList.push_back(chan);
         rotPivotINVIdx = mAnimChanList.size()-1;
     }
 
-    if (isAttrExportable("scalePivotTranslation")) {
+    if (isAttrExportable(scalePivotTranslate)) {
         // inspect the scale pivot translation
-        if (_GatherAnimChannel(TRANSLATE, iTrans, "scalePivotTranslate", "X", "Y", "Z", &mAnimChanList, writeAnim)) {
+        if (_GatherAnimChannel(TRANSLATE, iTrans, scalePivotTranslate, "X", "Y", "Z", &mAnimChanList, writeAnim)) {
             conformsToCommonAPI = false;
         }
     }
 
     bool hasScalePivot = false;
-    if (isAttrExportable("scalePivot")) {
+    if (isAttrExportable(scalePivot)) {
         // inspect the scale pivot point
-        hasScalePivot = _GatherAnimChannel(TRANSLATE, iTrans, "scalePivot", "X", "Y", "Z", &mAnimChanList,
+        hasScalePivot = _GatherAnimChannel(TRANSLATE, iTrans, scalePivot, "X", "Y", "Z", &mAnimChanList,
                                                 writeAnim);
         if (hasScalePivot) {
             scalePivotIdx = mAnimChanList.size() - 1;
         }
     }
 
-    if (isAttrExportable("shear")) {
+    if (isAttrExportable(shear)) {
         // inspect the shear. Even if we have one xform on the xform list, it represents a share so we should name it
-        if (_GatherAnimChannel(SHEAR, iTrans, "shear", "XY", "XZ", "YZ", &mAnimChanList, writeAnim)) {
+        if (_GatherAnimChannel(SHEAR, iTrans, shear, "XY", "XZ", "YZ", &mAnimChanList, writeAnim)) {
             conformsToCommonAPI = false;
         }
     }
 
-    if (isAttrExportable("scale")) {
+    if (isAttrExportable(scale)) {
         // add the scale. no suffix to be closer compatibility with common API
-        _GatherAnimChannel(SCALE, iTrans, "scale", "X", "Y", "Z", &mAnimChanList, writeAnim, false);
+        _GatherAnimChannel(SCALE, iTrans, scale, "X", "Y", "Z", &mAnimChanList, writeAnim, false);
     }
 
     // inverse the scale pivot point
@@ -373,7 +384,7 @@ void MayaTransformWriter::pushTransformStack(
         AnimChannel chan;
         chan.usdOpType = UsdGeomXformOp::TypeTranslate;
         chan.precision = UsdGeomXformOp::PrecisionFloat;
-        chan.opName = "scalePivot";
+        chan.opName = scalePivot;
         chan.isInverse = true;
         mAnimChanList.push_back(chan);
         scalePivotINVIdx = mAnimChanList.size()-1;
