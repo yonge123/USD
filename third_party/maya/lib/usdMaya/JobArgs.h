@@ -176,6 +176,7 @@ struct JobImportArgs : JobSharedArgs
     bool useAssemblies;
     std::string parentNode;
     std::vector<std::string> parentRefPaths;
+    std::string variantSelectionNode;
 };
 
 

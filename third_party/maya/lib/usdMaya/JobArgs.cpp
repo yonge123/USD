@@ -187,7 +187,8 @@ JobImportArgs::JobImportArgs()
         readAnimData(false),
         useCustomFrameRange(false),
         importWithProxyShapes(false),
-        useAssemblies(_useAssembliesDefault)
+        useAssemblies(_useAssembliesDefault),
+        variantSelectionNode("")
 {
 }
 
@@ -212,6 +213,8 @@ void JobImportArgs::parseSingleOption(const MStringArray& theOption)
         parentNode = theOption[1].asChar();
     } else if (theOption[0] == MString("parentRefPaths")) {
         setJoinedParentRefPaths(theOption[1].asChar());
+    } else if (theOption[0] == MString("variantSelectionNode")) {
+        variantSelectionNode = theOption[1].asChar();
     }
 }
 

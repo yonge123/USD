@@ -33,7 +33,13 @@
 #include <maya/MObject.h>
 #include <maya/MStatus.h>
 
+#include <map>
+
 PXR_NAMESPACE_OPEN_SCOPE
+
+// \brief Type to hold variants selections for all nodes in a scene.
+typedef std::map<std::string, std::map<std::string, std::string>> VariantMapByPath;
+
 
 /// \brief Node to hold information about variant selections.
 ///
