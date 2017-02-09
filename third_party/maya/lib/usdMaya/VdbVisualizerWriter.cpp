@@ -56,8 +56,8 @@ namespace {
     }
 }
 
-VdbVisualizerWriter::VdbVisualizerWriter(MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs) :
-    MayaTransformWriter(iDag, stage, iArgs, false), has_velocity_grids(false) {
+VdbVisualizerWriter::VdbVisualizerWriter(MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs, usdWriteJob* jobPtr) :
+    MayaTransformWriter(iDag, stage, iArgs, false, jobPtr), has_velocity_grids(false) {
     UsdAiVolume primSchema =
         UsdAiVolume::Define(getUsdStage(), getUsdPath());
     TF_AXIOM(primSchema);
