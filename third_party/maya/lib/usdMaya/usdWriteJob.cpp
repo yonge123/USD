@@ -600,7 +600,7 @@ MayaPrimWriterPtr usdWriteJob::createPrimWriter(
     else if (ob.hasFn(MFn::kPluginShape)) {
         MFnDependencyNode dn(ob);
         if (dn.typeName() == "vdb_visualizer") {
-            VdbVisualizerWriterPtr primPtr(new VdbVisualizerWriter(curDag, mStage, mArgs));
+            VdbVisualizerWriterPtr primPtr(new VdbVisualizerWriter(curDag, mStage, mArgs, this));
             if (primPtr->isValid()) {
                 return primPtr;
             }
