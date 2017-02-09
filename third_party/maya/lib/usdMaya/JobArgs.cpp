@@ -189,7 +189,8 @@ JobImportArgs::JobImportArgs()
         readAnimData(false),
         useCustomFrameRange(false),
         importWithProxyShapes(false),
-        useAssemblies(TfGetEnvSetting(PIXMAYA_USE_USD_REF_ASSEMBLIES))
+        useAssemblies(TfGetEnvSetting(PIXMAYA_USE_USD_REF_ASSEMBLIES)),
+        variantSelectionNode("")
 {
 }
 
@@ -218,6 +219,8 @@ void JobImportArgs::parseSingleOption(const MStringArray& theOption)
         parentNode = theOption[1].asChar();
     } else if (theOption[0] == MString("parentRefPaths")) {
         setJoinedParentRefPaths(theOption[1].asChar());
+    } else if (theOption[0] == MString("variantSelectionNode")) {
+        variantSelectionNode = theOption[1].asChar();
     }
 }
 
