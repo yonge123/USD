@@ -512,7 +512,7 @@ MayaTransformWriter::MayaTransformWriter(
 //virtual 
 void MayaTransformWriter::write(const UsdTimeCode &usdTime)
 {
-    if (mIsInstance && mJob != nullptr && usdTime.IsDefault()) {
+    if (mIsInstance && usdTime.IsDefault()) {
         const auto masterPath = mJob->getMasterPath(getDagPath());
         if (!masterPath.IsEmpty()){
             mUsdPrim.GetInherits().AppendInherit(masterPath);

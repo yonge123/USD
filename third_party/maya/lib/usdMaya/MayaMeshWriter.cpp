@@ -52,8 +52,9 @@ const float MayaMeshWriter::_ColorSetDefaultAlpha = 1.0;
 MayaMeshWriter::MayaMeshWriter(
         const MDagPath & iDag,
         UsdStageRefPtr stage, 
-        const JobExportArgs & iArgs) :
-    MayaTransformWriter(iDag, stage, iArgs)
+        const JobExportArgs & iArgs,
+        usdWriteJob* jobPtr) :
+    MayaTransformWriter(iDag, stage, iArgs, jobPtr)
 {
     if ( !isMeshValid() ) {
         return;

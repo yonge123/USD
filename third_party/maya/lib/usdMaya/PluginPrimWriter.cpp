@@ -32,8 +32,9 @@ PxrUsdExport_PluginPrimWriter::PxrUsdExport_PluginPrimWriter(
         const MDagPath& iDag,
         UsdStageRefPtr& stage,
         const JobExportArgs& iArgs,
-        PxrUsdMayaPrimWriterRegistry::WriterFn plugFn) :
-    MayaTransformWriter(iDag, stage, iArgs),
+        PxrUsdMayaPrimWriterRegistry::WriterFn plugFn,
+        usdWriteJob* jobPtr) :
+    MayaTransformWriter(iDag, stage, iArgs, jobPtr),
     _plugFn(plugFn),
     _exportsGprims(false),
     _exportsReferences(false),

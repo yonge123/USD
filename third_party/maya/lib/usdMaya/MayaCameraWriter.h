@@ -31,12 +31,13 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 class UsdGeomCamera;
+class usdWriteJob;
 
 // Writes an MFnMesh as a poly mesh OR a subd mesh
 class MayaCameraWriter : public MayaTransformWriter
 {
   public:
-    MayaCameraWriter(const MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs);
+    MayaCameraWriter(const MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs, usdWriteJob* jobPtr);
     virtual ~MayaCameraWriter() {};
 
     virtual void write(const UsdTimeCode &usdTime);

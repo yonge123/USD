@@ -40,8 +40,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 
-MayaCameraWriter::MayaCameraWriter(const MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs) :
-    MayaTransformWriter(iDag, stage, iArgs)
+MayaCameraWriter::MayaCameraWriter(const MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs, usdWriteJob* jobPtr) :
+    MayaTransformWriter(iDag, stage, iArgs, jobPtr)
 {
     UsdGeomCamera primSchema =
         UsdGeomCamera::Define(getUsdStage(), getUsdPath());

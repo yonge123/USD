@@ -37,6 +37,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+class usdWriteJob;
 
 /// \class PxrUsdExport_PluginPrimWriter
 /// \brief This class is scaffolding to hold the writer plugin and to adapt it
@@ -53,7 +54,8 @@ public:
             const MDagPath& iDag,
             UsdStageRefPtr& stage,
             const JobExportArgs& iArgs,
-            PxrUsdMayaPrimWriterRegistry::WriterFn plugFn);
+            PxrUsdMayaPrimWriterRegistry::WriterFn plugFn,
+            usdWriteJob* jobPtr);
 
     virtual ~PxrUsdExport_PluginPrimWriter();
 

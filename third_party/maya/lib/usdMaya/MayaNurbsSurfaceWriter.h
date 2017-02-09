@@ -31,6 +31,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 class UsdGeomNurbsPatch;
+class usdWriteJob;
 
 // Writes an MFnMesh as a poly mesh OR a subd mesh
 class MayaNurbsSurfaceWriter : public MayaTransformWriter
@@ -38,7 +39,8 @@ class MayaNurbsSurfaceWriter : public MayaTransformWriter
   public:
     MayaNurbsSurfaceWriter(const MDagPath & iDag,
             UsdStageRefPtr stage, 
-            const JobExportArgs & iArgs);
+            const JobExportArgs & iArgs,
+            usdWriteJob* jobPtr);
     virtual ~MayaNurbsSurfaceWriter() {};
     
     virtual void write(const UsdTimeCode &usdTime);

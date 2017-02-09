@@ -551,7 +551,7 @@ MayaPrimWriterPtr usdWriteJob::createPrimWriter(
         if (PxrUsdMayaPrimWriterRegistry::WriterFn primWriter =
                 PxrUsdMayaPrimWriterRegistry::Find(mayaTypeName)) {
             PxrUsdExport_PluginPrimWriter::Ptr primPtr(new PxrUsdExport_PluginPrimWriter(
-                        curDag, mStage, mArgs, primWriter));
+                        curDag, mStage, mArgs, primWriter, this));
             if (primPtr->isValid()) {
                 // We found a PluginPrimWriter that handles this node type, so
                 // return now.
@@ -568,25 +568,25 @@ MayaPrimWriterPtr usdWriteJob::createPrimWriter(
         }
     }
     else if (ob.hasFn(MFn::kMesh)) {
-        MayaMeshWriterPtr primPtr(new MayaMeshWriter(curDag, mStage, mArgs));
+        MayaMeshWriterPtr primPtr(new MayaMeshWriter(curDag, mStage, mArgs, this));
         if (primPtr->isValid() ) {
             return primPtr;
         }
     }
     else if (ob.hasFn(MFn::kNurbsCurve)) {
-        MayaNurbsCurveWriterPtr primPtr(new MayaNurbsCurveWriter(curDag, mStage, mArgs));
+        MayaNurbsCurveWriterPtr primPtr(new MayaNurbsCurveWriter(curDag, mStage, mArgs, this));
         if (primPtr->isValid() ) {
             return primPtr;
         }
     }
     else if (ob.hasFn(MFn::kNurbsSurface)) {
-        MayaNurbsSurfaceWriterPtr primPtr(new MayaNurbsSurfaceWriter(curDag, mStage, mArgs));
+        MayaNurbsSurfaceWriterPtr primPtr(new MayaNurbsSurfaceWriter(curDag, mStage, mArgs, this));
         if (primPtr->isValid() ) {
             return primPtr;
         }
     }
     else if (ob.hasFn(MFn::kCamera)) {
-        MayaCameraWriterPtr primPtr(new MayaCameraWriter(curDag, mStage, mArgs));
+        MayaCameraWriterPtr primPtr(new MayaCameraWriter(curDag, mStage, mArgs, this));
         if (primPtr->isValid() ) {
             return primPtr;
         }
@@ -624,6 +624,10 @@ SdfPath usdWriteJob::getMasterPath(const MDagPath& dg)
 
 MDagPath usdWriteJob::getMayaMasterPath(const MDagPath& dg)
 {
+    if (!dg.isInstanced()) {
+        return dg;
+    }
+
     const auto instanceNumber = dg.instanceNumber();
     // if instance number is zero, and we are querying it, then it's always the master
     if (instanceNumber == 0) {
@@ -635,10 +639,13 @@ MDagPath usdWriteJob::getMayaMasterPath(const MDagPath& dg)
         return it->second;
     } else {
         MDagPathArray allInstances;
-        MDagPath::getAllPathsTo(dg.node(), allInstances);
+        auto status = MDagPath::getAllPathsTo(dg.node(), allInstances);
+        const auto instanceCount = allInstances.length();
+        if (!status || (instanceCount == 0)) { return dg; }
         // we are looking for the instance with the lowest number here
         // which is still exported
-        for (auto i = 0u; i <= instanceNumber; ++i) {
+        const auto loopLimit = std::min(instanceNumber, instanceCount - 1);
+        for (auto i = 0u; i <= loopLimit; ++i) {
             const auto& currDag = allInstances[i];
             if (mMayaDagPathList.find(currDag) != mMayaDagPathList.end()) {
                 mMasterDagMap.insert(std::make_pair(handle, currDag));

@@ -36,6 +36,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class UsdGeomMesh;
 class UsdGeomGprim;
+class usdWriteJob;
 
 
 // Writes an MFnMesh as a poly mesh OR a subd mesh
@@ -44,7 +45,8 @@ class MayaMeshWriter : public MayaTransformWriter
   public:
     MayaMeshWriter(const MDagPath & iDag,
             UsdStageRefPtr stage, 
-            const JobExportArgs & iArgs);
+            const JobExportArgs & iArgs,
+            usdWriteJob* jobPtr);
     virtual ~MayaMeshWriter() {};
 
     virtual void write(const UsdTimeCode &usdTime);
