@@ -561,10 +561,10 @@ MayaPrimWriterPtr usdWriteJob::createPrimWriter(
     }
 
     if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator) ||
-        (mArgs.exportInstances && curDag.isInstanced() && curDag.instanceNumber() != 0)) {
+        (mArgs.exportInstances && curDag.isInstanced() && !isMasterInstance(curDag))) {
         MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, mStage, mArgs, this));
         if (primPtr->isValid() ) {
-            return primPtr = primPtr;
+            return primPtr;
         }
     }
     else if (ob.hasFn(MFn::kMesh)) {
@@ -638,7 +638,7 @@ MDagPath usdWriteJob::getMayaMasterPath(const MDagPath& dg)
         MDagPath::getAllPathsTo(dg.node(), allInstances);
         // we are looking for the instance with the lowest number here
         // which is still exported
-        for (unsigned int i = 0; i <= instanceNumber; ++i) {
+        for (auto i = 0u; i <= instanceNumber; ++i) {
             const auto& currDag = allInstances[i];
             if (mMayaDagPathList.find(currDag) != mMayaDagPathList.end()) {
                 mMasterDagMap.insert(std::make_pair(handle, currDag));

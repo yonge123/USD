@@ -65,7 +65,7 @@ class usdWriteJob
     
   private:
     struct MObjectComp {
-        bool operator()(const MObjectHandle& rhs, const MObjectHandle& lhs) {
+        bool operator()(const MObjectHandle& rhs, const MObjectHandle& lhs) const {
             return rhs.hashCode() < lhs.hashCode();
         }
     };

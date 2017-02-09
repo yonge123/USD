@@ -86,9 +86,9 @@ class MayaTransformWriter : public MayaPrimWriter
     bool mWriteTransformAttrs;
     MDagPath mXformDagPath;
     bool mIsShapeAnimated;
-    bool mIsInstance;
     std::vector<AnimChannel> mAnimChanList;
     usdWriteJob* mJob;
+    bool mIsInstance;
 
     size_t mJointOrientOpIndex[3];
     size_t mRotateOpIndex[3];

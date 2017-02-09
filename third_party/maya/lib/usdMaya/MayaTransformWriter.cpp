@@ -417,13 +417,13 @@ MayaTransformWriter::MayaTransformWriter(
     MayaPrimWriter(iDag, stage, iArgs),
     mXformDagPath(iDag),
     mIsShapeAnimated(false),
-    mIsInstance(false),
-    mJob(jobPtr)
+    mJob(jobPtr),
+    mIsInstance(false)
 {
     auto setup_merged_shape = [this] () {
         // Use the parent transform if there is only a single shape under the shape's xform
         this->mXformDagPath.pop();
-        unsigned int numberOfShapesDirectlyBelow = 0;
+        auto numberOfShapesDirectlyBelow = 0u;
         this->mXformDagPath.numberOfShapesDirectlyBelow(numberOfShapesDirectlyBelow);
         if (numberOfShapesDirectlyBelow == 1) {
             // Use the parent path (xform) instead of the shape path
@@ -438,10 +438,12 @@ MayaTransformWriter::MayaTransformWriter(
         this->mXformDagPath = MDagPath(); // make path invalid
     };
 
+    const auto hasTransform = iDag.hasFn(MFn::kTransform);
+
     // it's more straightforward to separate code
     if (iArgs.exportInstances) {
-        if (iDag.hasFn(MFn::kTransform)) {
-            unsigned int numberOfShapesDirectlyBelow = 0;
+        if (hasTransform) {
+            auto numberOfShapesDirectlyBelow = 0u;
             iDag.numberOfShapesDirectlyBelow(numberOfShapesDirectlyBelow);
             if (numberOfShapesDirectlyBelow == 1) {
                 auto copyDag = iDag;
@@ -473,7 +475,7 @@ MayaTransformWriter::MayaTransformWriter(
         // If is a transform, then do not write
         // Return if has a single shape directly below xform
         if (getArgs().mergeTransformAndShape) {
-            if (iDag.hasFn(MFn::kTransform)) { // if is an actual transform
+            if (hasTransform) { // if is an actual transform
                 unsigned int numberOfShapesDirectlyBelow = 0;
                 iDag.numberOfShapesDirectlyBelow(numberOfShapesDirectlyBelow);
                 if (numberOfShapesDirectlyBelow == 1) {
@@ -483,7 +485,7 @@ MayaTransformWriter::MayaTransformWriter(
                 setup_merged_shape();
             }
         } else {
-            if (!iDag.hasFn(MFn::kTransform)) { // if is NOT an actual transform
+            if (!hasTransform) { // if is NOT an actual transform
                 mXformDagPath = MDagPath(); // make path invalid
             }
         }
@@ -500,7 +502,7 @@ MayaTransformWriter::MayaTransformWriter(
     }
 
     // Determine if shape is animated
-    if (!iDag.hasFn(MFn::kTransform)) { // if is a shape
+    if (!hasTransform) { // if is a shape
         MObject obj = getDagPath().node();
         if (iArgs.exportAnimation)
             mIsShapeAnimated = PxrUsdMayaUtil::isAnimated(obj);
