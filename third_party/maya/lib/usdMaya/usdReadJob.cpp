@@ -494,6 +494,15 @@ bool usdReadJob::_InitVariantsByPath(const std::map<std::string, std::string>& t
                 continue;
             }
 
+            // std::insert will preserve existing entries if present, which in this
+            // case, is what we what
+            currentPathVariants.insert(std::pair<std::string, std::string>(
+                    variantMapIter->first, variantValue));
+        }
+    }
+    return true;
+}
+
 void usdReadJob::setJoinedParentRefPaths(const std::string& joinedRefPaths)
 {
     mParentRefPaths.clear();
