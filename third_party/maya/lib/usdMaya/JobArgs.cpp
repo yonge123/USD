@@ -44,6 +44,7 @@ TF_DEFINE_PUBLIC_TOKENS(PxUsdExportJobArgsTokens,
 
 namespace {
     static bool _readAnimDataDefault = TfGetEnvSetting(PIXMAYA_READ_ANIM_BY_DEFAULT);
+    static bool _useAssembliesDefault = TfGetEnvSetting(PIXMAYA_USE_USD_REF_ASSEMBLIES);
 }
 
 JobSharedArgs::JobSharedArgs()
@@ -193,7 +194,7 @@ JobImportArgs::JobImportArgs()
         readAnimData(_readAnimDataDefault),
         useCustomFrameRange(false),
         importWithProxyShapes(false),
-        useAssemblies(TfGetEnvSetting(PIXMAYA_USE_USD_REF_ASSEMBLIES)),
+        useAssemblies(_useAssembliesDefault),
         variantSelectionNode("")
 {
 }
