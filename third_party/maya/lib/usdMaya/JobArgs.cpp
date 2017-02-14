@@ -42,6 +42,9 @@ TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
 TF_DEFINE_PUBLIC_TOKENS(PxUsdExportJobArgsTokens, 
         PXRUSDMAYA_JOBARGS_TOKENS);
 
+namespace {
+    static bool _useAssembliesDefault = TfGetEnvSetting(PIXMAYA_USE_USD_REF_ASSEMBLIES);
+}
 
 JobSharedArgs::JobSharedArgs()
     :
@@ -180,7 +183,7 @@ JobImportArgs::JobImportArgs()
         readAnimData(false),
         useCustomFrameRange(false),
         importWithProxyShapes(false),
-        useAssemblies(TfGetEnvSetting(PIXMAYA_USE_USD_REF_ASSEMBLIES))
+        useAssemblies(_useAssembliesDefault)
 {
 }
 
