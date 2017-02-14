@@ -1173,10 +1173,7 @@ PxrUsdMayaUtil::IsNativeMayaReference(const MObject& mobj)
     CHECK_MSTATUS_AND_RETURN(status, false);
 
     std::string extension = TfStringToLower(TfStringGetSuffix(fileName.asChar()));
-    if (extension != "ma" && extension != "mb")
-    {
-        return false;
-    }
+    return bool(extension == "ma" || extension == "mb");
 }
 
 std::vector<MObject>

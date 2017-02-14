@@ -26,12 +26,13 @@
 
 #include "usdMaya/shadingModeRegistry.h"
 
-#include "pxr/base/tf/staticTokens.h"
 #include "pxr/base/tf/envSetting.h"
+#include "pxr/base/tf/staticTokens.h"
 #include "pxr/usd/usdGeom/tokens.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+extern TfEnvSetting<bool> PIXMAYA_READ_ANIM_BY_DEFAULT;
 
 extern TfEnvSetting<bool> PIXMAYA_USE_USD_REF_ASSEMBLIES;
 
@@ -41,6 +42,10 @@ TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
 TF_DEFINE_PUBLIC_TOKENS(PxUsdExportJobArgsTokens,
         PXRUSDMAYA_JOBARGS_TOKENS);
 
+namespace {
+    static bool _readAnimDataDefault = TfGetEnvSetting(PIXMAYA_READ_ANIM_BY_DEFAULT);
+    static bool _useAssembliesDefault = TfGetEnvSetting(PIXMAYA_USE_USD_REF_ASSEMBLIES);
+}
 
 JobSharedArgs::JobSharedArgs()
     :
@@ -62,13 +67,13 @@ bool JobSharedArgs::parseSharedOption(const MStringArray& theOption)
         } else if (theOption[1]=="Look Colors") {
             shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
         } else if (theOption[1]=="RfM Shaders") {
-            TfToken shadingMode("pxrRis");
-            if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode)) {
-                shadingMode = shadingMode;
+            TfToken rfmShadingMode("pxrRis");
+            if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(rfmShadingMode)) {
+                shadingMode = rfmShadingMode;
             } else {
                 MGlobal::displayError(
                         TfStringPrintf("No shadingMode '%s' found.  Setting shadingMode='none'",
-                                       shadingMode.GetText()).c_str());
+                                       rfmShadingMode.GetText()).c_str());
                 shadingMode = PxrUsdMayaShadingModeTokens->none;
             }
         }
@@ -189,10 +194,11 @@ JobImportArgs::JobImportArgs()
     :
         primPath("/"),
         assemblyRep(PxUsdExportJobArgsTokens->Collapsed),
-        readAnimData(false),
+        readAnimData(_readAnimDataDefault),
         useCustomFrameRange(false),
         importWithProxyShapes(false),
-        useAssemblies(TfGetEnvSetting(PIXMAYA_USE_USD_REF_ASSEMBLIES))
+        useAssemblies(_useAssembliesDefault),
+        variantSelectionNode("")
 {
 }
 
@@ -221,6 +227,8 @@ void JobImportArgs::parseSingleOption(const MStringArray& theOption)
         parentNode = theOption[1].asChar();
     } else if (theOption[0] == MString("parentRefPaths")) {
         setJoinedParentRefPaths(theOption[1].asChar());
+    } else if (theOption[0] == MString("variantSelectionNode")) {
+        variantSelectionNode = theOption[1].asChar();
     }
 }
 

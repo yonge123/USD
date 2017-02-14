@@ -32,7 +32,9 @@
 #include "usdMaya/shadingModeRegistry.h"
 #include "usdMaya/usdReadJob.h"
 #include "usdMaya/usdWriteJob.h"
-#include "JobArgs.h"
+
+#include "pxr/base/tf/envSetting.h"
+#include "pxr/base/tf/stringUtils.h"
 
 #include <maya/MFnDagNode.h>
 #include <maya/MFileObject.h>
@@ -44,6 +46,17 @@
 #include <map>
 #include <string>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+extern TfEnvSetting<bool> PIXMAYA_READ_ANIM_BY_DEFAULT;
+
+namespace {
+    static const std::string usdTranslatorDefaultsString = TfStringPrintf(
+            usdTranslatorDefaultsTemplate,
+            TfGetEnvSetting(PIXMAYA_READ_ANIM_BY_DEFAULT));
+}
+
+const char* const usdTranslatorDefaults = usdTranslatorDefaultsString.c_str();
 
 void* usdTranslator::creator(const std::string& assemblyTypeName,
                                    const std::string& proxyShapeTypeName) {
@@ -162,3 +175,5 @@ usdTranslator::identifyFile(
     }
     return kNotMyFileType;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

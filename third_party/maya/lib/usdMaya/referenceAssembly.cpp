@@ -85,6 +85,9 @@ TF_DEFINE_ENV_SETTING(PIXMAYA_USE_USD_ASSEM_NAMESPACE, true,
 TF_DEFINE_ENV_SETTING(PIXMAYA_DEBUG_USD_ASSEM, false,
                       "Displays debug information for unrolling USD assemblies");
 
+TF_DEFINE_ENV_SETTING(PIXMAYA_READ_ANIM_BY_DEFAULT, false,
+                      "Default to reading animation when importing usd");
+
 // == Statics ==
 const MString UsdMayaReferenceAssembly::_classification("drawdb/geometry/transform");
 
@@ -250,6 +253,7 @@ MStatus UsdMayaReferenceAssembly::initialize(
 
     status = attributeAffects(psData->inStageDataCached, psData->outStageData);
 
+    status = attributeAffects(psData->primPath, psData->inStageDataCached);
     status = attributeAffects(psData->primPath, psData->outStageData);
 
 
@@ -600,10 +604,18 @@ MStatus UsdMayaReferenceAssembly::computeInStageDataCached(MDataBlock& dataBlock
         if (isValidPath) {
 
             if (SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(fileString)) {
+                // Get the primPath
+                primPath = getPrimPath(dataBlock, rootLayer);
+                if (primPath.IsEmpty()) {
+                    // XXX:
+                    // Preserving prior behavior for now-- eventually might make
+                    // more sense to bail in this case.
+                    primPath = SdfPath::AbsoluteRootPath();
+                }
+
                 SdfLayerRefPtr sessionLayer;
                 std::vector<std::pair<std::string, std::string> > varSelsVec;
                 MFnDependencyNode depNodeFn(thisMObject());
-                TfToken modelName = UsdUtilsGetModelNameFromRootLayer(rootLayer);
                 const std::set<std::string> varSetNamesForCache = _GetVariantSetNamesForStageCache(depNodeFn);
                 TF_FOR_ALL(variantSet, varSetNamesForCache) {
                     MString variantSetPlugName(PxrUsdMayaVariantSetTokens->PlugNamePrefix.GetText());
@@ -619,7 +631,7 @@ MStatus UsdMayaReferenceAssembly::computeInStageDataCached(MDataBlock& dataBlock
                 }
                 
                 sessionLayer = UsdUtilsStageCache::GetSessionLayerForVariantSelections(
-                    modelName, varSelsVec);
+                    primPath, varSelsVec);
 
                 // If we have assembly edits, do not share session layers with
                 // other models that have our same set of variant selections,
@@ -641,14 +653,6 @@ MStatus UsdMayaReferenceAssembly::computeInStageDataCached(MDataBlock& dataBlock
                 usdStage = UsdStage::Open(rootLayer, 
                         sessionLayer,
                         ArGetResolver().GetCurrentContext());
-
-                primPath = usdStage->GetDefaultPrim() ?
-                    usdStage->GetDefaultPrim().GetPath() :
-
-                    // XXX:
-                    // Preserving prior behavior for now-- eventually might make
-                    // more sense to bail in this case.
-                    SdfPath::AbsoluteRootPath();
             }
             else {
                 retValue = MS::kFailure;
@@ -719,13 +723,8 @@ MStatus UsdMayaReferenceAssembly::computeOutStageData(MDataBlock& dataBlock)
     // Get the prim
     // If no primPath string specified, then use the pseudo-root.
     UsdPrim usdPrim;
-    std::string primPathStr = aPrimPath.asChar();
-    if (primPathStr.empty() && usdStage->GetDefaultPrim()) {
-        usdPrim = usdStage->GetDefaultPrim();
-    }
-    if (!usdPrim && !primPathStr.empty()) {
-        SdfPath primPath(primPathStr);
-
+    SdfPath primPath = getPrimPath(dataBlock, usdStage->GetRootLayer());
+    if (!primPath.IsEmpty()) {
         // Validate assumption: primPath is descendent of passed-in stage primPath
         //   Make sure that the primPath is a child of the passed in stage's primpath
         //   This allows data for variants to flow down the hierarchy as expected
@@ -735,10 +734,10 @@ MStatus UsdMayaReferenceAssembly::computeOutStageData(MDataBlock& dataBlock)
         else {
             MGlobal::displayWarning("UsdMayaReferenceAssembly::computeOutStageData" + MPxNode::name() + ": Stage primPath '" + 
                                     MString(inData->primPath.GetText()) + "'' not a parent of primPath '" +
-                                    MString(primPathStr.c_str()) + "'. Skipping variant assignment.");
+                                    MString(primPath.GetText()) + "'. Skipping variant assignment.");
         }
     } else {
-        MGlobal::displayWarning(MPxNode::name() + ": Stage primPath MISSING");
+        MGlobal::displayWarning(MPxNode::name() + ": Stage primPath invalid, or empty and no default prim defined");
     }
 
     // Handle UsdPrim variant overrides for subassemblies (i.e., assemblies
@@ -794,6 +793,28 @@ MStatus UsdMayaReferenceAssembly::computeOutStageData(MDataBlock& dataBlock)
     return MS::kSuccess;
 }
 
+SdfPath UsdMayaReferenceAssembly::getPrimPath(
+        MDataBlock& dataBlock,
+        SdfLayerRefPtr rootLayer)
+{
+    MStatus retValue = MS::kSuccess;
+    const MString aPrimPath = dataBlock.inputValue(_psData.primPath, &retValue).asString();
+    CHECK_MSTATUS_AND_RETURN(retValue, SdfPath());
+
+    if (aPrimPath.length() == 0) {
+        TfToken name = rootLayer->GetDefaultPrim();
+        if (SdfPath::IsValidIdentifier(name)) {
+            return SdfPath::AbsoluteRootPath().AppendChild(name);
+        }
+    }
+    else {
+        // Note that if aPrimPath is an invalid path, this will just return
+        // and empty SdfPath
+        return SdfPath(aPrimPath.asChar());
+    }
+    return SdfPath();
+
+}
 
 bool UsdMayaReferenceAssembly::setInternalValueInContext( const MPlug& plug,
                                              const MDataHandle& dataHandle,

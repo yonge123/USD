@@ -40,12 +40,14 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-const char* const usdTranslatorDefaultsTemplate =
+<<<<<<< HEAD:third_party/maya/lib/usdMaya/usdTranslator.h
+const char* const usdTranslatorDefaults =
         // Shared options
         "shadingMode=GPrim Colors;"
         "defaultMeshScheme=CatmullClark SDiv;"
+
         // import options
-        "readAnimData=%d;"
+        "readAnimData=0;"
         "useCustomFrameRange=0;"
         "assemblyRep=Collapsed;"
 
@@ -65,9 +67,19 @@ const char* const usdTranslatorDefaultsTemplate =
         "startTime=1;"
         "endTime=1";
 
-extern const char* const usdTranslatorDefaults;
 
 class usdTranslator : public MPxFileTranslator
+=======
+const char* const usdTranslatorImportDefaultsTemplate =
+        "shadingMode=GPrim Colors;"
+        "readAnimData=%d;"
+        "useCustomFrameRange=0;"
+        "assemblyRep=Collapsed";
+
+extern const char* const usdTranslatorImportDefaults;
+
+class usdTranslatorImport : public MPxFileTranslator
+>>>>>>> pull_requests:third_party/maya/lib/usdMaya/usdTranslatorImport.h
 {
     public:
 
