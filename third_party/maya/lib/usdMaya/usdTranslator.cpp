@@ -47,6 +47,8 @@
 #include <map>
 #include <string>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 extern TfEnvSetting<bool> PIXMAYA_READ_ANIM_BY_DEFAULT;
 
 namespace {
@@ -174,3 +176,5 @@ usdTranslator::identifyFile(
     }
     return kNotMyFileType;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
