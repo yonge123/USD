@@ -32,7 +32,6 @@
 #include "usdMaya/shadingModeRegistry.h"
 #include "usdMaya/usdReadJob.h"
 #include "usdMaya/usdWriteJob.h"
-#include "JobArgs.h"
 
 #include "pxr/base/tf/envSetting.h"
 #include "pxr/base/tf/stringUtils.h"
