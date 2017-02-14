@@ -26,12 +26,13 @@
 
 #include "usdMaya/shadingModeRegistry.h"
 
-#include "pxr/base/tf/staticTokens.h"
 #include "pxr/base/tf/envSetting.h"
+#include "pxr/base/tf/staticTokens.h"
 #include "pxr/usd/usdGeom/tokens.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+extern TfEnvSetting<bool> PIXMAYA_READ_ANIM_BY_DEFAULT;
 
 extern TfEnvSetting<bool> PIXMAYA_USE_USD_REF_ASSEMBLIES;
 
@@ -41,6 +42,9 @@ TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
 TF_DEFINE_PUBLIC_TOKENS(PxUsdExportJobArgsTokens,
         PXRUSDMAYA_JOBARGS_TOKENS);
 
+namespace {
+    static bool _readAnimDataDefault = TfGetEnvSetting(PIXMAYA_READ_ANIM_BY_DEFAULT);
+}
 
 JobSharedArgs::JobSharedArgs()
     :
@@ -186,7 +190,7 @@ JobImportArgs::JobImportArgs()
     :
         primPath("/"),
         assemblyRep(PxUsdExportJobArgsTokens->Collapsed),
-        readAnimData(false),
+        readAnimData(_readAnimDataDefault),
         useCustomFrameRange(false),
         importWithProxyShapes(false),
         useAssemblies(TfGetEnvSetting(PIXMAYA_USE_USD_REF_ASSEMBLIES)),
