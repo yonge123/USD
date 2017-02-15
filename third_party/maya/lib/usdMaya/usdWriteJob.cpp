@@ -518,6 +518,17 @@ bool usdWriteJob::needToTraverse(const MDagPath& curDag)
         return false;
     }
 
+    if (ob.hasFn(MFn::kTransform) && !mArgs.exportDefaultCameras) { 
+        // Ignore transforms of default cameras 
+        MString fullPathName = curDag.fullPathName(); 
+        if (fullPathName == "|persp" || 
+            fullPathName == "|top" || 
+            fullPathName == "|front" || 
+            fullPathName == "|side") { 
+            return false; 
+        }
+    }
+
     if (ob.hasFn(MFn::kCamera) && !mArgs.exportDefaultCameras) {
         // Ignore default cameras
         MString fullPathName = curDag.fullPathName();
