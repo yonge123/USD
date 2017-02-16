@@ -43,7 +43,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-
+extern const TfToken MAYA_NATIVE_FILE_REF_ATTR;
 
 class usdReadJob
 {
