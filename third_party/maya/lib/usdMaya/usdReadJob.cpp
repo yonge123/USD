@@ -75,7 +75,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 // (usdMaya/referenceAssembly.cpp)
 const static TfToken ASSEMBLY_SHADING_MODE = PxrUsdMayaShadingModeTokens->displayColor;
 
-const static TfToken MAYA_NATIVE_FILE_REF_ATTR("maya:reference");
+const TfToken MAYA_NATIVE_FILE_REF_ATTR("maya:reference");
 
 usdReadJob::usdReadJob(
     const std::map<std::string, std::string>& topVariants,
