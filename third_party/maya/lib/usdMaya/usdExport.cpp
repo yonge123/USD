@@ -151,7 +151,10 @@ try
             jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
         }
         else {
-            if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode)) {
+            if (shadingMode == "arnold") {
+                jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->arnold;
+            }
+            else if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode)) {
                 jobArgs.shadingMode = shadingMode;
             }
             else {

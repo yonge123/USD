@@ -48,7 +48,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 #define PXRUSDMAYA_SHADINGMODE_TOKENS \
     (none) \
-    (displayColor) 
+    (displayColor) \
+    (arnold)
 
 TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaShadingModeTokens, PXRUSDMAYA_SHADINGMODE_TOKENS);
 

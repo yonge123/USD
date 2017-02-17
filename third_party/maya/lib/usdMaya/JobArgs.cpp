@@ -76,6 +76,8 @@ bool JobSharedArgs::parseSharedOption(const MStringArray& theOption)
                                        rfmShadingMode.GetText()).c_str());
                 shadingMode = PxrUsdMayaShadingModeTokens->none;
             }
+        } else if (theOption[1]=="arnold") {
+            shadingMode = PxrUsdMayaShadingModeTokens->arnold;
         }
         return true;
     } else if (theOption[0] == MString("defaultMeshScheme")) {

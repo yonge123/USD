@@ -30,6 +30,7 @@
 #include "pxr/base/tf/staticTokens.h"
 #include "pxr/usd/sdf/assetPath.h"
 #include "pxr/usd/usdGeom/mesh.h"
+#include "pxr/base/gf/matrix4f.h"
 
 #include <maya/MFnMeshData.h>
 #include <maya/MFnSet.h>
@@ -40,7 +41,11 @@
 #include <maya/MSelectionList.h>
 #include <maya/MStatus.h>
 
+#include <dlfcn.h>
+
 PXR_NAMESPACE_OPEN_SCOPE
+
+#define AI_NODE_SHADER      0x0010
 
 
 TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaTranslatorLookTokens,
@@ -304,6 +309,120 @@ PxrUsdMayaTranslatorLook::AssignLook(
     return true;
 }
 
+namespace {
+    struct AtNode;
+    struct AtNodeEntry;
+    struct AtUserParamIterator;
+    struct AtUserParamEntry;
+    struct AtParamIterator;
+    struct AtParamEntry;
+    struct AtArray;
+
+    constexpr int32_t AI_TYPE_BYTE = 0x00;
+    constexpr int32_t AI_TYPE_INT = 0x01;
+    constexpr int32_t AI_TYPE_UINT = 0x02;
+    constexpr int32_t AI_TYPE_BOOLEAN = 0x03;
+    constexpr int32_t AI_TYPE_FLOAT = 0x04;
+    constexpr int32_t AI_TYPE_RGB = 0x05;
+    constexpr int32_t AI_TYPE_RGBA = 0x06;
+    constexpr int32_t AI_TYPE_VECTOR = 0x07;
+    constexpr int32_t AI_TYPE_POINT = 0x08;
+    constexpr int32_t AI_TYPE_POINT2 = 0x09;
+    constexpr int32_t AI_TYPE_STRING = 0x0A;
+    constexpr int32_t AI_TYPE_POINTER = 0x0B;
+    constexpr int32_t AI_TYPE_NODE = 0x0C;
+    constexpr int32_t AI_TYPE_ARRAY = 0x0D;
+    constexpr int32_t AI_TYPE_MATRIX = 0x0E;
+    constexpr int32_t AI_TYPE_ENUM = 0x0F;
+    constexpr int32_t AI_TYPE_UNDEFINED = 0xFF;
+    constexpr int32_t AI_TYPE_NONE = 0xFF;
+
+    // mtoa functions
+    void (*mtoa_init_export_session) () = nullptr;
+    AtNode* (*mtoa_export_node) (void*, const char*) = nullptr;
+    void (*mtoa_destroy_export_session) () = nullptr;
+    AtNode* (*AiNodeGetLink) (const AtNode*, const char*, int32_t*) = nullptr;
+    const char* (*AiNodeGetName) (const AtNode*) = nullptr;
+    const AtNodeEntry* (*AiNodeGetNodeEntry) (const AtNode*) = nullptr;
+    AtUserParamIterator* (*AiNodeGetUserParamIterator) (const AtNode*) = nullptr;
+    void (*AiUserParamIteratorDestroy) (AtUserParamIterator*) = nullptr;
+    const AtUserParamEntry* (*AiUserParamIteratorGetNext) (AtUserParamIterator*) = nullptr;
+    bool (*AiUserParamIteratorFinished) (const AtUserParamIterator*) = nullptr;
+    const char* (*AiUserParamGetName) (const AtUserParamEntry*) = nullptr;
+    int (*AiUserParamGetType) (const AtUserParamEntry*) = nullptr;
+    int (*AiUserParamGetArrayType) (const AtUserParamEntry* upentry) = nullptr;
+    const char* (*AiNodeEntryGetName) (const AtNodeEntry* nentry) = nullptr;
+    AtParamIterator* (*AiNodeEntryGetParamIterator) (const AtNodeEntry* nentry) = nullptr;
+    void (*AiParamIteratorDestroy) (AtParamIterator* iter) = nullptr;
+    const AtParamEntry* (*AiParamIteratorGetNext) (AtParamIterator* iter) = nullptr;
+    bool (*AiParamIteratorFinished) (const AtParamIterator* iter) = nullptr;
+    const char* (*AiParamGetName) (const AtParamEntry* pentry) = nullptr;
+    int (*AiParamGetType) (const AtParamEntry* pentry) = nullptr;
+    int8_t (*AiNodeGetByte) (const AtNode*, const char*) = nullptr;
+    int32_t (*AiNodeGetInt) (const AtNode*, const char*) = nullptr;
+    uint32_t (*AiNodeGetUInt) (const AtNode*, const char*) = nullptr;
+    bool (*AiNodeGetBool) (const AtNode*, const char*) = nullptr;
+    float (*AiNodeGetFlt) (const AtNode*, const char*) = nullptr;
+    GfVec3f (*AiNodeGetRGB) (const AtNode*, const char*) = nullptr;
+    GfVec4f (*AiNodeGetRGBA) (const AtNode*, const char*) = nullptr;
+    GfVec3f (*AiNodeGetVec) (const AtNode*, const char*) = nullptr;
+    GfVec3f (*AiNodeGetPnt) (const AtNode*, const char*) = nullptr;
+    GfVec2f (*AiNodeGetPnt2) (const AtNode*, const char*) = nullptr;
+    const char* (*AiNodeGetStr) (const AtNode*, const char*) = nullptr;
+    void* (*AiNodeGetPtr) (const AtNode*, const char*) = nullptr;
+    AtArray* (*AiNodeGetArray) (const AtNode*, const char*) = nullptr;
+    void (*_AiNodeGetMtx) (const AtNode*, const char*, float*) = nullptr;
+    
+    GfMatrix4f AiNodeGetMtx(const AtNode* node, const char* param) {
+        GfMatrix4f ret;
+        _AiNodeGetMtx(node, param, ret[0]);
+        return ret;
+    };
+
+    template <typename T>
+    void convert_ptr(T& trg, void* sym) {
+        trg = reinterpret_cast<T>(sym);
+    }
+
+    void setup_pointers(void* mtoa_handle, void* ai_handle) {
+        // mtoa functions
+        convert_ptr(mtoa_init_export_session, dlsym(mtoa_handle, "mtoa_init_export_session"));
+        convert_ptr(mtoa_export_node, dlsym(mtoa_handle, "mtoa_export_node"));
+        convert_ptr(mtoa_destroy_export_session, dlsym(mtoa_handle, "mtoa_destroy_export_session"));
+        convert_ptr(AiNodeGetLink, dlsym(ai_handle, "AiNodeGetLink"));
+        convert_ptr(AiNodeGetName, dlsym(ai_handle, "AiNodeGetName"));
+        convert_ptr(AiNodeGetNodeEntry, dlsym(ai_handle, "AiNodeGetNodeEntry"));
+        convert_ptr(AiNodeGetUserParamIterator, dlsym(ai_handle, "AiNodeGetUserParamIterator"));
+        convert_ptr(AiUserParamIteratorDestroy, dlsym(ai_handle, "AiUserParamIteratorDestroy"));
+        convert_ptr(AiUserParamIteratorGetNext, dlsym(ai_handle, "AiUserParamIteratorGetNext"));
+        convert_ptr(AiUserParamIteratorFinished, dlsym(ai_handle, "AiUserParamIteratorFinished"));
+        convert_ptr(AiUserParamGetName, dlsym(ai_handle, "AiUserParamGetName"));
+        convert_ptr(AiUserParamGetType, dlsym(ai_handle, "AiUserParamGetType"));
+        convert_ptr(AiUserParamGetArrayType, dlsym(ai_handle, "AiUserParamGetArrayType"));
+        convert_ptr(AiNodeEntryGetName, dlsym(ai_handle, "AiNodeEntryGetName"));
+        convert_ptr(AiNodeEntryGetParamIterator, dlsym(ai_handle, "AiNodeEntryGetParamIterator"));
+        convert_ptr(AiParamIteratorDestroy, dlsym(ai_handle, "AiParamIteratorDestory"));
+        convert_ptr(AiParamIteratorGetNext, dlsym(ai_handle, "AiParamIteratorGetNext"));
+        convert_ptr(AiParamIteratorFinished, dlsym(ai_handle, "AiParamIteratorFinished"));
+        convert_ptr(AiParamGetName, dlsym(ai_handle, "AiParamGetName"));
+        convert_ptr(AiParamGetType, dlsym(ai_handle, "AiParamGetType"));
+        convert_ptr(AiNodeGetByte, dlsym(ai_handle, "AiNodeGetByte"));
+        convert_ptr(AiNodeGetInt, dlsym(ai_handle, "AiNodeGetInt"));
+        convert_ptr(AiNodeGetUInt, dlsym(ai_handle, "AiNodeGetUInt"));
+        convert_ptr(AiNodeGetBool, dlsym(ai_handle, "AiNodeGetBool"));
+        convert_ptr(AiNodeGetFlt, dlsym(ai_handle, "AiNodeGetFlt"));
+        convert_ptr(AiNodeGetRGB, dlsym(ai_handle, "AiNodeGetRGB"));
+        convert_ptr(AiNodeGetRGBA, dlsym(ai_handle, "AiNodeGetRGBA"));
+        convert_ptr(AiNodeGetVec, dlsym(ai_handle, "AiNodeGetVec"));
+        convert_ptr(AiNodeGetPnt, dlsym(ai_handle, "AiNodeGetPnt"));
+        convert_ptr(AiNodeGetPnt2, dlsym(ai_handle, "AiNodeGetPnt2"));
+        convert_ptr(AiNodeGetStr, dlsym(ai_handle, "AiNodeGetStr"));
+        convert_ptr(AiNodeGetPtr, dlsym(ai_handle, "AiNodeGetPtr"));
+        convert_ptr(AiNodeGetArray, dlsym(ai_handle, "AiNodeGetArray"));
+        convert_ptr(_AiNodeGetMtx, dlsym(ai_handle, "AiNodeGetMtx"));
+    }
+}
+
 /* static */
 void
 PxrUsdMayaTranslatorLook::ExportShadingEngines(
@@ -318,7 +437,26 @@ PxrUsdMayaTranslatorLook::ExportShadingEngines(
         return;
     }
 
-    if (PxrUsdMayaShadingModeExporter exporter =
+    if (shadingMode == PxrUsdMayaShadingModeTokens->arnold) {
+        // traditional registry doesn't work here, as it's only a simple function pointer
+        // which doesn't play well with starting up and shutting down the mtoa exporter
+
+        auto ai_handle = dlopen("libai.so", RTLD_LAZY | RTLD_GLOBAL);
+        if (ai_handle == nullptr) { return; }
+        std::string mtoa_path = std::string(getenv("MTOA_HOME")) + std::string("/plug-ins/mtoa.so");
+        auto mtoa_handle = dlopen(mtoa_path.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+        if (mtoa_handle == nullptr) { return; }
+        // struct definitions
+        setup_pointers(mtoa_handle, ai_handle);
+        mtoa_init_export_session();
+        for (MItDependencyNodes iter(MFn::kShadingEngine); !iter.isDone(); iter.next()) {
+            MObject obj = iter.thisNode();
+            auto arnoldNode = mtoa_export_node(&obj, "message");
+            std::cerr << "Exported arnold node : " << AiNodeGetName(arnoldNode) << std::endl;
+        }
+        mtoa_destroy_export_session();
+
+    } else if (PxrUsdMayaShadingModeExporter exporter =
             PxrUsdMayaShadingModeRegistry::GetExporter(shadingMode)) {
         MItDependencyNodes shadingEngineIter(MFn::kShadingEngine);
         for (; !shadingEngineIter.isDone(); shadingEngineIter.next()) {
