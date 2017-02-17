@@ -35,8 +35,11 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-MayaNurbsCurveWriter::MayaNurbsCurveWriter(const MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs, usdWriteJob* jobPtr) :
-    MayaTransformWriter(iDag, stage, iArgs, jobPtr)
+MayaNurbsCurveWriter::MayaNurbsCurveWriter(const MDagPath & iDag,
+                                           const SdfPath& uPath,
+                                           bool instanceSource,
+                                           usdWriteJobCtx& job) :
+    MayaTransformWriter(iDag, uPath, instanceSource, job)
 {
     UsdGeomNurbsCurves primSchema =
         UsdGeomNurbsCurves::Define(getUsdStage(), getUsdPath());

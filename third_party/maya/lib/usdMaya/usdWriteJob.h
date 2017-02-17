@@ -30,8 +30,9 @@
 #include "usdMaya/Chaser.h"
 
 #include "usdMaya/util.h"
-#include "usdMaya/MayaPrimWriter.h"
 #include "usdMaya/ModelKindWriter.h"
+
+#include "usdMaya/usdWriteJobCtx.h"
 
 #include <maya/MObjectHandle.h>
 
@@ -40,7 +41,7 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-class usdWriteJob
+class usdWriteJob : public usdWriteJobCtx
 {
   public:
 
@@ -54,39 +55,18 @@ class usdWriteJob
     void endJob();
     TfToken writeVariants(const UsdPrim &usdRootPrim);
 
-    SdfPath getMasterPath(const MDagPath& dg);
-    bool isMasterInstance(const MDagPath& dg);
   private:
     void perFrameCallback(double iFrame);
     void postCallback();
-    MayaPrimWriterPtr createPrimWriter(const MDagPath& curDag);
     bool needToTraverse(const MDagPath& curDag);
-    MDagPath getMayaMasterPath(const MDagPath& dg);
     
   private:
-    struct MObjectComp {
-        bool operator()(const MObjectHandle& rhs, const MObjectHandle& lhs) const {
-            return rhs.hashCode() < lhs.hashCode();
-        }
-    };
-
-    JobExportArgs mArgs;
-
-    // List of the primitive writers to iterate over
-    std::vector<MayaPrimWriterPtr> mMayaPrimWriterList;
-    std::set<MDagPath, PxrUsdMayaUtil::cmpDag> mMayaDagPathList;
-    std::map<MObjectHandle, MDagPath, MObjectComp> mMasterDagMap;
-
-    // Stage used to write out USD file
-    UsdStageRefPtr mStage;
-
     // Name of current layer since it should be restored after looping over them
     MString mCurrentRenderLayerName;
     
     // List of renderLayerObjects. Currently used for variants
     MObjectArray mRenderLayerObjs;
-    
-    // USD Maya Prim mapping used for variants
+
     PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type mDagPathToUsdPathMap;
 
     PxrUsdMayaChaserRefPtrVector mChasers;
@@ -94,7 +74,7 @@ class usdWriteJob
     PxrUsdMaya_ModelKindWriter mModelKindWriter;
 };
 
-typedef shared_ptr < usdWriteJob > usdWriteJobPtr;
+typedef std::shared_ptr<usdWriteJob> usdWriteJobPtr;
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

@@ -28,7 +28,6 @@
 
 #include "pxr/pxr.h"
 #include "usdMaya/MayaTransformWriter.h"
-#include "usdMaya/JobArgs.h"
 
 #include "usdMaya/primWriterRegistry.h"
 
@@ -37,7 +36,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class usdWriteJob;
 
 /// \class PxrUsdExport_PluginPrimWriter
 /// \brief This class is scaffolding to hold the writer plugin and to adapt it
@@ -49,13 +47,13 @@ class usdWriteJob;
 class PxrUsdExport_PluginPrimWriter : public MayaTransformWriter
 {
 public:
-    typedef boost::shared_ptr<PxrUsdExport_PluginPrimWriter> Ptr;
+    typedef std::shared_ptr<PxrUsdExport_PluginPrimWriter> Ptr;
     PxrUsdExport_PluginPrimWriter(
             const MDagPath& iDag,
-            UsdStageRefPtr& stage,
-            const JobExportArgs& iArgs,
-            PxrUsdMayaPrimWriterRegistry::WriterFn plugFn,
-            usdWriteJob* jobPtr);
+            const SdfPath& uPath,
+            bool instanceSource,
+            usdWriteJobCtx& job,
+            PxrUsdMayaPrimWriterRegistry::WriterFn plugFn);
 
     virtual ~PxrUsdExport_PluginPrimWriter();
 

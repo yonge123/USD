@@ -26,18 +26,18 @@
 
 #include "pxr/pxr.h"
 #include "usdMaya/MayaTransformWriter.h"
+#include "usdMaya/usdWriteJobCtx.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 
 class UsdGeomCamera;
-class usdWriteJob;
 
 // Writes an MFnMesh as a poly mesh OR a subd mesh
 class MayaCameraWriter : public MayaTransformWriter
 {
   public:
-    MayaCameraWriter(const MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs, usdWriteJob* jobPtr);
+    MayaCameraWriter(const MDagPath & iDag, const SdfPath& uPath, usdWriteJobCtx& job);
     virtual ~MayaCameraWriter() {};
 
     virtual void write(const UsdTimeCode &usdTime);
@@ -46,7 +46,7 @@ class MayaCameraWriter : public MayaTransformWriter
     bool writeCameraAttrs(const UsdTimeCode &usdTime, UsdGeomCamera &primSchema);
 };
 
-typedef shared_ptr < MayaCameraWriter > MayaCameraWriterPtr;
+typedef std::shared_ptr<MayaCameraWriter> MayaCameraWriterPtr;
 
 
 PXR_NAMESPACE_CLOSE_SCOPE

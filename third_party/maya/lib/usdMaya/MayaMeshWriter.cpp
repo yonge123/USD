@@ -51,10 +51,10 @@ const float MayaMeshWriter::_ColorSetDefaultAlpha = 1.0;
 
 MayaMeshWriter::MayaMeshWriter(
         const MDagPath & iDag,
-        UsdStageRefPtr stage, 
-        const JobExportArgs & iArgs,
-        usdWriteJob* jobPtr) :
-    MayaTransformWriter(iDag, stage, iArgs, jobPtr)
+        const SdfPath& uPath,
+        bool instanceSource,
+        usdWriteJobCtx& job) :
+    MayaTransformWriter(iDag, uPath, instanceSource, job)
 {
     if ( !isMeshValid() ) {
         return;
@@ -186,7 +186,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
 
     // Read usdSdScheme attribute. If not set, we default to defaultMeshScheme
     // flag that can be user defined and initialized to catmullClark
-    TfToken sdScheme = PxrUsdMayaMeshUtil::getSubdivScheme(lMesh, getArgs().defaultMeshScheme);    
+    TfToken sdScheme = PxrUsdMayaMeshUtil::getSubdivScheme(lMesh, getArgs().defaultMeshScheme);
     primSchema.CreateSubdivisionSchemeAttr(VtValue(sdScheme), true);
 
     // Polygonal Mesh Case

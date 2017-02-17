@@ -30,18 +30,18 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 PxrUsdExport_PluginPrimWriter::PxrUsdExport_PluginPrimWriter(
         const MDagPath& iDag,
-        UsdStageRefPtr& stage,
-        const JobExportArgs& iArgs,
-        PxrUsdMayaPrimWriterRegistry::WriterFn plugFn,
-        usdWriteJob* jobPtr) :
-    MayaTransformWriter(iDag, stage, iArgs, jobPtr),
+        const SdfPath& uPath,
+        bool instanceSource,
+        usdWriteJobCtx& job,
+        PxrUsdMayaPrimWriterRegistry::WriterFn plugFn) :
+    MayaTransformWriter(iDag, uPath, instanceSource, job),
     _plugFn(plugFn),
     _exportsGprims(false),
     _exportsReferences(false),
     _pruneChildren(false)
 {
     SdfPath authorPath = getUsdPath();
-    mUsdPrim = stage->GetPrimAtPath(authorPath);
+    mUsdPrim = getUsdStage()->GetPrimAtPath(authorPath);
 }
 
 PxrUsdExport_PluginPrimWriter::~PxrUsdExport_PluginPrimWriter()

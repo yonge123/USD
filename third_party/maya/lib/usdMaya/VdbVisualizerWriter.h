@@ -10,7 +10,10 @@ class usdWriteJob;
 
 class VdbVisualizerWriter : public MayaTransformWriter {
 public:
-    VdbVisualizerWriter(const MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs, usdWriteJob* jobPtr);
+    VdbVisualizerWriter(const MDagPath & iDag,
+                        const SdfPath& uPath,
+                        bool instanceSource,
+                        usdWriteJobCtx& job);
     virtual ~VdbVisualizerWriter();
 
     virtual void write(const UsdTimeCode& usdTime) override;
@@ -18,7 +21,7 @@ private:
     bool has_velocity_grids;
 };
 
-typedef shared_ptr<VdbVisualizerWriter> VdbVisualizerWriterPtr;
+typedef std::shared_ptr<VdbVisualizerWriter> VdbVisualizerWriterPtr;
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

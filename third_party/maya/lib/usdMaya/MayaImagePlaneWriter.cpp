@@ -12,14 +12,15 @@ const TfToken MayaImagePlaneWriter::image_plane_horizontal("horizontal");
 const TfToken MayaImagePlaneWriter::image_plane_vertical("vertical");
 const TfToken MayaImagePlaneWriter::image_plane_to_size("to size");
 
-MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs)
-    : MayaPrimWriter(iDag, stage, iArgs), mIsShapeAnimated(false) {
-    if (iArgs.exportAnimation) {
+MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, usdWriteJobCtx& job)
+    : MayaPrimWriter(iDag, uPath, job), mIsShapeAnimated(false) {
+    if (getArgs().exportAnimation) {
         MObject obj = getDagPath().node();
         mIsShapeAnimated = PxrUsdMayaUtil::isAnimated(obj);
     }
 
-    if (iArgs.mergeTransformAndShape) {
+    // TODO inherit from the TransformWriter and handle it like the other shapes.
+    if (getArgs().mergeTransformAndShape) {
         // the path will always look like :
         // camera transform -> camera shape -> image plane transform -> image plane shape
         // So first we pop the image plane shape if possible,

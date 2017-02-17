@@ -34,8 +34,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class usdWriteJob;
-
 class UsdGeomXformable;
 class UsdTimeCode;
 
@@ -62,8 +60,7 @@ class MayaTransformWriter : public MayaPrimWriter
 {
   public:
 
-    MayaTransformWriter(const MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs,
-                        usdWriteJob* jobPtr);
+    MayaTransformWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& job);
     virtual ~MayaTransformWriter() {};
 
     virtual void pushTransformStack(
@@ -87,8 +84,7 @@ class MayaTransformWriter : public MayaPrimWriter
     MDagPath mXformDagPath;
     bool mIsShapeAnimated;
     std::vector<AnimChannel> mAnimChanList;
-    usdWriteJob* mJob;
-    bool mIsInstance;
+    bool mIsInstanceSource;
 
     size_t mJointOrientOpIndex[3];
     size_t mRotateOpIndex[3];
@@ -96,7 +92,7 @@ class MayaTransformWriter : public MayaPrimWriter
 
 };
 
-typedef shared_ptr < MayaTransformWriter > MayaTransformWriterPtr;
+typedef std::shared_ptr < MayaTransformWriter > MayaTransformWriterPtr;
 
 
 PXR_NAMESPACE_CLOSE_SCOPE

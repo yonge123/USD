@@ -36,7 +36,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class UsdGeomMesh;
 class UsdGeomGprim;
-class usdWriteJob;
 
 
 // Writes an MFnMesh as a poly mesh OR a subd mesh
@@ -44,9 +43,9 @@ class MayaMeshWriter : public MayaTransformWriter
 {
   public:
     MayaMeshWriter(const MDagPath & iDag,
-            UsdStageRefPtr stage, 
-            const JobExportArgs & iArgs,
-            usdWriteJob* jobPtr);
+                   const SdfPath& uPath,
+                   bool instanceSource,
+                   usdWriteJobCtx& job);
     virtual ~MayaMeshWriter() {};
 
     virtual void write(const UsdTimeCode &usdTime);
@@ -143,7 +142,7 @@ class MayaMeshWriter : public MayaTransformWriter
     static const float _ColorSetDefaultAlpha;
 };
 
-typedef shared_ptr < MayaMeshWriter > MayaMeshWriterPtr;
+typedef std::shared_ptr<MayaMeshWriter> MayaMeshWriterPtr;
 
 
 PXR_NAMESPACE_CLOSE_SCOPE

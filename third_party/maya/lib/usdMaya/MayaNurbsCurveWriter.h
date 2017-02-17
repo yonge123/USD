@@ -31,13 +31,12 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 class UsdGeomNurbsCurves;
-class usdWriterJob;
 
 // Writes an MFnMesh as a poly mesh OR a subd mesh
 class MayaNurbsCurveWriter : public MayaTransformWriter
 {
   public:
-    MayaNurbsCurveWriter(const MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs, usdWriteJob* jobPtr);
+    MayaNurbsCurveWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& job);
     virtual ~MayaNurbsCurveWriter() {};
 
     virtual void write(const UsdTimeCode &usdTime);
@@ -49,7 +48,7 @@ class MayaNurbsCurveWriter : public MayaTransformWriter
     bool writeNurbsCurveAttrs(const UsdTimeCode &usdTime, UsdGeomNurbsCurves &primSchema);
 };
 
-typedef shared_ptr < MayaNurbsCurveWriter > MayaNurbsCurveWriterPtr;
+typedef std::shared_ptr<MayaNurbsCurveWriter> MayaNurbsCurveWriterPtr;
 
 
 PXR_NAMESPACE_CLOSE_SCOPE

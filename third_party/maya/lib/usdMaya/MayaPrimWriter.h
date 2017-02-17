@@ -24,16 +24,11 @@
 #ifndef PXRUSDMAYA_MAYAPRIMWRITER_H
 #define PXRUSDMAYA_MAYAPRIMWRITER_H
 #include "pxr/pxr.h"
-#include "usdMaya/JobArgs.h"
+#include "usdMaya/usdWriteJobCtx.h"
 
 #include "pxr/usd/usd/stage.h"
 
-#include <boost/smart_ptr.hpp>
-
 PXR_NAMESPACE_OPEN_SCOPE
-
-
-using boost::shared_ptr;
 
 class UsdGeomImageable;
 class UsdTimeCode;
@@ -43,12 +38,11 @@ class MayaPrimWriter
 {
   public:
     MayaPrimWriter(
-            const MDagPath & iDag,
-            UsdStageRefPtr stage, 
-            const JobExportArgs & iArgs);
+            const MDagPath& iDag,
+            const SdfPath& uPath,
+            usdWriteJobCtx& job);
     virtual ~MayaPrimWriter() {};
 
-    const UsdPrim& getPrim() const;
     virtual void write(const UsdTimeCode &usdTime) = 0;
     virtual bool isShapeAnimated()     const = 0;
 
@@ -70,33 +64,28 @@ class MayaPrimWriter
     virtual bool shouldPruneChildren() const;
 
 public:
-    const MDagPath&        getDagPath()    const { return mDagPath;};
-    const SdfPath &        getUsdPath()    const { return mUsdPath; };
-    const UsdStageRefPtr&  getUsdStage()   const { return mStage;};
-    bool isValid()                         const { return mIsValid;};
-    const JobExportArgs&   getArgs()       const { return mArgs;};
+    const MDagPath&        getDagPath()    const { return mDagPath; }
+    const SdfPath&         getUsdPath()    const { return mUsdPath; }
+    const UsdStageRefPtr&  getUsdStage()   const { return mJob.getUsdStage(); }
+    bool isValid()                         const { return mIsValid; }
+    const JobExportArgs&   getArgs()       const { return mJob.getArgs(); }
+    const UsdPrim&         getPrim()       const { return mUsdPrim; }
+
 
 protected:
-    void setValid(bool isValid) { mIsValid = isValid;};
-    void setUsdPath(const SdfPath &newPath) { mUsdPath = newPath;};
+    void setValid(bool isValid) { mIsValid = isValid; }
+    void setUsdPath(const SdfPath &newPath) { mUsdPath = newPath; }
     bool writePrimAttrs(const MDagPath & iDag2, const UsdTimeCode &usdTime, UsdGeomImageable &primSchema);
 
     UsdPrim mUsdPrim;
+    usdWriteJobCtx& mJob;
 
 private:
     MDagPath mDagPath;
-    UsdStageRefPtr mStage;
     SdfPath mUsdPath;
 
     bool mIsValid;
-
-    // This is just a reference to the JobExportArgs object of the UsdWriteJob
-    // that creates this prim writer. This prevents copying when the set of
-    // dagPaths can potentially be large.
-    const JobExportArgs& mArgs;
 };
-
-typedef shared_ptr < MayaPrimWriter > MayaPrimWriterPtr;
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

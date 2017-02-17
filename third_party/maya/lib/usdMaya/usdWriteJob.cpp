@@ -25,16 +25,7 @@
 #include "usdMaya/usdWriteJob.h"
 
 #include "usdMaya/JobArgs.h"
-#include "usdMaya/MayaMeshWriter.h"
-#include "usdMaya/MayaNurbsCurveWriter.h"
-#include "usdMaya/MayaNurbsSurfaceWriter.h"
-#include "usdMaya/MayaTransformWriter.h"
-#include "usdMaya/MayaCameraWriter.h"
-#include "usdMaya/MayaImagePlaneWriter.h"
-#include "usdMaya/VdbVisualizerWriter.h"
-
 #include "usdMaya/translatorLook.h"
-#include "usdMaya/primWriterRegistry.h"
 #include "usdMaya/PluginPrimWriter.h"
 
 #include "usdMaya/Chaser.h"
@@ -77,7 +68,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 usdWriteJob::usdWriteJob(const JobExportArgs & iArgs) :
-    mArgs(iArgs), mModelKindWriter(iArgs)
+    usdWriteJobCtx(iArgs), mModelKindWriter(iArgs)
 {
 }
 
@@ -117,19 +108,8 @@ bool usdWriteJob::beginJob(bool append)
 
     MGlobal::displayInfo("usdWriteJob::beginJob: Create stage file "+MString(mArgs.fileName.c_str()));
 
-    ArResolverContext resolverCtx = ArGetResolver().GetCurrentContext();
-    if (append) {
-        mStage = UsdStage::Open(SdfLayer::FindOrOpen(mArgs.fileName), resolverCtx);
-        if (!mStage) {
-            MGlobal::displayError("Failed to open stage file "+MString(mArgs.fileName.c_str()));
-            return false;
-            }
-    } else {
-        mStage = UsdStage::CreateNew(mArgs.fileName, resolverCtx);
-        if (!mStage) {
-            MGlobal::displayError("Failed to create stage file "+MString(mArgs.fileName.c_str()));
-            return false;
-        }
+    if (!openFile(mArgs.fileName, append)) {
+        return false;
     }
 
     // Set time range for the USD file
@@ -246,40 +226,36 @@ bool usdWriteJob::beginJob(bool append)
             // This dagPath and all of its children should be pruned.
             itDag.prune();
         } else {
-            mMayaDagPathList.insert(curDagPath);
-        }
-    }
+            MayaPrimWriterPtr primWriter = createPrimWriter(curDagPath);
 
-    for (const auto& dg : mMayaDagPathList) {
-        MayaPrimWriterPtr primWriter = createPrimWriter(dg);
+            if (primWriter) {
+                mMayaPrimWriterList.push_back(primWriter);
 
-        if (primWriter) {
-            mMayaPrimWriterList.push_back(primWriter);
+                primWriter->write(UsdTimeCode::Default());
 
-            // Write out data (non-animated/default values).
-            if (const auto& usdPrim = primWriter->getPrim()) {
-                MDagPath dag = primWriter->getDagPath();
-                mDagPathToUsdPathMap[dag] = usdPrim.GetPath();
+                // Write out data (non-animated/default values).
+                if (const auto& usdPrim = primWriter->getPrim()) {
+                    MDagPath dag = primWriter->getDagPath();
+                    mDagPathToUsdPathMap[dag] = usdPrim.GetPath();
 
-                // If we are merging transforms and the object derives from
-                // MayaTransformWriter but isn't actually a transform node, we
-                // need to add its parent.
-                if (mArgs.mergeTransformAndShape) {
-                    MayaTransformWriterPtr xformWriter =
-                        boost::dynamic_pointer_cast<MayaTransformWriter>(
-                            primWriter);
-                    if (xformWriter) {
-                        MDagPath xformDag = xformWriter->getTransformDagPath();
-                        mDagPathToUsdPathMap[xformDag] = usdPrim.GetPath();
+                    // If we are merging transforms and the object derives from
+                    // MayaTransformWriter but isn't actually a transform node, we
+                    // need to add its parent.
+                    if (mArgs.mergeTransformAndShape) {
+                        MayaTransformWriterPtr xformWriter =
+                            std::dynamic_pointer_cast<MayaTransformWriter>(primWriter);
+                        if (xformWriter) {
+                            MDagPath xformDag = xformWriter->getTransformDagPath();
+                            mDagPathToUsdPathMap[xformDag] = usdPrim.GetPath();
+                        }
                     }
+                }
+
+                if (primWriter->shouldPruneChildren()) {
+                    itDag.prune();
                 }
             }
         }
-    }
-
-    for (const auto& primWriter : mMayaPrimWriterList) {
-        primWriter->write(UsdTimeCode::Default());
-        mModelKindWriter.OnWritePrim(primWriter->getPrim(), primWriter);
     }
 
     // Writing Looks/Shading
@@ -386,10 +362,8 @@ void usdWriteJob::endJob()
         // prim for the export... usdVariantRootPrimPath
         mStage->GetRootLayer()->SetDefaultPrim(defaultPrim);
     }
-    if (mStage->GetRootLayer()->PermissionToSave()) {
-        mStage->GetRootLayer()->Save();
-    }
-    mStage->Close();
+    saveAndCloseStage();
+    mMayaPrimWriterList.clear(); // clear this so that no stage references are left around
     MGlobal::displayInfo("usdWriteJob::endJob Saving Stage");
 }
 
@@ -518,7 +492,7 @@ bool usdWriteJob::needToTraverse(const MDagPath& curDag)
         return false;
     }
 
-    if (ob.hasFn(MFn::kTransform) && !mArgs.exportDefaultCameras) { 
+    if (!mArgs.exportDefaultCameras && ob.hasFn(MFn::kTransform)) {
         // Ignore transforms of default cameras 
         MString fullPathName = curDag.fullPathName(); 
         if (fullPathName == "|persp" || 
@@ -529,147 +503,7 @@ bool usdWriteJob::needToTraverse(const MDagPath& curDag)
         }
     }
 
-    if (ob.hasFn(MFn::kCamera) && !mArgs.exportDefaultCameras) {
-        // Ignore default cameras
-        MString fullPathName = curDag.fullPathName();
-        if (fullPathName == "|persp|perspShape" ||
-            fullPathName == "|top|topShape" ||
-            fullPathName == "|front|frontShape" ||
-            fullPathName == "|side|sideShape") {
-            return false;
-        }
-    }
-
     return true;
-}
-
-// This method returns false if the given dagPath should be ignored and
-// its subgraph should be pruned from the traversal. Otherwise, it returns true.
-MayaPrimWriterPtr usdWriteJob::createPrimWriter(
-        const MDagPath& curDag)
-{
-    MObject ob = curDag.node();
-
-    // Check whether a PluginPrimWriter exists for the node first, since plugin
-    // nodes may provide the same function sets as native Maya nodes. If a
-    // writer can't be found, we'll fall back on the standard writers below.
-    if (ob.hasFn(MFn::kPluginDependNode) && ob.hasFn(MFn::kDagNode) && ob.hasFn(MFn::kDependencyNode)) {
-        MFnDependencyNode depNodeFn(ob);
-        MPxNode *pxNode = depNodeFn.userNode();
-
-        std::string mayaTypeName(pxNode->typeName().asChar());
-
-        if (PxrUsdMayaPrimWriterRegistry::WriterFn primWriter =
-                PxrUsdMayaPrimWriterRegistry::Find(mayaTypeName)) {
-            PxrUsdExport_PluginPrimWriter::Ptr primPtr(new PxrUsdExport_PluginPrimWriter(
-                        curDag, mStage, mArgs, primWriter, this));
-            if (primPtr->isValid()) {
-                // We found a PluginPrimWriter that handles this node type, so
-                // return now.
-                return primPtr;
-            }
-        }
-    }
-
-    if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator) ||
-        (mArgs.exportInstances && curDag.isInstanced() && !isMasterInstance(curDag))) {
-        MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, mStage, mArgs, this));
-        if (primPtr->isValid() ) {
-            return primPtr;
-        }
-    }
-    else if (ob.hasFn(MFn::kMesh)) {
-        MayaMeshWriterPtr primPtr(new MayaMeshWriter(curDag, mStage, mArgs, this));
-        if (primPtr->isValid() ) {
-            return primPtr;
-        }
-    }
-    else if (ob.hasFn(MFn::kNurbsCurve)) {
-        MayaNurbsCurveWriterPtr primPtr(new MayaNurbsCurveWriter(curDag, mStage, mArgs, this));
-        if (primPtr->isValid() ) {
-            return primPtr;
-        }
-    }
-    else if (ob.hasFn(MFn::kNurbsSurface)) {
-        MayaNurbsSurfaceWriterPtr primPtr(new MayaNurbsSurfaceWriter(curDag, mStage, mArgs, this));
-        if (primPtr->isValid() ) {
-            return primPtr;
-        }
-    }
-    else if (ob.hasFn(MFn::kCamera)) {
-        MayaCameraWriterPtr primPtr(new MayaCameraWriter(curDag, mStage, mArgs, this));
-        if (primPtr->isValid() ) {
-            return primPtr;
-        }
-    }
-    else if (ob.hasFn(MFn::kImagePlane)) {
-        MayaImagePlaneWriterPtr primPtr(new MayaImagePlaneWriter(curDag, mStage, mArgs));
-        if (primPtr->isValid()) {
-            return primPtr;
-        }
-    }
-    else if (ob.hasFn(MFn::kPluginShape)) {
-        MFnDependencyNode dn(ob);
-        if (dn.typeName() == "vdb_visualizer") {
-            VdbVisualizerWriterPtr primPtr(new VdbVisualizerWriter(curDag, mStage, mArgs, this));
-            if (primPtr->isValid()) {
-                return primPtr;
-            }
-        }
-    }
-    
-    return nullptr;
-}
-
-SdfPath usdWriteJob::getMasterPath(const MDagPath& dg)
-{
-    auto dgCopy = getMayaMasterPath(dg);
-    dgCopy.pop();
-    const auto it = mDagPathToUsdPathMap.find(dgCopy);
-    if (it != mDagPathToUsdPathMap.end()) {
-        return it->second;
-    } else {
-        return SdfPath();
-    }
-}
-
-MDagPath usdWriteJob::getMayaMasterPath(const MDagPath& dg)
-{
-    if (!dg.isInstanced()) {
-        return dg;
-    }
-
-    const auto instanceNumber = dg.instanceNumber();
-    // if instance number is zero, and we are querying it, then it's always the master
-    if (instanceNumber == 0) {
-        return dg;
-    }
-    const MObjectHandle handle(dg.node());
-    const auto it = mMasterDagMap.find(handle);
-    if (it != mMasterDagMap.end()) {
-        return it->second;
-    } else {
-        MDagPathArray allInstances;
-        auto status = MDagPath::getAllPathsTo(dg.node(), allInstances);
-        const auto instanceCount = allInstances.length();
-        if (!status || (instanceCount == 0)) { return dg; }
-        // we are looking for the instance with the lowest number here
-        // which is still exported
-        const auto loopLimit = std::min(instanceNumber, instanceCount - 1);
-        for (auto i = 0u; i <= loopLimit; ++i) {
-            const auto& currDag = allInstances[i];
-            if (mMayaDagPathList.find(currDag) != mMayaDagPathList.end()) {
-                mMasterDagMap.insert(std::make_pair(handle, currDag));
-                return currDag;
-            }
-        }
-        return dg;
-    }
-}
-
-bool usdWriteJob::isMasterInstance(const MDagPath& dg)
-{
-    return getMayaMasterPath(dg) == dg;
 }
 
 void usdWriteJob::perFrameCallback(double iFrame)

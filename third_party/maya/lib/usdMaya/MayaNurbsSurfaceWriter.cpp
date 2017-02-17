@@ -42,10 +42,10 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 MayaNurbsSurfaceWriter::MayaNurbsSurfaceWriter(
         const MDagPath & iDag,
-        UsdStageRefPtr stage, 
-        const JobExportArgs & iArgs,
-        usdWriteJob* jobPtr) :
-    MayaTransformWriter(iDag, stage, iArgs, jobPtr)
+        const SdfPath& uPath,
+        bool instanceSource,
+        usdWriteJobCtx& job) :
+    MayaTransformWriter(iDag, uPath, instanceSource, job)
 {
     UsdGeomNurbsPatch primSchema =
         UsdGeomNurbsPatch::Define(getUsdStage(), getUsdPath());
