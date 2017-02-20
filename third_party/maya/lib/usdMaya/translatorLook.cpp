@@ -388,16 +388,17 @@ namespace {
             bool (*UserParamIteratorFinished) (const AtUserParamIterator*) = nullptr;
             const char* (*UserParamGetName) (const AtUserParamEntry*) = nullptr;
             int (*UserParamGetType) (const AtUserParamEntry*) = nullptr;
-            int (*UserParamGetArrayType) (const AtUserParamEntry* upentry) = nullptr;
+            int (*UserParamGetArrayType) (const AtUserParamEntry*) = nullptr;
             // Node entry functions
-            const char* (*NodeEntryGetName) (const AtNodeEntry* nentry) = nullptr;
-            AtParamIterator* (*NodeEntryGetParamIterator) (const AtNodeEntry* nentry) = nullptr;
+            const char* (*NodeEntryGetName) (const AtNodeEntry*) = nullptr;
+            AtParamIterator* (*NodeEntryGetParamIterator) (const AtNodeEntry*) = nullptr;
+            int32_t (*NodeEntryGetOutputType) (const AtNodeEntry*) = nullptr;
             // Param functions
-            void (*ParamIteratorDestroy) (AtParamIterator* iter) = nullptr;
-            const AtParamEntry* (*ParamIteratorGetNext) (AtParamIterator* iter) = nullptr;
-            bool (*ParamIteratorFinished) (const AtParamIterator* iter) = nullptr;
-            const char* (*ParamGetName) (const AtParamEntry* pentry) = nullptr;
-            int (*ParamGetType) (const AtParamEntry* pentry) = nullptr;
+            void (*ParamIteratorDestroy) (AtParamIterator*) = nullptr;
+            const AtParamEntry* (*ParamIteratorGetNext) (AtParamIterator*) = nullptr;
+            bool (*ParamIteratorFinished) (const AtParamIterator*) = nullptr;
+            const char* (*ParamGetName) (const AtParamEntry*) = nullptr;
+            int (*ParamGetType) (const AtParamEntry*) = nullptr;
             // Node functions
             uint8_t (*NodeGetByte) (const AtNode*, const char*) = nullptr;
             int32_t (*NodeGetInt) (const AtNode*, const char*) = nullptr;
@@ -502,6 +503,7 @@ namespace {
                     ai_ptr(UserParamGetArrayType, "AiUserParamGetArrayType");
                     ai_ptr(NodeEntryGetName, "AiNodeEntryGetName");
                     ai_ptr(NodeEntryGetParamIterator, "AiNodeEntryGetParamIterator");
+                    ai_ptr(NodeEntryGetOutputType, "AiNodeEntryGetOutputType");
                     ai_ptr(ParamIteratorDestroy, "AiParamIteratorDestroy");
                     ai_ptr(ParamIteratorGetNext, "AiParamIteratorGetNext");
                     ai_ptr(ParamIteratorFinished, "AiParamIteratorFinished");
@@ -553,6 +555,27 @@ namespace {
                 }
                 if (ai_handle != nullptr) {
                     dlclose(ai_handle);
+                }
+            }
+
+            // Preferring std::vector here over pointers, so we can get some extra
+            // boundary checks in debug mode.
+            static
+            const TfToken& out_comp_name(int32_t output_type, int32_t index) {
+                const auto i = std::min(std::max(index + 1, 0), 4);
+                const static std::array<TfToken, 5> rgb_comp_names = {
+                    TfToken("node"), TfToken("r"), TfToken("g"), TfToken("b"), TfToken("a")};
+                const static std::array<TfToken, 5> vec_comp_names = {
+                    TfToken("node"), TfToken("x"), TfToken("y"), TfToken("z"), TfToken("w")};
+                const static std::array<TfToken, 5> other_comp_names = {
+                    TfToken("node"), TfToken("node"), TfToken("node"), TfToken("node"), TfToken("node")};
+                switch (output_type) {
+                    case AI_TYPE_RGB: case AI_TYPE_RGBA:
+                        return rgb_comp_names[i];
+                    case AI_TYPE_VECTOR: case AI_TYPE_POINT: case AI_TYPE_POINT2:
+                        return vec_comp_names[i];
+                    default:
+                        return other_comp_names[i];
                 }
             }
         };
@@ -678,18 +701,23 @@ namespace {
                     api.CreateUserAttribute(TfToken(pname), itype->second.type);
                 } else {
                     auto param = shader.CreateParameter(TfToken(pname), itype->second.type);
-                    if (!param) { return; }
+                    // Connections to user parameters don't make much sense.
+                    if (!param || user) { return; }
                     // These checks can't be easily moved out, or we'll just put complexity somewhere else.
                     // Accessing AtParam directly won't give us the "type" checks the arnold functions are doing.
                     param.Set(itype->second.f(arnold_node, pname));
                     int32_t comp = -1;
                     const auto linked_node = ai.NodeGetLink(arnold_node, pname, &comp);
-                    if (linked_node != nullptr || comp > 4) {
+                    if (linked_node != nullptr) {
                         const auto linked_prim = write_arnold_node(linked_node);
                         if (!linked_prim.IsValid()) { return; }
                         UsdShadeShader linked_shader(linked_prim);
-                        const static TfToken comp_names[] = {TfToken("node"), TfToken("r"), TfToken("g"), TfToken("b"), TfToken("a")};
-                        auto out_param = linked_shader.GetOutput(comp_names[comp + 1]);
+                        // We make sure there are 5 elems in each array, thus the w and multiple nodes
+                        // so there is no need for extra checks.
+
+                        const auto linked_output_type = ai.NodeEntryGetOutputType(ai.NodeGetNodeEntry(linked_node));
+                        const auto& out_name = ArnoldCtx::out_comp_name(linked_output_type, comp);
+                        auto out_param = linked_shader.GetOutput(out_name);
                         if (out_param) {
                             param.ConnectToSource(out_param);
                         } else {
@@ -697,10 +725,10 @@ namespace {
                             // something neutral, like Token. Otherwise it's always float, there are no
                             // multicomponent, no float types in arnold.
                             param.ConnectToSource(
-                                linked_shader.CreateOutput(comp_names[comp + 1],
-                                                              comp != -1 ?
-                                                              SdfValueTypeNames.Get()->Float :
-                                                              SdfValueTypeNames.Get()->Token));
+                                linked_shader.CreateOutput(out_name,
+                                                           out_name == "node" ?
+                                                           SdfValueTypeNames.Get()->Float :
+                                                           SdfValueTypeNames.Get()->Token));
                         }
                     }
                 }
