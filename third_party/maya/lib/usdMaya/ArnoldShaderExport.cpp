@@ -1,19 +1,13 @@
 #include "usdMaya/ArnoldShaderExport.h"
 
-#include "pxr/usd/usdGeom/scope.h"
+#include "pxr/base/gf/matrix4f.h"
+#include "pxr/usd/sdf/types.h"
 #include "pxr/usd/usdAi/aiMaterialAPI.h"
 #include "pxr/usd/usdAi/aiNodeAPI.h"
-#include "pxr/usd/sdf/types.h"
-#include "pxr/base/gf/matrix4f.h"
+#include "pxr/usd/usd/relationship.h"
+#include "pxr/usd/usdGeom/scope.h"
 
 #include <dlfcn.h>
-
-struct AtArray {
-    void* data;
-    uint32_t nelements;
-    uint8_t nkeys;
-    uint8_t type;
-};
 
 namespace {
     constexpr uint8_t AI_TYPE_BYTE = 0x00;
@@ -35,11 +29,13 @@ namespace {
     constexpr uint8_t AI_TYPE_UNDEFINED = 0xFF;
     constexpr uint8_t AI_TYPE_NONE = 0xFF;
 
+
     struct AtNodeEntry;
     struct AtUserParamIterator;
     struct AtUserParamEntry;
     struct AtParamIterator;
     struct AtParamEntry;
+    struct AtArray;
     struct AtRGB {
         float r, g, b;
 
@@ -59,6 +55,12 @@ namespace {
         float x, y;
 
         operator GfVec2f() { return GfVec2f(x, y); }
+    };
+    struct AtArray {
+        void* data;
+        uint32_t nelements;
+        uint8_t nkeys;
+        uint8_t type;
     };
 
     struct ArnoldCtx {
@@ -282,8 +284,16 @@ namespace {
         param.Set(VtValue(out_arr));
     }
 
+    struct simple_type {
+        const SdfValueTypeName& type;
+        std::function<VtValue(const AtNode*, const char*)> f;
+
+        simple_type(const SdfValueTypeName& _type, std::function<VtValue(const AtNode*, const char*)> _f) :
+            type(_type), f(_f) { }
+    };
+
     // TODO: use sorted vectors with lower bound searches. Too many ptr jumps here
-    const std::map<uint8_t, ArnoldShaderExport::simple_type> simple_type_map = {
+    const std::map<uint8_t, simple_type> simple_type_map = {
         {AI_TYPE_BYTE, {SdfValueTypeNames.Get()->UChar, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetByte(no, na)); }}},
         {AI_TYPE_INT, {SdfValueTypeNames.Get()->Int, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetInt(no, na)); }}},
         {AI_TYPE_UINT, {SdfValueTypeNames.Get()->UInt, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetUInt(no, na)); }}},
@@ -299,7 +309,25 @@ namespace {
         {AI_TYPE_ENUM, {SdfValueTypeNames.Get()->Int, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetInt(no, na)); }}},
     };
 
-    const std::map<uint8_t, ArnoldShaderExport::array_type> array_type_map = {
+    const simple_type*
+    get_simple_type(uint8_t type) {
+        const auto it = simple_type_map.find(type);
+        if (it != simple_type_map.end()) {
+            return &it->second;
+        } else {
+            return nullptr;
+        }
+    }
+
+    struct array_type {
+        const SdfValueTypeName& type;
+        std::function<void(UsdShadeParameter&, const AtArray*)> f;
+
+        array_type(const SdfValueTypeName& _type, std::function<void(UsdShadeParameter&, const AtArray*)> _f) :
+            type(_type), f(_f) { }
+    };
+
+    const std::map<uint8_t, array_type> array_type_map = {
         {AI_TYPE_BYTE, {SdfValueTypeNames.Get()->UCharArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<uint8_t>(p, a, ai.ArrayGetByteFunc); }}},
         {AI_TYPE_INT, {SdfValueTypeNames.Get()->IntArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<int32_t>(p, a, ai.ArrayGetIntFunc); }}},
         {AI_TYPE_UINT, {SdfValueTypeNames.Get()->UIntArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<uint32_t>(p, a, ai.ArrayGetUIntFunc); }}},
@@ -322,20 +350,19 @@ namespace {
                        }}, // TODO: implement
         {AI_TYPE_ENUM, {SdfValueTypeNames.Get()->IntArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<int32_t>(p, a, ai.ArrayGetIntFunc); }}},
     };
+
+    const array_type*
+    get_array_type(uint8_t type) {
+        const auto it = array_type_map.find(type);
+        if (it != array_type_map.end()) {
+            return &it->second;
+        } else {
+            return nullptr;
+        }
+    }
 }
 
 ArnoldShaderExport::ArnoldShaderExport(const UsdStageRefPtr& _stage, UsdTimeCode _time_code) :
-    m_node_simple_type(SdfValueTypeNames.Get()->String, [this](const AtNode* no, const char* na) -> VtValue
-    {
-        return VtValue(this->write_arnold_node(reinterpret_cast<const AtNode*>(ai.NodeGetPtr(no, na))).GetPath().GetString());
-    }),
-    m_node_array_type(SdfValueTypeNames.Get()->StringArray, [this](UsdShadeParameter& p, const AtArray* a)
-    {
-        VtArray<std::string> arr(a->nelements);
-        for (auto i = 0u; i < a->nelements; ++i) {
-            arr[i] = this->write_arnold_node(reinterpret_cast<const AtNode*>(ai.ArrayGetPtrFunc(a, i, __FILE__, __LINE__))).GetPath().GetString();
-        }
-    }),
     m_stage(_stage), m_shaders_scope("/shaders"), m_time_code(_time_code) {
     UsdGeomScope::Define(m_stage, m_shaders_scope);
     ai.mtoa_init_export_session();
@@ -350,77 +377,86 @@ ArnoldShaderExport::is_valid() {
     return ai.is_valid();
 }
 
-const ArnoldShaderExport::simple_type*
-ArnoldShaderExport::get_simple_type(uint8_t type) {
-    if (type == AI_TYPE_ARRAY) {
-        return &m_node_simple_type;
-    } else {
-        const auto it = simple_type_map.find(type);
-        if (it != simple_type_map.end()) {
-            return &it->second;
-        } else {
-            return nullptr;
-        }
-    }
-}
-
-const ArnoldShaderExport::array_type*
-ArnoldShaderExport::get_array_type(uint8_t type) {
-    if (type == AI_TYPE_ARRAY) {
-        return &m_node_array_type;
-    } else {
-        const auto it = array_type_map.find(type);
-        if (it != array_type_map.end()) {
-            return &it->second;
-        } else {
-            return nullptr;
-        }
-    }
-}
-
 void
 ArnoldShaderExport::export_parameter(
     const AtNode* arnold_node, UsdAiShader& shader, const char* pname, uint8_t ptype, bool user) {
     if (ptype == AI_TYPE_ARRAY) {
         const auto arr = ai.NodeGetArray(arnold_node, pname);
         if (arr == nullptr || arr->nelements == 0 || arr->nkeys == 0 || arr->type == AI_TYPE_ARRAY) { return; }
-        const auto itype = get_array_type(arr->type);
-        if (itype == nullptr) { return; }
-        auto param = shader.CreateParameter(TfToken(pname), itype->type);
-        itype->f(param, arr);
-    } else {
-        const auto itype = get_simple_type(ptype);
-        if (itype == nullptr) { return; }
-        if (user) {
-            UsdAiNodeAPI api(shader.GetPrim());
-            auto param = api.CreateUserAttribute(TfToken(pname), itype->type);
-            param.Set(itype->f(arnold_node, pname));
-        } else {
-            auto param = shader.CreateParameter(TfToken(pname), itype->type);
-            if (!param) { return; }
-            // These checks can't be easily moved out, or we'll just put complexity somewhere else.
-            // Accessing AtParam directly won't give us the "type" checks the arnold functions are doing.
-            param.Set(itype->f(arnold_node, pname));
-            int32_t comp = -1;
-            const auto linked_node = ai.NodeGetLink(arnold_node, pname, &comp);
-            if (linked_node != nullptr) {
+        if (arr->type == AI_TYPE_NODE) {
+            std::vector<SdfPath> rels_vector(arr->nelements);
+            for (auto i = 0u; i < arr->nelements; ++i) {
+                const auto linked_node = reinterpret_cast<AtNode*>(ai.NodeGetPtr(arnold_node, pname));
+                if (linked_node == nullptr) { continue; }
                 const auto linked_prim = write_arnold_node(linked_node);
-                if (!linked_prim.IsValid()) { return; }
-                UsdShadeShader linked_shader(linked_prim);
-                const auto linked_output_type = ai.NodeEntryGetOutputType(ai.NodeGetNodeEntry(linked_node));
-                const auto& out_name = ArnoldCtx::out_comp_name(linked_output_type, comp);
-                auto out_param = linked_shader.GetOutput(out_name);
-                if (out_param) {
-                    param.ConnectToSource(out_param);
-                } else {
-                    // The automatic conversion will be handled by arnold, so make the full connection
-                    // something neutral, like Token. Otherwise it's always float, there are no
-                    // multicomponent, no float types in arnold.
-                    param.ConnectToSource(
-                        linked_shader.CreateOutput(out_name,
-                                                   out_name == "node" ?
-                                                   SdfValueTypeNames.Get()->Float :
-                                                   SdfValueTypeNames.Get()->Token));
+                if (linked_prim) { rels_vector[i] = linked_prim.GetPath(); }
+            }
+            const TfToken param_token(user ? std::string("user:") + std::string(pname) : pname);
+            const auto prim = shader.GetPrim();
+            if (prim.HasRelationship(param_token)) {
+                auto rel = prim.GetRelationship(param_token);
+                rel.ClearTargets(true);
+                rel.SetTargets(rels_vector);
+            } else {
+                auto rel = prim.CreateRelationship(param_token);
+                rel.SetTargets(rels_vector);
+            }
+        } else {
+            const auto itype = get_array_type(arr->type);
+            if (itype == nullptr) { return; }
+            auto param = shader.CreateParameter(TfToken(pname), itype->type);
+            itype->f(param, arr);
+        }
+    } else {
+        if (ptype == AI_TYPE_NODE) {
+            const auto linked_node = reinterpret_cast<AtNode*>(ai.NodeGetPtr(arnold_node, pname));
+            if (linked_node == nullptr) { return; }
+            const auto linked_prim = write_arnold_node(linked_node);
+            if (!linked_prim) { return; }
+            const TfToken param_token(user ? std::string("user:") + std::string(pname) : pname);
+            const auto prim = shader.GetPrim();
+            if (prim.HasRelationship(param_token)) {
+                auto rel = prim.GetRelationship(param_token);
+                rel.ClearTargets(true);
+                rel.AppendTarget(prim.GetPath());
+            } else {
+                auto rel = prim.CreateRelationship(param_token);
+                rel.AppendTarget(prim.GetPath());
+            }
+        } else {
+            const auto itype = get_simple_type(ptype);
+            if (itype == nullptr) { return; }
+            if (user) {
+                UsdAiNodeAPI api(shader.GetPrim());
+                auto param = api.CreateUserAttribute(TfToken(pname), itype->type);
+                param.Set(itype->f(arnold_node, pname));
+            } else {
+                auto param = shader.CreateParameter(TfToken(pname), itype->type);
+                if (!param) { return; }
+                // These checks can't be easily moved out, or we'll just put complexity somewhere else.
+                // Accessing AtParam directly won't give us the "type" checks the arnold functions are doing.
+                param.Set(itype->f(arnold_node, pname));
+                int32_t comp = -1;
+                const auto linked_node = ai.NodeGetLink(arnold_node, pname, &comp);
+                if (linked_node != nullptr) {
+                    const auto linked_prim = write_arnold_node(linked_node);
+                    if (!linked_prim.IsValid()) { return; }
+                    UsdShadeShader linked_shader(linked_prim);
+                    const auto linked_output_type = ai.NodeEntryGetOutputType(ai.NodeGetNodeEntry(linked_node));
+                    const auto& out_name = ArnoldCtx::out_comp_name(linked_output_type, comp);
+                    auto out_param = linked_shader.GetOutput(out_name);
+                    if (out_param) {
+                        param.ConnectToSource(out_param);
+                    } else {
+                        // The automatic conversion will be handled by arnold, so make the full connection
+                        // something neutral, like Token. Otherwise it's always float, there are no
+                        // multicomponent, no float types in arnold.
+                        param.ConnectToSource(
+                            linked_shader.CreateOutput(out_name,
+                                                       out_name == "node" ?
+                                                       SdfValueTypeNames.Get()->Float :
+                                                       SdfValueTypeNames.Get()->Token));
+                    }
                 }
             }
         }
