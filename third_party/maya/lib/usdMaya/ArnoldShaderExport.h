@@ -4,6 +4,7 @@
 #include "pxr/usd/usdAi/aiShader.h"
 
 #include <maya/MObject.h>
+#include <maya/MDagPath.h>
 
 struct AtNode;
 
@@ -23,6 +24,7 @@ private:
     UsdPrim write_arnold_node(const AtNode* arnold_node);
 public:
     UsdPrim export_shader(MObject obj, const char* attr);
+    void setup_shaders(const MDagPath& dg, const SdfPath& path);
 };
 
 #endif

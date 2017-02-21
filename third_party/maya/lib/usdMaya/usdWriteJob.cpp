@@ -265,7 +265,8 @@ bool usdWriteJob::beginJob(bool append)
                 mArgs.shadingMode,
                 mArgs.mergeTransformAndShape,
                 mArgs.handleUsdNamespaces,
-                mArgs.usdModelRootOverridePath);
+                mArgs.usdModelRootOverridePath,
+                mDagPathToUsdPathMap);
 
     if (!mModelKindWriter.MakeModelHierarchy(mStage)) {
         return false;

@@ -76,7 +76,8 @@ struct PxrUsdMayaTranslatorLook
             const TfToken& shadingMode,
             bool mergeTransformAndShape,
             bool handleUsdNamespaces,
-            SdfPath overrideRootPath);
+            SdfPath overrideRootPath,
+            PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap);
 };
 
 
