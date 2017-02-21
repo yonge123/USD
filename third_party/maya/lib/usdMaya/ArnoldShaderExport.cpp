@@ -29,6 +29,8 @@ namespace {
     constexpr uint8_t AI_TYPE_UNDEFINED = 0xFF;
     constexpr uint8_t AI_TYPE_NONE = 0xFF;
 
+    constexpr uint32_t AI_NODE_SHADER = 0x0010;
+
 
     struct AtNodeEntry;
     struct AtUserParamIterator;
@@ -84,6 +86,7 @@ namespace {
         // Node entry functions
         const char* (*NodeEntryGetName) (const AtNodeEntry*) = nullptr;
         AtParamIterator* (*NodeEntryGetParamIterator) (const AtNodeEntry*) = nullptr;
+        int32_t (*NodeEntryGetType) (const AtNodeEntry*) = nullptr;
         int32_t (*NodeEntryGetOutputType) (const AtNodeEntry*) = nullptr;
         // Param functions
         void (*ParamIteratorDestroy) (AtParamIterator*) = nullptr;
@@ -195,6 +198,7 @@ namespace {
                 ai_ptr(UserParamGetArrayType, "AiUserParamGetArrayType");
                 ai_ptr(NodeEntryGetName, "AiNodeEntryGetName");
                 ai_ptr(NodeEntryGetParamIterator, "AiNodeEntryGetParamIterator");
+                ai_ptr(NodeEntryGetType, "AiNodeEntryGetType");
                 ai_ptr(NodeEntryGetOutputType, "AiNodeEntryGetOutputType");
                 ai_ptr(ParamIteratorDestroy, "AiParamIteratorDestroy");
                 ai_ptr(ParamIteratorGetNext, "AiParamIteratorGetNext");
@@ -465,7 +469,11 @@ ArnoldShaderExport::export_parameter(
 
 UsdPrim
 ArnoldShaderExport::write_arnold_node(const AtNode* arnold_node) {
-    if (arnold_node != nullptr) {
+    if (arnold_node == nullptr) { return UsdPrim(); }
+    const auto nentry = ai.NodeGetNodeEntry(arnold_node);
+    if (ai.NodeEntryGetType(nentry) != AI_NODE_SHADER) {
+        return UsdPrim();
+    } else {
         const auto it = m_shader_to_usd_path.find(arnold_node);
         if (it != m_shader_to_usd_path.end()) {
             return it->second;
@@ -478,7 +486,6 @@ ArnoldShaderExport::write_arnold_node(const AtNode* arnold_node) {
             auto shader = UsdAiShader::Define(m_stage, shader_path);
             m_shader_to_usd_path.insert(std::make_pair(arnold_node, shader.GetPrim()));
 
-            const auto nentry = ai.NodeGetNodeEntry(arnold_node);
             shader.CreateIdAttr(VtValue(TfToken(ai.NodeEntryGetName(nentry))));
             auto piter = ai.NodeEntryGetParamIterator(nentry);
             while (!ai.ParamIteratorFinished(piter)) {
@@ -499,8 +506,6 @@ ArnoldShaderExport::write_arnold_node(const AtNode* arnold_node) {
             ai.UserParamIteratorDestroy(puiter);
             return shader.GetPrim();
         }
-    } else {
-        return UsdPrim();
     }
 }
 
