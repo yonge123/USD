@@ -281,14 +281,9 @@ namespace {
         }
         param.Set(VtValue(out_arr));
     }
-}
 
-ArnoldShaderExport::ArnoldShaderExport(const UsdStageRefPtr& _stage, UsdTimeCode _time_code) :
-    m_stage(_stage), m_shaders_scope("/shaders"), m_time_code(_time_code) {
-    UsdGeomScope::Define(m_stage, m_shaders_scope);
-    ai.mtoa_init_export_session();
-
-    simple_type_map = {
+    // TODO: use sorted vectors with lower bound searches. Too many ptr jumps here
+    const std::map<uint8_t, ArnoldShaderExport::simple_type> simple_type_map = {
         {AI_TYPE_BYTE, {SdfValueTypeNames.Get()->UChar, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetByte(no, na)); }}},
         {AI_TYPE_INT, {SdfValueTypeNames.Get()->Int, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetInt(no, na)); }}},
         {AI_TYPE_UINT, {SdfValueTypeNames.Get()->UInt, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetUInt(no, na)); }}},
@@ -300,17 +295,11 @@ ArnoldShaderExport::ArnoldShaderExport(const UsdStageRefPtr& _stage, UsdTimeCode
         {AI_TYPE_POINT, {SdfValueTypeNames.Get()->Vector3f, [](const AtNode* no, const char* na) -> VtValue { auto v = ai.NodeGetPnt(no, na); return VtValue(GfVec3f(v.x, v.y, v.z)); }}},
         {AI_TYPE_POINT2, {SdfValueTypeNames.Get()->Float2, [](const AtNode* no, const char* na) -> VtValue { auto v = ai.NodeGetPnt2(no, na); return VtValue(GfVec2f(v.x, v.y)); }}},
         {AI_TYPE_STRING, {SdfValueTypeNames.Get()->String, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetStr(no, na)); }}},
-        {AI_TYPE_NODE,
-            {SdfValueTypeNames.Get()->String,
-                           [this](const AtNode* no, const char* na) -> VtValue
-                                                        {
-                                                            return VtValue(this->write_arnold_node(reinterpret_cast<const AtNode*>(ai.NodeGetPtr(no, na))).GetPath().GetString());
-                                                        }}}, // TODO: Do connections here?
         {AI_TYPE_MATRIX, {SdfValueTypeNames.Get()->Matrix4d, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetMatrix(no, na)); }}},
         {AI_TYPE_ENUM, {SdfValueTypeNames.Get()->Int, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetInt(no, na)); }}},
     };
 
-    array_type_map = {
+    const std::map<uint8_t, ArnoldShaderExport::array_type> array_type_map = {
         {AI_TYPE_BYTE, {SdfValueTypeNames.Get()->UCharArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<uint8_t>(p, a, ai.ArrayGetByteFunc); }}},
         {AI_TYPE_INT, {SdfValueTypeNames.Get()->IntArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<int32_t>(p, a, ai.ArrayGetIntFunc); }}},
         {AI_TYPE_UINT, {SdfValueTypeNames.Get()->UIntArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<uint32_t>(p, a, ai.ArrayGetUIntFunc); }}},
@@ -322,15 +311,6 @@ ArnoldShaderExport::ArnoldShaderExport(const UsdStageRefPtr& _stage, UsdTimeCode
         {AI_TYPE_POINT, {SdfValueTypeNames.Get()->Vector3fArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<GfVec3f, AtPnt>(p, a, ai.ArrayGetPntFunc); }}},
         {AI_TYPE_POINT2, {SdfValueTypeNames.Get()->Float2Array, [](UsdShadeParameter& p, const AtArray* a) { export_array<GfVec2f, AtPnt2>(p, a, ai.ArrayGetPnt2Func); }}},
         {AI_TYPE_STRING, {SdfValueTypeNames.Get()->StringArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<std::string, const char*>(p, a, ai.ArrayGetStrFunc); }}},
-        {AI_TYPE_NODE,
-            {SdfValueTypeNames.Get()->StringArray,
-                           [this](UsdShadeParameter& p, const AtArray* a)
-                                                             {
-                                                                 VtArray<std::string> arr(a->nelements);
-                                                                 for (auto i = 0u; i < a->nelements; ++i) {
-                                                                     arr[i] = this->write_arnold_node(reinterpret_cast<const AtNode*>(ai.ArrayGetPtrFunc(a, i, __FILE__, __LINE__))).GetPath().GetString();
-                                                                 }
-                                                             }}},
         {AI_TYPE_MATRIX,
             {SdfValueTypeNames.Get()->Matrix4dArray,
                            [](UsdShadeParameter& p, const AtArray* a) {
@@ -344,6 +324,23 @@ ArnoldShaderExport::ArnoldShaderExport(const UsdStageRefPtr& _stage, UsdTimeCode
     };
 }
 
+ArnoldShaderExport::ArnoldShaderExport(const UsdStageRefPtr& _stage, UsdTimeCode _time_code) :
+    m_node_simple_type(SdfValueTypeNames.Get()->String, [this](const AtNode* no, const char* na) -> VtValue
+    {
+        return VtValue(this->write_arnold_node(reinterpret_cast<const AtNode*>(ai.NodeGetPtr(no, na))).GetPath().GetString());
+    }),
+    m_node_array_type(SdfValueTypeNames.Get()->StringArray, [this](UsdShadeParameter& p, const AtArray* a)
+    {
+        VtArray<std::string> arr(a->nelements);
+        for (auto i = 0u; i < a->nelements; ++i) {
+            arr[i] = this->write_arnold_node(reinterpret_cast<const AtNode*>(ai.ArrayGetPtrFunc(a, i, __FILE__, __LINE__))).GetPath().GetString();
+        }
+    }),
+    m_stage(_stage), m_shaders_scope("/shaders"), m_time_code(_time_code) {
+    UsdGeomScope::Define(m_stage, m_shaders_scope);
+    ai.mtoa_init_export_session();
+}
+
 ArnoldShaderExport::~ArnoldShaderExport() {
     ai.mtoa_destroy_export_session();
 }
@@ -353,37 +350,63 @@ ArnoldShaderExport::is_valid() {
     return ai.is_valid();
 }
 
+const ArnoldShaderExport::simple_type*
+ArnoldShaderExport::get_simple_type(uint8_t type) {
+    if (type == AI_TYPE_ARRAY) {
+        return &m_node_simple_type;
+    } else {
+        const auto it = simple_type_map.find(type);
+        if (it != simple_type_map.end()) {
+            return &it->second;
+        } else {
+            return nullptr;
+        }
+    }
+}
+
+const ArnoldShaderExport::array_type*
+ArnoldShaderExport::get_array_type(uint8_t type) {
+    if (type == AI_TYPE_ARRAY) {
+        return &m_node_array_type;
+    } else {
+        const auto it = array_type_map.find(type);
+        if (it != array_type_map.end()) {
+            return &it->second;
+        } else {
+            return nullptr;
+        }
+    }
+}
+
 void
-ArnoldShaderExport::export_parameter(const AtNode* arnold_node, UsdAiShader& shader, const char* pname, uint8_t ptype, bool user) {
+ArnoldShaderExport::export_parameter(
+    const AtNode* arnold_node, UsdAiShader& shader, const char* pname, uint8_t ptype, bool user) {
     if (ptype == AI_TYPE_ARRAY) {
         const auto arr = ai.NodeGetArray(arnold_node, pname);
         if (arr == nullptr || arr->nelements == 0 || arr->nkeys == 0 || arr->type == AI_TYPE_ARRAY) { return; }
-        const auto itype = array_type_map.find(arr->type);
-        if (itype == array_type_map.end() || itype->second.f == nullptr) { return; }
-        auto param = shader.CreateParameter(TfToken(pname), itype->second.type);
-        itype->second.f(param, arr);
+        const auto itype = get_array_type(arr->type);
+        if (itype == nullptr) { return; }
+        auto param = shader.CreateParameter(TfToken(pname), itype->type);
+        itype->f(param, arr);
     } else {
-        const auto itype = simple_type_map.find(ptype);
-        if (itype == simple_type_map.end()) { return; }
+        const auto itype = get_simple_type(ptype);
+        if (itype == nullptr) { return; }
         if (user) {
             UsdAiNodeAPI api(shader.GetPrim());
-            auto param = api.CreateUserAttribute(TfToken(pname), itype->second.type);
-            param.Set(itype->second.f(arnold_node, pname));
+            auto param = api.CreateUserAttribute(TfToken(pname), itype->type);
+            param.Set(itype->f(arnold_node, pname));
         } else {
-            auto param = shader.CreateParameter(TfToken(pname), itype->second.type);
+            auto param = shader.CreateParameter(TfToken(pname), itype->type);
             if (!param) { return; }
             // These checks can't be easily moved out, or we'll just put complexity somewhere else.
             // Accessing AtParam directly won't give us the "type" checks the arnold functions are doing.
-            param.Set(itype->second.f(arnold_node, pname));
+            param.Set(itype->f(arnold_node, pname));
             int32_t comp = -1;
             const auto linked_node = ai.NodeGetLink(arnold_node, pname, &comp);
             if (linked_node != nullptr) {
                 const auto linked_prim = write_arnold_node(linked_node);
                 if (!linked_prim.IsValid()) { return; }
                 UsdShadeShader linked_shader(linked_prim);
-                // We make sure there are 5 elems in each array, thus the w and multiple nodes
-                // so there is no need for extra checks.
-
                 const auto linked_output_type = ai.NodeEntryGetOutputType(ai.NodeGetNodeEntry(linked_node));
                 const auto& out_name = ArnoldCtx::out_comp_name(linked_output_type, comp);
                 auto out_param = linked_shader.GetOutput(out_name);
