@@ -1186,11 +1186,6 @@ class MainWindow(QtGui.QMainWindow):
             self._pathResolverContext = \
                 Ar.GetResolver().CreateDefaultContextForAsset(usdFilePath) 
 
-        if not os.path.isfile(usdFilePath):
-            print >> sys.stderr, "Error: File not found '" + usdFilePath + \
-                        "'. Stage was not opened."
-            return None
-
         if self._mallocTags != 'none':
             Tf.MallocTag.Initialize()
 
