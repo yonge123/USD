@@ -6,6 +6,11 @@
 #include "pxr/usd/usdAi/aiNodeAPI.h"
 #include "pxr/usd/usd/relationship.h"
 #include "pxr/usd/usdGeom/scope.h"
+#include "pxr/usd/usdShade/tokens.h"
+
+#include <maya/MFnDependencyNode.h>
+#include <maya/MPlug.h>
+#include <maya/MPlugArray.h>
 
 #include <dlfcn.h>
 
@@ -458,8 +463,8 @@ ArnoldShaderExport::export_parameter(
                         param.ConnectToSource(
                             linked_shader.CreateOutput(out_name,
                                                        out_name == "node" ?
-                                                       SdfValueTypeNames.Get()->Float :
-                                                       SdfValueTypeNames.Get()->Token));
+                                                       SdfValueTypeNames.Get()->Token :
+                                                       SdfValueTypeNames.Get()->Float));
                     }
                 }
             }
@@ -513,4 +518,35 @@ UsdPrim
 ArnoldShaderExport::export_shader(MObject obj, const char* attr) {
     auto arnold_node = ai.mtoa_export_node(&obj, attr);
     return write_arnold_node(arnold_node);
+}
+
+void
+ArnoldShaderExport::setup_shaders(const MDagPath& dg, const SdfPath& path) {
+    const auto obj = dg.node();
+    if (obj.hasFn(MFn::kTransform) || obj.hasFn(MFn::kLocator)) { return; }
+    MFnDependencyNode node(obj);
+    auto plug = node.findPlug("instObjGroups");
+    MPlugArray conns;
+    plug.elementByLogicalIndex(dg.instanceNumber()).connectedTo(conns, false, true);
+    const auto conns_length = conns.length();
+    for (auto i = 0u; i < conns_length; ++i) {
+        const auto splug = conns[i];
+        auto sobj = splug.node();
+        if (sobj.apiType() == MFn::kShadingEngine) {
+            auto shader = export_shader(sobj, "message");
+            if (shader) {
+                auto shape_prim = m_stage->GetPrimAtPath(path);
+                if (!shape_prim) { return; }
+                if (shape_prim.HasRelationship(UsdShadeTokens->materialBinding)) {
+                    auto rel = shape_prim.GetRelationship(UsdShadeTokens->materialBinding);
+                    rel.ClearTargets(true);
+                    rel.AppendTarget(shader.GetPath());
+                } else {
+                    auto rel = shape_prim.CreateRelationship(UsdShadeTokens->materialBinding);
+                    rel.AppendTarget(shader.GetPath());
+                }
+            }
+            return;
+        }
+    }
 }
