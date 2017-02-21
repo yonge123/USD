@@ -21,7 +21,7 @@ private:
     UsdTimeCode m_time_code;
 
     void export_parameter(const AtNode* arnold_node, UsdAiShader& shader, const char* pname, uint8_t ptype, bool user);
-    UsdPrim write_arnold_node(const AtNode* arnold_node);
+    UsdPrim write_arnold_node(const AtNode* arnold_node, SdfPath parent_path);
 public:
     UsdPrim export_shader(MObject obj, const char* attr);
     void setup_shaders(const MDagPath& dg, const SdfPath& path);
