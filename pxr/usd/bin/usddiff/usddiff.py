@@ -159,6 +159,8 @@ def _findFiles(args):
     baseline-only and comparison-only are lists of individual files, while
     matching is a list of corresponding pairs of files.'''
     import os
+    from pxr import Sdf
+
     join = os.path.join
     basename = os.path.basename
     exists = os.path.exists
@@ -170,15 +172,32 @@ def _findFiles(args):
                     for file in files]
         return set(ret)
 
-    # Must have FILE FILE, DIR DIR, DIR FILES... or FILES... DIR.
+    origArgs = args
+
+    # path may not be a "real" path due to custom resolvers... so use
+    # Sdf.Layer.FindOrOpen first
+    args = []
+    for arg in origArgs:
+        layer = Sdf.Layer.FindOrOpen(arg)
+        if layer is None:
+            raise ValueError("Error: unable to open %s" % arg)
+        args.append(layer.realPath)
+
+    for index, exist in enumerate(map(exists, args)):
+        if not exist:
+            origArg = origArgs[index]
+            arg = args[index]
+            if not origArg == arg:
+                path = '%s (real path: %s)' % (origArg, arg)
+            else:
+                path = arg
+            raise ValueError("Error: %s does not exist" % path)
+
+# Must have FILE FILE, DIR DIR, DIR FILES... or FILES... DIR.
     err = ValueError("Error: File arguments must be one of: "
                      "FILE FILE, DIR DIR, DIR FILES..., or FILES... DIR.")
     if len(args) < 2:
         raise err
-
-    for index, exist in enumerate(map(exists, args)):
-        if not exist:
-            raise ValueError("Error: %s does not exist" % args[index]) 
 
     # DIR FILES...
     if os.path.isdir(args[0]) and not any(map(os.path.isdir, args[1:])):
