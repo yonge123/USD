@@ -634,7 +634,7 @@ _GetMaterialAttr(
 
                     std::string handle = _CreateShadingNode(
                         surfacePrim, currentTime,
-                        nodesBuilder, interfaceBuilder, "arnold");
+                        nodesBuilder, interfaceBuilder, "arnold", flatten);
                     terminalsBuilder.set("arnoldSurface",
                                          FnKat::StringAttribute(handle));
                     terminalsBuilder.set("arnoldSurfacePort",
@@ -664,7 +664,7 @@ _GetMaterialAttr(
 
                     std::string handle = _CreateShadingNode(
                         displacementPrim, currentTime,
-                        nodesBuilder, interfaceBuilder, "arnold");
+                        nodesBuilder, interfaceBuilder, "arnold", flatten);
                     terminalsBuilder.set("arnoldDisplacement",
                                          FnKat::StringAttribute(handle));
                     terminalsBuilder.set("arnoldDisplacementPort",
