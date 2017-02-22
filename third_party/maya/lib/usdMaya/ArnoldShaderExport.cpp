@@ -7,6 +7,7 @@
 #include "pxr/usd/usd/relationship.h"
 #include "pxr/usd/usdGeom/scope.h"
 #include "pxr/usd/usdShade/tokens.h"
+#include "pxr/usd/usdShade/material.h"
 
 #include <maya/MFnDependencyNode.h>
 #include <maya/MPlug.h>
@@ -439,7 +440,9 @@ ArnoldShaderExport::export_parameter(
                                      reinterpret_cast<AtNode*>(ai.NodeGetPtr(arnold_node, pname)) :
                                      ai.NodeGetLink(arnold_node, pname, &comp);
             if (linked_node != nullptr) {
-                const auto linked_prim = write_arnold_node(linked_node, m_shaders_scope);
+                const auto linked_path = write_arnold_node(linked_node, m_shaders_scope);
+                if (linked_path.IsEmpty()) { return; }
+                auto linked_prim = m_stage->GetPrimAtPath(linked_path);
                 if (!linked_prim.IsValid()) { return; }
                 UsdShadeShader linked_shader(linked_prim);
                 const auto linked_output_type = ptype == AI_TYPE_NODE ?
@@ -461,12 +464,12 @@ ArnoldShaderExport::export_parameter(
     }
 }
 
-UsdPrim
+SdfPath
 ArnoldShaderExport::write_arnold_node(const AtNode* arnold_node, SdfPath parent_path) {
-    if (arnold_node == nullptr) { return UsdPrim(); }
+    if (arnold_node == nullptr) { return SdfPath(); }
     const auto nentry = ai.NodeGetNodeEntry(arnold_node);
     if (ai.NodeEntryGetType(nentry) != AI_NODE_SHADER) {
-        return UsdPrim();
+        return SdfPath();
     } else {
         const auto it = m_shader_to_usd_path.find(arnold_node);
         if (it != m_shader_to_usd_path.end()) {
@@ -478,7 +481,7 @@ ArnoldShaderExport::write_arnold_node(const AtNode* arnold_node, SdfPath parent_
             std::replace(arnold_name_cleanup.begin(), arnold_name_cleanup.end(), '@', '_');
             auto shader_path = parent_path.AppendPath(SdfPath(arnold_name_cleanup));
             auto shader = UsdAiShader::Define(m_stage, shader_path);
-            m_shader_to_usd_path.insert(std::make_pair(arnold_node, shader.GetPrim()));
+            m_shader_to_usd_path.insert(std::make_pair(arnold_node, shader_path));
 
             shader.CreateIdAttr(VtValue(TfToken(ai.NodeEntryGetName(nentry))));
             auto piter = ai.NodeEntryGetParamIterator(nentry);
@@ -498,15 +501,29 @@ ArnoldShaderExport::write_arnold_node(const AtNode* arnold_node, SdfPath parent_
                 export_parameter(arnold_node, shader, pname, ptype, true);
             }
             ai.UserParamIteratorDestroy(puiter);
-            return shader.GetPrim();
+            return shader_path;
         }
     }
 }
 
-UsdPrim
-ArnoldShaderExport::export_shader(MObject obj, const char* attr) {
-    auto arnold_node = ai.mtoa_export_node(&obj, attr);
-    return write_arnold_node(arnold_node, m_shaders_scope);
+SdfPath
+ArnoldShaderExport::export_shader(MObject obj) {
+    if (!obj.hasFn(MFn::kShadingEngine)) { return SdfPath(); }
+    auto arnold_node = ai.mtoa_export_node(&obj, "message");
+    if (arnold_node == nullptr) { return SdfPath(); }
+    // we can't store the material in the map
+    MFnDependencyNode node(obj);
+    auto material_path = m_shaders_scope.AppendChild(TfToken(node.name().asChar()));
+    auto material_prim = m_stage->GetPrimAtPath(material_path);
+    if (material_prim.IsValid()) { return material_path; } // if it already exists and setup
+    auto material = UsdShadeMaterial::Define(m_stage, material_path);
+    material_prim = material.GetPrim();
+    auto shading_engine_path = write_arnold_node(arnold_node, material_path);
+    if (!shading_engine_path.IsEmpty()) {
+        auto rel = material_prim.CreateRelationship(TfToken("ai:surface"));
+        rel.AppendTarget(shading_engine_path);
+    }
+    return material_path;
 }
 
 void
@@ -522,18 +539,19 @@ ArnoldShaderExport::setup_shaders(const MDagPath& dg, const SdfPath& path) {
         const auto splug = conns[i];
         auto sobj = splug.node();
         if (sobj.apiType() == MFn::kShadingEngine) {
-            auto shader = export_shader(sobj, "message");
-            if (shader) {
-                auto shape_prim = m_stage->GetPrimAtPath(path);
-                if (!shape_prim) { return; }
-                if (shape_prim.HasRelationship(UsdShadeTokens->materialBinding)) {
-                    auto rel = shape_prim.GetRelationship(UsdShadeTokens->materialBinding);
-                    rel.ClearTargets(true);
-                    rel.AppendTarget(shader.GetPath());
-                } else {
-                    auto rel = shape_prim.CreateRelationship(UsdShadeTokens->materialBinding);
-                    rel.AppendTarget(shader.GetPath());
-                }
+            auto shader_path = export_shader(sobj);
+            if (shader_path.IsEmpty()) { return; }
+            auto shader = m_stage->GetPrimAtPath(shader_path);
+            if (!shader.IsValid()) { return; }
+            auto shape_prim = m_stage->GetPrimAtPath(path);
+            if (!shape_prim.IsValid()) { return; }
+            if (shape_prim.HasRelationship(UsdShadeTokens->materialBinding)) {
+                auto rel = shape_prim.GetRelationship(UsdShadeTokens->materialBinding);
+                rel.ClearTargets(true);
+                rel.AppendTarget(shader_path);
+            } else {
+                auto rel = shape_prim.CreateRelationship(UsdShadeTokens->materialBinding);
+                rel.AppendTarget(shader_path);
             }
             return;
         }

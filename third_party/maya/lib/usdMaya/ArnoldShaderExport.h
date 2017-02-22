@@ -15,15 +15,15 @@ public:
 
     static bool is_valid();
 private:
-    std::map<const AtNode*, UsdPrim> m_shader_to_usd_path;
+    std::map<const AtNode*, SdfPath> m_shader_to_usd_path;
     const UsdStageRefPtr& m_stage;
     SdfPath m_shaders_scope;
     UsdTimeCode m_time_code;
 
     void export_parameter(const AtNode* arnold_node, UsdAiShader& shader, const char* pname, uint8_t ptype, bool user);
-    UsdPrim write_arnold_node(const AtNode* arnold_node, SdfPath parent_path);
+    SdfPath write_arnold_node(const AtNode* arnold_node, SdfPath parent_path);
 public:
-    UsdPrim export_shader(MObject obj, const char* attr);
+    SdfPath export_shader(MObject obj);
     void setup_shaders(const MDagPath& dg, const SdfPath& path);
 };
 

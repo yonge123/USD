@@ -331,7 +331,7 @@ PxrUsdMayaTranslatorLook::ExportShadingEngines(
         if (bindableRoots.empty()) {
             for (MItDependencyNodes iter(MFn::kShadingEngine); !iter.isDone(); iter.next()) {
                 MObject obj = iter.thisNode();
-                const auto exportedShader = ai.export_shader(obj, "message");
+                const auto exportedShader = ai.export_shader(obj);
             }
         }
         for (auto it = dagPathToUsdMap.begin(); it != dagPathToUsdMap.end(); ++it) {
