@@ -25,7 +25,7 @@
 #include "usdMaya/usdWriteJob.h"
 
 #include "usdMaya/JobArgs.h"
-#include "usdMaya/translatorLook.h"
+#include "usdMaya/translatorMaterial.h"
 #include "usdMaya/PluginPrimWriter.h"
 
 #include "usdMaya/Chaser.h"
@@ -258,8 +258,8 @@ bool usdWriteJob::beginJob(bool append)
         }
     }
 
-    // Writing Looks/Shading
-    PxrUsdMayaTranslatorLook::ExportShadingEngines(
+    // Writing Materials/Shading
+    PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
                 mStage, 
                 mArgs.dagPaths,
                 mArgs.shadingMode,

@@ -38,8 +38,6 @@ find_package(Boost
         system
     REQUIRED
 )
-# --Double Conversion
-find_package(DoubleConversion REQUIRED)
 
 # --TBB
 # LUMA: Force off for now, because turning it on causes usdview to error out
@@ -118,7 +116,6 @@ endif()
 
 if (PXR_BUILD_MAYA_PLUGIN)
     find_package(Maya REQUIRED)
-    find_package(GLUT REQUIRED)
 endif()
 
 if (PXR_BUILD_ALEMBIC_PLUGIN)

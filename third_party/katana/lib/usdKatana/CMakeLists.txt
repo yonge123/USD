@@ -48,6 +48,7 @@ pxr_shared_library(${PXR_PACKAGE}
         readMesh
         readModel
         readNurbsPatch
+        readPointInstancer
         readPoints
         readPrim
         readXformable

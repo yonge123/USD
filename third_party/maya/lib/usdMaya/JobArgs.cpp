@@ -64,7 +64,7 @@ bool JobSharedArgs::parseSharedOption(const MStringArray& theOption)
             shadingMode = PxrUsdMayaShadingModeTokens->none;
         } else if (theOption[1]=="GPrim Colors") {
             shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
-        } else if (theOption[1]=="Look Colors") {
+        } else if (theOption[1]=="Material Colors") {
             shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
         } else if (theOption[1]=="RfM Shaders") {
             TfToken rfmShadingMode("pxrRis");

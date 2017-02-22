@@ -22,7 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/pxr.h"
-#include "usdMaya/translatorLook.h"
+#include "usdMaya/translatorMaterial.h"
 
 #include "usdMaya/shadingModeRegistry.h"
 #include "usdMaya/util.h"
@@ -48,13 +48,13 @@ PXR_NAMESPACE_OPEN_SCOPE
 #define AI_NODE_SHADER      0x0010
 
 
-TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaTranslatorLookTokens,
-    PXRUSDMAYA_TRANSLATOR_LOOK_TOKENS);
+TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaTranslatorMaterialTokens,
+    PXRUSDMAYA_TRANSLATOR_MATERIAL_TOKENS);
 
 
 /* static */
 MObject
-PxrUsdMayaTranslatorLook::Read(
+PxrUsdMayaTranslatorMaterial::Read(
         const TfToken& shadingMode,
         const UsdShadeMaterial& shadeMaterial,
         const UsdGeomGprim& boundPrim,
@@ -94,7 +94,7 @@ PxrUsdMayaTranslatorLook::Read(
         // the Maya transform or shape node names, we put the shadingEngine
         // objects into their own namespace.
         std::string shadingEngineName =
-            PxrUsdMayaTranslatorLookTokens->LookNamespace.GetString() + std::string(":") +
+            PxrUsdMayaTranslatorMaterialTokens->MaterialNamespace.GetString() + std::string(":") +
             (shadeMaterial ? shadeMaterial.GetPrim() : boundPrim.GetPrim()
                 ).GetName().GetString();
 
@@ -155,7 +155,7 @@ _AssignMaterialFaceSet(const MObject &shadingEngine,
 }
 
 bool
-PxrUsdMayaTranslatorLook::AssignLook(
+PxrUsdMayaTranslatorMaterial::AssignMaterial(
         const TfToken& shadingMode,
         const UsdGeomGprim& primSchema,
         MObject shapeObj,
@@ -173,7 +173,7 @@ PxrUsdMayaTranslatorLook::AssignLook(
     MFnDagNode(shapeObj).getPath(shapeDagPath);
 
     MStatus status;
-    MObject shadingEngine = PxrUsdMayaTranslatorLook::Read(
+    MObject shadingEngine = PxrUsdMayaTranslatorMaterial::Read(
             shadingMode,
             UsdShadeMaterial::GetBoundMaterial(primSchema.GetPrim()), 
             primSchema, 
@@ -277,7 +277,7 @@ PxrUsdMayaTranslatorLook::AssignLook(
             primSchema.GetPrim().GetStage()->GetPrimAtPath(
                 *bindingTargetsIt));
 
-        MObject faceGroupShadingEngine = PxrUsdMayaTranslatorLook::Read(
+        MObject faceGroupShadingEngine = PxrUsdMayaTranslatorMaterial::Read(
             shadingMode, material, UsdGeomGprim(), context);
  
         if (faceGroupShadingEngine.isNull()) {
@@ -311,7 +311,7 @@ PxrUsdMayaTranslatorLook::AssignLook(
 
 /* static */
 void
-PxrUsdMayaTranslatorLook::ExportShadingEngines(
+PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
         const UsdStageRefPtr& stage,
         const PxrUsdMayaUtil::ShapeSet& bindableRoots,
         const TfToken& shadingMode,
