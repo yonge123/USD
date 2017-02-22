@@ -479,6 +479,7 @@ ArnoldShaderExport::write_arnold_node(const AtNode* arnold_node, SdfPath parent_
             // MtoA exports sub shaders with @ prefix, which is used for something else in USD
             // TODO: implement a proper cleanup using boost::regex
             std::replace(arnold_name_cleanup.begin(), arnold_name_cleanup.end(), '@', '_');
+            std::replace(arnold_name_cleanup.begin(), arnold_name_cleanup.end(), '.', '_');
             auto shader_path = parent_path.AppendPath(SdfPath(arnold_name_cleanup));
             auto shader = UsdAiShader::Define(m_stage, shader_path);
             m_shader_to_usd_path.insert(std::make_pair(arnold_node, shader_path));
@@ -522,6 +523,19 @@ ArnoldShaderExport::export_shader(MObject obj) {
     if (!shading_engine_path.IsEmpty()) {
         auto rel = material_prim.CreateRelationship(TfToken("ai:surface"));
         rel.AppendTarget(shading_engine_path);
+    }
+    auto disp_plug = node.findPlug("displacementShader");
+    MPlugArray conns;
+    disp_plug.connectedTo(conns, true, false);
+    if (conns.length() == 0) { return material_path; }
+    auto disp_obj = conns[0].node();
+    auto disp_path = write_arnold_node(
+        ai.mtoa_export_node(&disp_obj,
+                            conns[0].partialName(false, false, false, false, false, true).asChar()),
+                            m_shaders_scope);
+    if (!disp_path.IsEmpty()) {
+        auto rel = material_prim.CreateRelationship(TfToken("ai:displacement"));
+        rel.AppendTarget(disp_path);
     }
     return material_path;
 }
