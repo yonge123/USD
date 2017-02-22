@@ -21,8 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef PXRUSDMAYA_SHADINGMODEEXPORTER_H
-#define PXRUSDMAYA_SHADINGMODEEXPORTER_H
+#ifndef PXRUSDMAYA_SHADINGMODEEXPORTERCONTEXT_H
+#define PXRUSDMAYA_SHADINGMODEEXPORTERCONTEXT_H
 
 #include "pxr/pxr.h"
 #include "usdMaya/util.h"
@@ -92,4 +92,4 @@ typedef boost::function< void (PxrUsdMayaShadingModeExportContext*) > PxrUsdMaya
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // PXRUSDMAYA_SHADINGMODEEXPORTER_H
+#endif // PXRUSDMAYA_SHADINGMODEEXPORTERCONTEXT_H

@@ -35,7 +35,7 @@
 /// displayColor importer is used.  See DisplayColorShading.cpp
 
 #include "pxr/pxr.h"
-#include "usdMaya/shadingModeExporter.h"
+#include "usdMaya/shadingModeExporterContext.h"
 #include "usdMaya/shadingModeImporter.h"
 
 #include "pxr/base/tf/registryManager.h"

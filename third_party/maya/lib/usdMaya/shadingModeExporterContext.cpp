@@ -22,7 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/pxr.h"
-#include "usdMaya/shadingModeExporter.h"
+#include "usdMaya/shadingModeExporterContext.h"
 
 #include "usdMaya/util.h"
 

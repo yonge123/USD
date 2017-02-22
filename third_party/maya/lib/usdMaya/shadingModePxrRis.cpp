@@ -26,7 +26,7 @@
 #include "usdMaya/writeUtil.h"
 
 #include "usdMaya/shadingModeRegistry.h"
-#include "usdMaya/shadingModeExporter.h"
+#include "usdMaya/shadingModeExporterContext.h"
 
 #include "pxr/usd/usd/prim.h"
 
