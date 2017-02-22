@@ -34,6 +34,7 @@
 #include "usdMaya/usdImport.h"
 #include "usdMaya/usdExport.h"
 #include "usdMaya/usdCacheFormat.h"
+#include "usdMaya/usdListShadingModes.h"
 #include "usdMaya/usdTranslator.h"
 #include "usdMaya/variantSelectionNode.h"
 
@@ -161,6 +162,14 @@ MStatus initializePlugin(
         status.perror("registerCommand usdImport");
     }
 
+    status = plugin.registerCommand("usdListShadingModes",
+                                    usdListShadingModes::creator,
+                                    usdListShadingModes::createSyntax);
+
+    if (!status) {
+        status.perror("registerCommand usdListShadingModes");
+    }
+
     // Formerly had separate import/export translators, but due to a bug where
     // referenced .usd files had the wrong type saved (ie, they were saved as
     // pxrUsdExport type, which didn't have a read method!), they are now
@@ -221,6 +230,11 @@ MStatus uninitializePlugin(
     status = plugin.deregisterFileTranslator("pxrUsdExport");
     if (!status) {
         status.perror("pxrUsd: unable to deregister USD Export translator.");
+    }
+
+    status = plugin.deregisterFileTranslator("usdListShadingModes");
+    if (!status) {
+        status.perror("deregisterCommand usdListShadingModes");
     }
 
     status = plugin.deregisterCacheFormat("pxrUsdCacheFormat");

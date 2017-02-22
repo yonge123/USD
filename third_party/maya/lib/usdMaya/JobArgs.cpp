@@ -78,6 +78,16 @@ bool JobSharedArgs::parseSharedOption(const MStringArray& theOption)
             }
         } else if (theOption[1]=="arnold") {
             shadingMode = PxrUsdMayaShadingModeTokens->arnold;
+        } else {
+            TfToken modeToken(theOption[1].asChar());
+            if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(modeToken)) {
+                shadingMode = modeToken;
+            } else {
+                MGlobal::displayError(
+                    TfStringPrintf("No shadingMode '%s' found.  Setting shadingMode='none'",
+                                   modeToken.GetText()).c_str());
+                shadingMode = PxrUsdMayaShadingModeTokens->none;
+            }
         }
         return true;
     } else if (theOption[0] == MString("defaultMeshScheme")) {
