@@ -65,6 +65,12 @@ public:
     static PxrUsdMayaShadingModeImporter GetImporter(const TfToken& name) {
         return GetInstance()._GetImporter(name);
     }
+    static TfTokenVector ListExporters() {
+        return GetInstance()._ListExporters();
+    }
+    static TfTokenVector ListImporters() {
+        return GetInstance()._ListImporters();
+    }
 
     static PxrUsdMayaShadingModeRegistry& GetInstance();
     bool RegisterExporter(
@@ -78,6 +84,9 @@ public:
 private:
     PxrUsdMayaShadingModeExporter _GetExporter(const TfToken& name);
     PxrUsdMayaShadingModeImporter _GetImporter(const TfToken& name);
+
+    TfTokenVector _ListExporters();
+    TfTokenVector _ListImporters();
 
     PxrUsdMayaShadingModeRegistry();
     ~PxrUsdMayaShadingModeRegistry();

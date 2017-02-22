@@ -99,13 +99,12 @@ global proc int usdTranslatorExport (string $parent,
         setParent $parent;
 
         columnLayout -adj true usdOptsCol;
-        
-	    optionMenuGrp -l "Shading Mode:" shadingModePopup;
-	        menuItem -l "None";
-	        menuItem -l "GPrim Colors";
-	        menuItem -l "Material Colors";
-	        menuItem -l "RfM Shaders";
-	        menuItem -l "arnold";
+
+        string $exporters[] = `usdListShadingModes -export`;
+        optionMenuGrp -l "Shading Mode:" shadingModePopup;
+        for ($each in $exporters) {
+            menuItem -l $each;
+        }
 
         checkBox -l "Make References Instanceable" exportReferencesAsInstanceableCheckBox;
 
