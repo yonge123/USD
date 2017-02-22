@@ -44,7 +44,7 @@ pxr_shared_library(${PXR_PACKAGE}
         translatorImagePlane
         translatorCurves
         translatorGprim
-        translatorLook
+        translatorMaterial
         translatorMesh
         translatorModelAssembly
         translatorNurbsPatch
@@ -103,7 +103,7 @@ pxr_shared_library(${PXR_PACKAGE}
         MayaMeshWriter_SubDiv.cpp
         primReaderCamera.cpp
         primReaderImagePlane.cpp
-        primReaderLook.cpp
+        primReaderMaterial.cpp
         primReaderMesh.cpp
         primReaderNurbsCurves.cpp
         primReaderNurbsPatch.cpp
@@ -134,6 +134,7 @@ pxr_shared_library(${PXR_PACKAGE}
         testenv/testUsdExportDisplayColor.py
         testenv/testUsdExportFrameOffset.py
         testenv/testUsdExportUVSets.py
+        testenv/testUsdImportAsAssemblies.py
         testenv/testUsdImportCamera.py
         testenv/testUsdImportColorSets.py
         testenv/testUsdImportFrameRange.py
@@ -159,6 +160,7 @@ pxr_test_scripts(
         testenv/testUsdExportDisplayColor.py
         testenv/testUsdExportFrameOffset.py
         testenv/testUsdExportUVSets.py
+        testenv/testUsdImportAsAssemblies.py
         testenv/testUsdImportCamera.py
         testenv/testUsdImportColorSets.py
         testenv/testUsdImportFrameRange.py
@@ -237,6 +239,18 @@ pxr_install_test_dir(
 pxr_register_test(testUsdExportUVSets
     COMMAND "${MAYA_LOCATION}/bin/mayapy ${CMAKE_INSTALL_PREFIX}/tests/testUsdExportUVSets"
     TESTENV testUsdExportUVSets
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+)
+
+pxr_install_test_dir(
+    SRC testenv/UsdImportAsAssemblies
+    DEST testUsdImportAsAssemblies
+)
+pxr_register_test(testUsdImportAsAssemblies
+    COMMAND "${MAYA_LOCATION}/bin/mayapy ${CMAKE_INSTALL_PREFIX}/tests/testUsdImportAsAssemblies"
+    TESTENV testUsdImportAsAssemblies
     ENV
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources

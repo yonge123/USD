@@ -52,10 +52,14 @@ function(_install_headers LIBRARY_NAME)
             if(PXR_SYMLINK_HEADER_FILES AND NOT WIN32)
                 # cmake -E create_symlink doesn't create parent directories, while
                 # copy does... so need an extra command to make dir
+
+                # Also, if ${f} has a directory, header_parent_dir will be
+                # different than header_dest_dir                
+                get_filename_component(header_parent_dir ${outfile} DIRECTORY)
                 add_custom_command(
                         OUTPUT ${outfile}
                         COMMAND "${CMAKE_COMMAND}"
-                        ARGS -E make_directory "${header_dest_dir}"
+                        ARGS -E make_directory "${header_parent_dir}"
                         COMMAND "${CMAKE_COMMAND}"
                         ARGS -E create_symlink "${infile}" "${outfile}"
                         MAIN_DEPENDENCY "${infile}"

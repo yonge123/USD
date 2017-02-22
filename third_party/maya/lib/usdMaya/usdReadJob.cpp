@@ -28,7 +28,7 @@
 #include "usdMaya/primReaderRegistry.h"
 #include "usdMaya/shadingModeRegistry.h"
 #include "usdMaya/stageCache.h"
-#include "usdMaya/translatorLook.h"
+#include "usdMaya/translatorMaterial.h"
 #include "usdMaya/translatorModelAssembly.h"
 #include "usdMaya/translatorXformable.h"
 #include "usdMaya/translatorUtil.h"
@@ -481,14 +481,25 @@ bool usdReadJob::_DoImport(UsdTreeIterator& primIt,
                                       mArgs.endTime);
         PxrUsdMayaPrimReaderContext ctx(&mNewNodeRegistry);
 
+        // If we are NOT importing on behalf of an assembly, then we'll create
+        // reference assembly nodes that target the asset file and the root
+        // prims of those assets directly. This ensures that a re-export will
+        // work correctly, since USD references can only target root prims.
+        std::string assetIdentifier;
+        SdfPath assetPrimPath;
         if (PxrUsdMayaTranslatorModelAssembly::ShouldImportAsAssembly(
                 usdRootPrim,
-                prim)) {
-            // We use the file path of the file currently being imported and
-            // the path to the prim within that file when creating the
-            // reference assembly.
-            const std::string refFilePath = mArgs.fileName;
-            const SdfPath refPrimPath = prim.GetPath();
+                prim,
+                &assetIdentifier,
+                &assetPrimPath)) {
+            const bool isSceneAssembly = mMayaRootDagPath.node().hasFn(MFn::kAssembly);
+            if (isSceneAssembly) {
+                // If we ARE importing on behalf of an assembly, we use the
+                // file path of the top-level assembly and the path to the prim
+                // within that file when creating the reference assembly.
+                assetIdentifier = mArgs.fileName;
+                assetPrimPath = prim.GetPath();
+            }
 
             // XXX: At some point, if assemblyRep == "import" we'd like
             // to import everything instead of just making an assembly.
@@ -496,8 +507,8 @@ bool usdReadJob::_DoImport(UsdTreeIterator& primIt,
 
             MObject parentNode = ctx.GetMayaNode(prim.GetPath().GetParentPath(), false);
             if (PxrUsdMayaTranslatorModelAssembly::Read(prim,
-                                                        refFilePath,
-                                                        refPrimPath,
+                                                        assetIdentifier,
+                                                        assetPrimPath,
                                                         parentNode,
                                                         args,
                                                         &ctx,
