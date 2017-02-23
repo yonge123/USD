@@ -93,13 +93,6 @@ private:
     friend class TfSingleton<PxrUsdMayaShadingModeRegistry>;
 };
 
-#define DEFINE_SHADING_MODE_EXPORTER(name, exporter) \
-TF_REGISTRY_FUNCTION_WITH_TAG(PxrUsdMayaShadingModeExportCreator, exporter) {\
-    PxrUsdMayaShadingModeRegistry::GetInstance().RegisterExporter(name, []() -> PxrUsdMayaShadingModeExporterCreator {\
-        return PxrUsdMayaShadingModeExporterCreator(static_cast<PxrUsdMayaShadingModeExporter*>(new exporter ## ())); \
-    });\
-}
-
 #define DEFINE_SHADING_MODE_EXPORTER_OLD(name, contextName) \
 static void _ShadingModeExporter_##name(PxrUsdMayaShadingModeExportContext*); \
 void _ShadingModeExporter_##name(PxrUsdMayaShadingModeExportContext* contextName)

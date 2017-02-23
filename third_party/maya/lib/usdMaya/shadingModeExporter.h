@@ -37,18 +37,19 @@ PXR_NAMESPACE_OPEN_SCOPE
 class PxrUsdMayaShadingModeExporter {
 public:
     PxrUsdMayaShadingModeExporter();
+    virtual ~PxrUsdMayaShadingModeExporter();
 
     virtual void DoExport(const UsdStageRefPtr& stage,
                           const PxrUsdMayaUtil::ShapeSet& bindableRoots,
                           bool mergeTransformAndShape,
                           bool handleUsdNamespaces,
                           const SdfPath& overrideRootPath);
-protected:
-    virtual ~PxrUsdMayaShadingModeExporter();
-    virtual void Export(const PxrUsdMayaShadingModeExportContext& ctx);
+
+    virtual void Export(const PxrUsdMayaShadingModeExportContext& context);
 };
 
-using PxrUsdMayaShadingModeExporterCreator = std::function<std::shared_ptr<PxrUsdMayaShadingModeExporter>(void)>;
+using PxrUsdMayaShadingModeExporterPtr = std::shared_ptr<PxrUsdMayaShadingModeExporter>;
+using PxrUsdMayaShadingModeExporterCreator = std::function<std::shared_ptr<PxrUsdMayaShadingModeExporter>()>;
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
