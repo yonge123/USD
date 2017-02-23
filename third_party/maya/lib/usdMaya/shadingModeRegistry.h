@@ -93,10 +93,6 @@ private:
     friend class TfSingleton<PxrUsdMayaShadingModeRegistry>;
 };
 
-#define DEFINE_SHADING_MODE_EXPORTER_OLD(name, contextName) \
-static void _ShadingModeExporter_##name(PxrUsdMayaShadingModeExportContext*); \
-void _ShadingModeExporter_##name(PxrUsdMayaShadingModeExportContext* contextName)
-
 #define DEFINE_SHADING_MODE_IMPORTER(name, contextName) \
 static MPlug _ShadingModeImporter_##name(PxrUsdMayaShadingModeImportContext*); \
 TF_REGISTRY_FUNCTION_WITH_TAG(PxrUsdMayaShadingModeImportContext, name) {\

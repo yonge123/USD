@@ -198,7 +198,7 @@ private:
         }
     }
 };
-};
+}
 
 TF_REGISTRY_FUNCTION_WITH_TAG(PxrUsdMayaShadingModeExportContext, pxrRis)
 {
