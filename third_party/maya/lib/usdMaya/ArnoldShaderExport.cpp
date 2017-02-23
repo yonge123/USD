@@ -370,7 +370,7 @@ namespace {
         };
         const static std::vector<out_comp_t> vec_comp_names = {
             {"x", SdfValueTypeNames.Get()->Float},
-            {"t", SdfValueTypeNames.Get()->Float},
+            {"y", SdfValueTypeNames.Get()->Float},
             {"z", SdfValueTypeNames.Get()->Float},
         };
         if (index == -1) {
