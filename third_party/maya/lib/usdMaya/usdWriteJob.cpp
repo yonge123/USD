@@ -231,10 +231,11 @@ bool usdWriteJob::beginJob(bool append)
             if (primWriter) {
                 mMayaPrimWriterList.push_back(primWriter);
 
-                primWriter->write(UsdTimeCode::Default());
-
                 // Write out data (non-animated/default values).
-                if (const auto& usdPrim = primWriter->getPrim()) {
+                const auto& usdPrim = primWriter->getPrim();
+                if (usdPrim && usdPrim.IsValid()) {
+                    primWriter->write(UsdTimeCode::Default());
+
                     MDagPath dag = primWriter->getDagPath();
                     mDagPathToUsdPathMap[dag] = usdPrim.GetPath();
 
