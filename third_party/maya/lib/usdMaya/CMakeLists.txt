@@ -51,6 +51,7 @@ pxr_shared_library(${PXR_PACKAGE}
         translatorPrim
         translatorUtil
         translatorXformable
+        shadingModeExporter
         shadingModeExporterContext
         shadingModeImporter
         shadingModeRegistry

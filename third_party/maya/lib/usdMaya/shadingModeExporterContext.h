@@ -75,8 +75,7 @@ public:
             bool mergeTransformAndShape,
             bool handleUsdNamespaces,
             const PxrUsdMayaUtil::ShapeSet& bindableRoots,
-            SdfPath overrideRootPath); 
-
+            SdfPath overrideRootPath);
 private:
     MObject _shadingEngine;
     const UsdStageRefPtr& _stage;
@@ -87,7 +86,7 @@ private:
     SdfPathSet _bindableRoots;
 };
 
-typedef boost::function< void (PxrUsdMayaShadingModeExportContext*) > PxrUsdMayaShadingModeExporter;
+typedef boost::function< void (PxrUsdMayaShadingModeExportContext*) > PxrUsdMayaShadingModeExporterContext;
 
 
 PXR_NAMESPACE_CLOSE_SCOPE

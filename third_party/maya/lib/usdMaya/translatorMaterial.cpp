@@ -337,22 +337,11 @@ PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
         for (auto it = dagPathToUsdMap.begin(); it != dagPathToUsdMap.end(); ++it) {
             ai.setup_shaders(it->first, it->second);
         }
-    } else if (PxrUsdMayaShadingModeExporter exporter =
+    } else if (auto exporterCreator =
             PxrUsdMayaShadingModeRegistry::GetExporter(shadingMode)) {
-        MItDependencyNodes shadingEngineIter(MFn::kShadingEngine);
-        for (; !shadingEngineIter.isDone(); shadingEngineIter.next()) {
-            MObject shadingEngine(shadingEngineIter.thisNode());
-            MFnDependencyNode seDepNode(shadingEngine);
-
-            PxrUsdMayaShadingModeExportContext c(
-                    shadingEngine,
-                    stage,
-                    mergeTransformAndShape,
-                    handleUsdNamespaces,
-                    bindableRoots,
-                    overrideRootPath);
-
-            exporter(&c);
+        auto exporter = exporterCreator();
+        if (exporter != nullptr) {
+            exporter->DoExport(stage, bindableRoots, mergeTransformAndShape, handleUsdNamespaces, overrideRootPath);
         }
     }
     else {

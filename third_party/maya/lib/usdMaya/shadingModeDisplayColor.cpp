@@ -57,7 +57,7 @@ TF_DEFINE_PRIVATE_TOKENS(
 );
 
 
-DEFINE_SHADING_MODE_EXPORTER(displayColor, context)
+DEFINE_SHADING_MODE_EXPORTER_OLD(displayColor, context)
 {
     MStatus status;
     MFnDependencyNode ssDepNode(context->GetSurfaceShader(), &status);

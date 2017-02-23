@@ -167,7 +167,7 @@ _ExportShadingNode(const UsdPrim& materialPrim,
 
 }; // namespace _exporter
 
-DEFINE_SHADING_MODE_EXPORTER(pxrRis, context)
+DEFINE_SHADING_MODE_EXPORTER_OLD(pxrRis, context)
 {
     MStatus status;
     const PxrUsdMayaShadingModeExportContext::AssignmentVector &assignments = 
