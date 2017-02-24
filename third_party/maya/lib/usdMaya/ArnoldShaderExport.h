@@ -20,7 +20,7 @@ private:
     SdfPath m_shaders_scope;
     UsdTimeCode m_time_code;
 
-    void export_parameter(const AtNode* arnold_node, UsdAiShader& shader, const char* pname, uint8_t ptype, bool user);
+    void export_parameter(const AtNode* arnold_node, UsdAiShader& shader, const char* arnold_param_name, uint8_t arnold_param_type, bool user);
     SdfPath write_arnold_node(const AtNode* arnold_node, SdfPath parent_path);
 public:
     SdfPath export_shader(MObject obj);

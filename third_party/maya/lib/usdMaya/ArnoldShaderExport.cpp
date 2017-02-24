@@ -8,6 +8,8 @@
 #include "pxr/usd/usdGeom/scope.h"
 #include "pxr/usd/usdShade/tokens.h"
 #include "pxr/usd/usdShade/material.h"
+#include "pxr/usd/usdShade/input.h"
+#include "pxr/usd/usdShade/connectableAPI.h"
 
 #include <maya/MFnDependencyNode.h>
 #include <maya/MPlug.h>
@@ -391,6 +393,34 @@ namespace {
             }
         }
     }
+
+    using in_comp_names_t = std::vector<const char*>;
+    const in_comp_names_t& in_comp_names(int32_t input_type) {
+        const static in_comp_names_t empty;
+        const static in_comp_names_t rgb_names {
+            "r", "g", "b"
+        };
+        const static in_comp_names_t rgba_names = {
+            "r", "g", "b", "a"
+        };
+        const static in_comp_names_t vec_names = {
+            "x", "y", "z"
+        };
+        const static in_comp_names_t vec2_names = {
+            "x", "y"
+        };
+        if (input_type == AI_TYPE_RGB) {
+            return rgb_names;
+        } else if (input_type == AI_TYPE_RGBA) {
+            return rgba_names;
+        } else if (input_type == AI_TYPE_POINT || input_type == AI_TYPE_VECTOR) {
+            return vec_names;
+        } else if (input_type == AI_TYPE_POINT2) {
+            return vec2_names;
+        } else {
+            return empty;
+        }
+    }
 }
 
 ArnoldShaderExport::ArnoldShaderExport(const UsdStageRefPtr& _stage, UsdTimeCode _time_code) :
@@ -410,55 +440,66 @@ ArnoldShaderExport::is_valid() {
 
 void
 ArnoldShaderExport::export_parameter(
-    const AtNode* arnold_node, UsdAiShader& shader, const char* pname, uint8_t ptype, bool user) {
-    if (ptype == AI_TYPE_ARRAY) {
-        const auto arr = ai.NodeGetArray(arnold_node, pname);
+    const AtNode* arnold_node, UsdAiShader& shader, const char* arnold_param_name, uint8_t arnold_param_type, bool user) {
+    if (arnold_param_type == AI_TYPE_ARRAY) {
+        const auto arr = ai.NodeGetArray(arnold_node, arnold_param_name);
         if (arr == nullptr || arr->nelements == 0 || arr->nkeys == 0 || arr->type == AI_TYPE_ARRAY) { return; }
-        const auto itype = get_array_type(arr->type);
-        if (itype == nullptr) { return; }
-        auto param = shader.CreateParameter(TfToken(pname), itype->type);
-        if (itype->f != nullptr) {
-            itype->f(param, arr);
+        const auto iter_type = get_array_type(arr->type);
+        if (iter_type == nullptr) { return; }
+        auto param = shader.CreateParameter(TfToken(arnold_param_name), iter_type->type);
+        if (iter_type->f != nullptr) {
+            iter_type->f(param, arr);
         }
     } else {
-        const auto itype = get_simple_type(ptype);
-        if (itype == nullptr) { return; }
+        const auto iter_type = get_simple_type(arnold_param_type);
+        if (iter_type == nullptr) { return; }
         if (user) {
             UsdAiNodeAPI api(shader.GetPrim());
-            auto param = api.CreateUserAttribute(TfToken(pname), itype->type);
-            param.Set(itype->f(arnold_node, pname));
+            auto param = api.CreateUserAttribute(TfToken(arnold_param_name), iter_type->type);
+            param.Set(iter_type->f(arnold_node, arnold_param_name));
         } else {
-            auto param = shader.CreateParameter(TfToken(pname), itype->type);
+            UsdShadeConnectableAPI connectable_API(shader);
+            auto param = shader.CreateParameter(TfToken(arnold_param_name), iter_type->type);
             if (!param) { return; }
             // These checks can't be easily moved out, or we'll just put complexity somewhere else.
             // Accessing AtParam directly won't give us the "type" checks the arnold functions are doing.
-            if (itype->f != nullptr) {
-                param.Set(itype->f(arnold_node, pname));
+            if (iter_type->f != nullptr) {
+                param.Set(iter_type->f(arnold_node, arnold_param_name));
             }
-            int32_t comp = -1;
-            const auto linked_node = ptype == AI_TYPE_NODE ?
-                                     reinterpret_cast<AtNode*>(ai.NodeGetPtr(arnold_node, pname)) :
-                                     ai.NodeGetLink(arnold_node, pname, &comp);
-            if (linked_node != nullptr) {
-                const auto linked_path = write_arnold_node(linked_node, m_shaders_scope);
-                if (linked_path.IsEmpty()) { return; }
-                auto linked_prim = m_stage->GetPrimAtPath(linked_path);
-                if (!linked_prim.IsValid()) { return; }
-                UsdShadeShader linked_shader(linked_prim);
-                const auto linked_output_type = ptype == AI_TYPE_NODE ?
-                                                AI_TYPE_NODE :
-                                                ai.NodeEntryGetOutputType(ai.NodeGetNodeEntry(linked_node));
-                const auto& out_comp = out_comp_name(linked_output_type, comp);
-                auto out_param = linked_shader.GetOutput(out_comp.n);
-                if (out_param) {
-                    param.ConnectToSource(out_param);
-                } else {
-                    // The automatic conversion will be handled by arnold, so make the full connection
-                    // something neutral, like Token. Otherwise it's always float, there are no
-                    // multicomponent, no float types in arnold.
-                    param.ConnectToSource(
-                        linked_shader.CreateOutput(out_comp.n, out_comp.t));
-                }
+
+            auto get_source_parameter = [this, arnold_node, arnold_param_type] (const char* param_name, UsdShadeOutput& out) -> bool {
+                int32_t comp = -1;
+                const auto linked_node = arnold_param_type == AI_TYPE_NODE ?
+                                         reinterpret_cast<AtNode*>(ai.NodeGetPtr(arnold_node, param_name)) :
+                                         ai.NodeGetLink(arnold_node, param_name, &comp);
+                if (linked_node != nullptr) {
+                    const auto linked_path = this->write_arnold_node(linked_node, this->m_shaders_scope);
+                    if (linked_path.IsEmpty()) { return false; }
+                    auto linked_prim = this->m_stage->GetPrimAtPath(linked_path);
+                    if (!linked_prim.IsValid()) { return false; }
+                    UsdShadeShader linked_shader(linked_prim);
+                    UsdShadeConnectableAPI linked_API(linked_shader);
+                    const auto linked_output_type = arnold_param_type == AI_TYPE_NODE ?
+                                                    AI_TYPE_NODE :
+                                                    ai.NodeEntryGetOutputType(ai.NodeGetNodeEntry(linked_node));
+                    const auto& out_comp = out_comp_name(linked_output_type, comp);
+                    out = linked_API.GetOutput(out_comp.n);
+                    if (!out) {
+                        out = linked_shader.CreateOutput(out_comp.n, out_comp.t);
+                    }
+
+                    return true;
+                } else { return false; }
+            };
+
+            // check for the full connection first
+            UsdShadeOutput source_param;
+            if (get_source_parameter(arnold_param_name, source_param)) {
+                param.ConnectToSource(source_param);
+            }
+
+            for (const auto& comps : in_comp_names(arnold_param_type)) {
+                const auto comp_name = std::string(arnold_param_name) + std::string(".") + std::string(comps);
             }
         }
     }
