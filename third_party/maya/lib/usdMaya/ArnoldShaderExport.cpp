@@ -459,15 +459,13 @@ ArnoldShaderExport::export_parameter(
             param.Set(iter_type->f(arnold_node, arnold_param_name));
         } else {
             UsdShadeConnectableAPI connectable_API(shader);
-            auto param = shader.CreateParameter(TfToken(arnold_param_name), iter_type->type);
+            auto param = connectable_API.CreateInput(TfToken(arnold_param_name), iter_type->type);
             if (!param) { return; }
-            // These checks can't be easily moved out, or we'll just put complexity somewhere else.
-            // Accessing AtParam directly won't give us the "type" checks the arnold functions are doing.
             if (iter_type->f != nullptr) {
                 param.Set(iter_type->f(arnold_node, arnold_param_name));
             }
 
-            auto get_source_parameter = [this, arnold_node, arnold_param_type] (const char* param_name, UsdShadeOutput& out) -> bool {
+            auto get_output_parameter = [this, arnold_node, arnold_param_type] (const char* param_name, UsdShadeOutput& out) -> bool {
                 int32_t comp = -1;
                 const auto linked_node = arnold_param_type == AI_TYPE_NODE ?
                                          reinterpret_cast<AtNode*>(ai.NodeGetPtr(arnold_node, param_name)) :
@@ -485,7 +483,7 @@ ArnoldShaderExport::export_parameter(
                     const auto& out_comp = out_comp_name(linked_output_type, comp);
                     out = linked_API.GetOutput(out_comp.n);
                     if (!out) {
-                        out = linked_shader.CreateOutput(out_comp.n, out_comp.t);
+                        out = linked_API.CreateOutput(out_comp.n, out_comp.t);
                     }
 
                     return true;
@@ -494,12 +492,20 @@ ArnoldShaderExport::export_parameter(
 
             // check for the full connection first
             UsdShadeOutput source_param;
-            if (get_source_parameter(arnold_param_name, source_param)) {
-                param.ConnectToSource(source_param);
+            if (get_output_parameter(arnold_param_name, source_param)) {
+                connectable_API.ConnectToSource(param, source_param);
             }
 
             for (const auto& comps : in_comp_names(arnold_param_type)) {
-                const auto comp_name = std::string(arnold_param_name) + std::string(".") + std::string(comps);
+                const auto arnold_comp_name = std::string(arnold_param_name) + "." + comps;
+                const auto usd_comp_name = std::string(arnold_param_name) + ":" + comps;
+                if (get_output_parameter(arnold_comp_name.c_str(), source_param)) {
+                    auto param_comp = connectable_API.CreateInput(TfToken(usd_comp_name),
+                                                                  SdfValueTypeNames.Get()->Float);
+                    if (param_comp) {
+                        connectable_API.ConnectToSource(param_comp, source_param);
+                    }
+                }
             }
         }
     }
