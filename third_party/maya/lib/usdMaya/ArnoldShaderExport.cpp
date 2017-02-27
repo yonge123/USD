@@ -8,6 +8,8 @@
 #include "pxr/usd/usdGeom/scope.h"
 #include "pxr/usd/usdShade/tokens.h"
 #include "pxr/usd/usdShade/material.h"
+#include "pxr/usd/usdShade/input.h"
+#include "pxr/usd/usdShade/connectableAPI.h"
 
 #include <maya/MFnDependencyNode.h>
 #include <maya/MPlug.h>
@@ -80,6 +82,7 @@ namespace {
         // Node functions
         AtNode* (*NodeGetLink) (const AtNode*, const char*, int32_t*) = nullptr;
         const char* (*NodeGetName) (const AtNode*) = nullptr;
+        bool (*NodeIs) (const AtNode*, const char*) = nullptr;
         const AtNodeEntry* (*NodeGetNodeEntry) (const AtNode*) = nullptr;
         AtUserParamIterator* (*NodeGetUserParamIterator) (const AtNode*) = nullptr;
         // User entry functions
@@ -194,6 +197,7 @@ namespace {
                 mtoa_ptr(mtoa_destroy_export_session, "mtoa_destroy_export_session");
                 ai_ptr(NodeGetLink, "AiNodeGetLink");
                 ai_ptr(NodeGetName, "AiNodeGetName");
+                ai_ptr(NodeIs, "AiNodeIs");
                 ai_ptr(NodeGetNodeEntry, "AiNodeGetNodeEntry");
                 ai_ptr(NodeGetUserParamIterator, "AiNodeGetUserParamIterator");
                 ai_ptr(UserParamIteratorDestroy, "AiUserParamIteratorDestroy");
@@ -391,6 +395,39 @@ namespace {
             }
         }
     }
+
+    using in_comp_names_t = std::vector<const char*>;
+    const in_comp_names_t& in_comp_names(int32_t input_type) {
+        const static in_comp_names_t empty;
+        const static in_comp_names_t rgb_names {
+            "r", "g", "b"
+        };
+        const static in_comp_names_t rgba_names = {
+            "r", "g", "b", "a"
+        };
+        const static in_comp_names_t vec_names = {
+            "x", "y", "z"
+        };
+        const static in_comp_names_t vec2_names = {
+            "x", "y"
+        };
+        if (input_type == AI_TYPE_RGB) {
+            return rgb_names;
+        } else if (input_type == AI_TYPE_RGBA) {
+            return rgba_names;
+        } else if (input_type == AI_TYPE_POINT || input_type == AI_TYPE_VECTOR) {
+            return vec_names;
+        } else if (input_type == AI_TYPE_POINT2) {
+            return vec2_names;
+        } else {
+            return empty;
+        }
+    }
+
+    void clean_arnold_name(std::string& name) {
+        std::replace(name.begin(), name.end(), '@', '_');
+        std::replace(name.begin(), name.end(), '.', '_');
+    }
 }
 
 ArnoldShaderExport::ArnoldShaderExport(const UsdStageRefPtr& _stage, UsdTimeCode _time_code) :
@@ -410,54 +447,71 @@ ArnoldShaderExport::is_valid() {
 
 void
 ArnoldShaderExport::export_parameter(
-    const AtNode* arnold_node, UsdAiShader& shader, const char* pname, uint8_t ptype, bool user) {
-    if (ptype == AI_TYPE_ARRAY) {
-        const auto arr = ai.NodeGetArray(arnold_node, pname);
+    const AtNode* arnold_node, UsdAiShader& shader, const char* arnold_param_name, uint8_t arnold_param_type, bool user) {
+    if (arnold_param_type == AI_TYPE_ARRAY) {
+        const auto arr = ai.NodeGetArray(arnold_node, arnold_param_name);
         if (arr == nullptr || arr->nelements == 0 || arr->nkeys == 0 || arr->type == AI_TYPE_ARRAY) { return; }
-        const auto itype = get_array_type(arr->type);
-        if (itype == nullptr) { return; }
-        auto param = shader.CreateParameter(TfToken(pname), itype->type);
-        if (itype->f != nullptr) {
-            itype->f(param, arr);
+        const auto iter_type = get_array_type(arr->type);
+        if (iter_type == nullptr) { return; }
+        auto param = shader.CreateParameter(TfToken(arnold_param_name), iter_type->type);
+        if (iter_type->f != nullptr) {
+            iter_type->f(param, arr);
         }
     } else {
-        const auto itype = get_simple_type(ptype);
-        if (itype == nullptr) { return; }
+        const auto iter_type = get_simple_type(arnold_param_type);
+        if (iter_type == nullptr) { return; }
         if (user) {
             UsdAiNodeAPI api(shader.GetPrim());
-            auto param = api.CreateUserAttribute(TfToken(pname), itype->type);
-            param.Set(itype->f(arnold_node, pname));
+            auto param = api.CreateUserAttribute(TfToken(arnold_param_name), iter_type->type);
+            param.Set(iter_type->f(arnold_node, arnold_param_name));
         } else {
-            auto param = shader.CreateParameter(TfToken(pname), itype->type);
+            UsdShadeConnectableAPI connectable_API(shader);
+            auto param = connectable_API.CreateInput(TfToken(arnold_param_name), iter_type->type);
             if (!param) { return; }
-            // These checks can't be easily moved out, or we'll just put complexity somewhere else.
-            // Accessing AtParam directly won't give us the "type" checks the arnold functions are doing.
-            if (itype->f != nullptr) {
-                param.Set(itype->f(arnold_node, pname));
+            if (iter_type->f != nullptr) {
+                param.Set(iter_type->f(arnold_node, arnold_param_name));
             }
-            int32_t comp = -1;
-            const auto linked_node = ptype == AI_TYPE_NODE ?
-                                     reinterpret_cast<AtNode*>(ai.NodeGetPtr(arnold_node, pname)) :
-                                     ai.NodeGetLink(arnold_node, pname, &comp);
-            if (linked_node != nullptr) {
-                const auto linked_path = write_arnold_node(linked_node, m_shaders_scope);
-                if (linked_path.IsEmpty()) { return; }
-                auto linked_prim = m_stage->GetPrimAtPath(linked_path);
-                if (!linked_prim.IsValid()) { return; }
-                UsdShadeShader linked_shader(linked_prim);
-                const auto linked_output_type = ptype == AI_TYPE_NODE ?
-                                                AI_TYPE_NODE :
-                                                ai.NodeEntryGetOutputType(ai.NodeGetNodeEntry(linked_node));
-                const auto& out_comp = out_comp_name(linked_output_type, comp);
-                auto out_param = linked_shader.GetOutput(out_comp.n);
-                if (out_param) {
-                    param.ConnectToSource(out_param);
-                } else {
-                    // The automatic conversion will be handled by arnold, so make the full connection
-                    // something neutral, like Token. Otherwise it's always float, there are no
-                    // multicomponent, no float types in arnold.
-                    param.ConnectToSource(
-                        linked_shader.CreateOutput(out_comp.n, out_comp.t));
+
+            auto get_output_parameter = [this, arnold_node, arnold_param_type] (const char* param_name, UsdShadeOutput& out) -> bool {
+                int32_t comp = -1;
+                const auto linked_node = arnold_param_type == AI_TYPE_NODE ?
+                                         reinterpret_cast<AtNode*>(ai.NodeGetPtr(arnold_node, param_name)) :
+                                         ai.NodeGetLink(arnold_node, param_name, &comp);
+                if (linked_node != nullptr) {
+                    const auto linked_path = this->write_arnold_node(linked_node, this->m_shaders_scope);
+                    if (linked_path.IsEmpty()) { return false; }
+                    auto linked_prim = this->m_stage->GetPrimAtPath(linked_path);
+                    if (!linked_prim.IsValid()) { return false; }
+                    UsdShadeShader linked_shader(linked_prim);
+                    UsdShadeConnectableAPI linked_API(linked_shader);
+                    const auto linked_output_type = arnold_param_type == AI_TYPE_NODE ?
+                                                    AI_TYPE_NODE :
+                                                    ai.NodeEntryGetOutputType(ai.NodeGetNodeEntry(linked_node));
+                    const auto& out_comp = out_comp_name(linked_output_type, comp);
+                    out = linked_API.GetOutput(out_comp.n);
+                    if (!out) {
+                        out = linked_API.CreateOutput(out_comp.n, out_comp.t);
+                    }
+
+                    return true;
+                } else { return false; }
+            };
+
+            // check for the full connection first
+            UsdShadeOutput source_param;
+            if (get_output_parameter(arnold_param_name, source_param)) {
+                connectable_API.ConnectToSource(param, source_param);
+            }
+
+            for (const auto& comps : in_comp_names(arnold_param_type)) {
+                const auto arnold_comp_name = std::string(arnold_param_name) + "." + comps;
+                const auto usd_comp_name = std::string(arnold_param_name) + ":" + comps;
+                if (get_output_parameter(arnold_comp_name.c_str(), source_param)) {
+                    auto param_comp = connectable_API.CreateInput(TfToken(usd_comp_name),
+                                                                  SdfValueTypeNames.Get()->Float);
+                    if (param_comp) {
+                        connectable_API.ConnectToSource(param_comp, source_param);
+                    }
                 }
             }
         }
@@ -478,8 +532,7 @@ ArnoldShaderExport::write_arnold_node(const AtNode* arnold_node, SdfPath parent_
             std::string arnold_name_cleanup(ai.NodeGetName(arnold_node));
             // MtoA exports sub shaders with @ prefix, which is used for something else in USD
             // TODO: implement a proper cleanup using boost::regex
-            std::replace(arnold_name_cleanup.begin(), arnold_name_cleanup.end(), '@', '_');
-            std::replace(arnold_name_cleanup.begin(), arnold_name_cleanup.end(), '.', '_');
+            clean_arnold_name(arnold_name_cleanup);
             auto shader_path = parent_path.AppendPath(SdfPath(arnold_name_cleanup));
             auto shader = UsdAiShader::Define(m_stage, shader_path);
             m_shader_to_usd_path.insert(std::make_pair(arnold_node, shader_path));
@@ -542,8 +595,53 @@ ArnoldShaderExport::export_shader(MObject obj) {
 
 void
 ArnoldShaderExport::setup_shaders(const MDagPath& dg, const SdfPath& path) {
-    const auto obj = dg.node();
+    auto obj = dg.node();
     if (obj.hasFn(MFn::kTransform) || obj.hasFn(MFn::kLocator)) { return; }
+
+    auto setup_material = [&path, this] (SdfPath shader_path) {
+        auto shape_prim = this->m_stage->GetPrimAtPath(path);
+        if (!shape_prim.IsValid()) { return; }
+        if (shape_prim.HasRelationship(UsdShadeTokens->materialBinding)) {
+            auto rel = shape_prim.GetRelationship(UsdShadeTokens->materialBinding);
+            rel.ClearTargets(true);
+            rel.AppendTarget(shader_path);
+        } else {
+            auto rel = shape_prim.CreateRelationship(UsdShadeTokens->materialBinding);
+            rel.AppendTarget(shader_path);
+        }
+    };
+
+    if (obj.hasFn(MFn::kPluginShape)) {
+        MFnDependencyNode dn(obj);
+        if (dn.typeName() == "vdb_visualizer") {
+            auto* volume_node = ai.mtoa_export_node(&obj, "message");
+            if (!ai.NodeIs(volume_node, "volume")) { return; }
+            const auto* linked_shader = reinterpret_cast<const AtNode*>(ai.NodeGetPtr(volume_node, "shader"));
+            if (linked_shader == nullptr) { return; }
+            std::string cleaned_volume_name = ai.NodeGetName(linked_shader);
+            clean_arnold_name(cleaned_volume_name);
+            auto material_path = m_shaders_scope.AppendChild(TfToken(cleaned_volume_name));
+            auto material_prim = m_stage->GetPrimAtPath(material_path);
+            if (!material_prim.IsValid()) {
+                auto material = UsdShadeMaterial::Define(m_stage, material_path);
+                material_prim = material.GetPrim();
+            }
+            setup_material(material_path);
+
+            auto linked_path = write_arnold_node(linked_shader, material_path);
+            if (linked_path.IsEmpty()) { return; }
+            auto rel = material_prim.GetRelationship(TfToken("ai:volume"));
+            if (rel) {
+                rel.ClearTargets(true);
+                rel.AppendTarget(linked_path);
+            } else {
+                rel = material_prim.CreateRelationship(TfToken("ai:volume"));
+                rel.AppendTarget(linked_path);
+            }
+            return;
+        }
+    }
+
     MFnDependencyNode node(obj);
     auto plug = node.findPlug("instObjGroups");
     MPlugArray conns;
@@ -557,16 +655,7 @@ ArnoldShaderExport::setup_shaders(const MDagPath& dg, const SdfPath& path) {
             if (shader_path.IsEmpty()) { return; }
             auto shader = m_stage->GetPrimAtPath(shader_path);
             if (!shader.IsValid()) { return; }
-            auto shape_prim = m_stage->GetPrimAtPath(path);
-            if (!shape_prim.IsValid()) { return; }
-            if (shape_prim.HasRelationship(UsdShadeTokens->materialBinding)) {
-                auto rel = shape_prim.GetRelationship(UsdShadeTokens->materialBinding);
-                rel.ClearTargets(true);
-                rel.AppendTarget(shader_path);
-            } else {
-                auto rel = shape_prim.CreateRelationship(UsdShadeTokens->materialBinding);
-                rel.AppendTarget(shader_path);
-            }
+            setup_material(shader_path);
             return;
         }
     }
