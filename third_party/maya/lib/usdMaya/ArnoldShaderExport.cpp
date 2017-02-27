@@ -82,6 +82,7 @@ namespace {
         // Node functions
         AtNode* (*NodeGetLink) (const AtNode*, const char*, int32_t*) = nullptr;
         const char* (*NodeGetName) (const AtNode*) = nullptr;
+        bool (*NodeIs) (const AtNode*, const char*) = nullptr;
         const AtNodeEntry* (*NodeGetNodeEntry) (const AtNode*) = nullptr;
         AtUserParamIterator* (*NodeGetUserParamIterator) (const AtNode*) = nullptr;
         // User entry functions
@@ -196,6 +197,7 @@ namespace {
                 mtoa_ptr(mtoa_destroy_export_session, "mtoa_destroy_export_session");
                 ai_ptr(NodeGetLink, "AiNodeGetLink");
                 ai_ptr(NodeGetName, "AiNodeGetName");
+                ai_ptr(NodeIs, "AiNodeIs");
                 ai_ptr(NodeGetNodeEntry, "AiNodeGetNodeEntry");
                 ai_ptr(NodeGetUserParamIterator, "AiNodeGetUserParamIterator");
                 ai_ptr(UserParamIteratorDestroy, "AiUserParamIteratorDestroy");
@@ -421,6 +423,11 @@ namespace {
             return empty;
         }
     }
+
+    void clean_arnold_name(std::string& name) {
+        std::replace(name.begin(), name.end(), '@', '_');
+        std::replace(name.begin(), name.end(), '.', '_');
+    }
 }
 
 ArnoldShaderExport::ArnoldShaderExport(const UsdStageRefPtr& _stage, UsdTimeCode _time_code) :
@@ -525,8 +532,7 @@ ArnoldShaderExport::write_arnold_node(const AtNode* arnold_node, SdfPath parent_
             std::string arnold_name_cleanup(ai.NodeGetName(arnold_node));
             // MtoA exports sub shaders with @ prefix, which is used for something else in USD
             // TODO: implement a proper cleanup using boost::regex
-            std::replace(arnold_name_cleanup.begin(), arnold_name_cleanup.end(), '@', '_');
-            std::replace(arnold_name_cleanup.begin(), arnold_name_cleanup.end(), '.', '_');
+            clean_arnold_name(arnold_name_cleanup);
             auto shader_path = parent_path.AppendPath(SdfPath(arnold_name_cleanup));
             auto shader = UsdAiShader::Define(m_stage, shader_path);
             m_shader_to_usd_path.insert(std::make_pair(arnold_node, shader_path));
@@ -589,8 +595,53 @@ ArnoldShaderExport::export_shader(MObject obj) {
 
 void
 ArnoldShaderExport::setup_shaders(const MDagPath& dg, const SdfPath& path) {
-    const auto obj = dg.node();
+    auto obj = dg.node();
     if (obj.hasFn(MFn::kTransform) || obj.hasFn(MFn::kLocator)) { return; }
+
+    auto setup_material = [&path, this] (SdfPath shader_path) {
+        auto shape_prim = this->m_stage->GetPrimAtPath(path);
+        if (!shape_prim.IsValid()) { return; }
+        if (shape_prim.HasRelationship(UsdShadeTokens->materialBinding)) {
+            auto rel = shape_prim.GetRelationship(UsdShadeTokens->materialBinding);
+            rel.ClearTargets(true);
+            rel.AppendTarget(shader_path);
+        } else {
+            auto rel = shape_prim.CreateRelationship(UsdShadeTokens->materialBinding);
+            rel.AppendTarget(shader_path);
+        }
+    };
+
+    if (obj.hasFn(MFn::kPluginShape)) {
+        MFnDependencyNode dn(obj);
+        if (dn.typeName() == "vdb_visualizer") {
+            auto* volume_node = ai.mtoa_export_node(&obj, "message");
+            if (!ai.NodeIs(volume_node, "volume")) { return; }
+            const auto* linked_shader = reinterpret_cast<const AtNode*>(ai.NodeGetPtr(volume_node, "shader"));
+            if (linked_shader == nullptr) { return; }
+            std::string cleaned_volume_name = ai.NodeGetName(linked_shader);
+            clean_arnold_name(cleaned_volume_name);
+            auto material_path = m_shaders_scope.AppendChild(TfToken(cleaned_volume_name));
+            auto material_prim = m_stage->GetPrimAtPath(material_path);
+            if (!material_prim.IsValid()) {
+                auto material = UsdShadeMaterial::Define(m_stage, material_path);
+                material_prim = material.GetPrim();
+            }
+            setup_material(material_path);
+
+            auto linked_path = write_arnold_node(linked_shader, material_path);
+            if (linked_path.IsEmpty()) { return; }
+            auto rel = material_prim.GetRelationship(TfToken("ai:volume"));
+            if (rel) {
+                rel.ClearTargets(true);
+                rel.AppendTarget(linked_path);
+            } else {
+                rel = material_prim.CreateRelationship(TfToken("ai:volume"));
+                rel.AppendTarget(linked_path);
+            }
+            return;
+        }
+    }
+
     MFnDependencyNode node(obj);
     auto plug = node.findPlug("instObjGroups");
     MPlugArray conns;
@@ -604,16 +655,7 @@ ArnoldShaderExport::setup_shaders(const MDagPath& dg, const SdfPath& path) {
             if (shader_path.IsEmpty()) { return; }
             auto shader = m_stage->GetPrimAtPath(shader_path);
             if (!shader.IsValid()) { return; }
-            auto shape_prim = m_stage->GetPrimAtPath(path);
-            if (!shape_prim.IsValid()) { return; }
-            if (shape_prim.HasRelationship(UsdShadeTokens->materialBinding)) {
-                auto rel = shape_prim.GetRelationship(UsdShadeTokens->materialBinding);
-                rel.ClearTargets(true);
-                rel.AppendTarget(shader_path);
-            } else {
-                auto rel = shape_prim.CreateRelationship(UsdShadeTokens->materialBinding);
-                rel.AppendTarget(shader_path);
-            }
+            setup_material(shader_path);
             return;
         }
     }
