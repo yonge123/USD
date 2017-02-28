@@ -53,10 +53,10 @@ UsdShadeInterfaceAttribute::UsdShadeInterfaceAttribute(
         const UsdAttribute &attr)
 {
     TfToken const &interfaceAttrName = attr.GetName();
-    if (TfStringStartsWith(interfaceAttrName, UsdShadeTokens->interface)){
+    if (TfStringStartsWith(interfaceAttrName, UsdShadeTokens->interface_)){
         _attr = attr;
         _name = TfToken(interfaceAttrName.GetString().substr(
-            UsdShadeTokens->interface.GetString().size()));
+            UsdShadeTokens->interface_.GetString().size()));
     }
 }
 
@@ -64,12 +64,12 @@ UsdShadeInterfaceAttribute::UsdShadeInterfaceAttribute(
 UsdShadeInterfaceAttribute::_GetName(
         const TfToken& interfaceAttrName)
 {
-    if (TfStringStartsWith(interfaceAttrName, UsdShadeTokens->interface)) {
+    if (TfStringStartsWith(interfaceAttrName, UsdShadeTokens->interface_)) {
         return interfaceAttrName;
     }
     
     return TfToken(TfStringPrintf("%s%s",
-            UsdShadeTokens->interface.GetText(),
+            UsdShadeTokens->interface_.GetText(),
             interfaceAttrName.GetText()));
 }
 
@@ -231,7 +231,7 @@ UsdRelationship
 _GetConnectionRel(const UsdAttribute &interfaceAttr, 
                   bool create)
 {
-    if (not interfaceAttr) {
+    if (!interfaceAttr) {
         TF_WARN("Invalid attribute: %s", UsdDescribe(interfaceAttr).c_str());
         return UsdRelationship();
     }
@@ -267,7 +267,7 @@ bool
 UsdShadeInterfaceAttribute::ConnectToSource(const SdfPath &sourcePath) const
 {
     // sourcePath needs to be a property path for us to make a connection.
-    if (not sourcePath.IsPropertyPath())
+    if (!sourcePath.IsPropertyPath())
         return false;
 
     UsdPrim sourcePrim = GetAttr().GetStage()->GetPrimAtPath(

@@ -2,6 +2,31 @@
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
+ <property name="comment" stdset="0">
+   <string>
+     Copyright 2016 Pixar                                                                   
+                                                                                            
+     Licensed under the Apache License, Version 2.0 (the &quot;Apache License&quot;)      
+     with the following modification; you may not use this file except in                   
+     compliance with the Apache License and the following modification to it:               
+     Section 6. Trademarks. is deleted and replaced with:                                   
+                                                                                            
+     6. Trademarks. This License does not grant permission to use the trade                 
+        names, trademarks, service marks, or product names of the Licensor                  
+        and its affiliates, except as required to comply with Section 4(c) of               
+        the License and to reproduce the content of the NOTICE file.                        
+                                                                                            
+     You may obtain a copy of the Apache License at                                         
+                                                                                            
+         http://www.apache.org/licenses/LICENSE-2.0                                         
+                                                                                            
+     Unless required by applicable law or agreed to in writing, software                    
+     distributed under the Apache License with the above modification is                    
+     distributed on an &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY   
+     KIND, either express or implied. See the Apache License for the specific               
+     language governing permissions and limitations under the Apache License.               
+  </string>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -157,12 +182,18 @@
 
          <item>
             <widget class="QWidget" name="nodeLegendContainer">
-                 <property name="maximumSize">
-                     <size>
-                         <width>400</width>
-                         <height>100</height>
-                     </size>
-                 </property>
+                <property name="maximumSize">
+                    <size>
+                        <width>400</width>
+                        <height>0</height>
+                    </size>
+                </property>
+                <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                   </sizepolicy>
+                </property>
                 <layout class="QVBoxLayout" name="nodeLegendLayoutContainer">
                 <item>
                 <layout class="QGridLayout" name="nodeLegendLayout">
@@ -343,7 +374,13 @@
            </item>
 
            <item>
-            <widget class="QToolButton" name="nodeLegendQButton">
+            <widget class="QPushButton" name="nodeLegendQButton">
+             <property name="maximumSize">
+              <size>
+               <width>32</width>
+               <height>24</height>
+              </size>
+             </property>
              <property name="iconSize">
               <size>
                <width>12</width>
@@ -561,12 +598,18 @@
          <!-- Property Value Inspector Key Begin -->
          <item>
              <widget class="QWidget" name="propertyLegendContainer">
-             <property name="maximumSize">
+                <property name="maximumSize">
                  <size>
                      <width>500</width>
-                     <height>100</height>
+                     <height>0</height>
                  </size>
-             </property>
+                </property>
+                <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                   </sizepolicy>
+                </property>
                  <layout class="QGridLayout" name="propertyLegendLayout">
                  <item row="0" column="0">
                      <widget class="QGraphicsView" name="propertyLegendColorFallback">
@@ -741,8 +784,14 @@
             <number>5</number>
            </property>
            <item>
-              <widget class="QToolButton" name="propertyLegendQButton">
-                  <property name="font">
+              <widget class="QPushButton" name="propertyLegendQButton">
+                <property name="maximumSize">
+                  <size>
+                   <width>32</width>
+                   <height>24</height>
+                  </size>
+                 </property>
+                 <property name="font">
                       <font>
                           <family>Gotham Rounded</family>
                           <pointsize>9</pointsize>

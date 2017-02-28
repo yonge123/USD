@@ -27,12 +27,13 @@
 /// \file usdShade/connectableAPI.h
 
 #include "pxr/pxr.h"
+#include "pxr/usd/usdShade/api.h"
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
 
 #include "pxr/usd/usdShade/shader.h"
-#include "pxr/usd/usdShade/subgraph.h"
+#include "pxr/usd/usdShade/nodeGraph.h"
     
 
 #include "pxr/base/vt/value.h"
@@ -86,11 +87,13 @@ public:
     }
 
     /// Destructor.
+    USDSHADE_API
     virtual ~UsdShadeConnectableAPI();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
+    USDSHADE_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
@@ -103,6 +106,7 @@ public:
     /// UsdShadeConnectableAPI(stage->GetPrimAtPath(path));
     /// \endcode
     ///
+    USDSHADE_API
     static UsdShadeConnectableAPI
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
@@ -110,11 +114,13 @@ public:
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
+    USDSHADE_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
+    USDSHADE_API
     virtual const TfType &_GetTfType() const;
 
 public:
@@ -131,7 +137,8 @@ public:
     
 private:
     // Returns true if the given prim is compatible with this API schema,
-    // i.e. if it is a shader or a subgraph.
+    // i.e. if it is a shader or a node-graph.
+    USDSHADE_API
     virtual bool _IsCompatible(const UsdPrim &prim) const;
     
 public:
@@ -142,23 +149,25 @@ public:
     {        
     }
 
-    /// Constructor that takes a UsdShadeSubgraph.
-    explicit UsdShadeConnectableAPI(const UsdShadeSubgraph &subgraph):
-        UsdShadeConnectableAPI(subgraph.GetPrim())
+    /// Constructor that takes a UsdShadeNodeGraph.
+    explicit UsdShadeConnectableAPI(const UsdShadeNodeGraph &nodeGraph):
+        UsdShadeConnectableAPI(nodeGraph.GetPrim())
     {        
     }
 
     /// Returns true if the prim is a shader.
+    USDSHADE_API
     bool IsShader() const;
 
-    /// Returns true if the prim is a subgraph.
-    bool IsSubgraph() const;
+    /// Returns true if the prim is a node-graph.
+    USDSHADE_API
+    bool IsNodeGraph() const;
 
-    /// Allow UsdShadeConnectableAPI to auto-convert to UsdShadeSubgraph, so 
+    /// Allow UsdShadeConnectableAPI to auto-convert to UsdShadeNodeGraph, so 
     /// you can pass in a UsdShadeConnectableAPI to any function that accepts 
-    /// a UsdShadeSubgraph.
-    operator UsdShadeSubgraph () {
-        return UsdShadeSubgraph(GetPrim());
+    /// a UsdShadeNodeGraph.
+    operator UsdShadeNodeGraph () {
+        return UsdShadeNodeGraph(GetPrim());
     }
 
     /// Allow UsdShadeConnectableAPI to auto-convert to UsdShadeShader, so 
@@ -170,7 +179,7 @@ public:
 
     /// \name Connections 
     /// 
-    /// Inputs and outputs on shaders and subgraphs are connectable.
+    /// Inputs and outputs on shaders and node-graphs are connectable.
     /// This section provides API for authoring and managing these connections
     /// in a shading network.
     /// 
@@ -200,6 +209,7 @@ public:
     /// \note The source shading property is created if it doesn't exist 
     /// already.
     ///
+    USDSHADE_API
     static bool ConnectToSource(
         UsdProperty const &shadingProp,
         UsdShadeConnectableAPI const &source, 
@@ -215,16 +225,19 @@ public:
     /// This overload is provided for convenience, for use in contexts where 
     /// the prim types are unknown or unavailable.
     /// 
+    USDSHADE_API
     static bool ConnectToSource(UsdProperty const &shadingProp, 
                                 SdfPath const &sourcePath);
 
     /// \overload 
     /// Connect the given shading property to the given source input. 
+    USDSHADE_API
     static bool ConnectToSource(UsdProperty const &shadingProp, 
                                 UsdShadeInput const &sourceInput);
 
     /// \overload 
     /// Connect the given shading property to the given source output. 
+    USDSHADE_API
     static bool ConnectToSource(UsdProperty const &shadingProp, 
                                 UsdShadeOutput const &sourceOutput);
 
@@ -250,6 +263,7 @@ public:
     /// (source, sourceName, sourceType) tuple if the parameter is connected, 
     /// else \c None
     ///
+    USDSHADE_API
     static bool GetConnectedSource(
         UsdProperty const &shadingProp,
         UsdShadeConnectableAPI *source, 
@@ -269,6 +283,7 @@ public:
     ///      // process unconnected property
     /// }
     /// \endcode
+    USDSHADE_API
     static bool HasConnectedSource(const UsdProperty &shadingProp);
 
     /// Disconnect source for this shading property.
@@ -281,6 +296,7 @@ public:
     /// the current UsdEditTarget. 
     ///
     /// \sa ConnectToSource().
+    USDSHADE_API
     static bool DisconnectSource(UsdProperty const &shadingProp);
 
     /// Clears source for this shading property in the current UsdEditTarget.
@@ -289,6 +305,7 @@ public:
     /// rather than this function.
     ///
     /// \sa DisconnectSource()
+    USDSHADE_API
     static bool ClearSource(UsdProperty const &shadingProp);
 
     /// @}
@@ -298,11 +315,12 @@ public:
     /// @{
 
     /// Create an output, which represents and externally computed, typed value.
-    /// Outputs on subgraphs can be connected. 
+    /// Outputs on node-graphs can be connected. 
     /// 
     /// The attribute representing an output is created in the "outputs:" 
     /// namespace.
     /// 
+    USDSHADE_API
     UsdShadeOutput CreateOutput(const TfToken& name,
                                 const SdfValueTypeName& typeName) const;
 
@@ -310,11 +328,13 @@ public:
     /// 
     /// \p name is the unnamespaced base name.
     ///
+    USDSHADE_API
     UsdShadeOutput GetOutput(const TfToken &name) const;
 
-    /// Returns all outputs on the connectable prim (i.e. shader or subgraph). 
+    /// Returns all outputs on the connectable prim (i.e. shader or node-graph). 
     /// Outputs are represented by attributes in the "outputs:" namespace.
     /// 
+    USDSHADE_API
     std::vector<UsdShadeOutput> GetOutputs() const;
 
     /// @}
@@ -326,6 +346,7 @@ public:
     /// The attribute representing the input is created in the "inputs:" 
     /// namespace.
     /// 
+    USDSHADE_API
     UsdShadeInput CreateInput(const TfToken& name,
                                const SdfValueTypeName& typeName) const;
 
@@ -333,11 +354,13 @@ public:
     /// 
     /// \p name is the unnamespaced base name.
     /// 
+    USDSHADE_API
     UsdShadeInput GetInput(const TfToken &name) const;
 
-    /// Returns all inputs on the connectable prim (i.e. shader or subgraph). 
+    /// Returns all inputs on the connectable prim (i.e. shader or node-graph). 
     /// Inputs are represented by attributes in the "inputs:" namespace.
     /// 
+    USDSHADE_API
     std::vector<UsdShadeInput> GetInputs() const;
 
     /// @}

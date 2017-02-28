@@ -53,6 +53,9 @@ pxr_shared_library(${PXR_PACKAGE}
         readPrim
         readXformable
 
+    PUBLIC_HEADERS
+        api.h
+
     PYMODULE_CPPFILES
         wrapBlindDataObject.cpp
         wrapLookAPI.cpp

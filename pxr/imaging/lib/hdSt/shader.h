@@ -42,7 +42,9 @@ public:
     virtual ~HdStShader();
 
     /// Synchronizes state from the delegate to this object.
-    virtual void Sync(HdSceneDelegate *sceneDelegate) override;
+    virtual void Sync(HdSceneDelegate *sceneDelegate,
+                      HdRenderParam   *renderParam,
+                      HdDirtyBits     *dirtyBits) override;
 
     /// Accessor for tasks to get the parameter cached in this sprim object.
     /// Don't communicate back to scene delegate within this function.
@@ -51,7 +53,7 @@ public:
     /// Returns the minimal set of dirty bits to place in the
     /// change tracker for use in the first sync of this prim.
     /// Typically this would be all dirty bits.
-    virtual int GetInitialDirtyBitsMask() const override;
+    virtual HdDirtyBits GetInitialDirtyBitsMask() const override;
 
     /// Causes the shader to be reloaded.
     virtual void Reload() override;

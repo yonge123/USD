@@ -501,50 +501,6 @@ HdEngine::_InitCaps() const
     HdRenderContextCaps::GetInstance();
 }
 
-void 
-HdEngine::Draw(HdRenderIndex& index,
-               HdRenderPassSharedPtr const &renderPass,
-               HdRenderPassStateSharedPtr const &renderPassState)
-{
-    // DEPRECATED : use Execute() instead
-
-    // XXX: remaining client codes are
-    //
-    //   HdxIntersector::Query
-    //   Hd_TestDriver::Draw
-    //   UsdImaging_TestDriver::Draw
-    //   PxUsdGeomGL_TestDriver::Draw
-    //   HfkCurvesVMP::draw
-    //
-
-    HD_TRACE_FUNCTION();
-    _InitCaps();
-
-    // Sync the scene state prims
-    index.SyncSprims();
-
-    renderPass->Sync();
-    renderPassState->Sync();
-
-    // Process pending dirty lists.
-    index.SyncAll();
-
-    // Commit all pending source data.
-    _resourceRegistry->Commit();
-
-    if (index.GetChangeTracker().IsGarbageCollectionNeeded()) {
-        _resourceRegistry->GarbageCollect();
-        index.GetChangeTracker().ClearGarbageCollectionNeeded();
-        index.GetChangeTracker().MarkAllCollectionsDirty();
-    }
-
-    _resourceRegistry->GarbageCollectDispatchBuffers();
-
-    renderPassState->Bind();
-    renderPass->Execute(renderPassState);
-    renderPassState->Unbind();
-}
-
 void
 HdEngine::Execute(HdRenderIndex& index, HdTaskSharedPtrVector const &tasks)
 {
@@ -567,9 +523,6 @@ HdEngine::Execute(HdRenderIndex& index, HdTaskSharedPtrVector const &tasks)
 
     _InitCaps();
 
-    // Sync the scene state prims
-    index.SyncSprims();
-
     // --------------------------------------------------------------------- //
     // DATA DISCOVERY PHASE
     // --------------------------------------------------------------------- //
@@ -582,17 +535,9 @@ HdEngine::Execute(HdRenderIndex& index, HdTaskSharedPtrVector const &tasks)
     // with both BufferSources that need to be resolved (possibly generating
     // data on the CPU) and computations to run on the GPU.
 
-    // could be in parallel... but how?
-    // may be just gathering dirtyLists at first, and then index->sync()?
-    TF_FOR_ALL(it, tasks) {
-        if (!TF_VERIFY(*it)) {
-            continue;
-        }
-        (*it)->Sync(&_taskContext);
-    }
 
     // Process all pending dirty lists
-    index.SyncAll();
+    index.SyncAll(tasks, &_taskContext);
 
     // --------------------------------------------------------------------- //
     // RESOLVE, COMPUTE & COMMIT PHASE
@@ -693,6 +638,63 @@ HdEngine::_InitalizeDefaultGalDelegateId()
     GalDelegateRegistry &galRegistry = GalDelegateRegistry::GetInstance();
 
     _defaultGalDelegateId = galRegistry.GetDefaultDelegateId();
+}
+
+
+
+class Hd_DrawTask final : public HdTask
+{
+public:
+    Hd_DrawTask(HdRenderPassSharedPtr const &renderPass,
+                HdRenderPassStateSharedPtr const &renderPassState)
+    : HdTask()
+    , _renderPass(renderPass)
+    , _renderPassState(renderPassState)
+    {
+    }
+
+protected:
+    virtual void _Sync( HdTaskContext* ctx) override
+    {
+        _renderPass->Sync();
+        _renderPassState->Sync();
+    }
+
+    virtual void _Execute(HdTaskContext* ctx) override
+    {
+        _renderPassState->Bind();
+        _renderPass->Execute(_renderPassState);
+        _renderPassState->Unbind();
+    }
+
+private:
+    HdRenderPassSharedPtr _renderPass;
+    HdRenderPassStateSharedPtr _renderPassState;
+};
+
+void 
+HdEngine::Draw(HdRenderIndex& index,
+               HdRenderPassSharedPtr const &renderPass,
+               HdRenderPassStateSharedPtr const &renderPassState)
+{
+    // DEPRECATED : use Execute() instead
+
+    // XXX: remaining client codes are
+    //
+    //   HdxIntersector::Query
+    //   Hd_TestDriver::Draw
+    //   UsdImaging_TestDriver::Draw
+    //   PxUsdGeomGL_TestDriver::Draw
+    //   HfkCurvesVMP::draw
+    //
+    HD_TRACE_FUNCTION();
+
+    // Create Dummy task to use with Execute API.
+    HdTaskSharedPtrVector tasks;
+    tasks.push_back(boost::make_shared<Hd_DrawTask>(renderPass,
+                                                    renderPassState));
+
+    Execute(index, tasks);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

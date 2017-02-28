@@ -90,7 +90,7 @@ UsdShadeInput::UsdShadeInput(
             _attr = prim.GetAttribute(name);
         }
         else {
-            TfToken interfaceAttrName(UsdShadeTokens->interface.GetString() + 
+            TfToken interfaceAttrName(UsdShadeTokens->interface_.GetString() + 
                                       name.GetString());
             if (prim.HasAttribute(interfaceAttrName)) {
                 _attr = prim.GetAttribute(interfaceAttrName);
@@ -104,11 +104,11 @@ UsdShadeInput::UsdShadeInput(
                 /* custom = */ false);
         } else {
             UsdShadeConnectableAPI connectable(prim);
-            // If this is a subgraph and the name already contains "interface:" 
+            // If this is a node-graph and the name already contains "interface:" 
             // namespace in it, just create the attribute with the requested 
             // name.
-            if (connectable.IsSubgraph() and 
-                TfStringStartsWith(name.GetString(), UsdShadeTokens->interface))
+            if (connectable.IsNodeGraph() && 
+                TfStringStartsWith(name.GetString(),UsdShadeTokens->interface_))
             {
                 _attr = prim.CreateAttribute(name, typeName, /*custom*/ false);
             } else {
@@ -149,7 +149,7 @@ UsdShadeInput::HasRenderType() const
 bool 
 UsdShadeInput::IsInput(const UsdAttribute &attr)
 {
-    return attr and attr.IsDefined() and 
+    return attr && attr.IsDefined() && 
             // Check the attribute's namespace only if reading of old encoding 
             // is not supported.
             (UsdShadeUtils::ReadOldEncoding() ? true :

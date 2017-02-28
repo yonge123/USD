@@ -23,6 +23,7 @@
 //
 #include "pxr/imaging/hd/primTypeIndex.h"
 #include "pxr/imaging/hd/bprim.h"
+#include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/renderDelegate.h"
 #include "pxr/imaging/hd/sprim.h"
@@ -111,8 +112,7 @@ Hd_PrimTypeIndex<PrimType>::InsertPrim(const TfToken    &typeId,
     }
 
 
-    HdChangeTracker::DirtyBits initialDirtyState =
-                                                prim->GetInitialDirtyBitsMask();
+    HdDirtyBits initialDirtyState = prim->GetInitialDirtyBitsMask();
 
     _TrackerInsertPrim(tracker, primId, initialDirtyState);
 
@@ -268,30 +268,12 @@ Hd_PrimTypeIndex<PrimType>::DestroyFallbackPrims(HdRenderDelegate *renderDelegat
 
 template <class PrimType>
 void
-Hd_PrimTypeIndex<PrimType>::SyncPrims(HdChangeTracker &tracker)
+Hd_PrimTypeIndex<PrimType>::SyncPrims(HdChangeTracker  &tracker,
+                                      HdRenderParam    *renderParam)
 {
     size_t numTypes = _entries.size();
 
-    // XXX: Temporary solution to Sync Ordering issue.
-    // Currently SPrims are synced before BPrims, but BPrims are supposed to
-    // be first.  This is an issue for Shaders that depend on Textures being
-    // synced and registered.
-    // So for now, skip sync'ing shaders here and sync them later seperatly
-    // after Bprims.
-
-    size_t shaderTypeIdxXXX = -1;
-    _TypeIndex::const_iterator typeItXXX = _index.find(HdPrimTypeTokens->shader);
-    if (typeItXXX != _index.end()) {
-        shaderTypeIdxXXX = typeItXXX->second;
-    }
-
-
-
     for (size_t typeIdx = 0; typeIdx < numTypes; ++typeIdx) {
-        if (typeIdx == shaderTypeIdxXXX) {
-            continue;
-        }
-
         _PrimTypeEntry &typeEntry =  _entries[typeIdx];
 
         for (typename _PrimMap::iterator primIt  = typeEntry.primMap.begin();
@@ -299,31 +281,20 @@ Hd_PrimTypeIndex<PrimType>::SyncPrims(HdChangeTracker &tracker)
                                        ++primIt) {
             const SdfPath &primPath = primIt->first;
 
-            if (_TrackerGetPrimDirtyBits(tracker, primPath) != HdChangeTracker::Clean) {
+            HdDirtyBits dirtyBits = _TrackerGetPrimDirtyBits(tracker, primPath);
+
+            if (dirtyBits != HdChangeTracker::Clean) {
 
                 _PrimInfo &primInfo = primIt->second;
 
-                primInfo.prim->Sync(primInfo.sceneDelegate);
+                primInfo.prim->Sync(primInfo.sceneDelegate,
+                                    renderParam,
+                                    &dirtyBits);
 
-                _TrackerMarkPrimClean(tracker, primPath);
+                _TrackerMarkPrimClean(tracker, primPath, dirtyBits);
             }
         }
     }
-}
-
-// XXX: Transitional API
-template <class PrimType>
-const typename Hd_PrimTypeIndex<PrimType>::_PrimMap *
-Hd_PrimTypeIndex<PrimType>::GetPrimMapXXX(TfToken const &typeId) const
-{
-
-    typename _TypeIndex::const_iterator typeIt = _index.find(typeId);
-    if (typeIt ==_index.end()) {
-        TF_CODING_ERROR("Unsupported prim type: %s", typeId.GetText());
-        return nullptr;
-    }
-
-    return &_entries[typeIt->second].primMap;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -335,7 +306,7 @@ template <>
 void
 Hd_PrimTypeIndex<HdSprim>::_TrackerInsertPrim(HdChangeTracker &tracker,
                                               const SdfPath  &path,
-                                   HdChangeTracker::DirtyBits initialDirtyState)
+                                              HdDirtyBits initialDirtyState)
 {
     tracker.SprimInserted(path, initialDirtyState);
 }
@@ -351,7 +322,7 @@ Hd_PrimTypeIndex<HdSprim>::_TrackerRemovePrim(HdChangeTracker &tracker,
 
 template <>
 // static
-HdChangeTracker::DirtyBits
+HdDirtyBits
 Hd_PrimTypeIndex<HdSprim>::_TrackerGetPrimDirtyBits(HdChangeTracker &tracker,
                                                    const SdfPath &path)
 {
@@ -361,10 +332,12 @@ Hd_PrimTypeIndex<HdSprim>::_TrackerGetPrimDirtyBits(HdChangeTracker &tracker,
 template <>
 // static
 void
-Hd_PrimTypeIndex<HdSprim>::_TrackerMarkPrimClean(HdChangeTracker &tracker,
-                                                 const SdfPath &path)
+Hd_PrimTypeIndex<HdSprim>::_TrackerMarkPrimClean(
+                                           HdChangeTracker &tracker,
+                                           const SdfPath &path,
+                                           HdDirtyBits dirtyBits)
 {
-    tracker.MarkSprimClean(path);
+    tracker.MarkSprimClean(path, dirtyBits);
 }
 
 template <>
@@ -404,8 +377,8 @@ template <>
 // static
 void
 Hd_PrimTypeIndex<HdBprim>::_TrackerInsertPrim(HdChangeTracker &tracker,
-                                              const SdfPath  &path,
-                                   HdChangeTracker::DirtyBits initialDirtyState)
+                                              const SdfPath   &path,
+                                              HdDirtyBits     initialDirtyState)
 {
     tracker.BprimInserted(path, initialDirtyState);
 }
@@ -421,9 +394,9 @@ Hd_PrimTypeIndex<HdBprim>::_TrackerRemovePrim(HdChangeTracker &tracker,
 
 template <>
 // static
-HdChangeTracker::DirtyBits
+HdDirtyBits
 Hd_PrimTypeIndex<HdBprim>::_TrackerGetPrimDirtyBits(HdChangeTracker &tracker,
-                                                   const SdfPath &path)
+                                                    const SdfPath   &path)
 {
     return tracker.GetBprimDirtyBits(path);
 }
@@ -431,10 +404,12 @@ Hd_PrimTypeIndex<HdBprim>::_TrackerGetPrimDirtyBits(HdChangeTracker &tracker,
 template <>
 // static
 void
-Hd_PrimTypeIndex<HdBprim>::_TrackerMarkPrimClean(HdChangeTracker &tracker,
-                                                 const SdfPath &path)
+Hd_PrimTypeIndex<HdBprim>::_TrackerMarkPrimClean(
+                                           HdChangeTracker &tracker,
+                                           const SdfPath &path,
+                                           HdDirtyBits dirtyBits)
 {
-    tracker.MarkBprimClean(path);
+    tracker.MarkBprimClean(path, dirtyBits);
 }
 
 template <>
