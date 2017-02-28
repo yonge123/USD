@@ -80,6 +80,7 @@ namespace {
         AtNode* (*mtoa_export_node) (void*, const char*) = nullptr;
         void (*mtoa_destroy_export_session) () = nullptr;
         // Node functions
+        bool (*NodeIsLinked) (const AtNode*, const char*) = nullptr;
         AtNode* (*NodeGetLink) (const AtNode*, const char*, int32_t*) = nullptr;
         const char* (*NodeGetName) (const AtNode*) = nullptr;
         bool (*NodeIs) (const AtNode*, const char*) = nullptr;
@@ -195,6 +196,7 @@ namespace {
                 mtoa_ptr(mtoa_init_export_session, "mtoa_init_export_session");
                 mtoa_ptr(mtoa_export_node, "mtoa_export_node");
                 mtoa_ptr(mtoa_destroy_export_session, "mtoa_destroy_export_session");
+                ai_ptr(NodeIsLinked, "AiNodeIsLinked");
                 ai_ptr(NodeGetLink, "AiNodeGetLink");
                 ai_ptr(NodeGetName, "AiNodeGetName");
                 ai_ptr(NodeIs, "AiNodeIs");
@@ -465,13 +467,6 @@ ArnoldShaderExport::export_parameter(
             auto param = api.CreateUserAttribute(TfToken(arnold_param_name), iter_type->type);
             param.Set(iter_type->f(arnold_node, arnold_param_name));
         } else {
-            UsdShadeConnectableAPI connectable_API(shader);
-            auto param = connectable_API.CreateInput(TfToken(arnold_param_name), iter_type->type);
-            if (!param) { return; }
-            if (iter_type->f != nullptr) {
-                param.Set(iter_type->f(arnold_node, arnold_param_name));
-            }
-
             auto get_output_parameter = [this, arnold_node, arnold_param_type] (const char* param_name, UsdShadeOutput& out) -> bool {
                 int32_t comp = -1;
                 const auto linked_node = arnold_param_type == AI_TYPE_NODE ?
@@ -497,21 +492,33 @@ ArnoldShaderExport::export_parameter(
                 } else { return false; }
             };
 
-            // check for the full connection first
-            UsdShadeOutput source_param;
-            if (get_output_parameter(arnold_param_name, source_param)) {
-                connectable_API.ConnectToSource(param, source_param);
-            }
-
-            for (const auto& comps : in_comp_names(arnold_param_type)) {
-                const auto arnold_comp_name = std::string(arnold_param_name) + "." + comps;
-                const auto usd_comp_name = std::string(arnold_param_name) + ":" + comps;
-                if (get_output_parameter(arnold_comp_name.c_str(), source_param)) {
-                    auto param_comp = connectable_API.CreateInput(TfToken(usd_comp_name),
-                                                                  SdfValueTypeNames.Get()->Float);
-                    if (param_comp) {
-                        connectable_API.ConnectToSource(param_comp, source_param);
+            if (ai.NodeIsLinked(arnold_node, arnold_param_name)) {
+                UsdShadeConnectableAPI connectable_API(shader);
+                UsdShadeOutput source_param;
+                if (get_output_parameter(arnold_param_name, source_param)) {
+                    UsdShadeConnectableAPI::ConnectToSource(shader.CreateInput(TfToken(arnold_param_name), iter_type->type), source_param);
+                } else {
+                    if (iter_type->f != nullptr) {
+                        auto param = shader.CreateParameter(TfToken(arnold_param_name), iter_type->type);
+                        param.Set(iter_type->f(arnold_node, arnold_param_name));
                     }
+                }
+
+                /*for (const auto& comps : in_comp_names(arnold_param_type)) {
+                    const auto arnold_comp_name = std::string(arnold_param_name) + "." + comps;
+                    const auto usd_comp_name = std::string(arnold_param_name) + ":" + comps;
+                    if (get_output_parameter(arnold_comp_name.c_str(), source_param)) {
+                        auto param_comp = connectable_API.CreateInput(TfToken(usd_comp_name),
+                                                                      SdfValueTypeNames.Get()->Float);
+                        if (param_comp) {
+                            connectable_API.ConnectToSource(param_comp, source_param);
+                        }
+                    }
+                }*/
+            } else {
+                if (iter_type->f != nullptr) {
+                    auto param = shader.CreateParameter(TfToken(arnold_param_name), iter_type->type);
+                    param.Set(iter_type->f(arnold_node, arnold_param_name));
                 }
             }
         }
