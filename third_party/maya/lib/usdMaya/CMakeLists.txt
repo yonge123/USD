@@ -14,6 +14,7 @@ pxr_shared_library(${PXR_PACKAGE}
         usdRi
         usdShade
         usdUtils
+        usdAi
         vt
         ${Boost_PYTHON_LIBRARY}
         ${MAYA_Foundation_LIBRARY}
