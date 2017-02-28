@@ -33,6 +33,7 @@ pxr_plugin(${PXR_PACKAGE}
         nurbsPatch.cpp
         pointInstancer.cpp
         points.cpp
+        pointInstancer.cpp
         scope.cpp
         uiUtils.cpp
         xform.cpp

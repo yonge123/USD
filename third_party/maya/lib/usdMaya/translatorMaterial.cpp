@@ -26,6 +26,7 @@
 
 #include "usdMaya/shadingModeRegistry.h"
 #include "usdMaya/util.h"
+#include "usdMaya/ArnoldShaderExport.h"
 
 #include "pxr/base/tf/staticTokens.h"
 #include "pxr/usd/sdf/assetPath.h"
@@ -311,13 +312,27 @@ PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
         const PxrUsdMayaUtil::ShapeSet& bindableRoots,
         const TfToken& shadingMode,
         bool mergeTransformAndShape,
-        SdfPath overrideRootPath)
+        SdfPath overrideRootPath,
+        const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap)
 {
     if (shadingMode == PxrUsdMayaShadingModeTokens->none) {
         return;
     }
 
-    if (PxrUsdMayaShadingModeExporter exporter =
+    if (shadingMode == PxrUsdMayaShadingModeTokens->arnold && ArnoldShaderExport::is_valid()) {
+        // traditional registry doesn't work here, as it's only a simple function pointer
+        // which doesn't play well with starting up and shutting down the mtoa exporter
+        ArnoldShaderExport ai(stage, UsdTimeCode::Default());
+        if (bindableRoots.empty()) {
+            for (MItDependencyNodes iter(MFn::kShadingEngine); !iter.isDone(); iter.next()) {
+                MObject obj = iter.thisNode();
+                const auto exportedShader = ai.export_shader(obj);
+            }
+        }
+        for (auto it = dagPathToUsdMap.begin(); it != dagPathToUsdMap.end(); ++it) {
+            ai.setup_shaders(it->first, it->second);
+        }
+    } else if (PxrUsdMayaShadingModeExporter exporter =
             PxrUsdMayaShadingModeRegistry::GetExporter(shadingMode)) {
         MItDependencyNodes shadingEngineIter(MFn::kShadingEngine);
         for (; !shadingEngineIter.isDone(); shadingEngineIter.next()) {
