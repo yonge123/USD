@@ -89,6 +89,7 @@ pxr_shared_library(${PXR_PACKAGE}
         MayaTransformWriter
         ModelKindWriter
         PluginPrimWriter
+        VdbVisualizerWriter
 
     PRIVATE_HEADERS
         shadingModePxrRis_rfm_map.h

@@ -30,6 +30,7 @@
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
 #include "usdMaya/MayaTransformWriter.h"
 #include "usdMaya/MayaCameraWriter.h"
+#include "usdMaya/VdbVisualizerWriter.h"
 
 #include "usdMaya/translatorMaterial.h"
 #include "usdMaya/primWriterRegistry.h"
@@ -571,7 +572,16 @@ bool usdWriteJob::createPrimWriter(
             return true;
         }
     }
-
+    else if (ob.hasFn(MFn::kPluginShape)) {
+        MFnDependencyNode dn(ob);
+        if (dn.typeName() == "vdb_visualizer") {
+            VdbVisualizerWriterPtr primPtr(new VdbVisualizerWriter(curDag, mStage, mArgs));
+            if (primPtr->isValid()) {
+                *primWriterOut = primPtr;
+                return true;
+            }
+        }
+    }
     *primWriterOut = nullptr;
     return true;
 }
