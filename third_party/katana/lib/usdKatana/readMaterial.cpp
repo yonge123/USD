@@ -617,11 +617,11 @@ _GetMaterialAttr(
     }
 
     // look for displacement
-    if (UsdRelationship displacementRel = riLookAPI.GetDisplacementRel()) {
+    if (UsdRelationship displacementRel = aiMaterialAPI.GetDisplacementRel()) {
         if (!PxrUsdKatana_AreRelTargetsFromBaseMaterial(displacementRel)) {
             SdfPathVector targetPaths;
             displacementRel.GetForwardedTargets(&targetPaths);
-        
+
             if (targetPaths.size() > 1) {
                 FnLogWarn("Multiple displacement sources detected on "
                           "material:" << materialPrim.GetPath());
