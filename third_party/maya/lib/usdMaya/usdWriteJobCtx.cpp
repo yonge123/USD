@@ -129,6 +129,8 @@ bool usdWriteJobCtx::openFile(const std::string& filename, bool append)
         instancesSchema.MakeInvisible();
         mInstancesScope.SetActive(false);
     }
+
+    return true;
 }
 
 void usdWriteJobCtx::saveAndCloseStage()
