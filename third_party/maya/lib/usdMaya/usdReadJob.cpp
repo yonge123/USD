@@ -59,6 +59,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -97,6 +98,46 @@ usdReadJob::usdReadJob(
             MGlobal::displayError(MString(errorStr.c_str()));
         }
         setMayaRootDagPath( dagPath );
+    }
+
+    // Add the current scene, and the currently loading file (if any) to the
+    // list of parent refs
+
+    std::vector<std::string> pathsToAdd;
+    pathsToAdd.emplace_back(MFileIO::currentFile().asChar());
+    pathsToAdd.emplace_back(MFileIO::fileCurrentlyLoading().asChar());
+    if (pathsToAdd.back() == pathsToAdd.front()) {
+        pathsToAdd.pop_back();
+    }
+
+    auto remove_empty_iterator = std::remove_if(pathsToAdd.begin(),
+                                                pathsToAdd.end(),
+                                                [](const std::string& str) {
+                                                    return str.empty();
+                                                });
+
+    pathsToAdd.erase(remove_empty_iterator, pathsToAdd.end());
+    // Now make sure that mArgs.parentRefPaths doesn't already contain the new
+    // paths...
+    if (pathsToAdd.size() > 0) {
+        for (const auto& oldPath : mArgs.parentRefPaths) {
+            auto remove_matching_iterator = std::remove_if(
+                    pathsToAdd.begin(), pathsToAdd.end(),
+                    [&](const std::string& str) {
+                        return str == oldPath;
+                    });
+            pathsToAdd.erase(remove_matching_iterator, pathsToAdd.end());
+            if (pathsToAdd.size() == 0) {
+                break;
+            }
+        }
+
+        if (pathsToAdd.size() > 0) {
+            mArgs.parentRefPaths.reserve(mArgs.parentRefPaths.size()
+                                         + pathsToAdd.size());
+            mArgs.parentRefPaths.insert(mArgs.parentRefPaths.end(),
+                                        pathsToAdd.begin(), pathsToAdd.end());
+        }
     }
 }
 
