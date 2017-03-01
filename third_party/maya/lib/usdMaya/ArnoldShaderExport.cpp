@@ -73,6 +73,8 @@ namespace {
         uint8_t type;
     };
 
+    using AtEnum = const char**;
+
     struct ArnoldCtx {
         // TODO: rewrite to std::function and use static_cast / reinterpret_cast
         // mtoa functions
@@ -98,12 +100,14 @@ namespace {
         AtParamIterator* (*NodeEntryGetParamIterator) (const AtNodeEntry*) = nullptr;
         int32_t (*NodeEntryGetType) (const AtNodeEntry*) = nullptr;
         int32_t (*NodeEntryGetOutputType) (const AtNodeEntry*) = nullptr;
+        const AtParamEntry* (*NodeEntryLookUpParameter) (const AtNodeEntry*, const char*) = nullptr;
         // Param functions
         void (*ParamIteratorDestroy) (AtParamIterator*) = nullptr;
         const AtParamEntry* (*ParamIteratorGetNext) (AtParamIterator*) = nullptr;
         bool (*ParamIteratorFinished) (const AtParamIterator*) = nullptr;
         const char* (*ParamGetName) (const AtParamEntry*) = nullptr;
         int (*ParamGetType) (const AtParamEntry*) = nullptr;
+        AtEnum (*ParamGetEnum) (const AtParamEntry*) = nullptr;
         // Node functions
         uint8_t (*NodeGetByte) (const AtNode*, const char*) = nullptr;
         int32_t (*NodeGetInt) (const AtNode*, const char*) = nullptr;
@@ -145,6 +149,17 @@ namespace {
             GfMatrix4f ret;
             ArrayGetMtxFunc(arr, i, ret[0], file, line);
             return ret;
+        }
+
+        inline const char* GetEnum(AtEnum en, int32_t id) {
+            if (en == nullptr) { return ""; }
+            if (id < 0) { return ""; }
+            for (auto i = 0; i <= id; ++i) {
+                if (en[i] == nullptr) {
+                    return "";
+                }
+            }
+            return en[id];
         }
 
         void* mtoa_handle = nullptr;
@@ -212,11 +227,13 @@ namespace {
                 ai_ptr(NodeEntryGetParamIterator, "AiNodeEntryGetParamIterator");
                 ai_ptr(NodeEntryGetType, "AiNodeEntryGetType");
                 ai_ptr(NodeEntryGetOutputType, "AiNodeEntryGetOutputType");
+                ai_ptr(NodeEntryLookUpParameter, "AiNodeEntryLookUpParameter");
                 ai_ptr(ParamIteratorDestroy, "AiParamIteratorDestroy");
                 ai_ptr(ParamIteratorGetNext, "AiParamIteratorGetNext");
                 ai_ptr(ParamIteratorFinished, "AiParamIteratorFinished");
                 ai_ptr(ParamGetName, "AiParamGetName");
                 ai_ptr(ParamGetType, "AiParamGetType");
+                ai_ptr(ParamGetEnum, "AiParamGetEnum");
                 ai_ptr(NodeGetByte, "AiNodeGetByte");
                 ai_ptr(NodeGetInt, "AiNodeGetInt");
                 ai_ptr(NodeGetUInt, "AiNodeGetUInt");
@@ -302,7 +319,14 @@ namespace {
         {AI_TYPE_STRING, {SdfValueTypeNames.Get()->String, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetStr(no, na)); }}},
         {AI_TYPE_NODE, {SdfValueTypeNames.Get()->String, nullptr}},
         {AI_TYPE_MATRIX, {SdfValueTypeNames.Get()->Matrix4d, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetMatrix(no, na)); }}},
-        {AI_TYPE_ENUM, {SdfValueTypeNames.Get()->Int, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetInt(no, na)); }}},
+        {AI_TYPE_ENUM, {SdfValueTypeNames.Get()->String, [](const AtNode* no, const char* na) -> VtValue {
+            const auto* nentry = ai.NodeGetNodeEntry(no);
+            if (nentry == nullptr) { return VtValue(""); }
+            const auto* pentry = ai.NodeEntryLookUpParameter(nentry, na);
+            if (pentry == nullptr) { return VtValue(""); }
+            const auto enums = ai.ParamGetEnum(pentry);
+            return VtValue(ai.GetEnum(enums, ai.NodeGetInt(no, na)));
+        }}},
     };
 
     const simple_type*
