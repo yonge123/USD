@@ -140,12 +140,15 @@ pxr_shared_library(${PXR_PACKAGE}
         testenv/testUsdImportCamera.py
         testenv/testUsdImportColorSets.py
         testenv/testUsdImportFrameRange.py
+        testenv/testUsdImportNestedAssemblyAnimation.py
         testenv/testUsdImportSessionLayer.py
         testenv/testUsdImportUVSets.py
         testenv/testUsdMayaGetVariantSetSelections.py
         testenv/testUsdMayaModelKindWriter.py
         testenv/testUsdMayaUserExportedAttributes.py
         testenv/testUsdMetadataAttributeConverters.py
+        testenv/testUsdReferenceAssemblyChangeRepresentations.py
+        testenv/testUsdReferenceAssemblySelection.py
 
     RESOURCE_FILES
         AEpxrUsdProxyShapeTemplate.mel
@@ -168,12 +171,15 @@ pxr_test_scripts(
         testenv/testUsdImportCamera.py
         testenv/testUsdImportColorSets.py
         testenv/testUsdImportFrameRange.py
+        testenv/testUsdImportNestedAssemblyAnimation.py
         testenv/testUsdImportSessionLayer.py
         testenv/testUsdImportUVSets.py
         testenv/testUsdMayaGetVariantSetSelections.py
         testenv/testUsdMayaModelKindWriter.py
         testenv/testUsdMayaUserExportedAttributes.py
         testenv/testUsdMetadataAttributeConverters.py
+        testenv/testUsdReferenceAssemblyChangeRepresentations.py
+        testenv/testUsdReferenceAssemblySelection.py
 )
 
 pxr_install_test_dir(
@@ -297,6 +303,18 @@ pxr_register_test(testUsdImportFrameRange
 )
 
 pxr_install_test_dir(
+    SRC testenv/UsdImportNestedAssemblyAnimationTest
+    DEST testUsdImportNestedAssemblyAnimation
+)
+pxr_register_test(testUsdImportNestedAssemblyAnimation
+    COMMAND "${MAYA_LOCATION}/bin/mayapy ${CMAKE_INSTALL_PREFIX}/tests/testUsdImportNestedAssemblyAnimation"
+    TESTENV testUsdImportNestedAssemblyAnimation
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+)
+
+pxr_install_test_dir(
     SRC testenv/UsdImportSessionLayerTest
     DEST testUsdImportSessionLayer
 )
@@ -363,6 +381,30 @@ pxr_install_test_dir(
 pxr_register_test(testUsdMetadataAttributeConverters
     COMMAND "${MAYA_LOCATION}/bin/mayapy ${CMAKE_INSTALL_PREFIX}/tests/testUsdMetadataAttributeConverters"
     TESTENV testUsdMetadataAttributeConverters
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+)
+
+pxr_install_test_dir(
+    SRC testenv/UsdReferenceAssemblyChangeRepresentationsTest
+    DEST testUsdReferenceAssemblyChangeRepresentations
+)
+pxr_register_test(testUsdReferenceAssemblyChangeRepresentations
+    COMMAND "${MAYA_LOCATION}/bin/mayapy ${CMAKE_INSTALL_PREFIX}/tests/testUsdReferenceAssemblyChangeRepresentations"
+    TESTENV testUsdReferenceAssemblyChangeRepresentations
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+)
+
+pxr_install_test_dir(
+    SRC testenv/UsdReferenceAssemblySelectionTest
+    DEST testUsdReferenceAssemblySelection
+)
+pxr_register_test(testUsdReferenceAssemblySelection
+    COMMAND "${MAYA_LOCATION}/bin/mayapy ${CMAKE_INSTALL_PREFIX}/tests/testUsdReferenceAssemblySelection"
+    TESTENV testUsdReferenceAssemblySelection
     ENV
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
