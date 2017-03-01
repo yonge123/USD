@@ -450,7 +450,7 @@ PxrUsdMayaTranslatorModelAssembly::Read(
         if (!refPath.length())
         {
             MString errorMsg("Failed to find a non-recursive reference path for ");
-            errorMsg += prim.GetPath().GetText();
+            errorMsg += modelPrim.GetPath().GetText();
             errorMsg += " in top-level usd file ";
             errorMsg += usdStage->GetRootLayer()->GetRealPath().c_str();
             MGlobal::displayError(errorMsg);
@@ -464,7 +464,7 @@ PxrUsdMayaTranslatorModelAssembly::Read(
         MString cmd = (MString("file -reference -options \"primPath=")
                        // TODO: properly escape these strings
                        // Pass in the primitive path...
-                       + prim.GetPath().GetText()
+                       + modelPrim.GetPath().GetText()
                        // ...and the top-level usd file in the option string.
                        // Note that that's all the information that USD actually
                        // needs / uses - the refPath is actually just a dummy. See
