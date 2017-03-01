@@ -171,7 +171,7 @@ MStatus initializePlugin(
         status.perror("registerCommand usdListShadingModes");
     }
     
-    status = plugin.registerFileTranslator("pxrUsdImport", 
+    status = plugin.registerFileTranslator("pxrUsd",
                                     "", 
                                     []() { 
                                         return usdTranslator::creator(
@@ -217,14 +217,9 @@ MStatus uninitializePlugin(
         status.perror("deregisterCommand usdExport");
     }
 
-    status = plugin.deregisterFileTranslator("pxrUsdImport");
+    status = plugin.deregisterFileTranslator("pxrUsd");
     if (!status) {
-        status.perror("pxrUsd: unable to deregister USD Import translator.");
-    }
-
-    status = plugin.deregisterFileTranslator("pxrUsdExport");
-    if (!status) {
-        status.perror("pxrUsd: unable to deregister USD Export translator.");
+        status.perror("pxrUsd: unable to deregister USD translator.");
     }
 
     status = plugin.deregisterFileTranslator("usdListShadingModes");
