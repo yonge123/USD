@@ -534,7 +534,7 @@ bool usdReadJob::_DoImport(UsdTreeIterator& primIt,
                 &assetIdentifier,
                 &assetPrimPath)) {
             const bool isSceneAssembly = mMayaRootDagPath.node().hasFn(MFn::kAssembly);
-            if (isSceneAssembly) {
+            if (isSceneAssembly || MFileIO::isReferencingFile()) {
                 // If we ARE importing on behalf of an assembly, we use the
                 // file path of the top-level assembly and the path to the prim
                 // within that file when creating the reference assembly.
