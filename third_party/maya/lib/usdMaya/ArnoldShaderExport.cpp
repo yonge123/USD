@@ -637,12 +637,12 @@ ArnoldShaderExport::setup_shaders(const MDagPath& dg, const SdfPath& path) {
 
             auto linked_path = write_arnold_node(linked_shader, material_path);
             if (linked_path.IsEmpty()) { return; }
-            auto rel = material_prim.GetRelationship(TfToken("ai:volume"));
+            auto rel = material_prim.GetRelationship(TfToken("ai:surface"));
             if (rel) {
                 rel.ClearTargets(true);
                 rel.AppendTarget(linked_path);
             } else {
-                rel = material_prim.CreateRelationship(TfToken("ai:volume"));
+                rel = material_prim.CreateRelationship(TfToken("ai:surface"));
                 rel.AppendTarget(linked_path);
             }
             return;
