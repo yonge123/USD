@@ -51,10 +51,11 @@ SdfPath usdWriteJobCtx::getMasterPath(const MDagPath& dg)
         // we are looking for the instance with the lowest number here
         // which is still exported
         auto dagCopy = allInstances[0];
+        const auto usdPath = getUsdPathFromDagPath(dagCopy, true);
         dagCopy.pop();
         // This will get auto destroyed, because we are not storing it in the list
-        auto transformPrimWriter = _createPrimWriter(dagCopy, true);
-        if (transformPrimWriter != nullptr) {
+        MayaTransformWriterPtr transformPrimWriter(new MayaTransformWriter(dagCopy, usdPath.GetParentPath(), true, *this));
+        if (transformPrimWriter != nullptr && transformPrimWriter->isValid()) {
             transformPrimWriter->write(UsdTimeCode::Default());
             mMasterToUsdPath.insert(std::make_pair(handle, transformPrimWriter->getUsdPath()));
         } else {
@@ -82,15 +83,9 @@ SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool inst
             std::stringstream ss;
             ss << mInstancesScope.GetPath().GetString();
             MObject node = dagPath.node();
-            if (node.hasFn(MFn::kTransform)) {
-                ss << "/" << dagPath.fullPathName().asChar() + 1;
-            } else {
-                auto dgCopy = dagPath;
-                dgCopy.pop();
-                ss << "/" << dgCopy.fullPathName().asChar() + 1;
-                ss << "/";
-                MFnDependencyNode dnode(node);
-                ss << dnode.name().asChar();
+            ss << "/" << dagPath.fullPathName().asChar() + 1;
+            if (!node.hasFn(MFn::kTransform)) {
+                ss << "/Shape";
             }
             auto pathName = ss.str();
             std::replace(pathName.begin(), pathName.end(), '|', '_');
