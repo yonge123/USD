@@ -25,19 +25,43 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
         // camera transform -> camera shape -> image plane transform -> image plane shape
         // So first we pop the image plane shape if possible,
         // then we are removing the camera shape
-        auto iDagCopy = iDag;
-        std::string shapeName = MFnDependencyNode(iDagCopy.node()).name().asChar();
-        iDagCopy.pop();
-        std::string transformName = MFnDependencyNode(iDagCopy.node()).name().asChar();
-        unsigned int numberOfShapesDirectlyBelow = 0;
-        iDagCopy.numberOfShapesDirectlyBelow(numberOfShapesDirectlyBelow);
-        auto usdPath = getUsdPath().GetParentPath().GetParentPath().GetParentPath();
-        if (numberOfShapesDirectlyBelow == 1) {
-            usdPath = usdPath.AppendChild(TfToken(transformName));
-        } else {
-            usdPath = usdPath.AppendChild(TfToken(transformName)).AppendChild(TfToken(shapeName));
+        auto imagePlaneXform = iDag;
+        imagePlaneXform.pop();
+        auto cameraXform = imagePlaneXform;
+        cameraXform.pop();
+
+        unsigned int imagePlaneShapes = 0;
+        unsigned int cameraShapes = 0;
+        imagePlaneXform.numberOfShapesDirectlyBelow(imagePlaneShapes);
+        cameraXform.numberOfShapesDirectlyBelow(cameraShapes);
+
+        // Use tokens from the already-created path - that way, we don't redo
+        // processing done by MDagPathToUsdPath, and we avoid the hash from
+        // token re-creation
+        if (cameraShapes == 1 || imagePlaneShapes == 1) {
+            SdfPath usdPath;
+            if (cameraShapes == 1) {
+                // Get the cameraShape path, then swap it out for the
+                // imagePlaneXform, effectively removing it
+                auto impagePlaneXformPath = getUsdPath().GetParentPath();
+                usdPath = impagePlaneXformPath.GetParentPath().ReplaceName(
+                        impagePlaneXformPath.GetElementToken());
+            }
+            else {
+                // We just use the camera shape path
+                usdPath = getUsdPath().GetParentPath().GetParentPath();
+            }
+
+            if (imagePlaneShapes == 1) {
+                usdPath.AppendChild(getUsdPath().GetParentPath().GetElementToken());
+            }
+            else {
+                usdPath = usdPath
+                        .AppendChild(getUsdPath().GetParentPath().GetElementToken())
+                        .AppendChild(getUsdPath().GetElementToken());
+            }
+            setUsdPath(usdPath);
         }
-        setUsdPath(usdPath);
     }
 
     UsdGeomImagePlane primSchema =
