@@ -418,7 +418,9 @@ MayaTransformWriter::MayaTransformWriter(
     mIsShapeAnimated(false),
     mIsInstanceSource(instanceSource)
 {
-    auto setup_merged_shape = [this] () {
+    auto isInstance = false;
+    auto hasTransform = iDag.hasFn(MFn::kTransform);
+    auto setup_merged_shape = [this, &isInstance, &iDag, &hasTransform] () {
         // Use the parent transform if there is only a single shape under the shape's xform
         this->mXformDagPath.pop();
         auto numberOfShapesDirectlyBelow = 0u;
@@ -426,6 +428,9 @@ MayaTransformWriter::MayaTransformWriter(
         if (numberOfShapesDirectlyBelow == 1) {
             // Use the parent path (xform) instead of the shape path
             this->setUsdPath( getUsdPath().GetParentPath() );
+            hasTransform = true;
+        } else if (isInstance) {
+            this->mXformDagPath = iDag;
         } else {
             this->mXformDagPath = MDagPath(); // make path invalid
         }
@@ -435,10 +440,6 @@ MayaTransformWriter::MayaTransformWriter(
         this->setValid(false); // no need to iterate over this Writer, as not writing it out
         this->mXformDagPath = MDagPath(); // make path invalid
     };
-
-    const auto hasTransform = iDag.hasFn(MFn::kTransform);
-
-    bool isInstance = false;
 
     // it's more straightforward to separate code
     if (mIsInstanceSource) {
@@ -494,10 +495,12 @@ MayaTransformWriter::MayaTransformWriter(
         UsdGeomXform primSchema = UsdGeomXform::Define(getUsdStage(), getUsdPath());
         mUsdPrim = primSchema.GetPrim();
         if (!mIsInstanceSource) {
-            MFnTransform transFn(mXformDagPath);
-            // Create a vector of AnimChannels based on the Maya transformation
-            // ordering
-            pushTransformStack(transFn, primSchema, getArgs().exportAnimation);
+            if (hasTransform) {
+                MFnTransform transFn(mXformDagPath);
+                // Create a vector of AnimChannels based on the Maya transformation
+                // ordering
+                pushTransformStack(transFn, primSchema, getArgs().exportAnimation);
+            }
 
             if (isInstance) {
                 const auto masterPath = mJob.getMasterPath(getDagPath());
