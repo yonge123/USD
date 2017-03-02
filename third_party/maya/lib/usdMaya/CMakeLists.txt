@@ -136,6 +136,8 @@ pxr_shared_library(${PXR_PACKAGE}
         testenv/testUsdExportColorSets.py
         testenv/testUsdExportDisplayColor.py
         testenv/testUsdExportFrameOffset.py
+        testenv/testUsdExportMesh.py
+        testenv/testUsdExportRenderLayerMode.py
         testenv/testUsdExportUVSets.py
         testenv/testUsdImportAsAssemblies.py
         testenv/testUsdImportCamera.py
@@ -167,6 +169,8 @@ pxr_test_scripts(
         testenv/testUsdExportColorSets.py
         testenv/testUsdExportDisplayColor.py
         testenv/testUsdExportFrameOffset.py
+        testenv/testUsdExportMesh.py
+        testenv/testUsdExportRenderLayerMode.py
         testenv/testUsdExportUVSets.py
         testenv/testUsdImportAsAssemblies.py
         testenv/testUsdImportCamera.py
@@ -238,6 +242,30 @@ pxr_install_test_dir(
 pxr_register_test(testUsdExportFrameOffset
     COMMAND "${MAYA_LOCATION}/bin/mayapy ${CMAKE_INSTALL_PREFIX}/tests/testUsdExportFrameOffset"
     TESTENV testUsdExportFrameOffset
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+)
+
+pxr_install_test_dir(
+    SRC testenv/UsdExportMeshTest
+    DEST testUsdExportMesh
+)
+pxr_register_test(testUsdExportMesh
+    COMMAND "${MAYA_LOCATION}/bin/mayapy ${CMAKE_INSTALL_PREFIX}/tests/testUsdExportMesh"
+    TESTENV testUsdExportMesh
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+)
+
+pxr_install_test_dir(
+    SRC testenv/UsdExportRenderLayerModeTest
+    DEST testUsdExportRenderLayerMode
+)
+pxr_register_test(testUsdExportRenderLayerMode
+    COMMAND "${MAYA_LOCATION}/bin/mayapy ${CMAKE_INSTALL_PREFIX}/tests/testUsdExportRenderLayerMode"
+    TESTENV testUsdExportRenderLayerMode
     ENV
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
