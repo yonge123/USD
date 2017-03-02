@@ -457,7 +457,7 @@ namespace {
 }
 
 ArnoldShaderExport::ArnoldShaderExport(const UsdStageRefPtr& _stage, UsdTimeCode _time_code) :
-    m_stage(_stage), m_shaders_scope("/shaders"), m_time_code(_time_code) {
+    m_stage(_stage), m_shaders_scope("/Looks"), m_time_code(_time_code) {
     UsdGeomScope::Define(m_stage, m_shaders_scope);
     ai.mtoa_init_export_session();
 }
