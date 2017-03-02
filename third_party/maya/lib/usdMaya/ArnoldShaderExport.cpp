@@ -157,11 +157,9 @@ namespace {
             for (auto i = 0; i <= id; ++i) {
                 if (en[i] == nullptr) {
                     return "";
-                } else if (i == id) {
-                    return en[i];
                 }
             }
-            return "";
+            return en[id];
         }
 
         void* mtoa_handle = nullptr;
