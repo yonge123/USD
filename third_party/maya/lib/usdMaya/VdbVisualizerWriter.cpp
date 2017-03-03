@@ -93,10 +93,7 @@ void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
         primSchema.GetDsoAttr().Set(std::string("volume_openvdb"));
     }
 
-    if (usdTime.IsDefault() == isShapeAnimated()) {
-        return;
-    }
-
+    // The node regenerates all kinds of params, so we always need to write these out.
     const auto out_vdb_path = volume_node.findPlug("outVdbPath").asString();
     const auto& bbox_min = volume_node.findPlug("bboxMin").asMDataHandle().asFloat3();
     const auto& bbox_max = volume_node.findPlug("bboxMax").asMDataHandle().asFloat3();
