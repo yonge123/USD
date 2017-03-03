@@ -22,6 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "usdKatana/attrMap.h"
+#include "usdKatana/arnoldHelpers.h"
 #include "usdKatana/readAiProcedural.h"
 #include "usdKatana/readXformable.h"
 #include "usdKatana/usdInPrivateData.h"
@@ -34,59 +35,7 @@
 #include <FnAttribute/FnDataBuilder.h>
 #include <FnLogging/FnLogging.h>
 
-#include <sstream>
-
 FnLogSetup("PxrUsdKatanaReadAiProcedural");
-
-static std::string
-_GetArnoldAttrTypeHint(const SdfValueTypeName& scalarType) {
-    std::string hint;
-    if (scalarType == SdfValueTypeNames->Bool) {
-        hint = "boolean";
-    }
-    else if (scalarType == SdfValueTypeNames->UChar) {
-        hint = "byte";
-    }
-    else if (scalarType == SdfValueTypeNames->UInt ||
-             scalarType == SdfValueTypeNames->UInt64) {
-        hint = "uint";
-    }
-    else if (scalarType == SdfValueTypeNames->Matrix4d) {
-        hint = "matrix";
-    }
-    else if (scalarType == SdfValueTypeNames->Float3 ||
-             scalarType == SdfValueTypeNames->Double3 ||
-             scalarType == SdfValueTypeNames->Half3 ||
-             scalarType == SdfValueTypeNames->Vector3f ||
-             scalarType == SdfValueTypeNames->Vector3d ||
-             scalarType == SdfValueTypeNames->Vector3h ||
-             scalarType == SdfValueTypeNames->Normal3f ||
-             scalarType == SdfValueTypeNames->Normal3d ||
-             scalarType == SdfValueTypeNames->Normal3h) {
-        hint = "vector";
-    }
-    else if (scalarType == SdfValueTypeNames->Float2 ||
-             scalarType == SdfValueTypeNames->Double2 ||
-             scalarType == SdfValueTypeNames->Half2) {
-        hint = "point2";
-    }
-    else if (scalarType == SdfValueTypeNames->Point3h ||
-             scalarType == SdfValueTypeNames->Point3f ||
-             scalarType == SdfValueTypeNames->Point3d) {
-        hint = "point";
-    }
-    else if (scalarType == SdfValueTypeNames->Color3h ||
-             scalarType == SdfValueTypeNames->Color3f ||
-             scalarType == SdfValueTypeNames->Color3d) {
-        hint = "rgb";
-    }
-    else if (scalarType == SdfValueTypeNames->Color4h ||
-             scalarType == SdfValueTypeNames->Color4f ||
-             scalarType == SdfValueTypeNames->Color4d) {
-        hint = "rgba";
-    }
-    return hint;
-}
 
 void
 PxrUsdKatanaReadAiProcedural(
@@ -94,27 +43,35 @@ PxrUsdKatanaReadAiProcedural(
         const PxrUsdKatanaUsdInPrivateData& data,
         PxrUsdKatanaAttrMap& attrs)
 {
-    // Read in general attributes for a Gprim.
+    // Read in general attributes for a transformable prim.
     PxrUsdKatanaReadXformable(procedural, data, attrs);
 
-    // TODO: Read in bounding box if defined. There's currently no op type for
-    // `UsdGeomBoundable`, so we may want to add one.
+    // Ready in Arnold visibility attributes, etc.
+    FnKat::GroupAttribute arnoldStatements =
+        PxrUsdKatana_GetArnoldStatementsGroup(procedural.GetPrim());
+    if (arnoldStatements.isValid()) {
+        attrs.set("arnoldStatements", arnoldStatements);
+    }
+
+    const double currentTime = data.GetUsdInArgs()->GetCurrentTime();
 
     // This plugin is registered for both AiProcedural and AiVolume, so check
     // which one we're dealing with, since the handling is slightly different.
     if (procedural.GetPrim().IsA<UsdAiVolume>()) {
         attrs.set("type", FnKat::StringAttribute("volume"));
         attrs.set("geometry.type", FnKat::StringAttribute("volumedso"));
+        // TODO: Find a way to check if the "bound" attribute is already set.
+        // The current plugin system doesn't give prim reader plugins any way to
+        // access the ``GeolibCookInterface`` from the base PxrUsdIn op.
         attrs.set("rendererProcedural.autoBounds", FnAttribute::IntAttribute(1));
 
         float stepSize = 0;
         if (UsdAttribute stepAttr = UsdAiVolume(procedural).GetStepSizeAttr()) {
-            stepAttr.Get<float>(&stepSize);
+            stepAttr.Get<float>(&stepSize, currentTime);
         }
         attrs.set("geometry.step_size", FnKat::FloatAttribute(stepSize));
     } else {
         attrs.set("type", FnKat::StringAttribute("renderer procedural"));
-        // TODO: Bounds?
     }
 
     // Read the DSO value.
@@ -131,6 +88,7 @@ PxrUsdKatanaReadAiProcedural(
 
     // Read all parameters in the "user:" namespace and convert their values to
     // attributes in the "rendererProcedural.args" group attribute.
+    // Note that these are only sampled once per frame.
     FnKat::GroupBuilder argsBuilder;
 
     UsdAiNodeAPI nodeAPI = UsdAiNodeAPI(procedural);
@@ -138,7 +96,7 @@ PxrUsdKatanaReadAiProcedural(
     TF_FOR_ALL(attrIter, userAttrs) {
         UsdAttribute userAttr = *attrIter;
         VtValue vtValue;
-        if (!userAttr.Get(&vtValue)) {
+        if (!userAttr.Get(&vtValue, currentTime)) {
             continue;
         }
 
@@ -154,7 +112,7 @@ PxrUsdKatanaReadAiProcedural(
             attrHints.push_back("true");
         }
 
-        std::string typeHint = _GetArnoldAttrTypeHint(
+        std::string typeHint = PxrUsdKatana_GetArnoldAttrTypeHint(
                 userAttr.GetTypeName().GetScalarType());
         if (!typeHint.empty()) {
             attrHints.push_back("type");

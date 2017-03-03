@@ -2,6 +2,7 @@
 #include "usdMaya/writeUtil.h"
 #include "pxr/usd/usdAi/aiVolume.h"
 #include "pxr/usd/usdAi/aiNodeAPI.h"
+#include "pxr/usd/usdAi/aiShapeAPI.h"
 #include "pxr/usd/sdf/types.h"
 #include "pxr/usd/usd/stage.h"
 
@@ -70,11 +71,12 @@ VdbVisualizerWriter::VdbVisualizerWriter(const MDagPath & iDag,
 
 VdbVisualizerWriter::~VdbVisualizerWriter() {
     UsdAiVolume primSchema(mUsdPrim);
-    UsdAiNodeAPI nodeApi(mUsdPrim);
+    UsdAiNodeAPI nodeApi(primSchema);
+    UsdAiShapeAPI shapeApi(primSchema);
     PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetStepSizeAttr());
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetMatteAttr(), UsdInterpolationTypeHeld);
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetReceiveShadowsAttr(), UsdInterpolationTypeHeld);
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetSelfShadowsAttr(), UsdInterpolationTypeHeld);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(shapeApi.GetMatteAttr(), UsdInterpolationTypeHeld);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(shapeApi.GetReceiveShadowsAttr(), UsdInterpolationTypeHeld);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(shapeApi.GetSelfShadowsAttr(), UsdInterpolationTypeHeld);
     PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(filename_token), UsdInterpolationTypeHeld);
     PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(velocity_scale_token));
     PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(velocity_fps_token));
@@ -85,7 +87,8 @@ VdbVisualizerWriter::~VdbVisualizerWriter() {
 
 void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
     UsdAiVolume primSchema(mUsdPrim);
-    UsdAiNodeAPI nodeApi(mUsdPrim);
+    UsdAiNodeAPI nodeApi(primSchema);
+    UsdAiShapeAPI shapeApi(primSchema);
     writeTransformAttrs(usdTime, primSchema);
 
     const MFnDependencyNode volume_node(getDagPath().node());
@@ -111,9 +114,9 @@ void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
 
     const auto sampling_quality = volume_node.findPlug("samplingQuality").asFloat();
     primSchema.GetStepSizeAttr().Set(volume_node.findPlug("voxelSize").asFloat() / (sampling_quality / 100.0f), usdTime);
-    primSchema.GetMatteAttr().Set(volume_node.findPlug("matte").asBool(), usdTime);
-    primSchema.GetReceiveShadowsAttr().Set(volume_node.findPlug("receiveShadows").asBool(), usdTime);
-    primSchema.GetSelfShadowsAttr().Set(volume_node.findPlug("selfShadows").asBool(), usdTime);
+    shapeApi.GetMatteAttr().Set(volume_node.findPlug("matte").asBool(), usdTime);
+    shapeApi.GetReceiveShadowsAttr().Set(volume_node.findPlug("receiveShadows").asBool(), usdTime);
+    shapeApi.GetSelfShadowsAttr().Set(volume_node.findPlug("selfShadows").asBool(), usdTime);
     get_attribute(mUsdPrim, nodeApi, filename_token, SdfValueTypeNames.Get()->String)
         .Set(std::string(out_vdb_path.asChar()), usdTime);
 

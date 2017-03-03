@@ -16,7 +16,11 @@ pxr_shared_library(usdAi
         aiNodeAPI
         aiProcedural
         aiShader
+        aiShapeAPI
         aiVolume
+
+    PUBLIC_HEADERS
+        rayTypes.h
 
     CPPFILES
         moduleDeps.cpp
@@ -27,6 +31,7 @@ pxr_shared_library(usdAi
         wrapAiNodeAPI.cpp
         wrapAiProcedural.cpp
         wrapAiShader.cpp
+        wrapAiShapeAPI.cpp
         wrapAiVolume.cpp
         wrapTokens.cpp
 

@@ -50,7 +50,7 @@ class SdfAssetPath;
 
 /// \class UsdAiNodeAPI
 ///
-/// API for treating prims as Arnold nodes. Provides a consistent
+/// API for handling prims as Arnold nodes. Provides a consistent
 /// interface for getting and setting user parameters.
 ///
 class UsdAiNodeAPI : public UsdSchemaBase
