@@ -111,9 +111,9 @@ void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
 
     const auto sampling_quality = volume_node.findPlug("samplingQuality").asFloat();
     primSchema.GetStepSizeAttr().Set(volume_node.findPlug("voxelSize").asFloat() / (sampling_quality / 100.0f), usdTime);
-    shapeApi.GetMatteAttr().Set(volume_node.findPlug("matte").asBool(), usdTime);
-    shapeApi.GetReceiveShadowsAttr().Set(volume_node.findPlug("receiveShadows").asBool(), usdTime);
-    shapeApi.GetSelfShadowsAttr().Set(volume_node.findPlug("selfShadows").asBool(), usdTime);
+    shapeApi.CreateMatteAttr().Set(volume_node.findPlug("matte").asBool(), usdTime);
+    shapeApi.CreateReceiveShadowsAttr().Set(volume_node.findPlug("receiveShadows").asBool(), usdTime);
+    shapeApi.CreateSelfShadowsAttr().Set(volume_node.findPlug("selfShadows").asBool(), usdTime);
     get_attribute(mUsdPrim, nodeApi, filename_token, SdfValueTypeNames->String)
         .Set(std::string(out_vdb_path.asChar()), usdTime);
 
