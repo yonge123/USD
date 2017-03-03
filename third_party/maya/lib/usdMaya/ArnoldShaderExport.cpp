@@ -306,20 +306,20 @@ namespace {
 
     // TODO: use sorted vectors with lower bound searches. Too many ptr jumps here
     const std::map<uint8_t, simple_type> simple_type_map = {
-        {AI_TYPE_BYTE, {SdfValueTypeNames.Get()->UChar, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetByte(no, na)); }}},
-        {AI_TYPE_INT, {SdfValueTypeNames.Get()->Int, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetInt(no, na)); }}},
-        {AI_TYPE_UINT, {SdfValueTypeNames.Get()->UInt, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetUInt(no, na)); }}},
-        {AI_TYPE_BOOLEAN, {SdfValueTypeNames.Get()->Bool, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetBool(no, na)); }}},
-        {AI_TYPE_FLOAT, {SdfValueTypeNames.Get()->Float, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetFlt(no, na)); }}},
-        {AI_TYPE_RGB, {SdfValueTypeNames.Get()->Color3f, [](const AtNode* no, const char* na) -> VtValue { auto v = ai.NodeGetRGB(no, na); return VtValue(GfVec3f(v.r, v.g, v.b)); }}},
-        {AI_TYPE_RGBA, {SdfValueTypeNames.Get()->Color4f, [](const AtNode* no, const char* na) -> VtValue { auto v = ai.NodeGetRGBA(no, na); return VtValue(GfVec4f(v.r, v.g, v.b, v.a)); }}},
-        {AI_TYPE_VECTOR, {SdfValueTypeNames.Get()->Vector3f, [](const AtNode* no, const char* na) -> VtValue { auto v = ai.NodeGetVec(no, na); return VtValue(GfVec3f(v.x, v.y, v.z)); }}},
-        {AI_TYPE_POINT, {SdfValueTypeNames.Get()->Vector3f, [](const AtNode* no, const char* na) -> VtValue { auto v = ai.NodeGetPnt(no, na); return VtValue(GfVec3f(v.x, v.y, v.z)); }}},
-        {AI_TYPE_POINT2, {SdfValueTypeNames.Get()->Float2, [](const AtNode* no, const char* na) -> VtValue { auto v = ai.NodeGetPnt2(no, na); return VtValue(GfVec2f(v.x, v.y)); }}},
-        {AI_TYPE_STRING, {SdfValueTypeNames.Get()->String, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetStr(no, na)); }}},
-        {AI_TYPE_NODE, {SdfValueTypeNames.Get()->String, nullptr}},
-        {AI_TYPE_MATRIX, {SdfValueTypeNames.Get()->Matrix4d, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetMatrix(no, na)); }}},
-        {AI_TYPE_ENUM, {SdfValueTypeNames.Get()->String, [](const AtNode* no, const char* na) -> VtValue {
+        {AI_TYPE_BYTE, {SdfValueTypeNames->UChar, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetByte(no, na)); }}},
+        {AI_TYPE_INT, {SdfValueTypeNames->Int, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetInt(no, na)); }}},
+        {AI_TYPE_UINT, {SdfValueTypeNames->UInt, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetUInt(no, na)); }}},
+        {AI_TYPE_BOOLEAN, {SdfValueTypeNames->Bool, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetBool(no, na)); }}},
+        {AI_TYPE_FLOAT, {SdfValueTypeNames->Float, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetFlt(no, na)); }}},
+        {AI_TYPE_RGB, {SdfValueTypeNames->Color3f, [](const AtNode* no, const char* na) -> VtValue { auto v = ai.NodeGetRGB(no, na); return VtValue(GfVec3f(v.r, v.g, v.b)); }}},
+        {AI_TYPE_RGBA, {SdfValueTypeNames->Color4f, [](const AtNode* no, const char* na) -> VtValue { auto v = ai.NodeGetRGBA(no, na); return VtValue(GfVec4f(v.r, v.g, v.b, v.a)); }}},
+        {AI_TYPE_VECTOR, {SdfValueTypeNames->Vector3f, [](const AtNode* no, const char* na) -> VtValue { auto v = ai.NodeGetVec(no, na); return VtValue(GfVec3f(v.x, v.y, v.z)); }}},
+        {AI_TYPE_POINT, {SdfValueTypeNames->Vector3f, [](const AtNode* no, const char* na) -> VtValue { auto v = ai.NodeGetPnt(no, na); return VtValue(GfVec3f(v.x, v.y, v.z)); }}},
+        {AI_TYPE_POINT2, {SdfValueTypeNames->Float2, [](const AtNode* no, const char* na) -> VtValue { auto v = ai.NodeGetPnt2(no, na); return VtValue(GfVec2f(v.x, v.y)); }}},
+        {AI_TYPE_STRING, {SdfValueTypeNames->String, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetStr(no, na)); }}},
+        {AI_TYPE_NODE, {SdfValueTypeNames->String, nullptr}},
+        {AI_TYPE_MATRIX, {SdfValueTypeNames->Matrix4d, [](const AtNode* no, const char* na) -> VtValue { return VtValue(ai.NodeGetMatrix(no, na)); }}},
+        {AI_TYPE_ENUM, {SdfValueTypeNames->String, [](const AtNode* no, const char* na) -> VtValue {
             const auto* nentry = ai.NodeGetNodeEntry(no);
             if (nentry == nullptr) { return VtValue(""); }
             const auto* pentry = ai.NodeEntryLookUpParameter(nentry, na);
@@ -348,20 +348,20 @@ namespace {
     };
 
     const std::map<uint8_t, array_type> array_type_map = {
-        {AI_TYPE_BYTE, {SdfValueTypeNames.Get()->UCharArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<uint8_t>(p, a, ai.ArrayGetByteFunc); }}},
-        {AI_TYPE_INT, {SdfValueTypeNames.Get()->IntArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<int32_t>(p, a, ai.ArrayGetIntFunc); }}},
-        {AI_TYPE_UINT, {SdfValueTypeNames.Get()->UIntArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<uint32_t>(p, a, ai.ArrayGetUIntFunc); }}},
-        {AI_TYPE_BOOLEAN, {SdfValueTypeNames.Get()->BoolArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<bool>(p, a, ai.ArrayGetBoolFunc); }}},
-        {AI_TYPE_FLOAT, {SdfValueTypeNames.Get()->FloatArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<float>(p, a, ai.ArrayGetFltFunc); }}},
-        {AI_TYPE_RGB, {SdfValueTypeNames.Get()->Color3fArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<GfVec3f, AtRGB>(p, a, ai.ArrayGetRGBFunc); }}},
-        {AI_TYPE_RGBA, {SdfValueTypeNames.Get()->Color4fArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<GfVec4f, AtRGBA>(p, a, ai.ArrayGetRGBAFunc); }}},
-        {AI_TYPE_VECTOR, {SdfValueTypeNames.Get()->Vector3fArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<GfVec3f, AtPnt>(p, a, ai.ArrayGetVecFunc); }}},
-        {AI_TYPE_POINT, {SdfValueTypeNames.Get()->Vector3fArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<GfVec3f, AtPnt>(p, a, ai.ArrayGetPntFunc); }}},
-        {AI_TYPE_POINT2, {SdfValueTypeNames.Get()->Float2Array, [](UsdShadeParameter& p, const AtArray* a) { export_array<GfVec2f, AtPnt2>(p, a, ai.ArrayGetPnt2Func); }}},
-        {AI_TYPE_STRING, {SdfValueTypeNames.Get()->StringArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<std::string, const char*>(p, a, ai.ArrayGetStrFunc); }}},
-        {AI_TYPE_NODE, {SdfValueTypeNames.Get()->StringArray, nullptr}},
+        {AI_TYPE_BYTE, {SdfValueTypeNames->UCharArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<uint8_t>(p, a, ai.ArrayGetByteFunc); }}},
+        {AI_TYPE_INT, {SdfValueTypeNames->IntArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<int32_t>(p, a, ai.ArrayGetIntFunc); }}},
+        {AI_TYPE_UINT, {SdfValueTypeNames->UIntArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<uint32_t>(p, a, ai.ArrayGetUIntFunc); }}},
+        {AI_TYPE_BOOLEAN, {SdfValueTypeNames->BoolArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<bool>(p, a, ai.ArrayGetBoolFunc); }}},
+        {AI_TYPE_FLOAT, {SdfValueTypeNames->FloatArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<float>(p, a, ai.ArrayGetFltFunc); }}},
+        {AI_TYPE_RGB, {SdfValueTypeNames->Color3fArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<GfVec3f, AtRGB>(p, a, ai.ArrayGetRGBFunc); }}},
+        {AI_TYPE_RGBA, {SdfValueTypeNames->Color4fArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<GfVec4f, AtRGBA>(p, a, ai.ArrayGetRGBAFunc); }}},
+        {AI_TYPE_VECTOR, {SdfValueTypeNames->Vector3fArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<GfVec3f, AtPnt>(p, a, ai.ArrayGetVecFunc); }}},
+        {AI_TYPE_POINT, {SdfValueTypeNames->Vector3fArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<GfVec3f, AtPnt>(p, a, ai.ArrayGetPntFunc); }}},
+        {AI_TYPE_POINT2, {SdfValueTypeNames->Float2Array, [](UsdShadeParameter& p, const AtArray* a) { export_array<GfVec2f, AtPnt2>(p, a, ai.ArrayGetPnt2Func); }}},
+        {AI_TYPE_STRING, {SdfValueTypeNames->StringArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<std::string, const char*>(p, a, ai.ArrayGetStrFunc); }}},
+        {AI_TYPE_NODE, {SdfValueTypeNames->StringArray, nullptr}},
         {AI_TYPE_MATRIX,
-            {SdfValueTypeNames.Get()->Matrix4dArray,
+            {SdfValueTypeNames->Matrix4dArray,
                            [](UsdShadeParameter& p, const AtArray* a) {
                                VtArray<GfMatrix4d> arr(a->nelements);
                                for (auto i = 0u; i < a->nelements; ++i) {
@@ -369,7 +369,7 @@ namespace {
                                }
                            }
                        }}, // TODO: implement
-        {AI_TYPE_ENUM, {SdfValueTypeNames.Get()->IntArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<int32_t>(p, a, ai.ArrayGetIntFunc); }}},
+        {AI_TYPE_ENUM, {SdfValueTypeNames->IntArray, [](UsdShadeParameter& p, const AtArray* a) { export_array<int32_t>(p, a, ai.ArrayGetIntFunc); }}},
     };
 
     const array_type*
@@ -391,17 +391,17 @@ namespace {
     // Preferring std::vector here over pointers, so we can get some extra
     // boundary checks in debug mode.
     const out_comp_t out_comp_name(int32_t output_type, int32_t index) {
-        const static out_comp_t node_comp_name = {"node", SdfValueTypeNames.Get()->String};
+        const static out_comp_t node_comp_name = {"node", SdfValueTypeNames->String};
         const static std::vector<out_comp_t> rgba_comp_names = {
-            {"r", SdfValueTypeNames.Get()->Float},
-            {"g", SdfValueTypeNames.Get()->Float},
-            {"b", SdfValueTypeNames.Get()->Float},
-            {"a", SdfValueTypeNames.Get()->Float},
+            {"r", SdfValueTypeNames->Float},
+            {"g", SdfValueTypeNames->Float},
+            {"b", SdfValueTypeNames->Float},
+            {"a", SdfValueTypeNames->Float},
         };
         const static std::vector<out_comp_t> vec_comp_names = {
-            {"x", SdfValueTypeNames.Get()->Float},
-            {"y", SdfValueTypeNames.Get()->Float},
-            {"z", SdfValueTypeNames.Get()->Float},
+            {"x", SdfValueTypeNames->Float},
+            {"y", SdfValueTypeNames->Float},
+            {"z", SdfValueTypeNames->Float},
         };
         if (index == -1) {
             auto itype = get_simple_type(static_cast<uint8_t>(output_type));
@@ -533,7 +533,7 @@ ArnoldShaderExport::export_parameter(
                     const auto usd_comp_name = std::string(arnold_param_name) + ":" + comps;
                     if (get_output_parameter(arnold_comp_name.c_str(), source_param)) {
                         auto param_comp = connectable_API.CreateInput(TfToken(usd_comp_name),
-                                                                      SdfValueTypeNames.Get()->Float);
+                                                                      SdfValueTypeNames->Float);
                         if (param_comp) {
                             connectable_API.ConnectToSource(param_comp, source_param);
                         }
