@@ -11,6 +11,7 @@
 #include "usdMaya/MayaTransformWriter.h"
 #include "usdMaya/MayaCameraWriter.h"
 #include "usdMaya/MayaImagePlaneWriter.h"
+#include "usdMaya/MayaXGenWriter.h"
 #include "usdMaya/VdbVisualizerWriter.h"
 #include "usdMaya/primWriterRegistry.h"
 
@@ -207,8 +208,14 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         }
     } else if (ob.hasFn(MFn::kPluginShape)) {
         MFnDependencyNode dn(ob);
-        if (dn.typeName() == "vdb_visualizer") {
+        const auto typeName = dn.typeName();
+        if (typeName == "vdb_visualizer") {
             VdbVisualizerWriterPtr primPtr(new VdbVisualizerWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
+            if (primPtr->isValid()) {
+                return primPtr;
+            }
+        } else if (typeName == "xgmDescription") {
+            MayaXGenWriterPtr primPtr(new MayaXGenWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
             if (primPtr->isValid()) {
                 return primPtr;
             }
