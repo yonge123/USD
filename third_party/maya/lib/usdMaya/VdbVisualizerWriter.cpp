@@ -48,7 +48,7 @@ namespace {
             for (std::remove_const<decltype(grids_length)>::type i = 0; i < grids_length; ++i) {
                 grid_names.push_back(grids[i].asChar());
             }
-            get_attribute(prim, api, usd_attr_name, SdfValueTypeNames.Get()->StringArray)
+            get_attribute(prim, api, usd_attr_name, SdfValueTypeNames->StringArray)
                 .Set(grid_names);
             return true;
         } else {
@@ -114,21 +114,21 @@ void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
     shapeApi.GetMatteAttr().Set(volume_node.findPlug("matte").asBool(), usdTime);
     shapeApi.GetReceiveShadowsAttr().Set(volume_node.findPlug("receiveShadows").asBool(), usdTime);
     shapeApi.GetSelfShadowsAttr().Set(volume_node.findPlug("selfShadows").asBool(), usdTime);
-    get_attribute(mUsdPrim, nodeApi, filename_token, SdfValueTypeNames.Get()->String)
+    get_attribute(mUsdPrim, nodeApi, filename_token, SdfValueTypeNames->String)
         .Set(std::string(out_vdb_path.asChar()), usdTime);
 
     if (has_velocity_grids) {
-        get_attribute(mUsdPrim, nodeApi, velocity_scale_token, SdfValueTypeNames.Get()->Float)
+        get_attribute(mUsdPrim, nodeApi, velocity_scale_token, SdfValueTypeNames->Float)
             .Set(volume_node.findPlug("velocityScale").asFloat(), usdTime);
-        get_attribute(mUsdPrim, nodeApi, velocity_fps_token, SdfValueTypeNames.Get()->Float)
+        get_attribute(mUsdPrim, nodeApi, velocity_fps_token, SdfValueTypeNames->Float)
             .Set(volume_node.findPlug("velocityFps").asFloat(), usdTime);
-        get_attribute(mUsdPrim, nodeApi, velocity_shutter_start_token, SdfValueTypeNames.Get()->Float)
+        get_attribute(mUsdPrim, nodeApi, velocity_shutter_start_token, SdfValueTypeNames->Float)
             .Set(volume_node.findPlug("velocityShutterStart").asFloat(), usdTime);
-        get_attribute(mUsdPrim, nodeApi, velocity_shutter_end_token, SdfValueTypeNames.Get()->Float)
+        get_attribute(mUsdPrim, nodeApi, velocity_shutter_end_token, SdfValueTypeNames->Float)
             .Set(volume_node.findPlug("velocityShutterEnd").asFloat(), usdTime);
     }
 
-    get_attribute(mUsdPrim, nodeApi, bounds_slack_token, SdfValueTypeNames.Get()->Float)
+    get_attribute(mUsdPrim, nodeApi, bounds_slack_token, SdfValueTypeNames->Float)
         .Set(volume_node.findPlug("boundsSlack").asFloat());
 }
 
