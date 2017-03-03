@@ -31,6 +31,8 @@ namespace {
         }
         return path;
     }
+
+    constexpr auto instancesScopeName = "/__instance_sources";
 }
 
 usdWriteJobCtx::usdWriteJobCtx(const JobExportArgs& args) : mArgs(args)
@@ -118,7 +120,7 @@ bool usdWriteJobCtx::openFile(const std::string& filename, bool append)
     }
 
     if (mArgs.exportInstances) {
-        SdfPath instancesPath("/__instance_sources");
+        SdfPath instancesPath(instancesScopeName);
         auto instancesSchema = UsdGeomScope::Define(mStage, rootOverridePath(mArgs, instancesPath));
         mInstancesScope = instancesSchema.GetPrim();
         instancesSchema.MakeInvisible();
@@ -130,6 +132,10 @@ bool usdWriteJobCtx::openFile(const std::string& filename, bool append)
 
 void usdWriteJobCtx::saveAndCloseStage()
 {
+    if (mArgs.exportInstances && !mInstancesScope.IsActive()) {
+        SdfPath instancesPath(instancesScopeName);
+        mStage->RemovePrim(instancesPath);
+    }
     if (mStage->GetRootLayer()->PermissionToSave()) {
         mStage->GetRootLayer()->Save();
     }
