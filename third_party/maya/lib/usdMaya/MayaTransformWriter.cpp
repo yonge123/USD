@@ -513,7 +513,9 @@ MayaTransformWriter::MayaTransformWriter(
     }
 
     // Determine if shape is animated
-    if (!hasTransform) { // if is a shape
+    // note that we can't use hasTransform, because we need to test the original
+    // dag, not the transform (if mergeTransformAndShape is on)!
+    if (!getDagPath().hasFn(MFn::kTransform)) { // if is a shape
         MObject obj = getDagPath().node();
         if (getArgs().exportAnimation) {
             mIsShapeAnimated = PxrUsdMayaUtil::isAnimated(obj);
