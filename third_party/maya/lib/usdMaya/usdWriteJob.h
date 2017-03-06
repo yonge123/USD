@@ -30,15 +30,18 @@
 #include "usdMaya/Chaser.h"
 
 #include "usdMaya/util.h"
-#include "usdMaya/MayaPrimWriter.h"
 #include "usdMaya/ModelKindWriter.h"
+
+#include "usdMaya/usdWriteJobCtx.h"
+
+#include <maya/MObjectHandle.h>
 
 #include <string>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-class usdWriteJob
+class usdWriteJob : public usdWriteJobCtx
 {
   public:
 
@@ -58,17 +61,9 @@ class usdWriteJob
   private:
     void perFrameCallback(double iFrame);
     void postCallback();
-    bool createPrimWriter(MDagPath &curDag, MayaPrimWriterPtr* primWriterOut);
+    bool needToTraverse(const MDagPath& curDag);
     
   private:
-    JobExportArgs mArgs;
-
-    // List of the primitive writers to iterate over
-    std::vector<MayaPrimWriterPtr> mMayaPrimWriterList;
-
-    // Stage used to write out USD file
-    UsdStageRefPtr mStage;
-
     // Name of the created/appended USD file
     std::string mFileName;
     
@@ -78,7 +73,6 @@ class usdWriteJob
     // List of renderLayerObjects. Currently used for variants
     MObjectArray mRenderLayerObjs;
     
-    // USD Maya Prim mapping used for variants
     PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type mDagPathToUsdPathMap;
 
     PxrUsdMayaChaserRefPtrVector mChasers;
@@ -86,7 +80,7 @@ class usdWriteJob
     PxrUsdMaya_ModelKindWriter mModelKindWriter;
 };
 
-typedef shared_ptr < usdWriteJob > usdWriteJobPtr;
+typedef std::shared_ptr<usdWriteJob> usdWriteJobPtr;
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

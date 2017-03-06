@@ -60,6 +60,7 @@ pxr_shared_library(${PXR_PACKAGE}
         JobArgs
         usdReadJob
         usdWriteJob
+        usdWriteJobCtx
 
         pluginStaticData
         proxyShape

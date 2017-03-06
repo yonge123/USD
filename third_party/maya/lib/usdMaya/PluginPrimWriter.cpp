@@ -29,23 +29,26 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 PxrUsdExport_PluginPrimWriter::PxrUsdExport_PluginPrimWriter(
-        MDagPath& iDag,
-        UsdStageRefPtr& stage,
-        const JobExportArgs& iArgs,
+        const MDagPath& iDag,
+        const SdfPath& uPath,
+        bool instanceSource,
+        usdWriteJobCtx& job,
         PxrUsdMayaPrimWriterRegistry::WriterFn plugFn) :
-    MayaTransformWriter(iDag, stage, iArgs),
+    MayaTransformWriter(iDag, uPath, instanceSource, job),
     _plugFn(plugFn),
     _exportsGprims(false),
     _exportsReferences(false),
     _pruneChildren(false)
 {
+    SdfPath authorPath = getUsdPath();
+    mUsdPrim = getUsdStage()->GetPrimAtPath(authorPath);
 }
 
 PxrUsdExport_PluginPrimWriter::~PxrUsdExport_PluginPrimWriter()
 {
 }
 
-UsdPrim
+void
 PxrUsdExport_PluginPrimWriter::write(
         const UsdTimeCode& usdTime)
 {
@@ -60,18 +63,15 @@ PxrUsdExport_PluginPrimWriter::write(
     _exportsReferences = ctx.GetExportsReferences();
     _pruneChildren = ctx.GetPruneChildren();
 
-    UsdPrim prim = stage->GetPrimAtPath(authorPath);
-    if (!prim) {
-        return prim;
+    if (!mUsdPrim) {
+        return;
     }
 
     // Write "parent" class attrs
-    UsdGeomXformable primSchema(prim);
+    UsdGeomXformable primSchema(mUsdPrim);
     if (primSchema) {
         writeTransformAttrs(usdTime, primSchema);
     }
-
-    return prim;
 }
 
 bool
