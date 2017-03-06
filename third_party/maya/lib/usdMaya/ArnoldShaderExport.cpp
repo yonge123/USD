@@ -6,7 +6,9 @@
 #include "pxr/usd/usdAi/aiMaterialAPI.h"
 #include "pxr/usd/usdAi/aiNodeAPI.h"
 #include "pxr/usd/usd/relationship.h"
+#include "pxr/usd/usd/treeIterator.h"
 #include "pxr/usd/usdGeom/scope.h"
+#include "pxr/usd/usdGeom/xform.h"
 #include "pxr/usd/usdShade/tokens.h"
 #include "pxr/usd/usdShade/material.h"
 #include "pxr/usd/usdShade/input.h"
@@ -15,6 +17,8 @@
 #include <maya/MFnDependencyNode.h>
 #include <maya/MPlug.h>
 #include <maya/MPlugArray.h>
+
+#include <tbb/tick_count.h>
 
 #include <dlfcn.h>
 
@@ -466,8 +470,8 @@ ArnoldShaderExport::ArnoldShaderExport(const UsdStageRefPtr& _stage, UsdTimeCode
     UsdGeomScope::Define(m_stage, m_shaders_scope);
     ai.mtoa_init_export_session();
     const auto transform_assignment = TfGetenv("PXR_MAYA_TRANSFORM_ASSIGNMENT", "disable");
-    if (transform_assignment == "bake") {
-        m_transform_assignment = TRANSFORM_ASSIGNMENT_BAKE;
+    if (transform_assignment == "common") {
+        m_transform_assignment = TRANSFORM_ASSIGNMENT_COMMON;
     } else if (transform_assignment == "full") {
         m_transform_assignment = TRANSFORM_ASSIGNMENT_FULL;
     } else {
@@ -638,7 +642,7 @@ ArnoldShaderExport::export_shader(MObject obj) {
 }
 
 void
-ArnoldShaderExport::setup_shaders(const MDagPath& dg, const SdfPath& path) {
+ArnoldShaderExport::setup_shader(const MDagPath& dg, const SdfPath& path) {
     auto obj = dg.node();
     if (obj.hasFn(MFn::kTransform) || obj.hasFn(MFn::kLocator)) { return; }
 
@@ -688,13 +692,13 @@ ArnoldShaderExport::setup_shaders(const MDagPath& dg, const SdfPath& path) {
         }
     }
 
-    auto get_shading_engine_obj = [] (MObject shape_obj, const MDagPath& shape_dag) -> MObject {
+    auto get_shading_engine_obj = [] (MObject shape_obj, unsigned int instance_num) -> MObject {
         constexpr auto out_shader_plug = "instObjGroups";
 
         MFnDependencyNode node (shape_obj);
         auto plug = node.findPlug(out_shader_plug);
         MPlugArray conns;
-        plug.elementByLogicalIndex(shape_dag.instanceNumber()).connectedTo(conns, false, true);
+        plug.elementByLogicalIndex(instance_num).connectedTo(conns, false, true);
         const auto conns_length = conns.length();
         for (auto i = decltype(conns_length){0}; i < conns_length; ++i) {
             const auto splug = conns[i];
@@ -711,29 +715,97 @@ ArnoldShaderExport::setup_shaders(const MDagPath& dg, const SdfPath& path) {
         return MFnDependencyNode(tobj).name() == initial_shading_group_name;
     };
 
-    auto material_assignment = get_shading_engine_obj(obj, dg);
+    auto material_assignment = get_shading_engine_obj(obj, dg.instanceNumber());
     // we are checking for transform assignments as well
-    if (m_transform_assignment != TRANSFORM_ASSIGNMENT_DISABLE &&
+    if (m_transform_assignment == TRANSFORM_ASSIGNMENT_FULL &&
         (material_assignment.isNull() || is_initial_group(material_assignment))) {
         auto dag_it = dg;
         dag_it.pop();
         for (; dag_it.length() > 0; dag_it.pop()) {
             const auto it = m_dag_to_usd.find(dag_it);
             if (it != m_dag_to_usd.end()) {
-                const auto transform_assignment = get_shading_engine_obj(dag_it.node(), dag_it);
+                const auto transform_assignment = get_shading_engine_obj(dag_it.node(), dag_it.instanceNumber());
                 if (!transform_assignment.isNull() && !is_initial_group(transform_assignment)) {
                     const auto shader_path = export_shader(transform_assignment);
                     if (shader_path.IsEmpty()) { return; }
-                    setup_material(shader_path, m_transform_assignment == TRANSFORM_ASSIGNMENT_BAKE ?
-                                                path :
-                                                it->second.GetPrimPath());
+                    setup_material(shader_path, it->second.GetPrimPath());
                     return;
                 }
             }
         }
     }
 
+    if (material_assignment.isNull()) {
+        material_assignment = get_shading_engine_obj(obj, 0);
+    }
+
     const auto shader_path = export_shader(material_assignment);
     if (shader_path.IsEmpty()) { return; }
     setup_material(shader_path, path);
+}
+
+void collapse_shaders(UsdPrim prim) {
+    if (!prim.IsA<UsdGeomXform>()) {
+        return;
+    }
+
+    auto children = prim.GetAllChildren();
+    if (children.empty()) {
+        return;
+    }
+    SdfPathVector materials;
+    bool first = true;
+    for (auto child : children) {
+        collapse_shaders(child);
+        if (child.HasRelationship(UsdShadeTokens->materialBinding)) {
+            if (first) {
+                child.GetRelationship(UsdShadeTokens->materialBinding).GetTargets(&materials);
+                first = false;
+            } else {
+                SdfPathVector test_materials;
+                child.GetRelationship(UsdShadeTokens->materialBinding).GetTargets(&test_materials);
+                if (materials != test_materials) {
+                    materials.clear();
+                    break;
+                }
+            }
+        } else {
+            materials.clear();
+            break;
+        }
+    }
+
+    if (!materials.empty()) {
+        for (auto child : children) {
+            if (child.HasRelationship(UsdShadeTokens->materialBinding)) {
+                child.RemoveProperty(UsdShadeTokens->materialBinding);
+            }
+        }
+        prim.CreateRelationship(UsdShadeTokens->materialBinding).SetTargets(materials);
+    }
+}
+
+void ArnoldShaderExport::setup_shaders() {
+    for (const auto& it : m_dag_to_usd) {
+        setup_shader(it.first, it.second);
+    }
+
+    if (m_transform_assignment == TRANSFORM_ASSIGNMENT_COMMON) {
+        tbb::tick_count tc = tbb::tick_count::now();
+
+        for (auto stage_iter = m_stage->Traverse(); stage_iter; ++stage_iter) {
+            if (stage_iter.IsPostVisit()) {
+                continue;
+            }
+
+            // shaders and instances are in a scope, everything else is simple hierarchy
+            // with mostly shader assignments
+            if (!stage_iter->IsA<UsdGeomScope>()) {
+                collapse_shaders(*stage_iter);
+            }
+            stage_iter.PruneChildren();
+        }
+        std::cerr << "[usdMaya] Collapsing shader assignments took: "
+                  << (tbb::tick_count::now() - tc).seconds() << std::endl;
+    }
 }

@@ -20,7 +20,7 @@ public:
 private:
     enum TransformAssignment{
         TRANSFORM_ASSIGNMENT_DISABLE,
-        TRANSFORM_ASSIGNMENT_BAKE,
+        TRANSFORM_ASSIGNMENT_COMMON,
         TRANSFORM_ASSIGNMENT_FULL
     };
     std::map<const AtNode*, SdfPath> m_shader_to_usd_path;
@@ -32,9 +32,10 @@ private:
 
     void export_parameter(const AtNode* arnold_node, UsdAiShader& shader, const char* arnold_param_name, uint8_t arnold_param_type, bool user);
     SdfPath write_arnold_node(const AtNode* arnold_node, SdfPath parent_path);
+    void setup_shader(const MDagPath& dg, const SdfPath& path);
 public:
     SdfPath export_shader(MObject obj);
-    void setup_shaders(const MDagPath& dg, const SdfPath& path);
+    void setup_shaders();
 };
 
 #endif

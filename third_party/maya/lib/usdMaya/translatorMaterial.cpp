@@ -334,9 +334,7 @@ PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
                 const auto exportedShader = ai.export_shader(obj);
             }
         }
-        for (auto it = dagPathToUsdMap.begin(); it != dagPathToUsdMap.end(); ++it) {
-            ai.setup_shaders(it->first, it->second);
-        }
+        ai.setup_shaders();
     } else if (auto exporterCreator =
             PxrUsdMayaShadingModeRegistry::GetExporter(shadingMode)) {
         auto exporter = exporterCreator();
