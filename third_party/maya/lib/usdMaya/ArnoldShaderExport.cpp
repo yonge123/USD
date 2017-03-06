@@ -1,6 +1,7 @@
 #include "usdMaya/ArnoldShaderExport.h"
 
 #include "pxr/base/gf/matrix4f.h"
+#include "pxr/base/tf/getenv.h"
 #include "pxr/usd/sdf/types.h"
 #include "pxr/usd/usdAi/aiMaterialAPI.h"
 #include "pxr/usd/usdAi/aiNodeAPI.h"
@@ -454,12 +455,24 @@ namespace {
         std::replace(name.begin(), name.end(), '@', '_');
         std::replace(name.begin(), name.end(), '.', '_');
     }
+
+    const TfToken ai_surface_token("ai:surface");
+    const TfToken ai_displacement_token("ai:displacement");
 }
 
-ArnoldShaderExport::ArnoldShaderExport(const UsdStageRefPtr& _stage, UsdTimeCode _time_code) :
-    m_stage(_stage), m_shaders_scope("/Looks"), m_time_code(_time_code) {
+ArnoldShaderExport::ArnoldShaderExport(const UsdStageRefPtr& _stage, UsdTimeCode _time_code,
+                                       PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dag_to_usd) :
+    m_stage(_stage), m_dag_to_usd(dag_to_usd), m_shaders_scope("/Looks"), m_time_code(_time_code) {
     UsdGeomScope::Define(m_stage, m_shaders_scope);
     ai.mtoa_init_export_session();
+    const auto transform_assignment = TfGetenv("PXR_MAYA_TRANSFORM_ASSIGNMENT", "disable");
+    if (transform_assignment == "bake") {
+        m_transform_assignment = TRANSFORM_ASSIGNMENT_BAKE;
+    } else if (transform_assignment == "full") {
+        m_transform_assignment = TRANSFORM_ASSIGNMENT_FULL;
+    } else {
+        m_transform_assignment = TRANSFORM_ASSIGNMENT_DISABLE;
+    }
 }
 
 ArnoldShaderExport::~ArnoldShaderExport() {
@@ -605,7 +618,7 @@ ArnoldShaderExport::export_shader(MObject obj) {
     material_prim = material.GetPrim();
     auto shading_engine_path = write_arnold_node(arnold_node, material_path);
     if (!shading_engine_path.IsEmpty()) {
-        auto rel = material_prim.CreateRelationship(TfToken("ai:surface"));
+        auto rel = material_prim.CreateRelationship(ai_surface_token);
         rel.AppendTarget(shading_engine_path);
     }
     auto disp_plug = node.findPlug("displacementShader");
@@ -618,7 +631,7 @@ ArnoldShaderExport::export_shader(MObject obj) {
                             conns[0].partialName(false, false, false, false, false, true).asChar()),
                             m_shaders_scope);
     if (!disp_path.IsEmpty()) {
-        auto rel = material_prim.CreateRelationship(TfToken("ai:displacement"));
+        auto rel = material_prim.CreateRelationship(ai_displacement_token);
         rel.AppendTarget(disp_path);
     }
     return material_path;
@@ -629,9 +642,11 @@ ArnoldShaderExport::setup_shaders(const MDagPath& dg, const SdfPath& path) {
     auto obj = dg.node();
     if (obj.hasFn(MFn::kTransform) || obj.hasFn(MFn::kLocator)) { return; }
 
-    auto setup_material = [&path, this] (SdfPath shader_path) {
-        auto shape_prim = this->m_stage->GetPrimAtPath(path);
+    auto setup_material = [this] (const SdfPath& shader_path, const SdfPath& shape_path) {
+        auto shape_prim = this->m_stage->GetPrimAtPath(shape_path);
         if (!shape_prim.IsValid()) { return; }
+        auto shader_prim = this->m_stage->GetPrimAtPath(shader_path);
+        if (!shader_prim.IsValid()) { return; }
         if (shape_prim.HasRelationship(UsdShadeTokens->materialBinding)) {
             auto rel = shape_prim.GetRelationship(UsdShadeTokens->materialBinding);
             rel.ClearTargets(true);
@@ -657,37 +672,68 @@ ArnoldShaderExport::setup_shaders(const MDagPath& dg, const SdfPath& path) {
                 auto material = UsdShadeMaterial::Define(m_stage, material_path);
                 material_prim = material.GetPrim();
             }
-            setup_material(material_path);
+            setup_material(material_path, path);
 
             auto linked_path = write_arnold_node(linked_shader, material_path);
             if (linked_path.IsEmpty()) { return; }
-            auto rel = material_prim.GetRelationship(TfToken("ai:surface"));
+            auto rel = material_prim.GetRelationship(ai_surface_token);
             if (rel) {
                 rel.ClearTargets(true);
                 rel.AppendTarget(linked_path);
             } else {
-                rel = material_prim.CreateRelationship(TfToken("ai:surface"));
+                rel = material_prim.CreateRelationship(ai_surface_token);
                 rel.AppendTarget(linked_path);
             }
             return;
         }
     }
 
-    MFnDependencyNode node(obj);
-    auto plug = node.findPlug("instObjGroups");
-    MPlugArray conns;
-    plug.elementByLogicalIndex(dg.instanceNumber()).connectedTo(conns, false, true);
-    const auto conns_length = conns.length();
-    for (auto i = 0u; i < conns_length; ++i) {
-        const auto splug = conns[i];
-        auto sobj = splug.node();
-        if (sobj.apiType() == MFn::kShadingEngine) {
-            auto shader_path = export_shader(sobj);
-            if (shader_path.IsEmpty()) { return; }
-            auto shader = m_stage->GetPrimAtPath(shader_path);
-            if (!shader.IsValid()) { return; }
-            setup_material(shader_path);
-            return;
+    auto get_shading_engine_obj = [] (MObject shape_obj, const MDagPath& shape_dag) -> MObject {
+        constexpr auto out_shader_plug = "instObjGroups";
+
+        MFnDependencyNode node (shape_obj);
+        auto plug = node.findPlug(out_shader_plug);
+        MPlugArray conns;
+        plug.elementByLogicalIndex(shape_dag.instanceNumber()).connectedTo(conns, false, true);
+        const auto conns_length = conns.length();
+        for (auto i = decltype(conns_length){0}; i < conns_length; ++i) {
+            const auto splug = conns[i];
+            const auto sobj = splug.node();
+            if (sobj.apiType() == MFn::kShadingEngine) {
+                return sobj;
+            }
+        }
+        return MObject();
+    };
+
+    auto is_initial_group = [] (MObject tobj) -> bool {
+        constexpr auto initial_shading_group_name = "initialShadingGroup";
+        return MFnDependencyNode(tobj).name() == initial_shading_group_name;
+    };
+
+    auto material_assignment = get_shading_engine_obj(obj, dg);
+    // we are checking for transform assignments as well
+    if (m_transform_assignment != TRANSFORM_ASSIGNMENT_DISABLE &&
+        (material_assignment.isNull() || is_initial_group(material_assignment))) {
+        auto dag_it = dg;
+        dag_it.pop();
+        for (; dag_it.length() > 0; dag_it.pop()) {
+            const auto it = m_dag_to_usd.find(dag_it);
+            if (it != m_dag_to_usd.end()) {
+                const auto transform_assignment = get_shading_engine_obj(dag_it.node(), dag_it);
+                if (!transform_assignment.isNull() && !is_initial_group(transform_assignment)) {
+                    const auto shader_path = export_shader(transform_assignment);
+                    if (shader_path.IsEmpty()) { return; }
+                    setup_material(shader_path, m_transform_assignment == TRANSFORM_ASSIGNMENT_BAKE ?
+                                                path :
+                                                it->second.GetPrimPath());
+                    return;
+                }
+            }
         }
     }
+
+    const auto shader_path = export_shader(material_assignment);
+    if (shader_path.IsEmpty()) { return; }
+    setup_material(shader_path, path);
 }
