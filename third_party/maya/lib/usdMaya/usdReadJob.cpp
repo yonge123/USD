@@ -127,7 +127,7 @@ usdReadJob::usdReadJob(
     // paths...
     if (pathsToAdd.size() > 0) {
         for (const auto& oldPath : mArgs.parentRefPaths) {
-            auto remove_matching_iterator = std::remove_if(
+            std::remove_if(
                     pathsToAdd.begin(), pathsToAdd.end(),
                     [&](const std::string& str) {
                         return str == oldPath;
