@@ -311,7 +311,8 @@ PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
         const PxrUsdMayaUtil::ShapeSet& bindableRoots,
         const TfToken& shadingMode,
         bool mergeTransformAndShape,
-        SdfPath overrideRootPath)
+        SdfPath overrideRootPath,
+        const std::string& parentScope)
 {
     if (shadingMode == PxrUsdMayaShadingModeTokens->none) {
         return;
