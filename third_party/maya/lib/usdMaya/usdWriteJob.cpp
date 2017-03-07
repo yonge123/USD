@@ -267,6 +267,7 @@ bool usdWriteJob::beginJob(bool append)
                 mArgs.mergeTransformAndShape,
                 mArgs.handleUsdNamespaces,
                 mArgs.usdModelRootOverridePath,
+                mArgs.parentScope,
                 mDagPathToUsdPathMap);
 
     if (!mModelKindWriter.MakeModelHierarchy(mStage)) {

@@ -77,6 +77,7 @@ struct PxrUsdMayaTranslatorMaterial
             bool mergeTransformAndShape,
             bool handleUsdNamespaces,
             SdfPath overrideRootPath,
+            const std::string& parentScope,
             PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap);
 };
 

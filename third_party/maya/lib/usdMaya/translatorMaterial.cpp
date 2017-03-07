@@ -318,6 +318,7 @@ PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
         bool mergeTransformAndShape,
         bool handleUsdNamespaces,
         SdfPath overrideRootPath,
+        const std::string& parentScope,
         PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap)
 {
     if (shadingMode == PxrUsdMayaShadingModeTokens->none) {
@@ -327,7 +328,7 @@ PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
     if (shadingMode == PxrUsdMayaShadingModeTokens->arnold && ArnoldShaderExport::is_valid()) {
         // traditional registry doesn't work here, as it's only a simple function pointer
         // which doesn't play well with starting up and shutting down the mtoa exporter
-        ArnoldShaderExport ai(stage, UsdTimeCode::Default(), dagPathToUsdMap);
+        ArnoldShaderExport ai(stage, UsdTimeCode::Default(), parentScope, dagPathToUsdMap);
         if (bindableRoots.empty()) {
             for (MItDependencyNodes iter(MFn::kShadingEngine); !iter.isDone(); iter.next()) {
                 MObject obj = iter.thisNode();

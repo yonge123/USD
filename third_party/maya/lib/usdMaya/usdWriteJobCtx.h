@@ -43,6 +43,7 @@ private:
     std::map<MObjectHandle, SdfPath, MObjectHandleComp> mMasterToUsdPath;
     MayaPrimWriterPtr _createPrimWriter(const MDagPath& curDag, bool instanceSource);
     UsdPrim mInstancesScope;
+    SdfPath mParentScopePath;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

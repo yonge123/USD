@@ -199,6 +199,9 @@ void JobExportArgs::parseSingleOption(const MStringArray& theOption)
     else if (theOption[0] == MString("handleUsdNamespaces")) {
         handleUsdNamespaces = theOption[1].asInt() == 1;
     }
+    else if (theOption[0] == MString("parentScope")) {
+        parentScope = theOption[1].asChar();
+    }
 }
 
 

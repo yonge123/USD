@@ -97,7 +97,10 @@ SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool inst
             return SdfPath();
         }
     } else {
-        path = PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false, mArgs.handleUsdNamespaces);
+        path = mParentScopePath.IsEmpty() ?
+               PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false, mArgs.handleUsdNamespaces) :
+               SdfPath(mParentScopePath.GetString() +
+                       PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false, mArgs.handleUsdNamespaces).GetString());
     }
     return rootOverridePath(mArgs, path);
 }
@@ -119,8 +122,18 @@ bool usdWriteJobCtx::openFile(const std::string& filename, bool append)
         }
     }
 
+    if (!mArgs.parentScope.empty()) {
+        if (mArgs.parentScope[0] != '/') {
+            mArgs.parentScope = "/" + mArgs.parentScope;
+        }
+        SdfPath parentScopePath(mArgs.parentScope);
+        mParentScopePath = UsdGeomScope::Define(mStage, rootOverridePath(mArgs, parentScopePath)).GetPrim().GetPrimPath();
+    }
+
     if (mArgs.exportInstances) {
-        SdfPath instancesPath(instancesScopeName);
+        SdfPath instancesPath(mParentScopePath.IsEmpty() ?
+                              instancesScopeName :
+                              mParentScopePath.GetString() + instancesScopeName);
         auto instancesSchema = UsdGeomScope::Define(mStage, rootOverridePath(mArgs, instancesPath));
         mInstancesScope = instancesSchema.GetPrim();
         instancesSchema.MakeInvisible();
@@ -133,8 +146,7 @@ bool usdWriteJobCtx::openFile(const std::string& filename, bool append)
 void usdWriteJobCtx::saveAndCloseStage()
 {
     if (mArgs.exportInstances && !mInstancesScope.IsActive()) {
-        SdfPath instancesPath(instancesScopeName);
-        mStage->RemovePrim(instancesPath);
+        mStage->RemovePrim(mInstancesScope.GetPrimPath());
     }
     if (mStage->GetRootLayer()->PermissionToSave()) {
         mStage->GetRootLayer()->Save();
