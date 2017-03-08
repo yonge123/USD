@@ -28,6 +28,8 @@
 #include "usdMaya/shadingModeRegistry.h"
 #include "usdMaya/usdReadJob.h"
 
+#include "pxr/usd/ar/resolver.h"
+
 #include <maya/MArgDatabase.h>
 #include <maya/MArgList.h>
 #include <maya/MFileObject.h>
@@ -109,18 +111,28 @@ MStatus usdImport::doIt(const MArgList & args)
         MString tmpVal;
         argData.getFlagArgument("file", 0, tmpVal);
 
-        // resolve the path into an absolute path
-        MFileObject absoluteFile;
-        absoluteFile.setRawFullName(tmpVal);
-        absoluteFile.setRawFullName( absoluteFile.resolvedFullName() ); // Make sure an absolute path
+        // First resolve using maya's resolver, to expand any environment
+        // variables, or any maya-specific tokens
+        MFileObject mayaFile;
+        mayaFile.setRawFullName(tmpVal);
 
-        if (!absoluteFile.exists()) {
-            MGlobal::displayError("File does not exist.  Exiting.");
+        // Use the usd resolver - this should also have the side effect of making
+        // absolute paths
+        std::string expandedPath = mayaFile.expandedFullName().asChar();
+        ArResolver& resolver = ArGetResolver();
+        resolver.ConfigureResolverForAsset(expandedPath);
+        std::string resolvedPath = resolver.Resolve(expandedPath);
+        if (resolvedPath.empty()) {
+            MString msg = MString("File does not exist, or could not be resolved (")
+                    + tmpVal + ") - Exiting.";
+            MGlobal::displayError(msg);
             return MS::kFailure;
         }
 
-        // Set the fileName
-        mFileName = absoluteFile.resolvedFullName().asChar();
+        // Set the fileName - use the expandedPath. The resolvedPath may not exist
+        // yet (unitl FetchToLocalResolvedPath is called) - we resolve only to
+        // ensure that the path is resolvable / valid.
+        mFileName = expandedPath;
         MGlobal::displayInfo(MString("Importing ") + MString(mFileName.c_str()));
     }
     
