@@ -282,7 +282,7 @@ public:
 
 private:
     struct _Task {
-        _Task() : delegate(NULL), requestBits(NULL) { }
+        _Task() : delegate(NULL), requestBits(0) { }
         _Task(UsdImagingDelegate* delegate_, const SdfPath& path_, 
                         int requestBits_)
             : delegate(delegate_)
