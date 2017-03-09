@@ -584,22 +584,20 @@ MStatus UsdMayaReferenceAssembly::computeInStageDataCached(MDataBlock& dataBlock
         //
         std::string fileString = TfStringTrimRight(aFile.asChar());
 
-        fileString = PxrUsdMayaQuery::ResolvePath(fileString);
+        fileString = PxrUsdMayaQuery::ExpandAndCheckPath(fileString);
 
+        // Don't check for file existence if the file resolves, because filepath may not exist yet.
+        bool isValidPath = true;
         // Fall back on checking if path is just a standard absolute path
         if ( fileString.empty() ) {
             fileString = aFile.asChar();
+            isValidPath = (TfStringStartsWith(fileString, "//") ||
+                           TfIsFile(fileString, true /*resolveSymlinks*/));
         }
 
         // == Load the Stage
         UsdStageRefPtr usdStage;
         SdfPath        primPath;
-
-        // Don't try to create a stage for a non-existent file. Some processes
-        // such as mbuild may author a file path here does not yet exist until a
-        // later operation.
-        bool isValidPath = (TfStringStartsWith(fileString, "//") ||
-                            TfIsFile(fileString, true /*resolveSymlinks*/));
 
         if (isValidPath) {
 
@@ -1284,7 +1282,7 @@ bool UsdMayaRepresentationHierBase::activate()
     MString usdPrimPath(assemblyFn.findPlug(_psData.primPath, true).asString());
 
     // Resolve the file path before passing it to the importer for expanded unroll.
-    usdFilePath = MString(PxrUsdMayaQuery::ResolvePath(usdFilePath.asChar()).c_str());
+    usdFilePath = MString(PxrUsdMayaQuery::ExpandAndCheckPath(usdFilePath.asChar()).c_str());
 
     // Get the variant set selections from the Maya assembly node.
     UsdMayaReferenceAssembly* usdAssembly =

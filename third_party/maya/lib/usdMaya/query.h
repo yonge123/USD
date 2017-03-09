@@ -40,6 +40,8 @@ struct PxrUsdMayaQuery
      */
     static UsdPrim GetPrim(const std::string& shapeName);
     static std::string ResolvePath(const std::string &filePath);
+    // Return unresolved expanded path if path is resolvable, otherwise return empty string
+    static std::string ExpandAndCheckPath(const std::string &filePath);
     static void ReloadStage(const std::string& shapeName);
 };
 
