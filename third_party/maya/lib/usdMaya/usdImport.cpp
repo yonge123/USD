@@ -27,6 +27,9 @@
 #include "usdMaya/JobArgs.h"
 #include "usdMaya/shadingModeRegistry.h"
 #include "usdMaya/usdReadJob.h"
+#include "usdMaya/query.h"
+
+#include "pxr/usd/ar/resolver.h"
 
 #include <maya/MArgDatabase.h>
 #include <maya/MArgList.h>
@@ -109,18 +112,16 @@ MStatus usdImport::doIt(const MArgList & args)
         MString tmpVal;
         argData.getFlagArgument("file", 0, tmpVal);
 
-        // resolve the path into an absolute path
-        MFileObject absoluteFile;
-        absoluteFile.setRawFullName(tmpVal);
-        absoluteFile.setRawFullName( absoluteFile.resolvedFullName() ); // Make sure an absolute path
-
-        if (!absoluteFile.exists()) {
-            MGlobal::displayError("File does not exist.  Exiting.");
+        std::string expandedPath = PxrUsdMayaQuery::ExpandAndCheckPath(tmpVal.asChar());
+        if (expandedPath.empty()) {
+            MString msg = MString("File does not exist, or could not be resolved (")
+                    + tmpVal + ") - Exiting.";
+            MGlobal::displayError(msg);
             return MS::kFailure;
         }
 
-        // Set the fileName
-        mFileName = absoluteFile.resolvedFullName().asChar();
+        // Set the fileName - use the expandedPath.
+        mFileName = expandedPath;
         MGlobal::displayInfo(MString("Importing ") + MString(mFileName.c_str()));
     }
     
