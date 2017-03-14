@@ -119,9 +119,7 @@ MStatus usdImport::doIt(const MArgList & args)
         // Use the usd resolver - this should also have the side effect of making
         // absolute paths
         std::string expandedPath = mayaFile.expandedFullName().asChar();
-        ArResolver& resolver = ArGetResolver();
-        resolver.ConfigureResolverForAsset(expandedPath);
-        std::string resolvedPath = resolver.Resolve(expandedPath);
+        std::string resolvedPath = ArGetResolver().Resolve(expandedPath);
         if (resolvedPath.empty()) {
             MString msg = MString("File does not exist, or could not be resolved (")
                     + tmpVal + ") - Exiting.";
