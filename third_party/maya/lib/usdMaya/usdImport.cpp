@@ -110,27 +110,16 @@ MStatus usdImport::doIt(const MArgList & args)
         // Get the value
         MString tmpVal;
         argData.getFlagArgument("file", 0, tmpVal);
+        mFileName = tmpVal.asChar();
 
-        // First resolve using maya's resolver, to expand any environment
-        // variables, or any maya-specific tokens
-        MFileObject mayaFile;
-        mayaFile.setRawFullName(tmpVal);
-
-        // Use the usd resolver - this should also have the side effect of making
-        // absolute paths
-        std::string expandedPath = mayaFile.expandedFullName().asChar();
-        std::string resolvedPath = ArGetResolver().Resolve(expandedPath);
-        if (resolvedPath.empty()) {
+        // Use the usd resolver for validation (but save the unresolved)
+        if (ArGetResolver().Resolve(mFileName).empty()) {
             MString msg = MString("File does not exist, or could not be resolved (")
                     + tmpVal + ") - Exiting.";
             MGlobal::displayError(msg);
             return MS::kFailure;
         }
 
-        // Set the fileName - use the expandedPath. The resolvedPath may not exist
-        // yet (unitl FetchToLocalResolvedPath is called) - we resolve only to
-        // ensure that the path is resolvable / valid.
-        mFileName = expandedPath;
         MGlobal::displayInfo(MString("Importing ") + MString(mFileName.c_str()));
     }
     
