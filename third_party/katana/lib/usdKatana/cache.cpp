@@ -278,7 +278,7 @@ UsdStageRefPtr UsdKatanaCache::GetStage(
         const UsdStage::InitialLoadSet load = 
             (forcePopulate ? UsdStage::LoadAll : UsdStage::LoadNone);
         UsdStageRefPtr const& stage = UsdStage::Open(rootLayer, sessionLayer, 
-                ArGetResolver().CreateDefaultContextForAsset(fileName),
+                ArGetResolver().GetCurrentContext(),
                 load);
 
         // TF_DEBUG(USDKATANA_CACHE_STAGE).Msg("{USD STAGE CACHE} Fetched stage "
@@ -328,7 +328,7 @@ UsdKatanaCache::GetUncachedStage(std::string const& fileName,
         const UsdStage::InitialLoadSet load = 
             (forcePopulate ? UsdStage::LoadAll : UsdStage::LoadNone);
         UsdStageRefPtr const stage = UsdStage::Open(rootLayer, sessionLayer, 
-                ArGetResolver().CreateDefaultContextForAsset(fileName),
+                ArGetResolver().GetCurrentContext(),
                 load);
 
         // TF_DEBUG(USDKATANA_CACHE_STAGE).Msg("{USD STAGE CACHE} Fetched uncached stage "
