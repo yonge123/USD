@@ -71,6 +71,23 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+namespace {
+    static
+    bool _HasParent(const MDagPath& curDagPath, const MDagPath& curLeafDagPath) {
+        MFnDagNode dagNode(curDagPath);
+        if (dagNode.inUnderWorld()) {
+            for (auto dagPathCopy = curDagPath; dagPathCopy.pathCount(); dagPathCopy.pop()) {
+                MFnDagNode dagNodeCopy(dagPathCopy);
+                if (!dagNodeCopy.inUnderWorld()) {
+                    return dagNodeCopy.hasParent(curLeafDagPath.node());
+                }
+            }
+            return false;
+        } else {
+            return dagNode.hasParent(curLeafDagPath.node());
+        }
+    }
+}
 
 usdWriteJob::usdWriteJob(const JobExportArgs & iArgs) :
     mArgs(iArgs), mModelKindWriter(iArgs)
@@ -216,24 +233,10 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
             // This dagPath IS one of the arg dagPaths. It AND all of its
             // children should be included in the export.
             curLeafDagPath = curDagPath;
-        } else {
-            MFnDagNode dagNode(curDagPath);
-            auto hasParent = false;
-            if (dagNode.inUnderWorld()) {
-                for (auto dagPathCopy = curDagPath; dagPathCopy.pathCount(); dagPathCopy.pop()) {
-                    MFnDagNode dagNodeCopy(dagPathCopy);
-                    if (!dagNodeCopy.inUnderWorld()) {
-                        hasParent = dagNodeCopy.hasParent(curLeafDagPath.node());
-                        break;
-                    }
-                }
-            } else {
-                hasParent = dagNode.hasParent(curLeafDagPath.node());
-            }
-            if (!hasParent) {
-                itDag.prune();
-                continue;
-            }
+        } else if (!_HasParent(curDagPath, curLeafDagPath)) {
+            // The lowest-level, non-underworld dagNode from the dagPath is not one of the arg dagPaths, so prune
+            itDag.prune();
+            continue;
         }
 
         MayaPrimWriterPtr primWriter = nullptr;
