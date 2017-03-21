@@ -1363,15 +1363,18 @@ PxrUsdMayaUtil::MDagPathToUsdPathString(
         usdPathStr = dagPath.fullPathName().asChar();
     }
 
-    std::replace( usdPathStr.begin(), usdPathStr.end(), '|', '/');
+    // We are keeping the iterators around, to avoid extra memory allocations.
+    // Replacing characters because of underworld (transform|shapeNode->|underWorldNode).
+    // Maya inserts "->|", we can safely eliminate both the "-" and ">", and keep the rest.
+    auto itBegin = usdPathStr.begin();
+    auto itEnd = std::remove(itBegin, usdPathStr.end(), '-');
+    itEnd = std::remove(itBegin, itEnd, '>');
+    // Replacing MDagPath separators with the USD ones.
+    std::replace(itBegin, itEnd, '|', '/');
     // We may want to have another option that allows us to drop namespace's
     // instead of making them part of the path.
-    std::replace( usdPathStr.begin(), usdPathStr.end(), ':', '_'); // replace namespace ":" with "_"
-    // Replacing characters because of underworld (transform|shapeNode->|underWorldNode)
-    // Because maya inserts "->|", we can safely eliminate both the "-" and ">"
-    usdPathStr = std::string(usdPathStr.begin(), std::remove( usdPathStr.begin(), usdPathStr.end(), '-'));
-    usdPathStr = std::string(usdPathStr.begin(), std::remove( usdPathStr.begin(), usdPathStr.end(), '>'));
-    return usdPathStr;
+    std::replace(itBegin, itEnd, ':', '_');
+    return std::string(itBegin, itEnd);
 }
 
 SdfPath
