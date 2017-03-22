@@ -150,24 +150,24 @@ void JobExportArgs::parseSingleOption(const MStringArray& theOption)
     if (parseSharedOption(theOption)) return;
 
     if (theOption[0] == MString("exportReferencesAsInstanceable")) {
-        exportRefsAsInstanceable = theOption[1].asInt() == 1;
+        exportRefsAsInstanceable = theOption[1].asInt();
     }
     else if (theOption[0] == MString("exportUVs")) {
-        exportMeshUVs = theOption[1].asInt() == 1;
-        exportNurbsExplicitUV = theOption[1].asInt() == 1;
+        exportMeshUVs = theOption[1].asInt();
+        exportNurbsExplicitUV = theOption[1].asInt();
     }
     else if (theOption[0] == MString("normalizeUVs")) {
-        normalizeMeshUVs = theOption[1].asInt() == 1;
+        normalizeMeshUVs = theOption[1].asInt();
         nurbsExplicitUVType = PxUsdExportJobArgsTokens->Uniform;
     }
     else if (theOption[0] == MString("exportColorSets")) {
-        exportColorSets = theOption[1].asInt() == 1;
+        exportColorSets = theOption[1].asInt();
     }
     else if (theOption[0] == MString("renderableOnly")) {
-        excludeInvisible = theOption[1].asInt() == 1;
+        excludeInvisible = theOption[1].asInt();
     }
     else if (theOption[0] == MString("allCameras")) {
-        exportDefaultCameras = theOption[1].asInt() == 1;
+        exportDefaultCameras = theOption[1].asInt();
     }
     else if (theOption[0] == MString("renderLayerMode")) {
         renderLayerMode = PxUsdExportJobArgsTokens->defaultLayer;
@@ -179,16 +179,16 @@ void JobExportArgs::parseSingleOption(const MStringArray& theOption)
         }
     }
     else if (theOption[0] == MString("mergeXForm")) {
-        mergeTransformAndShape = theOption[1].asInt() == 1;
+        mergeTransformAndShape = theOption[1].asInt();
     }
     else if (theOption[0] == MString("exportInstances")) {
-        exportInstances = theOption[1].asInt() == 1;
+        exportInstances = theOption[1].asInt();
     }
     else if (theOption[0] == MString("exportVisibility")) {
-        exportVisibility = theOption[1].asInt() == 1;
+        exportVisibility = theOption[1].asInt();
     }
     else if (theOption[0] == MString("animation")) {
-        exportAnimation = theOption[1].asInt() == 1;
+        exportAnimation = theOption[1].asInt();
     }
     else if (theOption[0] == MString("frameSample")) {
         frameSamples.insert(theOption[1].asDouble());
@@ -197,7 +197,7 @@ void JobExportArgs::parseSingleOption(const MStringArray& theOption)
         exportRootPath = theOption[1].asChar();
     }
     else if (theOption[0] == MString("handleUsdNamespaces")) {
-        handleUsdNamespaces = theOption[1].asInt() == 1;
+        handleUsdNamespaces = theOption[1].asInt();
     }
     else if (theOption[0] == MString("parentScope")) {
         parentScope = theOption[1].asChar();
@@ -223,7 +223,7 @@ void JobImportArgs::parseSingleOption(const MStringArray& theOption)
     if (parseSharedOption(theOption)) return;
 
     if (theOption[0] == MString("readAnimData")) {
-        readAnimData = theOption[1].asInt() == 1;
+        readAnimData = theOption[1].asInt();
     } else if (theOption[0] == MString("assemblyRep")) {
         assemblyRep = TfToken(theOption[1].asChar());
     } else if (theOption[0] == MString("startTime")) {
@@ -231,9 +231,9 @@ void JobImportArgs::parseSingleOption(const MStringArray& theOption)
     } else if (theOption[0] == MString("endTime")) {
         endTime = theOption[1].asDouble();
     } else if (theOption[0] == MString("useCustomFrameRange")) {
-        useCustomFrameRange = theOption[1].asInt() == 1;
+        useCustomFrameRange = theOption[1].asInt();
     } else if (theOption[0] == MString("importWithProxyShapes")) {
-        importWithProxyShapes = theOption[1].asInt() == 1;
+        importWithProxyShapes = theOption[1].asInt();
     } else if (theOption[0] == MString("primPath")) {
         primPath = theOption[1].asChar();
     } else if (theOption[0] == MString("topLayerUsd")) {
