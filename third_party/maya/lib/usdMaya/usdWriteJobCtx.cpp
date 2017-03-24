@@ -10,7 +10,7 @@
 #include "usdMaya/MayaTransformWriter.h"
 #include "usdMaya/MayaCameraWriter.h"
 #include "usdMaya/primWriterRegistry.h"
-#include "usdMaya/PluginPrimWriter.h"
+#include "usdMaya/FunctorPrimWriter.h"
 
 #include <maya/MDagPathArray.h>
 #include <maya/MGlobal.h>
@@ -151,7 +151,7 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
 {
     MObject ob = curDag.node();
 
-    // Check whether a PluginPrimWriter exists for the node first, since plugin
+    // Check whether a user prim writer exists for the node first, since plugin
     // nodes may provide the same function sets as native Maya nodes. If a
     // writer can't be found, we'll fall back on the standard writers below.
     if (ob.hasFn(MFn::kPluginDependNode) && ob.hasFn(MFn::kDagNode) && ob.hasFn(MFn::kDependencyNode)) {
@@ -160,13 +160,13 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
 
         std::string mayaTypeName(pxNode->typeName().asChar());
 
-        if (PxrUsdMayaPrimWriterRegistry::WriterFn primWriter =
+        if (PxrUsdMayaPrimWriterRegistry::WriterFactoryFn primWriterFactory =
             PxrUsdMayaPrimWriterRegistry::Find(mayaTypeName)) {
-            PxrUsdExport_PluginPrimWriter::Ptr primPtr(new PxrUsdExport_PluginPrimWriter(
-                curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this, primWriter));
-            if (primPtr->isValid()) {
-                // We found a PluginPrimWriter that handles this node type, so
-                // return now.
+            MayaPrimWriterPtr primPtr(primWriterFactory(
+                curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
+            if (primPtr && primPtr->isValid()) {
+                // We found a registered user prim writer that handles this node
+                // type, so return now.
                 return primPtr;
             }
         }

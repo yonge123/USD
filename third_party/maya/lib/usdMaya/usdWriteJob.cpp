@@ -34,7 +34,6 @@
 
 #include "usdMaya/translatorMaterial.h"
 #include "usdMaya/primWriterRegistry.h"
-#include "usdMaya/PluginPrimWriter.h"
 
 #include "usdMaya/Chaser.h"
 #include "usdMaya/ChaserRegistry.h"

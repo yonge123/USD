@@ -22,18 +22,18 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/pxr.h"
-#include "usdMaya/PluginPrimWriter.h"
+#include "usdMaya/FunctorPrimWriter.h"
 #include "pxr/usd/usdGeom/xformable.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-PxrUsdExport_PluginPrimWriter::PxrUsdExport_PluginPrimWriter(
+FunctorPrimWriter::FunctorPrimWriter(
         const MDagPath& iDag,
         const SdfPath& uPath,
         bool instanceSource,
         usdWriteJobCtx& job,
-        PxrUsdMayaPrimWriterRegistry::WriterFn plugFn) :
+        WriterFn plugFn) :
     MayaTransformWriter(iDag, uPath, instanceSource, job),
     _plugFn(plugFn),
     _exportsGprims(false),
@@ -44,12 +44,12 @@ PxrUsdExport_PluginPrimWriter::PxrUsdExport_PluginPrimWriter(
     mUsdPrim = getUsdStage()->GetPrimAtPath(authorPath);
 }
 
-PxrUsdExport_PluginPrimWriter::~PxrUsdExport_PluginPrimWriter()
+FunctorPrimWriter::~FunctorPrimWriter()
 {
 }
 
 void
-PxrUsdExport_PluginPrimWriter::write(
+FunctorPrimWriter::write(
         const UsdTimeCode& usdTime)
 {
     SdfPath authorPath = getUsdPath();
@@ -75,23 +75,48 @@ PxrUsdExport_PluginPrimWriter::write(
 }
 
 bool
-PxrUsdExport_PluginPrimWriter::exportsGprims() const
+FunctorPrimWriter::exportsGprims() const
 {
     return _exportsGprims;
 }
     
 bool
-PxrUsdExport_PluginPrimWriter::exportsReferences() const
+FunctorPrimWriter::exportsReferences() const
 {
     return _exportsReferences;
 }
 
 bool
-PxrUsdExport_PluginPrimWriter::shouldPruneChildren() const
+FunctorPrimWriter::shouldPruneChildren() const
 {
     return _pruneChildren;
 }
 
+/* static */
+MayaPrimWriterPtr
+FunctorPrimWriter::Create(
+    const MDagPath& iDag,
+    const SdfPath& uPath,
+    bool instanceSource,
+    usdWriteJobCtx& job,
+    WriterFn plugFn)
+{
+    return MayaPrimWriterPtr(new FunctorPrimWriter(iDag, uPath, instanceSource, job, plugFn));
+}
+
+/* static */
+std::function< MayaPrimWriterPtr(const MDagPath&, const SdfPath&,
+    bool, usdWriteJobCtx&) >
+FunctorPrimWriter::CreateFactory(WriterFn fn)
+{
+    return std::bind(
+            Create,
+            std::placeholders::_1,
+            std::placeholders::_2,
+            std::placeholders::_3,
+            std::placeholders::_4,
+            fn);
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
