@@ -206,7 +206,7 @@ PxrUsdMayaTranslatorMaterial::AssignMaterial(
         primSchema.GetPrim());
 
     SdfPathVector bindingTargets;
-    if (!materialFaceSet.GetBindingTargets(&bindingTargets) or
+    if (!materialFaceSet.GetBindingTargets(&bindingTargets) ||
         bindingTargets.empty()) {
             
         MGlobal::displayWarning(TfStringPrintf("No bindings found on material "
@@ -338,8 +338,7 @@ PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
         ai.setup_shaders();
     } else if (auto exporterCreator =
             PxrUsdMayaShadingModeRegistry::GetExporter(shadingMode)) {
-        auto exporter = exporterCreator();
-        if (exporter != nullptr) {
+        if (auto exporter = exporterCreator()) {
             exporter->DoExport(stage, bindableRoots, mergeTransformAndShape, handleUsdNamespaces, overrideRootPath);
         }
     }

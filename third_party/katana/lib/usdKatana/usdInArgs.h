@@ -88,13 +88,13 @@ public:
             UsdStageRefPtr stage,
             const std::string& rootLocation,
             const std::string& isolatePath,
+            const std::string& sessionLocation,
             FnAttribute::GroupAttribute sessionAttr,
             const std::string& ignoreLayerRegex,
             double currentTime,
             double shutterOpen,
             double shutterClose,
             const std::vector<double>& motionSampleTimes,
-            const std::set<std::string>& defaultMotionPaths,
             const StringListMap& extraAttributesOrNamespaces,
             bool verbose,
             const char * errorMessage = 0) {
@@ -102,13 +102,13 @@ public:
                     stage, 
                     rootLocation,
                     isolatePath,
+                    sessionLocation,
                     sessionAttr,
                     ignoreLayerRegex,
                     currentTime,
                     shutterOpen,
                     shutterClose, 
                     motionSampleTimes,
-                    defaultMotionPaths,
                     extraAttributesOrNamespaces,
                     verbose,
                     errorMessage));
@@ -135,6 +135,10 @@ public:
         return _isolatePath;
     }
 
+    const std::string& GetSessionLocationPath() const {
+        return _sessionLocation;
+    }
+
     FnAttribute::GroupAttribute GetSessionAttr() {
         return _sessionAttr;
     }
@@ -159,19 +163,6 @@ public:
         return _motionSampleTimes;
     }
 
-    const std::set<std::string>& GetDefaultMotionPaths() const {
-        return _defaultMotionPaths;
-    }
-
-    /// \brief Return true if motion blur is backward.
-    ///
-    /// PxrUsdIn supports both forward and backward motion blur. Motion
-    /// blur is considered backward if multiple samples are requested
-    /// and the first specified sample is later than the last sample.
-    const bool IsMotionBackward() const {
-        return _isMotionBackward;
-    }
-
     const StringListMap& GetExtraAttributesOrNamespaces() const {
         return _extraAttributesOrNamespaces;
     }
@@ -193,13 +184,13 @@ private:
             UsdStageRefPtr stage,
             const std::string& rootLocation,
             const std::string& isolatePath,
+            const std::string& sessionLocation,
             FnAttribute::GroupAttribute sessionAttr,
             const std::string& ignoreLayerRegex,
             double currentTime,
             double shutterOpen,
             double shutterClose,
             const std::vector<double>& motionSampleTimes,
-            const std::set<std::string>& defaultMotionPaths,
             const StringListMap& extraAttributesOrNamespaces,
             bool verbose,
             const char * errorMessage = 0);
@@ -211,6 +202,7 @@ private:
     std::string _rootLocation;
     std::string _isolatePath;
 
+    std::string _sessionLocation;
     FnAttribute::GroupAttribute _sessionAttr;
     std::string _ignoreLayerRegex;
 
@@ -218,8 +210,6 @@ private:
     double _shutterOpen;
     double _shutterClose;
     std::vector<double> _motionSampleTimes;
-    std::set<std::string> _defaultMotionPaths;
-    bool _isMotionBackward;
 
     // maps the root-level attribute name to the specified attributes or namespaces
     StringListMap _extraAttributesOrNamespaces;
@@ -240,13 +230,13 @@ struct ArgsBuilder
     UsdStageRefPtr stage;
     std::string rootLocation;
     std::string isolatePath;
+    std::string sessionLocation;
     FnAttribute::GroupAttribute sessionAttr;
     std::string ignoreLayerRegex;
     double currentTime;
     double shutterOpen;
     double shutterClose;
     std::vector<double> motionSampleTimes;
-    std::set<std::string> defaultMotionPaths;
     PxrUsdKatanaUsdInArgs::StringListMap extraAttributesOrNamespaces;
     bool verbose;
     const char * errorMessage;
@@ -267,6 +257,7 @@ struct ArgsBuilder
             stage,
             rootLocation,
             isolatePath,
+            sessionLocation,
             sessionAttr.isValid() ? sessionAttr :
                     FnAttribute::GroupAttribute(true),
             ignoreLayerRegex,
@@ -274,7 +265,6 @@ struct ArgsBuilder
             shutterOpen,
             shutterClose,
             motionSampleTimes,
-            defaultMotionPaths,
             extraAttributesOrNamespaces,
             verbose,
             errorMessage);
@@ -285,13 +275,13 @@ struct ArgsBuilder
         stage = other->GetStage();
         rootLocation = other->GetRootLocationPath();
         isolatePath = other->GetIsolatePath();
+        sessionLocation = other->GetSessionLocationPath();
         sessionAttr = other->GetSessionAttr();
         ignoreLayerRegex = other->GetIgnoreLayerRegex();
         currentTime = other->GetCurrentTime();
         shutterOpen = other->GetShutterOpen();
         shutterClose = other->GetShutterClose();
         motionSampleTimes = other->GetMotionSampleTimes();
-        defaultMotionPaths = other->GetDefaultMotionPaths();
         extraAttributesOrNamespaces = other->GetExtraAttributesOrNamespaces();
         verbose = other->IsVerbose();
         errorMessage = other->GetErrorMessage().c_str();

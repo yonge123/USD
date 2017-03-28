@@ -20,7 +20,6 @@ pxr_shared_library(hd
         sdf
         garch
         hf
-        gal
         glf
         pxOsd
         ${OPENSUBDIV_LIBRARIES}
@@ -48,7 +47,6 @@ pxr_shared_library(hd
         codeGen
         commandBuffer
         computation
-        context
         conversions
         copyComputation
         debugCodes
@@ -73,6 +71,7 @@ pxr_shared_library(hd
         lightingShader
         mesh
         meshTopology
+        meshUtil
         package
         patchIndex
         perfLog
@@ -107,12 +106,14 @@ pxr_shared_library(hd
         textureResource
         tokens
         topology
+        unitTestGLDrawing
         vboMemoryManager
         vboSimpleMemoryManager
         vertexAdjacency
         vtBufferSource
 
     PUBLIC_HEADERS
+        api.h
         enums.h
         types.h
         version.h
@@ -123,9 +124,6 @@ pxr_shared_library(hd
         unitTestDelegate
         unitTestHelper
         ${optionalPrivateClasses}
-
-    PRIVATE_HEADERS
-        unitTestGLDrawing.h
 
     RESOURCE_FILES
         plugInfo.json
@@ -145,14 +143,3 @@ pxr_shared_library(hd
         shaders/renderPassShader.glslfx
 )
 
-if (X11_FOUND OR APPLE)
-pxr_build_test(testHdBasicDrawing
-    LIBRARIES
-        hd
-        garch
-        glf
-    CPPFILES
-        unitTestGLDrawing.cpp
-        testenv/testHdBasicDrawing.cpp
-)
-endif()

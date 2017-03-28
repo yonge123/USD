@@ -27,6 +27,7 @@
 
 #include "pxr/pxr.h"
 
+#include "usdMaya/api.h"
 #include "usdMaya/shadingModeExporterContext.h"
 
 #include <functional>
@@ -36,15 +37,19 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class PxrUsdMayaShadingModeExporter {
 public:
+    PXRUSDMAYA_API
     PxrUsdMayaShadingModeExporter();
+    PXRUSDMAYA_API
     virtual ~PxrUsdMayaShadingModeExporter();
 
+    PXRUSDMAYA_API
     virtual void DoExport(const UsdStageRefPtr& stage,
                           const PxrUsdMayaUtil::ShapeSet& bindableRoots,
                           bool mergeTransformAndShape,
                           bool handleUsdNamespaces,
                           const SdfPath& overrideRootPath);
 
+    PXRUSDMAYA_API
     virtual void Export(const PxrUsdMayaShadingModeExportContext& context);
 };
 

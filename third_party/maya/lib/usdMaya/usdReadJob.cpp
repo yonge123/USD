@@ -44,7 +44,7 @@
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usd/stageCacheContext.h"
 #include "pxr/usd/usd/timeCode.h"
-#include "pxr/usd/usd/treeIterator.h"
+#include "pxr/usd/usd/primRange.h"
 #include "pxr/usd/usd/variantSets.h"
 #include "pxr/usd/usdGeom/xform.h"
 #include "pxr/usd/usdGeom/xformCommonAPI.h"
@@ -283,7 +283,7 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
         mArgs.shadingMode = ASSEMBLY_SHADING_MODE;
     }
 
-    UsdTreeIterator primIt(usdRootPrim);
+    UsdPrimRange primIt(usdRootPrim);
 
     // We maintain a registry mapping SdfPaths to MObjects as we create Maya
     // nodes, so prime the registry with the root Maya node and the
@@ -507,7 +507,7 @@ bool usdReadJob::_InitVariantsByPath(const std::map<std::string, std::string>& t
     return true;
 }
 
-bool usdReadJob::_DoImport(UsdTreeIterator& primIt,
+bool usdReadJob::_DoImport(UsdPrimRange& primIt,
                            const UsdPrim& usdRootPrim)
 {
     for(; primIt; ++primIt) {

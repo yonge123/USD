@@ -39,11 +39,11 @@
 #include <map>
 #include <string>
 
-PXR_NAMESPACE_OPEN_SCOPE
-
-
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static
 std::map<std::string, std::string>
@@ -67,6 +67,8 @@ _GetVariantSetSelections(const std::string& assemblyName) {
     return assembly->GetVariantSetSelections();
 }
 
+} // anonymous namespace 
+
 void wrapAssembly()
 {
     def("GetVariantSetSelections",
@@ -75,6 +77,3 @@ void wrapAssembly()
 
     scope().attr("MAYA_NATIVE_FILE_REF_ATTR") = MAYA_NATIVE_FILE_REF_ATTR.GetText();
 }
-
-PXR_NAMESPACE_CLOSE_SCOPE
-

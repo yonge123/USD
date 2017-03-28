@@ -27,6 +27,7 @@
 /// \file JobArgs.h
 
 #include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/util.h"
 
 #include "pxr/base/tf/staticTokens.h"
@@ -103,6 +104,7 @@ struct JobSharedArgs
 
 struct JobExportArgs : JobSharedArgs
 {
+    PXRUSDMAYA_API
     JobExportArgs();
 
     inline void parseExportOptions(const MString &optionsString)
@@ -169,6 +171,7 @@ struct JobExportArgs : JobSharedArgs
 
 struct JobImportArgs : JobSharedArgs
 {
+    PXRUSDMAYA_API
     JobImportArgs();
 
     inline void parseImportOptions(const MString &optionsString)

@@ -25,6 +25,7 @@
 #define _usdExport_MayaTransformWriter_h_
 
 #include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/MayaPrimWriter.h"
 
 #include "pxr/usd/usdGeom/xform.h"
@@ -60,14 +61,17 @@ class MayaTransformWriter : public MayaPrimWriter
 {
   public:
 
+    PXRUSDMAYA_API
     MayaTransformWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& job);
     virtual ~MayaTransformWriter() {};
 
+    PXRUSDMAYA_API
     virtual void pushTransformStack(
             const MFnTransform& iTrans, 
             const UsdGeomXformable& usdXForm, 
             bool writeAnim);
     
+    PXRUSDMAYA_API
     virtual void write(const UsdTimeCode &usdTime);
 
     virtual bool isShapeAnimated()     const { return mIsShapeAnimated; };
@@ -75,6 +79,7 @@ class MayaTransformWriter : public MayaPrimWriter
     const MDagPath& getTransformDagPath() { return mXformDagPath; };
 
   protected:
+    PXRUSDMAYA_API
     bool writeTransformAttrs(
             const UsdTimeCode& usdTime, 
             UsdGeomXformable& primSchema);

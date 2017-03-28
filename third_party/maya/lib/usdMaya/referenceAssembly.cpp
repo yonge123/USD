@@ -38,7 +38,7 @@
 #include "pxr/usd/usd/editContext.h"
 #include "pxr/usd/usd/editTarget.h"
 #include "pxr/usd/usd/stageCacheContext.h"
-#include "pxr/usd/usd/treeIterator.h"
+#include "pxr/usd/usd/primRange.h"
 #include "pxr/usd/usd/variantSets.h"
 #include "pxr/usd/usdGeom/xformable.h"
 #include "pxr/usd/usdGeom/xformCommonAPI.h"
@@ -87,6 +87,12 @@ TF_DEFINE_ENV_SETTING(PIXMAYA_DEBUG_USD_ASSEM, false,
 
 TF_DEFINE_ENV_SETTING(PIXMAYA_READ_ANIM_BY_DEFAULT, false,
                       "Default to reading animation when importing usd");
+
+bool
+UsdMayaUseUsdAssemblyNamespace()
+{
+    return TfGetEnvSetting(PIXMAYA_USE_USD_ASSEM_NAMESPACE);
+}
 
 // == Statics ==
 const MString UsdMayaReferenceAssembly::_classification("drawdb/geometry/transform");
@@ -631,21 +637,21 @@ MStatus UsdMayaReferenceAssembly::computeInStageDataCached(MDataBlock& dataBlock
                 sessionLayer = UsdUtilsStageCache::GetSessionLayerForVariantSelections(
                     primPath, varSelsVec);
 
-                // If we have assembly edits, do not share session layers with
-                // other models that have our same set of variant selections,
-                // since our edits may differ from theirs. Theoretically we
-                // could hash all of our edit strings and share the same usd
-                // stage as other models with the same hash, but it's not
-                // typical to have enough models in a scene that share the same
-                // set of edits in order to make that worthwhile.
-                MObject assemObj = thisMObject();
-                MItEdits assemEdits(_GetEdits(assemObj));
-                if (!assemEdits.isDone()) {
-                    _hasEdits = true;
-                    SdfLayerRefPtr unsharedSessionLayer = SdfLayer::CreateAnonymous();
-                    unsharedSessionLayer->TransferContent(sessionLayer);
-                    sessionLayer = unsharedSessionLayer;
-                }
+            // If we have assembly edits, do not share session layers with
+            // other models that have our same set of variant selections,
+            // since our edits may differ from theirs. Theoretically we
+            // could hash all of our edit strings and share the same usd
+            // stage as other models with the same hash, but it's not
+            // typical to have enough models in a scene that share the same
+            // set of edits in order to make that worthwhile.
+            MObject assemObj = thisMObject();
+            MItEdits assemEdits(_GetEdits(assemObj));
+            if (!assemEdits.isDone()) {
+                _hasEdits = true;
+                SdfLayerRefPtr unsharedSessionLayer = SdfLayer::CreateAnonymous();
+                unsharedSessionLayer->TransferContent(sessionLayer);
+                sessionLayer = unsharedSessionLayer;
+            }
 
                 UsdStageCacheContext ctx(UsdMayaStageCache::Get());
                 usdStage = UsdStage::Open(rootLayer, 
@@ -656,6 +662,10 @@ MStatus UsdMayaReferenceAssembly::computeInStageDataCached(MDataBlock& dataBlock
                 retValue = MS::kFailure;
                 CHECK_MSTATUS_AND_RETURN_IT(retValue);
             }
+        }
+        else {
+            retValue = MS::kFailure;
+            CHECK_MSTATUS_AND_RETURN_IT(retValue);
         }
 
         // Create the output outData ========
@@ -1107,7 +1117,12 @@ UsdMayaRepresentationProxyBase::_PushEditsToProxy()
         stage->GetSessionLayer()->GetSubLayerPaths().clear();
         stage->GetSessionLayer()->GetSubLayerPaths().push_back(
             _sessionSublayer->GetIdentifier());
-        
+
+        // Make the session sublayer the edit target before applying the Maya
+        // edits to ensure that we don't pollute other assemblies using the
+        // same layer(s).
+        UsdEditContext editContext(stage, _sessionSublayer);
+
         PxrUsdMayaEditUtil::ApplyEditsToProxy( refEdits, stage, proxyRootPrim, &failedEdits );
     }
     

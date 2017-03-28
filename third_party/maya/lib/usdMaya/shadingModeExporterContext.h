@@ -30,10 +30,8 @@
 
 
 #include <maya/MObject.h>
-#include <boost/function.hpp>
 
 PXR_NAMESPACE_OPEN_SCOPE
-
 
 class PxrUsdMayaShadingModeExportContext
 {
@@ -73,7 +71,6 @@ public:
             const MObject& shadingEngine,
             const UsdStageRefPtr& stage,
             bool mergeTransformAndShape,
-            bool handleUsdNamespaces,
             const PxrUsdMayaUtil::ShapeSet& bindableRoots,
             SdfPath overrideRootPath);
 private:
@@ -85,9 +82,6 @@ private:
 
     SdfPathSet _bindableRoots;
 };
-
-typedef boost::function< void (PxrUsdMayaShadingModeExportContext*) > PxrUsdMayaShadingModeExporterContext;
-
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

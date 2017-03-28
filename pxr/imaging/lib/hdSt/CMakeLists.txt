@@ -10,20 +10,32 @@ endif()
 
 pxr_shared_library(hdSt
     LIBRARIES
+        cameraUtil
         hd
         tf
         tracelite
 
     PUBLIC_CLASSES
         basisCurves
+        camera
+        drawTarget
+        drawTargetAttachmentDesc
+        drawTargetAttachmentDescArray
+        drawTargetRenderPassState
+        light      
         mesh
         points
+        renderDelegate
         shader
+
+    PUBLIC_HEADERS
+        api.h
 
     PRIVATE_CLASSES
         basisCurvesComputations
         basisCurvesShaderKey
         basisCurvesTopology
+        drawTargetTextureResource
         meshShaderKey
         meshTopology 
         pointsShaderKey
@@ -31,4 +43,18 @@ pxr_shared_library(hdSt
         subdivision
         subdivision3
         triangulate
+
+    RESOURCE_FILES
+        plugInfo.json
 )
+
+if (X11_FOUND OR APPLE)
+pxr_build_test(testHdStBasicDrawing
+    LIBRARIES
+        hd
+        garch
+        glf
+    CPPFILES
+        testenv/testHdStBasicDrawing.cpp
+)
+endif()

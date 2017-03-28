@@ -44,6 +44,7 @@
 
 #include <FnGeolibServices/FnAttributeFunctionUtil.h>
 #include <FnLogging/FnLogging.h>
+#include <pystring/pystring.h>
 
 #include "pxr/usd/usdHydra/tokens.h"
 
@@ -94,7 +95,7 @@ PxrUsdKatanaReadMaterial(
     // we do this before ReadPrim because ReadPrim calls ReadBlindData 
     // (primvars only) which we don't want to stomp here.
     attrs.set("material", _GetMaterialAttr(
-        material, data.GetUsdInArgs()->GetCurrentTime(), flatten));
+        material, data.GetCurrentTime(), flatten));
 
     const std::string& parentPrefix = (looksGroupLocation.empty()) ?
         data.GetUsdInArgs()->GetRootLocationPath() : looksGroupLocation;
@@ -298,8 +299,12 @@ _CreateShadingNode(
             if (flatten ||
                 !PxrUsdKatana_IsAttrValFromBaseMaterial(
                 oslSchema.GetOslPathAttr())) {
-                shdNodeAttr.set("type", FnKat::StringAttribute(
-                            "osl:" + fileAssetPath.GetAssetPath()));
+                std::string typeValue = fileAssetPath.GetAssetPath();
+                if (!pystring::endswith(typeValue, ".oso"))
+                {
+                    typeValue = "osl:" + typeValue;
+                }
+                shdNodeAttr.set("type", FnKat::StringAttribute(typeValue));
             }
         }
         else if (risObjectSchema){
@@ -321,7 +326,12 @@ _CreateShadingNode(
                 TfToken id;
                 shaderSchema.GetIdAttr().Get(&id, currentTime);
                 std::string oslIdString = id.GetString();
-                oslIdString = "osl:" + oslIdString;
+                
+                if (!pystring::endswith(oslIdString, ".oso"))
+                {
+                    oslIdString = "osl:" + oslIdString;
+                }
+                
                 FnKat::StringAttribute oslIdAttr = FnKat::StringAttribute(oslIdString);
                 FnAttribute::GroupAttribute shaderInfoAttr = 
                          FnGeolibServices::FnAttributeFunctionUtil::run(

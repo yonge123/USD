@@ -27,6 +27,7 @@
 /// \file translatorModelAssembly.h
 
 #include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/primReaderArgs.h"
 #include "usdMaya/primReaderContext.h"
 #include "usdMaya/primWriterArgs.h"
@@ -49,6 +50,7 @@ struct PxrUsdMayaTranslatorModelAssembly
     /// This method generates a USD prim with a model reference
     /// when provided args and a context that identify a Maya
     /// assembly node.
+    PXRUSDMAYA_API
     static bool Create(
         const PxrUsdMayaPrimWriterArgs& args, 
         PxrUsdMayaPrimWriterContext* context);
@@ -60,6 +62,7 @@ struct PxrUsdMayaTranslatorModelAssembly
     /// references the asset directly if desired.
     /// XXX: This might be a candidate for a plugin point that studios would
     //  want to customize.
+    PXRUSDMAYA_API
     static bool ShouldImportAsAssembly(
         const UsdPrim& usdImportRootPrim,
         const UsdPrim& prim,
@@ -71,6 +74,7 @@ struct PxrUsdMayaTranslatorModelAssembly
     /// created, and if \p assemblyRep is non-empty, that representation will
     /// be activated after creation.
     /// Returns true if this succeeds in creating an assembly for \p prim.
+    PXRUSDMAYA_API
     static bool Read(
         const UsdPrim& prim,
         const std::string& assetIdentifier,
@@ -86,6 +90,7 @@ struct PxrUsdMayaTranslatorModelAssembly
     /// Creates a Maya USD proxy shape node for the USD prim \p prim under
     /// \p parentNode. A node of type \p proxyShapeTypeName will be created.
     /// Returns true if this succeeds in creating a proxy shape for \p prim.
+    PXRUSDMAYA_API
     static bool ReadAsProxy(
         const UsdPrim& prim,
         const std::map<std::string, std::string>& variantSetSelections,

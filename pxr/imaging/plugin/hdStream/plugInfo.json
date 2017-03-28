@@ -3,9 +3,9 @@
         {
             "Info": {
                 "Types": {
-                    "HdStreamRenderDelegate": {
+                    "HdStreamRendererPlugin": {
                         "bases": [
-                            "HdRenderDelegate"
+                            "HdxRendererPlugin"
                         ],
                         "displayName": "Hydra Stream Renderer",
                         "priority": 0

@@ -26,7 +26,7 @@
 
 #include "usdMaya/JobArgs.h"
 #include "usdMaya/translatorMaterial.h"
-#include "usdMaya/PluginPrimWriter.h"
+#include "usdMaya/primWriterRegistry.h"
 
 #include "usdMaya/Chaser.h"
 #include "usdMaya/ChaserRegistry.h"
@@ -37,7 +37,7 @@
 
 #include "pxr/usd/usd/variantSets.h"
 #include "pxr/usd/usd/editContext.h"
-#include "pxr/usd/usd/treeIterator.h"
+#include "pxr/usd/usd/primRange.h"
 #include "pxr/usd/usdGeom/metrics.h"
 #include "pxr/usd/usdGeom/xform.h"
 #include "pxr/usd/usdUtils/pipeline.h"
@@ -443,7 +443,7 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
                 UsdEditContext editContext(mStage, editTarget);
 
                 // == Activate/Deactivate UsdPrims
-                UsdTreeIterator it = UsdTreeIterator::AllPrims(mStage->GetPseudoRoot());
+                UsdPrimRange it = UsdPrimRange::AllPrims(mStage->GetPseudoRoot());
                 std::vector<UsdPrim> primsToDeactivate;
                 for ( ; it; ++it) {
                     UsdPrim usdPrim = *it;
@@ -463,7 +463,7 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
                         }
                     }
                 }
-                // Now deactivate the prims (done outside of the UsdTreeIterator 
+                // Now deactivate the prims (done outside of the UsdPrimRange 
                 // so not to modify the iterator while in the loop)
                 for ( UsdPrim const& prim : primsToDeactivate ) {
                     prim.SetActive(false);
