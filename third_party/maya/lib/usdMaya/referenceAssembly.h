@@ -58,11 +58,9 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaVariantSetTokens, PXRUSDMAYA_VARIANT_SET_TOKENS);
 
-extern TfEnvSetting<bool> PIXMAYA_USE_USD_ASSEM_NAMESPACE;
 /// Returns the PIXMAYA_USE_USD_ASSEM_NAMESPACE env setting.
 PXRUSDMAYA_API
 bool UsdMayaUseUsdAssemblyNamespace();
-
 
 class UsdMayaReferenceAssembly : public MPxAssembly, 
     public PxrUsdMayaUsdPrimProvider

@@ -3,6 +3,6 @@ if (NOT TARGET usdviewq)
     return()
 endif()
 
-pxr_python_bins(
+pxr_python_bin(
         usdrender
 )

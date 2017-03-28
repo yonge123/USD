@@ -6,7 +6,7 @@
 #include "pxr/usd/usdAi/aiMaterialAPI.h"
 #include "pxr/usd/usdAi/aiNodeAPI.h"
 #include "pxr/usd/usd/relationship.h"
-#include "pxr/usd/usd/treeIterator.h"
+#include "pxr/usd/usd/primRange.h"
 #include "pxr/usd/usdGeom/scope.h"
 #include "pxr/usd/usdGeom/xform.h"
 #include "pxr/usd/usdShade/tokens.h"

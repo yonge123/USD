@@ -4,7 +4,6 @@
 #include "pxr/usd/ar/resolverContext.h"
 #include "pxr/usd/usdGeom/scope.h"
 
-#include "usdMaya/PluginPrimWriter.h"
 #include "usdMaya/MayaMeshWriter.h"
 #include "usdMaya/MayaNurbsCurveWriter.h"
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
@@ -174,13 +173,13 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
 
         std::string mayaTypeName(pxNode->typeName().asChar());
 
-        if (PxrUsdMayaPrimWriterRegistry::WriterFn primWriter =
-            PxrUsdMayaPrimWriterRegistry::Find(mayaTypeName)) {
-            PxrUsdExport_PluginPrimWriter::Ptr primPtr(new PxrUsdExport_PluginPrimWriter(
-                curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this, primWriter));
-            if (primPtr->isValid()) {
-                // We found a PluginPrimWriter that handles this node type, so
-                // return now.
+        if (PxrUsdMayaPrimWriterRegistry::WriterFactoryFn primWriterFactory =
+                PxrUsdMayaPrimWriterRegistry::Find(mayaTypeName)) {
+            MayaPrimWriterPtr primPtr(primWriterFactory(
+                curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
+            if (primPtr && primPtr->isValid()) {
+                // We found a registered user prim writer that handles this node
+                // type, so return now.
                 return primPtr;
             }
         }

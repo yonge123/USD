@@ -71,6 +71,7 @@ public:
             const MObject& shadingEngine,
             const UsdStageRefPtr& stage,
             bool mergeTransformAndShape,
+            bool handleUsdNamespaces,
             const PxrUsdMayaUtil::ShapeSet& bindableRoots,
             SdfPath overrideRootPath);
 private:
