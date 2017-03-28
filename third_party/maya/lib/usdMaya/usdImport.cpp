@@ -110,18 +110,17 @@ MStatus usdImport::doIt(const MArgList & args)
         // Get the value
         MString tmpVal;
         argData.getFlagArgument("file", 0, tmpVal);
+        mFileName = tmpVal.asChar();
 
-        std::string expandedPath = PxrUsdMayaQuery::ExpandAndCheckPath(tmpVal.asChar());
-        if (expandedPath.empty()) {
+        // Use the usd resolver for validation (but save the unresolved)
+        if (ArGetResolver().Resolve(mFileName).empty()) {
             MString msg = MString("File does not exist, or could not be resolved (")
                     + tmpVal + ") - Exiting.";
             MGlobal::displayError(msg);
             return MS::kFailure;
         }
 
-        // Set the fileName - use the expandedPath.
-        jobArgs.fileName = expandedPath;
-        MGlobal::displayInfo(MString("Importing ") + MString(jobArgs.fileName.c_str()));
+        MGlobal::displayInfo(MString("Importing ") + MString(mFileName.c_str()));
     }
     
     if (jobArgs.fileName.empty()) {
