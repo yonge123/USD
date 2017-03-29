@@ -28,6 +28,7 @@
 /// \file usdTranslator.h
 
 #include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/JobArgs.h"
 
 #include <maya/MFileObject.h>
@@ -74,14 +75,17 @@ class usdTranslator : public MPxFileTranslator
         /**
          * method to create usdTranslator file translator
          */
+        PXRUSDMAYA_API
         static void* creator(const std::string& assemblyTypeName,
                              const std::string& proxyShapeTypeName);
 
+        PXRUSDMAYA_API
         MStatus reader(
                 const MFileObject& file,
                 const MString& optionsString,
                 MPxFileTranslator::FileAccessMode mode);
 
+        PXRUSDMAYA_API
         MStatus writer(
                 const MFileObject& file,
                 const MString& optionsString,
@@ -90,6 +94,7 @@ class usdTranslator : public MPxFileTranslator
         bool haveReadMethod() const { return true; }
         bool haveWriteMethod() const { return true; }
 
+        PXRUSDMAYA_API
         MFileKind identifyFile(
                 const MFileObject& file,
                 const char* buffer,

@@ -29,11 +29,11 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 FunctorPrimWriter::FunctorPrimWriter(
-        const MDagPath & iDag,
-            const SdfPath& uPath,
-            bool instanceSource,
-            usdWriteJobCtx& job,
-            WriterFn plugFn) :
+        const MDagPath& iDag,
+        const SdfPath& uPath,
+        bool instanceSource,
+        usdWriteJobCtx& job,
+        WriterFn plugFn) :
     MayaTransformWriter(iDag, uPath, instanceSource, job),
     _plugFn(plugFn),
     _exportsGprims(false),

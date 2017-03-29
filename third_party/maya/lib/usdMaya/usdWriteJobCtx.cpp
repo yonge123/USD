@@ -164,7 +164,7 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
 {
     MObject ob = curDag.node();
 
-    // Check whether a PluginPrimWriter exists for the node first, since plugin
+    // Check whether a user prim writer exists for the node first, since plugin
     // nodes may provide the same function sets as native Maya nodes. If a
     // writer can't be found, we'll fall back on the standard writers below.
     if (ob.hasFn(MFn::kPluginDependNode) && ob.hasFn(MFn::kDagNode) && ob.hasFn(MFn::kDependencyNode)) {

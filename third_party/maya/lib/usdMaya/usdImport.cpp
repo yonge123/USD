@@ -110,17 +110,17 @@ MStatus usdImport::doIt(const MArgList & args)
         // Get the value
         MString tmpVal;
         argData.getFlagArgument("file", 0, tmpVal);
-        mFileName = tmpVal.asChar();
+        jobArgs.fileName = tmpVal.asChar();
 
         // Use the usd resolver for validation (but save the unresolved)
-        if (ArGetResolver().Resolve(mFileName).empty()) {
+        if (ArGetResolver().Resolve(jobArgs.fileName).empty()) {
             MString msg = MString("File does not exist, or could not be resolved (")
                     + tmpVal + ") - Exiting.";
             MGlobal::displayError(msg);
             return MS::kFailure;
         }
 
-        MGlobal::displayInfo(MString("Importing ") + MString(mFileName.c_str()));
+        MGlobal::displayInfo(MString("Importing ") + MString(jobArgs.fileName.c_str()));
     }
     
     if (jobArgs.fileName.empty()) {
