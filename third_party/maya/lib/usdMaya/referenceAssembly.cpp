@@ -590,52 +590,39 @@ MStatus UsdMayaReferenceAssembly::computeInStageDataCached(MDataBlock& dataBlock
         //
         std::string fileString = TfStringTrimRight(aFile.asChar());
 
-        fileString = PxrUsdMayaQuery::ExpandAndCheckPath(fileString);
-
-        // Don't check for file existence if the file resolves, because filepath may not exist yet.
-        bool isValidPath = true;
-        // Fall back on checking if path is just a standard absolute path
-        if ( fileString.empty() ) {
-            fileString = aFile.asChar();
-            isValidPath = (TfStringStartsWith(fileString, "//") ||
-                           TfIsFile(fileString, true /*resolveSymlinks*/));
-        }
-
         // == Load the Stage
         UsdStageRefPtr usdStage;
         SdfPath        primPath;
 
-        if (isValidPath) {
+        if (SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(fileString)) {
+            // Get the primPath
+            primPath = getPrimPath(dataBlock, rootLayer);
+            if (primPath.IsEmpty()) {
+                // XXX:
+                // Preserving prior behavior for now-- eventually might make
+                // more sense to bail in this case.
+                primPath = SdfPath::AbsoluteRootPath();
+            }
 
-            if (SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(fileString)) {
-                // Get the primPath
-                primPath = getPrimPath(dataBlock, rootLayer);
-                if (primPath.IsEmpty()) {
-                    // XXX:
-                    // Preserving prior behavior for now-- eventually might make
-                    // more sense to bail in this case.
-                    primPath = SdfPath::AbsoluteRootPath();
-                }
-
-                SdfLayerRefPtr sessionLayer;
-                std::vector<std::pair<std::string, std::string> > varSelsVec;
-                MFnDependencyNode depNodeFn(thisMObject());
-                const std::set<std::string> varSetNamesForCache = _GetVariantSetNamesForStageCache(depNodeFn);
-                TF_FOR_ALL(variantSet, varSetNamesForCache) {
-                    MString variantSetPlugName(PxrUsdMayaVariantSetTokens->PlugNamePrefix.GetText());
-                    variantSetPlugName += variantSet->c_str();
-                    MPlug varSetPlg = depNodeFn.findPlug(variantSetPlugName, true);
-                    if (!varSetPlg.isNull()) {
-                        MString varSetVal = varSetPlg.asString();
-                        if (varSetVal.length() > 0) {
-                            varSelsVec.push_back(
-                                std::make_pair(*variantSet, varSetVal.asChar()));
-                        }
+            SdfLayerRefPtr sessionLayer;
+            std::vector<std::pair<std::string, std::string> > varSelsVec;
+            MFnDependencyNode depNodeFn(thisMObject());
+            const std::set<std::string> varSetNamesForCache = _GetVariantSetNamesForStageCache(depNodeFn);
+            TF_FOR_ALL(variantSet, varSetNamesForCache) {
+                MString variantSetPlugName(PxrUsdMayaVariantSetTokens->PlugNamePrefix.GetText());
+                variantSetPlugName += variantSet->c_str();
+                MPlug varSetPlg = depNodeFn.findPlug(variantSetPlugName, true);
+                if (!varSetPlg.isNull()) {
+                    MString varSetVal = varSetPlg.asString();
+                    if (varSetVal.length() > 0) {
+                        varSelsVec.push_back(
+                            std::make_pair(*variantSet, varSetVal.asChar()));
                     }
                 }
-                
-                sessionLayer = UsdUtilsStageCache::GetSessionLayerForVariantSelections(
-                    primPath, varSelsVec);
+            }
+            
+            sessionLayer = UsdUtilsStageCache::GetSessionLayerForVariantSelections(
+                primPath, varSelsVec);
 
             // If we have assembly edits, do not share session layers with
             // other models that have our same set of variant selections,
@@ -653,15 +640,10 @@ MStatus UsdMayaReferenceAssembly::computeInStageDataCached(MDataBlock& dataBlock
                 sessionLayer = unsharedSessionLayer;
             }
 
-                UsdStageCacheContext ctx(UsdMayaStageCache::Get());
-                usdStage = UsdStage::Open(rootLayer, 
-                        sessionLayer,
-                        ArGetResolver().GetCurrentContext());
-            }
-            else {
-                retValue = MS::kFailure;
-                CHECK_MSTATUS_AND_RETURN_IT(retValue);
-            }
+            UsdStageCacheContext ctx(UsdMayaStageCache::Get());
+            usdStage = UsdStage::Open(rootLayer, 
+                    sessionLayer,
+                    ArGetResolver().GetCurrentContext());
         }
         else {
             retValue = MS::kFailure;
@@ -1295,9 +1277,6 @@ bool UsdMayaRepresentationHierBase::activate()
     MFnAssembly assemblyFn(getAssembly()->thisMObject());
     MString usdFilePath(assemblyFn.findPlug(_psData.filePath, true).asString());
     MString usdPrimPath(assemblyFn.findPlug(_psData.primPath, true).asString());
-
-    // Resolve the file path before passing it to the importer for expanded unroll.
-    usdFilePath = MString(PxrUsdMayaQuery::ExpandAndCheckPath(usdFilePath.asChar()).c_str());
 
     // Get the variant set selections from the Maya assembly node.
     UsdMayaReferenceAssembly* usdAssembly =

@@ -65,46 +65,6 @@ PxrUsdMayaQuery::GetPrim(const std::string& shapeName)
     return usdPrim;
 }
 
-std::string
-PxrUsdMayaQuery::ResolvePath(const std::string &filePath)
-{
-    ArResolver& resolver = ArGetResolver();
-
-    ArResolverContext ctx = 
-        resolver.CreateDefaultContextForDirectory(ArchGetCwd());
-    resolver.RefreshContext(ctx);
-
-    ArResolverContextBinder boundCtx(ctx);
-    return resolver.Resolve(filePath);
-}
-
-std::string
-PxrUsdMayaQuery::ExpandAndCheckPath(const std::string &filePath)
-{
-    MString tmpVal= filePath.c_str();
-
-    // First resolve using maya's resolver, to expand any environment
-    // variables, or any maya-specific tokens
-    MFileObject mayaFile;
-    mayaFile.setRawFullName(tmpVal);
-
-    // Use the usd resolver - this should also have the side effect of making
-    // absolute paths
-    std::string expandedPath = mayaFile.expandedFullName().asChar();
-    ArResolver& resolver = ArGetResolver();
-    resolver.ConfigureResolverForAsset(expandedPath);
-    std::string resolvedPath = resolver.Resolve(expandedPath);
-    if (resolvedPath.empty()) {
-        // Could not resolve, return the empty resolvedPath
-        return resolvedPath;
-    }
-
-    // Return the expandedPath. The resolvedPath may not exist
-    // yet (until FetchToLocalResolvedPath is called) - we resolve only to
-    // ensure that the path is resolvable / valid.
-    return expandedPath;
-}
-
 void
 PxrUsdMayaQuery::ReloadStage(const std::string& shapeName)
 {
