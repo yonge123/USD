@@ -43,13 +43,9 @@ pxr_shared_library(usdImagingGL
         gl
         hdEngine
         refEngine
-        taskDelegate
 
     PUBLIC_HEADERS
         api.h
-
-    PRIVATE_CLASSES
-        defaultTaskDelegate
 
     PRIVATE_HEADERS
         unitTestGLDrawing.h

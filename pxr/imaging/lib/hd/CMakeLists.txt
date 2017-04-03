@@ -80,7 +80,6 @@ pxr_shared_library(hd
         primTypeIndex
         renderContextCaps
         renderDelegate
-        renderDelegateRegistry
         renderIndex
         renderPass
         renderPassShader
@@ -106,6 +105,7 @@ pxr_shared_library(hd
         textureResource
         tokens
         topology
+        unitTestDelegate
         unitTestGLDrawing
         vboMemoryManager
         vboSimpleMemoryManager
@@ -120,9 +120,8 @@ pxr_shared_library(hd
 
     PRIVATE_CLASSES
         cullingShaderKey
-        renderIndexManager
-        unitTestDelegate
         unitTestHelper
+        unitTestNullRenderDelegate
         ${optionalPrivateClasses}
 
     RESOURCE_FILES
