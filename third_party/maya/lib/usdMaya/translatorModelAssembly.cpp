@@ -52,6 +52,7 @@
 #include "pxr/usd/usdUtils/pipeline.h"
 
 #include <maya/MDagModifier.h>
+#include <maya/MFileIO.h>
 #include <maya/MFnAssembly.h>
 #include <maya/MFnDagNode.h>
 #include <maya/MFnData.h>
