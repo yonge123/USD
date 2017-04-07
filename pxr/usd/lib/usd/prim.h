@@ -52,6 +52,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+class UsdPrim;
 class UsdPrimRange;
 class Usd_PrimData;
 
@@ -382,7 +383,7 @@ public:
     bool HasProperty(const TfToken &propName) const;
 
 private:
-    friend void wrapUsdPrim();
+    friend bool Usd_PrimIsA(const UsdPrim&, const TfType& schemaType);
     /// The non-templated implementation of UsdPrim::IsA using the
     /// TfType system.
     USD_API
@@ -1008,6 +1009,7 @@ private:
     USD_API
     bool _PrimPathIsInMaster() const;
 
+    friend const PcpPrimIndex &Usd_PrimGetSourcePrimIndex(const UsdPrim&);
     // Return a const reference to the source PcpPrimIndex for this prim.
     //
     // For all prims in masters (which includes the master prim itself), 

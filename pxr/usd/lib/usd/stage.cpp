@@ -1637,6 +1637,12 @@ UsdStage::HasDefaultPrim() const
 UsdPrim
 UsdStage::GetPrimAtPath(const SdfPath &path) const
 {
+    // Silently return an invalid UsdPrim if the given path is not an
+    // absolute path to maintain existing behavior.
+    if (!path.IsAbsolutePath()) {
+        return UsdPrim();
+    }
+
     // If this path points to a prim beneath an instance, return
     // an instance proxy that uses the prim data from the corresponding
     // prim in the master but appears to be a prim at the given path.
@@ -2760,6 +2766,62 @@ UsdStage::IsSupportedFile(const std::string& filePath)
                                           UsdUsdFileFormatTokens->Target);
 }
 
+namespace {
+
+void _SaveLayers(const SdfLayerHandleVector& layers)
+{
+    for (const SdfLayerHandle& layer : layers) {
+        if (!layer->IsDirty()) {
+            continue;
+        }
+
+        if (layer->IsAnonymous()) {
+            TF_WARN("Not saving @%s@ because it is an anonymous layer",
+                    layer->GetIdentifier().c_str());
+            continue;
+        }
+
+        // Sdf will emit errors if there are any problems with
+        // saving the layer.
+        layer->Save();
+    }
+}
+
+}
+
+void
+UsdStage::Save()
+{
+    SdfLayerHandleVector layers = GetUsedLayers();
+
+    const PcpLayerStackPtr localLayerStack = _GetPcpCache()->GetLayerStack();
+    if (TF_VERIFY(localLayerStack)) {
+        const SdfLayerHandleVector sessionLayers = 
+            localLayerStack->GetSessionLayers();
+        const auto isSessionLayer = 
+            [&sessionLayers](const SdfLayerHandle& l) {
+                return std::find(
+                    sessionLayers.begin(), sessionLayers.end(), l) 
+                    != sessionLayers.end();
+            };
+
+        layers.erase(std::remove_if(layers.begin(), layers.end(), 
+                                    isSessionLayer),
+                     layers.end());
+    }
+
+    _SaveLayers(layers);
+}
+
+void
+UsdStage::SaveSessionLayers()
+{
+    const PcpLayerStackPtr localLayerStack = _GetPcpCache()->GetLayerStack();
+    if (TF_VERIFY(localLayerStack)) {
+        _SaveLayers(localLayerStack->GetSessionLayers());
+    }
+}
+
 static bool
 _CheckAbsolutePrimPath(const SdfPath &path)
 {
@@ -3387,13 +3449,40 @@ UsdStage::_HandleLayersDidChange(
     UsdNotice::StageContentsChanged(self).Send(self);
 }
 
-void UsdStage::_Recompose(const PcpChanges &changes,
-                          SdfPathSet *initialPathsToRecompose)
+void 
+UsdStage::_Recompose(const PcpChanges &changes,
+                     SdfPathSet *initialPathsToRecompose)
 {
     SdfPathSet newPathsToRecompose;
     SdfPathSet *pathsToRecompose = initialPathsToRecompose ?
         initialPathsToRecompose : &newPathsToRecompose;
 
+    _RecomposePrims(changes, pathsToRecompose);
+
+    // Update layer change notice listeners if changes may affect
+    // the set of used layers.
+    bool changedUsedLayers = !pathsToRecompose->empty();
+    if (!changedUsedLayers) {
+        const PcpChanges::LayerStackChanges& layerStackChanges = 
+            changes.GetLayerStackChanges();
+        for (const auto& entry : layerStackChanges) {
+            if (entry.second.didChangeLayers ||
+                entry.second.didChangeSignificantly) {
+                changedUsedLayers = true;
+                break;
+            }
+        }
+    }
+
+    if (changedUsedLayers) {
+        _RegisterPerLayerNotices();
+    }
+}
+
+void 
+UsdStage::_RecomposePrims(const PcpChanges &changes,
+                          SdfPathSet *pathsToRecompose)
+{
     changes.Apply();
 
     const PcpChanges::CacheChanges &cacheChanges = changes.GetCacheChanges();
@@ -3551,9 +3640,6 @@ void UsdStage::_Recompose(const PcpChanges &changes,
         _ComposeSubtreesInParallel(
             subtreesToRecompose, &primIndexPathsForSubtrees);
     }
-
-    if (!pathVecToRecompose.empty())
-        _RegisterPerLayerNotices();
 }
 
 template <class PrimIndexPathMap>
