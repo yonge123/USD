@@ -315,28 +315,34 @@ void Connect(
 /// Returns an MObject for the reference node which contains
 /// \p referencedNodeName; the returned node will be null if
 /// \p referencedNodeName is not referenced, or is invalid.
+PXRUSDMAYA_API
 MObject GetReferenceNode(const MString& referencedNodeName);
 
 /// Returns an MObject for the reference node which contains \p mobj; the
 /// returned node will be null if \p mobj is not referenced, or is invalid.
+PXRUSDMAYA_API
 MObject GetReferenceNode(const MObject& mobj);
 
 /// Returns true if the reference associated with \p mfnRef is loading a usd
 /// filetype.
+PXRUSDMAYA_API
 bool IsUsdReference(const MObject& mobj);
 
 /// Returns true if the reference associated with \p mfnRef is loading a
 /// native-maya filetype.
+PXRUSDMAYA_API
 bool IsNativeMayaReference(const MObject& mobj);
 
 /// If \p origRefObj is the object for a reference node, returns a vector of
 /// MObjects for the references and parent references for that node, starting with
 /// \p origRefObj, and going up to the top-level reference. If it is not a
 /// valid reference node, an empty list is returned.
+PXRUSDMAYA_API
 std::vector<MObject> FullReferenceChain(const MObject& origRefObj);
 
 /// Returns true if \p dagPath was created by a usd reference or assembly node.
 /// Note that nodes which were IMPORTED from a usd file will still return false.
+PXRUSDMAYA_API
 bool IsUsdReferenceOrAssemblyNode(const MDagPath& dagPath);
 
 /// For a given node, tries to determine the leading namespaces in the node's
@@ -347,8 +353,10 @@ bool IsUsdReferenceOrAssemblyNode(const MDagPath& dagPath);
 /// Note that for dag nodes, this only applies to THIS node's node-name - parent
 /// nodes will need to have this method called on them to determine which of
 /// THEIR namespaces are from USD.
+PXRUSDMAYA_API
 std::string GetUsdNamespace(const MObject& mobj);
 
+PXRUSDMAYA_API
 std::string MDagPathToUsdPathString(const MDagPath& dagPath,
                                     bool stripUsdNamespaces);
 
