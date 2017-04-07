@@ -1,2 +1,3 @@
 From: Paul Molodowitch <pm@stanfordalumni.org>
-Subject: [usdMaya] add optionString control to import for primPath, defaultMeshScheme and importWithProxyShapes
+Subject: [usdMaya] merge moreOptionStringControls and mergeUsdTranslator
+
