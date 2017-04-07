@@ -17,9 +17,7 @@ pxr_shared_library(pxOsd
     PUBLIC_CLASSES
         meshTopology
         refinerFactory
-        stencilPerVertex
         subdivTags
         tokens
-        uniformEvaluator
 
 )

@@ -85,14 +85,14 @@ public:
     /// Create a render index with the given render delegate.
     /// Returns null if renderDelegate is null.
     HD_API
-    static HdRenderIndex* New(HdRenderDelegate *renderDelegate);
-
-    /// \deprecated {
-    ///   Create a render index with no bound render delegate.
-    ///   XXX: This method will be deleted soon.
-    /// }
-    HD_API
-    HdRenderIndex();
+    static HdRenderIndex* New(HdRenderDelegate *renderDelegate) {
+        if (renderDelegate == nullptr) {
+            TF_CODING_ERROR(
+                "Null Render Delegate provided to create render index");
+            return nullptr;
+        }
+        return new HdRenderIndex(renderDelegate);
+    }
 
     HD_API
     ~HdRenderIndex();
@@ -249,16 +249,6 @@ public:
                      HdSceneDelegate* delegate,
                      SdfPath const& sprimId);
 
-    /// \deprecated {
-    ///   Old templated mathod of inserting a sprim into the index.
-    ///   This API has been superseeded by passing the typeId token.
-    ///   XXX: This method still exists to aid transition but may be
-    ///   removed at any time.
-    /// }
-    template <typename T>
-    void
-    InsertSprim(HdSceneDelegate* delegate, SdfPath const &id);
-
     HD_API
     void RemoveSprim(TfToken const& typeId, SdfPath const &id);
 
@@ -387,16 +377,6 @@ private:
 
     HdRenderDelegate *_renderDelegate;
 
-    // XXX: This is a temporary variable to aid in transition to the new
-    // context api.  Under the new API, the render delegate is owned by
-    // the context.  However, as clients are not creating the delegate
-    // yet, the render index will create one on their behalf.
-    //
-    // It was preferred to add this variable than use the reference counting
-    // mechanism.  As that impacted the new code path, rather than explicitly
-    // calling out the transitional elements.
-    bool _ownsDelegateXXX;
-
     /// Register the render delegate's list of supported prim types.
     void _InitPrimTypes();
 
@@ -406,6 +386,8 @@ private:
     /// Release the fallback prims.
     void _DestroyFallbackPrims();
 
+    // Remove default constructor
+    HdRenderIndex() = delete;
 };
 
 template <typename T>
@@ -430,9 +412,6 @@ HdRenderIndex::InsertTask(HdSceneDelegate* delegate, SdfPath const& id)
 class HdMesh;
 class HdBasisCurves;
 class HdPoints;
-class HdxCamera;
-class HdxDrawTarget;
-class HdxLight;
 
 namespace HdRenderIndexInternal
 {  
@@ -463,30 +442,6 @@ namespace HdRenderIndexInternal
         return HdPrimTypeTokens->points;
     }
 
-    template <>
-    inline
-    const TfToken &
-    _GetTypeId<HdxCamera>()
-    {
-        return HdPrimTypeTokens->camera;
-    }
-
-    template <>
-    inline
-    const TfToken &
-    _GetTypeId<HdxDrawTarget>()
-    {
-        return HdPrimTypeTokens->drawTarget;
-    }
-
-    template <>
-    inline
-    const TfToken &
-    _GetTypeId<HdxLight>()
-    {
-        return HdPrimTypeTokens->light;
-    }
-
 } 
 
 template <typename T>
@@ -498,13 +453,6 @@ HdRenderIndex::InsertRprim(HdSceneDelegate* delegate, SdfPath const& id,
     InsertRprim(HdRenderIndexInternal::_GetTypeId<T>(), delegate, id, instancerId);
 }
 
-
-template <typename T>
-void
-HdRenderIndex::InsertSprim(HdSceneDelegate* delegate, SdfPath const& id)
-{
-    InsertSprim(HdRenderIndexInternal::_GetTypeId<T>(), delegate, id);
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 //

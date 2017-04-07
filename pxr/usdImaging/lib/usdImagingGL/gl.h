@@ -55,6 +55,7 @@ typedef std::vector<UsdImagingGLSharedPtr> UsdImagingGLSharedPtrVector;
 /// it and all subsequently created objects will use Hd if:
 /// \li the machine's hardware and insalled openGl are sufficient
 /// \li the environment variable HD_ENABLED is unset, or set to "1"
+/// \li any hydra renderer plugin can be found
 /// 
 /// So, to disable Hd rendering for testing purposes, set HD_ENABLED to "0"
 ///
@@ -71,8 +72,7 @@ public:
     UsdImagingGL(const SdfPath& rootPath,
                  const SdfPathVector& excludedPaths,
                  const SdfPathVector& invisedPaths=SdfPathVector(),
-                 const SdfPath& sharedId = SdfPath::AbsoluteRootPath(),
-                 const UsdImagingGLSharedPtr& sharedImaging = UsdImagingGLSharedPtr());
+                 const SdfPath& delegateID = SdfPath::AbsoluteRootPath());
 
     USDIMAGINGGL_API
     virtual ~UsdImagingGL();
@@ -177,10 +177,10 @@ public:
     virtual bool IsConverged() const;
 
     USDIMAGINGGL_API
-    virtual std::vector<TfType> GetRenderGraphPlugins();
+    virtual std::vector<TfType> GetRendererPlugins();
 
     USDIMAGINGGL_API
-    virtual bool SetRenderGraphPlugin(TfType const &type);
+    virtual bool SetRendererPlugin(TfType const &type);
 
     USDIMAGINGGL_API
     virtual bool TestIntersection(
