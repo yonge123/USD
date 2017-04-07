@@ -24,6 +24,7 @@
 #include "pxr/pxr.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/inherits.h"
+#include "pxr/usd/usd/instanceCache.h"
 #include "pxr/usd/usd/relationship.h"
 #include "pxr/usd/usd/references.h"
 #include "pxr/usd/usd/resolver.h"
@@ -31,7 +32,7 @@
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/specializes.h"
 #include "pxr/usd/usd/stage.h"
-#include "pxr/usd/usd/treeIterator.h"
+#include "pxr/usd/usd/primRange.h"
 #include "pxr/usd/usd/variantSets.h"
 
 #include "pxr/usd/pcp/primIndex.h"
@@ -52,7 +53,6 @@
 #include <vector>
 
 PXR_NAMESPACE_OPEN_SCOPE
-
 
 UsdPrim
 UsdPrim::GetChild(const TfToken &name) const
@@ -165,7 +165,7 @@ UsdPrim::GetProperty(const TfToken &propName) const
     else if (specType == SdfSpecTypeRelationship) {
         return GetRelationship(propName);
     }
-    return UsdProperty(UsdTypeProperty, _Prim(), propName);
+    return UsdProperty(UsdTypeProperty, _Prim(), GetPrimPath(), propName);
 }
 
 bool
@@ -368,7 +368,7 @@ UsdPrim::GetAttribute(const TfToken& attrName) const
 {
     // An invalid prim will present a coding error, and then return an
     // invalid attribute
-    return UsdAttribute(_Prim(), attrName);
+    return UsdAttribute(_Prim(), GetPrimPath(), attrName);
 }
 
 bool
@@ -427,7 +427,7 @@ UsdPrim::GetAuthoredRelationships() const
 UsdRelationship
 UsdPrim::GetRelationship(const TfToken& relName) const
 {
-    return UsdRelationship(_Prim(), relName);
+    return UsdRelationship(_Prim(), GetPrimPath(), relName);
 }
 
 bool
@@ -617,12 +617,6 @@ UsdPrim::HasPayload() const
 }
 
 bool
-UsdPrim::GetPayload(SdfPayload* payload) const
-{
-    return GetMetadata(SdfFieldKeys->Payload, payload);
-}
-
-bool
 UsdPrim::SetPayload(const SdfPayload& payload) const
 {
     return SetMetadata(SdfFieldKeys->Payload, payload);
@@ -662,25 +656,36 @@ UsdPrim::Unload() const
 UsdPrim
 UsdPrim::GetNextSibling() const
 {
-    return GetFilteredNextSibling(UsdPrimIsActive && UsdPrimIsDefined &&
-                                  UsdPrimIsLoaded && !UsdPrimIsAbstract);
+    return GetFilteredNextSibling(UsdPrimDefaultPredicate);
 }
 
 UsdPrim
-UsdPrim::GetFilteredNextSibling(const Usd_PrimFlagsPredicate &pred) const
+UsdPrim::GetFilteredNextSibling(const Usd_PrimFlagsPredicate &inPred) const
 {
-    Usd_PrimDataPtr s = _Prim()->GetNextSibling();
-    while (s && !pred(s))
-        s = s->GetNextSibling();
+    Usd_PrimDataConstPtr sibling = get_pointer(_Prim());
+    SdfPath siblingPath = GetPrimPath();
+    const Usd_PrimFlagsPredicate pred = 
+        Usd_CreatePredicateForTraversal(sibling, siblingPath, inPred);
 
-    return UsdPrim(s);
+    if (Usd_MoveToNextSiblingOrParent(sibling, siblingPath, pred)) {
+        return UsdPrim();
+    }
+    return UsdPrim(sibling, siblingPath);
 }
 
 UsdPrim
 UsdPrim::GetMaster() const
 {
-    return UsdPrim(
-        _GetStage()->_GetMasterForInstance(get_pointer(_Prim())));
+    Usd_PrimDataConstPtr masterPrimData = 
+        _GetStage()->_GetMasterForInstance(get_pointer(_Prim()));
+    return UsdPrim(masterPrimData, 
+                   masterPrimData ? masterPrimData->GetPath() : SdfPath());
+}
+
+bool 
+UsdPrim::_PrimPathIsInMaster() const
+{
+    return Usd_InstanceCache::IsPathMasterOrInMaster(GetPrimPath());
 }
 
 SdfPrimSpecHandleVector 

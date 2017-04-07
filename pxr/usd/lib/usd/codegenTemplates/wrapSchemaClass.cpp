@@ -38,8 +38,12 @@
 
 using namespace boost::python;
 
-{{ namespaceOpen }}
+{% if useExportAPI %}
+{{ namespaceUsing }}
 
+namespace {
+
+{% endif %}
 #define WRAP_CUSTOM                                                     \
     template <class Cls> static void _CustomWrapCode(Cls &_class)
 
@@ -55,6 +59,10 @@ _Create{{ Proper(attr.apiName) }}Attr({{ cls.cppClassName }} &self,
         UsdPythonToSdfType(defaultVal, {{ attr.usdType }}), writeSparsely);
 }
 {% endfor %}
+{% if useExportAPI %}
+
+} // anonymous namespace
+{% endif %}
 
 void wrap{{ cls.cppClassName }}()
 {
@@ -110,8 +118,6 @@ void wrap{{ cls.cppClassName }}()
     _CustomWrapCode(cls);
 }
 
-{{ namespaceClose }}
-
 // ===================================================================== //
 // Feel free to add custom code below this line, it will be preserved by 
 // the code generator.  The entry point for your custom code should look
@@ -124,10 +130,12 @@ void wrap{{ cls.cppClassName }}()
 // }
 //
 // Of course any other ancillary or support code may be provided.
+{% if useExportAPI %}
 // 
 // Just remember to wrap code in the appropriate delimiters:
-// '{{ namespaceOpen }}', '{{ namespaceClose }}'.
+// 'namespace {', '}'.
 //
+{% endif %}
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 

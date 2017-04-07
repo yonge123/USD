@@ -23,6 +23,7 @@
 //
 #include "pxr/pxr.h"
 #include "pxr/usd/usdShade/parameter.h"
+#include "pxr/usd/usdShade/input.h"
 #include "pxr/usd/usdShade/output.h"
 #include "pxr/usd/usdShade/connectableAPI.h"
 
@@ -38,11 +39,12 @@
 
 #include <vector>
 
-PXR_NAMESPACE_OPEN_SCOPE
-
-
 using std::vector;
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static bool
 _Set(const UsdShadeParameter &self, object val, const UsdTimeCode &time) {
@@ -64,6 +66,8 @@ _GetConnectedSource(const UsdShadeParameter &self)
     }
 }
 
+} // anonymous namespace 
+
 void wrapUsdShadeParameter()
 {
     typedef UsdShadeParameter Parameter;
@@ -77,7 +81,9 @@ void wrapUsdShadeParameter()
                                     &Parameter::ConnectToSource;
     bool (Parameter::*ConnectToSource_4)(UsdShadeInterfaceAttribute const &) const =
                                     &Parameter::ConnectToSource;
-    bool (Parameter::*ConnectToSource_5)(SdfPath const &) const =
+    bool (Parameter::*ConnectToSource_5)(UsdShadeInput const &) const =
+                                    &Parameter::ConnectToSource;
+    bool (Parameter::*ConnectToSource_6)(SdfPath const &) const =
                                     &Parameter::ConnectToSource;
 
     class_<Parameter>("Parameter")
@@ -104,6 +110,8 @@ void wrapUsdShadeParameter()
         .def("ConnectToSource", ConnectToSource_4,
              (arg("interfaceAttribute")))
         .def("ConnectToSource", ConnectToSource_5,
+             (arg("input")))
+        .def("ConnectToSource", ConnectToSource_6,
              (arg("path")))
 
         .def("DisconnectSource", &Parameter::DisconnectSource)
@@ -115,11 +123,9 @@ void wrapUsdShadeParameter()
         ;
 
     implicitly_convertible<Parameter, UsdAttribute>();
+
     to_python_converter<
         std::vector<Parameter>,
         TfPySequenceToPython<std::vector<Parameter> > >();
 }
-
-
-PXR_NAMESPACE_CLOSE_SCOPE
 

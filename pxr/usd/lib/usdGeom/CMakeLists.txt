@@ -3,6 +3,7 @@ set(PXR_PACKAGE usdGeom)
 
 pxr_shared_library(usdGeom
     LIBRARIES
+        js
         tf
         plug
         vt
@@ -24,6 +25,7 @@ pxr_shared_library(usdGeom
         xformCache
         basisCurves
         boundable
+        boundableComputeExtent
         camera
         capsule
         cone
@@ -48,6 +50,9 @@ pxr_shared_library(usdGeom
         xformable
         xformOp
         xformCommonAPI
+        
+    PUBLIC_HEADERS
+        api.h
 
     CPPFILES
         moduleDeps.cpp

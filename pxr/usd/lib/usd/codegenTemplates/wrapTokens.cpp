@@ -25,12 +25,12 @@
 #include "{{ libraryPath }}/tokens.h"
 #include "pxr/base/tf/pyStaticTokens.h"
 
-{{ namespaceOpen }}
+{% if useExportAPI %}
+{{ namespaceUsing }}
 
+{% endif %}
 void wrap{{ tokensPrefix }}Tokens()
 {
     TF_PY_WRAP_PUBLIC_TOKENS("Tokens", {{ tokensPrefix }}Tokens,
                              {{ Upper(tokensPrefix) }}_TOKENS);
 }
-
-{{ namespaceClose }}

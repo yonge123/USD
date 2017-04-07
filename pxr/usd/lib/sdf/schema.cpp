@@ -41,6 +41,7 @@
 #include "pxr/base/tracelite/trace.h"
 #include "pxr/base/vt/dictionary.h"
 
+#include <deque>
 #include <map>
 #include <set>
 #include <vector>
@@ -355,7 +356,7 @@ _ValidateIsSceneDescriptionValue(const SdfSchemaBase& schema, const VtValue& val
 static SdfAllowed                                                       \
 _Validate ## name_(const SdfSchemaBase& schema, const VtValue& value)   \
 {                                                                       \
-    if (!value.IsHolding<expectedType_>()) {                         \
+    if (!value.IsHolding<expectedType_>()) {                            \
         return SdfAllowed("Expected value of type " # expectedType_);   \
     }                                                                   \
     return SdfSchemaBase::IsValid ## name_(value.Get<expectedType_>()); \
@@ -381,6 +382,7 @@ TF_DEFINE_PUBLIC_TOKENS(SdfFieldKeys, SDF_FIELD_KEYS);
 
 struct Sdf_SchemaFieldTypeRegistrar
 {
+public:
     Sdf_SchemaFieldTypeRegistrar(SdfSchemaBase* schema) : _schema(schema) { }
 
     template <class T>
@@ -1450,7 +1452,11 @@ SdfSchemaBase::_UpdateMetadataFromPlugins(
                     .MetadataField(fieldName, displayGroup);
             }
 
-            if (appliesTo.empty() || appliesTo.count("variants")) {
+            // All metadata on prims should also apply to variants.
+            // This matches how the variant spec definition is copied
+            // from the prim spec definition in _RegisterStandardFields.
+            if (appliesTo.empty() || appliesTo.count("variants") || 
+                appliesTo.count("prims")) {
                 _ExtendSpecDefinition(SdfSpecTypeVariant)
                     .MetadataField(fieldName, displayGroup);
             }
@@ -1526,7 +1532,7 @@ SdfSchema::_RegisterTypes(_ValueTypeRegistrar r)
     r.AddType("uint",   uint32_t());
     r.AddType("int64",  int64_t());
     r.AddType("uint64", uint64_t());
-    r.AddType("half",   half());
+    r.AddType("half",   GfHalf());
     r.AddType("float",  float());
     r.AddType("double", double());
     r.AddType("string", std::string());

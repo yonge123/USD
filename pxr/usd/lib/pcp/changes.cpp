@@ -1084,6 +1084,36 @@ PcpChanges::DidChangeLayerOffsets(PcpCache* cache)
     }
 }
 
+void 
+PcpChanges::DidChangeLayerStack(PcpCache* cache, 
+                                const PcpLayerStackPtr& layerStack)
+{
+    _DidChangeLayerStack(
+        layerStack, 
+        /* requiresLayerStackChange = */ true,
+        /* requiresLayerStackOffsetChange = */ true,
+        /* requiresSignificantChange = */ true);
+
+    // Since this layer stack will be recomputed, need to register
+    // significant changes to all prim indexes that use it so that
+    // they pick up the new contents.
+    
+    const PcpDependencyVector deps = cache->FindSiteDependencies(
+        layerStack, SdfPath::AbsoluteRootPath(), 
+        PcpDependencyTypeAnyIncludingVirtual,
+        /* recurseOnSite */ true,
+        /* recurseOnIndex */ true,
+        /* filter */ true);
+
+    for (const PcpDependency& dep : deps) {
+        if (!dep.indexPath.IsAbsoluteRootOrPrimPath()) {
+            // Filter to only prims; see comment above re: properties.
+            continue;
+        }
+        DidChangeSignificantly(cache, dep.indexPath);
+    }
+}
+
 void
 PcpChanges::DidChangeSignificantly(PcpCache* cache, const SdfPath& path)
 {
@@ -1326,11 +1356,19 @@ PcpChanges::_Optimize(PcpCacheChanges* changes)
     TF_FOR_ALL(i, changes->didChangeSignificantly) {
         Pcp_SubsumeDescendants(&changes->didChangePrims, *i);
         Pcp_SubsumeDescendants(&changes->didChangeSpecs, *i);
+        Pcp_SubsumeDescendants(&changes->_didChangeSpecsInternal, *i);
     }
 
     // Subsume spec changes for prims whose indexes will be rebuilt.
     TF_FOR_ALL(i, changes->didChangePrims) {
         changes->didChangeSpecs.erase(*i);
+        changes->_didChangeSpecsInternal.erase(*i);
+    }
+
+    // Subsume spec changes that don't change the contents of the stack
+    // changes against those that may change the contents.
+    TF_FOR_ALL(i, changes->didChangeSpecs) {
+        changes->_didChangeSpecsInternal.erase(*i);
     }
 
     // XXX: Do we subsume name changes?
@@ -1467,7 +1505,7 @@ PcpChanges::_DidChangeDependents(
         layer->GetIdentifier().c_str(), path.GetText(),
         onlyExistingDependentPaths ?
         " (restricted to existing caches)" :
-        " (restricted to existing caches)");
+        " (not restricted to existing caches)");
     for (const auto& dep: deps) {
         PCP_APPEND_DEBUG(
             "    <%s> depends on <%s>\n",
@@ -1601,7 +1639,7 @@ PcpChanges::_DidChangeSublayer(
     // new prims with new arcs, requiring prim and property indexes to be
     // recomputed. So, register significant changes for every prim path
     // in the cache that uses any path in any of the layer stacks that
-    // included layer.  Only bother doing this for prims, since thex
+    // included layer.  Only bother doing this for prims, since the
     // properties will be implicitly invalidated by significant
     // prim resyncs.
     //
@@ -1646,7 +1684,7 @@ PcpChanges::_DidChangeSublayer(
             if (*significant) {
                 DidChangeSignificantly(cache, dep.indexPath);
             } else {
-                DidChangeSpecStack(cache, dep.indexPath);
+                _DidChangeSpecStackInternal(cache, dep.indexPath);
             }
         }
     }
@@ -1780,6 +1818,12 @@ PcpChanges::_DidChangeLayerStackRelocations(
             DidChangeSignificantly(cache, depPath);
         }
     }
+}
+
+void 
+PcpChanges::_DidChangeSpecStackInternal(PcpCache* cache, const SdfPath& path)
+{
+    _cacheChanges[cache]._didChangeSpecsInternal.insert(path);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

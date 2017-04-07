@@ -49,9 +49,11 @@
 #include "pxr/usd/sdf/variantSetSpec.h"
 #include "pxr/usd/sdf/variantSpec.h"
 
-#include "pxr/base/tracelite/trace.h"
 #include "pxr/usd/ar/resolver.h"
 #include "pxr/usd/ar/resolverContextBinder.h"
+#include "pxr/base/arch/fileSystem.h"
+#include "pxr/base/arch/errno.h"
+#include "pxr/base/tracelite/trace.h"
 #include "pxr/base/tf/debug.h"
 #include "pxr/base/tf/fileUtils.h"
 #include "pxr/base/tf/iterator.h"
@@ -64,6 +66,8 @@
 #include "pxr/base/tf/stackTrace.h"
 
 #include <boost/bind.hpp>
+
+#include <tbb/queuing_rw_mutex.h>
 
 #include <atomic>
 #include <fstream>
@@ -101,8 +105,13 @@ static std::atomic_size_t _mutedLayersRevision { 1 };
 
 // A registry for loaded layers.
 static TfStaticData<Sdf_LayerRegistry> _layerRegistry;
+
 // Global mutex protecting _layerRegistry.
-static TfStaticData<std::mutex> _layerRegistryMutex;
+static tbb::queuing_rw_mutex &
+_GetLayerRegistryMutex() {
+    static tbb::queuing_rw_mutex mutex;
+    return mutex;
+}
 
 SdfLayer::SdfLayer(
     const SdfFileFormatConstPtr &fileFormat,
@@ -167,7 +176,7 @@ SdfLayer::~SdfLayer()
         }
     }
 
-    std::lock_guard<std::mutex> lock(*_layerRegistryMutex);
+    tbb::queuing_rw_mutex::scoped_lock lock(_GetLayerRegistryMutex());
 
     // Note that FindOrOpen may have already removed this layer from
     // the registry, so we count on this API not emitting errors in that
@@ -188,7 +197,7 @@ SdfLayer::_CreateNewWithFormat(
     const ArAssetInfo& assetInfo,
     const FileFormatArguments& args)
 {
-    // This method should be called with _layerRegistryMutex already held.
+    // This method should be called with the layerRegistryMutex already held.
 
     // Create and return a new layer with _initializationMutex locked.
     return fileFormat->NewLayer<SdfLayer>(
@@ -260,7 +269,7 @@ SdfLayerRefPtr
 SdfLayer::_CreateAnonymousWithFormat(
     const SdfFileFormatConstPtr &fileFormat, const std::string& tag)
 {
-    std::lock_guard<std::mutex> lock(*_layerRegistryMutex);
+    tbb::queuing_rw_mutex::scoped_lock lock(_GetLayerRegistryMutex());
 
     SdfLayerRefPtr layer =
         _CreateNewWithFormat(
@@ -371,7 +380,7 @@ SdfLayer::_CreateNew(
     // registry mutex lock before destroying the layer.
     SdfLayerRefPtr layer;
     {
-        std::lock_guard<std::mutex> lock(*_layerRegistryMutex);
+        tbb::queuing_rw_mutex::scoped_lock lock(_GetLayerRegistryMutex());
 
         // Check for existing layer with this identifier.
         if (_layerRegistry->Find(absIdentifier)) {
@@ -446,7 +455,7 @@ SdfLayer::New(
         return TfNullPtr;
     }
 
-    std::lock_guard<std::mutex> lock(*_layerRegistryMutex);
+    tbb::queuing_rw_mutex::scoped_lock lock(_GetLayerRegistryMutex());
 
     // When creating a new layer, assume that relative identifiers are
     // relative to the current working directory.
@@ -641,28 +650,34 @@ SdfLayer::FindOrOpen(const string &identifier,
         Sdf_ResolvePath(layerInfo.layerPath, &assetInfo);
 
     // First see if this layer is already present.
-    _layerRegistryMutex->lock();
+    tbb::queuing_rw_mutex::scoped_lock
+        lock(_GetLayerRegistryMutex(), /*write=*/false);
     if (SdfLayerRefPtr layer =
         _TryToFindLayer(layerInfo.identifier, resolvedPath)) {
-        
-        // Unlock the mutex so other threads trying to access
-        // unrelated layers can proceed while this thread waits
-        // for this layer to be ready.
-        _layerRegistryMutex->unlock();
+        lock.release();
+        return layer->_WaitForInitializationAndCheckIfSuccessful() ?
+            layer : TfNullPtr;
+    }
 
-        return layer->_WaitForInitializationAndCheckIfSuccessful() 
-            ? layer
-            : TfNullPtr;
-
+    // Not found.  Upgrade to writer and retry if upgrade was non-atomic.
+    if (!lock.upgrade_to_writer()) {
+        // Retry.
+        if (SdfLayerRefPtr layer =
+            _TryToFindLayer(layerInfo.identifier, resolvedPath)) {
+            lock.release();
+            
+            return layer->_WaitForInitializationAndCheckIfSuccessful() ?
+                layer : TfNullPtr;
+        }
     }
 
     if (resolvedPath.empty()) {
-        _layerRegistryMutex->unlock();
         return TfNullPtr;
     }
 
     // Otherwise we create the layer and insert it into the registry.
-    return _OpenLayerAndUnlockRegistry(layerInfo, /* metadataOnly */ false,
+    return _OpenLayerAndUnlockRegistry(lock, layerInfo,
+                                       /* metadataOnly */ false,
                                        resolvedPath, assetInfo, isAnonymous);
 }
 
@@ -690,7 +705,7 @@ SdfLayer::OpenAsAnonymous(
     // Create a new anonymous layer.
     SdfLayerRefPtr layer;
     {
-        std::lock_guard<std::mutex> lock(*_layerRegistryMutex);
+        tbb::queuing_rw_mutex::scoped_lock lock(_GetLayerRegistryMutex());
         layer = _CreateNewWithFormat(
                 format, Sdf_GetAnonLayerIdentifierTemplate(string()),
                 string());
@@ -912,21 +927,16 @@ SdfLayer::Find(const string &identifier,
         Sdf_ResolvePath(layerInfo.layerPath);
 
     // First see if this layer is already present.
-    _layerRegistryMutex->lock();
+    tbb::queuing_rw_mutex::scoped_lock
+        lock(_GetLayerRegistryMutex(), /*write=*/false);
     if (SdfLayerRefPtr layer =
         _TryToFindLayer(layerInfo.identifier, resolvedPath)) {
-        // Unlock the mutex so other threads trying to access
-        // unrelated layers can proceed while this thread waits
-        // for this layer to be ready.
-        _layerRegistryMutex->unlock();
-
-        return layer->_WaitForInitializationAndCheckIfSuccessful()
-            ? layer
-            : TfNullPtr;
-
+        // Unlock the mutex so other threads trying to use the layer registry
+        // can proceed while this thread waits for this layer to be ready.
+        lock.release();
+        return layer->_WaitForInitializationAndCheckIfSuccessful() ?
+            layer : TfNullPtr;
     }
-    _layerRegistryMutex->unlock();
-    
     return TfNullPtr;
 }
 
@@ -1622,7 +1632,7 @@ SdfLayer::InsertSubLayerPath(const string& path, int index)
     SdfSubLayerProxy proxy = GetSubLayerPaths();
 
     if (index == -1) {
-        index = proxy.size();
+        index = static_cast<int>(proxy.size());
     }
 
     proxy.Insert(index, path);
@@ -1945,9 +1955,9 @@ SdfLayer::CanApply(
     static const bool fixBackpointers = true;
     SdfLayerHandle self = SdfCreateNonConstHandle(this);
     if (!edits.Process(NULL,
-                          boost::bind(&_HasObjectAtPath, self, _1),
-                          boost::bind(&_CanEdit, self, _1, _2),
-                          details, !fixBackpointers)) {
+                       boost::bind(&_HasObjectAtPath, self, _1),
+                       boost::bind(&_CanEdit, self, _1, _2),
+                       details, !fixBackpointers)) {
         result = CombineError(result);
     }
 
@@ -1965,9 +1975,9 @@ SdfLayer::Apply(const SdfBatchNamespaceEdit& edits)
     SdfLayerHandle self(this);
     SdfNamespaceEditVector final;
     if (!edits.Process(&final,
-                          boost::bind(&_HasObjectAtPath, self, _1),
-                          boost::bind(&_CanEdit, self, _1, _2),
-                          NULL, !fixBackpointers)) {
+                       boost::bind(&_HasObjectAtPath, self, _1),
+                       boost::bind(&_CanEdit, self, _1, _2),
+                       NULL, !fixBackpointers)) {
         return false;
     }
 
@@ -2154,7 +2164,7 @@ SdfLayer::SetIdentifier(const string &identifier)
     // notification until the mutex is unlocked.
     SdfChangeBlock block;
     {
-        std::lock_guard<std::mutex> lock(*_layerRegistryMutex);
+        tbb::queuing_rw_mutex::scoped_lock lock(_GetLayerRegistryMutex());
         _InitializeFromIdentifier(absIdentifier);
     }
 
@@ -2194,7 +2204,7 @@ SdfLayer::UpdateAssetInfo(const string &fileVersion)
                     _assetInfo->resolverContext));
         }    
 
-        std::lock_guard<std::mutex> lock(*_layerRegistryMutex);
+        tbb::queuing_rw_mutex::scoped_lock lock(_GetLayerRegistryMutex());
         _InitializeFromIdentifier(GetIdentifier(),
             /* realPath */ std::string(), fileVersion);
     }
@@ -2717,7 +2727,8 @@ SdfLayer::_UpdateReferencePaths(
 void
 SdfLayer::DumpLayerInfo()
 {
-    std::lock_guard<std::mutex> lock(*_layerRegistryMutex);
+    tbb::queuing_rw_mutex::scoped_lock
+        lock(_GetLayerRegistryMutex(), /*write=*/false);
     std::cerr << "Layer Registry Dump:" << std::endl
         << *_layerRegistry << std::endl;
 }
@@ -2734,13 +2745,16 @@ SdfLayer::WriteDataFile(const string &filename)
 set<SdfLayerHandle>
 SdfLayer::GetLoadedLayers()
 {
-    std::lock_guard<std::mutex> lock(*_layerRegistryMutex);
+    tbb::queuing_rw_mutex::scoped_lock
+        lock(_GetLayerRegistryMutex(), /*write=*/false);
     return _layerRegistry->GetLayers();
 }
 
 /* static */
+template <class Lock>
 SdfLayerRefPtr
 SdfLayer::_OpenLayerAndUnlockRegistry(
+    Lock &lock,
     const _FindOrOpenLayerInfo& info,
     bool metadataOnly,
     string const &resolvedPath,
@@ -2767,7 +2781,7 @@ SdfLayer::_OpenLayerAndUnlockRegistry(
     if (!info.fileFormat) {
         TF_CODING_ERROR("Cannot determine file format for @%s@", 
                         info.identifier.c_str());
-        _layerRegistryMutex->unlock();
+        lock.release();
         return TfNullPtr;
     }
 
@@ -2785,7 +2799,7 @@ SdfLayer::_OpenLayerAndUnlockRegistry(
               FindByIdentifier(layer->GetIdentifier()) == layer,
               "Could not find %s", layer->GetIdentifier().c_str());
 
-    _layerRegistryMutex->unlock();
+    lock.release();
 
     // From this point on, we need to be sure to call
     // layer->_FinishInitialization() with either success or failure,
@@ -3097,7 +3111,7 @@ SdfLayer::EraseFieldDictValueByKey(const SdfAbstractDataSpecId& id,
     }
 
     if (!_data->HasDictKey(id, fieldName, keyPath,
-                              static_cast<VtValue *>(NULL))) {
+                           static_cast<VtValue *>(NULL))) {
         return;
     }
 
@@ -3246,7 +3260,7 @@ SdfLayer::_SetData(const SdfAbstractDataPtr &newData)
                                                   SdfSpecifierOver)
                         == SdfSpecifierOver)
                     && (newData->GetAs<TfToken>(id, SdfFieldKeys->TypeName,
-                                                 TfToken())
+                                                TfToken())
                         .IsEmpty());
             } else if (path.IsPropertyPath()) {
                 // Properties are considered inert if they are custom.
@@ -3356,7 +3370,7 @@ SdfLayer::_PrimPushChild(const SdfPath& parentPath,
 {
     SdfAbstractDataSpecId id(&parentPath);
 
-    if (not HasField(id, fieldName)) {
+    if (!HasField(id, fieldName)) {
         _PrimSetField(id, fieldName,
             VtValue(std::vector<T>(1, value)));
         return;
@@ -3772,7 +3786,7 @@ bool
 SdfLayer::_IsInertSubtree(const SdfPath &path)
 {
     if (!_IsInert(path, true /*ignoreChildren*/, 
-                     true /* requiredFieldOnlyPropertiesAreInert */)) {
+                  true /* requiredFieldOnlyPropertiesAreInert */)) {
         return false;
     }
 
@@ -3789,8 +3803,8 @@ SdfLayer::_IsInertSubtree(const SdfPath &path)
             path, SdfChildrenKeys->PropertyChildren);
         TF_FOR_ALL(i, properties) {
             if (!_IsInert(path.AppendProperty(*i), 
-                             false /*ignoreChildren*/, 
-                             true /* requiredFieldOnlyPropertiesAreInert */)) {
+                          false /*ignoreChildren*/, 
+                          true /* requiredFieldOnlyPropertiesAreInert */)) {
 
                 return false;
             }
@@ -3906,7 +3920,7 @@ SdfLayer::_Save(bool force) const
         return true;
 
     if (!_WriteToFile(path, std::string(), 
-                         GetFileFormat(), GetFileFormatArguments()))
+                      GetFileFormat(), GetFileFormatArguments()))
         return false;
 
     // Record modification timestamp.

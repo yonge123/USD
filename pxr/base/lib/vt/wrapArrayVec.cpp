@@ -25,6 +25,7 @@
 #define SUBTRACTION_OPERATOR
 #define UNARY_NEG_OPERATOR
 #define DOUBLE_MULT_OPERATOR
+
 // Vec types support *, but as a dot product, so return is a double rather than
 // a Vec, so we can't use it on two Vecs, just on Vec * double
 // (sure we could create special overloading for
@@ -41,11 +42,9 @@
 #include "pxr/base/vt/typeHeaders.h"
 #include "pxr/base/vt/wrapArray.h"
 
-PXR_NAMESPACE_OPEN_SCOPE
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void wrapArrayVec() {
     BOOST_PP_SEQ_FOR_EACH(VT_WRAP_ARRAY, ~, VT_VEC_VALUE_TYPES);
     //BOOST_PP_SEQ_FOR_EACH(VT_WRAP_COMPARISON, ~, VT_VEC_VALUE_TYPES);
 }
-
-PXR_NAMESPACE_CLOSE_SCOPE

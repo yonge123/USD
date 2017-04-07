@@ -47,7 +47,9 @@ using namespace boost::python;
 
 using std::string;
 
-PXR_NAMESPACE_OPEN_SCOPE
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static string __repr__(GfQuath const &self) {
     return TF_PY_REPR_PREFIX + "Quath(" +
@@ -57,6 +59,8 @@ static string __repr__(GfQuath const &self) {
 
 // Zero-initialized default ctor for python.
 static GfQuath *__init__() { return new GfQuath(0); }
+
+} // anonymous namespace 
 
 void wrapQuath()
 {    
@@ -69,7 +73,7 @@ void wrapQuath()
                       &GfQuath::SetImaginary);
 
     object setImaginaryScl =
-        make_function((void (GfQuath::*)(half, half, half))
+        make_function((void (GfQuath::*)(GfHalf, GfHalf, GfHalf))
                       &GfQuath::SetImaginary,
                       default_call_policies(),
                       (arg("i"), arg("j"), arg("k")));
@@ -83,10 +87,10 @@ void wrapQuath()
                           
         .def(TfTypePythonClass())
 
-        .def(init<half>(arg("real")))
-        .def(init<half, const GfVec3h &>(
+        .def(init<GfHalf>(arg("real")))
+        .def(init<GfHalf, const GfVec3h &>(
                  (arg("real"), arg("imaginary"))))
-        .def(init<half, half, half, half>(
+        .def(init<GfHalf, GfHalf, GfHalf, GfHalf>(
                  (arg("real"), arg("i"), arg("j"), arg("k"))))
 
         .def("GetIdentity", &GfQuath::GetIdentity)
@@ -116,16 +120,16 @@ void wrapQuath()
         .def(self == self)
         .def(self != self)
         .def(self *= self)
-        .def(self *= half())
-        .def(self /= half())
+        .def(self *= GfHalf())
+        .def(self /= GfHalf())
         .def(self += self)
         .def(self -= self)
         .def(self + self)
         .def(self - self)
         .def(self * self)
-        .def(self * half())
-        .def(half() * self)
-        .def(self / half())
+        .def(self * GfHalf())
+        .def(GfHalf() * self)
+        .def(self / GfHalf())
 
         .def("__repr__", __repr__)
 
@@ -136,5 +140,3 @@ void wrapQuath()
         TfPySequenceToPython<std::vector<GfQuath> > >();
     
 }
-
-PXR_NAMESPACE_CLOSE_SCOPE

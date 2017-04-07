@@ -25,6 +25,7 @@
 #define HDST_BASIS_CURVES_H
 
 #include "pxr/pxr.h"
+#include "pxr/imaging/hdSt/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/basisCurves.h"
 #include "pxr/imaging/hd/drawingCoord.h"
@@ -62,40 +63,51 @@ typedef boost::shared_ptr<class HdSt_BasisCurvesTopology>
 class HdStBasisCurves final: public HdBasisCurves {
 public:
     HF_MALLOC_TAG_NEW("new HdStBasisCurves");
+
+    HDST_API
     HdStBasisCurves(SdfPath const& id,
                     SdfPath const& instancerId = SdfPath());
+    HDST_API
     virtual ~HdStBasisCurves();
 
+    HDST_API
+    virtual void Sync(HdSceneDelegate* delegate,
+                      HdRenderParam*   renderParam,
+                      HdDirtyBits*     dirtyBits,
+                      TfToken const &  reprName,
+                      bool             forcedRepr) override;
+
     /// Configure geometric style of drawItems for \p reprName
+    HDST_API
     static void ConfigureRepr(TfToken const &reprName,
                               HdStBasisCurvesReprDesc desc);
 
     /// Returns whether refinement is always on or not.
+    HDST_API
     static bool IsEnabledForceRefinedCurves();
     
 protected:
     virtual HdReprSharedPtr const &
         _GetRepr(HdSceneDelegate *sceneDelegate,
                  TfToken const &reprName,
-                 HdChangeTracker::DirtyBits *dirtyBitsState) override;
+                 HdDirtyBits *dirtyBitsState) override;
 
     void _PopulateTopology(HdSceneDelegate *sceneDelegate,
                            HdDrawItem *drawItem,
-                           HdChangeTracker::DirtyBits *dirtyBits,
+                           HdDirtyBits *dirtyBits,
                            const HdStBasisCurvesReprDesc &desc);
 
     void _PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
                                  HdDrawItem *drawItem,
-                                 HdChangeTracker::DirtyBits *dirtyBits);
+                                 HdDirtyBits *dirtyBits);
 
     void _PopulateElementPrimVars(HdSceneDelegate *sceneDelegate,
                                   HdDrawItem *drawItem,
-                                  HdChangeTracker::DirtyBits *dirtyBits);
+                                  HdDirtyBits *dirtyBits);
 
-    HdChangeTracker::DirtyBits _PropagateDirtyBits(
-        HdChangeTracker::DirtyBits dirtyBits);
+    HdDirtyBits _PropagateDirtyBits(HdDirtyBits dirtyBits);
 
-    virtual HdChangeTracker::DirtyBits _GetInitialDirtyBits() const override;
+    virtual HdDirtyBits _GetInitialDirtyBits() const override;
 
 private:
     enum DrawingCoord {
@@ -116,7 +128,7 @@ private:
 
     void _UpdateDrawItem(HdSceneDelegate *sceneDelegate,
                          HdDrawItem *drawItem,
-                         HdChangeTracker::DirtyBits *dirtyBits,
+                         HdDirtyBits *dirtyBits,
                          const HdStBasisCurvesReprDesc &desc);
 
     void _UpdateDrawItemGeometricShader(HdDrawItem *drawItem,

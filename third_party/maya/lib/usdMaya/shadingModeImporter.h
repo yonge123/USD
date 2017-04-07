@@ -25,6 +25,7 @@
 #define PXRUSDMAYA_SHADINGMODEIMPORTER_H 
 
 #include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/primReaderContext.h"
 
 #include "pxr/usd/sdf/path.h"
@@ -43,14 +44,14 @@ class PxrUsdMayaShadingModeImportContext
 {
 public:
 
-    const UsdShadeMaterial& GetShadeLook() const { return _shadeLook; }
+    const UsdShadeMaterial& GetShadeMaterial() const { return _shadeMaterial; }
     const UsdGeomGprim& GetBoundPrim() const { return _boundPrim; }
 
     PxrUsdMayaShadingModeImportContext(
-            const UsdShadeMaterial& shadeLook,
+            const UsdShadeMaterial& shadeMaterial,
             const UsdGeomGprim& boundPrim,
             PxrUsdMayaPrimReaderContext* context) :
-        _shadeLook(shadeLook),
+        _shadeMaterial(shadeMaterial),
         _boundPrim(boundPrim),
         _context(context)
     {
@@ -68,23 +69,26 @@ public:
     /// This will return true and \p obj will be set to the
     /// previously created MObject.  Otherwise, this returns false;
     /// If \p prim is an invalid UsdPrim, this will return false.
+    PXRUSDMAYA_API
     bool GetCreatedObject(const UsdPrim& prim, MObject* obj) const;
 
     /// If you want to register a prim so that other parts of the import
     /// uses them, this function registers \obj as being created.
     /// If \p prim is an invalid UsdPrim, nothing will get stored and \p obj
     /// will be returned.
+    PXRUSDMAYA_API
     MObject AddCreatedObject(const UsdPrim& prim, const MObject& obj);
 
     /// If you want to register a path so that other parts of the import
     /// uses them, this function registers \obj as being created.
     /// If \p path is an empty SdfPath, nothing will get stored and \p obj
     /// will be returned.
+    PXRUSDMAYA_API
     MObject AddCreatedObject(const SdfPath& path, const MObject& obj);
     /// @}
 
 private:
-    const UsdShadeMaterial& _shadeLook;
+    const UsdShadeMaterial& _shadeMaterial;
     const UsdGeomGprim& _boundPrim;
     PxrUsdMayaPrimReaderContext* _context;
 };

@@ -30,14 +30,15 @@
 #include "pxr/base/tf/poolAllocator.h"
 #include "pxr/base/tf/stopwatch.h"
 
-
 #include <boost/bind.hpp>
 #include <boost/scoped_ptr.hpp>
 
 #include <atomic>
+#include <chrono>
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <thread>
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -384,7 +385,7 @@ static bool
 _DelayedGraphTask(Graph *graph)
 {
     std::cout << "\tSleeping..." << std::endl;
-    sleep(2);
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     return _TestDispatcher<DispatcherType>(graph);
 }
 
@@ -404,7 +405,7 @@ _TestDispatcherCancellation(Graph *graph)
     DispatcherType parentDispatcher;
 
     parentDispatcher.Run(&_DelayedGraphTask<DispatcherType>, graph);
-    sleep(1);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     std::cout << "\tCancelling..." << std::endl;
     parentDispatcher.Cancel();
     parentDispatcher.Wait();

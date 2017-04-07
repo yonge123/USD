@@ -27,9 +27,9 @@
 #include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/arch/stackTrace.h"
 
-#include <thread>
-
+#include <chrono>
 #include <iostream>
+#include <thread>
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -43,7 +43,7 @@ _ThreadTask()
 {
     TfErrorMark m;
     TF_RUNTIME_ERROR("Pending secondary thread error for crash report!");
-    sleep(600); // 10 minutes.
+    std::this_thread::sleep_for(std::chrono::minutes(10));
 }
 
 int
@@ -62,7 +62,7 @@ main(int argc, char **argv)
 
     std::thread t(_ThreadTask);
 
-    sleep(1);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     int* bunk(0);
     std::cout << *bunk << '\n';

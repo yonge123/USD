@@ -40,7 +40,7 @@ This table lists the fundamental data types supported by USD.
 | uint             | uint32_t      | 32 bit unsigned integer                          |
 | int64            | int64_t       | 64 bit signed   integer                          |
 | uint64           | uint64_t      | 64 bit unsigned integer                          |
-| half             | half          | 16 bit floating point (imath half)               |
+| half             | GfHalf        | 16 bit floating point                            |
 | float            | float         | 32 bit floating point                            |
 | double           | double        | 64 bit floating point                            |
 | string           | std::string   | stl string                                       |
@@ -137,6 +137,6 @@ value resolution that "strongest opinion wins".
 You can use the builtin customData for your truly ad-hoc user-data needs, 
 but you can also add new dictionary-valued metadata by defining it in a 
 module plugInfo.json file - 
-see \ref Usd_Extending_Metadata for details on how to do so.
+see \ref sdf_plugin_metadata for details on how to do so.
 
 */

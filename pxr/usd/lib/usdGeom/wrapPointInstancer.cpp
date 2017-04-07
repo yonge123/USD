@@ -38,7 +38,9 @@
 
 using namespace boost::python;
 
-PXR_NAMESPACE_OPEN_SCOPE
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 #define WRAP_CUSTOM                                                     \
     template <class Cls> static void _CustomWrapCode(Cls &_class)
@@ -109,6 +111,8 @@ _CreatePrototypeDrawModeAttr(UsdGeomPointInstancer &self,
     return self.CreatePrototypeDrawModeAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
 }
+
+} // anonymous namespace
 
 void wrapUsdGeomPointInstancer()
 {
@@ -214,8 +218,6 @@ void wrapUsdGeomPointInstancer()
     _CustomWrapCode(cls);
 }
 
-PXR_NAMESPACE_CLOSE_SCOPE
-
 // ===================================================================== //
 // Feel free to add custom code below this line, it will be preserved by 
 // the code generator.  The entry point for your custom code should look
@@ -230,19 +232,20 @@ PXR_NAMESPACE_CLOSE_SCOPE
 // Of course any other ancillary or support code may be provided.
 // 
 // Just remember to wrap code in the appropriate delimiters:
-// 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
+// 'namespace {', '}'.
 //
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
 #include "pxr/base/tf/pyEnum.h"
 
-PXR_NAMESPACE_OPEN_SCOPE
+namespace {
 
 static
 std::vector<bool>
-_ComputeMaskAtTime(UsdGeomPointInstancer &self,
-                    UsdTimeCode time)
+_ComputeMaskAtTime(
+    const UsdGeomPointInstancer& self,
+    const UsdTimeCode time)
 {
     return self.ComputeMaskAtTime(time);
 }
@@ -250,11 +253,11 @@ _ComputeMaskAtTime(UsdGeomPointInstancer &self,
 static
 VtMatrix4dArray
 _ComputeInstanceTransformsAtTime(
-    UsdGeomPointInstancer &self,
-    UsdTimeCode time,
-    UsdTimeCode baseTime,
-    UsdGeomPointInstancer::ProtoXformInclusion doProtoXforms,
-    UsdGeomPointInstancer::MaskApplication applyMask)
+    const UsdGeomPointInstancer& self,
+    const UsdTimeCode time,
+    const UsdTimeCode baseTime,
+    const UsdGeomPointInstancer::ProtoXformInclusion doProtoXforms,
+    const UsdGeomPointInstancer::MaskApplication applyMask)
 {
     VtMatrix4dArray xforms;
 
@@ -263,6 +266,21 @@ _ComputeInstanceTransformsAtTime(
                                          doProtoXforms, applyMask);
 
     return xforms;
+}
+
+static
+VtVec3fArray
+_ComputeExtentAtTime(
+    const UsdGeomPointInstancer& self,
+    const UsdTimeCode time,
+    const UsdTimeCode baseTime)
+{
+    VtVec3fArray extent;
+
+    // On error we'll be returning an empty array.
+    self.ComputeExtentAtTime(&extent, time, baseTime);
+
+    return extent;
 }
 
 WRAP_CUSTOM {
@@ -316,10 +334,13 @@ WRAP_CUSTOM {
              (arg("time"), arg("baseTime"),
               arg("doProtoXforms")=This::IncludeProtoXform,
               arg("applyMask")=This::ApplyMask))
-              
+
+        .def("ComputeExtentAtTime",
+             &_ComputeExtentAtTime,
+             (arg("time"), arg("baseTime")))
 
         ;
 
 }
 
-PXR_NAMESPACE_CLOSE_SCOPE
+} // anonymous namespace

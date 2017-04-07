@@ -10,14 +10,14 @@ pxr_shared_library(pxOsd
 
     INCLUDE_DIRS
         ${OPENSUBDIV_INCLUDE_DIR}
+        
+    PUBLIC_HEADERS
+        api.h
 
     PUBLIC_CLASSES
         meshTopology
         refinerFactory
-        refinerCache
-        stencilPerVertex
         subdivTags
         tokens
-        uniformEvaluator
 
 )

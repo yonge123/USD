@@ -34,7 +34,9 @@
 using namespace boost::python;
 using std::string;
 
-PXR_NAMESPACE_OPEN_SCOPE
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static SdfLayerHandleVector
 _GetLayerStackLayers(const PcpLayerStack &layerStack)
@@ -64,6 +66,8 @@ _GetResolvedAssetPaths(const PcpLayerStack &layerStack)
     const std::set<string>& paths = layerStack.GetResolvedAssetPaths();
     return std::vector<string>(paths.begin(), paths.end());
 }
+
+} // anonymous namespace 
 
 void wrapLayerStack()
 {
@@ -101,4 +105,4 @@ void wrapLayerStack()
         ;
 }
 
-PXR_NAMESPACE_CLOSE_SCOPE
+TF_REFPTR_CONST_VOLATILE_GET(PcpLayerStack)

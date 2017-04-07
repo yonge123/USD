@@ -8,10 +8,6 @@ pxr_shared_library(gf
     LIBRARIES
         arch
         tf
-        ${OPENEXR_Half_LIBRARY}
-
-    INCLUDE_DIRS
-        ${OPENEXR_INCLUDE_DIRS}
 
     PUBLIC_CLASSES
         bbox3d
@@ -20,6 +16,7 @@ pxr_shared_library(gf
         gamma
         half
         homogeneous
+        ilmbase_half
         interval
         line
         line2d
@@ -66,12 +63,17 @@ pxr_shared_library(gf
         vec4i
 
     PUBLIC_HEADERS
+        api.h
         declare.h
         limits.h
         traits.h
 
     PRIVATE_CLASSES
         ostreamHelpers
+
+    PRIVATE_HEADERS
+        ilmbase_eLut.h
+        ilmbase_toFloat.h
 
     CPPFILES
         moduleDeps.cpp

@@ -39,7 +39,7 @@
 // Include headers for other vec types to support wrapping conversions and
 // operators.
 {% for S in SCALARS if S != SCL -%}
-#include "pxr/base/gf/vec{{ DIM }}{{ S[0] }}.h"
+#include "pxr/base/gf/vec{{ DIM }}{{ SCALAR_SUFFIX(S) }}.h"
 {% endfor %}
 {% endif %}
 
@@ -59,7 +59,9 @@ using namespace boost::python;
 
 using std::string;
 
-PXR_NAMESPACE_OPEN_SCOPE
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 ////////////////////////////////////////////////////////////////////////
 // Python buffer protocol support.
@@ -346,7 +348,6 @@ static V *__init__() {
     return new V(0);
 }
 
-namespace {
 struct FromPythonTuple {
     FromPythonTuple() {
         converter::registry::
@@ -397,7 +398,8 @@ struct PickleSuite : boost::python::pickle_suite
         return boost::python::make_tuple({{ LIST("v[%(i)s]") }});
     }
 };
-} // anon
+
+} // anonymous namespace 
 
 void wrapVec{{ SUFFIX }}()
 {
@@ -534,5 +536,3 @@ void wrapVec{{ SUFFIX }}()
         std::vector<{{ VEC }}>,
         TfPyContainerConversions::variable_capacity_policy >();
 }
-
-PXR_NAMESPACE_CLOSE_SCOPE

@@ -3,6 +3,7 @@ set(PXR_PACKAGE usd)
 
 pxr_shared_library(usd
     LIBRARIES
+        arch
         kind
         pcp
         sdf
@@ -38,6 +39,7 @@ pxr_shared_library(usd
         primData
         primDataHandle
         primFlags
+        primRange
         property
         references
         relationship
@@ -52,7 +54,6 @@ pxr_shared_library(usd
         stagePopulationMask
         timeCode
         tokens
-        treeIterator
         typed
         usdFileFormat
         usdaFileFormat
@@ -67,11 +68,14 @@ pxr_shared_library(usd
         instanceCache
         instanceKey
         interpolators
-        wrapUtils
+
+    PUBLIC_HEADERS
+        api.h
 
     PRIVATE_HEADERS
         crateDataTypes.h
         crateValueInliners.h
+        wrapUtils.h
 
     CPPFILES
         moduleDeps.cpp
@@ -92,6 +96,7 @@ pxr_shared_library(usd
         wrapObject.cpp
         wrapPrim.cpp
         wrapPrimFlags.cpp
+        wrapPrimRange.cpp
         wrapProperty.cpp
         wrapReferences.cpp
         wrapRelationship.cpp
@@ -104,8 +109,8 @@ pxr_shared_library(usd
         wrapStageCacheContext.cpp
         wrapStagePopulationMask.cpp
         wrapTimeCode.cpp
-        wrapTreeIterator.cpp
         wrapTyped.cpp
+        wrapUtils.cpp
         wrapVariantSets.cpp
 
     PYTHON_FILES
@@ -119,7 +124,10 @@ pxr_shared_library(usd
 if (NOT JINJA2_FOUND)
     message(WARNING "Skipping building usdGenSchema due to missing dependency: Jinja2")
 else()
-    pxr_python_bins(
-        usdGenSchema
+    pxr_python_bin(usdGenSchema
+        DEPENDENCIES
+            tf
+            sdf
+            usd
     )
 endif()

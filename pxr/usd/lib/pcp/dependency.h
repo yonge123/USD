@@ -25,6 +25,7 @@
 #define PCP_DEPENDENCY_H
 
 #include "pxr/pxr.h"
+#include "pxr/usd/pcp/api.h"
 #include "pxr/usd/pcp/mapFunction.h"
 #include "pxr/usd/sdf/path.h"
 
@@ -125,11 +126,20 @@ struct PcpDependency {
 
 typedef std::vector<PcpDependency> PcpDependencyVector;
 
+/// Returns true if this node introduces a dependency in its
+/// PcpPrimIndex, false otherwise.  This is equivalent to
+/// PcpClassifyNodeDependency(n) != PcpDependencyTypeNone, but
+/// is faster.
+PCP_API
+bool PcpNodeIntroducesDependency(const PcpNodeRef &n);
+
 /// Classify the dependency represented by a node, by analyzing
 /// its structural role in its PcpPrimIndex.  Returns a
 /// bitmask of flags from PcpDependencyType.
+PCP_API
 PcpDependencyFlags PcpClassifyNodeDependency(const PcpNodeRef &n);
 
+PCP_API
 std::string PcpDependencyFlagsToString(const PcpDependencyFlags flags);
 
 PXR_NAMESPACE_CLOSE_SCOPE

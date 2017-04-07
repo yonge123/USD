@@ -58,7 +58,7 @@ HdDrawItem::GetPrimitiveMode() const
 HdShaderCodeSharedPtr
 HdDrawItem::GetSurfaceShader() const
 {
-    return boost::static_pointer_cast<HdShaderCode>(_sharedData->surfaceShader);
+    return _sharedData->surfaceShader;
 }
 
 size_t
@@ -100,6 +100,7 @@ HdDrawItem::IntersectsViewVolume(GfMatrix4d const &viewProjMatrix) const
     }
 }
 
+HD_API
 std::ostream &operator <<(std::ostream &out, 
                                  const HdDrawItem& self) {
     out << "Draw Item:\n";

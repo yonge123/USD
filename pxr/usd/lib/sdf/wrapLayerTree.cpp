@@ -32,7 +32,9 @@
 
 using namespace boost::python;
 
-PXR_NAMESPACE_OPEN_SCOPE
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static SdfLayerTreeHandle
 _NewEmpty()
@@ -55,6 +57,8 @@ _New(const SdfLayerHandle & layer,
 {
    return SdfLayerTree::New(layer, childTrees, cumulativeOffset);
 }
+
+} // anonymous namespace 
 
 void wrapLayerTree()
 {    
@@ -84,4 +88,4 @@ void wrapLayerTree()
         ;
 }
 
-PXR_NAMESPACE_CLOSE_SCOPE
+TF_REFPTR_CONST_VOLATILE_GET(SdfLayerTree)
