@@ -349,6 +349,7 @@ bool IsUsdReferenceOrAssemblyNode(const MDagPath& dagPath);
 /// THEIR namespaces are from USD.
 std::string GetUsdNamespace(const MObject& mobj);
 
+PXRUSDMAYA_API
 std::string MDagPathToUsdPathString(const MDagPath& dagPath,
                                     bool stripUsdNamespaces);
 
