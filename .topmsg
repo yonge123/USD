@@ -1,2 +1,4 @@
-From: Pal Mezei <sirpalee@gmail.com>
-Subject: [imaging] Fixing image reads if OIIO built with asserts enabled.
+From: Paul Molodowitch <pm@stanfordalumni.org>
+Subject: branch to merge various luma pull-requests
+
+NO substantive commits should be on this branch - it should ONLY contain merges
