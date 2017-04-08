@@ -102,6 +102,12 @@ struct JobExportArgs
     // the model path. This to allow a proper internal reference
     SdfPath usdModelRootOverridePath;
 
+    // Optionally specified path to use as top level prim in
+    // place of the scene root.
+    std::string exportRootPath;
+    // store a computed SdfPath path for reuse in mayaPrimWriter
+    SdfPath exportRootSdfPath;
+
     TfToken rootKind;
 };
 
