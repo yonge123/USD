@@ -8,3 +8,4 @@ tg/simple_features/usdview_reload_shortcut
 maya_use_IsSupportedFile
 unify_usdVariantSet_prefix_token
 pseudo_root_warning
+symlink_headers
