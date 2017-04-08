@@ -2,6 +2,7 @@ tg/bugfixes/oiio_read_with_asserts
 tg/bugfixes/ubuntu_katana_build_fix
 tg/simple_features/export_root
 tg/simple_features/glsl_type_info
+tg/simple_features/iterating_maya_underworld
 tg/simple_features/tx_hydra
 tg/simple_features/usdRender
 tg/simple_features/usdview_reload_shortcut
