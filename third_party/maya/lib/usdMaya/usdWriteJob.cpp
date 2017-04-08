@@ -71,6 +71,23 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+namespace {
+    static
+    bool _HasParent(const MDagPath& curDagPath, const MDagPath& curLeafDagPath) {
+        MFnDagNode dagNode(curDagPath);
+        if (dagNode.inUnderWorld()) {
+            for (auto dagPathCopy = curDagPath; dagPathCopy.pathCount(); dagPathCopy.pop()) {
+                MFnDagNode dagNodeCopy(dagPathCopy);
+                if (!dagNodeCopy.inUnderWorld()) {
+                    return dagNodeCopy.hasParent(curLeafDagPath.node());
+                }
+            }
+            return false;
+        } else {
+            return dagNode.hasParent(curLeafDagPath.node());
+        }
+    }
+}
 
 usdWriteJob::usdWriteJob(const JobExportArgs & iArgs) :
     mArgs(iArgs), mModelKindWriter(iArgs)
@@ -201,6 +218,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
     MDagPath curLeafDagPath;
     MItDag itDag(MItDag::kDepthFirst, MFn::kInvalid);
 
+    itDag.traverseUnderWorld(true);
+
     if (!mArgs.exportRootPath.empty()){
         // If a root is specified, start iteration there
         MDagPath rootDagPath;
@@ -221,9 +240,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
             // This dagPath IS one of the arg dagPaths. It AND all of its
             // children should be included in the export.
             curLeafDagPath = curDagPath;
-        } else if (!MFnDagNode(curDagPath).hasParent(curLeafDagPath.node())) {
-            // This dagPath is not a child of one of the arg dagPaths, so prune
-            // it and everything below it from the traversal.
+        } else if (!_HasParent(curDagPath, curLeafDagPath)) {
+            // The lowest-level, non-underworld dagNode from the dagPath is not one of the arg dagPaths, so prune
             itDag.prune();
             continue;
         }
@@ -382,9 +400,8 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
 
     // Get the usdVariantRootPrimPath (optionally filter by renderLayer prefix)
     MayaPrimWriterPtr firstPrimWriterPtr = *mMayaPrimWriterList.begin();
-    std::string firstPrimWriterPathStr( firstPrimWriterPtr->getDagPath().fullPathName().asChar() );
-    std::replace( firstPrimWriterPathStr.begin(), firstPrimWriterPathStr.end(), '|', '/');
-    std::replace( firstPrimWriterPathStr.begin(), firstPrimWriterPathStr.end(), ':', '_'); // replace namespace ":" with "_"
+    std::string firstPrimWriterPathStr(PxrUsdMayaUtil::MDagPathToUsdPathString(
+        firstPrimWriterPtr->getDagPath()));
     SdfPath usdVariantRootPrimPath(firstPrimWriterPathStr);
     usdVariantRootPrimPath = usdVariantRootPrimPath.GetPrefixes()[0];
 
