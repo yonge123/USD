@@ -62,6 +62,14 @@ namespace FnKat = Foundry::Katana;
     interface.setAttr("errorMessage", Foundry::Katana::StringAttribute(\
         TfStringPrintf(__VA_ARGS__)));
 
+// Return true if katana is running interactively
+// (i.e., not batch or via script).
+static bool
+_IsInteractiveKatana()
+{
+    return getenv("KATANA_UI_MODE");
+}
+
 // see overview.dox for more documentation.
 class PxrUsdInOp : public FnKat::GeolibOp
 {
@@ -125,21 +133,8 @@ public:
             return;
         }
 
-        // A flag to force the use of default motion samples. This is only set
-        // when at root and an isolate path is specified. In this case, we must
-        // check whether the isolated path starts with any of the 
-        // user-specified
-        // paths that should use the default motion sample times.
-        //
-        bool useDefaultMotion = false;
-
         if (interface.atRoot()) {
             interface.stopChildTraversal();
-
-            if (!usdInArgs->GetIsolatePath().empty())
-            {
-                useDefaultMotion = GetDefaultMotionAtRoot(usdInArgs);
-            }
 
             // XXX This info currently gets used to determine whether
             // to correctively rotate cameras. The camera's zUp needs to be
@@ -220,8 +215,7 @@ public:
                         FnKat::GeolibCookInterface::ResetRootFalse,
                         new PxrUsdKatanaUsdInPrivateData(
                                 usdInArgs->GetRootPrim(),
-                                usdInArgs, privateData, useDefaultMotion
-                                ),
+                                usdInArgs, privateData),
                         PxrUsdKatanaUsdInPrivateData::Delete);
             }
         }
@@ -442,7 +436,7 @@ public:
                         FnKat::GeolibCookInterface::ResetRootFalse,
                         new PxrUsdKatanaUsdInPrivateData(
                                 child, usdInArgs,
-                                privateData, useDefaultMotion),
+                                privateData),
                         PxrUsdKatanaUsdInPrivateData::Delete);
             }
         }
@@ -527,6 +521,7 @@ public:
         }
         // XXX END
 
+        ab.sessionLocation = sessionLocation;
         ab.sessionAttr = sessionAttr;
 
         ab.ignoreLayerRegex = FnKat::StringAttribute(
@@ -575,28 +570,34 @@ public:
             }
         }
 
-        // Build the set of paths which should use default motion sample times.
-        //
-        FnAttribute::GroupAttribute defaultMotionPathsAttr =
-                sessionAttr.getChildByName("defaultMotionPaths");
-        if (defaultMotionPathsAttr.isValid())
-        {
-            for (size_t i = 0, e = 
-                    defaultMotionPathsAttr.getNumberOfChildren();
-                    i != e; ++i)
-            {
-                ab.defaultMotionPaths.insert(pystring::replace(
-                    FnAttribute::DelimiterDecode(
-                        defaultMotionPathsAttr.getChildName(i)),
-                        sessionLocation, "", 1));
-            }
+        // Determine whether to force-populate the USD stage.
+        bool forcePopulate = true;
+        int prePopulate(FnKat::FloatAttribute(interface.getOpArg("prePopulate"))
+                        .getValue(0, false));
+        switch(prePopulate) {
+        case 0:
+        default:
+            forcePopulate = true;
+            break;
+        case 1:
+            forcePopulate = false;
+            break;
+        case 2:
+            // Pre-load and populate payloads when running non-interactive.
+            // This provides maximum efficiency for batch jobs.  Assuming
+            // that we will visit everything, populating USD up-front allows
+            // it to use internal multithreading.
+            // We do not do this for interactive jobs since we prefer katana
+            // to stay responsive, and only pull in payloads as locations
+            // are cooked.
+            forcePopulate = !_IsInteractiveKatana();
         }
 
         ab.stage =  UsdKatanaCache::GetInstance().GetStage(
                 fileName, 
                 sessionAttr, sessionLocation,
                 ab.ignoreLayerRegex, 
-                true /* forcePopulate */);
+                forcePopulate);
 
         if (!ab.stage) {
             return ab.buildWithError("PxrUsdIn: USD Stage cannot be loaded.");
@@ -670,32 +671,6 @@ public:
         return ab.build();
     }
 
-    /*
-     * Return true if the root prim path starts with any of the
-     * user-specified paths that should be using default motion
-     * samples.
-     */
-    static bool GetDefaultMotionAtRoot(PxrUsdKatanaUsdInArgsRefPtr usdInArgs)
-    {
-        const std::string& rootPrimPath =
-                usdInArgs->GetRootPrim().GetPath().GetString();
-
-        const std::set<std::string>& defaultMotionPaths =
-                usdInArgs->GetDefaultMotionPaths();
-
-        for (std::set<std::string>::const_iterator I = 
-                defaultMotionPaths.begin(),
-                E = defaultMotionPaths.end(); I != E; ++I)
-        {
-            if (pystring::startswith(rootPrimPath, (*I) + "/"))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
 private:
 
     /*
@@ -728,13 +703,16 @@ private:
             return FnKat::DoubleAttribute();
         }
         std::vector<GfBBox3d> bounds = usdInArgs->ComputeBounds(prim);
+        // TODO: apply motion sample time overrides stored in the session
         const std::vector<double>& motionSampleTimes = 
             usdInArgs->GetMotionSampleTimes();
 
         bool hasInfiniteBounds = false;
+        bool isMotionBackward = motionSampleTimes.size() > 1 &&
+            motionSampleTimes.front() > motionSampleTimes.back();
         FnKat::DoubleAttribute boundsAttr = 
             PxrUsdKatanaUtils::ConvertBoundsToAttribute(
-                bounds, motionSampleTimes, usdInArgs->IsMotionBackward(), 
+                bounds, motionSampleTimes, isMotionBackward, 
                 &hasInfiniteBounds);
 
         // Report infinite bounds as a warning.
@@ -822,8 +800,7 @@ public:
                         new PxrUsdKatanaUsdInPrivateData(
                                 usdInArgs->GetRootPrim(),
                                 usdInArgs,
-                                NULL /* parentData */,
-                                PxrUsdInOp::GetDefaultMotionAtRoot(usdInArgs)),
+                                NULL /* parentData */),
                         PxrUsdKatanaUsdInPrivateData::Delete);
     }
 

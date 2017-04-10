@@ -29,7 +29,8 @@ pxr_shared_library(hdStream
         ${OPENSUBDIV_INCLUDE_DIR}
 
     PUBLIC_CLASSES
-        renderDelegate
+        rendererPlugin
+        taskController
 
     RESOURCE_FILES
         plugInfo.json

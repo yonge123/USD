@@ -44,6 +44,7 @@ using std::string;
 
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
+    (connectability)
     (renderType)
 );
 
@@ -58,7 +59,12 @@ UsdShadeInput::GetBaseName() const
     string name = GetFullName();
     if (TfStringStartsWith(name, UsdShadeTokens->inputs)) {
         return TfToken(name.substr(UsdShadeTokens->inputs.GetString().size()));
+    } else if (UsdShadeUtils::ReadOldEncoding() && 
+               TfStringStartsWith(name, UsdShadeTokens->interface_)) {
+        return TfToken(name.substr(
+            UsdShadeTokens->interface_.GetString().size()));
     }
+    
     return GetFullName();
 }
 
@@ -90,7 +96,7 @@ UsdShadeInput::UsdShadeInput(
             _attr = prim.GetAttribute(name);
         }
         else {
-            TfToken interfaceAttrName(UsdShadeTokens->interface.GetString() + 
+            TfToken interfaceAttrName(UsdShadeTokens->interface_.GetString() + 
                                       name.GetString());
             if (prim.HasAttribute(interfaceAttrName)) {
                 _attr = prim.GetAttribute(interfaceAttrName);
@@ -104,11 +110,11 @@ UsdShadeInput::UsdShadeInput(
                 /* custom = */ false);
         } else {
             UsdShadeConnectableAPI connectable(prim);
-            // If this is a subgraph and the name already contains "interface:" 
+            // If this is a node-graph and the name already contains "interface:" 
             // namespace in it, just create the attribute with the requested 
             // name.
-            if (connectable.IsSubgraph() and 
-                TfStringStartsWith(name.GetString(), UsdShadeTokens->interface))
+            if (connectable.IsNodeGraph() && 
+                TfStringStartsWith(name.GetString(),UsdShadeTokens->interface_))
             {
                 _attr = prim.CreateAttribute(name, typeName, /*custom*/ false);
             } else {
@@ -149,12 +155,60 @@ UsdShadeInput::HasRenderType() const
 bool 
 UsdShadeInput::IsInput(const UsdAttribute &attr)
 {
-    return attr and attr.IsDefined() and 
-            // Check the attribute's namespace only if reading of old encoding 
-            // is not supported.
-            (UsdShadeUtils::ReadOldEncoding() ? true :
+    return attr && attr.IsDefined() && 
+            // If reading of old encoding is supported, then assume it's      
+            // an input as long as it's not in the "outputs:" namespace.
+            // If support for reading the old encoding is disabled, then only
+            // identify as an input if the attr is in the "inputs:" namespace.
+            (UsdShadeUtils::ReadOldEncoding() ? 
+             !TfStringStartsWith(attr.GetName().GetString(), 
+                                UsdShadeTokens->outputs) :
              TfStringStartsWith(attr.GetName().GetString(), 
                                 UsdShadeTokens->inputs));
+}
+
+bool 
+UsdShadeInput::SetConnectability(const TfToken &connectability) const
+{
+    return _attr.SetMetadata(_tokens->connectability, connectability);
+}
+
+TfToken 
+UsdShadeInput::GetConnectability() const
+{
+    TfToken connectability; 
+    _attr.GetMetadata(_tokens->connectability, &connectability);
+
+    // If there's no authored connectability, then check the owner of the 
+    // input to see if it's a node-graph or a shader.
+    // If it's a node-graph, the default connectability is "interfaceOnly".
+    // If it's a shader, the default connectability is "full".
+    // 
+    // If the owner's type is unknown, then get the fallback value from the  
+    // schema registry.
+    // 
+    if (connectability.IsEmpty()) {
+        UsdShadeConnectableAPI connectable(GetPrim());
+        if (connectable.IsNodeGraph())
+            return UsdShadeTokens->interfaceOnly;
+        else if (connectable.IsShader()) {
+            return UsdShadeTokens->full;
+        }
+    } else {
+        return connectability;
+    }
+
+    static const VtValue fallback = SdfSchema::GetInstance().GetFallback(
+        _tokens->connectability);
+
+    return fallback.IsHolding<TfToken>() ? fallback.UncheckedGet<TfToken>()
+                                         : UsdShadeTokens->full;
+}
+
+bool 
+UsdShadeInput::ClearConnectability() const
+{
+    return _attr.ClearMetadata(_tokens->connectability);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

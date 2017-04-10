@@ -54,13 +54,18 @@ HdRprim::~HdRprim()
     /*NOTHING*/
 }
 
+void
+HdRprim::Finalize(HdRenderParam *renderParam)
+{
+}
+
 std::vector<HdDrawItem>* 
 HdRprim::GetDrawItems(HdSceneDelegate* delegate,
                       TfToken const &defaultReprName, bool forced)
 {
     // note: GetDrawItems is called at execute phase.
     // All required dirtyBits should have cleaned at this point.
-    HdChangeTracker::DirtyBits dirtyBits(HdChangeTracker::Clean);
+    HdDirtyBits dirtyBits(HdChangeTracker::Clean);
     TfToken reprName = _GetReprName(delegate, defaultReprName,
                                     forced, &dirtyBits);
     return _GetRepr(delegate, reprName, &dirtyBits)->GetDrawItems();
@@ -68,10 +73,10 @@ HdRprim::GetDrawItems(HdSceneDelegate* delegate,
 
 
 void
-HdRprim::Sync(HdSceneDelegate* delegate,
+HdRprim::_Sync(HdSceneDelegate* delegate,
               TfToken const &defaultReprName,
               bool forced,
-              HdChangeTracker::DirtyBits *dirtyBits)
+              HdDirtyBits *dirtyBits)
 {
     HdRenderIndex   &renderIndex   = delegate->GetRenderIndex();
     HdChangeTracker &changeTracker = renderIndex.GetChangeTracker();
@@ -91,19 +96,13 @@ HdRprim::Sync(HdSceneDelegate* delegate,
 
         *dirtyBits &= ~HdChangeTracker::DirtySurfaceShader;
     }
-
-    TfToken reprName = _GetReprName(delegate, defaultReprName,
-                                    forced, dirtyBits);
-    _GetRepr(delegate, reprName, dirtyBits);
-
-    *dirtyBits &= ~HdChangeTracker::AllSceneDirtyBits;
 }
 
 TfToken
 HdRprim::_GetReprName(HdSceneDelegate* delegate,
                       TfToken const &defaultReprName,
                       bool forced,
-                      HdChangeTracker::DirtyBits *dirtyBits)
+                      HdDirtyBits *dirtyBits)
 {
     // resolve reprName
 
@@ -122,8 +121,8 @@ HdRprim::_GetReprName(HdSceneDelegate* delegate,
 }
 
 // Static
-HdChangeTracker::DirtyBits
-HdRprim::_PropagateRprimDirtyBits(HdChangeTracker::DirtyBits bits)
+HdDirtyBits
+HdRprim::_PropagateRprimDirtyBits(HdDirtyBits bits)
 {
     // propagate point dirtiness to normal
     bits |= (bits & HdChangeTracker::DirtyPoints) ?
@@ -146,7 +145,7 @@ HdRprim::_PropagateRprimDirtyBits(HdChangeTracker::DirtyBits bits)
 
 void
 HdRprim::_UpdateVisibility(HdSceneDelegate* delegate,
-                           HdChangeTracker::DirtyBits *dirtyBits)
+                           HdDirtyBits *dirtyBits)
 {
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, GetId())) {
         _sharedData.visible = delegate->GetVisible(GetId());
@@ -186,7 +185,7 @@ HdRprim::SetPrimId(int32_t primId)
     // Don't set DirtyPrimID here, to avoid undesired variability tracking.
 }
 
-int
+HdDirtyBits
 HdRprim::GetInitialDirtyBitsMask() const
 {
     return _GetInitialDirtyBits();
@@ -195,7 +194,7 @@ HdRprim::GetInitialDirtyBitsMask() const
 void
 HdRprim::_PopulateConstantPrimVars(HdSceneDelegate* delegate,
                                    HdDrawItem *drawItem,
-                                   HdChangeTracker::DirtyBits *dirtyBits)
+                                   HdDirtyBits *dirtyBits)
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -349,7 +348,7 @@ HdRprim::_PopulateConstantPrimVars(HdSceneDelegate* delegate,
 void
 HdRprim::_PopulateInstancePrimVars(HdSceneDelegate* delegate,
                                    HdDrawItem *drawItem,
-                                   HdChangeTracker::DirtyBits *dirtyBits,
+                                   HdDirtyBits *dirtyBits,
                                    int instancePrimVarSlot)
 {
     HD_TRACE_FUNCTION();

@@ -33,6 +33,8 @@
 #include "pxr/imaging/hd/renderPass.h"
 #include "pxr/imaging/hd/rprim.h"
 
+#include "pxr/imaging/hdSt/renderDelegate.h"
+
 #include <string>
 #include <boost/shared_ptr.hpp>
 
@@ -49,10 +51,7 @@ typedef boost::shared_ptr<HdRenderPass> HdRenderPassSharedPtr;
 /// that is is not available, all OpenGL calls become no-ops, but all other work
 /// is performed as usual.
 ///
-class UsdImaging_TestDriver {
-    void _Init(UsdStageRefPtr const& usdStage,
-               TfToken const &collectionName,
-               TfToken const &reprName);
+class UsdImaging_TestDriver final {
 public:
     UsdImaging_TestDriver(std::string const& usdFilePath);
     UsdImaging_TestDriver(std::string const& usdFilePath,
@@ -63,11 +62,13 @@ public:
                           TfToken const &collectioName,
                           TfToken const &reprName);
 
+    ~UsdImaging_TestDriver();
+
     void Draw();
     void SetTime(double time);
 
     /// Marks an rprim in the RenderIndex as dirty with the given dirty flags.
-    void MarkRprimDirty(SdfPath path, HdChangeTracker::DirtyBits flag);
+    void MarkRprimDirty(SdfPath path, HdDirtyBits flag);
 
     /// Set camera to renderpass
     void SetCamera(GfMatrix4d const &modelViewMatrix,
@@ -87,12 +88,17 @@ public:
     UsdStageRefPtr const& GetStage();
 
 private:
-
     HdEngine _engine;
-    UsdImagingDelegate _delegate;
+    HdStRenderDelegate   _renderDelegate;
+    HdRenderIndex       *_renderIndex;
+    UsdImagingDelegate  *_delegate;
     HdRenderPassSharedPtr _geometryPass;
     HdRenderPassStateSharedPtr _renderPassState;
     UsdStageRefPtr _stage;
+
+    void _Init(UsdStageRefPtr const& usdStage,
+               TfToken const &collectionName,
+               TfToken const &reprName);
 };
 
 

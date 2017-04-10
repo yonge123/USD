@@ -37,7 +37,7 @@
 #include "usdMaya/usdTranslatorImport.h"
 #include "usdMaya/usdTranslatorExport.h"
 
-PXR_NAMESPACE_OPEN_SCOPE
+PXR_NAMESPACE_USING_DIRECTIVE
 
 static PxrUsdMayaPluginStaticData& _data(PxrUsdMayaPluginStaticData::pxrUsd);
 
@@ -237,5 +237,3 @@ MStatus uninitializePlugin(
 
     return status;
 }
-
-PXR_NAMESPACE_CLOSE_SCOPE

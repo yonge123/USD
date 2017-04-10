@@ -25,6 +25,7 @@
 #define USDSHADE_INPUT_H
 
 #include "pxr/pxr.h"
+#include "pxr/usd/usdShade/api.h"
 #include "pxr/usd/usd/attribute.h"
 #include "pxr/usd/usdShade/utils.h"
 
@@ -36,7 +37,7 @@ class UsdShadeConnectableAPI;
 
 /// \class UsdShadeInput
 /// 
-/// This class encapsulates a shader or subgraph input, which is a 
+/// This class encapsulates a shader or node-graph input, which is a 
 /// connectable property representing a typed value.
 /// 
 class UsdShadeInput
@@ -60,11 +61,13 @@ public:
     /// We call this the base name since it strips off the "inputs:" namespace 
     /// prefix from the attribute name, and returns it.
     /// 
+    USDSHADE_API
     TfToken GetBaseName() const;
 
     /// Get the "scene description" value type name of the attribute associated 
     /// with the Input.
     /// 
+    USDSHADE_API
     SdfValueTypeName GetTypeName() const;
     
     /// Get the prim that the input belongs to.
@@ -74,6 +77,7 @@ public:
 
     /// Set a value for the Input at \p time.
     /// 
+    USDSHADE_API
     bool Set(const VtValue& value, 
              UsdTimeCode time = UsdTimeCode::Default()) const;
 
@@ -104,17 +108,20 @@ public:
     ///
     /// \return true on success.
     ///
+    USDSHADE_API
     bool SetRenderType(TfToken const& renderType) const;
 
     /// Return this Input's specialized renderType, or an empty
     /// token if none was authored.
     ///
     /// \sa SetRenderType()
+    USDSHADE_API
     TfToken GetRenderType() const;
 
     /// Return true if a renderType has been specified for this Input.
     ///
     /// \sa SetRenderType()
+    USDSHADE_API
     bool HasRenderType() const;
 
     /// @}
@@ -131,12 +138,14 @@ public:
     /// \p attr already represents a shade Input, and produces an \em invalid 
     /// UsdShadeInput otherwise (i.e. \ref UsdShadeInput_bool_type 
     /// "unspecified-bool-type()" will return false).
+    USDSHADE_API
     explicit UsdShadeInput(const UsdAttribute &attr);
 
     /// Test whether a given UsdAttribute represents a valid Input, which
     /// implies that creating a UsdShadeInput from the attribute will succeed.
     ///
     /// Success implies that \c attr.IsDefined() is true.
+    USDSHADE_API
     static bool IsInput(const UsdAttribute &attr);
 
     /// Explicit UsdAttribute extractor.
@@ -150,7 +159,7 @@ public:
     /// Return true if the wrapped UsdAttribute is defined, and in addition the 
     /// attribute is identified as an input.
     bool IsDefined() const {
-        return _attr and IsInput(_attr);
+        return _attr && IsInput(_attr);
     }
 
     /// @}
@@ -166,6 +175,51 @@ public:
     friend bool operator==(const UsdShadeInput &lhs, const UsdShadeInput &rhs) {
         return lhs.GetAttr() == rhs.GetAttr();
     }
+
+    // -------------------------------------------------------------------------
+    /// \name Connectability API
+    // -------------------------------------------------------------------------
+    /// @{
+        
+    /// \brief Set the connectability of the Input. 
+    /// 
+    /// In certain shading data models, there is a need to distinguish which 
+    /// inputs <b>can</b> vary over a surface from those that must be 
+    /// <b>uniform</b>. This is accomplished in UsdShade by limiting the 
+    /// connectability of the input. This is done by setting the 
+    /// "connectability" metadata on the associated attribute.
+    /// 
+    /// 
+    /// Connectability of an Input can be set to UsdShadeTokens->full or 
+    /// UsdShadeTokens->interfaceOnly. 
+    /// 
+    /// \li <b>full</b> implies that  the Input can be connected to any other 
+    /// Input or Output.  
+    /// \li <b>interfaceOnly</b> implies that the Input can only be connected to 
+    /// a NodeGraph Input (which represents an interface override, not a 
+    /// render-time dataflow connection), or another Input whose connectability 
+    /// is also "interfaceOnly".
+    /// 
+    /// The default connectability of a node-graph interface input is 
+    /// UsdShadeTokens->interfaceOnly. 
+    /// The default connectability of a shader input is UsdShadeTokens->full. 
+    /// 
+    /// \sa SetConnectability()
+    USDSHADE_API
+    bool SetConnectability(const TfToken &connectability) const;
+
+    /// \brief Returns the connectability of the Input.
+    /// 
+    /// \sa SetConnectability()
+    USDSHADE_API
+    TfToken GetConnectability() const;
+
+    /// \brief Clears any authored connectability on the Input.
+    /// 
+    USDSHADE_API
+    bool ClearConnectability() const;
+
+    /// @}
 
 private:
     friend class UsdShadeConnectableAPI;

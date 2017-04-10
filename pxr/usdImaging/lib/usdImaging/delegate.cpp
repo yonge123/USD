@@ -46,7 +46,7 @@
 #include "pxr/usd/ar/resolver.h"
 #include "pxr/usd/ar/resolverContext.h"
 
-#include "pxr/usd/usd/treeIterator.h"
+#include "pxr/usd/usd/primRange.h"
 
 #include "pxr/usd/usdGeom/tokens.h"
 
@@ -114,28 +114,8 @@ UsdImagingDelegate::_InitializeCollectionsByPurpose(HdChangeTracker &tracker)
 }
 
 
-UsdImagingDelegate::UsdImagingDelegate()
-    : HdSceneDelegate()
-    , _valueCache()
-    , _compensationPath(SdfPath::AbsoluteRootPath())
-    , _rootXf(1.0)
-    , _rootIsVisible(true)
-    , _time(std::numeric_limits<double>::infinity())
-    , _refineLevelFallback(0)
-    , _reprFallback()
-    , _cullStyleFallback(HdCullStyleDontCare)
-    , _xformCache(GetTime(), GetRootCompensation())
-    , _materialBindingCache(GetTime(), GetRootCompensation())
-    , _visCache(GetTime(), GetRootCompensation())
-    , _shaderAdapter(boost::make_shared<UsdImagingShaderAdapter>(this))
-{
-    // this constructor create a new render index.
-    HdChangeTracker &tracker = GetRenderIndex().GetChangeTracker();
-    _InitializeCollectionsByPurpose(tracker);
-}
-
 UsdImagingDelegate::UsdImagingDelegate(
-        HdRenderIndexSharedPtr const& parentIndex, 
+        HdRenderIndex *parentIndex,
         SdfPath const& delegateID)
     : HdSceneDelegate(parentIndex, delegateID)
     , _valueCache()
@@ -177,7 +157,7 @@ UsdImagingDelegate::~UsdImagingDelegate()
     }
 }
 
-int*
+HdDirtyBits*
 UsdImagingDelegate::_GetDirtyBits(SdfPath const& usdPath)
 {
     _DirtyMap::iterator it = _dirtyMap.find(usdPath);
@@ -189,7 +169,8 @@ UsdImagingDelegate::_GetDirtyBits(SdfPath const& usdPath)
 }
 
 void 
-UsdImagingDelegate::_MarkRprimOrInstancerDirty(SdfPath const& usdPath, int dirtyFlags)
+UsdImagingDelegate::_MarkRprimOrInstancerDirty(SdfPath const& usdPath,
+                                               HdDirtyBits dirtyFlags)
 {
     // This function handles external client driven dirty tracking.
     // e.g. SetRootTransform, SetRefineLevel, SetCullStyle, ...
@@ -209,11 +190,9 @@ UsdImagingDelegate::_MarkRprimOrInstancerDirty(SdfPath const& usdPath, int dirty
     it->second |= dirtyFlags;
 
     if (_instancerPrimPaths.find(usdPath) != _instancerPrimPaths.end()) {
-        tracker.MarkInstancerDirty(indexPath,
-                        (HdChangeTracker::DirtyBits)dirtyFlags);
+        tracker.MarkInstancerDirty(indexPath, dirtyFlags);
     } else {
-        tracker.MarkRprimDirty(indexPath,
-                    (HdChangeTracker::DirtyBits)dirtyFlags);
+        tracker.MarkRprimDirty(indexPath, dirtyFlags);
     }
 }
 
@@ -282,9 +261,9 @@ public:
 
 private:
     struct _Task {
-        _Task() : delegate(NULL), requestBits(NULL) { }
+        _Task() : delegate(NULL), requestBits(0) { }
         _Task(UsdImagingDelegate* delegate_, const SdfPath& path_, 
-                        int requestBits_)
+                        HdDirtyBits requestBits_)
             : delegate(delegate_)
             , path(path_)
             , requestBits(requestBits_)
@@ -293,12 +272,12 @@ private:
 
         UsdImagingDelegate* delegate;
         SdfPath path;
-        int requestBits;
+        HdDirtyBits requestBits;
     };
     std::vector<_Task> _tasks;
 
     ResultVector _results;
-    boost::optional<int> _requestBits;
+    boost::optional<HdDirtyBits> _requestBits;
 
 public:
     _Worker()
@@ -309,16 +288,16 @@ public:
         _requestBits = flags;
     }
 
-    int GetRequestBits(_Task const& task) { 
+    HdDirtyBits GetRequestBits(_Task const& task) {
          if (_requestBits) {
-            return *_requestBits;
+            return *_requestBits; 
          } else {
             return task.requestBits;
          }
     }
 
     void AddTask(UsdImagingDelegate* delegate, SdfPath const& usdPath, 
-                 int requestBits=0) {
+                 HdDirtyBits requestBits=0) {
         _tasks.push_back(_Task(delegate, usdPath, requestBits));
         // TODO: This is only used when updating, might be nice to split this
         // out into two classes.
@@ -372,8 +351,8 @@ public:
             UsdImagingDelegate* delegate = _tasks[i].delegate;
             SdfPath const& usdPath = _tasks[i].path;
             UsdPrim const& prim = delegate->_GetPrim(usdPath);
-            int* requestBits = NULL;
-            int* dirtyBits = delegate->_GetDirtyBits(usdPath);
+            HdDirtyBits* requestBits = NULL;
+            HdDirtyBits* dirtyBits = delegate->_GetDirtyBits(usdPath);
             if (_requestBits) {
                 requestBits = &(*_requestBits);
             } else {
@@ -400,9 +379,9 @@ public:
             UsdTimeCode const& time = delegate->_time;
             SdfPath const& usdPath = _tasks[i].path;
             UsdPrim const& prim = delegate->_GetPrim(usdPath);
-            int requestBits = GetRequestBits(_tasks[i]);
+            HdDirtyBits requestBits = GetRequestBits(_tasks[i]);
             if (!requestBits) {
-                if (int* bits = delegate->_GetDirtyBits(usdPath)) {
+                if (HdDirtyBits* bits = delegate->_GetDirtyBits(usdPath)) {
                     requestBits = *bits;
                 } else {
                     // Should never get here; _GetDirtyBits will hit a failed
@@ -412,7 +391,7 @@ public:
             }
             _AdapterSharedPtr adapter = delegate->_AdapterLookupByPath(usdPath);
             if (TF_VERIFY(adapter, "%s\n", usdPath.GetText())) {
-                int resultBits = requestBits;
+                HdDirtyBits resultBits = requestBits;
                 adapter->UpdateForTime(prim, usdPath, time, 
                                         requestBits, &resultBits);
                 _results[i] = std::make_pair(usdPath, resultBits);
@@ -429,13 +408,13 @@ public:
             UsdImagingDelegate* delegate = _tasks[i].delegate;
 
             SdfPath const& path = _results[i].first;
-            int dirtyFlags = _results[i].second;
+            HdDirtyBits dirtyFlags = _results[i].second;
 
             TF_DEBUG(USDIMAGING_UPDATES).Msg(
                     "[Update] RESULT: Dirtying rprim <%s> "
-                    "with dirtyFlags: %d [%s]\n",
+                    "with dirtyFlags: 0x%llX [%s]\n",
                     path.GetText(), 
-                    dirtyFlags,
+                    (unsigned long long)dirtyFlags,
                     HdChangeTracker::StringifyDirtyBits(dirtyFlags).c_str());
             
             delegate->_MarkRprimOrInstancerDirty(path, dirtyFlags);
@@ -797,7 +776,7 @@ UsdImagingDelegate::Sync(HdSyncRequestVector* request)
     for (size_t i = 0; i < request->IDs.size(); i++) {
         // This is a refernece to allow the Adapter to communicate back to the
         // render index what was actually updated vs. what was requested.
-        int dirtyFlags = request->dirtyBits[i];
+        HdDirtyBits dirtyFlags = request->dirtyBits[i];
 
         if (!TF_VERIFY(dirtyFlags != HdChangeTracker::Clean))
             continue;
@@ -812,9 +791,9 @@ UsdImagingDelegate::Sync(HdSyncRequestVector* request)
         _AdapterSharedPtr adapter = _AdapterLookupByPath(usdPath);
         if (TF_VERIFY(adapter, "%s\n", usdPath.GetText())) {
             TF_DEBUG(USDIMAGING_UPDATES).Msg(
-                    "[Sync] PREP: <%s> dirtyFlags: %d [%s]\n",
+                    "[Sync] PREP: <%s> dirtyFlags: 0x%llX [%s]\n",
                     usdPath.GetText(), 
-                    dirtyFlags,
+                    (unsigned long long)dirtyFlags,
                     HdChangeTracker::StringifyDirtyBits(dirtyFlags).c_str());
             adapter->UpdateForTimePrep(prim, usdPath, _time, dirtyFlags);
             worker.AddTask(this, usdPath, dirtyFlags);
@@ -827,7 +806,7 @@ UsdImagingDelegate::Sync(HdSyncRequestVector* request)
         // not prefixed with the delegate ID.
         SdfPath usdPath = *it;
         UsdPrim prim = _GetPrim(usdPath);
-        int* p = _GetDirtyBits(usdPath);
+        HdDirtyBits* p = _GetDirtyBits(usdPath);
         if (!TF_VERIFY(p)) {
             continue;
         }
@@ -978,7 +957,7 @@ UsdImagingDelegate::_Populate(UsdImagingIndexProxy* proxy)
     leafPaths.reserve(pathsToRepopulate.size());
 
     TF_FOR_ALL(rootPathIt, pathsToRepopulate) {
-        UsdTreeIterator treeIt(_GetPrim(*rootPathIt));
+        UsdPrimRange treeIt(_GetPrim(*rootPathIt));
 
         // Discover and insert all renderable prims into the worker for later
         // execution.
@@ -1202,7 +1181,7 @@ UsdImagingDelegate::_PrepareWorkerForTimeUpdate(_Worker* worker)
     // Mark varying attributes as dirty and build a work queue for threads to
     // populate caches for the new time.
     TF_FOR_ALL(it, _dirtyMap) {
-        int& dirtyFlags = it->second;
+        HdDirtyBits& dirtyFlags = it->second;
         if (dirtyFlags == HdChangeTracker::Clean)
             continue;
         _MarkRprimOrInstancerDirty(it->first, dirtyFlags);
@@ -1404,7 +1383,7 @@ UsdImagingDelegate::_ResyncPrim(SdfPath const& rootPath,
         // If this path was not pruned by a parent, discover all prims that were
         // newly added with this change.
         if (!prunedByParent) {
-            UsdTreeIterator treeIt(prim);
+            UsdPrimRange treeIt(prim);
 
             for (;treeIt;++treeIt) {
                 if (prunedByParent)
@@ -1579,7 +1558,7 @@ UsdImagingDelegate::_RefreshObject(SdfPath const& usdPath,
             // variability and stage the associated data.
             int requestBits = adapter->ProcessPropertyChange(prim, usdPath, attrName);
             if (requestBits != HdChangeTracker::AllDirty) {
-                int* dirtyBits = _GetDirtyBits(usdPath);
+                HdDirtyBits* dirtyBits = _GetDirtyBits(usdPath);
                 if (!TF_VERIFY(dirtyBits)) {
                     continue;
                 }
@@ -1610,6 +1589,13 @@ UsdImagingDelegate::_ResyncProperty(SdfPath const& path,
     _ResyncPrim(path.GetPrimPath(), proxy);
 }
 
+void 
+UsdImagingDelegate::_ProcessPendingUpdates()
+{
+    // Change processing logic is all implemented in SetTime, so just
+    // redirect to that using our current time.
+    SetTime(_time);
+}
 
 // -------------------------------------------------------------------------- //
 // Data Collection
@@ -1624,7 +1610,7 @@ UsdImagingDelegate::_UpdateSingleValue(SdfPath const& usdPath, int requestBits)
     _AdapterSharedPtr adapter = _AdapterLookupByPath(usdPath);
     if (TF_VERIFY(adapter, "%s\n", usdPath.GetText())) {
         adapter->UpdateForTimePrep(prim, usdPath, _time, requestBits);
-        int resultBits = 0;
+        HdDirtyBits resultBits = 0;
         adapter->UpdateForTime(prim, usdPath, _time, requestBits, &resultBits);
     }
 }
@@ -2086,8 +2072,8 @@ UsdImagingDelegate::SetRigidXformOverrides(
 
 void
 UsdImagingDelegate::_MarkSubtreeDirty(SdfPath const &subtreeRoot,
-                                      int rprimDirtyFlag,
-                                      int instancerDirtyFlag)
+                                      HdDirtyBits rprimDirtyFlag,
+                                      HdDirtyBits instancerDirtyFlag)
 {
     std::pair<_PathAdapterMap::const_iterator,
         _PathAdapterMap::const_iterator> range =
@@ -2269,6 +2255,19 @@ UsdImagingDelegate::PopulateSelection(SdfPath const &path,
                                       int instanceIndex,
                                       HdxSelectionSharedPtr const &result)
 {
+    HD_TRACE_FUNCTION();
+
+    // Process any pending path resyncs/updates first to ensure all
+    // adapters are up-to-date. Note that this can't just be a call to
+    // _ProcessChangesForTimeUpdate, since that won't mark any rprims as
+    // dirty.
+    //
+    // XXX: 
+    // It feels a bit unsatisfying to have to do this here. UsdImagingDelegate
+    // should provide better guidance about when scene description changes are 
+    // handled.
+    _ProcessPendingUpdates();
+
     SdfPath usdPath = GetPathForUsd(path);
     _AdapterSharedPtr const& adapter = _AdapterLookupByPath(usdPath);
     bool added = false;
@@ -2280,19 +2279,48 @@ UsdImagingDelegate::PopulateSelection(SdfPath const &path,
     }
 
     if (adapter) {
-        // prim, or instancer
+        // Prim, or instancer
         return adapter->PopulateSelection(usdPath, instanceIndices, result);
     } else {
-        // subtree (path doesnt' exist in the renderIndex)
-
-        // XXX: GetRprimSubtree doesn't work for native instancing.
-        SdfPathVector const& ids =
-            GetRenderIndex().GetRprimSubtree(path);  // this is an index path
-
-        TF_FOR_ALL (it, ids){
-            // XXX: TODO: should exclude prototypes
-            result->AddInstance(*it, instanceIndices);
+        // Select rprims that are part of the path subtree. Exclude proto paths 
+        // since they will be added later in this function when iterating 
+        // through the different instances.
+        SdfPathVector const& rprimPaths = GetRenderIndex().GetRprimSubtree(path);
+        TF_FOR_ALL (rprimPath, rprimPaths) {
+            if ((*rprimPath).IsPropertyPath()) {
+                continue;
+            }
+            result->AddRprim(*rprimPath);
             added = true;
+        }
+
+        // Iterate the adapter map to figure out if there is (at least) one
+        // instancer under the selected path, and then populate the selection
+        std::pair<UsdImagingDelegate::_PathAdapterMap::iterator,
+                  UsdImagingDelegate::_PathAdapterMap::iterator> 
+                  range = _pathAdapterMap.FindSubtreeRange(usdPath);
+        for (UsdImagingDelegate::_PathAdapterMap::iterator it = range.first; 
+             it != range.second; it++) {
+
+            // We are looking for instancers, so if there is 
+            // no adapter let's ignore it and keep iterating
+            _AdapterSharedPtr const &adapter = it->second;
+            if (!adapter) {
+                continue;
+            }
+            
+            // Check if the there is an instancer associated to that path
+            // if so, let's populate the selection to that instance.
+            SdfPath instancePath = it->first;
+            SdfPath instancerPath = adapter->GetInstancer(instancePath);
+            if (!instancerPath.IsEmpty()) {                
+                // We don't need to take into account specific indices when 
+                // doing subtree selections.
+                added |= adapter->PopulateSelection(usdPath,
+                                                  VtIntArray(), 
+                                                  result);
+                break;
+            }
         }
     }
     return added;

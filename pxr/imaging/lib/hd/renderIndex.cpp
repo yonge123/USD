@@ -33,12 +33,12 @@
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/points.h"
 #include "pxr/imaging/hd/renderDelegate.h"
-#include "pxr/imaging/hd/renderDelegateRegistry.h"
 #include "pxr/imaging/hd/repr.h"
 #include "pxr/imaging/hd/rprim.h"
 #include "pxr/imaging/hd/rprimCollection.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
 #include "pxr/imaging/hd/sprim.h"
+#include "pxr/imaging/hd/task.h"
 #include "pxr/imaging/hd/texture.h"
 #include "pxr/imaging/hd/tokens.h"
 
@@ -63,7 +63,7 @@ typedef tbb::concurrent_unordered_map<TfToken,
                         tbb::concurrent_vector<HdDrawItem const*>, 
                         TfToken::HashFunctor > _ConcurrentDrawItemView; 
 
-HdRenderIndex::HdRenderIndex()
+HdRenderIndex::HdRenderIndex(HdRenderDelegate *renderDelegate)
     : _delegateRprimMap()
     , _rprimMap()
     , _rprimIDSet()
@@ -75,37 +75,26 @@ HdRenderIndex::HdRenderIndex()
     , _nextPrimId(1)
     , _instancerMap()
     , _syncQueue()
-    , _renderDelegate(nullptr)
-    , _ownsDelegateXXX(false)
+    , _renderDelegate(renderDelegate)
 {
+    // Note: HdRenderIndex::New(...) guarantees renderDelegate is non-null.
 
     // Register well-known collection types (to be deprecated)
     // XXX: for compatibility and smooth transition,
     //      leave geometry collection for a while.
     _tracker.AddCollection(HdTokens->geometry);
 
+    // Register the prim types our render delegate supports.
+    _InitPrimTypes();
+    // Create fallback prims.
+    _CreateFallbackPrims();
 }
 
 HdRenderIndex::~HdRenderIndex()
 {
     HD_TRACE_FUNCTION();
     Clear();
-    DestroyFallbackPrims();
-
-    {
-        // XXX: Transitional Code - to be removed.
-        // If the render index created the render delegate, it needs
-        // to release it.
-        if (_ownsDelegateXXX)
-        {
-            HdRenderDelegateRegistry &renderRegistry =
-                                        HdRenderDelegateRegistry::GetInstance();
-
-            renderRegistry.ReleaseDelegate(_renderDelegate);
-            _renderDelegate = nullptr;
-        }
-    }
-
+    _DestroyFallbackPrims();
 }
 
 void
@@ -128,27 +117,6 @@ HdRenderIndex::InsertRprim(TfToken const& typeId,
 
     if (ARCH_UNLIKELY(TfMapLookupPtr(_rprimMap, rprimId)))
         return;
-
-    {
-        // XXX: Transitional code.
-        // If the application didn't use the new context api to
-        // create a render delegate, create one on its behalf.
-        //
-        // In the future, this would be an error condition as the context api
-        // would create the delegate and provide it to the render index..
-        if (_renderDelegate == nullptr)
-        {
-            HdRenderDelegateRegistry &renderRegistry =
-                                        HdRenderDelegateRegistry::GetInstance();
-            const TfToken &defaultRenderDelegateId =
-                                          renderRegistry.GetDefaultDelegateId();
-             _renderDelegate =
-                      renderRegistry.GetRenderDelegate(defaultRenderDelegateId);
-             _ownsDelegateXXX = true;
-             _InitPrimTypes();
-             CreateFallbackPrims();
-        }
-    }
 
     HdRprim *rprim = _renderDelegate->CreateRprim(typeId,
                                                   rprimId,
@@ -230,6 +198,7 @@ HdRenderIndex::RemoveRprim(SdfPath const& id)
     _tracker.RprimRemoved(id);
 
     // Ask delegate to actually delete the rprim
+    rprimInfo.rprim->Finalize(_renderDelegate->GetRenderParam());
     _renderDelegate->DestroyRprim(rprimInfo.rprim);
     rprimInfo.rprim = nullptr;
 
@@ -358,27 +327,6 @@ HdRenderIndex::InsertSprim(TfToken const& typeId,
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    {
-        // XXX: Transitional code.
-        // If the application didn't use the new context api to
-        // create a render delegate, create one on its behalf.
-        //
-        // In the future, this would be an error condition as the context api
-        // would create the delegate and provide it to the render index..
-        if (_renderDelegate == nullptr)
-        {
-            HdRenderDelegateRegistry &renderRegistry =
-                                        HdRenderDelegateRegistry::GetInstance();
-            const TfToken &defaultRenderDelegateId =
-                                          renderRegistry.GetDefaultDelegateId();
-             _renderDelegate =
-                      renderRegistry.GetRenderDelegate(defaultRenderDelegateId);
-             _ownsDelegateXXX = true;
-             _InitPrimTypes();
-             CreateFallbackPrims();
-        }
-    }
-
     _sprimIndex.InsertPrim(typeId, sceneDelegate, sprimId,
                            _tracker, _renderDelegate);
 }
@@ -435,27 +383,6 @@ HdRenderIndex::InsertBprim(TfToken const& typeId,
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    {
-        // XXX: Transitional code.
-        // If the application didn't use the new context api to
-        // create a render delegate, create one on its behalf.
-        //
-        // In the future, this would be an error condition as the context api
-        // would create the delegate and provide it to the render index..
-        if (_renderDelegate == nullptr)
-        {
-            HdRenderDelegateRegistry &renderRegistry =
-                                        HdRenderDelegateRegistry::GetInstance();
-            const TfToken &defaultRenderDelegateId =
-                                          renderRegistry.GetDefaultDelegateId();
-             _renderDelegate =
-                      renderRegistry.GetRenderDelegate(defaultRenderDelegateId);
-             _ownsDelegateXXX = true;
-             _InitPrimTypes();
-             CreateFallbackPrims();
-        }
-    }
-
     _bprimIndex.InsertPrim(typeId, sceneDelegate, bprimId,
                            _tracker, _renderDelegate);
 }
@@ -499,28 +426,9 @@ HdRenderIndex::GetFallbackBprim(TfToken const& typeId) const
     return _bprimIndex.GetFallbackPrim(typeId);
 }
 
-void
-HdRenderIndex::SetRenderDelegate(HdRenderDelegate *renderDelegate)
+HdRenderDelegate *HdRenderIndex::GetRenderDelegate() const
 {
-    if (_renderDelegate != nullptr && _renderDelegate != renderDelegate) {
-        TF_CODING_ERROR("Render Delegate already set on render index and "
-                        "switching render delegates is not supported");
-        return;
-    }
-
-    _renderDelegate = renderDelegate;
-    {
-        // Small hack until applications migrate to using new
-        // context API.
-        // XXX: To be removed
-
-        HdRenderDelegateRegistry &renderRegistry =
-                                        HdRenderDelegateRegistry::GetInstance();
-
-        renderRegistry.AddDelegateReference(_renderDelegate);
-    }
-
-    _InitPrimTypes();
+    return _renderDelegate;
 }
 
 TfToken
@@ -537,7 +445,7 @@ HdRenderIndex::GetRenderDelegateType() const
 }
 
 bool
-HdRenderIndex::CreateFallbackPrims()
+HdRenderIndex::_CreateFallbackPrims()
 {
     bool success = true;
 
@@ -553,7 +461,7 @@ HdRenderIndex::CreateFallbackPrims()
 }
 
 void
-HdRenderIndex::DestroyFallbackPrims()
+HdRenderIndex::_DestroyFallbackPrims()
 {
     // If the render delegate never got assigned, or already removed we can't
     // free the fallback prims.
@@ -777,7 +685,7 @@ namespace {
         void PushBack(HdSceneDelegate *sceneDelegate,
                       HdRprim *rprim,
                       size_t reprsMask,
-                      int dirtyBits)
+                      HdDirtyBits dirtyBits)
         {
             sceneDelegates.push_back(sceneDelegate);
             rprims.push_back(rprim);
@@ -786,22 +694,9 @@ namespace {
             request.dirtyBits.push_back(dirtyBits);
         }
 
-        void PushBackShader(SdfPath const& shaderID)
-        {
-            surfaceShaderIDs.push_back(shaderID);
-        }
-
-        void PushBackTexture(SdfPath const& textureID)
-        {
-            textureIDs.push_back(textureID);
-        }
-
         std::vector<HdSceneDelegate *> sceneDelegates;
         std::vector<HdRprim *> rprims;
         std::vector<size_t> reprsMasks;
-
-        SdfPathVector surfaceShaderIDs;
-        SdfPathVector textureIDs;
 
         HdSyncRequestVector request;
     };
@@ -853,13 +748,16 @@ namespace {
         _RprimSyncRequestVector &_r;
         _ReprList const &_reprs;
         HdChangeTracker &_tracker;
+        HdRenderParam *_renderParam;
     public:
         _SyncRPrims( _RprimSyncRequestVector& r,
                      _ReprList const &reprs,
-                     HdChangeTracker &tracker)
+                     HdChangeTracker &tracker,
+                     HdRenderParam *renderParam)
          : _r(r)
          , _reprs(reprs)
          , _tracker(tracker)
+         , _renderParam(renderParam)
         {
         }
 
@@ -871,14 +769,15 @@ namespace {
                 HdRprim &rprim = *_r.rprims[i];
                 size_t reprsMask = _r.reprsMasks[i];
 
-                int dirtyBits = _r.request.dirtyBits[i];
+                HdDirtyBits dirtyBits = _r.request.dirtyBits[i];
 
                 TF_FOR_ALL(it, _reprs) {
                     if (reprsMask & 1) {
                         rprim.Sync(sceneDelegate,
+                                   _renderParam,
+                                   &dirtyBits,
                                     it->reprName,
-                                    it->forcedRepr,
-                                    &dirtyBits);
+                                   it->forcedRepr);
                     }
                     reprsMask >>= 1;
                 }
@@ -896,9 +795,28 @@ HdRenderIndex::Sync(HdDirtyListSharedPtr const &dirtyList)
 }
 
 void
-HdRenderIndex::SyncAll()
+HdRenderIndex::SyncAll(HdTaskSharedPtrVector const &tasks,
+                       HdTaskContext *taskContext)
 {
     HD_TRACE_FUNCTION();
+
+    HdRenderParam *renderParam = _renderDelegate->GetRenderParam();
+
+
+    _bprimIndex.SyncPrims(_tracker, _renderDelegate->GetRenderParam());
+    _sprimIndex.SyncPrims(_tracker, _renderDelegate->GetRenderParam());
+
+    // could be in parallel... but how?
+    // may be just gathering dirtyLists at first, and then index->sync()?
+
+    // These tasks will call Sync() adding dirty lists to _syncQueue for
+    // processing below.
+    TF_FOR_ALL(it, tasks) {
+        if (!TF_VERIFY(*it)) {
+            continue;
+        }
+        (*it)->Sync(taskContext);
+    }
 
     // Merge IDs using the slow SdfPath less-than so that all delegate IDs group
     // together. Unfortunately, FastLessThan makes the optimization below less
@@ -946,58 +864,8 @@ HdRenderIndex::SyncAll()
         }
     }
 
-    //
-    // This is transitional code as part of the Hydra Render Delegate Refactor.
-    // As part of that change, the Hydra policy in the order of sync operation
-    // is changing.  However, there are some existing inter-prim dependencies
-    // that need to be resolved to comply with the new policy.  So for now
-    // we explicitly sync shaders and texture prims here to maintain the current
-    // sync order.
-    //
-
     _RprimSyncRequestMap syncMap;
-    const _BprimIndex::_PrimMap *textureMapXXX =
-                       _bprimIndex.GetPrimMapXXX(HdPrimTypeTokens->texture);
-    const _SprimIndex::_PrimMap *shaderMapXXX =
-                       _sprimIndex.GetPrimMapXXX(HdPrimTypeTokens->shader);
-    if ((textureMapXXX == nullptr) ||
-        (shaderMapXXX == nullptr)) {
-        TF_CODING_ERROR("Texture or Shader prim types not defined");
-        return;
-    }
-
-
     bool resetVaryingState = false;
-    {
-        TRACE_SCOPE("Build Sync Map: Textures");
-
-
-        // Collect dirty texture IDs.
-        // We could/should try to be more sparse here, however finding the
-        // intersection of textures used by prims in this RenderPass is currently
-        // more expensive than just updating all textures.
-
-        TF_FOR_ALL(it, *textureMapXXX) {
-            if (HdChangeTracker::IsClean(_tracker.GetBprimDirtyBits(it->first)))
-                continue;
-            syncMap[it->second.sceneDelegate].PushBackTexture(it->first);
-        }
-    }
-
-    {
-        TRACE_SCOPE("Build Sync Map: Shaders");
-        // Collect dirty shader IDs.
-        // We could/should try to be more sparse here, however finding the
-        // intersection of shaders used by prims in this RenderPass is currently
-        // *way* more expensive than just updating all shaders.
-        TF_FOR_ALL(it, *shaderMapXXX) {
-            if (HdChangeTracker::IsClean(_tracker.GetSprimDirtyBits(it->first)))
-                continue;
-
-            syncMap[it->second.sceneDelegate].PushBackShader(it->first);
-        }
-    }
-
     {
         TRACE_SCOPE("Build Sync Map: Rprims");
         // Collect dirty Rprim IDs.
@@ -1070,34 +938,8 @@ HdRenderIndex::SyncAll()
         HdSceneDelegate* sceneDelegate = dlgIt->first;
         _RprimSyncRequestVector& r = dlgIt->second;
 
-
-        TF_FOR_ALL(textureID, r.textureIDs) {
-            _BprimIndex::_PrimMap::const_iterator textIt =
-                                                textureMapXXX->find(*textureID);
-
-            if (textIt != textureMapXXX->end()) {
-                const _BprimIndex::_PrimInfo &bprimInfo = textIt->second;
-
-                bprimInfo.prim->Sync(sceneDelegate);
-                _tracker.MarkBprimClean(*textureID, HdTexture::Clean);
-            }
-        }
-
-        TF_FOR_ALL(shaderID, r.surfaceShaderIDs) {
-            _SprimIndex::_PrimMap::const_iterator shaderIt =
-                                                  shaderMapXXX->find(*shaderID);
-
-
-            if (shaderIt != shaderMapXXX->end()) {
-                const _SprimIndex::_PrimInfo &sprimInfo = shaderIt->second;
-
-                sprimInfo.prim->Sync(sceneDelegate);
-                _tracker.MarkSprimClean(*shaderID, HdTexture::Clean);
-            }
-        }
-
         {
-            _SyncRPrims workerState(r, reprs, _tracker);
+            _SyncRPrims workerState(r, reprs, _tracker, renderParam);
 
             if (!TfDebug::IsEnabled(HD_DISABLE_MULTITHREADED_RPRIM_SYNC) &&
                   sceneDelegate->IsEnabled(HdOptionTokens->parallelRprimSync)) {
@@ -1137,12 +979,6 @@ HdRenderIndex::SyncAll()
         // Clear all pending dirty lists
         _syncQueue.clear();
     }
-}
-
-void
-HdRenderIndex::SyncSprims()
-{
-    _sprimIndex.SyncPrims(_tracker);
 }
 
 void

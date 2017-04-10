@@ -33,7 +33,7 @@
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/renderIndex.h"
 #include "pxr/usd/sdf/schema.h"
-#include "pxr/usd/usd/treeIterator.h"
+#include "pxr/usd/usd/primRange.h"
 #include "pxr/usd/usdGeom/pointInstancer.h"
 #include "pxr/usd/usdGeom/imageable.h"
 
@@ -204,8 +204,8 @@ UsdImagingPointInstancerAdapter::_PopulatePrototype(
 
     _PrototypeSharedPtr &prototype = instrData.prototypes[protoIndex];
 
-    std::vector<UsdTreeIterator> treeStack;
-    treeStack.push_back(UsdTreeIterator(protoRootPrim));
+    std::vector<UsdPrimRange> treeStack;
+    treeStack.push_back(UsdPrimRange(protoRootPrim));
     for (; !treeStack.empty();) {
         if (!treeStack.back()) {
             treeStack.pop_back();
@@ -220,7 +220,7 @@ UsdImagingPointInstancerAdapter::_PopulatePrototype(
                 continue;
             }
         }
-        UsdTreeIterator& treeIt = treeStack.back();
+        UsdPrimRange& treeIt = treeStack.back();
         if (UsdImagingPrimAdapterSharedPtr adapter = 
             _GetPrimAdapter(*treeIt)){
             primCount++;
@@ -237,7 +237,7 @@ UsdImagingPointInstancerAdapter::_PopulatePrototype(
             SdfPath protoPath;
             if (treeIt->IsInstance()) {
                 UsdPrim master = treeIt->GetMaster();
-                treeStack.push_back(UsdTreeIterator(master));
+                treeStack.push_back(UsdPrimRange(master));
                 continue;
             } else if (treeIt->IsMaster()) {
                 // ignore master root (redirected from IsInstance condition)
@@ -334,7 +334,7 @@ UsdImagingPointInstancerAdapter::_PopulatePrototype(
 void 
 UsdImagingPointInstancerAdapter::TrackVariabilityPrep(UsdPrim const& prim,
                                       SdfPath const& cachePath,
-                                      int requestedBits,
+                                      HdDirtyBits requestedBits,
                                       UsdImagingInstancerContext const* 
                                           instancerContext)
 {
@@ -388,8 +388,8 @@ UsdImagingPointInstancerAdapter::TrackVariabilityPrep(UsdPrim const& prim,
 void 
 UsdImagingPointInstancerAdapter::TrackVariability(UsdPrim const& prim,
                                   SdfPath const& cachePath,
-                                  int requestedBits,
-                                  int* dirtyBits,
+                                  HdDirtyBits requestedBits,
+                                  HdDirtyBits* dirtyBits,
                                   UsdImagingInstancerContext const* 
                                       instancerContext)
 {
@@ -624,7 +624,7 @@ void
 UsdImagingPointInstancerAdapter::UpdateForTimePrep(UsdPrim const& prim,
                                    SdfPath const& cachePath,
                                    UsdTimeCode time,
-                                   int requestedBits,
+                                   HdDirtyBits requestedBits,
                                    UsdImagingInstancerContext const*
                                        instancerContext)
 {
@@ -741,8 +741,8 @@ void
 UsdImagingPointInstancerAdapter::UpdateForTime(UsdPrim const& prim,
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
-                               int requestedBits,
-                               int* resultBits,
+                               HdDirtyBits requestedBits,
+                               HdDirtyBits* resultBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext)
 {
@@ -1296,11 +1296,11 @@ UsdImagingPointInstancerAdapter::_UpdateDirtyBits(
     }
 
     // If another thread already initialized the dirty bits, we can bail.
-    if (instrData.dirtyBits != HdChangeTracker::AllDirty)
+    if (instrData.dirtyBits != static_cast<HdDirtyBits>(HdChangeTracker::AllDirty))
         return instrData.dirtyBits;
 
     instrData.dirtyBits = HdChangeTracker::Clean;
-    int* dirtyBits = &instrData.dirtyBits;
+    HdDirtyBits* dirtyBits = &instrData.dirtyBits;
 
     if (!_IsVarying(instancerPrim, 
                        UsdGeomTokens->visibility, 
@@ -1519,7 +1519,7 @@ UsdImagingPointInstancerAdapter::GetPathForInstanceIndex(
         _InstancerDataMap::iterator it = _instancerData.find(protoPath);
         if (it != _instancerData.end()) {
             SdfPath parentInstancerPath = it->second.parentInstancerPath;
-            if (not parentInstancerPath.IsEmpty()) {
+            if (!parentInstancerPath.IsEmpty()) {
 
                 UsdImagingPrimAdapterSharedPtr adapter =
                     _GetPrimAdapter(_GetPrim(parentInstancerPath));

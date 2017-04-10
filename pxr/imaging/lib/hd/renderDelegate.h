@@ -25,9 +25,10 @@
 #define HD_RENDER_DELEGATE_H
 
 #include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
+#include "pxr/imaging/hf/pluginBase.h"
+#include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/base/tf/token.h"
-
-#include "pxr/imaging/hf/pluginDelegateBase.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -36,18 +37,32 @@ class SdfPath;
 class HdRprim;
 class HdSprim;
 class HdBprim;
+class HdSceneDelegate;
+
+///
+/// The HdRenderParam is an opaque (to core Hydra) handle, to an object
+/// that is obtained from the render delegate and passed to each prim
+/// during Sync processing.
+///
+class HdRenderParam {
+public:
+    HdRenderParam() {}
+    HD_API
+    virtual ~HdRenderParam();
+
+private:
+    // Hydra will not attempt to copy the class.
+    HdRenderParam(const HdRenderParam &) = delete;
+    HdRenderParam &operator =(const HdRenderParam &) = delete;
+};
 
 /// \class HdRenderDelegate
 ///
-class HdRenderDelegate : public HfPluginDelegateBase
+class HdRenderDelegate : public HfPluginBase
 {
 public:
-    ///
-    /// Allows the delegate an opinion on the default Gal to use.
-    /// Return an empty token for no opinion.
-    /// Return HdDelegateTokens->None for no Gal.
-    ///
-    virtual TfToken GetDefaultGalId() const = 0;
+    HD_API
+    virtual ~HdRenderDelegate();
 
     ///
     /// Returns a list of typeId's of all supported Sprims by this render
@@ -61,6 +76,21 @@ public:
     /// delegate.
     ///
     virtual const TfTokenVector &GetSupportedBprimTypes() const = 0;
+
+    ///
+    /// Returns an opaque handle to a render param, that in turn is
+    /// passed to each prim created by the render delegate during sync
+    /// processing.  This avoids the need to store a global state pointer
+    /// in each prim.
+    ///
+    /// The typical lifetime of the renderParam would match that of the
+    /// RenderDelegate, however the minimal lifetime is that of the Sync
+    /// processing.  The param maybe queried multiple times during sync.
+    ///
+    /// A render delegate may return null for the param.
+    ///
+    virtual HdRenderParam *GetRenderParam() const = 0;
+
 
     ////////////////////////////////////////////////////////////////////////////
     ///
@@ -137,11 +167,29 @@ public:
     ///
     virtual void DestroyBprim(HdBprim *bprim) = 0;
 
+    ////////////////////////////////////////////////////////////////////////////
+    ///
+    /// Sync, Execute & Dispatch Hooks
+    ///
+    ////////////////////////////////////////////////////////////////////////////
+
+    ///
+    /// Notification point from the Engine to the delegate.
+    /// This notification occurs after all Sync's have completed and
+    /// before task execution.
+    ///
+    /// This notification gives the Render Delegate a chance to
+    /// update and move memory that the render may need.
+    ///
+    /// For example, the render delegate might fill primvar buffers or texture
+    /// memory.
+    ///
+    virtual void CommitResources(HdChangeTracker *tracker) = 0;
+
 
 protected:
     /// This class must be derived from
     HdRenderDelegate()          = default;
-    virtual ~HdRenderDelegate();
 
     ///
     /// This class is not intended to be copied.

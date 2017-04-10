@@ -37,9 +37,9 @@ PXR_NAMESPACE_OPEN_SCOPE
 static std::string
 _GetRelPrefix(const TfToken& renderTarget)
 {
-    return TfStringPrintf("%s:%s", 
-            renderTarget.GetText(),
-            UsdShadeTokens->interfaceRecipientsOf.GetText());
+    return renderTarget.IsEmpty() ? UsdShadeTokens->interfaceRecipientsOf:
+            TfStringPrintf("%s:%s", renderTarget.GetText(),
+                UsdShadeTokens->interfaceRecipientsOf.GetText());
 }
 
 /* static */ std::string
@@ -53,10 +53,10 @@ UsdShadeInterfaceAttribute::UsdShadeInterfaceAttribute(
         const UsdAttribute &attr)
 {
     TfToken const &interfaceAttrName = attr.GetName();
-    if (TfStringStartsWith(interfaceAttrName, UsdShadeTokens->interface)){
+    if (TfStringStartsWith(interfaceAttrName, UsdShadeTokens->interface_)){
         _attr = attr;
         _name = TfToken(interfaceAttrName.GetString().substr(
-            UsdShadeTokens->interface.GetString().size()));
+            UsdShadeTokens->interface_.GetString().size()));
     }
 }
 
@@ -64,12 +64,12 @@ UsdShadeInterfaceAttribute::UsdShadeInterfaceAttribute(
 UsdShadeInterfaceAttribute::_GetName(
         const TfToken& interfaceAttrName)
 {
-    if (TfStringStartsWith(interfaceAttrName, UsdShadeTokens->interface)) {
+    if (TfStringStartsWith(interfaceAttrName, UsdShadeTokens->interface_)) {
         return interfaceAttrName;
     }
     
     return TfToken(TfStringPrintf("%s%s",
-            UsdShadeTokens->interface.GetText(),
+            UsdShadeTokens->interface_.GetText(),
             interfaceAttrName.GetText()));
 }
 
@@ -231,7 +231,7 @@ UsdRelationship
 _GetConnectionRel(const UsdAttribute &interfaceAttr, 
                   bool create)
 {
-    if (not interfaceAttr) {
+    if (!interfaceAttr) {
         TF_WARN("Invalid attribute: %s", UsdDescribe(interfaceAttr).c_str());
         return UsdRelationship();
     }
@@ -254,20 +254,15 @@ UsdShadeInterfaceAttribute::ConnectToSource(
         TfToken const &sourceName,
         UsdShadeAttributeType const sourceType) const
 {
-    if (UsdRelationship rel = _GetConnectionRel(
-            GetAttr(), true)) {
-        return UsdShadeConnectableAPI::ConnectToSource(rel, 
+    return UsdShadeConnectableAPI::ConnectToSource(GetAttr(), 
             source, sourceName, sourceType, GetTypeName());
-    }
-
-    return false;
 }
 
 bool 
 UsdShadeInterfaceAttribute::ConnectToSource(const SdfPath &sourcePath) const
 {
     // sourcePath needs to be a property path for us to make a connection.
-    if (not sourcePath.IsPropertyPath())
+    if (!sourcePath.IsPropertyPath())
         return false;
 
     UsdPrim sourcePrim = GetAttr().GetStage()->GetPrimAtPath(

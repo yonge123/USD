@@ -112,7 +112,7 @@ UsdRelationship
 _GetConnectionRel(const UsdAttribute &parameter, 
                   bool create)
 {
-    if (not parameter) {
+    if (!parameter) {
         TF_WARN("Invalid attribute: %s", UsdDescribe(parameter).c_str());
         return UsdRelationship();
     }
@@ -135,9 +135,7 @@ UsdShadeParameter::ConnectToSource(
         TfToken const &outputName,
         UsdShadeAttributeType const sourceType) const
 {
-    UsdRelationship rel = _GetConnectionRel(GetAttr(), true);
-
-    return UsdShadeConnectableAPI::ConnectToSource(rel, 
+    return UsdShadeConnectableAPI::ConnectToSource(GetAttr(), 
         source, outputName, sourceType, GetTypeName());
 }
 
@@ -145,7 +143,7 @@ bool
 UsdShadeParameter::ConnectToSource(const SdfPath &sourcePath) const
 {
     // sourcePath needs to be a property path for us to make a connection.
-    if (not sourcePath.IsPropertyPath())
+    if (!sourcePath.IsPropertyPath())
         return false;
 
     UsdPrim sourcePrim = GetAttr().GetStage()->GetPrimAtPath(
