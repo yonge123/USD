@@ -465,8 +465,10 @@ namespace {
 }
 
 ArnoldShaderExport::ArnoldShaderExport(const UsdStageRefPtr& _stage, UsdTimeCode _time_code,
+                                       const std::string& parent_scope,
                                        PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dag_to_usd) :
-    m_stage(_stage), m_dag_to_usd(dag_to_usd), m_shaders_scope("/Looks"), m_time_code(_time_code) {
+    m_stage(_stage), m_dag_to_usd(dag_to_usd),
+    m_shaders_scope(parent_scope.empty() ? "/Looks" : (parent_scope + "/Looks")), m_time_code(_time_code) {
     UsdGeomScope::Define(m_stage, m_shaders_scope);
     ai.mtoa_init_export_session();
     const auto transform_assignment = TfGetenv("PXR_MAYA_TRANSFORM_ASSIGNMENT", "disable");

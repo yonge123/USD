@@ -80,6 +80,7 @@ struct PxrUsdMayaTranslatorMaterial
             const TfToken& shadingMode,
             bool mergeTransformAndShape,
             SdfPath overrideRootPath,
+            const std::string& parentScope,
             PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap);
 };
 

@@ -69,6 +69,7 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-cls" , "-exportColorSets", MSyntax::kBoolean);
     syntax.addFlag("-dms" , "-defaultMeshScheme", MSyntax::kString);
     syntax.addFlag("-vis" , "-exportVisibility", MSyntax::kBoolean);
+    syntax.addFlag("-psc", "-parentScope", MSyntax::kString);
 
     syntax.addFlag("-fr" , "-frameRange"   , MSyntax::kDouble, MSyntax::kDouble);
     syntax.addFlag("-pr" , "-preRoll"   , MSyntax::kDouble);
@@ -204,6 +205,13 @@ try
 
     if (argData.isFlagSet("exportVisibility")) {
         argData.getFlagArgument("exportVisibility", 0, jobArgs.exportVisibility);
+    }
+
+    if (argData.isFlagSet("parentScope")) {
+        MString stringVal;
+        argData.getFlagArgument("parentScope", 0,
+                                stringVal);
+        jobArgs.parentScope = stringVal.asChar();
     }
 
     bool append = false;

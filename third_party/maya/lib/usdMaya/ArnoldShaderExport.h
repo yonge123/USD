@@ -12,7 +12,7 @@ struct AtNode;
 
 class ArnoldShaderExport {
 public:
-    ArnoldShaderExport(const UsdStageRefPtr& _stage, UsdTimeCode _time_code,
+    ArnoldShaderExport(const UsdStageRefPtr& _stage, UsdTimeCode _time_code, const std::string& parent_scope,
                        PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dag_to_usd);
     ~ArnoldShaderExport();
 
