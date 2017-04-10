@@ -100,13 +100,13 @@ UsdAiVolume::_GetTfType() const
 UsdAttribute
 UsdAiVolume::GetStepSizeAttr() const
 {
-    return GetPrim().GetAttribute(UsdAiTokens->stepSize);
+    return GetPrim().GetAttribute(UsdAiTokens->step_size);
 }
 
 UsdAttribute
 UsdAiVolume::CreateStepSizeAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdAiTokens->stepSize,
+    return UsdSchemaBase::_CreateAttr(UsdAiTokens->step_size,
                        SdfValueTypeNames->Float,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -131,7 +131,7 @@ const TfTokenVector&
 UsdAiVolume::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdAiTokens->stepSize,
+        UsdAiTokens->step_size,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
