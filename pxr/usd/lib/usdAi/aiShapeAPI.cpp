@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdAi/aiProcedural.h"
+#include "pxr/usd/usdAi/aiShapeAPI.h"
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/typed.h"
 
@@ -33,58 +33,39 @@ PXR_NAMESPACE_OPEN_SCOPE
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
-    TfType::Define<UsdAiProcedural,
-        TfType::Bases< UsdGeomBoundable > >();
+    TfType::Define<UsdAiShapeAPI,
+        TfType::Bases< UsdSchemaBase > >();
     
-    // Register the usd prim typename as an alias under UsdSchemaBase. This
-    // enables one to call
-    // TfType::Find<UsdSchemaBase>().FindDerivedByName("AiProcedural")
-    // to find TfType<UsdAiProcedural>, which is how IsA queries are
-    // answered.
-    TfType::AddAlias<UsdSchemaBase, UsdAiProcedural>("AiProcedural");
 }
 
 /* virtual */
-UsdAiProcedural::~UsdAiProcedural()
+UsdAiShapeAPI::~UsdAiShapeAPI()
 {
 }
 
 /* static */
-UsdAiProcedural
-UsdAiProcedural::Get(const UsdStagePtr &stage, const SdfPath &path)
+UsdAiShapeAPI
+UsdAiShapeAPI::Get(const UsdStagePtr &stage, const SdfPath &path)
 {
     if (!stage) {
         TF_CODING_ERROR("Invalid stage");
-        return UsdAiProcedural();
+        return UsdAiShapeAPI();
     }
-    return UsdAiProcedural(stage->GetPrimAtPath(path));
+    return UsdAiShapeAPI(stage->GetPrimAtPath(path));
 }
 
-/* static */
-UsdAiProcedural
-UsdAiProcedural::Define(
-    const UsdStagePtr &stage, const SdfPath &path)
-{
-    static TfToken usdPrimTypeName("AiProcedural");
-    if (!stage) {
-        TF_CODING_ERROR("Invalid stage");
-        return UsdAiProcedural();
-    }
-    return UsdAiProcedural(
-        stage->DefinePrim(path, usdPrimTypeName));
-}
 
 /* static */
 const TfType &
-UsdAiProcedural::_GetStaticTfType()
+UsdAiShapeAPI::_GetStaticTfType()
 {
-    static TfType tfType = TfType::Find<UsdAiProcedural>();
+    static TfType tfType = TfType::Find<UsdAiShapeAPI>();
     return tfType;
 }
 
 /* static */
 bool 
-UsdAiProcedural::_IsTypedSchema()
+UsdAiShapeAPI::_IsTypedSchema()
 {
     static bool isTyped = _GetStaticTfType().IsA<UsdTyped>();
     return isTyped;
@@ -92,22 +73,22 @@ UsdAiProcedural::_IsTypedSchema()
 
 /* virtual */
 const TfType &
-UsdAiProcedural::_GetTfType() const
+UsdAiShapeAPI::_GetTfType() const
 {
     return _GetStaticTfType();
 }
 
 UsdAttribute
-UsdAiProcedural::GetDsoAttr() const
+UsdAiShapeAPI::GetOpaqueAttr() const
 {
-    return GetPrim().GetAttribute(UsdAiTokens->dso);
+    return GetPrim().GetAttribute(UsdAiTokens->opaque);
 }
 
 UsdAttribute
-UsdAiProcedural::CreateDsoAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdAiShapeAPI::CreateOpaqueAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdAiTokens->dso,
-                       SdfValueTypeNames->String,
+    return UsdSchemaBase::_CreateAttr(UsdAiTokens->opaque,
+                       SdfValueTypeNames->Bool,
                        /* custom = */ false,
                        SdfVariabilityUniform,
                        defaultValue,
@@ -115,33 +96,84 @@ UsdAiProcedural::CreateDsoAttr(VtValue const &defaultValue, bool writeSparsely) 
 }
 
 UsdAttribute
-UsdAiProcedural::GetDataAttr() const
+UsdAiShapeAPI::GetMatteAttr() const
 {
-    return GetPrim().GetAttribute(UsdAiTokens->data);
+    return GetPrim().GetAttribute(UsdAiTokens->matte);
 }
 
 UsdAttribute
-UsdAiProcedural::CreateDataAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdAiShapeAPI::CreateMatteAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdAiTokens->data,
-                       SdfValueTypeNames->String,
+    return UsdSchemaBase::_CreateAttr(UsdAiTokens->matte,
+                       SdfValueTypeNames->Bool,
                        /* custom = */ false,
-                       SdfVariabilityVarying,
+                       SdfVariabilityUniform,
                        defaultValue,
                        writeSparsely);
 }
 
 UsdAttribute
-UsdAiProcedural::GetLoadAtInitAttr() const
+UsdAiShapeAPI::GetReceiveShadowsAttr() const
 {
-    return GetPrim().GetAttribute(UsdAiTokens->loat_at_init);
+    return GetPrim().GetAttribute(UsdAiTokens->receive_shadows);
 }
 
 UsdAttribute
-UsdAiProcedural::CreateLoadAtInitAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdAiShapeAPI::CreateReceiveShadowsAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdAiTokens->loat_at_init,
+    return UsdSchemaBase::_CreateAttr(UsdAiTokens->receive_shadows,
                        SdfValueTypeNames->Bool,
+                       /* custom = */ false,
+                       SdfVariabilityUniform,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdAiShapeAPI::GetSelfShadowsAttr() const
+{
+    return GetPrim().GetAttribute(UsdAiTokens->self_shadows);
+}
+
+UsdAttribute
+UsdAiShapeAPI::CreateSelfShadowsAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdAiTokens->self_shadows,
+                       SdfValueTypeNames->Bool,
+                       /* custom = */ false,
+                       SdfVariabilityUniform,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdAiShapeAPI::GetVisibilityAttr() const
+{
+    return GetPrim().GetAttribute(UsdAiTokens->visibility);
+}
+
+UsdAttribute
+UsdAiShapeAPI::CreateVisibilityAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdAiTokens->visibility,
+                       SdfValueTypeNames->UChar,
+                       /* custom = */ false,
+                       SdfVariabilityUniform,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdAiShapeAPI::GetSidednessAttr() const
+{
+    return GetPrim().GetAttribute(UsdAiTokens->sidedness);
+}
+
+UsdAttribute
+UsdAiShapeAPI::CreateSidednessAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdAiTokens->sidedness,
+                       SdfValueTypeNames->UChar,
                        /* custom = */ false,
                        SdfVariabilityUniform,
                        defaultValue,
@@ -162,16 +194,19 @@ _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
 
 /*static*/
 const TfTokenVector&
-UsdAiProcedural::GetSchemaAttributeNames(bool includeInherited)
+UsdAiShapeAPI::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdAiTokens->dso,
-        UsdAiTokens->data,
-        UsdAiTokens->loat_at_init,
+        UsdAiTokens->opaque,
+        UsdAiTokens->matte,
+        UsdAiTokens->receive_shadows,
+        UsdAiTokens->self_shadows,
+        UsdAiTokens->visibility,
+        UsdAiTokens->sidedness,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
-            UsdGeomBoundable::GetSchemaAttributeNames(true),
+            UsdSchemaBase::GetSchemaAttributeNames(true),
             localNames);
 
     if (includeInherited)
