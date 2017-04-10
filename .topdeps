@@ -12,4 +12,5 @@ assembly_cmd_import_maya_cmds
 maya_use_IsSupportedFile
 unify_usdVariantSet_prefix_token
 pseudo_root_warning
+ptex_prefer_static
 symlink_headers
