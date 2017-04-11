@@ -310,7 +310,7 @@ usdReadJob::_ProcessCameraPrims(const std::vector<UsdPrim>& cameraPrims)
 }
 
 bool
-usdReadJob::_DoImportWithProxies(UsdPrimRange& primIt)
+usdReadJob::_DoImportWithProxies(UsdPrimRange& range)
 {
     MStatus status;
 
@@ -326,7 +326,7 @@ usdReadJob::_DoImportWithProxies(UsdPrimRange& primIt)
     UsdPrim pxrGeomRoot;
     std::vector<std::string> collapsePointPathStrings;
 
-    for(; primIt; ++primIt) {
+    for(auto primIt = range.begin(); primIt != range.end(); ++primIt) {
         const UsdPrim& prim = *primIt;
 
         if (prim.IsA<UsdGeomCamera>()) {
