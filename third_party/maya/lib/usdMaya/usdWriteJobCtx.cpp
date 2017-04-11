@@ -4,13 +4,13 @@
 #include "pxr/usd/ar/resolverContext.h"
 #include "pxr/usd/usdGeom/scope.h"
 
+#include "usdMaya/FunctorPrimWriter.h"
+#include "usdMaya/MayaCameraWriter.h"
 #include "usdMaya/MayaMeshWriter.h"
 #include "usdMaya/MayaNurbsCurveWriter.h"
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
 #include "usdMaya/MayaTransformWriter.h"
-#include "usdMaya/MayaCameraWriter.h"
 #include "usdMaya/primWriterRegistry.h"
-#include "usdMaya/FunctorPrimWriter.h"
 
 #include <maya/MDagPathArray.h>
 #include <maya/MGlobal.h>

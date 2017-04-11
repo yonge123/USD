@@ -26,11 +26,7 @@
 
 #include "usdMaya/JobArgs.h"
 #include "usdMaya/MayaPrimWriter.h"
-#include "usdMaya/MayaMeshWriter.h"
-#include "usdMaya/MayaNurbsCurveWriter.h"
-#include "usdMaya/MayaNurbsSurfaceWriter.h"
 #include "usdMaya/MayaTransformWriter.h"
-#include "usdMaya/MayaCameraWriter.h"
 
 #include "usdMaya/translatorMaterial.h"
 #include "usdMaya/primWriterRegistry.h"
@@ -65,7 +61,6 @@
 #include <maya/MItDag.h>
 #include <maya/MObjectArray.h>
 #include <maya/MPxNode.h>
-#include <maya/MDagPathArray.h>
 
 #include <limits>
 #include <map>
