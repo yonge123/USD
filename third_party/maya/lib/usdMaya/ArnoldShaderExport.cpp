@@ -794,8 +794,8 @@ void ArnoldShaderExport::setup_shaders() {
 
     if (m_transform_assignment == TRANSFORM_ASSIGNMENT_COMMON) {
         tbb::tick_count tc = tbb::tick_count::now();
-
-        for (auto stage_iter = m_stage->Traverse(); stage_iter; ++stage_iter) {
+        auto prim_range = m_stage->Traverse();
+        for (auto stage_iter = prim_range.begin(); stage_iter != prim_range.end(); ++stage_iter) {
             if (stage_iter.IsPostVisit()) {
                 continue;
             }
