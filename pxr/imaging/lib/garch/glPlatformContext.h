@@ -31,15 +31,15 @@
 #include "pxr/base/arch/defines.h"
 #include <cstddef>
 
-#if defined ARCH_OS_LINUX
+#if defined(ARCH_OS_LINUX)
 
 #include "pxr/imaging/garch/glPlatformContextGLX.h"
 
-#elif defined ARCH_OS_DARWIN
+#elif defined(ARCH_OS_DARWIN)
 
 #include "pxr/imaging/garch/glPlatformContextDarwin.h"
 
-#elif defined ARCH_OS_WINDOWS
+#elif defined(ARCH_OS_WINDOWS)
 
 #include "pxr/imaging/garch/glPlatformContextWindows.h"
 
