@@ -74,6 +74,7 @@ struct JobExportArgs
     TfToken shadingMode;
     
     bool mergeTransformAndShape;
+    bool exportInstances;
 
     bool exportAnimation;
     bool excludeInvisible;

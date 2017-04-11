@@ -60,6 +60,7 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-v"  , "-verbose", MSyntax::kNoArg);
 
     syntax.addFlag("-mt" , "-mergeTransformAndShape", MSyntax::kBoolean);
+    syntax.addFlag("-ein", "-exportInstances", MSyntax::kBoolean);
     syntax.addFlag("-eri", "-exportRefsAsInstanceable", MSyntax::kBoolean);
     syntax.addFlag("-dsp" , "-exportDisplayColor", MSyntax::kBoolean);
     syntax.addFlag("-shd" , "-shadingMode" , MSyntax::kString);
@@ -126,6 +127,10 @@ try
 
     if (argData.isFlagSet("mergeTransformAndShape")) {
         argData.getFlagArgument("mergeTransformAndShape", 0, jobArgs.mergeTransformAndShape);
+    }
+
+    if (argData.isFlagSet("exportInstances")) {
+        argData.getFlagArgument("exportInstances", 0, jobArgs.exportInstances);
     }
 
     if (argData.isFlagSet("exportRefsAsInstanceable")) {
