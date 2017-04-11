@@ -6,6 +6,7 @@
 
 #include "usdMaya/FunctorPrimWriter.h"
 #include "usdMaya/MayaCameraWriter.h"
+#include "usdMaya/MayaImagePlaneWriter.h"
 #include "usdMaya/MayaMeshWriter.h"
 #include "usdMaya/MayaNurbsCurveWriter.h"
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
@@ -190,6 +191,11 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
     } else if (ob.hasFn(MFn::kCamera)) {
         MayaCameraWriterPtr primPtr(new MayaCameraWriter(curDag, getUsdPathFromDagPath(curDag, false), *this));
         if (primPtr->isValid() ) {
+            return primPtr;
+        }
+    } else if (ob.hasFn(MFn::kImagePlane)) {
+        MayaImagePlaneWriterPtr primPtr(new MayaImagePlaneWriter(curDag, getUsdPathFromDagPath(curDag, false), *this));
+        if (primPtr->isValid()) {
             return primPtr;
         }
     }
