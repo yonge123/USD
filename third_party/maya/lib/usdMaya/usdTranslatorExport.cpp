@@ -123,7 +123,7 @@ usdTranslatorExport::writer(const MFileObject &file,
                 jobArgs.mergeTransformAndShape = theOption[1].asInt();
             }
             if (theOption[0] == MString("exportInstances")) {
-                jobArgs.exportInstances = theOption[1].asInt() == 1;
+                jobArgs.exportInstances = theOption[1].asInt();
             }
             if (theOption[0] == MString("defaultMeshScheme")) {            
                 if (theOption[1]=="Polygonal Mesh") {
