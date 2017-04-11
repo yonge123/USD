@@ -32,7 +32,9 @@
 #include "pxr/base/arch/systemInfo.h"
 
 #include <atomic>
-#if defined(ARCH_OS_LINUX) || defined(ARCH_OS_DARWIN)
+#if defined(ARCH_OS_WINDOWS)
+#include <Windows.h>
+#else
 #include "pxr/base/arch/inttypes.h"
 #include <sys/types.h>
 #include <sys/ptrace.h>
@@ -46,9 +48,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string>
-#endif
-#if defined(ARCH_OS_WINDOWS)
-#include <Windows.h>
 #endif
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -571,8 +570,8 @@ _ArchAvoidJIT()
 bool
 ArchDebuggerAttach()
 {
-    return ArchDebuggerIsAttached() ||
-            (!_ArchAvoidJIT() && Arch_DebuggerAttach());
+    return !_ArchAvoidJIT() &&
+            (ArchDebuggerIsAttached() || Arch_DebuggerAttach());
 }
 
 bool
@@ -590,7 +589,7 @@ ArchDebuggerIsAttached()
 void
 ArchAbort(bool logging)
 {
-    if (ArchDebuggerIsAttached() || !_ArchAvoidJIT()) {
+    if (!_ArchAvoidJIT() || ArchDebuggerIsAttached()) {
         if (!logging) {
 #if !defined(ARCH_OS_WINDOWS)
             // Remove signal handler.
