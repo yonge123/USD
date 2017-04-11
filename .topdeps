@@ -9,6 +9,7 @@ tg/simple_features/iterating_maya_underworld
 tg/simple_features/tx_hydra
 tg/simple_features/usdRender
 tg/simple_features/usdview_reload_shortcut
+tg/simple_features/vp2_maya_proxy
 assembly_cmd_import_maya_cmds
 maya_use_IsSupportedFile
 unify_usdVariantSet_prefix_token
