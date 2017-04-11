@@ -2,6 +2,7 @@ tg/bugfixes/gcc_warnings
 tg/bugfixes/oiio_read_with_asserts
 tg/bugfixes/ubuntu_katana_build_fix
 tg/instances/main
+tg/maya_particle_cache/initial
 tg/simple_features/GetSessionLayerForVariantSelections_SdfPath
 tg/simple_features/dynamic_shading_mode_list
 tg/simple_features/export_root
