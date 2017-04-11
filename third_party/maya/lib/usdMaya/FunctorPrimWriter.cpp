@@ -40,8 +40,6 @@ FunctorPrimWriter::FunctorPrimWriter(
     _exportsReferences(false),
     _pruneChildren(false)
 {
-    SdfPath authorPath = getUsdPath();
-    mUsdPrim = getUsdStage()->GetPrimAtPath(authorPath);
 }
 
 FunctorPrimWriter::~FunctorPrimWriter()
@@ -63,6 +61,7 @@ FunctorPrimWriter::write(
     _exportsReferences = ctx.GetExportsReferences();
     _pruneChildren = ctx.GetPruneChildren();
 
+    mUsdPrim = stage->GetPrimAtPath(authorPath);
     if (!mUsdPrim) {
         return;
     }
@@ -95,18 +94,19 @@ FunctorPrimWriter::shouldPruneChildren() const
 /* static */
 MayaPrimWriterPtr
 FunctorPrimWriter::Create(
-    const MDagPath& iDag,
-    const SdfPath& uPath,
+    const MDagPath& dag,
+    const SdfPath& path,
     bool instanceSource,
     usdWriteJobCtx& job,
     WriterFn plugFn)
 {
-    return MayaPrimWriterPtr(new FunctorPrimWriter(iDag, uPath, instanceSource, job, plugFn));
+    return MayaPrimWriterPtr(new FunctorPrimWriter(dag, path, instanceSource, job, plugFn));
 }
 
 /* static */
-std::function< MayaPrimWriterPtr(const MDagPath&, const SdfPath&,
-    bool, usdWriteJobCtx&) >
+std::function< MayaPrimWriterPtr(const MDagPath&,
+                                 const SdfPath&, bool,
+                                 usdWriteJobCtx&) >
 FunctorPrimWriter::CreateFactory(WriterFn fn)
 {
     return std::bind(

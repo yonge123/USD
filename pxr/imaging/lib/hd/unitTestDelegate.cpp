@@ -52,14 +52,7 @@ TF_DEFINE_PRIVATE_TOKENS(
 
 TF_DEFINE_PUBLIC_TOKENS(Hd_UnitTestTokens, HD_UNIT_TEST_TOKENS);
 
-Hd_UnitTestDelegate::Hd_UnitTestDelegate()
-  : _hasInstancePrimVars(true), _refineLevel(0)
-{
-    HdChangeTracker &tracker = GetRenderIndex().GetChangeTracker();
-    tracker.AddCollection(Hd_UnitTestTokens->geometryAndGuides);
-}
-
-Hd_UnitTestDelegate::Hd_UnitTestDelegate(HdRenderIndexSharedPtr const& parentIndex,
+Hd_UnitTestDelegate::Hd_UnitTestDelegate(HdRenderIndex *parentIndex,
                                          SdfPath const& delegateID)
   : HdSceneDelegate(parentIndex, delegateID)
   , _hasInstancePrimVars(true), _refineLevel(0)
@@ -411,6 +404,9 @@ Hd_UnitTestDelegate::UpdateCamera(SdfPath const &id,
                                   VtValue value)
 {
     _cameras[id].params[key] = value;
+   HdChangeTracker& tracker = GetRenderIndex().GetChangeTracker();
+   // XXX: we could be more granular here if the tokens weren't in hdx.
+   tracker.MarkSprimDirty(id, HdChangeTracker::AllDirty);
 }
 
 void
@@ -419,6 +415,18 @@ Hd_UnitTestDelegate::UpdateTask(SdfPath const &id,
                                 VtValue value)
 {
     _tasks[id].params[key] = value;
+
+   // Update dirty bits for tokens we recognize.
+   HdChangeTracker& tracker = GetRenderIndex().GetChangeTracker();
+   if (key == HdTokens->params) {
+       tracker.MarkTaskDirty(id, HdChangeTracker::DirtyParams);
+   } else if (key == HdTokens->collection) {
+       tracker.MarkTaskDirty(id, HdChangeTracker::DirtyCollection);
+   } else if (key == HdTokens->children) {
+       tracker.MarkTaskDirty(id, HdChangeTracker::DirtyChildren);
+   } else {
+       TF_CODING_ERROR("Unknown key %s", key.GetText());
+   }
 }
 
 /*virtual*/
@@ -644,11 +652,13 @@ Hd_UnitTestDelegate::GetTextureResource(SdfPath const& textureId)
 
     // Simple way to detect if the glf texture is ptex or not
     bool isPtex = false;
+#ifdef PXR_PTEX_SUPPORT_ENABLED
     GlfPtexTextureRefPtr pTex = 
         TfDynamic_cast<GlfPtexTextureRefPtr>(_textures[textureId].texture);
     if (pTex) {
         isPtex = true;
     }
+#endif
 
     return HdTextureResourceSharedPtr(
         new HdSimpleTextureResource(texture, isPtex));
@@ -1226,7 +1236,7 @@ Hd_UnitTestDelegate::AddCurves(
     if (authoredNormals)
         authNormals = _BuildArray(normals, sizeof(normals)/sizeof(normals[0]));
 
-    for(uint i = 0;i < sizeof(points) / sizeof(points[0]); ++ i) {
+    for(size_t i = 0;i < sizeof(points) / sizeof(points[0]); ++ i) {
         GfVec4f tmpPoint = GfVec4f(points[i][0], points[i][1], points[i][2], 1.0f);
         tmpPoint = tmpPoint * transform;
         points[i] = GfVec3f(tmpPoint[0], tmpPoint[1], tmpPoint[2]);

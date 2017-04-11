@@ -27,9 +27,9 @@
 /// \file primWriterRegistry.h
 
 #include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/MayaPrimWriter.h"
 #include "usdMaya/FunctorPrimWriter.h"
-#include "usdMaya/usdWriteJobCtx.h"
 
 #include <boost/function.hpp>
 
@@ -67,10 +67,9 @@ PXR_NAMESPACE_OPEN_SCOPE
 struct PxrUsdMayaPrimWriterRegistry
 {
     typedef std::function< MayaPrimWriterPtr (
-            const MDagPath& iDag,
-            const SdfPath& uPath,
-            bool instanceSource,
-            usdWriteJobCtx& job) > WriterFactoryFn;
+            const MDagPath&,
+            const SdfPath&, bool,
+            usdWriteJobCtx&) > WriterFactoryFn;
 
     /// \brief Register \p fn as a factory function providing a
     /// \link MayaPrimWriter subclass that can be used to write \p mayaType.
@@ -90,12 +89,14 @@ struct PxrUsdMayaPrimWriterRegistry
     ///             MyWriter::Create);
     /// }
     /// \endcode
+    PXRUSDMAYA_API
     static void Register(const std::string& mayaType, WriterFactoryFn fn);
 
     /// \brief Finds a writer if one exists for \p mayaTypeName.
     ///
     /// If there is no writer plugin for \p mayaTypeName, this will return 
     /// a value that evaluates to false.
+    PXRUSDMAYA_API
     static WriterFactoryFn Find(const std::string& mayaTypeName);
 };
 

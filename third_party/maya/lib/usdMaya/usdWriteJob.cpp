@@ -44,7 +44,7 @@
 
 #include "pxr/usd/usd/variantSets.h"
 #include "pxr/usd/usd/editContext.h"
-#include "pxr/usd/usd/treeIterator.h"
+#include "pxr/usd/usd/primRange.h"
 #include "pxr/usd/usdGeom/metrics.h"
 #include "pxr/usd/usdGeom/xform.h"
 #include "pxr/usd/usdUtils/pipeline.h"
@@ -222,11 +222,10 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
             if (primWriter) {
                 mMayaPrimWriterList.push_back(primWriter);
 
-                // Write out data (non-animated/default values).
-                const auto& usdPrim = primWriter->getPrim();
-                if (usdPrim && usdPrim.IsValid()) {
-                    primWriter->write(UsdTimeCode::Default());
+                primWriter->write(UsdTimeCode::Default());
 
+                // Write out data (non-animated/default values).
+                if (const auto& usdPrim = primWriter->getPrim()) {
                     MDagPath dag = primWriter->getDagPath();
                     mDagPathToUsdPathMap[dag] = usdPrim.GetPath();
 
@@ -304,6 +303,7 @@ void usdWriteJob::evalJob(double iFrame)
 
 void usdWriteJob::endJob()
 {
+    processInstances();
     UsdPrimSiblingRange usdRootPrims = mStage->GetPseudoRoot().GetChildren();
     
     // Write Variants (to first root prim path)
@@ -351,7 +351,10 @@ void usdWriteJob::endJob()
         // prim for the export... usdVariantRootPrimPath
         mStage->GetRootLayer()->SetDefaultPrim(defaultPrim);
     }
-    saveAndCloseStage();
+    if (mStage->GetRootLayer()->PermissionToSave()) {
+        mStage->GetRootLayer()->Save();
+    }
+    mStage->Close();
     mMayaPrimWriterList.clear(); // clear this so that no stage references are left around
     MGlobal::displayInfo("usdWriteJob::endJob Saving Stage");
 }
@@ -430,9 +433,9 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
                 UsdEditContext editContext(mStage, editTarget);
 
                 // == Activate/Deactivate UsdPrims
-                UsdTreeIterator it = UsdTreeIterator::AllPrims(mStage->GetPseudoRoot());
+                UsdPrimRange rng = UsdPrimRange::AllPrims(mStage->GetPseudoRoot());
                 std::vector<UsdPrim> primsToDeactivate;
-                for ( ; it; ++it) {
+                for (auto it = rng.begin(); it != rng.end(); ++it) {
                     UsdPrim usdPrim = *it;
                     // For all xformable usdPrims...
                     if (usdPrim && usdPrim.IsA<UsdGeomXformable>()) {
@@ -450,7 +453,7 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
                         }
                     }
                 }
-                // Now deactivate the prims (done outside of the UsdTreeIterator 
+                // Now deactivate the prims (done outside of the UsdPrimRange 
                 // so not to modify the iterator while in the loop)
                 for ( UsdPrim const& prim : primsToDeactivate ) {
                     prim.SetActive(false);

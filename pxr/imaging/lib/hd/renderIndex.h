@@ -25,6 +25,7 @@
 #define HD_RENDER_INDEX_H
 
 #include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/imaging/hd/perfLog.h"
@@ -75,19 +76,33 @@ typedef std::unordered_map<TfToken,
 /// relies on the HdSceneDelegate to provide any hierarchical or other
 /// computed values.
 ///
-class HdRenderIndex : public boost::noncopyable {
+class HdRenderIndex final : public boost::noncopyable {
 public:
 
     typedef std::unordered_map<TfToken, std::vector<HdDrawItem const*>,
                                boost::hash<TfToken> > HdDrawItemView;
 
-    HdRenderIndex();
+    /// Create a render index with the given render delegate.
+    /// Returns null if renderDelegate is null.
+    HD_API
+    static HdRenderIndex* New(HdRenderDelegate *renderDelegate) {
+        if (renderDelegate == nullptr) {
+            TF_CODING_ERROR(
+                "Null Render Delegate provided to create render index");
+            return nullptr;
+        }
+        return new HdRenderIndex(renderDelegate);
+    }
+
+    HD_API
     ~HdRenderIndex();
 
     /// Clear all r (render), s (state) and b (buffer) prims.
+    HD_API
     void Clear();
 
     /// Given a prim id and instance id, returns the prim path of the owner
+    HD_API
     SdfPath GetPrimPathFromPrimIdColor(GfVec4i const& primIdColor,
                                        GfVec4i const& instanceIdColor,
                                        int* instanceIndexOut = NULL) const;
@@ -95,22 +110,26 @@ public:
     // ---------------------------------------------------------------------- //
     /// \name Synchronization
     // ---------------------------------------------------------------------- //
-
+    HD_API
     HdDrawItemView GetDrawItems(HdRprimCollection const& collection);
 
     /// Synchronize all objects in the DirtyList
+    HD_API
     void Sync(HdDirtyListSharedPtr const &dirtyList);
 
     /// Processes all pending dirty lists 
+    HD_API
     void SyncAll(HdTaskSharedPtrVector const &tasks, HdTaskContext *taskContext);
 
     /// Returns a vector of Rprim IDs that are bound to the given DelegateID.
+    HD_API
     SdfPathVector const& GetDelegateRprimIDs(SdfPath const& delegateID) const;
 
     /// For each delegate that has at least one child with dirty bits matching
     /// the given dirtyMask, pushes the delegate ID into the given IDs vector.
     /// The resulting vector is a list of all delegate IDs who have at least one
     /// child that matches the mask.
+    HD_API
     void GetDelegateIDsWithDirtyRprims(int dirtyMask, SdfPathVector* IDs) const;
 
     // ---------------------------------------------------------------------- //
@@ -125,6 +144,7 @@ public:
     // ---------------------------------------------------------------------- //
 
     /// Insert a rprim into index
+    HD_API
     void InsertRprim(TfToken const& typeId,
                      HdSceneDelegate* sceneDelegate,
                      SdfPath const& rprimId,
@@ -143,6 +163,7 @@ public:
                      SdfPath const& instancerId = SdfPath());
 
     /// Remove a rprim from index
+    HD_API
     void RemoveRprim(SdfPath const& id);
 
     /// Returns true if rprim \p id exists in index.
@@ -151,21 +172,26 @@ public:
     }
 
     /// Returns the rprim of id
+    HD_API
     HdRprim const *GetRprim(SdfPath const &id) const;
 
     /// Returns the scene delegate for the given rprim
+    HD_API
     HdSceneDelegate *GetSceneDelegateForRprim(SdfPath const &id) const;
 
     /// Query function to return the id's of the scene delegate and instancer
     /// associated with the Rprim at the given path.
+    HD_API
     bool GetSceneDelegateAndInstancerIds(SdfPath const &id,
                                          SdfPath* sceneDelegateId,
                                          SdfPath* instancerId) const;
 
     /// Returns true if the given RprimID is a member of the collection.
+    HD_API
     bool IsInCollection(SdfPath const& id, TfToken const& collectionName) const;
 
     /// Returns the subtree rooted under the given path.
+    HD_API
     SdfPathVector GetRprimSubtree(SdfPath const& root) const;
 
 
@@ -174,11 +200,13 @@ public:
     // ---------------------------------------------------------------------- //
 
     /// Insert an instancer into index
+    HD_API
     void InsertInstancer(HdSceneDelegate* delegate,
                          SdfPath const &id,
                          SdfPath const &parentId = SdfPath());
 
     /// Remove an instancer from index
+    HD_API
     void RemoveInstancer(SdfPath const& id);
 
     /// Returns true if instancer \p id exists in index.
@@ -187,6 +215,7 @@ public:
     }
 
     /// Returns the instancer of id
+    HD_API
     HdInstancerSharedPtr GetInstancer(SdfPath const &id) const;
 
     // ---------------------------------------------------------------------- //
@@ -198,6 +227,7 @@ public:
     void InsertTask(HdSceneDelegate* delegate, SdfPath const& id);
 
     /// Removes the given task from the RenderIndex.
+    HD_API
     void RemoveTask(SdfPath const& id);
 
     /// Returns true if a task exists in the index with the given \p id.
@@ -206,6 +236,7 @@ public:
     }
 
     /// Returns the task for the given \p id.
+    HD_API
     HdTaskSharedPtr const& GetTask(SdfPath const& id) const;
 
     // ---------------------------------------------------------------------- //
@@ -213,30 +244,25 @@ public:
     // ---------------------------------------------------------------------- //
 
     /// Insert a sprim into index
+    HD_API
     void InsertSprim(TfToken const& typeId,
                      HdSceneDelegate* delegate,
                      SdfPath const& sprimId);
 
-    /// \deprecated {
-    ///   Old templated mathod of inserting a sprim into the index.
-    ///   This API has been superseeded by passing the typeId token.
-    ///   XXX: This method still exists to aid transition but may be
-    ///   removed at any time.
-    /// }
-    template <typename T>
-    void
-    InsertSprim(HdSceneDelegate* delegate, SdfPath const &id);
-
+    HD_API
     void RemoveSprim(TfToken const& typeId, SdfPath const &id);
 
+    HD_API
     HdSprim const *GetSprim(TfToken const& typeId, SdfPath const &id) const;
 
     /// Returns the subtree rooted under the given path for the given sprim
     /// type.
+    HD_API
     SdfPathVector GetSprimSubtree(TfToken const& typeId,
                                   SdfPath const& root) const;
 
     /// Returns the fullback prim for the Sprim of the given type.
+    HD_API
     HdSprim *GetFallbackSprim(TfToken const& typeId) const;
 
 
@@ -245,20 +271,25 @@ public:
     // ---------------------------------------------------------------------- //
 
     /// Insert a bprim into index
+    HD_API
     void InsertBprim(TfToken const& typeId,
                      HdSceneDelegate* delegate,
                      SdfPath const& bprimId);
 
+    HD_API
     void RemoveBprim(TfToken const& typeId, SdfPath const &id);
 
+    HD_API
     HdBprim const *GetBprim(TfToken const& typeId, SdfPath const &id) const;
 
     /// Returns the subtree rooted under the given path for the given bprim
     /// type.
+    HD_API
     SdfPathVector GetBprimSubtree(TfToken const& typeId,
                                   SdfPath const& root) const;
 
     /// Returns the fallback prim for the Bprim of the given type.
+    HD_API
     HdBprim *GetFallbackBprim(TfToken const& typeId) const;
 
 
@@ -266,20 +297,19 @@ public:
     /// \name Render Delegate
     // ---------------------------------------------------------------------- //
     /// Currently, a render index only supports connection to one type of
-    /// render delegate.  Due to the inserted information and change tracking
+    /// render delegate, due to the inserted information and change tracking
     /// being specific to that delegate type.
-    void SetRenderDelegate(HdRenderDelegate *renderDelegate);
+    HD_API
     HdRenderDelegate *GetRenderDelegate() const;
 
+    HD_API
     TfToken GetRenderDelegateType() const;
 
-    /// Creates fallback prims for each supported prim type
-    bool CreateFallbackPrims();
-
-    /// Release the fallback prims
-    void DestroyFallbackPrims();
-
 private:
+    // The render index constructor is private so we can check
+    // renderDelegate before construction: see HdRenderIndex::New(...).
+    HdRenderIndex(HdRenderDelegate *renderDelegate);
+
     // ---------------------------------------------------------------------- //
     // Private Helper methods 
     // ---------------------------------------------------------------------- //
@@ -292,6 +322,9 @@ private:
     void _AllocatePrimId(HdRprim* prim);
 
     // Inserts the task into the index and updates tracking state.
+    // _TrackDelegateTask is called by the inlined InsertTask<T>, so it needs
+    // to be marked HD_API.
+    HD_API
     void _TrackDelegateTask(HdSceneDelegate* delegate, 
                             SdfPath const& taskId,
                             HdTaskSharedPtr const& task);
@@ -344,17 +377,17 @@ private:
 
     HdRenderDelegate *_renderDelegate;
 
-    // XXX: This is a temporary variable to aid in transition to the new
-    // context api.  Under the new API, the render delegate is owned by
-    // the context.  However, as clients are not creating the delegate
-    // yet, the render index will create one on their behalf.
-    //
-    // It was preferred to add this variable than use the reference counting
-    // mechanism.  As that impacted the new code path, rather than explicitly
-    // calling out the transitional elements.
-    bool _ownsDelegateXXX;
-
+    /// Register the render delegate's list of supported prim types.
     void _InitPrimTypes();
+
+    /// Creates fallback prims for each supported prim type.
+    bool _CreateFallbackPrims();
+
+    /// Release the fallback prims.
+    void _DestroyFallbackPrims();
+
+    // Remove default constructor
+    HdRenderIndex() = delete;
 };
 
 template <typename T>
@@ -379,9 +412,6 @@ HdRenderIndex::InsertTask(HdSceneDelegate* delegate, SdfPath const& id)
 class HdMesh;
 class HdBasisCurves;
 class HdPoints;
-class HdxCamera;
-class HdxDrawTarget;
-class HdxLight;
 
 namespace HdRenderIndexInternal
 {  
@@ -412,30 +442,6 @@ namespace HdRenderIndexInternal
         return HdPrimTypeTokens->points;
     }
 
-    template <>
-    inline
-    const TfToken &
-    _GetTypeId<HdxCamera>()
-    {
-        return HdPrimTypeTokens->camera;
-    }
-
-    template <>
-    inline
-    const TfToken &
-    _GetTypeId<HdxDrawTarget>()
-    {
-        return HdPrimTypeTokens->drawTarget;
-    }
-
-    template <>
-    inline
-    const TfToken &
-    _GetTypeId<HdxLight>()
-    {
-        return HdPrimTypeTokens->light;
-    }
-
 } 
 
 template <typename T>
@@ -447,13 +453,6 @@ HdRenderIndex::InsertRprim(HdSceneDelegate* delegate, SdfPath const& id,
     InsertRprim(HdRenderIndexInternal::_GetTypeId<T>(), delegate, id, instancerId);
 }
 
-
-template <typename T>
-void
-HdRenderIndex::InsertSprim(HdSceneDelegate* delegate, SdfPath const& id)
-{
-    InsertSprim(HdRenderIndexInternal::_GetTypeId<T>(), delegate, id);
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 //

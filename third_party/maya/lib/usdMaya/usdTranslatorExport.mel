@@ -105,7 +105,7 @@ global proc int usdTranslatorExport (string $parent,
 	        menuItem -l "GPrim Colors";
 	        menuItem -l "Material Colors";
 	        menuItem -l "RfM Shaders";
-            
+
         checkBox -l "Make References Instanceable" exportReferencesAsInstanceableCheckBox;
 
         checkBox -l "Export UVs" exportUVsCheckBox;

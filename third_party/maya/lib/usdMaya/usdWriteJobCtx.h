@@ -2,6 +2,7 @@
 #define PXRUSDMAYA_USDWRITEJOBCTX_H
 
 #include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "pxr/usd/sdf/path.h"
 #include "usdMaya/JobArgs.h"
 
@@ -17,14 +18,18 @@ typedef std::shared_ptr<MayaPrimWriter> MayaPrimWriterPtr;
 
 class usdWriteJobCtx {
 public:
+    PXRUSDMAYA_API
     usdWriteJobCtx(const JobExportArgs& args);
     const JobExportArgs& getArgs() const { return mArgs; };
     const UsdStageRefPtr& getUsdStage() const { return mStage; };
     // Querying the master path for instancing. This also creates the mesh if it doesn't exists.
     SdfPath getMasterPath(const MDagPath& dg);
 protected:
+    PXRUSDMAYA_API
     bool openFile(const std::string& filename, bool append);
-    void saveAndCloseStage();
+    PXRUSDMAYA_API
+    void processInstances();
+    PXRUSDMAYA_API
     MayaPrimWriterPtr createPrimWriter(const MDagPath& curDag);
 
     JobExportArgs mArgs;
@@ -33,6 +38,7 @@ protected:
     // Stage used to write out USD file
     UsdStageRefPtr mStage;
 private:
+    PXRUSDMAYA_API
     SdfPath getUsdPathFromDagPath(const MDagPath& dagPath, bool instanceSource);
 
     struct MObjectHandleComp {
@@ -41,8 +47,10 @@ private:
         }
     };
     std::map<MObjectHandle, SdfPath, MObjectHandleComp> mMasterToUsdPath;
+    PXRUSDMAYA_API
     MayaPrimWriterPtr _createPrimWriter(const MDagPath& curDag, bool instanceSource);
-    UsdPrim mInstancesScope;
+    UsdPrim mInstancesPrim;
+    bool mNoInstances;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

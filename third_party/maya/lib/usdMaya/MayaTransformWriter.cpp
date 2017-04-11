@@ -155,7 +155,7 @@ _GatherAnimChannel(
         MString parentName, 
         MString xName, MString yName, MString zName, 
         std::vector<AnimChannel>* oAnimChanList, 
-        bool isWritingAnimation, 
+        bool isWritingAnimation,
         bool setOpName)
 {
     AnimChannel chan;
@@ -276,7 +276,7 @@ void MayaTransformWriter::pushTransformStack(
     // additional xform (compensation translates for pivots, rotateAxis or
     // shear) we are not conforming anymore 
     bool conformsToCommonAPI = true;
-    
+
     // Keep track of where we have rotate and scale Pivots and their inverse so
     // that we can combine them later if possible
     unsigned int rotPivotIdx = -1, rotPivotINVIdx = -1, scalePivotIdx = -1, scalePivotINVIdx = -1;
@@ -417,7 +417,7 @@ MayaTransformWriter::MayaTransformWriter(
     mXformDagPath(iDag),
     mIsShapeAnimated(false),
     mIsInstanceSource(instanceSource)
-{    
+{
     auto isInstance = false;
     auto hasTransform = iDag.hasFn(MFn::kTransform);
     auto setup_merged_shape = [this, &isInstance, &iDag, &hasTransform] () {

@@ -186,7 +186,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
 
     // Read usdSdScheme attribute. If not set, we default to defaultMeshScheme
     // flag that can be user defined and initialized to catmullClark
-    TfToken sdScheme = PxrUsdMayaMeshUtil::getSubdivScheme(lMesh, getArgs().defaultMeshScheme);    
+    TfToken sdScheme = PxrUsdMayaMeshUtil::getSubdivScheme(lMesh, getArgs().defaultMeshScheme);
     primSchema.CreateSubdivisionSchemeAttr(VtValue(sdScheme), true);
 
     // Polygonal Mesh Case

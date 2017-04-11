@@ -27,6 +27,7 @@
 /// \file usdWriteJob.h
 
 #include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/Chaser.h"
 
 #include "usdMaya/util.h"
@@ -45,17 +46,23 @@ class usdWriteJob : public usdWriteJobCtx
 {
   public:
 
+    PXRUSDMAYA_API
     usdWriteJob(const JobExportArgs & iArgs);
 
+    PXRUSDMAYA_API
     ~usdWriteJob();
 
     // returns true if the stage can be created successfully
+    PXRUSDMAYA_API
     bool beginJob(const std::string &fileName,
             bool append, 
             double startTime,
             double endTime);
+    PXRUSDMAYA_API
     void evalJob(double iFrame);
+    PXRUSDMAYA_API
     void endJob();
+    PXRUSDMAYA_API
     TfToken writeVariants(const UsdPrim &usdRootPrim);
 
   private:
@@ -72,7 +79,7 @@ class usdWriteJob : public usdWriteJobCtx
     
     // List of renderLayerObjects. Currently used for variants
     MObjectArray mRenderLayerObjs;
-    
+
     PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type mDagPathToUsdPathMap;
 
     PxrUsdMayaChaserRefPtrVector mChasers;
