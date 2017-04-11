@@ -26,8 +26,10 @@ pxr_shared_library(${PXR_PACKAGE}
     INCLUDE_DIRS
         ${MAYA_INCLUDE_DIRS}
 
+    PUBLIC_HEADERS
+        api.h
+
     PUBLIC_CLASSES
-        debugCodes
         editUtil
         stageCache
         stageData
@@ -49,7 +51,9 @@ pxr_shared_library(${PXR_PACKAGE}
         translatorPrim
         translatorUtil
         translatorXformable
+        roundTripUtil
         shadingModeExporter
+        shadingModeExporterContext
         shadingModeImporter
         shadingModeRegistry
         util
@@ -57,6 +61,8 @@ pxr_shared_library(${PXR_PACKAGE}
         writeUtil
 
         MayaPrimWriter
+        MayaTransformWriter
+        FunctorPrimWriter
         JobArgs
         usdReadJob
         usdWriteJob
@@ -78,14 +84,13 @@ pxr_shared_library(${PXR_PACKAGE}
         UserTaggedAttribute
 
     PRIVATE_CLASSES
+        debugCodes
         registryHelper
         MayaCameraWriter
         MayaMeshWriter
         MayaNurbsCurveWriter
         MayaNurbsSurfaceWriter
-        MayaTransformWriter
         ModelKindWriter
-        PluginPrimWriter
 
     PRIVATE_HEADERS
         shadingModePxrRis_rfm_map.h
@@ -112,6 +117,7 @@ pxr_shared_library(${PXR_PACKAGE}
         wrapAssembly.cpp
         wrapEditUtil.cpp
         wrapQuery.cpp
+        wrapRoundTripUtil.cpp
         wrapStageCache.cpp
         wrapUserTaggedAttribute.cpp
 
@@ -126,6 +132,7 @@ pxr_shared_library(${PXR_PACKAGE}
         testenv/testUsdExportFrameOffset.py
         testenv/testUsdExportMesh.py
         testenv/testUsdExportRenderLayerMode.py
+        testenv/testUsdExportSelection.py
         testenv/testUsdExportUVSets.py
         testenv/testUsdImportAsAssemblies.py
         testenv/testUsdImportCamera.py
@@ -136,6 +143,7 @@ pxr_shared_library(${PXR_PACKAGE}
         testenv/testUsdImportUVSets.py
         testenv/testUsdMayaGetVariantSetSelections.py
         testenv/testUsdMayaModelKindWriter.py
+        testenv/testUsdMayaProxyShape.py
         testenv/testUsdMayaUserExportedAttributes.py
         testenv/testUsdMetadataAttributeConverters.py
         testenv/testUsdReferenceAssemblyChangeRepresentations.py
@@ -158,6 +166,7 @@ pxr_test_scripts(
         testenv/testUsdExportFrameOffset.py
         testenv/testUsdExportMesh.py
         testenv/testUsdExportRenderLayerMode.py
+        testenv/testUsdExportSelection.py
         testenv/testUsdExportUVSets.py
         testenv/testUsdImportAsAssemblies.py
         testenv/testUsdImportCamera.py
@@ -168,6 +177,7 @@ pxr_test_scripts(
         testenv/testUsdImportUVSets.py
         testenv/testUsdMayaGetVariantSetSelections.py
         testenv/testUsdMayaModelKindWriter.py
+        testenv/testUsdMayaProxyShape.py
         testenv/testUsdMayaUserExportedAttributes.py
         testenv/testUsdMetadataAttributeConverters.py
         testenv/testUsdReferenceAssemblyChangeRepresentations.py
@@ -253,6 +263,18 @@ pxr_install_test_dir(
 pxr_register_test(testUsdExportRenderLayerMode
     COMMAND "${MAYA_LOCATION}/bin/mayapy ${CMAKE_INSTALL_PREFIX}/tests/testUsdExportRenderLayerMode"
     TESTENV testUsdExportRenderLayerMode
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+)
+
+pxr_install_test_dir(
+    SRC testenv/UsdExportSelectionTest
+    DEST testUsdExportSelection
+)
+pxr_register_test(testUsdExportSelection
+    COMMAND "${MAYA_LOCATION}/bin/mayapy ${CMAKE_INSTALL_PREFIX}/tests/testUsdExportSelection"
+    TESTENV testUsdExportSelection
     ENV
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
@@ -373,6 +395,18 @@ pxr_install_test_dir(
 pxr_register_test(testUsdMayaModelKindWriter
     COMMAND "${MAYA_LOCATION}/bin/mayapy ${CMAKE_INSTALL_PREFIX}/tests/testUsdMayaModelKindWriter"
     TESTENV testUsdMayaModelKindWriter
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+)
+
+pxr_install_test_dir(
+    SRC testenv/UsdMayaProxyShape
+    DEST testUsdMayaProxyShape
+)
+pxr_register_test(testUsdMayaProxyShape
+    COMMAND "${MAYA_LOCATION}/bin/mayapy ${CMAKE_INSTALL_PREFIX}/tests/testUsdMayaProxyShape"
+    TESTENV testUsdMayaProxyShape
     ENV
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources

@@ -729,10 +729,6 @@ class MainWindow(QtGui.QMainWindow):
                                QtCore.SIGNAL('triggered()'),
                                self._toggleViewerMode)
 
-        QtCore.QObject.connect(self._ui.actionRenderGraphDefault,
-                               QtCore.SIGNAL('triggered()'),
-                               self._defaultRenderGraph)
-
         QtCore.QObject.connect(self._ui.showBBoxes,
                                QtCore.SIGNAL('toggled(bool)'),
                                self._showBBoxes)
@@ -1140,8 +1136,8 @@ class MainWindow(QtGui.QMainWindow):
         if self._printTiming and not self._noRender:
             t.PrintTime("create first image")
 
-        # configure render graph plugins after stageView initialized its renderer.
-        self._configureRenderGraphPlugins()
+        # configure render plugins after stageView initialized its renderer.
+        self._configureRendererPlugins()
         
         if self._mallocTags == 'stageAndImaging':
             DumpMallocTags(self._stage, "stage-loading and imaging")
@@ -1226,7 +1222,7 @@ class MainWindow(QtGui.QMainWindow):
                 # We can only safely do Sdf-level ops inside an Sdf.ChangeBlock,
                 # so gather all the paths from the UsdStage first
                 modelPaths = [p.GetPath() for p in \
-                                  Usd.TreeIterator.Stage(stage, 
+                                  Usd.PrimRange.Stage(stage, 
                                                          Usd.PrimIsGroup) ]
                 with Sdf.ChangeBlock():
                     for mpp in modelPaths:
@@ -1351,34 +1347,40 @@ class MainWindow(QtGui.QMainWindow):
         self._refreshCameraListAndMenu(preserveCurrCamera = False)
 
 
-    # Render graph plugin support
-    def _defaultRenderGraph(self):
-        self._stageView.SetRenderGraphPlugin(Tf.Type())
+    # Render plugin support
+    def _rendererPluginChanged(self, plugin):
+        self._stageView.SetRendererPlugin(plugin)
 
-    def _pluginRenderGraphChanged(self, plugin):
-        self._stageView.SetRenderGraphPlugin(plugin)
-
-    def _configureRenderGraphPlugins(self):
+    def _configureRendererPlugins(self):
         if self._stageView:
-            self._ui.renderGraphActionGroup = QtGui.QActionGroup(self)
-            self._ui.renderGraphActionGroup.setExclusive(True)
-            self._ui.renderGraphActionGroup.addAction(
-                self._ui.actionRenderGraphDefault)
+            self._ui.rendererPluginActionGroup = QtGui.QActionGroup(self)
+            self._ui.rendererPluginActionGroup.setExclusive(True)
 
-            pluginTypes = self._stageView.GetRenderGraphPlugins()
+            pluginTypes = self._stageView.GetRendererPlugins()
             for pluginType in pluginTypes:
                 name = Plug.Registry().GetStringFromPluginMetaData(
                     pluginType, 'displayName')
-                action = self._ui.menuRenderGraph.addAction(name)
+                action = self._ui.menuRendererPlugin.addAction(name)
                 action.setCheckable(True)
                 action.pluginType = pluginType
-                self._ui.renderGraphActionGroup.addAction(action)
+                self._ui.rendererPluginActionGroup.addAction(action)
 
                 QtCore.QObject.connect(
                     action,
                     QtCore.SIGNAL('triggered()'),
                     lambda pluginType = pluginType:
-                        self._pluginRenderGraphChanged(pluginType))
+                        self._rendererPluginChanged(pluginType))
+
+            # If any plugins exist, the first render plugin is the default one.
+            if len(self._ui.rendererPluginActionGroup.actions()) > 0:
+                self._ui.rendererPluginActionGroup.actions()[0].setChecked(True)
+
+            # Otherwise, put a no-op placeholder in.
+            else:
+                action = self._ui.menuRendererPlugin.addAction('Default')
+                action.setCheckable(True)
+                action.setChecked(True)
+                self._ui.rendererPluginActionGroup.addAction(action)
 
     # Topology-dependent UI changes
     def _reloadVaryingUI(self):
@@ -1800,7 +1802,7 @@ class MainWindow(QtGui.QMainWindow):
             isMatch = lambda x: pattern in x.lower()
 
         matches = [prim.GetPath() for prim
-                   in Usd.TreeIterator.Stage(self._stage, 
+                   in Usd.PrimRange.Stage(self._stage, 
                                              self._displayPredicate)
                    if isMatch(prim.GetName())]
 
@@ -1808,7 +1810,7 @@ class MainWindow(QtGui.QMainWindow):
         if showMasters:
             for master in self._stage.GetMasters():
                 matches += [prim.GetPath() for prim
-                            in Usd.TreeIterator(master, self._displayPredicate)
+                            in Usd.PrimRange(master, self._displayPredicate)
                             if isMatch(prim.GetName())]
         
         return matches
@@ -1935,7 +1937,7 @@ class MainWindow(QtGui.QMainWindow):
     def _outputBaseDirectory(cls):
         import os
 
-        baseDir = os.getenv('HOME') + "/.usdview/"
+        baseDir = os.path.join(os.path.expanduser('~'), '.usdview')
 
         if not os.path.exists(baseDir):
             os.makedirs(baseDir)
@@ -2773,7 +2775,7 @@ class MainWindow(QtGui.QMainWindow):
         childTypeDict = {} 
         primCount = 0
 
-        for child in Usd.TreeIterator(prim):
+        for child in Usd.PrimRange(prim):
             typeString = _GetType(child)
             # skip pseudoroot
             if typeString is NOTYPE and not prim.GetParent():
