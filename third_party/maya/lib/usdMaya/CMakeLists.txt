@@ -168,6 +168,8 @@ pxr_shared_library(${PXR_PACKAGE}
         usdTranslatorExport.mel
         usdTranslatorImport.mel
         usdTranslator.mel
+
+    DISABLE_PRECOMPILED_HEADERS
 )
 
 pxr_test_scripts(
