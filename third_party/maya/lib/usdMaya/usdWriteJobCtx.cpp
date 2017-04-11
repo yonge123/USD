@@ -95,7 +95,10 @@ SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool inst
             return SdfPath();
         }
     } else {
-        path = PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false);
+        path = mParentScopePath.IsEmpty() ?
+               PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false) :
+               SdfPath(mParentScopePath.GetString() +
+                       PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false).GetString());
     }
     return rootOverridePath(mArgs, path);
 }
@@ -117,8 +120,18 @@ bool usdWriteJobCtx::openFile(const std::string& filename, bool append)
         }
     }
 
+    if (!mArgs.parentScope.empty()) {
+        if (mArgs.parentScope[0] != '/') {
+            mArgs.parentScope = "/" + mArgs.parentScope;
+        }
+        SdfPath parentScopePath(mArgs.parentScope);
+        mParentScopePath = UsdGeomScope::Define(mStage, rootOverridePath(mArgs, parentScopePath)).GetPrim().GetPrimPath();
+    }    
+
     if (mArgs.exportInstances) {
-        SdfPath instancesPath(instancesScopeName);
+        SdfPath instancesPath(mParentScopePath.IsEmpty() ?
+                              instancesScopeName :
+                              mParentScopePath.GetString() + instancesScopeName);
         mInstancesPrim = mStage->OverridePrim(rootOverridePath(mArgs, instancesPath));
     }
 
