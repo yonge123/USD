@@ -31,10 +31,10 @@ namespace {
         return path;
     }
 
-    constexpr auto instancesScopeName = "/__instance_sources";
+    constexpr auto instancesScopeName = "/InstanceSources";
 }
 
-usdWriteJobCtx::usdWriteJobCtx(const JobExportArgs& args) : mArgs(args)
+usdWriteJobCtx::usdWriteJobCtx(const JobExportArgs& args) : mArgs(args), mNoInstances(true) 
 {
 
 }
@@ -77,12 +77,10 @@ SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool inst
 {
     SdfPath path;
     if (instanceSource) {
-        if (mInstancesScope) {
-            if (!mInstancesScope.IsActive()) {
-                mInstancesScope.SetActive(true);
-            }
+        if (mInstancesPrim) {
+            mNoInstances = false;
             std::stringstream ss;
-            ss << mInstancesScope.GetPath().GetString();
+            ss << mInstancesPrim.GetPath().GetString();
             MObject node = dagPath.node();
             ss << "/" << dagPath.fullPathName().asChar() + 1;
             if (!node.hasFn(MFn::kTransform)) {
@@ -129,28 +127,23 @@ bool usdWriteJobCtx::openFile(const std::string& filename, bool append)
         mParentScopePath = UsdGeomScope::Define(mStage, rootOverridePath(mArgs, parentScopePath)).GetPrim().GetPrimPath();
     }
 
-    if (mArgs.exportInstances) {
-        SdfPath instancesPath(mParentScopePath.IsEmpty() ?
-                              instancesScopeName :
-                              mParentScopePath.GetString() + instancesScopeName);
-        auto instancesSchema = UsdGeomScope::Define(mStage, rootOverridePath(mArgs, instancesPath));
-        mInstancesScope = instancesSchema.GetPrim();
-        instancesSchema.MakeInvisible();
-        mInstancesScope.SetActive(false);
+    if (mArgs.exportInstances) { 
+        SdfPath instancesPath(instancesScopeName); 
+        mInstancesPrim = mStage->OverridePrim(rootOverridePath(mArgs, instancesPath)); 
     }
 
     return true;
 }
 
-void usdWriteJobCtx::saveAndCloseStage()
-{
-    if (mArgs.exportInstances && !mInstancesScope.IsActive()) {
-        mStage->RemovePrim(mInstancesScope.GetPrimPath());
-    }
-    if (mStage->GetRootLayer()->PermissionToSave()) {
-        mStage->GetRootLayer()->Save();
-    }
-    mStage->Close();
+void usdWriteJobCtx::processInstances() 
+{ 
+    if (mArgs.exportInstances) { 
+        if (mNoInstances) { 
+            mStage->RemovePrim(mInstancesPrim.GetPrimPath()); 
+        } else { 
+            mInstancesPrim.SetSpecifier(SdfSpecifierOver); 
+        } 
+    } 
 }
 
 MayaPrimWriterPtr usdWriteJobCtx::createPrimWriter(

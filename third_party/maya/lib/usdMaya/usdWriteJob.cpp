@@ -316,6 +316,7 @@ void usdWriteJob::evalJob(double iFrame)
 
 void usdWriteJob::endJob()
 {
+    processInstances();
     UsdPrimSiblingRange usdRootPrims = mStage->GetPseudoRoot().GetChildren();
     
     // Write Variants (to first root prim path)
@@ -365,7 +366,10 @@ void usdWriteJob::endJob()
         // prim for the export... usdVariantRootPrimPath
         mStage->GetRootLayer()->SetDefaultPrim(defaultPrim);
     }
-    saveAndCloseStage();
+    if (mStage->GetRootLayer()->PermissionToSave()) {
+        mStage->GetRootLayer()->Save();
+    }
+    mStage->Close();
     mMayaPrimWriterList.clear(); // clear this so that no stage references are left around
     MGlobal::displayInfo("usdWriteJob::endJob Saving Stage");
 }
