@@ -76,6 +76,7 @@ pxr_shared_library(${PXR_PACKAGE}
         usdListShadingModes
         usdTranslatorExport
         usdTranslatorImport
+        usdCacheFormat
 
         Chaser
         ChaserRegistry
