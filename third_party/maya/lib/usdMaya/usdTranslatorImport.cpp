@@ -92,9 +92,11 @@ MStatus usdTranslatorImport::reader(const MFileObject & file,
                     } else {
                         MGlobal::displayError(
                         TfStringPrintf("No shadingMode '%s' found.  Setting shadingMode='none'", 
-                                        shadingMode.GetText()).c_str());
+                                        jobArgs.shadingMode.GetText()).c_str());
                         jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none;
                     }
+                } else if (theOption[1]=="arnold") {
+                    jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->arnold;
                 } else { 
                     TfToken modeToken(theOption[1].asChar()); 
                     if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(modeToken)) { 

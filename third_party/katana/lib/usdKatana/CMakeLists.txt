@@ -10,6 +10,7 @@ pxr_shared_library(${PXR_PACKAGE}
         ar
         sdf
         usd
+        usdAi
         usdImaging
         usdImagingGL
         usdShade
@@ -24,6 +25,7 @@ pxr_shared_library(${PXR_PACKAGE}
 
     PUBLIC_CLASSES
         attrMap
+        arnoldHelpers
         baseMaterialHelpers
         blindDataObject
         cache
@@ -37,6 +39,7 @@ pxr_shared_library(${PXR_PACKAGE}
         usdInPrivateData
         usdInPluginRegistry
 
+        readAiProcedural
         readBasisCurves
         readBlindData
         readCamera

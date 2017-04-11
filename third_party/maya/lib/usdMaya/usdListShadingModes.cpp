@@ -32,6 +32,7 @@ usdListShadingModes::doIt(const MArgList& args) {
     TfTokenVector v;
     if (argData.isFlagSet("export")) {
         v = PxrUsdMayaShadingModeRegistry::ListExporters();
+        v.push_back(TfToken("arnold"));
     } else if (argData.isFlagSet("import")) {
         v = PxrUsdMayaShadingModeRegistry::ListImporters();
     }

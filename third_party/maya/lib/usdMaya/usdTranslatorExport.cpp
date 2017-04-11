@@ -91,6 +91,8 @@ usdTranslatorExport::writer(const MFileObject &file,
                     if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode)) {
                         jobArgs.shadingMode = shadingMode;
                     }
+                } else if (theOption[1]=="arnold") {
+                    jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->arnold;
                 } else { 
                     TfToken modeToken(theOption[1].asChar()); 
                     if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(modeToken)) { 
@@ -163,6 +165,9 @@ usdTranslatorExport::writer(const MFileObject &file,
             if (theOption[0] == MString("root")) {
                 jobArgs.exportRootPath = theOption[1].asChar();
             }
+            if (theOption[0] == MString("parentScope")) {
+                jobArgs.parentScope = theOption[1].asChar();
+            }            
         }
         // Now resync start and end frame based on animation mode
         if (jobArgs.exportAnimation) {
