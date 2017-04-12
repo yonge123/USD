@@ -29,6 +29,7 @@ pxr_shared_library(usdImagingGL
         ${GLEW_LIBRARY}
         ${TBB_tbb_LIBRARY}
         ${TBB_tbbmalloc_LIBRARY}
+        ${OIIO_LIBRARIES}
 
     INCLUDE_DIRS
         ${PYTHON_INCLUDE_PATH}

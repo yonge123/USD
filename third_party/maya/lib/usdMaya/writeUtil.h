@@ -176,6 +176,8 @@ struct PxrUsdMayaWriteUtil
             VtVec3fArray* val);
     /// \}
 
+    /// Cleaning up attribute animation keys.
+    static void CleanupAttributeKeys(UsdAttribute attribute, UsdInterpolationType parameterInterpolation = UsdInterpolationTypeLinear);
 };
 
 

@@ -41,6 +41,11 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
+#include <OpenImageIO/imageio.h>
+#include <OpenImageIO/imagecache.h>
+
+struct ImagePlaneDef;
+
 TF_DECLARE_WEAK_PTRS(UsdImagingGLRefEngine);
 
 class UsdImagingGLRefEngine : public UsdImagingGLEngine, public TfWeakBase {
@@ -106,6 +111,8 @@ private:
     void _RenderPrimitive(const UsdPrim &prim, const UsdGeomGprim *gprimSchema, 
                           const VtArray<GfVec3f> &pts, const VtIntArray &nmvts, 
                           const VtIntArray &vts);
+
+    void _DrawImagePlanes();
 
     // Generates GPU buffers for raw float and index data.
     void _PopulateBuffers();
@@ -185,6 +192,10 @@ private:
     // The byte-offsets into the element array buffer indicating the start of
     // each line segment-- not needed if prim restart is supported.
     std::vector<GLvoid*> _lineVertIdxOffsets;
+
+    // Storing image planes
+    std::vector<ImagePlaneDef> _imagePlanes;
+    OIIO::ImageCache* _imageCache;
 
     // A rolling count of points, to assist in providing buffer offsets for the
     // raw data of all lines.

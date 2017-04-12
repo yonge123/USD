@@ -14,6 +14,7 @@ pxr_shared_library(${PXR_PACKAGE}
         usdRi
         usdShade
         usdUtils
+        usdAi
         vt
         ${Boost_PYTHON_LIBRARY}
         ${MAYA_Foundation_LIBRARY}
@@ -42,6 +43,7 @@ pxr_shared_library(${PXR_PACKAGE}
         primWriterRegistry
         query
         translatorCamera
+        translatorImagePlane
         translatorCurves
         translatorGprim
         translatorMaterial
@@ -85,14 +87,18 @@ pxr_shared_library(${PXR_PACKAGE}
 
         UserTaggedAttribute
 
+        ArnoldShaderExport
+
     PRIVATE_CLASSES
         debugCodes
         registryHelper
         MayaCameraWriter
+        MayaImagePlaneWriter
         MayaMeshWriter
         MayaNurbsCurveWriter
         MayaNurbsSurfaceWriter
         ModelKindWriter
+        VdbVisualizerWriter
 
     PRIVATE_HEADERS
         shadingModePxrRis_rfm_map.h
@@ -101,6 +107,7 @@ pxr_shared_library(${PXR_PACKAGE}
         MayaMeshWriter_PrimVars.cpp
         MayaMeshWriter_SubDiv.cpp
         primReaderCamera.cpp
+        primReaderImagePlane.cpp
         primReaderMaterial.cpp
         primReaderMesh.cpp
         primReaderNurbsCurves.cpp

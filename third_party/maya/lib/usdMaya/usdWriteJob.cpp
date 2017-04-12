@@ -271,7 +271,9 @@ bool usdWriteJob::beginJob(bool append)
                 mArgs.dagPaths,
                 mArgs.shadingMode,
                 mArgs.mergeTransformAndShape,
-                mArgs.usdModelRootOverridePath);
+                mArgs.usdModelRootOverridePath,
+                mArgs.parentScope,
+                mDagPathToUsdPathMap);
 
     if (!mModelKindWriter.MakeModelHierarchy(mStage)) {
         return false;
@@ -352,7 +354,9 @@ void usdWriteJob::endJob()
     }
 
     postCallback();
-    
+    // clear this so that no stage references are left around
+    // also, we are triggering a before save cleanup here
+    mMayaPrimWriterList.clear();
     // Unfortunately, MGlobal::isZAxisUp() is merely session state that does
     // not get recorded in Maya files, so we cannot rely on it being set
     // properly.  Since "Y" is the more common upAxis, we'll just use
@@ -371,7 +375,6 @@ void usdWriteJob::endJob()
         mStage->GetRootLayer()->Save();
     }
     mStage->Close();
-    mMayaPrimWriterList.clear(); // clear this so that no stage references are left around
     MGlobal::displayInfo("usdWriteJob::endJob Saving Stage");
 }
 

@@ -69,6 +69,8 @@ bool JobSharedArgs::parseSharedOption(const MStringArray& theOption)
                                        rfmShadingMode.GetText()).c_str());
                 shadingMode = PxrUsdMayaShadingModeTokens->none;
             }
+        } else if (theOption[1]=="arnold") {
+            shadingMode = PxrUsdMayaShadingModeTokens->arnold;
         } else {
             TfToken modeToken(theOption[1].asChar());
             if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(modeToken)) {
@@ -184,6 +186,9 @@ void JobExportArgs::parseSingleOption(const MStringArray& theOption)
     }    
     else if (theOption[0] == MString("root")) {
         exportRootPath = theOption[1].asChar();
+    }
+    else if (theOption[0] == MString("parentScope")) {
+        parentScope = theOption[1].asChar();
     }
 }
 
