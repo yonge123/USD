@@ -3,6 +3,7 @@ set(PXR_PACKAGE pxrUsdInShipped)
 pxr_plugin(${PXR_PACKAGE}
     KATANA_PLUGIN
     LIBRARIES
+        katanaAttrfncApi
         katanaOpApi
         katanaPluginApi
         kind
@@ -10,6 +11,9 @@ pxr_plugin(${PXR_PACKAGE}
         usdGeom
         usdKatana
         usdShade
+
+    PRIVATE_CLASSES
+        attrfnc_materialReference
 
     PRIVATE_HEADERS
         declareCoreOps.h
@@ -25,6 +29,7 @@ pxr_plugin(${PXR_PACKAGE}
         mesh.cpp
         model.cpp
         nurbsPatch.cpp
+        pointInstancer.cpp
         points.cpp
         scope.cpp
         uiUtils.cpp

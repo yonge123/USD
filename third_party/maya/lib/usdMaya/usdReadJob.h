@@ -26,11 +26,13 @@
 
 /// \file usdReadJob.h
 
+#include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/JobArgs.h"
 #include "usdMaya/primReaderContext.h"
 
 #include "pxr/usd/usd/prim.h"
-#include "pxr/usd/usd/treeIterator.h"
+#include "pxr/usd/usd/primRange.h"
 
 #include <maya/MDagModifier.h>
 #include <maya/MDagPath.h>
@@ -39,11 +41,15 @@
 #include <string>
 #include <vector>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 
 class usdReadJob
 {
   public:
 
+    PXRUSDMAYA_API
     usdReadJob(const std::string& iFileName, 
         const std::string& iPrimPath, 
         const std::map<std::string, std::string>& iVariants,
@@ -55,10 +61,14 @@ class usdReadJob
         const std::string& assemblyTypeName,
         const std::string& proxyShapeTypeName);
 
+    PXRUSDMAYA_API
     ~usdReadJob();
 
+    PXRUSDMAYA_API
     bool doIt(std::vector<MDagPath>* addedDagPaths);
+    PXRUSDMAYA_API
     bool redoIt();
+    PXRUSDMAYA_API
     bool undoIt();
 
     // Getters/Setters
@@ -72,9 +82,9 @@ class usdReadJob
     // usdImport, and an 'Expanded' representation-style import, respectively.
     // It would be great if we could combine these into a single traversal at
     // some point.
-    bool _DoImport(UsdTreeIterator& primIt,
+    bool _DoImport(UsdPrimRange& range,
                    const UsdPrim& usdRootPrim);
-    bool _DoImportWithProxies(UsdTreeIterator& primIt);
+    bool _DoImportWithProxies(UsdPrimRange& range);
 
     // These are helper methods for the proxy import method.
     bool _ProcessProxyPrims(
@@ -98,5 +108,8 @@ class usdReadJob
     const std::string _assemblyTypeName;
     const std::string _proxyShapeTypeName;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_USDREADJOB_H

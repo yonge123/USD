@@ -24,22 +24,29 @@
 #ifndef GLF_UVTEXTURESTORAGE_DATA_H
 #define GLF_UVTEXTURESTORAGE_DATA_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/glf/api.h"
 #include "pxr/imaging/glf/baseTextureData.h"
 
 #include "pxr/base/vt/value.h"
 
 #include <boost/shared_ptr.hpp>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfUVTextureStorageData);
 
 class GlfUVTextureStorageData : public GlfBaseTextureData
 {
 public:
+    GLF_API
     static GlfUVTextureStorageDataRefPtr
     New(unsigned int width,
         unsigned int height, 
         const VtValue &storageData);
 
+    GLF_API
     virtual ~GlfUVTextureStorageData();
 
    // GlfBaseTextureData overrides
@@ -71,20 +78,26 @@ public:
         return _wrapInfo;
     };
 
+    GLF_API
     virtual size_t ComputeBytesUsed() const;
 
     virtual size_t ComputeBytesUsedByMip(int mipLevel = 0) const {
         return ComputeBytesUsed();
     }
 
+    GLF_API
     virtual bool HasRawBuffer(int mipLevel = 0) const;
 
+    GLF_API
     virtual unsigned char * GetRawBuffer(int mipLevel = 0) const;
 
+    GLF_API
     virtual bool Read(int degradeLevel, bool generateMipmap);
 
+    GLF_API
     virtual bool IsCompressed() const;
 
+    GLF_API
     virtual int GetNumMipLevels() const;
 
 private:
@@ -111,4 +124,7 @@ private:
 
     unsigned char *_rawBuffer;
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
 #endif // GLF_UVTEXTURESTORAGE_DATA_H

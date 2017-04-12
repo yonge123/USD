@@ -23,8 +23,8 @@
 //
 /// \file PrimSpec.cpp
 
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/primSpec.h"
-
 #include "pxr/usd/sdf/accessorHelpers.h"
 #include "pxr/usd/sdf/attributeSpec.h"
 #include "pxr/usd/sdf/changeBlock.h"
@@ -53,6 +53,8 @@
 using std::pair;
 using std::string;
 using std::vector;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 SDF_DEFINE_SPEC(SdfPrimSpec, SdfSpec);
 
@@ -549,8 +551,11 @@ SDF_DEFINE_GET_SET(Hidden,             SdfFieldKeys->Hidden,        bool)
 SDF_DEFINE_GET_SET(SymmetryFunction,   SdfFieldKeys->SymmetryFunction, TfToken)
 SDF_DEFINE_GET_SET(SymmetricPeer,      SdfFieldKeys->SymmetricPeer, std::string)
 SDF_DEFINE_GET_SET(Prefix,             SdfFieldKeys->Prefix,        std::string)
+SDF_DEFINE_GET_SET(Suffix,             SdfFieldKeys->Suffix,        std::string)
 
 SDF_DEFINE_GET_SET(PrefixSubstitutions,  SdfFieldKeys->PrefixSubstitutions,
+                   VtDictionary)
+SDF_DEFINE_GET_SET(SuffixSubstitutions,  SdfFieldKeys->SuffixSubstitutions,
                    VtDictionary)
 
 SDF_DEFINE_GET_SET_HAS_CLEAR(Active,         SdfFieldKeys->Active,       bool)
@@ -908,3 +913,5 @@ SdfCreatePrimInLayer(const SdfLayerHandle& layer, const SdfPath& primPath)
 
     return primSpec;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

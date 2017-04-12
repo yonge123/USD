@@ -23,7 +23,7 @@
 //
 // \file LayerStack.cpp
 
-
+#include "pxr/pxr.h"
 #include "pxr/usd/pcp/layerStack.h"
 #include "pxr/usd/pcp/changes.h"
 #include "pxr/usd/pcp/layerStackRegistry.h"
@@ -43,6 +43,8 @@
 
 using std::string;
 using std::vector;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 ////////////////////////////////////////////////////////////////////////
 // Computing layer stacks
@@ -271,6 +273,25 @@ _FilterRelocationsForPath(const SdfRelocatesMap & relocates,
 
     // Return a map function representing the relocates.
     return PcpMapFunction::Create(siteRelocates, SdfLayerOffset());
+}
+
+////////////////////////////////////////////////////////////////////////
+
+bool
+Pcp_NeedToRecomputeDueToAssetPathChange(const PcpLayerStackPtr& layerStack)
+{
+    // Iterate through _sublayerSourceInfo to see if recomputing the
+    // asset paths used to open sublayers would result in different
+    // sublayers being opened.
+    for (const auto& sourceInfo : layerStack->_sublayerSourceInfo) {
+        const std::string& assetPath = SdfComputeAssetPathRelativeToLayer(
+            sourceInfo.layer, sourceInfo.authoredSublayerPath);
+        if (assetPath != sourceInfo.computedSublayerPath) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -505,6 +526,7 @@ PcpLayerStack::_BlowLayers()
     _layers.clear();
     _mapFunctions.clear();
     _layerTree = TfNullPtr;
+    _sublayerSourceInfo.clear();
     _assetPaths.clear();
     _mutedAssetPaths.clear();
 }
@@ -668,6 +690,8 @@ PcpLayerStack::_BuildLayerStack(
         SdfLayerRefPtr sublayer = SdfFindOrOpenRelativeToLayer(
             layer, &sublayerPath, layerArgs);
 
+        _sublayerSourceInfo.emplace_back(layer, sublayers[i], sublayerPath);
+
         if (!sublayer) {
             PcpErrorInvalidSublayerPathPtr err = 
                 PcpErrorInvalidSublayerPath::New();
@@ -760,3 +784,5 @@ operator<<(std::ostream& s, const PcpLayerStackRefPtr& x)
         return s << "@NULL@";
     }
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

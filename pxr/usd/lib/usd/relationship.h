@@ -24,6 +24,8 @@
 #ifndef USD_RELATIONSHIPS_H
 #define USD_RELATIONSHIPS_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usd/api.h"
 #include "pxr/usd/usd/common.h"
 #include "pxr/usd/usd/property.h"
 
@@ -32,6 +34,9 @@
 
 #include <string>
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 class UsdRelationship;
 
@@ -139,7 +144,8 @@ class UsdRelationship : public UsdProperty {
 public:
     /// Construct an invalid relationship.
     UsdRelationship()
-        : UsdProperty(UsdTypeRelationship, Usd_PrimDataHandle(), TfToken())
+        : UsdProperty(UsdTypeRelationship, Usd_PrimDataHandle(), SdfPath(), 
+                      TfToken())
     {
     }
 
@@ -161,6 +167,7 @@ public:
     /// What data this actually authors depends on what data is currently
     /// authored in the authoring layer, with respect to list-editing
     /// semantics, which we will document soon 
+    USD_API
     bool AppendTarget(const SdfPath& target) const;
 
     /// Removes \p target from the list of targets.
@@ -168,11 +175,13 @@ public:
     /// Passing paths to master prims or any other objects in masters will 
     /// cause an error to be issued. It is not valid to author targets to
     /// these objects.
+    USD_API
     bool RemoveTarget(const SdfPath& target) const;
 
     /// Clears all target edits from the current EditTarget, and makes
     /// the opinion explicit, which means we are effectively resetting the
     /// composed value of the targets list to empty.
+    USD_API
     bool BlockTargets() const;
 
     /// Make the authoring layer's opinion of the targets list explicit,
@@ -184,6 +193,7 @@ public:
     ///
     /// If any target in \p targets is invalid, no targets will be authored
     /// and this function will return false.
+    USD_API
     bool SetTargets(const SdfPathVector& targets) const;
 
     /// Remove all opinions about the target list from the current edit
@@ -192,10 +202,11 @@ public:
     /// Only remove the spec if \p removeSpec is true (leave the spec to
     /// preserve meta-data we may have intentionally authored on the
     /// relationship)
+    USD_API
     bool ClearTargets(bool removeSpec) const;
 
-    /// Compose this relationship's targets and return the result as a
-    /// vector of SdfPath.
+    /// Compose this relationship's targets and fill \p targets with the result.
+    /// All preexisting elements in \p targets are lost.
     ///
     /// By default, any relationship targets that point to a child prim or
     /// a property of a child prim beneath an instanceable prim will be
@@ -213,19 +224,17 @@ public:
     /// ultimately correspond to the same master.
     ///
     /// The result is not cached, so will be recomputed on every query.
+    USD_API
     bool GetTargets(SdfPathVector* targets,
                     bool forwardToObjectsInMasters = true) const;
 
-    /// Compose this relationship's \em ultimate targets, taking into
-    /// account "relationship forwarding", and return the result as a vector
-    /// of SdfPath. This method never returns relationship paths in the targets
-    /// vector.
+    /// Compose this relationship's \em ultimate targets, taking into account
+    /// "relationship forwarding", and fill \p targets with the result.  All
+    /// preexisting elements in \p targets are lost.  This method never inserts
+    /// relationship paths in \p targets.
     ///
     /// See documentation on GetTargets for information on the 
-    /// \p forwardToObjectsInMasters parameter. Note that setting this
-    /// parameter to false will stop the relationship forwarding process
-    /// at any targets that correspond to an object in a master. In this
-    /// case, this method will never return paths to an object in a master.
+    /// \p forwardToObjectsInMasters parameter.
     ///
     /// When composition errors occur, continue to collect successfully
     /// composed targets, but return false to indicate to the caller that
@@ -245,12 +254,14 @@ public:
     /// Forwarding" for details on the semantics.
     ///
     /// The result is not cached, so will be recomputed on every query.
+    USD_API
     bool GetForwardedTargets(SdfPathVector* targets,
                              bool forwardToObjectsInMasters = true) const;
 
     /// Returns true if any target path opinions have been authored. 
     /// Note that this may include opinions that clear targets and may not 
     /// indicate that target paths will exist for this relationship.
+    USD_API
     bool HasAuthoredTargets() const;
 
     /// @}
@@ -262,13 +273,15 @@ private:
     friend struct UsdPrim_TargetFinder;
 
     UsdRelationship(const Usd_PrimDataHandle &prim,
+                    const SdfPath &proxyPrimPath,
                     const TfToken& relName)
-        : UsdProperty(UsdTypeRelationship, prim, relName) {}
+        : UsdProperty(UsdTypeRelationship, prim, proxyPrimPath, relName) {}
 
     UsdRelationship(UsdObjType objType,
                     const Usd_PrimDataHandle &prim,
+                    const SdfPath &proxyPrimPath,
                     const TfToken &propName)
-        : UsdProperty(objType, prim, propName) {}
+        : UsdProperty(objType, prim, proxyPrimPath, propName) {}
 
     SdfRelationshipSpecHandle _CreateSpec(bool fallbackCustom=true) const;
     bool _Create(bool fallbackCustom) const;
@@ -286,5 +299,8 @@ private:
     SdfPath _GetTargetForAuthoring(const SdfPath &targetPath,
                                    std::string* whyNot = 0) const;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //USD_RELATIONSHIPS_H

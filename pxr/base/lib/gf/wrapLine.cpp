@@ -21,8 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/base/gf/line.h"
 
+#include "pxr/pxr.h"
+#include "pxr/base/gf/line.h"
 #include "pxr/base/tf/pyUtils.h"
 #include "pxr/base/tf/wrapTypeHelpers.h"
 
@@ -39,7 +40,9 @@ using namespace boost::python;
 
 using std::string;
 
+PXR_NAMESPACE_USING_DIRECTIVE
 
+namespace {
 
 static string _Repr(GfLine const &self) {
     return TF_PY_REPR_PREFIX + "Line(" + TfPyRepr(self.GetPoint(0.0)) + ", " +
@@ -70,6 +73,7 @@ SetDirectionHelper( GfLine &self, const GfVec3d &dir )
     self.Set( self.GetPoint(0.0), dir );
 }
 
+} // anonymous namespace 
 
 void wrapLine()
 {    

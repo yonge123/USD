@@ -30,7 +30,10 @@
 /// This file allows you to define architecture-specific or compiler-specific
 /// options to be used outside lib/arch.
 
+#include "pxr/pxr.h"
 #include "pxr/base/arch/export.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 #if defined(doxygen)
 
@@ -114,11 +117,12 @@
 /// numbers are run first.  It is unspecified if these functions are run
 /// before or after dynamic initialization of non-local variables.
 ///
-/// \p _name is the name of the function and the remaining arguments should
-/// be types for the signature of the function.  The types are only to make
-/// the name unique (when mangled);  the function will be called with no
-/// arguments so the arguments must not be used.  If you don't need any
-/// arguments you must use void.
+/// \p _name is the name of the function and must be unique across all
+/// invocations of ARCH_CONSTRUCTOR in the same translation unit.
+/// The remaining arguments should be types for the signature of the 
+/// function.  The types are only to make the name unique (when mangled);  
+/// the function will be called with no arguments so the arguments must 
+/// not be used.  If you don't need any arguments you must use void.
 ///
 /// \hideinitializer
 #   define ARCH_CONSTRUCTOR(_name, _priority, ...)
@@ -132,11 +136,12 @@
 /// numbers are run first.  It is unspecified if these functions are run
 /// before or after dynamically initialized non-local variables.
 ///
-/// \p _name is the name of the function and the remaining arguments should
-/// be types for the signature of the function.  The types are only to make
-/// the name unique (when mangled);  the function will be called with no
-/// arguments so the arguments must not be used.  If you don't need any
-/// arguments you must use void.
+/// \p _name is the name of the function and must be unique across all
+/// invocations of ARCH_CONSTRUCTOR in the same translation unit.
+/// The remaining arguments should be types for the signature of the 
+/// function.  The types are only to make the name unique (when mangled);  
+/// the function will be called with no arguments so the arguments must 
+/// not be used.  If you don't need any arguments you must use void.
 ///
 /// \hideinitializer
 #   define ARCH_DESTRUCTOR(_name, _priority, ...)
@@ -183,10 +188,12 @@
         unsigned int priority:8;    // Priority of function
     };
 
+#   define _ARCH_CAT(a, b) a ## b
+
     // Emit a Arch_ConstructorEntry in the __Data,pxrctor section.
 #   define ARCH_CONSTRUCTOR(_name, _priority, ...) \
         static void _name(__VA_ARGS__); \
-        static const Arch_ConstructorEntry arch_ctor_ ## _name \
+        static const Arch_ConstructorEntry _ARCH_CAT(arch_ctor_, _name) \
 	        __attribute__((used, section("__DATA,pxrctor"))) = { \
 	    reinterpret_cast<Arch_ConstructorEntry::Type>(&_name), \
             0u, \
@@ -197,7 +204,7 @@
     // Emit a Arch_ConstructorEntry in the __Data,pxrdtor section.
 #   define ARCH_DESTRUCTOR(_name, _priority, ...) \
         static void _name(__VA_ARGS__); \
-        static const Arch_ConstructorEntry arch_dtor_ ## _name \
+        static const Arch_ConstructorEntry _ARCH_CAT(arch_dtor_, _name) \
 	        __attribute__((used, section("__DATA,pxrdtor"))) = { \
 	    reinterpret_cast<Arch_ConstructorEntry::Type>(&_name), \
             0u, \
@@ -222,26 +229,35 @@
 #   pragma section(".pxrctor", read)
 #   pragma section(".pxrdtor", read)
 
-    // Emit a Arch_ConstructorEntry in the .pxrctor section.
+#   define _ARCH_CAT(a, b) a ## b
+
+    // Emit a Arch_ConstructorEntry in the .pxrctor section.  The namespace
+    // and extern are to convince the compiler and linker to leave the object
+    // in the final library/executable instead of stripping it out.  In
+    // clang/gcc we use __attribute__((used)) to do that.
 #   define ARCH_CONSTRUCTOR(_name, _priority, ...) \
         static void _name(__VA_ARGS__); \
+        namespace { \
         __declspec(allocate(".pxrctor")) \
-        static Arch_ConstructorEntry arch_ctor_ ## _name = { \
+        extern const Arch_ConstructorEntry _ARCH_CAT(arch_ctor_, _name) = { \
 	    reinterpret_cast<Arch_ConstructorEntry::Type>(&_name), \
             0u, \
             _priority \
         }; \
+        } \
         static void _name(__VA_ARGS__)
 
     // Emit a Arch_ConstructorEntry in the .pxrdtor section.
 #   define ARCH_DESTRUCTOR(_name, _priority, ...) \
         static void _name(__VA_ARGS__); \
+        namespace { \
         __declspec(allocate(".pxrdtor")) \
-        static Arch_ConstructorEntry arch_dtor_ ## _name = { \
+        extern const Arch_ConstructorEntry _ARCH_CAT(arch_dtor_, _name) = { \
 	    reinterpret_cast<Arch_ConstructorEntry::Type>(&_name), \
             0u, \
             _priority \
         }; \
+        } \
         static void _name(__VA_ARGS__)
 
     // Objects of this type run the ARCH_CONSTRUCTOR and ARCH_DESTRUCTOR
@@ -253,11 +269,15 @@
     };
 
     // Ensure we run constructor/destructors for this library.  We only
-    // need one of these per library so we use selectany.
+    // need one of these per library so we use selectany.  The pragma
+    // prevents optimization from discarding the symbol.
+    extern "C" {
+    __pragma(comment(linker, "/include:_arch_constructor_init"))
     __declspec(selectany)
     Arch_ConstructorInit _arch_constructor_init;
+    }
 
-#elif defined(ARCH_COMPILER_GCC)
+#elif defined(ARCH_COMPILER_GCC) || defined(ARCH_COMPILER_CLANG)
 
     // The used attribute is required to prevent these apparently unused
     // functions from being removed by the linker.
@@ -274,5 +294,7 @@
 // rather than fail mysteriously at runtime.
 
 #endif
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // ARCH_ATTRIBUTES_H

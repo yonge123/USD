@@ -21,6 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/stopwatch.h"
 #include "pxr/base/tf/pyResultConversions.h"
 
@@ -31,6 +34,8 @@
 using std::string;
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void wrapStopwatch() {
 
@@ -62,4 +67,3 @@ void wrapStopwatch() {
         .add_property("isShared", &This::IsShared)
         ;
 }
-                 

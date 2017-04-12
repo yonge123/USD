@@ -21,15 +21,19 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/stageCacheContext.h"
 
 #include "pxr/base/tf/enum.h"
 #include "pxr/base/tf/registryManager.h"
 #include "pxr/base/tf/instantiateStacked.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 using std::vector;
 
-TF_INSTANTIATE_STACKED(UsdStageCacheContext);
+TF_INSTANTIATE_DEFINED_STACKED(UsdStageCacheContext);
 
 TF_REGISTRY_FUNCTION(TfEnum) {
     TF_ADD_ENUM_NAME(UsdBlockStageCaches);
@@ -96,3 +100,6 @@ UsdStageCacheContext::_GetWritableCaches()
     }
     return caches;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

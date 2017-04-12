@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usdGeom/metrics.h"
 
 #include "pxr/usd/usd/stage.h"
@@ -30,6 +31,8 @@
 #include <boost/python/def.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void wrapMetrics()
 {

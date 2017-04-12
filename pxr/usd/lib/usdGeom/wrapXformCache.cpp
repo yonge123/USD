@@ -21,11 +21,30 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usdGeom/xformCache.h"
 
 #include <boost/python/class.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
+static
+tuple
+_GetLocalTransformation(
+        UsdGeomXformCache& self,
+        const UsdPrim& prim)
+{
+    bool resetsXformStack;
+    GfMatrix4d localXform = self.GetLocalTransformation(prim, &resetsXformStack);
+
+    return make_tuple(localXform, resetsXformStack);
+}
+
+} // anonymous namespace 
 
 void wrapUsdGeomXformCache()
 {
@@ -37,6 +56,8 @@ void wrapUsdGeomXformCache()
              &XformCache::GetLocalToWorldTransform, arg("prim"))
         .def("GetParentToWorldTransform",
              &XformCache::GetParentToWorldTransform, arg("prim"))
+        .def("GetLocalTransformation",
+             &_GetLocalTransformation, arg("prim"))
         .def("Clear", &XformCache::Clear)
         .def("SetTime", &XformCache::SetTime, arg("time"))
         .def("GetTime", &XformCache::GetTime)
@@ -48,3 +69,4 @@ void wrapUsdGeomXformCache()
         .def("Swap", &XformCache::Swap, arg("other"))
         ;
 }
+

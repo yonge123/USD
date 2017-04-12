@@ -24,12 +24,20 @@
 #ifndef USDSHADE_PARAMETER_H
 #define USDSHADE_PARAMETER_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usdShade/api.h"
 #include "pxr/usd/usd/attribute.h"
+#include "pxr/usd/usdShade/utils.h"
 
 #include <vector>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 class UsdShadeConnectableAPI;
 class UsdShadeOutput;
+class UsdShadeInput;
+class UsdShadeInterfaceAttribute;
 
 /// \class UsdShadeParameter
 ///
@@ -80,18 +88,21 @@ public:
     /// are of renderman custom struct types.
     ///
     /// \return true on success
+    USDSHADE_API
     bool SetRenderType(TfToken const& renderType) const;
 
     /// Return this parameter's specialized renderType, or an empty
     /// token if none was authored.
     ///
     /// \sa SetRenderType()
+    USDSHADE_API
     TfToken GetRenderType() const;
 
     /// Return true if a renderType has been specified for this
     /// parameter.
     ///
     /// \sa SetRenderType()
+    USDSHADE_API
     bool HasRenderType() const;
 
     /// @}
@@ -112,27 +123,36 @@ public:
     /// connections can be only single-targetted; that is, any given scalar
     /// parameter can target at most a single source/outputName pair.
     ///
-    /// \param source    the Shader object producing the value
-    /// \param outputName  the particular computation or parameter we 
-    ///        want to consume
-    /// \param outputIsParameter outputs and parameters are namespaced 
-    ///        differently on a shader prim, therefore we need to know
-    ///        to which we are connecting.  By default we assume we are
-    ///        connecting to a computational output, but you can specify
-    ///        instead a parameter (assuming your renderer supports it)
-    ///        with a value of \c true.
+    /// \param source the shader or node-graph object producing the value
+    /// \param sourceName the particular computation or parameter we 
+    ///        want to consume. This does not include the namespace prefix 
+    ///        associated with the source type.
+    /// \param sourceType the source of the connection can be an output, a 
+    ///        parameter or an interface attribute. Each one is namespaced 
+    ///        differently, so it is important to know the type of the source
+    ///        attribute. By default we assume we are connecting to a 
+    ///        computational output, but you can specify instead a parameter 
+    ///        or an interface attribute (assuming your renderer supports it).
+    ///        
     /// \sa GetConnectedSource(), GetConnectedSources()
+    ///
+    USDSHADE_API
     bool ConnectToSource(
             UsdShadeConnectableAPI const &source, 
             TfToken const &outputName,
-            bool outputIsParameter=false) const;
+            UsdShadeAttributeType sourceType=
+                UsdShadeAttributeType::Output) const;
 
     /// \overload
     /// Connect parameter to the source, whose location is specified by \p
     /// sourcePath.
     /// 
-    /// This is useful in contexts where the prim types are unknown.
+    /// \p sourcePath should be the properly namespaced property path. 
     /// 
+    /// This overload is provided for convenience, for use in contexts where 
+    /// the prim types are unknown or unavailable.
+    /// 
+    USDSHADE_API
     bool ConnectToSource(const SdfPath &sourcePath) const;
 
     /// \overload
@@ -143,13 +163,30 @@ public:
     /// them with inputs (that are simply UsdShadeParameters), we will 
     /// have parameter-to-parameter (or input-to-input) connections.
     /// 
+    USDSHADE_API
     bool ConnectToSource(UsdShadeParameter const &param) const;
 
     /// \overload
     ///
     /// Connects this parameter to the given output.
     /// 
+    USDSHADE_API
     bool ConnectToSource(UsdShadeOutput const &output) const;
+
+    /// \overload
+    ///
+    /// Connects this parameter to the given interface attribute.
+    /// 
+    USDSHADE_API
+    bool ConnectToSource(UsdShadeInterfaceAttribute const &interfaceAttribute) 
+        const;
+
+    /// \overload
+    ///
+    /// Connects this parameter to the given input.
+    /// 
+    USDSHADE_API
+    bool ConnectToSource(UsdShadeInput const &input) const;
 
     /// Disconnect source for this Parameter.
     ///
@@ -161,6 +198,7 @@ public:
     /// the current UsdEditTarget. 
     ///
     /// \sa ConnectToSource().
+    USDSHADE_API
     bool DisconnectSource() const;
 
     /// Clears source for this Parameter in the current UsdEditTarget.
@@ -169,23 +207,29 @@ public:
     /// rather than this function.
     ///
     /// \sa DisconnectSource(), UsdRelationship::ClearTargets()
+    USDSHADE_API
     bool ClearSource() const;
 
     /// If this parameter is connected, retrieve the \p source prim
-    /// and \p outputName to which it is connected.
+    /// and \p sourceName to which it is connected.
     ///
     /// We name the object that a parameter is connected to a "source," as 
     /// the "source" produces or contains a value for the parameter.
-    /// \return \c true if \p source is a defined prim on the stage, and 
+    /// 
+    /// \return 
+    /// \c true if \p source is a defined prim on the stage, and 
     /// \p source has an attribute that is either a parameter or output;
+    ///
     /// \c false if not connected to a defined prim.
     ///
     /// \note The python wrapping for this method returns a 
-    /// (source, ouputName) tuple if the parameter is connected, else
-    /// \c None
+    /// (source, sourceName, sourceType) tuple if the parameter is connected, 
+    /// else \c None
+    USDSHADE_API
     bool GetConnectedSource(
             UsdShadeConnectableAPI *source, 
-            TfToken *outputName) const;
+            TfToken *sourceName,
+            UsdShadeAttributeType *sourceType) const;
 
     /// Returns true if and only if the parameter is currently connected to the
     /// output of another \em defined shader object.
@@ -199,10 +243,15 @@ public:
     ///      // process unconnected parameter
     /// }
     /// \endcode
+    USDSHADE_API
     bool IsConnected() const;
 
+    /// \deprecated
+    /// 
     /// Return the name of the sibling relationship that would encode
     /// the connection for this parameter.
+    /// 
+    USDSHADE_API
     TfToken GetConnectionRelName() const;
 
     // ---------------------------------------------------------------
@@ -218,6 +267,7 @@ public:
     /// produces an \em invalid Parameter otherwise (i.e. 
     /// \ref UsdShadeParameter_bool_type "unspecified-bool-type()" will return
     /// false).
+    USDSHADE_API
     explicit UsdShadeParameter(const UsdAttribute &attr);
 
     /// Test whether a given UsdAttribute represents a valid Parameter, which
@@ -265,5 +315,8 @@ private:
     
     UsdAttribute _attr;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // USDSHADE_PARAMETER_H

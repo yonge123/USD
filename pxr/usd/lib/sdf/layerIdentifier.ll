@@ -23,8 +23,18 @@
 // language governing permissions and limitations under the Apache License.
 //
 
-#include <string>
+#include "pxr/pxr.h"
+#include "pxr/base/arch/fileSystem.h"
 #include "layerIdentifier.tab.h"
+ 
+#include <string>
+
+#ifndef fileno
+#define fileno(fd) ArchFileNo(fd)
+#endif
+#ifndef isatty
+#define isatty(fd) ArchFileIsaTTY(fd)
+#endif
 
 #define YYSTYPE std::string
 
@@ -33,6 +43,8 @@ typedef void *yyscan_t;
 
 // As a pure parser, we must define the following
 #define YY_DECL int layerIdentifierYylex(YYSTYPE *yylval_param, yyscan_t yyscanner)
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 %}
 

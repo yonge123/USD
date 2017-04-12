@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/listOp.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/sdf/reference.h"
@@ -36,6 +38,8 @@
 
 using std::string;
 using std::vector;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 TF_REGISTRY_FUNCTION(TfType)
 {
@@ -210,9 +214,9 @@ SdfListOp<T>::ApplyOperations(ItemVector* vec, const ApplyCallback& cb) const
         _AppendKeys(SdfListOpTypeExplicit, cb, &result, &search);
     }
     else {
-        unsigned int numToDelete = _deletedItems.size();
-        unsigned int numToAppend = _addedItems.size();
-        unsigned int numToOrder = _orderedItems.size();
+        size_t numToDelete = _deletedItems.size();
+        size_t numToAppend = _addedItems.size();
+        size_t numToOrder = _orderedItems.size();
 
         if (!cb &&  ((numToDelete+numToAppend+numToOrder) == 0)) {
             // nothing to do, so avoid copying vectors
@@ -598,7 +602,7 @@ struct Sdf_ListOpTraits<SdfUnregisteredValue>
 
 #define SDF_INSTANTIATE_LIST_OP(ValueType)                       \
     template class SdfListOp<ValueType>;                         \
-    template std::ostream&                                       \
+    template SDF_API std::ostream&                               \
     operator<<(std::ostream &, const SdfListOp<ValueType> &)     \
 
 SDF_INSTANTIATE_LIST_OP(int);
@@ -612,8 +616,10 @@ SDF_INSTANTIATE_LIST_OP(SdfPath);
 SDF_INSTANTIATE_LIST_OP(SdfReference);
 
 template
-void SdfApplyListOrdering(std::vector<string>* v, 
+SDF_API void SdfApplyListOrdering(std::vector<string>* v, 
                           const std::vector<string>& order);
 template
-void SdfApplyListOrdering(std::vector<TfToken>* v, 
+SDF_API void SdfApplyListOrdering(std::vector<TfToken>* v, 
                           const std::vector<TfToken>& order);
+
+PXR_NAMESPACE_CLOSE_SCOPE

@@ -28,6 +28,8 @@
 #include "pxr/usd/sdf/types.h"
 #include "pxr/usd/sdf/assetPath.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
@@ -141,11 +143,21 @@ UsdGeomCurves::GetSchemaAttributeNames(bool includeInherited)
         return localNames;
 }
 
+PXR_NAMESPACE_CLOSE_SCOPE
+
 // ===================================================================== //
 // Feel free to add custom code below this line. It will be preserved by
 // the code generator.
+//
+// Just remember to wrap code in the appropriate delimiters:
+// 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
+
+#include "pxr/usd/usdGeom/boundableComputeExtent.h"
+#include "pxr/base/tf/registryManager.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 TfToken 
 UsdGeomCurves::GetWidthsInterpolation() const
@@ -176,12 +188,19 @@ UsdGeomCurves::SetWidthsInterpolation(TfToken const &interpolation)
     return false;
 }
 
-#include "pxr/usd/usdGeom/pointBased.h"
-
 bool
 UsdGeomCurves::ComputeExtent(const VtVec3fArray& points, 
     const VtFloatArray& widths, VtVec3fArray* extent)
 {
+    // XXX: All curves can be bounded by their control points, excluding
+    //      catmull rom and hermite. For now, we treat hermite and catmull
+    //      rom curves like their convex-hull counterparts. While there are
+    //      some bounds approximations we could perform, hermite's
+    //      implementation is not fully supported and catmull rom splines
+    //      are very rare. For simplicity, we ignore these odd corner cases
+    //      and provide a still reasonable approximation, but we also 
+    //      recognize there could be some out-of-bounds error. 
+
     // We know nothing about the curve basis. Compute the extent as if it were 
     // a point cloud with some max width (convex hull).
     float maxWidth = (widths.size() > 0 ? 
@@ -197,3 +216,33 @@ UsdGeomCurves::ComputeExtent(const VtVec3fArray& points,
 
     return true;
 }
+
+static bool
+_ComputeExtentForCurves(
+    const UsdGeomBoundable& boundable, 
+    const UsdTimeCode& time, 
+    VtVec3fArray* extent)
+{
+    const UsdGeomCurves curves(boundable);
+    if (!TF_VERIFY(curves)) {
+        return false;
+    }
+
+    VtVec3fArray points;
+    if (!curves.GetPointsAttr().Get(&points, time)) {
+        return false;
+    }
+
+    VtFloatArray widths;
+    curves.GetWidthsAttr().Get(&widths, time);
+    
+    return UsdGeomCurves::ComputeExtent(points, widths, extent);
+}
+
+TF_REGISTRY_FUNCTION(UsdGeomBoundable)
+{
+    UsdGeomRegisterComputeExtentFunction<UsdGeomCurves>(
+        _ComputeExtentForCurves);
+}
+
+PXR_NAMESPACE_CLOSE_SCOPE

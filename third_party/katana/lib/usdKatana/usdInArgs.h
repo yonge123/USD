@@ -24,13 +24,11 @@
 #ifndef PXRUSDKATANA_USDIN_ARGS_H
 #define PXRUSDKATANA_USDIN_ARGS_H
 
+#include "pxr/pxr.h"
 #include "pxr/usd/usdGeom/bboxCache.h"
 #include "pxr/base/tf/refPtr.h"
 
 #include <tbb/enumerable_thread_specific.h>
-
-class PxrUsdKatanaUsdInArgs;
-typedef TfRefPtr<PxrUsdKatanaUsdInArgs> PxrUsdKatanaUsdInArgsRefPtr;
 
 /// \brief Reference counted container for op state that should be constructed
 /// at an ops root and passed to read USD prims into Katana attributes.
@@ -41,6 +39,10 @@ typedef TfRefPtr<PxrUsdKatanaUsdInArgs> PxrUsdKatanaUsdInArgsRefPtr;
 
 #include <FnAttribute/FnAttribute.h>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+class PxrUsdKatanaUsdInArgs;
+typedef TfRefPtr<PxrUsdKatanaUsdInArgs> PxrUsdKatanaUsdInArgsRefPtr;
 
 /// The sessionAttr is a structured GroupAttribute argument for delivering
 /// edits to the session layer of the stage. It replaces the earlier
@@ -86,28 +88,30 @@ public:
             UsdStageRefPtr stage,
             const std::string& rootLocation,
             const std::string& isolatePath,
+            const std::string& sessionLocation,
             FnAttribute::GroupAttribute sessionAttr,
             const std::string& ignoreLayerRegex,
             double currentTime,
             double shutterOpen,
             double shutterClose,
             const std::vector<double>& motionSampleTimes,
-            const std::set<std::string>& defaultMotionPaths,
             const StringListMap& extraAttributesOrNamespaces,
+            bool prePopulate,
             bool verbose,
             const char * errorMessage = 0) {
         return TfCreateRefPtr(new PxrUsdKatanaUsdInArgs(
                     stage, 
                     rootLocation,
                     isolatePath,
+                    sessionLocation,
                     sessionAttr,
                     ignoreLayerRegex,
                     currentTime,
                     shutterOpen,
                     shutterClose, 
                     motionSampleTimes,
-                    defaultMotionPaths,
                     extraAttributesOrNamespaces,
+                    prePopulate,
                     verbose,
                     errorMessage));
     }
@@ -131,6 +135,10 @@ public:
 
     const std::string& GetIsolatePath() const {
         return _isolatePath;
+    }
+
+    const std::string& GetSessionLocationPath() const {
+        return _sessionLocation;
     }
 
     FnAttribute::GroupAttribute GetSessionAttr() {
@@ -157,21 +165,12 @@ public:
         return _motionSampleTimes;
     }
 
-    const std::set<std::string>& GetDefaultMotionPaths() const {
-        return _defaultMotionPaths;
-    }
-
-    /// \brief Return true if motion blur is backward.
-    ///
-    /// PxrUsdIn supports both forward and backward motion blur. Motion
-    /// blur is considered backward if multiple samples are requested
-    /// and the first specified sample is later than the last sample.
-    const bool IsMotionBackward() const {
-        return _isMotionBackward;
-    }
-
     const StringListMap& GetExtraAttributesOrNamespaces() const {
         return _extraAttributesOrNamespaces;
+    }
+
+    bool GetPrePopulate() const {
+        return _prePopulate;
     }
 
     bool IsVerbose() const {
@@ -191,14 +190,15 @@ private:
             UsdStageRefPtr stage,
             const std::string& rootLocation,
             const std::string& isolatePath,
+            const std::string& sessionLocation,
             FnAttribute::GroupAttribute sessionAttr,
             const std::string& ignoreLayerRegex,
             double currentTime,
             double shutterOpen,
             double shutterClose,
             const std::vector<double>& motionSampleTimes,
-            const std::set<std::string>& defaultMotionPaths,
             const StringListMap& extraAttributesOrNamespaces,
+            bool prePopulate,
             bool verbose,
             const char * errorMessage = 0);
 
@@ -209,6 +209,7 @@ private:
     std::string _rootLocation;
     std::string _isolatePath;
 
+    std::string _sessionLocation;
     FnAttribute::GroupAttribute _sessionAttr;
     std::string _ignoreLayerRegex;
 
@@ -216,12 +217,11 @@ private:
     double _shutterOpen;
     double _shutterClose;
     std::vector<double> _motionSampleTimes;
-    std::set<std::string> _defaultMotionPaths;
-    bool _isMotionBackward;
 
     // maps the root-level attribute name to the specified attributes or namespaces
     StringListMap _extraAttributesOrNamespaces;
 
+    bool _prePopulate;
     bool _verbose;
 
     typedef tbb::enumerable_thread_specific< std::vector<UsdGeomBBoxCache> > _ThreadLocalBBoxCaches;
@@ -230,5 +230,84 @@ private:
     std::string _errorMessage;
 
 };
+
+
+// utility to make it easier to exit earlier from InitUsdInArgs
+struct ArgsBuilder
+{
+    UsdStageRefPtr stage;
+    std::string rootLocation;
+    std::string isolatePath;
+    std::string sessionLocation;
+    FnAttribute::GroupAttribute sessionAttr;
+    std::string ignoreLayerRegex;
+    double currentTime;
+    double shutterOpen;
+    double shutterClose;
+    std::vector<double> motionSampleTimes;
+    PxrUsdKatanaUsdInArgs::StringListMap extraAttributesOrNamespaces;
+    bool prePopulate;
+    bool verbose;
+    const char * errorMessage;
+    
+    
+    ArgsBuilder()
+    : currentTime(0.0)
+    , shutterOpen(0.0)
+    , shutterClose(0.0)
+    , prePopulate(false)
+    , verbose(true)
+    , errorMessage(0)
+    {
+    }
+    
+    PxrUsdKatanaUsdInArgsRefPtr build()
+    {
+        return PxrUsdKatanaUsdInArgs::New(
+            stage,
+            rootLocation,
+            isolatePath,
+            sessionLocation,
+            sessionAttr.isValid() ? sessionAttr :
+                    FnAttribute::GroupAttribute(true),
+            ignoreLayerRegex,
+            currentTime,
+            shutterOpen,
+            shutterClose,
+            motionSampleTimes,
+            extraAttributesOrNamespaces,
+            prePopulate,
+            verbose,
+            errorMessage);
+    }
+
+    void update(PxrUsdKatanaUsdInArgsRefPtr other)
+    {
+        stage = other->GetStage();
+        rootLocation = other->GetRootLocationPath();
+        isolatePath = other->GetIsolatePath();
+        sessionLocation = other->GetSessionLocationPath();
+        sessionAttr = other->GetSessionAttr();
+        ignoreLayerRegex = other->GetIgnoreLayerRegex();
+        currentTime = other->GetCurrentTime();
+        shutterOpen = other->GetShutterOpen();
+        shutterClose = other->GetShutterClose();
+        motionSampleTimes = other->GetMotionSampleTimes();
+        extraAttributesOrNamespaces = other->GetExtraAttributesOrNamespaces();
+        prePopulate = other->GetPrePopulate();
+        verbose = other->IsVerbose();
+        errorMessage = other->GetErrorMessage().c_str();
+    }
+
+    PxrUsdKatanaUsdInArgsRefPtr buildWithError(std::string errorStr)
+    {
+        errorMessage = errorStr.c_str();
+        return build();
+    }
+    
+};
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDKATANA_USDIN_ARGS_H

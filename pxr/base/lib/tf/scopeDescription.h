@@ -24,14 +24,19 @@
 #ifndef TF_SCOPEDESCRIPTION_H
 #define TF_SCOPEDESCRIPTION_H
 
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/preprocessorUtils.h"
 #include "pxr/base/tf/stringUtils.h"
+#include "pxr/base/tf/api.h"
 
 #include <boost/noncopyable.hpp>
 #include <boost/preprocessor/if.hpp>
 
 #include <vector>
 #include <string>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// \class TfScopeDescription
 ///
@@ -45,20 +50,20 @@ public:
     /// Construct with a description.
     /// Push \a description on the stack of descriptions. Note that currently,
     /// descriptions are only pushed/popped for execution in the main thread.
-    explicit TfScopeDescription(std::string const &description);
+    TF_API explicit TfScopeDescription(std::string const &description);
 
     /// Destructor.
     /// Pop the description stack. Note that currently, descriptions are only
     /// pushed/popped for execution in the main thread.
-    ~TfScopeDescription();
+    TF_API ~TfScopeDescription();
 
     /// Replace the description stack entry for this scope with the given \a
     /// description. Note that currently, this only has an effect on
     /// TfScopeDescriptions constructed in the main thread.
-    void SetDescription(std::string const &description);
+    TF_API void SetDescription(std::string const &description);
 
 private:
-    static void *operator new(size_t);
+    static void *operator new(::std::size_t);
     static void operator delete (void *);
 
     void _Dismiss();
@@ -71,7 +76,7 @@ private:
 /// Return a copy of the current description stack as a vector of strings.
 /// The most recently pushed description is at back(), and the least recently
 /// pushed description is at front().
-std::vector<std::string>
+TF_API std::vector<std::string>
 TfGetCurrentScopeDescriptionStack();
 
 /// Macro that accepts either a single string, or printf-style arguments and
@@ -80,5 +85,7 @@ TfGetCurrentScopeDescriptionStack();
     TfScopeDescription __scope_description__                                   \
     (BOOST_PP_IF(TF_NUM_ARGS(__VA_ARGS__),                                     \
                  TfStringPrintf(fmt, __VA_ARGS__), fmt))
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // TF_SCOPEDESCRIPTION_H

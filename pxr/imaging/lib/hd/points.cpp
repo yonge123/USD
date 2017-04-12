@@ -23,9 +23,12 @@
 //
 #include "pxr/imaging/hd/points.h"
 
-HdPoints::HdPoints(HdSceneDelegate* delegate, SdfPath const& id,
+PXR_NAMESPACE_OPEN_SCOPE
+
+
+HdPoints::HdPoints(SdfPath const& id,
                    SdfPath const& instancerId)
-    : HdRprim(delegate, id, instancerId)
+    : HdRprim(id, instancerId)
 {
     /*NOTHING*/
 }
@@ -34,3 +37,6 @@ HdPoints::~HdPoints()
 {
     /*NOTHING*/
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

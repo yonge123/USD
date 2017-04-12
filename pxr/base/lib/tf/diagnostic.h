@@ -35,8 +35,10 @@
 /// in this file is appropriate, (and more importantly, when they're not!)
 /// see \ref page_tf_Diagnostic.
 
+#include "pxr/pxr.h"
 #include "pxr/base/arch/function.h"
 #include "pxr/base/tf/diagnosticLite.h"
+#include "pxr/base/tf/api.h"
 
 #if defined(__cplusplus) || defined (doxygen)
 
@@ -46,6 +48,8 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <string>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 // Note: diagnosticLite.h defines the various macros, but we'll document
 // them here.  The following block is only for doxygen, not seen by a real
@@ -415,14 +419,14 @@ void Tf_TerminateHandler();
                            Tf_DiagnosticStringPrintf(__VA_ARGS__)))
 
 // Helpers for TF_VERIFY
-bool
+TF_API  bool
 Tf_FailedVerifyHelper(TfCallContext const &context,
                       char const *condition,
                       std::string const &msg);
 
 // Helpers for TF_VERIFY.
-std::string Tf_DiagnosticStringPrintf();
-std::string Tf_DiagnosticStringPrintf(const char *format, ...)
+TF_API std::string Tf_DiagnosticStringPrintf();
+TF_API std::string Tf_DiagnosticStringPrintf(const char *format, ...)
     ARCH_PRINTF_FUNCTION(1, 2)
     ;
 
@@ -452,14 +456,14 @@ struct Tf_DiagnosticHelper {
     TfCallContext const &GetContext() const { return _context; }
     TfDiagnosticType GetType() const { return _type; }
 
-    void IssueError(std::string const &msg) const;
-    void IssueError(char const *fmt, ...) const ARCH_PRINTF_FUNCTION(2,3);
-    void IssueFatalError(std::string const &msg) const;
-    void IssueFatalError(char const *fmt, ...) const ARCH_PRINTF_FUNCTION(2,3);
-    void IssueWarning(std::string const &msg) const;
-    void IssueWarning(char const *fmt, ...) const ARCH_PRINTF_FUNCTION(2,3);
-    void IssueStatus(std::string const &msg) const;
-    void IssueStatus(char const *fmt, ...) const ARCH_PRINTF_FUNCTION(2,3);
+    TF_API void IssueError(std::string const &msg) const;
+    TF_API void IssueError(char const *fmt, ...) const ARCH_PRINTF_FUNCTION(2,3);
+    TF_API void IssueFatalError(std::string const &msg) const;
+    TF_API void IssueFatalError(char const *fmt, ...) const ARCH_PRINTF_FUNCTION(2,3);
+    TF_API void IssueWarning(std::string const &msg) const;
+    TF_API void IssueWarning(char const *fmt, ...) const ARCH_PRINTF_FUNCTION(2,3);
+    TF_API void IssueStatus(std::string const &msg) const;
+    TF_API void IssueStatus(char const *fmt, ...) const ARCH_PRINTF_FUNCTION(2,3);
 
   private:
     TfCallContext _context;
@@ -476,8 +480,11 @@ struct Tf_DiagnosticHelper {
 ///
 /// This calls std::set_terminate() and installs signal handlers for SIGSEGV,
 /// SIGBUS, SIGFPE, and SIGABRT.
+TF_API
 void TfInstallTerminateAndCrashHandlers();
 
 ///@}
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // TF_DIAGNOSTIC_H

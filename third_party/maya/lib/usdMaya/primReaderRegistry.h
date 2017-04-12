@@ -26,10 +26,15 @@
 
 /// \file primReaderRegistry.h
 
+#include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/primReaderArgs.h"
 #include "usdMaya/primReaderContext.h"
 
 #include "pxr/base/tf/registryManager.h" 
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// \class PxrUsdMayaPrimReaderRegistry
 /// \brief Provides functionality to register and lookup usd Maya reader
@@ -59,6 +64,7 @@ struct PxrUsdMayaPrimReaderRegistry
             PxrUsdMayaPrimReaderContext*) > ReaderFn;
 
     /// \brief Register \p fn as a reader provider for \p type.
+    PXRUSDMAYA_API
     static void Register(const TfType& type, ReaderFn fn);
 
     /// \brief Register \p fn as a reader provider for \p T.
@@ -81,6 +87,7 @@ struct PxrUsdMayaPrimReaderRegistry
     /// \code
     /// prim.GetTypeName()
     /// \endcode
+    PXRUSDMAYA_API
     static ReaderFn Find(
             const TfToken& usdTypeName);
 
@@ -93,5 +100,8 @@ TF_REGISTRY_FUNCTION_WITH_TAG(PxrUsdMayaPrimReaderRegistry, T) \
     PxrUsdMayaPrimReaderRegistry::Register<T>(PxrUsdMaya_PrimReader_##T);\
 }\
 bool PxrUsdMaya_PrimReader_##T(const PxrUsdMayaPrimReaderArgs& argsVarName, PxrUsdMayaPrimReaderContext* ctxVarName)
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_PRIMREADERREGISTRY_H

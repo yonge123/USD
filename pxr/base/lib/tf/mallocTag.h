@@ -24,6 +24,9 @@
 #ifndef TF_MALLOCTAG_H
 #define TF_MALLOCTAG_H
 
+#include "pxr/pxr.h"
+#include "pxr/base/tf/api.h"
+
 #include <boost/noncopyable.hpp>
 #include <boost/optional.hpp>
 
@@ -32,6 +35,8 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// \file tf/mallocTag.h
 /// \ingroup group_tf_MallocTag
@@ -125,6 +130,7 @@ public:
         /// \b %%Exc : BytesExcl / BytesIncl * 100
         ///
         /// \b %%Totl : (%% Total). BytesExcl / TotalBytes * 100
+        TF_API
         std::string GetPrettyPrintString(PrintSetting setting = BOTH,
                                          size_t maxPrintedNodes = 100000) const;
 
@@ -133,6 +139,7 @@ public:
         /// This report is printed in a way that is intened to be used by
         /// xxtracediff.  If \p rootName is provided and is non-empty it will
         /// replace the name of the tree root in the report.
+        TF_API
         void Report(
             std::ostream &out,
             const boost::optional<std::string> &rootName =
@@ -176,7 +183,7 @@ public:
     /// memory allocated prior to calling \c Initialize() is not tracked i.e.
     /// all data refers to allocations that happen subsequent to calling \c
     /// Initialize().
-    static bool Initialize(std::string* errMsg);
+    TF_API static bool Initialize(std::string* errMsg);
 
     /// Return true if the tagging system is active.
     ///
@@ -191,14 +198,14 @@ public:
     /// The current total memory that has been allocated and not freed is
     /// returned. Memory allocated before calling \c Initialize() is not
     /// accounted for.
-    static size_t GetTotalBytes();
+    TF_API static size_t GetTotalBytes();
 
     /// Return the maximum total number of bytes that have ever been allocated
     /// at one time.
     ///
     /// This is simply the maximum value of GetTotalBytes() since Initialize()
     /// was called.
-    static size_t GetMaxTotalBytes();
+    TF_API static size_t GetMaxTotalBytes();
 
     /// Return a snapshot of memory usage.
     ///
@@ -212,7 +219,7 @@ public:
     /// the last call. If /p skipRepeated is \c true, then any repeated
     /// callsite is skipped. See the \c CallTree documentation for more
     /// details.
-    static bool GetCallTree(CallTree* tree, bool skipRepeated = true);
+    TF_API static bool GetCallTree(CallTree* tree, bool skipRepeated = true);
 
 private:
     // Enum describing whether allocations are being tagged in an associated
@@ -317,9 +324,9 @@ public:
         }
 
     private:
-        void _Begin(const char* name);
-        void _Begin(const std::string& name);
-        void _End();
+        TF_API void _Begin(const char* name);
+        TF_API void _Begin(const std::string& name);
+        TF_API void _End();
 
         _ThreadData* _threadData;
 
@@ -393,7 +400,7 @@ public:
     ///
     /// If \c name is supplied and does not match the tag at the top of the
     /// stack, a warning message is issued.
-    static void Pop(const char* name = NULL);
+    TF_API static void Pop(const char* name = NULL);
 
     /// \overload
     static void Pop(const std::string& name) {
@@ -417,7 +424,7 @@ public:
     /// with 'Csd' but nothing starting with 'CsdScene::_Populate' except
     /// 'CsdScene::_PopulatePrimCacheLocal'. Use the empty string to disable
     /// debugging traps.
-    static void SetDebugMatchList(const std::string& matchList);
+    TF_API static void SetDebugMatchList(const std::string& matchList);
 
     /// Sets the tags to trace.
     ///
@@ -440,14 +447,14 @@ public:
     /// with 'Csd' but nothing starting with 'CsdScene::_Populate' except
     /// 'CsdScene::_PopulatePrimCacheLocal'.  Use the empty string to disable
     /// stack capturing.
-    static void SetCapturedMallocStacksMatchList(const std::string& matchList);
+    TF_API static void SetCapturedMallocStacksMatchList(const std::string& matchList);
 
     /// Returns the captured malloc stack traces for allocations billed to the
     /// malloc tags passed to SetCapturedMallocStacksMatchList().
     ///
     /// \note This method also clears the internally held set of captured
     /// stacks.
-    static std::vector<std::vector<uintptr_t> > GetCapturedMallocStacks();
+    TF_API static std::vector<std::vector<uintptr_t> > GetCapturedMallocStacks();
 
 private:
     friend struct Tf_MallocGlobalData;
@@ -483,7 +490,7 @@ private:
     friend class TfMallocTag::Auto;
     class Tls;
     friend class TfMallocTag::Tls;
-    static bool _doTagging;
+    TF_API static bool _doTagging;
 };
 
 /// Top-down memory tagging system.
@@ -525,21 +532,24 @@ typedef TfMallocTag::Auto2 TfAutoMallocTag2;
 /// \remark Placed in .h files.
 ///
 /// \hideinitializer
+//
+PXR_NAMESPACE_CLOSE_SCOPE                                                 
+
 #define TF_MALLOC_TAG_NEW(name1, name2)                                       \
     /* this is for STL purposes */                                            \
-    inline void* operator new(size_t, void* ptr) {                            \
+    inline void* operator new(::std::size_t, void* ptr) {                     \
         return ptr;                                                           \
     }                                                                         \
                                                                               \
-    inline void* operator new(size_t s) {                                     \
-        TfAutoMallocTag tag1(name1);                                          \
-        TfAutoMallocTag tag2(name2);                                          \
+    inline void* operator new(::std::size_t s) {                              \
+        PXR_NS::TfAutoMallocTag tag1(name1);                                  \
+        PXR_NS::TfAutoMallocTag tag2(name2);                                  \
         return malloc(s);                                                     \
     }                                                                         \
                                                                               \
-    inline void* operator new[](size_t s) {                                   \
-        TfAutoMallocTag tag1(name1);                                          \
-        TfAutoMallocTag tag2(name2);                                          \
+    inline void* operator new[](::std::size_t s) {                            \
+        PXR_NS::TfAutoMallocTag tag1(name1);                                  \
+        PXR_NS::TfAutoMallocTag tag2(name2);                                  \
         return malloc(s);                                                     \
     }                                                                         \
                                                                               \

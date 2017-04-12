@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/vt/value.h"
 
 #include "pxr/base/vt/array.h"
@@ -60,6 +62,7 @@ using namespace boost::python;
 using std::string;
 using std::map;
 
+PXR_NAMESPACE_OPEN_SCOPE
 
 TfPyObjWrapper
 Vt_GetPythonObjectFromHeldValue(VtValue const &self)
@@ -67,6 +70,11 @@ Vt_GetPythonObjectFromHeldValue(VtValue const &self)
     return self._GetPythonObject();
 }
 
+PXR_NAMESPACE_CLOSE_SCOPE
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 // This is only for testing and hitting code coverage.
 static string _test_ValueTypeName(VtValue const &val) {
@@ -235,6 +243,10 @@ struct Vt_ValueFromPython {
     }
 };
 
+} // anonymous namespace 
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 // XXX: Disable rvalue conversion of TfType.  It causes a mysterious
 //      crash and we don't need any implicit conversions.
 template <>
@@ -242,6 +254,8 @@ VtValue Vt_ValueFromPythonRegistry::
 _Extractor::_RValueHolder<TfType>::Invoke(PyObject *obj) const {
     return VtValue();
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 void wrapValue()
 {
@@ -283,8 +297,8 @@ void wrapValue()
     def("UInt64", Vt_ValueWrapper::Create<uint64_t>, 
         TfStringPrintf(funcDocString, "UInt64","uint64_t","uint64_t").c_str());
 
-    def("Half", Vt_ValueWrapper::Create<half>, 
-        TfStringPrintf(funcDocString, "Half","half","half").c_str());
+    def("Half", Vt_ValueWrapper::Create<GfHalf>, 
+        TfStringPrintf(funcDocString, "Half","half","GfHalf").c_str());
     def("Float", Vt_ValueWrapper::Create<float>, 
         TfStringPrintf(funcDocString, "Float","float","float").c_str());
     def("Double", Vt_ValueWrapper::Create<double>, 
@@ -294,8 +308,8 @@ void wrapValue()
     // nobody's registered anything before us.
 
     if (Vt_ValueFromPythonRegistry::HasConversions()) {
-	TF_FATAL_ERROR("Vt was not the first library to register VtValue "
-		       "from-python conversions!");
+        TF_FATAL_ERROR("Vt was not the first library to register VtValue "
+                       "from-python conversions!");
     }
 
     // register conversion types in reverse order, because the extractor

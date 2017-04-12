@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usdGeom/xformOp.h"
 #include "pxr/usd/usdGeom/xformable.h"
 #include "pxr/usd/usd/prim.h"
@@ -33,6 +34,9 @@
 #include "pxr/base/gf/vec4d.h"
 
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 TF_DEFINE_PUBLIC_TOKENS(UsdGeomXformOpTypes, USDGEOM_XFORM_OP_TYPES);
 
@@ -427,8 +431,8 @@ UsdGeomXformOp::GetOpTransform(UsdGeomXformOp::Type const opType,
         doubleVal  = opVal.UncheckedGet<double>();
     } else if (opVal.IsHolding<float>()) {
         doubleVal = opVal.UncheckedGet<float>();
-    } else if (opVal.IsHolding<half>()) {
-        doubleVal = opVal.UncheckedGet<half>();
+    } else if (opVal.IsHolding<GfHalf>()) {
+        doubleVal = opVal.UncheckedGet<GfHalf>();
     } else {
         isScalarVal = false;
     }
@@ -556,3 +560,6 @@ UsdGeomXformOp::GetOpTransform(UsdTimeCode time) const
 
     return result;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

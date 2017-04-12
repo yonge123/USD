@@ -26,12 +26,15 @@
 
 /// \file vt/array.h
 
+#include "pxr/pxr.h"
+#include "pxr/base/vt/api.h"
 #include "pxr/base/vt/hash.h"
 #include "pxr/base/vt/operators.h"
 #include "pxr/base/vt/streamOut.h"
 #include "pxr/base/vt/traits.h"
 #include "pxr/base/vt/types.h"
 
+#include "pxr/base/arch/pragmas.h"
 #include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/tf/iterator.h"
 #include "pxr/base/tf/mallocTag.h"
@@ -51,6 +54,8 @@
 #include <vector>
 
 #include <boost/functional/hash.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// \class VtArray 
 ///
@@ -375,18 +380,25 @@ class VtArray {
         return !(*this == other);
     }
 
+ARCH_PRAGMA_PUSH
+ARCH_PRAGMA_FORCING_TO_BOOL
+ARCH_PRAGMA_UNSAFE_USE_OF_BOOL
+ARCH_PRAGMA_UNARY_MINUS_ON_UNSIGNED
     VTOPERATOR_CPPARRAY(+)
     VTOPERATOR_CPPARRAY(-)
     VTOPERATOR_CPPARRAY(*)
     VTOPERATOR_CPPARRAY(/)
     VTOPERATOR_CPPARRAY(%)
     VTOPERATOR_CPPARRAY_UNARY(-)
+ARCH_PRAGMA_POP
 
   public:
     // XXX -- Public so VtValue::_ArrayHelper<T,U>::GetReserved() has access.
     Vt_Reserved* _GetReserved() {
         if (!_data) {
             _data.reset(new _Data);
+        } else {
+            _Detach();
         }
         return &_data->reserved;
     }
@@ -479,6 +491,10 @@ template <typename T>
 struct VtIsArray< VtArray <T> > : public VtTrueType {};
 
 // free functions for operators combining scalar and array types
+ARCH_PRAGMA_PUSH
+ARCH_PRAGMA_FORCING_TO_BOOL
+ARCH_PRAGMA_UNSAFE_USE_OF_BOOL
+ARCH_PRAGMA_UNARY_MINUS_ON_UNSIGNED
 VTOPERATOR_CPPSCALAR(+)
 VTOPERATOR_CPPSCALAR(-)
 VTOPERATOR_CPPSCALAR(*)
@@ -486,5 +502,8 @@ VTOPERATOR_CPPSCALAR_DOUBLE(*)
 VTOPERATOR_CPPSCALAR(/)
 VTOPERATOR_CPPSCALAR_DOUBLE(/)
 VTOPERATOR_CPPSCALAR(%)
+ARCH_PRAGMA_POP
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // VT_ARRAY_H

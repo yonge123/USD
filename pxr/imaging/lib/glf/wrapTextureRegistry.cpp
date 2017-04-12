@@ -34,6 +34,10 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 static void _RequiresGarbageCollection()
 {
     GlfTextureRegistry::GetInstance().RequiresGarbageCollection();
@@ -52,6 +56,8 @@ static void _Reset()
 {
     GlfTextureRegistry::GetInstance().Reset();
 }
+
+} // anonymous namespace 
 
 void wrapTextureRegistry()
 {    
@@ -74,5 +80,3 @@ void wrapTextureRegistry()
         .staticmethod("Reset")
         ;
 }
-    
-

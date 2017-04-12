@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/variantSets.h"
 #include "pxr/usd/usd/editContext.h"
 
@@ -38,6 +39,10 @@ using std::string;
 using std::vector;
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static object
 _HasAuthoredVariantSelection(const UsdVariantSet &self)
@@ -60,6 +65,8 @@ static UsdPyEditContext
 _GetVariantEditContext(const UsdVariantSet &self, const SdfLayerHandle &layer) {
     return UsdPyEditContext(self.GetVariantEditContext(layer));
 }
+
+} // anonymous namespace 
 
 void wrapUsdVariantSets()
 {
@@ -100,4 +107,3 @@ void wrapUsdVariantSets()
              (arg("variantSetName"), arg("variantName")))
         ;
 }
-

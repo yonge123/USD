@@ -28,6 +28,8 @@
 #ifndef PXRUSDMAYAGL_SOFTSELECTHELPER_H
 #define PXRUSDMAYAGL_SOFTSELECTHELPER_H
 
+#include "pxr/pxr.h"
+#include "pxrUsdMayaGL/api.h"
 #include "pxr/base/tf/hash.h"
 
 #include <maya/MColor.h>
@@ -36,6 +38,9 @@
 #include <maya/MString.h>
 
 #include <unordered_map>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// \class UsdMayaGLSoftSelectHelper
 /// \brief Helper class to store soft ("rich") selection state while
@@ -52,12 +57,15 @@
 class UsdMayaGLSoftSelectHelper 
 {
 public:
+    PXRUSDMAYAGL_API
     UsdMayaGLSoftSelectHelper();
 
     /// \brief Clears the saved soft selection state.
+    PXRUSDMAYAGL_API
     void Reset();
 
     /// \brief Repopulates soft selection state
+    PXRUSDMAYAGL_API
     void Populate();
 
     /// \brief Returns true if \p dagPath is in the softSelection.  Also returns
@@ -65,12 +73,14 @@ public:
     ///
     /// NOTE: until MAYA-73448 (and MAYA-73513) is fixed, the \p weight value is
     /// arbitrary.
+    PXRUSDMAYAGL_API
     bool GetWeight(const MDagPath& dagPath, float* weight) const;
 
     /// \brief Returns true if \p dagPath is in the softSelection.  Also returns
     /// the appropriate color based on the distance/weight and the current soft
     /// select color curve.  It will currently always return (0, 0, 1) at the
     /// moment.
+    PXRUSDMAYAGL_API
     bool GetFalloffColor(const MDagPath& dagPath, MColor* falloffColor) const;
 
 private:
@@ -89,5 +99,8 @@ private:
     MColor _wireColor;
     bool _populated;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYAGL_SOFTSELECTHELPER_H

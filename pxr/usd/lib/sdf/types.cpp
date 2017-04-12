@@ -22,8 +22,9 @@
 // language governing permissions and limitations under the Apache License.
 //
 // Types.cpp
-#include "pxr/usd/sdf/types.h"
 
+#include "pxr/pxr.h"
+#include "pxr/usd/sdf/types.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/sdf/schema.h"
 #include "pxr/usd/sdf/valueTypeName.h"
@@ -42,6 +43,8 @@
 using std::map;
 using std::string;
 using std::vector;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DEFINE_ENV_SETTING(SDF_WRITE_OLD_TYPENAMES, false,
                       "Write values using old type-name alias");
@@ -361,18 +364,21 @@ bool SdfBoolFromString( const std::string &str, bool *parseOk )
     if (parseOk)
         *parseOk = true;
 
-    const char* s = str.c_str();
-    if (strcasecmp(s, "false") == 0)
+    std::string s = str;
+    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+
+    if (strcmp(s.c_str(), "false") == 0)
         return false;
-    if (strcasecmp(s, "true") == 0)
+    if (strcmp(s.c_str(), "true") == 0)
         return true;
-    if (strcasecmp(s, "no") == 0)
+    if (strcmp(s.c_str(), "no") == 0)
         return false;
-    if (strcasecmp(s, "yes") == 0)
+    if (strcmp(s.c_str(), "yes") == 0)
         return true;
-    if (strcmp(s, "0") == 0)
+
+    if (strcmp(s.c_str(), "0") == 0)
         return false;
-    if (strcmp(s, "1") == 0)
+    if (strcmp(s.c_str(), "1") == 0)
         return true;
 
     if (parseOk)
@@ -524,3 +530,5 @@ operator<<(std::ostream& ostr, SdfValueBlock const& block)
 { 
     return ostr << "None"; 
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

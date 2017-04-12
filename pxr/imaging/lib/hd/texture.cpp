@@ -32,8 +32,11 @@
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
-HdTexture::HdTexture(HdSceneDelegate* delegate, SdfPath const& id)
-  : HdBprim(delegate, id)
+PXR_NAMESPACE_OPEN_SCOPE
+
+
+HdTexture::HdTexture(SdfPath const& id)
+  : HdBprim(id)
   , _textureResource()
 {
 }
@@ -43,16 +46,17 @@ HdTexture::~HdTexture()
 }
 
 void
-HdTexture::Sync()
+HdTexture::Sync(HdSceneDelegate *sceneDelegate,
+                HdRenderParam   *renderParam,
+                HdDirtyBits     *dirtyBits)
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
- 
+
+    TF_UNUSED(renderParam);
+
     SdfPath const& id = GetID();
-    HdSceneDelegate* delegate = GetDelegate();
-    HdChangeTracker& changeTracker = 
-                                delegate->GetRenderIndex().GetChangeTracker();    
-    HdChangeTracker::DirtyBits bits = changeTracker.GetBprimDirtyBits(id);
+    HdDirtyBits bits = *dirtyBits;
 
     // XXX : DirtyParams and DirtyTexture are currently the same but they
     //       can be separated functionally and have different 
@@ -60,7 +64,7 @@ HdTexture::Sync()
     if ((bits & (DirtyParams | DirtyTexture)) != 0) {
         HdResourceRegistry *resourceRegistry = 
                                             &HdResourceRegistry::GetInstance();
-        HdTextureResource::ID texID = delegate->GetTextureResourceID(id);
+        HdTextureResource::ID texID = sceneDelegate->GetTextureResourceID(id);
         {
             HdInstance<HdTextureResource::ID, HdTextureResourceSharedPtr> 
                 texInstance;
@@ -78,7 +82,7 @@ HdTexture::Sync()
                     _textureResource = HdTextureResourceSharedPtr(
                         new HdSimpleTextureResource(texture, false));
                 } else if (texID == HdTextureResource::ComputeFallbackPtexHash()) {
-                    _textureResource = delegate->GetTextureResource(id);
+                    _textureResource = sceneDelegate->GetTextureResource(id);
                     // Hacky Ptex Fallback Implementation (nonfunctional)
                     // For future reference
                     /*if (texResource->GetTexelsTextureId() == 0) {
@@ -95,8 +99,7 @@ HdTexture::Sync()
                         }
                     }*/
                 } else {
-                    _textureResource =
-                        delegate->GetTextureResource(id);
+                    _textureResource = sceneDelegate->GetTextureResource(id);
                 }
 
                 texInstance.SetValue(_textureResource);
@@ -109,9 +112,11 @@ HdTexture::Sync()
             }
         }
     }
+
+    *dirtyBits = Clean;
 }
 
-int
+HdDirtyBits
 HdTexture::GetInitialDirtyBitsMask() const
 {
     return AllDirty;
@@ -128,3 +133,6 @@ HdTexture::ShouldGenerateMipMaps() const
 {
     return true;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

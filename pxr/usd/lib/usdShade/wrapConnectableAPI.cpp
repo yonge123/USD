@@ -22,7 +22,6 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/usd/usdShade/connectableAPI.h"
-
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/conversions.h"
 
@@ -39,12 +38,18 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 #define WRAP_CUSTOM                                                     \
     template <class Cls> static void _CustomWrapCode(Cls &_class)
 
 // fwd decl.
 WRAP_CUSTOM;
 
+
+} // anonymous namespace
 
 void wrapUsdShadeConnectableAPI()
 {
@@ -92,19 +97,120 @@ void wrapUsdShadeConnectableAPI()
 // }
 //
 // Of course any other ancillary or support code may be provided.
+// 
+// Just remember to wrap code in the appropriate delimiters:
+// 'namespace {', '}'.
+//
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
+namespace {
+
+#include <boost/python/tuple.hpp>
+
+static object
+_GetConnectedSource(const UsdProperty &shadingProp)
+{
+    UsdShadeConnectableAPI source;
+    TfToken                sourceName;
+    UsdShadeAttributeType  sourceType;
+    
+    if (UsdShadeConnectableAPI::GetConnectedSource(shadingProp, 
+            &source, &sourceName, &sourceType)){
+        return boost::python::make_tuple(source, sourceName, sourceType);
+    } else {
+        return object();
+    }
+}
+
 WRAP_CUSTOM {
+
+    bool (*ConnectToSource_1)(
+        UsdProperty const &,
+        UsdShadeConnectableAPI const&,
+        TfToken const &,
+        UsdShadeAttributeType const,
+        SdfValueTypeName) = 
+            &UsdShadeConnectableAPI::ConnectToSource;
+
+    bool (*ConnectToSource_2)(
+        UsdProperty const &,
+        SdfPath const &) = &UsdShadeConnectableAPI::ConnectToSource;
+
+    bool (*ConnectToSource_3)(
+        UsdProperty const &,
+        UsdShadeInput const &) = &UsdShadeConnectableAPI::ConnectToSource;
+
+    bool (*ConnectToSource_4)(
+        UsdProperty const &,
+        UsdShadeOutput const &) = &UsdShadeConnectableAPI::ConnectToSource;
+
+    bool (*CanConnect_Input)(
+        UsdShadeInput const &,
+        UsdAttribute const &) = &UsdShadeConnectableAPI::CanConnect;
+       
+    bool (*CanConnect_Output)(
+        UsdShadeOutput const &,
+        UsdAttribute const &) = &UsdShadeConnectableAPI::CanConnect;
+
     _class
         .def(init<UsdShadeShader const &>(arg("shader")))
-        .def(init<UsdShadeSubgraph const&>(arg("subgraph")))
+        .def(init<UsdShadeNodeGraph const&>(arg("nodeGraph")))
 
         .def("IsShader", &UsdShadeConnectableAPI::IsShader)
-        .def("IsSubgraph", &UsdShadeConnectableAPI::IsSubgraph)
+        .def("IsNodeGraph", &UsdShadeConnectableAPI::IsNodeGraph)
+
+        .def("CanConnect", CanConnect_Input,
+            (arg("input"), arg("source")))
+        .def("CanConnect", CanConnect_Output,
+            (arg("output"), arg("source")=UsdAttribute()))
+        .staticmethod("CanConnect")
+
+        .def("ConnectToSource", ConnectToSource_1, 
+            (arg("shadingProp"), 
+             arg("source"), arg("sourceName"), 
+             arg("sourceType")=UsdShadeAttributeType::Output,
+             arg("typeName")=SdfValueTypeName()))
+        .def("ConnectToSource", ConnectToSource_2,
+            (arg("shadingProp"), arg("sourcePath")))
+        .def("ConnectToSource", ConnectToSource_3,
+            (arg("shadingProp"), arg("input")))
+        .def("ConnectToSource", ConnectToSource_4,
+            (arg("shadingProp"), arg("output")))
+        .staticmethod("ConnectToSource")
+
+        .def("GetConnectedSource", _GetConnectedSource,
+            (arg("shadingProp")))
+            .staticmethod("GetConnectedSource")
+
+        .def("HasConnectedSource", &UsdShadeConnectableAPI::HasConnectedSource,
+            (arg("shadingProp")))
+            .staticmethod("HasConnectedSource")
+        
+        .def("DisconnectSource", &UsdShadeConnectableAPI::DisconnectSource,
+            (arg("shadingProp")))
+            .staticmethod("DisconnectSource")
+        
+        .def("ClearSource", &UsdShadeConnectableAPI::ClearSource,
+            (arg("shadingProp")))
+            .staticmethod("ClearSource")
+        
+        .def("CreateOutput", &UsdShadeConnectableAPI::CreateOutput,
+             (arg("name"), arg("type")))
+        .def("GetOutput", &UsdShadeConnectableAPI::GetOutput, arg("name"))
+        .def("GetOutputs", &UsdShadeConnectableAPI::GetOutputs,
+             return_value_policy<TfPySequenceToList>())
+
+        .def("CreateInput", &UsdShadeConnectableAPI::CreateInput,
+             (arg("name"), arg("type")))
+        .def("GetInput", &UsdShadeConnectableAPI::GetInput, arg("name"))
+        .def("GetInputs", &UsdShadeConnectableAPI::GetInputs,
+             return_value_policy<TfPySequenceToList>())
 
     ;
 
-    implicitly_convertible<UsdShadeConnectableAPI, UsdShadeSubgraph>();
+    implicitly_convertible<UsdShadeConnectableAPI, UsdShadeNodeGraph>();
     implicitly_convertible<UsdShadeConnectableAPI, UsdShadeShader>();
 }
+
+} // anonymous namespace

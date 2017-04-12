@@ -33,6 +33,9 @@
 #include <limits>
 #include <iomanip>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 HdxSelectionTracker::HdxSelectionTracker()
     : _version(0)
 {
@@ -113,7 +116,7 @@ HdxSelectionTracker::GetBuffers(HdRenderIndex const* index,
     size_t const N = 1000;
     int const INVALID = -1;
     WorkParallelForN(numPrims/N + 1,
-       [&ids, &index, this](size_t begin, size_t end) mutable {
+       [&ids, &index, INVALID, &N, this](size_t begin, size_t end) mutable {
         end = std::min(end*N, ids.size());
         begin = begin*N;
         for (size_t i = begin; i < end; i++) {
@@ -311,4 +314,7 @@ HdxSelectionTracker::GetBuffers(HdRenderIndex const* index,
 
     return true;
 }
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 

@@ -21,11 +21,16 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/pyEnum.h"
 
 #include "pxr/base/tf/instantiateSingleton.h"
 #include "pxr/base/tf/mallocTag.h"
 #include "pxr/base/tf/pyWrapContext.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 TF_INSTANTIATE_SINGLETON(Tf_PyEnumRegistry);
 
@@ -69,7 +74,7 @@ string Tf_PyCleanEnumName(string name)
 {
     string pkgName =
         Tf_PyWrapContextManager::GetInstance().GetCurrentContext();
-    if (TfStringStartsWith(name, pkgName) and name != pkgName) {
+    if (TfStringStartsWith(name, pkgName) && name != pkgName) {
         name.erase(0, pkgName.size());
     }
     return TfStringReplace(name, " ", "_");
@@ -87,3 +92,5 @@ RegisterValue(TfEnum const &e, object const &obj)
     _enumsToObjects[e] = obj.ptr();
     _objectsToEnums[obj.ptr()] = e;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

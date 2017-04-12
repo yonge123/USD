@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/inherits.h"
 
 #include <boost/python/class.hpp>
@@ -29,6 +30,8 @@
 using std::string;
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void wrapUsdInherits()
 {
@@ -41,4 +44,3 @@ void wrapUsdInherits()
         .def(!self)
         ;
 }
-

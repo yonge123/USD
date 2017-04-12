@@ -23,10 +23,14 @@
 //
 /// \file alembicUtil.cpp
 
+#include "pxr/pxr.h"
 #include "pxr/usd/usdAbc/alembicUtil.h"
 #include "pxr/base/tf/ostreamMethods.h"
 #include <Alembic/Abc/IArrayProperty.h>
 #include <Alembic/Abc/IScalarProperty.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 TF_DEFINE_PUBLIC_TOKENS(UsdAbc_AlembicContextFlagNames,
                         USDABC_ALEMBIC_CONTEXT_FLAG_NAMES);
@@ -309,20 +313,20 @@ UsdAbc_AlembicConversions::UsdAbc_AlembicConversions()
     data.AddConverter<unsigned int,  uint32_t>();
     data.AddConverter<long,          int64_t>();
     data.AddConverter<unsigned long, uint64_t>();
-    data.AddConverter<half,          half>();
+    data.AddConverter<GfHalf,        ::half>();
     data.AddConverter<float,         float32_t>();
     data.AddConverter<double,        float64_t>();
     data.AddConverter<std::string,   std::string>();
     data.AddConverter<GfVec2i,   int32_t, 2>();
-    data.AddConverter<GfVec2h,      half, 2>();
+    data.AddConverter<GfVec2h,    GfHalf, 2>();
     data.AddConverter<GfVec2f, float32_t, 2>();
     data.AddConverter<GfVec2d, float64_t, 2>();
     data.AddConverter<GfVec3i,   int32_t, 3>();
-    data.AddConverter<GfVec3h,      half, 3>();
+    data.AddConverter<GfVec3h,    GfHalf, 3>();
     data.AddConverter<GfVec3f, float32_t, 3>();
     data.AddConverter<GfVec3d, float64_t, 3>();
     data.AddConverter<GfVec4i,   int32_t, 4>();
-    data.AddConverter<GfVec4h,      half, 4>();
+    data.AddConverter<GfVec4h,    GfHalf, 4>();
     data.AddConverter<GfVec4f, float32_t, 4>();
     data.AddConverter<GfVec4d, float64_t, 4>();
     data.AddConverter<GfQuatf, float32_t, 4>();
@@ -337,19 +341,22 @@ UsdAbc_AlembicConversions::UsdAbc_AlembicConversions()
     data.AddConverter<GfMatrix4d,   float32_t, 16>();
 
     // Role conversions.
-    data.AddConverter<GfVec3h,      half, 3>(SdfValueTypeNames->Point3h);
+    data.AddConverter<GfVec3h,    GfHalf, 3>(SdfValueTypeNames->Point3h);
     data.AddConverter<GfVec3f, float32_t, 3>(SdfValueTypeNames->Point3f);
     data.AddConverter<GfVec3d, float64_t, 3>(SdfValueTypeNames->Point3d);
-    data.AddConverter<GfVec3h,      half, 3>(SdfValueTypeNames->Normal3h);
+    data.AddConverter<GfVec3h,    GfHalf, 3>(SdfValueTypeNames->Normal3h);
     data.AddConverter<GfVec3f, float32_t, 3>(SdfValueTypeNames->Normal3f);
     data.AddConverter<GfVec3d, float64_t, 3>(SdfValueTypeNames->Normal3d);
-    data.AddConverter<GfVec3h,      half, 3>(SdfValueTypeNames->Vector3h);
+    data.AddConverter<GfVec3h,    GfHalf, 3>(SdfValueTypeNames->Vector3h);
     data.AddConverter<GfVec3f, float32_t, 3>(SdfValueTypeNames->Vector3f);
     data.AddConverter<GfVec3d, float64_t, 3>(SdfValueTypeNames->Vector3d);
-    data.AddConverter<GfVec3h,      half, 3>(SdfValueTypeNames->Color3h);
+    data.AddConverter<GfVec3h,    GfHalf, 3>(SdfValueTypeNames->Color3h);
     data.AddConverter<GfVec3f, float32_t, 3>(SdfValueTypeNames->Color3f);
     data.AddConverter<GfVec3d, float64_t, 3>(SdfValueTypeNames->Color3d);
     data.AddConverter<GfMatrix4d, float64_t, 16>(SdfValueTypeNames->Frame4d);
 }
 
 } // namespace UsdAbc_AlembicUtil
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

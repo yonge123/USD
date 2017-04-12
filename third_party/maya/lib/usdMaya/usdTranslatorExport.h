@@ -27,12 +27,17 @@
 
 /// \file usdTranslatorExport.h
 
+#include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/JobArgs.h"
 
 #include <maya/MFileObject.h>
 #include <maya/MPxFileTranslator.h>
 #include <maya/MStatus.h>
 #include <maya/MString.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 
 const char* const usdTranslatorExportDefaults = 
@@ -59,8 +64,10 @@ class usdTranslatorExport : public MPxFileTranslator
         /**
          * method to create usdTranslatorExport file translator
          */
+        PXRUSDMAYA_API
         static void* creator();
 
+        PXRUSDMAYA_API
         MStatus writer(
                 const MFileObject& file, 
                 const MString& optionsString,
@@ -69,6 +76,7 @@ class usdTranslatorExport : public MPxFileTranslator
         bool haveReadMethod() const { return false; }
         bool haveWriteMethod() const { return true; }
 
+        PXRUSDMAYA_API
         MFileKind identifyFile(
                 const MFileObject& file,
                 const char* buffer,
@@ -88,5 +96,8 @@ class usdTranslatorExport : public MPxFileTranslator
         ~usdTranslatorExport();
         usdTranslatorExport& operator=(const usdTranslatorExport&);
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_TRANSLATOR_EXPORT_H

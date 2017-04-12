@@ -12,6 +12,7 @@ pxr_shared_library(hdx
         glf
         pxOsd
         hd
+        hdSt
         cameraUtil
         sdf
         ${GLEW_LIBRARY}
@@ -20,18 +21,13 @@ pxr_shared_library(hdx
         ${GLEW_INCLUDE_DIR}
 
     PUBLIC_CLASSES
-        camera
-        debugCodes
-        drawTarget
-        drawTargetAttachmentDesc
-        drawTargetAttachmentDescArray
         drawTargetRenderPass
-        drawTargetRenderPassState
         drawTargetTask
         drawTargetResolveTask
         intersector
-        light
         package
+        rendererPlugin
+        rendererPluginRegistry
         renderTask
         renderSetupTask
         selectionTask
@@ -40,16 +36,21 @@ pxr_shared_library(hdx
         simpleLightingShader
         simpleLightTask
         simpleLightBypassTask
+        taskController
         tokens
         types
 
     PUBLIC_HEADERS
         shadowMatrixComputation.h
         version.h
+        api.h
 
     PRIVATE_CLASSES
-        drawTargetTextureResource
+        debugCodes
         unitTestDelegate
+
+    PRIVATE_HEADERS
+        unitTestGLDrawing.h
 
     RESOURCE_FILES
         plugInfo.json
@@ -59,3 +60,68 @@ pxr_shared_library(hdx
         shaders/renderPassIdShader.glslfx
         shaders/renderPassShadowShader.glslfx
 )
+
+if (X11_FOUND OR APPLE)
+pxr_build_test(testHdxRenderTask
+    LIBRARIES
+        hdx
+        hd
+        sdf
+        glf
+        garch
+        arch
+        tf
+    CPPFILES
+        testenv/testHdxRenderTask.cpp
+)
+pxr_build_test(testHdxLightAndShadow
+    LIBRARIES
+        hdx
+        hd
+        sdf
+        glf
+        garch
+        arch
+        tf
+    CPPFILES
+        testenv/testHdxLightAndShadow.cpp
+)
+pxr_build_test(testHdxIdRender
+    LIBRARIES
+        hdx
+        hd
+        sdf
+        glf
+        garch
+        arch
+        tf
+    CPPFILES
+        unitTestGLDrawing.cpp
+        testenv/testHdxIdRender.cpp
+)
+pxr_build_test(testHdxPickAndHighlight
+    LIBRARIES
+        hdx
+        hd
+        sdf
+        glf
+        garch
+        arch
+        tf
+    CPPFILES
+        unitTestGLDrawing.cpp
+        testenv/testHdxPickAndHighlight.cpp
+)
+pxr_build_test(testHdxCameraAndLight
+    LIBRARIES
+        hdx
+        hd
+        sdf
+        glf
+        garch
+        arch
+        tf
+    CPPFILES
+        testenv/testHdxCameraAndLight.cpp
+)
+endif()

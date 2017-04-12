@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/work/loops.h"
 
 #include "pxr/base/work/arenaDispatcher.h"
@@ -29,11 +31,14 @@
 #include "pxr/base/tf/stopwatch.h"
 #include "pxr/base/tf/iterator.h"
 #include "pxr/base/tf/staticData.h"
+#include "pxr/base/arch/fileSystem.h"
 
 #include <boost/bind.hpp>
 
 #include <cstdio>
 #include <iostream>
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 static void
 _Double(size_t begin, size_t end, std::vector<int> *v)
@@ -192,7 +197,7 @@ main(int argc, char **argv)
     if (perfMode) {
 
         // XXX:perfgen only accepts metric names ending in _time.  See bug 97317
-        FILE *outputFile = fopen("perfstats.raw", "w");
+        FILE *outputFile = ArchOpenFile("perfstats.raw", "w");
         fprintf(outputFile,
             "{'profile':'TBB Loops_time','metric':'time','value':%f,'samples':1}\n",
             tbbSeconds);

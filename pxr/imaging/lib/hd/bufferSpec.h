@@ -24,11 +24,16 @@
 #ifndef HD_BUFFER_SPEC_H
 #define HD_BUFFER_SPEC_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/garch/gl.h"
 #include "pxr/base/tf/stl.h"
 #include "pxr/base/tf/token.h"
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 typedef std::vector<struct HdBufferSpec> HdBufferSpecVector;
 
@@ -61,15 +66,18 @@ struct HdBufferSpec {
     }
 
     /// Returns true if \p subset is a subset of \p superset.
+    HD_API
     static bool IsSubset(HdBufferSpecVector const &subset,
                          HdBufferSpecVector const &superset);
 
     /// Returns union set of \p spec1 and \p spec2.
     /// Duplicated entries are uniquified.
+    HD_API
     static HdBufferSpecVector ComputeUnion(HdBufferSpecVector const &spec1,
                                            HdBufferSpecVector const &spec2);
 
     /// Debug output.
+    HD_API
     static void Dump(HdBufferSpecVector const &specs);
 
     /// Equality checks.
@@ -96,5 +104,8 @@ struct HdBufferSpec {
     int numComponents;
     int arraySize;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif  // HD_BUFFER_SPEC_H

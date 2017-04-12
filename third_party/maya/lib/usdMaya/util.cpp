@@ -21,12 +21,14 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdMaya/util.h"
 
 #include "pxr/base/gf/gamma.h"
 #include "pxr/base/tf/hashmap.h"
 #include "pxr/usd/usdGeom/mesh.h"
 
+#include <maya/MAnimControl.h>
 #include <maya/MAnimUtil.h>
 #include <maya/MColor.h>
 #include <maya/MDGModifier.h>
@@ -40,6 +42,7 @@
 #include <maya/MFnTypedAttribute.h>
 #include <maya/MFnSet.h>
 #include <maya/MItDependencyGraph.h>
+#include <maya/MItDependencyNodes.h>
 #include <maya/MItMeshFaceVertex.h>
 #include <maya/MItMeshPolygon.h>
 #include <maya/MObject.h>
@@ -52,6 +55,7 @@
 #include <string>
 #include <unordered_map>
 
+PXR_NAMESPACE_USING_DIRECTIVE
 
 // return seconds per frame
 double PxrUsdMayaUtil::spf()
@@ -86,6 +90,43 @@ PxrUsdMayaUtil::GetDagPathByName(const std::string& nodeName, MDagPath& dagPath)
     status = selectionList.getDagPath(0, dagPath);
 
     return status;
+}
+
+MPlug
+PxrUsdMayaUtil::GetMayaTimePlug()
+{
+    MPlug timePlug;
+    MStatus status;
+
+    // As an extra sanity check, we only return a discovered plug if its
+    // value matches the current time.
+    MTime curTime = MAnimControl::currentTime();
+
+    MItDependencyNodes iter(MFn::kTime, &status);
+    CHECK_MSTATUS_AND_RETURN(status, timePlug);
+
+    while (!timePlug && !iter.isDone()) {
+        MObject node = iter.thisNode();
+        iter.next();
+
+        MFnDependencyNode depNodeFn(node, &status);
+        if (status != MS::kSuccess) {
+            continue;
+        }
+
+        MPlug outTimePlug = depNodeFn.findPlug("outTime", true, &status);
+        if (status != MS::kSuccess || !outTimePlug) {
+            continue;
+        }
+
+        if (outTimePlug.asMTime() != curTime) {
+            continue;
+        }
+
+        timePlug = outTimePlug;
+    }
+
+    return timePlug;
 }
 
 bool PxrUsdMayaUtil::isAncestorDescendentRelationship(const MDagPath & path1,
@@ -745,6 +786,16 @@ struct ValueHash
 {
     std::size_t operator() (const T& value) const {
         return hash_value(value);
+    }
+};
+
+// There is no globally defined hash_value for numeric types
+// so we need an explicit opt-in here.
+template <>
+struct ValueHash<float>
+{
+    std::size_t operator() (const float& value) const {
+        return boost::hash_value(value);
     }
 };
 

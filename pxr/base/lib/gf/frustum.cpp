@@ -21,8 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/base/gf/frustum.h"
 
+#include "pxr/pxr.h"
+#include "pxr/base/gf/frustum.h"
 #include "pxr/base/gf/bbox3d.h"
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/gf/ostreamHelpers.h"
@@ -37,6 +38,8 @@
 #include <iostream>
 
 using namespace std;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 // CODE_COVERAGE_OFF_GCOV_BUG
 TF_REGISTRY_FUNCTION(TfType) {
@@ -192,14 +195,14 @@ GfFrustum::GetFOV(bool isFovVertical /* = false */)
 void
 GfFrustum::SetOrthographic(double left, double right,
                            double bottom, double top,
-                           double near, double far)
+                           double nearPlane, double farPlane)
 {
     _projectionType = GfFrustum::Orthographic;
 
     _window.SetMin(GfVec2d(left, bottom));
     _window.SetMax(GfVec2d(right, top));
-    _nearFar.SetMin(near);
-    _nearFar.SetMax(far);
+    _nearFar.SetMin(nearPlane);
+    _nearFar.SetMax(farPlane);
 
     _DirtyFrustumPlanes();
 }
@@ -207,7 +210,7 @@ GfFrustum::SetOrthographic(double left, double right,
 bool
 GfFrustum::GetOrthographic(double *left, double *right,
                            double *bottom, double *top,
-                           double *near, double *far) const
+                           double *nearPlane, double *farPlane) const
 {
     if (_projectionType != GfFrustum::Orthographic)
         return false;
@@ -217,8 +220,8 @@ GfFrustum::GetOrthographic(double *left, double *right,
     *bottom = _window.GetMin()[1];
     *top    = _window.GetMax()[1];
 
-    *near   = _nearFar.GetMin();
-    *far    = _nearFar.GetMax();
+    *nearPlane	= _nearFar.GetMin();
+    *farPlane   = _nearFar.GetMax();
 
     return true;
 }
@@ -484,11 +487,11 @@ GfFrustum::Transform(const GfMatrix4d &matrix)
     GfVec2d wMax = frustum._window.GetMax();
     // Make sure left < right
     if ( wMin[0] > wMax[0] ) {
-        swap( wMin[0], wMax[0] );
+        std::swap( wMin[0], wMax[0] );
     }
     // Make sure bottom < top
     if ( wMin[1] > wMax[1] ) {
-        swap( wMin[1], wMax[1] );
+        std::swap( wMin[1], wMax[1] );
     }
     frustum._window.SetMin( wMin );
     frustum._window.SetMax( wMax );
@@ -1336,3 +1339,5 @@ operator<<(std::ostream& out, const GfFrustum& f)
 
     return out;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

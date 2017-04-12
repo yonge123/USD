@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdKatana/usdInArgs.h"
 #include "usdKatana/utils.h"
 
@@ -28,36 +29,38 @@
 
 #include <FnAttribute/FnDataBuilder.h>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 PxrUsdKatanaUsdInArgs::PxrUsdKatanaUsdInArgs(
         UsdStageRefPtr stage,
         const std::string& rootLocation,
         const std::string& isolatePath,
+        const std::string& sessionLocation,
         FnAttribute::GroupAttribute sessionAttr,
         const std::string& ignoreLayerRegex,
         double currentTime,
         double shutterOpen,
         double shutterClose,
         const std::vector<double>& motionSampleTimes,
-        const std::set<std::string>& defaultMotionPaths,
         const StringListMap& extraAttributesOrNamespaces,
+        bool prePopulate,
         bool verbose,
         const char * errorMessage) :
     _stage(stage),
     _rootLocation(rootLocation),
     _isolatePath(isolatePath),
+    _sessionLocation(sessionLocation),
     _sessionAttr(sessionAttr),
     _ignoreLayerRegex(ignoreLayerRegex),
     _currentTime(currentTime),
     _shutterOpen(shutterOpen),
     _shutterClose(shutterClose),
     _motionSampleTimes(motionSampleTimes),
-    _defaultMotionPaths(defaultMotionPaths),
     _extraAttributesOrNamespaces(extraAttributesOrNamespaces),
+    _prePopulate(prePopulate),
     _verbose(verbose)
 {
-    _isMotionBackward = _motionSampleTimes.size() > 1 &&
-        _motionSampleTimes.front() > _motionSampleTimes.back();
-
     if (errorMessage)
     {
         _errorMessage = errorMessage;
@@ -125,3 +128,6 @@ PxrUsdKatanaUsdInArgs::GetRootPrim() const
         return _stage->GetPrimAtPath(SdfPath(_isolatePath));
     }
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

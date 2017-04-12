@@ -21,6 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/pyModuleNotice.h"
 #include "pxr/base/tf/pyNoticeWrapper.h"
 
@@ -29,7 +32,13 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 TF_INSTANTIATE_NOTICE_WRAPPER(TfPyModuleWasLoaded, TfNotice);
+
+} // anonymous namespace 
 
 void wrapPyModuleNotice() {
 
@@ -38,4 +47,3 @@ void wrapPyModuleNotice() {
                                    return_value_policy<return_by_value>()))
         ;
 }
-

@@ -24,14 +24,19 @@
 #ifndef HD_INSTANCE_REGISTRY_H
 #define HD_INSTANCE_REGISTRY_H
 
-#include <mutex>
+#include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
+#include "pxr/imaging/hd/version.h"
+#include "pxr/imaging/hd/perfLog.h"
+#include "pxr/imaging/hf/perfLog.h"
+
 #include <boost/shared_ptr.hpp>
 #include <tbb/concurrent_unordered_map.h>
 
-#include "pxr/imaging/hd/version.h"
-#include "pxr/imaging/hd/perfLog.h"
+#include <mutex>
 
-#include "pxr/imaging/hf/perfLog.h"
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// \class HdInstance
 ///
@@ -235,5 +240,8 @@ HdInstanceRegistry<INSTANCE>::Invalidate()
 
     _dictionary.clear();
 }
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif  // HD_INSTANCE_REGISTRY_H

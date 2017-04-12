@@ -21,8 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/base/gf/rotation.h"
 
+#include "pxr/pxr.h"
+#include "pxr/base/gf/rotation.h"
 #include "pxr/base/tf/pyUtils.h"
 #include "pxr/base/tf/wrapTypeHelpers.h"
 #include "pxr/base/tf/pyContainerConversions.h"
@@ -38,7 +39,9 @@ using namespace boost::python;
 
 using std::string;
 
+PXR_NAMESPACE_USING_DIRECTIVE
 
+namespace {
 
 void SetAxisHelper( GfRotation &rotation, const GfVec3d &axis )
 {
@@ -116,6 +119,8 @@ static string _Repr(GfRotation const &self) {
     return TF_PY_REPR_PREFIX + "Rotation(" + TfPyRepr(self.GetAxis()) + ", " +
         TfPyRepr(self.GetAngle()) + ")";
 }
+
+} // anonymous namespace 
 
 void wrapRotation()
 {    

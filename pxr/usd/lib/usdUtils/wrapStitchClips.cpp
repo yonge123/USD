@@ -23,6 +23,7 @@
 //
 /// \file wrapStitchClips.cpp
 
+#include "pxr/pxr.h"
 #include <boost/python/def.hpp>
 #include <boost/python/extract.hpp>
 
@@ -32,6 +33,10 @@
 #include <limits>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 template <typename T>
 T
@@ -85,8 +90,9 @@ _ConvertStitchClipTemplate(const SdfLayerHandle& resultLayer,
 
 }
 
-void 
-wrapStitchClips()
+} // anonymous namespace 
+
+void wrapStitchClips()
 {
     def("StitchClips",
         _ConvertStitchClips, 

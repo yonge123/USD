@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdKatana/attrMap.h"
 #include "usdKatana/debugCodes.h"
 #include "usdKatana/readGprim.h"
@@ -33,6 +34,9 @@
 #include "pxr/usd/usdRi/rmanUtilities.h"
 
 #include <FnLogging/FnLogging.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 FnLogSetup("PxrUsdKatanaReadMesh");
 
@@ -249,7 +253,7 @@ PxrUsdKatanaReadMesh(
         const PxrUsdKatanaUsdInPrivateData& data,
         PxrUsdKatanaAttrMap& attrs)
 {
-    const double currentTime = data.GetUsdInArgs()->GetCurrentTime();
+    const double currentTime = data.GetCurrentTime();
 
     //
     // Set all general attributes for a gprim type.
@@ -334,3 +338,6 @@ PxrUsdKatanaReadMesh(
 
     attrs.set("tabs.scenegraph.stopExpand", FnKat::IntAttribute(1));
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

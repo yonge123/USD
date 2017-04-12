@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/usd/pcp/node.h"
 #include "pxr/usd/pcp/node_Iterator.h"
 
@@ -29,6 +31,10 @@
 #include <boost/python.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 #define PCP_GET_NODE_FN(nodeFn)                                         \
     static boost::python::object                                        \
@@ -49,6 +55,8 @@ _GetChildren(const PcpNodeRef& node)
     return Pcp_GetChildren(node);
 }
 
+} // anonymous namespace 
+
 void
 wrapNode()
 {
@@ -65,10 +73,10 @@ wrapNode()
                       make_function(&This::GetLayerStack, 
                                     return_value_policy<return_by_value>()))
 
-        .add_property("parent", &::_GetParentNode)
-        .add_property("origin", &::_GetOriginNode)
+        .add_property("parent", &_GetParentNode)
+        .add_property("origin", &_GetOriginNode)
         .add_property("children", 
-                      make_function(&::_GetChildren, 
+                      make_function(&_GetChildren, 
                                     return_value_policy<TfPySequenceToList>()))
 
         .add_property("arcType", &This::GetArcType)
@@ -89,13 +97,14 @@ wrapNode()
         .add_property("isRestricted", &This::IsRestricted)
         .add_property("permission", &This::GetPermission)
 
-        .def("GetRootNode", &::_GetRootNode)
-        .def("GetOriginRootNode", &::_GetOriginRootNode)
+        .def("GetRootNode", &_GetRootNode)
+        .def("GetOriginRootNode", &_GetOriginRootNode)
 
         .def("IsDirect", &This::IsDirect)
         .def("IsDueToAncestor", &This::IsDueToAncestor)
         .def("GetDepthBelowIntroduction", &This::GetDepthBelowIntroduction)
         .def("GetIntroPath", &This::GetIntroPath)
+        .def("GetPathAtIntroduction", &This::GetPathAtIntroduction)
 
         .def("CanContributeSpecs", &This::CanContributeSpecs)
 

@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/tf/type.h"
 #include "pxr/base/tf/notice.h"
 #include "pxr/base/tf/pyFunction.h"
@@ -40,12 +42,36 @@
 #include <boost/python/return_value_policy.hpp>
 #include <boost/python/scope.hpp>
 
-
 using std::string;
 
 using namespace boost::python;
 
-class Tf_PyNotice
+PXR_NAMESPACE_OPEN_SCOPE
+
+class Tf_PyNotice {
+public:
+    static size_t SendWithType(const TfNotice& notice,
+                               const TfType & noticeType,
+                               const TfWeakBase* sender,
+                               const void *senderUniqueId,
+                               const std::type_info & senderType)
+    {
+        return notice._SendWithType(noticeType,
+                                    sender, senderUniqueId, senderType);
+    }
+};
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
+// TfNotice is passed for both the type and the base to indicate the root of the
+// hierarchy.
+TF_INSTANTIATE_NOTICE_WRAPPER(TfNotice, TfNotice);
+
+class Tf_PyNoticeInternal
 {
   public:
 
@@ -115,7 +141,7 @@ class Tf_PyNotice
                            const std::type_info &) {
             TfPyLock lock;
             object pyNotice = _GetDeliverableNotice(notice, type);
-            if (not TfPyIsNone(pyNotice)) {
+            if (!TfPyIsNone(pyNotice)) {
                 // Get the python sender.
                 handle<> pySender = sender ?
                     handle<>(allow_null(Tf_PyIdentityHelper::
@@ -160,10 +186,10 @@ class Tf_PyNotice
     static size_t
     SendWithAnyWeakPtrSender(TfNotice const &self,
                              TfAnyWeakPtr const &sender) {
-        return self._SendWithType(TfType::Find(&self),
-                                  sender.GetWeakBase(),
-                                  sender.GetUniqueIdentifier(),
-                                  sender.GetTypeInfo());
+        return Tf_PyNotice::SendWithType(self, TfType::Find(&self),
+                                         sender.GetWeakBase(),
+                                         sender.GetUniqueIdentifier(),
+                                         sender.GetTypeInfo());
     }
 
     static size_t
@@ -181,21 +207,18 @@ class Tf_PyNotice
     }
     
     static size_t SendGlobally(TfNotice const &self) {
-        return self._SendWithType(TfType::Find(&self),
-                                  0, 0, typeid(void));
+        return Tf_PyNotice::SendWithType(self, TfType::Find(&self),
+                                         0, 0, typeid(void));
     }
 
 };
 
-
-// TfNotice is passed for both the type and the base to indicate the root of the
-// hierarchy.
-TF_INSTANTIATE_NOTICE_WRAPPER(TfNotice, TfNotice);
+} // anonymous namespace 
 
 void wrapNotice()
 {
     // Make sure we can pass callbacks from python.
-    TfPyFunctionFromPython<Tf_PyNotice::Listener::CallbackSig>();
+    TfPyFunctionFromPython<Tf_PyNoticeInternal::Listener::CallbackSig>();
 
     // Passing TfNotice for both T and its base indicates that this is the root
     // of the notice hierarchy.
@@ -206,7 +229,7 @@ void wrapNotice()
         // the last overload that will be tried.  Thus, it will only be invoked
         // if the python object is not already weak-pointable.
         .def("Register",
-             Tf_PyNotice::RegisterWithPythonSender,
+             Tf_PyNoticeInternal::RegisterWithPythonSender,
              return_value_policy<manage_new_object>(),
          "Register( noticeType, callback, sender ) -> Listener \n\n"
          "noticeType : Tf.Notice\n"
@@ -226,12 +249,12 @@ void wrapNotice()
          "object returned by this call. "
              )
         .def("Register",
-             Tf_PyNotice::RegisterWithAnyWeakPtrSender,
+             Tf_PyNoticeInternal::RegisterWithAnyWeakPtrSender,
              return_value_policy<manage_new_object>())
         .staticmethod("Register")
         
         .def("RegisterGlobally",
-             Tf_PyNotice::RegisterGlobally,
+             Tf_PyNoticeInternal::RegisterGlobally,
              return_value_policy<manage_new_object>(), 
              "RegisterGlobally( noticeType, callback ) -> Listener \n\n"
              "noticeType : Tf.Notice\n"
@@ -246,7 +269,7 @@ void wrapNotice()
         // We register the method that takes any python object first, as this is
         // the last overload that will be tried.  Thus, it will only be invoked
         // if the python object is not already weak-pointable.
-        .def("Send", &Tf_PyNotice::SendWithPythonSender,
+        .def("Send", &Tf_PyNoticeInternal::SendWithPythonSender,
              "Send(sender) \n\n"
              "sender : object \n\n"
              "Deliver the notice to interested listeners, returning the number "
@@ -255,8 +278,8 @@ void wrapNotice()
              "argument. "
              "Listeners that registered for the given sender AND listeners "
              "that registered globally will get the notice. ")
-        .def("Send", &Tf_PyNotice::SendWithAnyWeakPtrSender)
-        .def("SendGlobally", &Tf_PyNotice::SendGlobally,
+        .def("Send", &Tf_PyNoticeInternal::SendWithAnyWeakPtrSender)
+        .def("SendGlobally", &Tf_PyNoticeInternal::SendGlobally,
              "SendGlobally() \n\n"
              "Deliver the notice to interested listeners.   "
              "For most clients it is recommended to use the Send(sender) "
@@ -275,8 +298,9 @@ void wrapNotice()
     "You can also use the Revoke() function to break the connection. "
     "A Listener object is returned from the Register() and  "
     "RegisterGlobally() functions. ";
-    class_<Tf_PyNotice::Listener, boost::noncopyable>("Listener", Listener_string, no_init)
-        .def("Revoke", &Tf_PyNotice::Listener::Revoke,
+    class_<Tf_PyNoticeInternal::Listener,
+           boost::noncopyable>("Listener", Listener_string, no_init)
+        .def("Revoke", &Tf_PyNoticeInternal::Listener::Revoke,
             "Revoke() \n\n"
             "Revoke interest by a notice listener. "
             " "
@@ -286,5 +310,3 @@ void wrapNotice()
         )
         ;
 }
-
-

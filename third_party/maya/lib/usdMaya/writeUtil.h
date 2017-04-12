@@ -27,6 +27,8 @@
 #ifndef PXRUSDMAYA_WRITEUTIL_H
 #define PXRUSDMAYA_WRITEUTIL_H
 
+#include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/UserTaggedAttribute.h"
 
 #include "pxr/base/tf/token.h"
@@ -45,6 +47,9 @@
 
 #include <string>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 
 struct PxrUsdMayaWriteUtil
 {
@@ -55,6 +60,7 @@ struct PxrUsdMayaWriteUtil
     /// If \p translateMayaDoubleToUsdSinglePrecision is true, Maya plugs that
     /// contain double data will return the appropriate float-based type.
     /// Otherwise, the type returned will be the appropriate double-based type.
+    PXRUSDMAYA_API
     static SdfValueTypeName GetUsdTypeName(
             const MPlug& attrPlug,
             const bool translateMayaDoubleToUsdSinglePrecision =
@@ -69,6 +75,7 @@ struct PxrUsdMayaWriteUtil
     /// If \p translateMayaDoubleToUsdSinglePrecision is true, Maya plugs that
     /// contain double data will result in USD attributes of the appropriate
     /// float-based type. Otherwise, their type will be double-based.
+    PXRUSDMAYA_API
     static UsdAttribute GetOrCreateUsdAttr(
             const MPlug& attrPlug,
             const UsdPrim& usdPrim,
@@ -86,6 +93,7 @@ struct PxrUsdMayaWriteUtil
     /// If \p translateMayaDoubleToUsdSinglePrecision is true, Maya plugs that
     /// contain double data will result in primvars of the appropriate
     /// float-based type. Otherwise, their type will be double-based.
+    PXRUSDMAYA_API
     static UsdGeomPrimvar GetOrCreatePrimvar(
             const MPlug& attrPlug,
             UsdGeomImageable& imageable,
@@ -102,6 +110,7 @@ struct PxrUsdMayaWriteUtil
     /// If \p translateMayaDoubleToUsdSinglePrecision is true, Maya plugs that
     /// contain double data will result in UsdRi attributes of the appropriate
     /// float-based type. Otherwise, their type will be double-based.
+    PXRUSDMAYA_API
     static UsdAttribute GetOrCreateUsdRiAttribute(
             const MPlug& attrPlug,
             const UsdPrim& usdPrim,
@@ -117,6 +126,7 @@ struct PxrUsdMayaWriteUtil
     /// contain double data will be set on \p usdAttr as the appropriate
     /// float-based type. Otherwise, their data will be set as the appropriate
     /// double-based type.
+    PXRUSDMAYA_API
     static bool SetUsdAttr(
             const MPlug& attrPlug,
             const UsdAttribute& usdAttr,
@@ -127,6 +137,7 @@ struct PxrUsdMayaWriteUtil
     /// Given a Maya node at \p dagPath, inspect it for attributes tagged by
     /// the user for export to USD and write them onto \p usdPrim at time
     /// \p usdTime.
+    PXRUSDMAYA_API
     static bool WriteUserExportedAttributes(
             const MDagPath& dagPath,
             const UsdPrim& usdPrim,
@@ -137,24 +148,28 @@ struct PxrUsdMayaWriteUtil
     /// \{
 
     /// \brief Reads attribute \p name on \p depNode into \p val.
+    PXRUSDMAYA_API
     static bool ReadMayaAttribute(
             const MFnDependencyNode& depNode,
             const MString& name, 
             std::string* val);
 
     /// \brief Reads attribute \p name on \p depNode into \p val.
+    PXRUSDMAYA_API
     static bool ReadMayaAttribute(
             const MFnDependencyNode& depNode,
             const MString& name, 
             VtIntArray* val);
 
     /// \brief Reads attribute \p name on \p depNode into \p val.
+    PXRUSDMAYA_API
     static bool ReadMayaAttribute(
             const MFnDependencyNode& depNode,
             const MString& name, 
             VtFloatArray* val);
 
     /// \brief Reads attribute \p name on \p depNode into \p val.
+    PXRUSDMAYA_API
     static bool ReadMayaAttribute(
             const MFnDependencyNode& depNode,
             const MString& name, 
@@ -162,5 +177,8 @@ struct PxrUsdMayaWriteUtil
     /// \}
 
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_WRITEUTIL_H

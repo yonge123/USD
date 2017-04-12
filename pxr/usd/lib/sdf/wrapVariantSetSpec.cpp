@@ -23,6 +23,7 @@
 //
 /// \file wrapVariantSetSpec.cpp
 
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/variantSetSpec.h"
 #include "pxr/usd/sdf/primSpec.h"
 #include "pxr/usd/sdf/pySpec.h"
@@ -32,6 +33,10 @@
 #include <boost/python.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static
 SdfVariantSetSpecHandle
@@ -47,6 +52,8 @@ _NewUnderVariant(const SdfVariantSpecHandle& owner, const std::string& name)
 {
     return SdfVariantSetSpec::New(owner, name);
 }
+
+} // anonymous namespace 
 
 void wrapVariantSetSpec()
 {

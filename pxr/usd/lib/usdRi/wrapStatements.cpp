@@ -22,7 +22,6 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/usd/usdRi/statements.h"
-
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/conversions.h"
 
@@ -39,6 +38,10 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 #define WRAP_CUSTOM                                                     \
     template <class Cls> static void _CustomWrapCode(Cls &_class)
 
@@ -52,6 +55,8 @@ _CreateFocusRegionAttr(UsdRiStatements &self,
     return self.CreateFocusRegionAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
 }
+
+} // anonymous namespace
 
 void wrapUsdRiStatements()
 {
@@ -106,8 +111,14 @@ void wrapUsdRiStatements()
 // }
 //
 // Of course any other ancillary or support code may be provided.
+// 
+// Just remember to wrap code in the appropriate delimiters:
+// 'namespace {', '}'.
+//
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
+
+namespace {
 
 static SdfPathVector
 _GetModelCoordinateSystems(const UsdRiStatements &self)
@@ -172,3 +183,5 @@ WRAP_CUSTOM {
              return_value_policy<TfPySequenceToList>())
         ;
 }
+
+} // anonymous namespace

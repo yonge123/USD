@@ -24,12 +24,15 @@
 ///
 /// \file Sdf/wrapLayerBase.cpp
 
-
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/layerBase.h"
 #include "pxr/base/tf/pyPtrHelpers.h"
+
 #include <boost/python/class.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void wrapLayerBase()
 {
@@ -46,3 +49,5 @@ void wrapLayerBase()
 
         ;
 }
+
+TF_REFPTR_CONST_VOLATILE_GET(SdfLayerBase)

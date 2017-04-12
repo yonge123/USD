@@ -23,6 +23,9 @@
 //
 ///
 /// \file tf/wrapTestTfPython.cpp
+
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/pyOptional.h"
 
 #include <boost/python/class.hpp>
@@ -34,6 +37,10 @@
 using namespace boost::python;
 using std::string;
 using std::vector;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 // ////////////////////////////////
 // // optional
@@ -64,6 +71,8 @@ _TestOptional(
 }
 
 struct Tf_TestPyOptional { };
+
+} // anonymous namespace 
 
 void wrapTf_TestTfPyOptional()
 {
@@ -99,4 +108,3 @@ void wrapTf_TestTfPyOptional()
         .staticmethod("TestOptionalUChar")
         ;
 }
-

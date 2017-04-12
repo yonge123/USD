@@ -24,6 +24,10 @@
 #ifndef HD_ENUMS_H
 #define HD_ENUMS_H
 
+#include "pxr/pxr.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 /// \enum HdCompareFunction
 ///
 /// Abstraction of the Graphics compare functions.
@@ -45,6 +49,9 @@ enum HdCompareFunction
 /// \enum HdCullStyle
 ///
 /// Face culling options.
+///
+/// DontCare indicates this prim doesn't determine what should be culled.
+/// Any other CullStyle opinion will override this (such as from the viewer).
 ///
 /// BackUnlessDoubleSided and FrontUnlessDoubleSided will only cull back or
 /// front faces if prim isn't marked as doubleSided.
@@ -97,6 +104,10 @@ enum HdPointsGeomStyle {
 /// Defines geometric styles for how each polygon/triangle
 /// of a gprim is to be rendered.
 ///
+/// Unspecified indicates this gprim does not indicate how it should be drawn
+/// (ie, it will always be overriden by another opinion).
+/// The actual geomstyle must come from somewhere else, such as the viewer.
+///
 /// The polygons/triangles of a gprim can be drawn as Lines or Polygons.
 /// The HiddenLine, FeyRay, and Sheer styles are combinations
 /// of these styles:
@@ -112,6 +123,7 @@ enum HdPointsGeomStyle {
 ///
 enum HdGeomStyle
 {
+    HdGeomStyleUnspecified,
     HdGeomStyleLines,
     HdGeomStylePolygons,
     HdGeomStyleHiddenLine,
@@ -235,5 +247,8 @@ enum HdFormat
     HdFormatCount,
     HdFormatUnknown = -1
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // HD_ENUMS_H

@@ -29,15 +29,22 @@
 
 #include <string>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 void
 UsdImaging_TestDriver::_Init(UsdStageRefPtr const& usdStage,
                              TfToken const &collectionName,
                              TfToken const &reprName)
 {
+    _renderIndex = HdRenderIndex::New(&_renderDelegate);
+    TF_VERIFY(_renderIndex != nullptr);
+    _delegate = new UsdImagingDelegate(_renderIndex, SdfPath::AbsoluteRootPath());
+
     _stage = usdStage;
-    _delegate.Populate(_stage->GetPseudoRoot());
+    _delegate->Populate(_stage->GetPseudoRoot());
     _geometryPass = HdRenderPassSharedPtr(
-        new HdRenderPass(&_delegate.GetRenderIndex(),
+        new HdRenderPass(_renderIndex,
                          HdRprimCollection(collectionName, reprName)));
     _renderPassState = HdRenderPassStateSharedPtr(new HdRenderPassState());
 }
@@ -45,11 +52,25 @@ UsdImaging_TestDriver::_Init(UsdStageRefPtr const& usdStage,
 UsdImaging_TestDriver::UsdImaging_TestDriver(std::string const& usdFilePath,
                                              TfToken const &collectionName,
                                              TfToken const &reprName)
+ : _engine()
+ , _renderDelegate()
+ , _renderIndex(nullptr)
+ , _delegate(nullptr)
+ , _geometryPass()
+ , _renderPassState()
+ , _stage()
 {
     _Init(UsdStage::Open(usdFilePath), collectionName, reprName);
 }
 
 UsdImaging_TestDriver::UsdImaging_TestDriver(std::string const& usdFilePath)
+ : _engine()
+ , _renderDelegate()
+ , _renderIndex(nullptr)
+ , _delegate(nullptr)
+ , _geometryPass()
+ , _renderPassState()
+ , _stage()
 {
     _Init(UsdStage::Open(usdFilePath), HdTokens->geometry, HdTokens->hull);
 }
@@ -57,31 +78,52 @@ UsdImaging_TestDriver::UsdImaging_TestDriver(std::string const& usdFilePath)
 UsdImaging_TestDriver::UsdImaging_TestDriver(UsdStageRefPtr const& usdStage,
                                              TfToken const &collectionName,
                                              TfToken const &reprName)
+ : _engine()
+ , _renderDelegate()
+ , _renderIndex(nullptr)
+ , _delegate(nullptr)
+ , _geometryPass()
+ , _renderPassState()
+ , _stage()
 {
     _Init(usdStage, collectionName, reprName);
 }
 
 UsdImaging_TestDriver::UsdImaging_TestDriver(UsdStageRefPtr const& usdStage)
+ : _engine()
+ , _renderDelegate()
+ , _renderIndex(nullptr)
+ , _delegate(nullptr)
+ , _geometryPass()
+ , _renderPassState()
+ , _stage()
 {
     _Init(usdStage, HdTokens->geometry, HdTokens->hull);
+}
+
+
+UsdImaging_TestDriver::~UsdImaging_TestDriver()
+{
+    delete _delegate;
+    delete _renderIndex;
 }
 
 void
 UsdImaging_TestDriver::Draw()
 {
-    _engine.Draw(_delegate.GetRenderIndex(), _geometryPass, _renderPassState);
+    _engine.Draw(_delegate->GetRenderIndex(), _geometryPass, _renderPassState);
 }
 
 void
 UsdImaging_TestDriver::SetTime(double time)
 {
-    _delegate.SetTime(time);
+    _delegate->SetTime(time);
 }
 
 void
-UsdImaging_TestDriver::MarkRprimDirty(SdfPath path, HdChangeTracker::DirtyBits flag)
+UsdImaging_TestDriver::MarkRprimDirty(SdfPath path, HdDirtyBits flag)
 {
-    _delegate.GetRenderIndex().GetChangeTracker().MarkRprimDirty(path, flag);
+    _delegate->GetRenderIndex().GetChangeTracker().MarkRprimDirty(path, flag);
 }
 
 void
@@ -95,7 +137,7 @@ UsdImaging_TestDriver::SetCamera(GfMatrix4d const &modelViewMatrix,
 void
 UsdImaging_TestDriver::SetRefineLevelFallback(int level)
 {
-    _delegate.SetRefineLevelFallback(level);
+    _delegate->SetRefineLevelFallback(level);
 }
 
 
@@ -108,7 +150,7 @@ UsdImaging_TestDriver::GetRenderPass()
 UsdImagingDelegate& 
 UsdImaging_TestDriver::GetDelegate()
 {
-    return _delegate;
+    return *_delegate;
 }
 
 /// Returns the populated UsdStage for this driver.
@@ -117,4 +159,7 @@ UsdImaging_TestDriver::GetStage()
 {
     return _stage;
 }
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 

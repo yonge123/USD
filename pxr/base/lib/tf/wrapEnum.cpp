@@ -26,6 +26,10 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 static size_t __hash__(Tf_PyEnumWrapper const &self)
 {
     return TfHash()(self.value);
@@ -40,6 +44,8 @@ static boost::python::object _GetValueFromFullName(const std::string &fullName)
     }
     return boost::python::object();
 }
+
+} // anonymous namespace 
 
 void wrapEnum()
 {

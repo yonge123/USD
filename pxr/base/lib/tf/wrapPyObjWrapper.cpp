@@ -21,11 +21,18 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/pyObjWrapper.h"
 
 #include <boost/python.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 struct Tf_PyObjWrapperFromPython {
     Tf_PyObjWrapperFromPython() {
@@ -78,6 +85,8 @@ _RoundTripWrapperIndexTest(TfPyObjWrapper const &wrapper, int index)
 {
     return boost::python::object(wrapper[index]);
 }
+
+} // anonymous namespace 
 
 void wrapPyObjWrapper()
 {

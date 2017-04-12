@@ -21,12 +21,16 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/base/tf/pyModule.h"
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 TF_WRAP_MODULE {
     TF_WRAP(Assembly);
     TF_WRAP(EditUtil);
     TF_WRAP(Query);
+    TF_WRAP(RoundTripUtil);
     TF_WRAP(StageCache);
     TF_WRAP(UserTaggedAttribute);
 }

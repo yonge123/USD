@@ -24,6 +24,7 @@
 #ifndef PXRUSDKATANA_ATTRUTILS_H
 #define PXRUSDKATANA_ATTRUTILS_H
 
+#include "pxr/pxr.h"
 #include "usdKatana/attrMap.h"
 #include "usdKatana/usdInPrivateData.h"
 
@@ -39,6 +40,8 @@
 #include <vector>
 
 namespace FnKat = Foundry::Katana;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 struct PxrUsdKatanaUtils {
 
@@ -151,10 +154,16 @@ struct PxrUsdKatanaUtils {
             bool* hasInfiniteBounds);
     /// \}
     
+    /// Build and return, as a group attribute for convenience, a map
+    /// from instances to masters.  Only traverses paths at and below
+    /// the given rootPath.
     static FnKat::GroupAttribute BuildInstanceMasterMapping(
-            const UsdStageRefPtr& stage);
+            const UsdStageRefPtr& stage, const SdfPath &rootPath);
     
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // SGG_USD_UTILS_H
 

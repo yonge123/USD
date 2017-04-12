@@ -24,6 +24,8 @@
 #ifndef PCP_ERRORS_H
 #define PCP_ERRORS_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/pcp/api.h"
 #include "pxr/usd/pcp/site.h"
 #include "pxr/usd/pcp/types.h"
 #include "pxr/usd/sdf/layer.h"
@@ -37,6 +39,8 @@
 
 #include <string>
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 // Forward declaration:
 class PcpCache;
@@ -83,7 +87,7 @@ typedef std::vector<PcpErrorBasePtr> PcpErrorVector;
 class PcpErrorBase {
 public:
     /// Destructor.
-    virtual ~PcpErrorBase();
+    PCP_API virtual ~PcpErrorBase();
     /// Converts error to string message.
     virtual std::string ToString() const = 0;
 
@@ -116,9 +120,9 @@ public:
     /// Returns a new error object.
     static PcpErrorArcCyclePtr New();
     /// Destructor.
-    ~PcpErrorArcCycle();
+    PCP_API ~PcpErrorArcCycle();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
     
     PcpSiteTracker cycle;
     
@@ -144,9 +148,9 @@ public:
     /// Returns a new error object.
     static PcpErrorArcPermissionDeniedPtr New();
     /// Destructor.
-    ~PcpErrorArcPermissionDenied();
+    PCP_API ~PcpErrorArcPermissionDenied();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
     
     /// The site where the invalid arc was expressed.
     PcpSite site;
@@ -165,7 +169,7 @@ private:
 class PcpErrorInconsistentPropertyBase : public PcpErrorBase {
 public:
     /// Destructor.
-    virtual ~PcpErrorInconsistentPropertyBase();
+    PCP_API virtual ~PcpErrorInconsistentPropertyBase();
     
     /// The identifier of the layer with the defining property spec.
     std::string definingLayerIdentifier;
@@ -199,9 +203,9 @@ public:
     /// Returns a new error object.
     static PcpErrorInconsistentPropertyTypePtr New();
     /// Destructor.
-    ~PcpErrorInconsistentPropertyType();
+    PCP_API ~PcpErrorInconsistentPropertyType();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
 
     /// The type of the defining spec.
     SdfSpecType definingSpecType;
@@ -230,9 +234,9 @@ public:
     /// Returns a new error object.
     static PcpErrorInconsistentAttributeTypePtr New();
     /// Destructor.
-    ~PcpErrorInconsistentAttributeType();
+    PCP_API ~PcpErrorInconsistentAttributeType();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
 
     /// The value type from the defining spec.
     TfToken definingValueType;
@@ -261,9 +265,9 @@ public:
     /// Returns a new error object.
     static PcpErrorInconsistentAttributeVariabilityPtr New();
     /// Destructor.
-    ~PcpErrorInconsistentAttributeVariability();
+    PCP_API ~PcpErrorInconsistentAttributeVariability();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
 
     /// The variability of the defining spec.
     SdfVariability definingVariability;
@@ -291,9 +295,9 @@ public:
     /// Returns a new error object.
     static PcpErrorInternalAssetPathPtr New();
     /// Destructor.
-    ~PcpErrorInternalAssetPath();
+    PCP_API ~PcpErrorInternalAssetPath();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
     
     /// The site where the invalid arc was expressed.
     PcpSite site;
@@ -323,9 +327,9 @@ public:
     /// Returns a new error object.
     static PcpErrorInvalidPrimPathPtr New();
     /// Destructor.
-    ~PcpErrorInvalidPrimPath();
+    PCP_API ~PcpErrorInvalidPrimPath();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
 
     /// The site where the invalid arc was expressed.
     PcpSite site;
@@ -347,7 +351,7 @@ typedef boost::shared_ptr<PcpErrorInvalidAssetPathBase>
 class PcpErrorInvalidAssetPathBase : public PcpErrorBase {
 public:
     /// Destructor.
-    ~PcpErrorInvalidAssetPathBase();
+    PCP_API ~PcpErrorInvalidAssetPathBase();
     
     /// The site where the invalid arc was expressed.
     PcpSite site;
@@ -378,9 +382,9 @@ public:
     /// Returns a new error object.
     static PcpErrorInvalidAssetPathPtr New();
     /// Destructor.
-    ~PcpErrorInvalidAssetPath();
+    PCP_API ~PcpErrorInvalidAssetPath();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
 
 private:
     /// Constructor is private. Use New() instead.
@@ -403,9 +407,9 @@ public:
     /// Returns a new error object.
     static PcpErrorMutedAssetPathPtr New();
     /// Destructor.
-    ~PcpErrorMutedAssetPath();
+    PCP_API ~PcpErrorMutedAssetPath();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
 
 private:
     /// Constructor is private. Use New() instead.
@@ -426,7 +430,7 @@ typedef boost::shared_ptr<PcpErrorTargetPathBase>
 class PcpErrorTargetPathBase : public PcpErrorBase {
 public:
     /// Destructor.
-    ~PcpErrorTargetPathBase();
+    PCP_API ~PcpErrorTargetPathBase();
 
     /// The invalid target or connection path that was authored.
     SdfPath targetPath;
@@ -464,9 +468,9 @@ public:
     /// Returns a new error object.
     static PcpErrorInvalidInstanceTargetPathPtr New();
     /// Destructor.
-    ~PcpErrorInvalidInstanceTargetPath();
+    PCP_API ~PcpErrorInvalidInstanceTargetPath();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
 
 private:
     /// Constructor is private. Use New() instead.
@@ -490,9 +494,9 @@ public:
     /// Returns a new error object.
     static PcpErrorInvalidExternalTargetPathPtr New();
     /// Destructor.
-    ~PcpErrorInvalidExternalTargetPath();
+    PCP_API ~PcpErrorInvalidExternalTargetPath();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
     
     PcpArcType ownerArcType;
     SdfPath ownerIntroPath;
@@ -518,9 +522,9 @@ public:
     /// Returns a new error object.
     static PcpErrorInvalidTargetPathPtr New();
     /// Destructor.
-    ~PcpErrorInvalidTargetPath();
+    PCP_API ~PcpErrorInvalidTargetPath();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
 
 private:
     /// Constructor is private. Use New() instead.
@@ -543,9 +547,9 @@ public:
     /// Returns a new error object.
     static PcpErrorInvalidSublayerOffsetPtr New();
     /// Destructor.
-    ~PcpErrorInvalidSublayerOffset();
+    PCP_API ~PcpErrorInvalidSublayerOffset();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
     
     SdfLayerHandle layer;
     SdfLayerHandle sublayer;
@@ -572,9 +576,9 @@ public:
     /// Returns a new error object.
     static PcpErrorInvalidReferenceOffsetPtr New();
     /// Destructor.
-    ~PcpErrorInvalidReferenceOffset();
+    PCP_API ~PcpErrorInvalidReferenceOffset();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
     
     SdfLayerHandle layer;
     SdfPath sourcePath;
@@ -603,9 +607,9 @@ public:
     /// Returns a new error object.
     static PcpErrorInvalidSublayerOwnershipPtr New();
     /// Destructor.
-    ~PcpErrorInvalidSublayerOwnership();
+    PCP_API ~PcpErrorInvalidSublayerOwnership();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
 
     std::string owner;
     SdfLayerHandle layer;
@@ -632,9 +636,9 @@ public:
     /// Returns a new error object.
     static PcpErrorInvalidSublayerPathPtr New();
     /// Destructor.
-    ~PcpErrorInvalidSublayerPath();
+    PCP_API ~PcpErrorInvalidSublayerPath();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
     
     SdfLayerHandle layer;
     std::string sublayerPath;
@@ -660,9 +664,9 @@ public:
     /// Returns a new error object.
     static PcpErrorInvalidVariantSelectionPtr New();
     /// Destructor.
-    ~PcpErrorInvalidVariantSelection();
+    PCP_API ~PcpErrorInvalidVariantSelection();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
     
     std::string siteAssetPath;
     SdfPath sitePath;
@@ -689,9 +693,9 @@ public:
     /// Returns a new error object.
     static PcpErrorOpinionAtRelocationSourcePtr New();
     /// Destructor.
-    ~PcpErrorOpinionAtRelocationSource();
+    PCP_API ~PcpErrorOpinionAtRelocationSource();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
     
     SdfLayerHandle layer;
     SdfPath path;
@@ -717,9 +721,9 @@ public:
     /// Returns a new error object.
     static PcpErrorPrimPermissionDeniedPtr New();
     /// Destructor.
-    ~PcpErrorPrimPermissionDenied();
+    PCP_API ~PcpErrorPrimPermissionDenied();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
     
     /// The site where the invalid arc was expressed.
     PcpSite site;
@@ -747,9 +751,9 @@ public:
     /// Returns a new error object.
     static PcpErrorPropertyPermissionDeniedPtr New();
     /// Destructor.
-    ~PcpErrorPropertyPermissionDenied();
+    PCP_API ~PcpErrorPropertyPermissionDenied();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
     
     SdfPath propPath;
     SdfSpecType propType;
@@ -775,9 +779,9 @@ public:
     /// Returns a new error object.
     static PcpErrorSublayerCyclePtr New();
     /// Destructor.
-    ~PcpErrorSublayerCycle();
+    PCP_API ~PcpErrorSublayerCycle();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
     
     SdfLayerHandle layer;
     SdfLayerHandle sublayer;
@@ -803,9 +807,9 @@ public:
     /// Returns a new error object.
     static PcpErrorTargetPermissionDeniedPtr New();
     /// Destructor.
-    ~PcpErrorTargetPermissionDenied();
+    PCP_API ~PcpErrorTargetPermissionDenied();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
 
 private:
     /// Constructor is private. Use New() instead.
@@ -828,9 +832,9 @@ public:
     /// Returns a new error object.
     static PcpErrorUnresolvedPrimPathPtr New();
     /// Destructor.
-    ~PcpErrorUnresolvedPrimPath();
+    PCP_API ~PcpErrorUnresolvedPrimPath();
     /// Converts error to string message.
-    virtual std::string ToString() const;
+    PCP_API virtual std::string ToString() const;
     
     /// The site where the invalid arc was expressed.
     PcpSite site;
@@ -842,7 +846,10 @@ private:
     PcpErrorUnresolvedPrimPath();
 };
 
-//////////////////////////////////////////////////////////////////////////// Raise the given errors as runtime errors.
+/// Raise the given errors as runtime errors.
+PCP_API
 void PcpRaiseErrors(const PcpErrorVector &errors);
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PCP_ERRORS_H

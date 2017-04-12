@@ -26,10 +26,14 @@
 
 /// \file pcp/layerStackRegistry.h
 
+#include "pxr/pxr.h"
 #include "pxr/usd/pcp/errors.h"
 #include "pxr/base/tf/declarePtrs.h"
 #include "pxr/base/tf/refBase.h"
+
 #include <boost/scoped_ptr.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DECLARE_WEAK_AND_REF_PTRS(PcpLayerStack);
 TF_DECLARE_REF_PTRS(Pcp_LayerStackRegistry);
@@ -101,6 +105,9 @@ private:
                            bool isUsd);
     ~Pcp_LayerStackRegistry();
 
+    // Find that doesn't lock.
+    PcpLayerStackPtr _Find(const PcpLayerStackIdentifier&) const;
+
     // Remove the layer stack with the given identifier from the registry.
     void _Remove(const PcpLayerStackIdentifier&,
                  const PcpLayerStack *);
@@ -148,4 +155,6 @@ private:
     std::vector<std::string> _layers;
 };
 
-#endif
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // PCP_LAYER_STACK_REGISTRY_H

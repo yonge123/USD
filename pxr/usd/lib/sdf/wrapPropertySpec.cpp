@@ -23,6 +23,7 @@
 //
 /// \file wrapPropertySpec.cpp
 
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/propertySpec.h"
 #include "pxr/usd/sdf/layer.h"
 #include "pxr/usd/sdf/primSpec.h"
@@ -35,6 +36,10 @@
 #include <boost/python.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static
 void
@@ -69,6 +74,8 @@ _SetAssetInfo(SdfPropertySpec const &self,
     self.GetAssetInfo() = dictionary;
 }
 
+} // anonymous namespace 
+
 void wrapPropertySpec()
 {
     typedef SdfPropertySpec This;
@@ -99,7 +106,7 @@ void wrapPropertySpec()
         .add_property("name",
             make_function(&This::GetName,
                           return_value_policy<return_by_value>()),
-            &::_WrapSetName,
+            &_WrapSetName,
             "The name of the property.")
 
         .add_property("comment",
@@ -168,7 +175,7 @@ void wrapPropertySpec()
 
         .add_property("symmetryArguments",
             &This::GetSymmetryArguments,
-            &::_SetSymmetryArguments,
+            &_SetSymmetryArguments,
             "Dictionary with property symmetry arguments.\n\n"
             "Although this property is marked read-only, you can "
             "modify the contents to add, change, and clear symmetry arguments.")
@@ -180,7 +187,7 @@ void wrapPropertySpec()
 
         .add_property("customData",
             &This::GetCustomData,
-            &::_SetCustomData,
+            &_SetCustomData,
             "The property's custom data.\n\n"
             "The default value for custom data is an empty dictionary.\n\n"
             "Custom data is for use by plugins or other non-tools supplied \n"
@@ -193,7 +200,7 @@ void wrapPropertySpec()
 
         .add_property("assetInfo",
             &This::GetAssetInfo,
-            &::_SetAssetInfo,
+            &_SetAssetInfo,
             "Returns the asset info dictionary for this property.\n\n"
             "The default value is an empty dictionary.\n\n"
             "The asset info dictionary is used to annotate SdfAssetPath-valued "

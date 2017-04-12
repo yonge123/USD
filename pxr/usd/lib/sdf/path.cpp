@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/sdf/pathNode.h"
 #include "pxr/usd/sdf/pathParser.h"
@@ -48,6 +49,7 @@ using std::pair;
 using std::string;
 using std::vector;
 
+PXR_NAMESPACE_OPEN_SCOPE
 
 static inline bool _IsValidIdentifier(TfToken const &name);
 
@@ -881,15 +883,15 @@ SdfPath::GetCommonPrefix(const SdfPath &path) const {
     SdfPath path1 = *this;
     SdfPath path2 = path;
 
-    int count1 = path1.GetPathElementCount();
-    int count2 = path2.GetPathElementCount();
+    size_t count1 = path1.GetPathElementCount();
+    size_t count2 = path2.GetPathElementCount();
 
     if (count1 > count2) {
-        for (int i=0; i < (count1-count2); ++i) {
+        for (size_t i=0; i < (count1-count2); ++i) {
             path1 = path1.GetParentPath();
         }
     } else {
-        for (int i=0; i < (count2-count1); ++i) {
+        for (size_t i=0; i < (count2-count1); ++i) {
             path2 = path2.GetParentPath();
         }
     }
@@ -1509,7 +1511,7 @@ SdfPath::RemoveDescendentPaths(SdfPathVector *paths)
 void
 SdfPath::RemoveAncestorPaths(SdfPathVector *paths)
 {
-    // To remove descendents, first parition paths into prefix-related groups
+    // To remove ancestors, first parition paths into prefix-related groups
     // via sort.
     std::sort(paths->begin(), paths->end());
 
@@ -1524,3 +1526,5 @@ SdfPath::RemoveAncestorPaths(SdfPathVector *paths)
 size_t hash_value(SdfPath const &path) {
     return path.GetHash();
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

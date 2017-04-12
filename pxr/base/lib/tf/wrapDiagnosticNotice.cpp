@@ -32,6 +32,10 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 TF_INSTANTIATE_NOTICE_WRAPPER(TfDiagnosticNotice::Base, TfNotice);
 TF_INSTANTIATE_NOTICE_WRAPPER(TfDiagnosticNotice::IssuedError,
     TfDiagnosticNotice::Base);
@@ -41,6 +45,8 @@ TF_INSTANTIATE_NOTICE_WRAPPER(TfDiagnosticNotice::IssuedStatus,
     TfDiagnosticNotice::Base);
 TF_INSTANTIATE_NOTICE_WRAPPER(TfDiagnosticNotice::IssuedFatalError,
     TfDiagnosticNotice::Base);
+
+} // anonymous namespace 
 
 void wrapDiagnosticNotice() {
     scope noticeScope = class_<TfDiagnosticNotice>("DiagnosticNotice", no_init);

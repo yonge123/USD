@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/stageCache.h"
 #include "pxr/usd/usd/stage.h"
 
@@ -35,6 +36,10 @@ using std::vector;
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 static size_t __hash__(UsdStageCache::Id id) { return hash_value(id); }
 
 static bool
@@ -46,6 +51,8 @@ static UsdStageCache::Id
 GetId(const UsdStageCache &self, const UsdStagePtr &stage) {
     return self.GetId(stage);
 }
+
+} // anonymous namespace 
 
 void wrapUsdStageCache()
 {

@@ -21,8 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/base/gf/ray.h"
 
+#include "pxr/pxr.h"
+#include "pxr/base/gf/ray.h"
 #include "pxr/base/gf/line.h"
 #include "pxr/base/gf/lineSeg.h"
 #include "pxr/base/gf/math.h"
@@ -34,6 +35,8 @@
 #include "pxr/base/tf/type.h"
 
 #include <iostream>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 // Tolerance for GfIsClose
 static const double tolerance = 1e-6;
@@ -88,10 +91,10 @@ GfRay::FindClosestPoint(const GfVec3d &point, double *rayDistance) const
 
 bool
 GfFindClosestPoints(const GfRay &ray, const GfLine &line,
-		     GfVec3d *rayPoint,
-		     GfVec3d *linePoint,
-		     double *rayDistance,
-		     double *lineDistance)
+		    GfVec3d *rayPoint,
+		    GfVec3d *linePoint,
+		    double *rayDistance,
+		    double *lineDistance)
 {
     GfLine l;
     double len = l.Set(ray._startPoint, ray._direction);
@@ -121,10 +124,10 @@ GfFindClosestPoints(const GfRay &ray, const GfLine &line,
 
 bool 
 GfFindClosestPoints(const GfRay &ray, const GfLineSeg &seg,
-			  GfVec3d *rayPoint,
-			  GfVec3d *segPoint,
-			  double *rayDistance,
-			  double *segDistance)
+		    GfVec3d *rayPoint,
+		    GfVec3d *segPoint,
+		    double *rayDistance,
+		    double *segDistance)
 {
     GfLine l;
     double len = l.Set(ray._startPoint, ray._direction);
@@ -352,7 +355,7 @@ GfRay::Intersect(const GfVec3d& center, double radius,
     C = x3*x3 + y3*y3 + z3*z3 + x1*x1 + y1*y1 + z1*z1
         - 2*(x3*x1 +y3*y1 +z3*z1) - radius*radius;
 
-    return _SolveQuadratic(A, B, C, enterDistance, exitDistance) > 0;
+    return _SolveQuadratic(A, B, C, enterDistance, exitDistance);
 }
 
 bool
@@ -373,7 +376,7 @@ GfRay::Intersect(const GfVec3d &origin,
     double b = 2.0 * GfDot(u, v);
     double c = GfDot(v, v) - GfSqr(radius);
     
-    return _SolveQuadratic(a, b, c, enterDistance, exitDistance) > 0;
+    return _SolveQuadratic(a, b, c, enterDistance, exitDistance);
 }
 
 bool
@@ -518,3 +521,5 @@ operator<<(std::ostream& out, const GfRay& r)
     return out << '[' << Gf_OstreamHelperP(r.GetStartPoint()) << " >> " 
                << Gf_OstreamHelperP(r.GetDirection()) << ']';
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

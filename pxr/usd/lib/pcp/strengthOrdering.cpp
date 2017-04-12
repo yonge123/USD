@@ -21,11 +21,14 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/pcp/strengthOrdering.h"
 
+#include "pxr/pxr.h"
+#include "pxr/usd/pcp/strengthOrdering.h"
 #include "pxr/usd/pcp/diagnostic.h"
 #include "pxr/usd/pcp/node.h"
 #include "pxr/usd/pcp/node_Iterator.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 // Walk the entire expression tree under node, looking for either a or b.
 // This is a helper used for resolving implied inherit strength.
@@ -243,7 +246,7 @@ _CompareNodeStrength(
     // there are enough corresponding elements in bNodes, flipping the
     // arguments and return value if necessary.
     if (bNodes.size() < aNodes.size()) {
-        return _CompareNodeStrength(b, bNodes, a, aNodes) * -1;
+        return -_CompareNodeStrength(b, bNodes, a, aNodes);
     }
 
     TF_VERIFY(aNodes.size() <= bNodes.size());
@@ -291,3 +294,5 @@ PcpCompareNodeStrength(
     const PcpNodeRefVector bNodes = _CollectNodesFromNodeToRoot(b);
     return _CompareNodeStrength(a, aNodes, b, bNodes);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

@@ -30,6 +30,9 @@
 #include "pxr/base/tf/fileUtils.h"
 #include "pxr/base/tracelite/trace.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 GlfUVTextureDataRefPtr
 GlfUVTextureData::New(
     std::string const &filePath,
@@ -158,11 +161,10 @@ GlfUVTextureData::_ReadDegradedImageInput(bool generateMipmap,
     // Read the header of the image (no subimageIndex given, so at full
     // resolutin when evaluated).
     const GlfImageSharedPtr fullImage = GlfImage::OpenForReading(_filePath);
-    const GlfImageSharedPtr nullImage;
 
     // Bail if image file could not be opened.
     if (!fullImage) {
-        return _DegradedImageInput(1.0, 1.0, nullImage);
+        return _DegradedImageInput(1.0, 1.0);
     }
 
     // Load full chain if needed
@@ -189,7 +191,7 @@ GlfUVTextureData::_ReadDegradedImageInput(bool generateMipmap,
         GlfImageSharedPtr image =
 		GlfImage::OpenForReading(_filePath, degradeLevel);
         if (!image) {
-            return _DegradedImageInput(1.0, 1.0, nullImage);
+            return _DegradedImageInput(1.0, 1.0);
         }
 
         return _GetDegradedImageInputChain(
@@ -261,7 +263,7 @@ GlfUVTextureData::Read(int degradeLevel, bool generateMipmap)
     TRACE_FUNCTION();
 
     if (!TfPathExists(_filePath)) {
-        TF_CODING_ERROR("Unable to find Texture '%s'.", _filePath.c_str());
+        TF_WARN("Unable to find Texture '%s'.", _filePath.c_str());
         return false;
     }
 
@@ -270,7 +272,7 @@ GlfUVTextureData::Read(int degradeLevel, bool generateMipmap)
     const _DegradedImageInput degradedImage = _ReadDegradedImageInput(
                             generateMipmap, _params.targetMemory, degradeLevel);
     if (degradedImage.images.size()<1) {
-        TF_CODING_ERROR("Unable to load Texture '%s'.", _filePath.c_str());
+        TF_WARN("Unable to load Texture '%s'.", _filePath.c_str());
         return false;
     }
 
@@ -403,7 +405,7 @@ GlfUVTextureData::Read(int degradeLevel, bool generateMipmap)
         storage.data = _rawBuffer.get() + mip.offset;
 
         if (!image->ReadCropped(cropTop, cropBottom, cropLeft, cropRight, storage)) {
-            TF_CODING_ERROR("Unable to read Texture '%s'.", _filePath.c_str());
+            TF_WARN("Unable to read Texture '%s'.", _filePath.c_str());
             return false;
         }
     }
@@ -460,3 +462,6 @@ GlfUVTextureData::GetNumMipLevels() const
 {
     return (int)_rawBufferMips.size();   
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

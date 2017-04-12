@@ -21,10 +21,13 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/plug/plugin.h"
 #include "pxr/base/plug/debugCodes.h"
 
 #include "pxr/base/arch/threads.h"
+#include "pxr/base/arch/library.h"
 #include "pxr/base/js/value.h"
 #include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/tf/dl.h"
@@ -50,6 +53,8 @@
 using std::pair;
 using std::string;
 using std::vector;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 typedef TfHashMap< std::string, PlugPluginRefPtr, TfHash > _PluginMap;
 typedef TfHashMap< std::string, PlugPluginPtr, TfHash > _WeakPluginMap;
@@ -257,7 +262,7 @@ PlugPlugin::_Load()
         }
     } else if (!IsResource()) {
         string dsoError;
-        _handle = TfDlopen(_path.c_str(), RTLD_NOW, &dsoError);
+        _handle = TfDlopen(_path.c_str(), ARCH_LIBRARY_NOW, &dsoError);
         if (!_handle ) {
             TF_CODING_ERROR("Load of '%s' for '%s' failed: %s",
                             _path.c_str(), _name.c_str(), dsoError.c_str());
@@ -671,3 +676,4 @@ PlugFindPluginResource(
     return plugin ? plugin->FindPluginResource(path, verify) : std::string();
 }
 
+PXR_NAMESPACE_CLOSE_SCOPE

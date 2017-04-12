@@ -24,24 +24,31 @@
 #ifndef HD_BASIS_CURVES_H
 #define HD_BASIS_CURVES_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/rprim.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// Hydra Schema for a collection of curves using a particular basis.
 ///
 class HdBasisCurves : public HdRprim {
 public:
+    HD_API
     virtual ~HdBasisCurves();
 
     ///
     /// Topology
     ///
-    inline HdBasisCurvesTopology  GetBasisCurvesTopology() const;
-    inline int                    GetRefineLevel()         const;
+    inline HdBasisCurvesTopology  GetBasisCurvesTopology(HdSceneDelegate* delegate) const;
+    inline int                    GetRefineLevel(HdSceneDelegate* delegate)         const;
 
 
 protected:
-    HdBasisCurves(HdSceneDelegate* delegate, SdfPath const& id,
+    HD_API
+    HdBasisCurves(SdfPath const& id,
                   SdfPath const& instancerId = SdfPath());
 
 private:
@@ -52,16 +59,18 @@ private:
 };
 
 inline HdBasisCurvesTopology
-HdBasisCurves::GetBasisCurvesTopology() const
+HdBasisCurves::GetBasisCurvesTopology(HdSceneDelegate* delegate) const
 {
-    return GetDelegate()->GetBasisCurvesTopology(GetId());
+    return delegate->GetBasisCurvesTopology(GetId());
 }
 
 inline int
-HdBasisCurves::GetRefineLevel() const
+HdBasisCurves::GetRefineLevel(HdSceneDelegate* delegate) const
 {
-    return GetDelegate()->GetRefineLevel(GetId());
+    return delegate->GetRefineLevel(GetId());
 }
 
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // HD_BASIS_CURVES_H

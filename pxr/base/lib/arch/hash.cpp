@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/arch/hash.h"
 
 //
@@ -53,6 +55,8 @@
 
 #include <cstring>
 #include <cstddef>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 typedef  uint64_t  uint64;
 typedef  uint32_t  uint32;
@@ -661,7 +665,9 @@ uint64_t ArchHash64(const char *data, size_t len)
     return SpookyHash::Hash64(data, len, /*seed=*/0);
 }
 
-uint64_t ArchHash64(const char *data, size_t len, uint32_t seed)
+uint64_t ArchHash64(const char *data, size_t len, uint64_t seed)
 {
     return SpookyHash::Hash64(data, len, seed);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

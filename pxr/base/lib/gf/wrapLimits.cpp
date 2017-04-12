@@ -23,9 +23,12 @@
 //
 #include <boost/python/scope.hpp>
 
+#include "pxr/pxr.h"
 #include "pxr/base/gf/limits.h"
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void wrapLimits()
 {

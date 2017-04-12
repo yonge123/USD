@@ -45,6 +45,9 @@
 // XXX: feels wrong
 #include "pxr/imaging/glf/ptexTexture.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 TF_REGISTRY_FUNCTION(TfType)
 {
     typedef UsdImagingGprimAdapter Adapter;
@@ -59,7 +62,7 @@ UsdImagingGprimAdapter::~UsdImagingGprimAdapter()
 void 
 UsdImagingGprimAdapter::TrackVariabilityPrep(UsdPrim const& prim,
                                              SdfPath const& cachePath,
-                                             int requestedBits,
+                                             HdDirtyBits requestedBits,
                                              UsdImagingInstancerContext const* 
                                                  instancerContext)
 {
@@ -79,8 +82,8 @@ UsdImagingGprimAdapter::TrackVariabilityPrep(UsdPrim const& prim,
 void 
 UsdImagingGprimAdapter::TrackVariability(UsdPrim const& prim,
                                          SdfPath const& cachePath,
-                                         int requestedBits,
-                                         int* dirtyBits,
+                                         HdDirtyBits requestedBits,
+                                         HdDirtyBits* dirtyBits,
                                          UsdImagingInstancerContext const* 
                                              instancerContext)
 {
@@ -154,7 +157,7 @@ void
 UsdImagingGprimAdapter::UpdateForTimePrep(UsdPrim const& prim,
                                    SdfPath const& cachePath, 
                                    UsdTimeCode time,
-                                   int requestedBits,
+                                   HdDirtyBits requestedBits,
                                    UsdImagingInstancerContext const* 
                                        instancerContext)
 {
@@ -220,7 +223,8 @@ UsdImagingGprimAdapter::_DiscoverPrimvarsFromShaderNetwork(UsdGeomGprim const& g
     for (UsdShadeParameter const& param : shader.GetParameters()) {
         UsdShadeConnectableAPI source;
         TfToken outputName;
-        if (param.GetConnectedSource(&source, &outputName)) {
+        UsdShadeAttributeType sourceType;
+        if (param.GetConnectedSource(&source, &outputName, &sourceType)) {
             UsdAttribute attr = UsdShadeShader(source).GetIdAttr();
             TfToken id;
             if (!attr || !attr.Get(&id)) {
@@ -289,7 +293,8 @@ UsdImagingGprimAdapter::_DiscoverPrimvarsDeprecated(UsdGeomGprim const& gprim,
             VtValue v;
             UsdGeomPrimvar primvarAttr;
             texAttr.Get(&ap, UsdTimeCode::Default());
-            bool isPtex = GlfPtexTexture::IsPtexTexture(TfToken(ap.GetAssetPath()));
+
+            bool isPtex = GlfIsSupportedPtexTexture(TfToken(ap.GetAssetPath()));
             if (isPtex) {
                 t = UsdImagingTokens->ptexFaceIndex;
                 // Allow the client to override this name
@@ -354,8 +359,8 @@ void
 UsdImagingGprimAdapter::UpdateForTime(UsdPrim const& prim,
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
-                               int requestedBits,
-                               int* resultBits,
+                               HdDirtyBits requestedBits,
+                               HdDirtyBits* resultBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext)
 {
@@ -643,3 +648,6 @@ UsdImagingGprimAdapter::_GetSurfaceShader(UsdPrim const& prim)
 
     return GetShaderBinding(prim);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/gf/plane.h"
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/gf/range3d.h"
@@ -40,12 +42,16 @@ using namespace boost::python;
 
 using std::string;
 
+PXR_NAMESPACE_USING_DIRECTIVE
 
+namespace {
 
 static string _Repr(GfPlane const &self) {
     return TF_PY_REPR_PREFIX + "Plane(" + TfPyRepr(self.GetNormal()) + ", " +
         TfPyRepr(self.GetDistanceFromOrigin()) + ")";
 }
+
+} // anonymous namespace 
 
 void wrapPlane()
 {    

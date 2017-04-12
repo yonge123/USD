@@ -28,8 +28,14 @@
 ///
 /// Utilities for extracting asset dependencies from a USD file.
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usdUtils/api.h"
+
 #include <string>
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// Parses the file at \p filePath, identifying external references, and
 /// sorting them into separate type-based buckets. Sublayers are returned in
@@ -39,10 +45,14 @@
 ///
 /// \note No recursive chasing of dependencies is performed; that is the
 /// client's responsibility, if desired.
+USDUTILS_API
 void UsdUtilsExtractExternalReferences(
     const std::string& filePath,
     std::vector<std::string>* subLayers,
     std::vector<std::string>* references,
     std::vector<std::string>* payloads);
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // USDUTILS_DEPENDENCIES_H

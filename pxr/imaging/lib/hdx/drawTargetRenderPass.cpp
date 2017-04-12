@@ -25,8 +25,11 @@
 #include "pxr/imaging/glf/glContext.h"
 
 #include "pxr/imaging/hdx/drawTargetRenderPass.h"
-#include "pxr/imaging/hdx/drawTargetRenderPassState.h"
+#include "pxr/imaging/hdSt/drawTargetRenderPassState.h"
 #include "pxr/imaging/hd/renderPassState.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 static
 void
@@ -80,7 +83,7 @@ HdxDrawTargetRenderPass::SetDrawTarget(const GlfDrawTargetRefPtr &drawTarget)
 
 void
 HdxDrawTargetRenderPass::SetRenderPassState(
-    const HdxDrawTargetRenderPassState *drawTargetRenderPassState)
+    const HdStDrawTargetRenderPassState *drawTargetRenderPassState)
 {
     _drawTargetRenderPassState = drawTargetRenderPassState;
 }
@@ -133,7 +136,7 @@ HdxDrawTargetRenderPass::Execute(
     glViewport(0, 0, resolution[0], resolution[1]);
 
     // Perform actual draw
-    _renderPass.Execute(renderPassState);
+    _renderPass.Execute(renderPassState, HdTokens->geometry);
 
     // restore viewport
     glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
@@ -164,3 +167,6 @@ HdxDrawTargetRenderPass::GetDrawTarget()
 {
     return _drawTarget;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

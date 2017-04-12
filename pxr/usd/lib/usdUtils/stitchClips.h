@@ -21,23 +21,27 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef _USDUTILS_STITCH_CLIPS_H_
-#define _USDUTILS_STITCH_CLIPS_H_
+#ifndef USDUTILS_STITCH_CLIPS_H
+#define USDUTILS_STITCH_CLIPS_H
 
 /// \file usdUtils/stitchClips.h
 ///
 /// Collection of utilities for sequencing multiple layers each holding
 /// sequential time-varying data into
-/// \ref Usd_AdvancedFeatures_ClipsOverview "USD Value Clips".
+/// \ref Usd_Page_ValueClips "USD Value Clips".
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usdUtils/api.h"
 #include "pxr/usd/sdf/declareHandles.h"
 #include "pxr/usd/sdf/path.h"
-SDF_DECLARE_HANDLES(SdfLayer);
-
 #include <limits>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+SDF_DECLARE_HANDLES(SdfLayer);
+
 /// A function that creates layers that use
-/// \ref Usd_AdvancedFeatures_ClipsOverview "USD Value Clips"
+/// \ref Usd_Page_ValueClips "USD Value Clips"
 /// to effectively merge the time samples in the given \p clipLayers under \p
 /// clipPath without copying the samples into a separate layer.
 ///
@@ -95,6 +99,7 @@ SDF_DECLARE_HANDLES(SdfLayer);
 /// Note: an invalid clip path(because the prim doesn't exist in
 /// the aggregate topologyLayer) will result in a TF_CODING_ERROR.
 /// 
+USDUTILS_API
 bool 
 UsdUtilsStitchClips(const SdfLayerHandle& resultLayer, 
                     const std::vector<std::string>& clipLayerFiles,
@@ -114,6 +119,7 @@ UsdUtilsStitchClips(const SdfLayerHandle& resultLayer,
 ///
 /// \p clipLayerFiles         The files containing the time varying data.
 /// 
+USDUTILS_API
 bool 
 UsdUtilsStitchClipsTopology(const SdfLayerHandle& topologyLayer, 
                             const std::vector<std::string>& clipLayerFiles);
@@ -147,6 +153,7 @@ UsdUtilsStitchClipsTopology(const SdfLayerHandle& topologyLayer,
 ///
 /// For further information on these metadatum, see \ref Usd_Page_AdvancedFeatures
 ///
+USDUTILS_API
 bool
 UsdUtilsStitchClipsTemplate(const SdfLayerHandle& resultLayer,
                             const SdfLayerHandle& topologyLayer,
@@ -165,7 +172,11 @@ UsdUtilsStitchClipsTemplate(const SdfLayerHandle& resultLayer,
 ///
 /// \p rootLayerName      The filepath used as a basis for generating
 ///                       our topology layer name.
+USDUTILS_API
 std::string
 UsdUtilsGenerateClipTopologyName(const std::string& rootLayerName);
 
-#endif // _USDUTILS_STITCH_CLIPS_H_
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif /* USDUTILS_STITCH_CLIPS_H */

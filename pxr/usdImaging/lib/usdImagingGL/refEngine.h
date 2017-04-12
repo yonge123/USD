@@ -21,12 +21,14 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef USDIMAGING_REFENGINE_H
-#define USDIMAGING_REFENGINE_H
+#ifndef USDIMAGINGGL_REFENGINE_H
+#define USDIMAGINGGL_REFENGINE_H
+
+#include "pxr/pxr.h"
+#include "pxr/usdImaging/usdImagingGL/api.h"
+#include "pxr/usdImaging/usdImagingGL/engine.h"
 
 #include "pxr/imaging/garch/gl.h"
-
-#include "pxr/usdImaging/usdImagingGL/engine.h"
 
 #include "pxr/usd/usdGeom/gprim.h"
 #include "pxr/usd/usd/notice.h"
@@ -36,30 +38,40 @@
 #include "pxr/base/tf/hashmap.h"
 #include "pxr/base/tf/hashset.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 TF_DECLARE_WEAK_PTRS(UsdImagingGLRefEngine);
 
 class UsdImagingGLRefEngine : public UsdImagingGLEngine, public TfWeakBase {
     typedef UsdImagingGLRefEngine This;
 public:
 
+    USDIMAGINGGL_API
     UsdImagingGLRefEngine(const SdfPathVector& excludedPaths);
 
+    USDIMAGINGGL_API
     ~UsdImagingGLRefEngine();
 
     // Entry point for kicking off a render
+    USDIMAGINGGL_API
     virtual void Render(const UsdPrim& root, RenderParams params);
 
+    USDIMAGINGGL_API
     virtual void SetCameraState(const GfMatrix4d& viewMatrix,
                                 const GfMatrix4d& projectionMatrix,
                                 const GfVec4d& viewport);
 
     /// Set lighting state
+    USDIMAGINGGL_API
     virtual void SetLightingState(GlfSimpleLightVector const &lights,
                                   GlfSimpleMaterial const &material,
                                   GfVec4f const &sceneAmbient);
 
+    USDIMAGINGGL_API
     virtual void InvalidateBuffers();
 
+    USDIMAGINGGL_API
     virtual SdfPath GetPrimPathFromPrimIdColor(
         GfVec4i const& primIdColor,
         GfVec4i const& instanceIdColor,
@@ -222,4 +234,7 @@ private:
     TfNotice::Key _objectsChangedNoticeKey;
 };
 
-#endif // USDIMAGING_REFENGINE_H
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // USDIMAGINGGL_REFENGINE_H

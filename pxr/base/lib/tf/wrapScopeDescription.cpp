@@ -21,6 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/scopeDescription.h"
 #include "pxr/base/tf/pyResultConversions.h"
 
@@ -37,6 +40,10 @@ using std::string;
 using std::vector;
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 // This class lets us expose TfScopeDescription to python for use as a "context
 // manager" object.  That is, for use with the 'with'-statement.  For example:
@@ -86,6 +93,7 @@ private:
     string _description;
 };
 
+} // anonymous namespace 
 
 void wrapScopeDescription()
 {
@@ -101,4 +109,3 @@ void wrapScopeDescription()
         .def("SetDescription", &This::SetDescription)
         ;
 }
-                 

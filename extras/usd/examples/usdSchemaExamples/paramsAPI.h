@@ -26,6 +26,8 @@
 
 /// \file usdSchemaExamples/paramsAPI.h
 
+#include "pxr/pxr.h"
+#include "./api.h"
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
@@ -39,6 +41,8 @@
 
 #include "pxr/base/tf/token.h"
 #include "pxr/base/tf/type.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class SdfAssetPath;
 
@@ -76,11 +80,13 @@ public:
     }
 
     /// Destructor.
+    USDSCHEMAEXAMPLES_API
     virtual ~UsdSchemaExamplesParamsAPI();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
+    USDSCHEMAEXAMPLES_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
@@ -93,6 +99,7 @@ public:
     /// UsdSchemaExamplesParamsAPI(stage->GetPrimAtPath(path));
     /// \endcode
     ///
+    USDSCHEMAEXAMPLES_API
     static UsdSchemaExamplesParamsAPI
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
@@ -100,11 +107,13 @@ public:
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
+    USDSCHEMAEXAMPLES_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
+    USDSCHEMAEXAMPLES_API
     virtual const TfType &_GetTfType() const;
 
 public:
@@ -117,6 +126,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Double
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDSCHEMAEXAMPLES_API
     UsdAttribute GetMassAttr() const;
 
     /// See GetMassAttr(), and also 
@@ -124,6 +134,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDSCHEMAEXAMPLES_API
     UsdAttribute CreateMassAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -136,6 +147,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Double
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDSCHEMAEXAMPLES_API
     UsdAttribute GetVelocityAttr() const;
 
     /// See GetVelocityAttr(), and also 
@@ -143,6 +155,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDSCHEMAEXAMPLES_API
     UsdAttribute CreateVelocityAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -155,6 +168,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Double
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDSCHEMAEXAMPLES_API
     UsdAttribute GetVolumeAttr() const;
 
     /// See GetVolumeAttr(), and also 
@@ -162,6 +176,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDSCHEMAEXAMPLES_API
     UsdAttribute CreateVolumeAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -169,10 +184,14 @@ public:
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 
     //
-    // Just remember to close the class declaration with }; and complete the
-    // include guard with #endif
+    // Just remember to: 
+    //  - Close the class declaration with }; 
+    //  - Close the namespace with PXR_NAMESPACE_CLOSE_SCOPE
+    //  - Close the include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif

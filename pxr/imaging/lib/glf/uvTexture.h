@@ -26,12 +26,17 @@
 
 /// \file glf/uvTexture.h
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/glf/api.h"
 #include "pxr/imaging/glf/baseTexture.h"
 
 #include "pxr/base/tf/declarePtrs.h"
 #include "pxr/base/tf/token.h"
 
 #include <string>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfUVTexture);
 
@@ -48,6 +53,7 @@ public:
     /// If given, \p cropTop, \p cropBottom, \p cropLeft, and \p cropRight
     /// specifies the number of pixels to crop from the indicated border of
     /// the source image.
+    GLF_API
     static GlfUVTextureRefPtr New(
         TfToken const &imageFilePath,
         unsigned int cropTop    = 0,
@@ -55,6 +61,7 @@ public:
         unsigned int cropLeft   = 0,
         unsigned int cropRight  = 0);
 
+    GLF_API
     static GlfUVTextureRefPtr New(
         std::string const &imageFilePath,
         unsigned int cropTop    = 0,
@@ -64,14 +71,19 @@ public:
     
     /// Returns true if the file at \p imageFilePath is an image that
     /// can be used with this texture object.
+    GLF_API
     static bool IsSupportedImageFile(TfToken const &imageFilePath);
+    GLF_API
     static bool IsSupportedImageFile(std::string const &imageFilePath);
 
+    GLF_API
     virtual VtDictionary GetTextureInfo() const;
 
+    GLF_API
     virtual bool IsMinFilterSupported(GLenum filter);
 
 protected:
+    GLF_API
     GlfUVTexture(
         TfToken const &imageFilePath,
         unsigned int cropTop,
@@ -79,8 +91,11 @@ protected:
         unsigned int cropLeft,
         unsigned int cropRight);
 
+    GLF_API
     virtual void _OnSetMemoryRequested(size_t targetMemory);
+    GLF_API
     virtual bool _GenerateMipmap() const;
+    GLF_API
     const TfToken& _GetImageFilePath() const;
     unsigned int _GetCropTop() const {return _cropTop;}
     unsigned int _GetCropBottom() const {return _cropBottom;}
@@ -94,5 +109,8 @@ private:
     const unsigned int _cropLeft;
     const unsigned int _cropRight;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // GLF_UVTEXTURE_H

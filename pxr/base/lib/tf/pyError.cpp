@@ -21,6 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/tf/error.h"
 #include "pxr/base/tf/errorMark.h"
@@ -39,10 +42,12 @@ using namespace boost::python;
 using std::vector;
 using std::string;
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 bool TfPyConvertTfErrorsToPythonException(TfErrorMark const &m) {
     // If there is a python exception somewhere in here, restore that, otherwise
     // raise a normal error exception.
-    if (not m.IsClean()) {
+    if (!m.IsClean()) {
         list args;
         for (TfErrorMark::Iterator e = m.GetBegin(); e != m.GetEnd(); ++e) {
             if (e->GetErrorCode() == TF_PYTHON_EXCEPTION) {
@@ -94,7 +99,7 @@ TfPyConvertPythonExceptionToTfErrors()
  
     // Replace the errors in m with errors parsed out of the exception.
     if (exc.GetType()) {
-        if (exc.GetType().get() == Tf_PyGetErrorExceptionClass().get() and
+        if (exc.GetType().get() == Tf_PyGetErrorExceptionClass().get() &&
             exc.GetValue()) {
             // Replace the errors in m with errors pulled out of exc.
             object exception = object(exc.GetValue());
@@ -110,3 +115,5 @@ TfPyConvertPythonExceptionToTfErrors()
         }
     }
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

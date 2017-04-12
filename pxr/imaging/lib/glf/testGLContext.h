@@ -26,11 +26,15 @@
 
 /// \file glf/testGLContext.h
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/glf/api.h"
 #include "pxr/imaging/glf/glContext.h"
 
-class Glf_TestGLContextPrivate;
-
 #include <boost/shared_ptr.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+class Glf_TestGLContextPrivate;
 
 typedef boost::shared_ptr<class GlfTestGLContext> GlfTestGLContextSharedPtr;
 
@@ -40,17 +44,23 @@ typedef boost::shared_ptr<class GlfTestGLContext> GlfTestGLContextSharedPtr;
 ///
 class GlfTestGLContext : public GlfGLContext {
 public:
+    GLF_API
     static void RegisterGLContextCallbacks();
 
     // GlfGLContext overrides
+    GLF_API
     virtual bool IsValid() const;
 
+    GLF_API
     static GlfTestGLContextSharedPtr Create( GlfTestGLContextSharedPtr const & share );
 
 protected:
     // GlfGLContext overrides
+    GLF_API
     virtual void _MakeCurrent();
+    GLF_API
     virtual bool _IsSharing(const GlfGLContextSharedPtr& rhs) const;
+    GLF_API
     virtual bool _IsEqual(const GlfGLContextSharedPtr& rhs) const;
 
 private:
@@ -61,5 +71,8 @@ private:
 private:
     Glf_TestGLContextPrivate * _context;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif  // GLF_TEST_GL_CONTEXT_H

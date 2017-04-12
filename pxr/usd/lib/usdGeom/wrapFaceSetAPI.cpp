@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usdGeom/faceSetAPI.h"
 #include "pxr/usd/usd/conversions.h"
 
@@ -28,9 +29,15 @@
 #include "pxr/base/tf/pyResultConversions.h"
 
 #include <boost/python.hpp>
-using namespace boost::python;
 
 #include <string>
+
+using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 using std::string;
 
 static  TfPyObjWrapper 
@@ -138,6 +145,8 @@ _AppendFaceGroup(const UsdGeomFaceSetAPI &self,
     }
     return false;
 }
+
+} // anonymous namespace 
 
 void wrapUsdGeomFaceSetAPI()
 {

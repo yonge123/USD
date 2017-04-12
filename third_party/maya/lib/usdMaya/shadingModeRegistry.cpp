@@ -21,26 +21,30 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdMaya/shadingModeRegistry.h"
 
 #include "pxr/base/tf/instantiateSingleton.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaShadingModeTokens, PXRUSDMAYA_SHADINGMODE_TOKENS);
 
-typedef std::map<TfToken, PxrUsdMayaShadingModeExporter> _ExportRegistry;
+typedef std::map<TfToken, PxrUsdMayaShadingModeExporterCreator> _ExportRegistry;
 static _ExportRegistry _exportReg;
 
 bool
 PxrUsdMayaShadingModeRegistry::RegisterExporter(
         const std::string& name,
-        PxrUsdMayaShadingModeExporter fn)
+        PxrUsdMayaShadingModeExporterCreator fn)
 {
     std::pair<_ExportRegistry::const_iterator, bool> insertStatus = _exportReg.insert(
             std::make_pair(TfToken(name), fn));
     return insertStatus.second;
 }
 
-PxrUsdMayaShadingModeExporter 
+PxrUsdMayaShadingModeExporterCreator
 PxrUsdMayaShadingModeRegistry::_GetExporter(const TfToken& name)
 {
     TfRegistryManager::GetInstance().SubscribeTo<PxrUsdMayaShadingModeExportContext>();
@@ -81,4 +85,7 @@ PxrUsdMayaShadingModeRegistry::PxrUsdMayaShadingModeRegistry()
 PxrUsdMayaShadingModeRegistry::~PxrUsdMayaShadingModeRegistry()
 {
 }
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 

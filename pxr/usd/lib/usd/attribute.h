@@ -24,6 +24,8 @@
 #ifndef USD_ATTRIBUTE_H
 #define USD_ATTRIBUTE_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usd/api.h"
 #include "pxr/usd/usd/common.h"
 #include "pxr/usd/usd/property.h"
 #include "pxr/usd/usd/resolveInfo.h"
@@ -37,6 +39,9 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 class UsdAttribute;
 
@@ -138,7 +143,8 @@ class UsdAttribute : public UsdProperty {
 public:
     /// Construct an invalid attribute.
     UsdAttribute()
-        : UsdProperty(UsdTypeAttribute, Usd_PrimDataHandle(), TfToken())
+        : UsdProperty(UsdTypeAttribute, Usd_PrimDataHandle(), SdfPath(), 
+                      TfToken())
     {
     }
 
@@ -154,6 +160,7 @@ public:
     ///
     /// Variability is required meta-data of all attributes, and its fallback
     /// value is SdfVariabilityVarying.
+    USD_API
     SdfVariability GetVariability() const;
 
     /// Set the value for variability at the current EditTarget, return true
@@ -162,9 +169,11 @@ public:
     /// \b Note that this value should not be changed as it is typically either
     /// automatically authored or provided by a property defintion. This method
     /// is provided primarily for fixing invalid scene description.
+    USD_API
     bool SetVariability(SdfVariability variability) const;
 
     /// Return the "scene description" value type name for this attribute.
+    USD_API
     SdfValueTypeName GetTypeName() const;
 
     /// Set the value for typeName at the current EditTarget, return true on
@@ -173,9 +182,11 @@ public:
     /// \b Note that this value should not be changed as it is typically either
     /// automatically authored or provided by a property definition. This method
     /// is provided primarily for fixing invalid scene description.
+    USD_API
     bool SetTypeName(const SdfValueTypeName& typeName) const;
 
     /// Return the roleName for this attribute's typeName.
+    USD_API
     TfToken GetRoleName() const;
 
     /// @}
@@ -199,6 +210,7 @@ public:
     /// expensive, especially if many clips are involved.     
     /// 
     /// \sa UsdAttribute::GetTimeSamplesInInterval
+    USD_API
     bool GetTimeSamples(std::vector<double>* times) const;
 
     /// Populates a vector with authored sample times in \p interval. 
@@ -210,6 +222,7 @@ public:
     /// \note This function will only query the value clips that may 
     /// contribute time samples for this attribute in the given interval, 
     /// opening them if necessary.
+    USD_API
     bool GetTimeSamplesInInterval(const GfInterval& interval,
                                   std::vector<double>* times) const;
 
@@ -222,6 +235,7 @@ public:
     /// \note This function will query all value clips that may contribute 
     /// time samples for this attribute, opening them if needed. This may be
     /// expensive, especially if many clips are involved.
+    USD_API
     size_t GetNumTimeSamples() const;
 
     /// Populate \a lower and \a upper with the next greater and lesser
@@ -249,6 +263,7 @@ public:
     ///
     /// All four cases above are considered to be successful, thus the return
     /// value will be true and no error message will be emitted.
+    USD_API
     bool GetBracketingTimeSamples(double desiredTime, 
                                   double* lower, 
                                   double* upper, 
@@ -256,14 +271,17 @@ public:
 
     /// Return true if this attribute has an authored default value, authored
     /// time samples or a fallback value provided by a registered schema.
+    USD_API
     bool HasValue() const;
 
     /// Return true if this attribute has either an authored default value or
     /// authored time samples.
+    USD_API
     bool HasAuthoredValueOpinion() const;
 
     /// Return true if this attribute has a fallback value provided by 
     /// a registered schema.
+    USD_API
     bool HasFallbackValue() const;
 
     /// Return true if it is possible, but not certain, that this attribute's
@@ -275,6 +293,7 @@ public:
     /// This function is equivalent to checking if GetNumTimeSamples() > 1,
     /// but may be more efficient since it does not actually need to get a
     /// full count of all time samples.
+    USD_API
     bool ValueMightBeTimeVarying() const;
 
     /// Perform value resolution to fetch the value of this attribute at the
@@ -315,11 +334,13 @@ public:
     }
     /// \overload 
     /// Type-erased access, often not as efficient as typed access.
+    USD_API
     bool Get(VtValue* value, UsdTimeCode time = UsdTimeCode::Default()) const;
 
     /// Perform value resolution to determine the source of the resolved
     /// value of this attribute at the requested UsdTimeCode \p time,
     /// which defaults to \em default.
+    USD_API
     UsdResolveInfo
     GetResolveInfo(UsdTimeCode time = UsdTimeCode::Default()) const;
 
@@ -347,6 +368,7 @@ public:
     }
 
     /// \overload 
+    USD_API
     bool Set(const VtValue& value, UsdTimeCode time = UsdTimeCode::Default()) const;
 
     /// Clears the authored default value and all time samples for this
@@ -356,6 +378,7 @@ public:
     /// is a silent no-op returning true.    
     ///
     /// This method does not affect any other data authored on this attribute.
+    USD_API
     bool Clear() const;
 
     /// Clears the authored value for this attribute at the given 
@@ -364,9 +387,11 @@ public:
     ///
     /// Calling clear when either no value is authored or no spec is present,
     /// is a silent no-op returning true. 
+    USD_API
     bool ClearAtTime(UsdTimeCode time) const;
 
     /// Shorthand for ClearAtTime(UsdTimeCode::Default()).
+    USD_API
     bool ClearDefault() const;
 
     /// Removes all time samples on an attribute and sets a block
@@ -375,6 +400,7 @@ public:
     /// in the LayerStack. During value resolution, if a block is authored,
     /// if there is a fallback, the client will receive that, otherwise they
     /// will receive false when calling Get(). 
+    USD_API
     void Block();
 
     /// @}
@@ -389,14 +415,16 @@ private:
     friend class UsdSchemaBase;
     friend class Usd_PrimData;
 
-    UsdAttribute(const Usd_PrimDataHandle& prim,
-                 const TfToken& attrName)
-        : UsdProperty(UsdTypeAttribute, prim, attrName) {}
+    UsdAttribute(const Usd_PrimDataHandle &prim,
+                 const SdfPath &proxyPrimPath,
+                 const TfToken &attrName)
+        : UsdProperty(UsdTypeAttribute, prim, proxyPrimPath, attrName) {}
 
     UsdAttribute(UsdObjType objType,
                  const Usd_PrimDataHandle &prim,
+                 const SdfPath &proxyPrimPath,
                  const TfToken &propName)
-        : UsdProperty(objType, prim, propName) {}
+        : UsdProperty(objType, prim, proxyPrimPath, propName) {}
 
     SdfAttributeSpecHandle
     _CreateSpec(const SdfValueTypeName &typeName, bool custom,
@@ -404,11 +432,15 @@ private:
     bool _Create(const SdfValueTypeName &typeName, bool custom,
                  const SdfVariability &variability) const;
 
+    USD_API
     bool _UntypedSet(const SdfAbstractDataConstValue& value, 
                      UsdTimeCode t) const;
 
     template <typename T>
     bool _Get(T* value, UsdTimeCode time) const;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // USD_ATTRIBUTE_H

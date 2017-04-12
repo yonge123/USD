@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdMaya/editUtil.h"
 
 #include "usdMaya/util.h"
@@ -44,6 +45,10 @@ using namespace boost::python;
 using namespace boost;
 
 #define BOOST_PYTHON_NONE boost::python::object()
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static
 boost::python::object
@@ -217,6 +222,8 @@ _GetAvarEdits(
 
     return pathDict;
 }
+
+} // anonymous namespace 
 
 void wrapEditUtil()
 {

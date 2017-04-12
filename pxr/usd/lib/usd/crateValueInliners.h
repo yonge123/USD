@@ -24,12 +24,16 @@
 #ifndef USD_CRATE_VALUE_INLINERS_H
 #define USD_CRATE_VALUE_INLINERS_H
 
+#include "pxr/pxr.h"
 #include "pxr/base/gf/traits.h"
 
 #include <type_traits>
 #include <limits>
 #include <cstdint>
 #include <cstring>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 namespace Usd_CrateValueInliners
 {
@@ -39,7 +43,7 @@ namespace Usd_CrateValueInliners
 // doing the conversion.
 template <class Src, class Dst>
 inline bool _IsExactlyRepresented(Src const &src, Dst *dst) {
-    Src min = static_cast<Src>(std::numeric_limits<Dst>::min());
+    Src min = static_cast<Src>(std::numeric_limits<Dst>::lowest());
     Src max = static_cast<Src>(std::numeric_limits<Dst>::max());
     if (min <= src && src <= max &&
         static_cast<Src>(static_cast<Dst>(src)) == src) {
@@ -179,6 +183,9 @@ _DecodeInline(VtDictionary *dict, uint32_t ival) {
 }
 
 } // Usd_CrateValueInliners
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // USD_CRATE_VALUE_INLINERS_H
 

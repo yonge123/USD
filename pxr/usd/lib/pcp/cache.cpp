@@ -21,8 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/pcp/cache.h"
 
+#include "pxr/pxr.h"
+#include "pxr/usd/pcp/cache.h"
 #include "pxr/usd/pcp/arc.h"
 #include "pxr/usd/pcp/changes.h"
 #include "pxr/usd/pcp/diagnostic.h"
@@ -70,6 +71,8 @@ using std::pair;
 using std::vector;
 
 using boost::dynamic_pointer_cast;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DEFINE_ENV_SETTING(
     PCP_CULLING, true,
@@ -637,36 +640,42 @@ PcpCache::FindSiteDependencies(
             ? depPrimSitePath : sitePath;
 
         auto visitNodeFn = [&](const SdfPath &depPrimIndexPath,
-                               const PcpNodeRef &node,
-                               PcpDependencyFlags flags)
+                               const PcpNodeRef &node)
         {
-            if ((flags & localMask) == flags) {
-                // Now that we have found a dependency on depPrimSitePath,
-                // use path translation to get the corresponding depIndexPath.
-                SdfPath depIndexPath;
-                bool valid = false;
-                if (node.GetArcType() == PcpArcTypeRelocate) {
-                    // Relocates require special handling.  Because
-                    // a relocate node's map function is always
-                    // identity, we must do our own prefix replacement
-                    // to step out of the relocate, then continue
-                    // with regular path translation.
-                    const PcpNodeRef parent = node.GetParentNode(); 
-                    depIndexPath = PcpTranslatePathFromNodeToRoot(
-                        parent,
-                        localSitePath.ReplacePrefix( node.GetPath(),
-                                                       parent.GetPath() ),
-                        &valid );
-                } else {
-                    depIndexPath = PcpTranslatePathFromNodeToRoot(
-                        node, localSitePath, &valid);
+            // Skip computing the node's dependency type if we aren't looking
+            // for a specific type -- that computation can be expensive.
+            if (localMask != PcpDependencyTypeAnyIncludingVirtual) {
+                PcpDependencyFlags flags = PcpClassifyNodeDependency(node);
+                if ((flags & localMask) != flags) { 
+                    return;
                 }
-                if (valid && TF_VERIFY(!depIndexPath.IsEmpty()) &&
-                    cacheFilterFn(depIndexPath)) {
-                    deps.push_back(PcpDependency{
-                        depIndexPath, localSitePath,
-                        node.GetMapToRoot().Evaluate() });
-                }
+            }
+
+            // Now that we have found a dependency on depPrimSitePath,
+            // use path translation to get the corresponding depIndexPath.
+            SdfPath depIndexPath;
+            bool valid = false;
+            if (node.GetArcType() == PcpArcTypeRelocate) {
+                // Relocates require special handling.  Because
+                // a relocate node's map function is always
+                // identity, we must do our own prefix replacement
+                // to step out of the relocate, then continue
+                // with regular path translation.
+                const PcpNodeRef parent = node.GetParentNode(); 
+                depIndexPath = PcpTranslatePathFromNodeToRoot(
+                    parent,
+                    localSitePath.ReplacePrefix( node.GetPath(),
+                                                 parent.GetPath() ),
+                    &valid );
+            } else {
+                depIndexPath = PcpTranslatePathFromNodeToRoot(
+                    node, localSitePath, &valid);
+            }
+            if (valid && TF_VERIFY(!depIndexPath.IsEmpty()) &&
+                cacheFilterFn(depIndexPath)) {
+                deps.push_back(PcpDependency{
+                    depIndexPath, localSitePath,
+                    node.GetMapToRoot().Evaluate() });
             }
         };
         Pcp_ForEachDependentNode(depPrimSitePath, siteLayerStack,
@@ -685,25 +694,37 @@ PcpCache::FindSiteDependencies(
         TRACE_SCOPE("PcpCache::FindSiteDependencies - recurseOnIndex");
         SdfPathSet seenDeps;
         PcpDependencyVector expandedDeps;
+
         for(const PcpDependency &dep: deps) {
             const SdfPath & indexPath = dep.indexPath;
-            if (seenDeps.find(indexPath) != seenDeps.end()) {
-                // Short circuit further expansion; expect we
-                // have already recursed below this path.
-                continue;
+
+            auto it = seenDeps.upper_bound(indexPath);
+            if (it != seenDeps.begin()) {
+                --it;
+                if (indexPath.HasPrefix(*it)) {
+                    // Short circuit further expansion; expect we
+                    // have already recursed below this path.
+                    continue;
+                }
             }
+
             seenDeps.insert(indexPath);
             expandedDeps.push_back(dep);
             // Recurse on child index entries.
             if (indexPath.IsAbsoluteRootOrPrimPath()) {
-                const auto primRange =
+                auto primRange =
                     _primIndexCache.FindSubtreeRange(indexPath);
+                if (primRange.first != primRange.second) {
+                    // Skip initial entry, since we've already added it 
+                    // to expandedDeps above.
+                    ++primRange.first;
+                }
+
                 for (auto entryIter = primRange.first;
                      entryIter != primRange.second; ++entryIter) {
                     const SdfPath& subPath = entryIter->first;
                     const PcpPrimIndex& subPrimIndex = entryIter->second;
-                    if (subPrimIndex.IsValid() &&
-                        seenDeps.find(subPath) == seenDeps.end()) {
+                    if (subPrimIndex.IsValid()) {
                         expandedDeps.push_back(PcpDependency{
                             subPath,
                             subPath.ReplacePrefix(indexPath, dep.sitePath),
@@ -718,8 +739,7 @@ PcpCache::FindSiteDependencies(
                  entryIter != propRange.second; ++entryIter) {
                 const SdfPath& subPath = entryIter->first;
                 const PcpPropertyIndex& subPropIndex = entryIter->second;
-                if (!subPropIndex.IsEmpty() &&
-                    seenDeps.find(subPath) == seenDeps.end()) {
+                if (!subPropIndex.IsEmpty()) {
                     expandedDeps.push_back(PcpDependency{
                         subPath,
                         subPath.ReplacePrefix(indexPath, dep.sitePath),
@@ -874,8 +894,7 @@ PcpCache::Apply(const PcpCacheChanges& changes, PcpLifeboat* lifeboat)
         }
 
         // Blow property stacks and update spec dependencies on prims.
-        TF_FOR_ALL(i, changes.didChangeSpecs) {
-            const SdfPath& path = *i;
+        auto updateSpecStacks = [this, &lifeboat](const SdfPath& path) {
             if (path.IsAbsoluteRootOrPrimPath()) {
                 // We've possibly changed the prim spec stack.  Note that
                 // we may have blown the prim index so check that it exists.
@@ -906,6 +925,14 @@ PcpCache::Apply(const PcpCacheChanges& changes, PcpLifeboat* lifeboat)
                 // relational attributes for this target.
                 _RemovePropertyCaches(path, lifeboat);
             }
+        };
+
+        TF_FOR_ALL(i, changes.didChangeSpecs) {
+            updateSpecStacks(*i);
+        }
+
+        TF_FOR_ALL(i, changes._didChangeSpecsInternal) {
+            updateSpecStacks(*i);
         }
 
         // Fix the keys for any prim or property under any of the renamed
@@ -1021,7 +1048,7 @@ PcpCache::ReloadReferences(PcpChanges* changes, const SdfPath& primPath)
     // Traverse every PrimIndex at or under primPath to find
     // InvalidAssetPath errors, and collect the unique layer stacks used.
     std::set<PcpLayerStackPtr> layerStacksAtOrUnderPrim;
-    auto range = _primIndexCache.FindSubtreeRange(primPath);
+    const auto range = _primIndexCache.FindSubtreeRange(primPath);
     for (auto entryIter = range.first; entryIter != range.second; ++entryIter) {
         const auto& entry = *entryIter;
         const PcpPrimIndex& primIndex = entry.second;
@@ -1561,3 +1588,5 @@ PcpCache::PrintStatistics() const
 {
     Pcp_PrintCacheStatistics(this);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

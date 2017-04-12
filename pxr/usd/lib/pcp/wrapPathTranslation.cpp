@@ -21,8 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/pcp/pathTranslation.h"
 
+#include "pxr/pxr.h"
+#include "pxr/usd/pcp/pathTranslation.h"
 #include "pxr/usd/pcp/mapFunction.h"
 #include "pxr/usd/pcp/node.h"
 #include "pxr/usd/sdf/path.h"
@@ -30,6 +31,10 @@
 #include <boost/python.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static SdfPath
 TranslatePathFromNodeToRoot(const PcpNodeRef& sourceNode,
@@ -44,6 +49,8 @@ TranslatePathFromRootToNode(const PcpNodeRef& destNode,
 {
     return PcpTranslatePathFromRootToNode(destNode, pathInRootNamespace);
 }
+
+} // anonymous namespace 
 
 void wrapPathTranslation()
 {

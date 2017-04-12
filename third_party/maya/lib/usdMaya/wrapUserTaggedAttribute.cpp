@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdMaya/UserTaggedAttribute.h"
 
 #include "usdMaya/util.h"
@@ -38,6 +39,10 @@
 
 #include <string>
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 static std::vector<PxrUsdMayaUserTaggedAttribute>
 _GetUserTaggedAttributesForNode(
         const std::string& dagString)
@@ -52,6 +57,8 @@ _GetUserTaggedAttributesForNode(
     return PxrUsdMayaUserTaggedAttribute::GetUserTaggedAttributesForNode(
             dagPath);
 }
+
+} // anonymous namespace 
 
 void wrapUserTaggedAttribute() {
     using namespace boost::python;

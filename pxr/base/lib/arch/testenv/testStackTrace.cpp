@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/arch/stackTrace.h"
 #include "pxr/base/arch/defines.h"
 #include "pxr/base/arch/error.h"
@@ -29,6 +31,8 @@
 
 #include <string>
 #include <cstdlib>
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 int main(int argc, char** argv)
 {
@@ -59,6 +63,10 @@ int main(int argc, char** argv)
     for (unsigned int i = 0; i < stackTrace.size(); i++) {
         found |= (stackTrace[i].find("main", 0) != std::string::npos);
     }
+#if defined(ARCH_OS_WINDOWS) && !defined(_DEBUG)
+    // Release builds on windows can't get symbolic names.
+    found |= !stackTrace.empty();
+#endif
     ARCH_AXIOM(found);
 
     return 0;

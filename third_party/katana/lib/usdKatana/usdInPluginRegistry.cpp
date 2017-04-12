@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdKatana/usdInPluginRegistry.h"
 
 #include "pxr/usd/kind/registry.h"
@@ -28,6 +29,13 @@
 
 #include "pxr/base/plug/plugin.h"
 #include "pxr/base/plug/registry.h"
+
+#include <FnLogging/FnLogging.h>
+
+FnLogSetup("UsdInPluginRegistry");
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 typedef std::map<std::string, std::string> _UsdTypeRegistry;
 static _UsdTypeRegistry _usdTypeReg;
@@ -121,11 +129,17 @@ PxrUsdKatanaUsdInPluginRegistry::_DoFindKind(
         const _KindRegistry& reg)
 {
     // can cache this if it becomes an issue.
-    for (TfToken currKind = kind;
-            !currKind.IsEmpty();
-            currKind = KindRegistry::GetBaseKind(currKind)) {
+    TfToken currKind = kind;
+    while (!currKind.IsEmpty()) {
         if (TfMapLookup(reg, currKind, opName)) {
             return true;
+        }
+        if (KindRegistry::HasKind(currKind)) {
+            currKind = KindRegistry::GetBaseKind(currKind);
+        }
+        else {
+            FnLogWarn(TfStringPrintf("Unknown kind: '%s'", currKind.GetText()));
+            return false;
         }
     }
 
@@ -149,3 +163,6 @@ PxrUsdKatanaUsdInPluginRegistry::FindKindForSite(
 {
     return _DoFindKind(kind, opName, _kindExtReg);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

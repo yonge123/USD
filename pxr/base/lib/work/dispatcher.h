@@ -26,7 +26,9 @@
 
 /// \file work/dispatcher.h
 
+#include "pxr/pxr.h"
 #include "pxr/base/work/threadLimits.h"
+#include "pxr/base/work/api.h"
 
 #include "pxr/base/tf/errorMark.h"
 #include "pxr/base/tf/errorTransport.h"
@@ -37,6 +39,8 @@
 #include <functional>
 #include <type_traits>
 #include <utility>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// \class WorkDispatcher
 ///
@@ -68,10 +72,10 @@ class WorkDispatcher
 {
 public:
     /// Construct a new dispatcher.
-    WorkDispatcher();
+    WORK_API WorkDispatcher();
 
     /// Wait() for any pending tasks to complete, then destroy the dispatcher.
-    ~WorkDispatcher();
+    WORK_API ~WorkDispatcher();
 
     WorkDispatcher(WorkDispatcher const &) = delete;
     WorkDispatcher &operator=(WorkDispatcher const &) = delete;
@@ -95,11 +99,7 @@ public:
 
     template <class Callable>
     inline void Run(Callable &&c) {
-        if (WorkGetConcurrencyLimit() != 1) {
-            _rootTask->spawn(_MakeInvokerTask(std::forward<Callable>(c)));
-        } else {
-            std::forward<Callable>(c)();
-        }
+        _rootTask->spawn(_MakeInvokerTask(std::forward<Callable>(c)));
     }
 
     template <class Callable, class A0, class ... Args>
@@ -112,7 +112,7 @@ public:
 #endif // doxygen
 
     /// Block until the work started by Run() completes.
-    void Wait();
+    WORK_API void Wait();
 
     /// Cancel remaining work and return immediately.
     ///
@@ -124,7 +124,7 @@ public:
     ///
     /// This call does not block.  Call Wait() after Cancel() to wait for
     /// pending tasks to complete.
-    void Cancel();
+    WORK_API void Cancel();
 
 private:
     typedef tbb::concurrent_vector<TfErrorTransport> _ErrorTransports;
@@ -163,7 +163,7 @@ private:
 
     // Helper function that removes errors from \p m and stores them in a new
     // entry in \p errors.
-    static void
+    WORK_API static void
     _TransportErrors(const TfErrorMark &m, _ErrorTransports *errors);
 
     // Task group context and associated root task that allows us to cancel
@@ -177,5 +177,7 @@ private:
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // WORK_DISPATCHER_H

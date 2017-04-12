@@ -24,20 +24,27 @@
 #ifndef HD_RPRIM_H
 #define HD_RPRIM_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/imaging/hd/drawItem.h"
 #include "pxr/imaging/hd/rprimSharedData.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
 #include "pxr/imaging/hd/shaderKey.h"
+#include "pxr/imaging/hd/types.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/base/gf/range3d.h"
 
 #include <boost/shared_ptr.hpp>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 class HdDrawItem;
 class HdRenderIndex;
 class HdRepr;
+class HdRenderParam;
 
 typedef boost::shared_ptr<HdRepr> HdReprSharedPtr;
 
@@ -48,24 +55,40 @@ typedef boost::shared_ptr<HdRepr> HdReprSharedPtr;
 ///
 class HdRprim {
 public:
-    HdRprim(HdSceneDelegate* delegate,
-            SdfPath const& id,
+    HD_API
+    HdRprim(SdfPath const& id,
             SdfPath const& instancerId);
+    HD_API
     virtual ~HdRprim();
+    
+    /// Update objects representation based on dirty bits.
+    /// @param[in, out]  dirtyBits: On input specifies which state is
+    ///                             is dirty and can be pulled from the scene
+    ///                             delegate.
+    ///                             On output specifies which bits are still
+    ///                             dirty and were not cleaned by the sync. 
+    ///                             
+    virtual void Sync(HdSceneDelegate* delegate,
+                      HdRenderParam*   renderParam,
+                      HdDirtyBits*     dirtyBits,
+                      TfToken const&   reprName,
+                      bool             forcedRepr) = 0;
+
+    /// Finalizes object resources. This function might not delete resources,
+    /// but it should deal with resource ownership so that the rprim is deletable.
+    HD_API
+    virtual void Finalize(HdRenderParam *renderParam);
 
     /// Returns the draw items for the requested reprName, these draw items
     /// should be constructed and cached beforehand by Sync().
-    std::vector<HdDrawItem>* GetDrawItems(TfToken const &reprName, bool forced);
+    HD_API
+    std::vector<HdDrawItem>* GetDrawItems(HdSceneDelegate* delegate,
+                                          TfToken const &reprName,
+                                          bool forced);
 
-    /// Update objects representation based on dirty bits.
-    void Sync(TfToken const &reprName, bool forced,
-              HdChangeTracker::DirtyBits *dirtyBits);
-
-    /// Returns the bounds of the rprim in local, untransformed space.
-    GfRange3d GetExtent();
-
-    /// Returns true if the rprim exists in the named collection.
-    bool IsInCollection(TfToken const& collectionName) const;
+    /// Returns the render tag associated to this rprim
+    HD_API
+    TfToken GetRenderTag(HdSceneDelegate* delegate) const;
 
     /// Returns the identifier of this Rprim. This is both used in the
     /// RenderIndex and the SceneDelegate and acts as the associative key for
@@ -83,73 +106,96 @@ public:
         return _surfaceShaderID;
     }
 
-    /// Sets a new surface shader id to be used by this rprim
-    void SetSurfaceShaderId(SdfPath const& surfaceShaderId);
-
     /// Returns true if any dirty flags are set for this rprim.
-    bool IsDirty();
+    HD_API
+    bool IsDirty(HdChangeTracker &changeTracker);
 
     /// Set the unique instance id
+    HD_API
     void SetPrimId(int32_t primId);
 
     /// Return the unique instance id
     int32_t GetPrimId() const { return _primId; };
 
-    /// Return the dirtyBits mask to be tracked for rprim.
-    static int GetDirtyBitsMask(TfToken const &reprName);
+    HD_API
+    HdDirtyBits GetInitialDirtyBitsMask() const;
 
-    int GetInitialDirtyBitsMask() const;
 
-    /// Returns the SceneDelegate object that is backing this Rprim.
-    /// Note: The scene delegate returned is non-const as the scene
-    /// delegate may need to perform mutable operations.
-    HdSceneDelegate* GetDelegate() const { return _delegate; }
+    /// Returns the bounds of the rprim in local, untransformed space.
+    inline GfRange3d GetExtent(HdSceneDelegate* delegate) const;
+
+    /// Returns true if the rprim exists in the named collection.
+    inline bool IsInCollection(HdSceneDelegate* delegate,
+                               TfToken const& collectionName) const;
 
     ///
     /// Primvar Query
     ///
-    inline TfTokenVector GetPrimVarVertexNames()      const;
-    inline TfTokenVector GetPrimVarVaryingNames()     const;
-    inline TfTokenVector GetPrimVarFacevaryingNames() const;
-    inline TfTokenVector GetPrimVarUniformNames()     const;
+    inline TfTokenVector GetPrimVarVertexNames(HdSceneDelegate* delegate)      const;
+    inline TfTokenVector GetPrimVarVaryingNames(HdSceneDelegate* delegate)     const;
+    inline TfTokenVector GetPrimVarFacevaryingNames(HdSceneDelegate* delegate) const;
+    inline TfTokenVector GetPrimVarUniformNames(HdSceneDelegate* delegate)     const;
 
-    inline VtValue GetPrimVar(const TfToken &name) const;
-
+    inline VtValue GetPrimVar(HdSceneDelegate* delegate, const TfToken &name)  const;
 
 protected:
-    virtual HdReprSharedPtr const & _GetRepr(
-        TfToken const &reprName, HdChangeTracker::DirtyBits *dirtyBits) = 0;
+    /// Update objects representation based on dirty bits.
+    HD_API
+    void _Sync(HdSceneDelegate* delegate,
+              TfToken const &reprName, bool forced,
+              HdDirtyBits *dirtyBits);
 
-    void _UpdateVisibility(HdChangeTracker::DirtyBits *dirtyBits);
-    HdRenderIndex& _GetRenderIndex();
-    HdRenderIndex const& _GetRenderIndex() const;
-    HdChangeTracker& _GetChangeTracker();
+
+    HD_API
+    virtual HdReprSharedPtr const &
+        _GetRepr(HdSceneDelegate *sceneDelegate,
+                 TfToken const &reprName,
+                 HdDirtyBits *dirtyBits) = 0;
+
+    HD_API
+    void _UpdateVisibility(HdSceneDelegate *sceneDelegate,
+                           HdDirtyBits *dirtyBits);
 
     /// note: constant range has to be shared across reprs (smooth, refined),
     /// since we're tracking dirtiness in a single bit (e.g. DirtyTransform)
     /// unlike vertex primvars (DirtyPoints-DirtyRefinedPoints)
-    void _PopulateConstantPrimVars(HdDrawItem *drawItem,
-                                   HdChangeTracker::DirtyBits *dirtyBits);
+    HD_API
+    void _PopulateConstantPrimVars(HdSceneDelegate *sceneDelegate,
+                                   HdDrawItem *drawItem,
+                                   HdDirtyBits *dirtyBits);
 
-    void _PopulateInstancePrimVars(HdDrawItem *drawItem,
-                                   HdChangeTracker::DirtyBits *dirtyBits,
+    HD_API
+    void _PopulateInstancePrimVars(HdSceneDelegate *sceneDelegate,
+                                   HdDrawItem *drawItem,
+                                   HdDirtyBits *dirtyBits,
                                    int instancePrimVarSlot);
 
-    VtMatrix4dArray _GetInstancerTransforms();
+    HD_API
+    VtMatrix4dArray _GetInstancerTransforms(HdSceneDelegate* delegate);
 
-    TfToken _GetReprName(TfToken const &defaultReprName, bool forced,
-                         HdChangeTracker::DirtyBits *dirtyBits);
+    HD_API
+    TfToken _GetReprName(HdSceneDelegate* delegate,
+                         TfToken const &defaultReprName, bool forced,
+                         HdDirtyBits *dirtyBits);
 
-    virtual HdChangeTracker::DirtyBits _GetInitialDirtyBits() const = 0;
+    virtual HdDirtyBits _GetInitialDirtyBits() const = 0;
+
+    HD_API
+    static HdDirtyBits _PropagateRprimDirtyBits(HdDirtyBits bits);
+
 
 private:
-    HdSceneDelegate* _delegate;
     SdfPath _id;
     SdfPath _instancerID;
     SdfPath _surfaceShaderID;
 
     // Used for id renders.
     int32_t _primId;
+
+    /// Sets a new surface shader id to be used by this rprim
+    void _SetSurfaceShaderId(HdChangeTracker &changeTracker,
+                             SdfPath const& surfaceShaderId);
+
 
 protected:
     // shared data across reprs: bufferArrayRanges, bounds, visibility
@@ -198,35 +244,55 @@ protected:
 
 };
 
+////////////////////////////////////////////////////////////////////////////////
+//
+// Delegate API Wrappers
+//
 
-inline TfTokenVector
-HdRprim::GetPrimVarVertexNames() const
+GfRange3d
+HdRprim::GetExtent(HdSceneDelegate* delegate) const
 {
-    return GetDelegate()->GetPrimVarVertexNames(GetId());
+    return delegate->GetExtent(GetId());
+}
+
+bool
+HdRprim::IsInCollection(HdSceneDelegate* delegate,
+                        TfToken const& collectionName) const
+{
+    return delegate->IsInCollection(GetId(), collectionName);
 }
 
 inline TfTokenVector
-HdRprim::GetPrimVarVaryingNames() const
+HdRprim::GetPrimVarVertexNames(HdSceneDelegate* delegate) const
 {
-    return GetDelegate()->GetPrimVarVaryingNames(GetId());
+    return delegate->GetPrimVarVertexNames(GetId());
 }
 
 inline TfTokenVector
-HdRprim::GetPrimVarFacevaryingNames() const
+HdRprim::GetPrimVarVaryingNames(HdSceneDelegate* delegate) const
 {
-    return GetDelegate()->GetPrimVarFacevaryingNames(GetId());
+    return delegate->GetPrimVarVaryingNames(GetId());
 }
 
 inline TfTokenVector
-HdRprim::GetPrimVarUniformNames() const
+HdRprim::GetPrimVarFacevaryingNames(HdSceneDelegate* delegate) const
 {
-    return GetDelegate()->GetPrimVarUniformNames(GetId());
+    return delegate->GetPrimVarFacevaryingNames(GetId());
+}
+
+inline TfTokenVector
+HdRprim::GetPrimVarUniformNames(HdSceneDelegate* delegate) const
+{
+    return delegate->GetPrimVarUniformNames(GetId());
 }
 
 inline VtValue
-HdRprim::GetPrimVar(const TfToken &name) const
+HdRprim::GetPrimVar(HdSceneDelegate* delegate, const TfToken &name) const
 {
-    return GetDelegate()->Get(GetId(), name);
+    return delegate->Get(GetId(), name);
 }
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //HD_RPRIM_H

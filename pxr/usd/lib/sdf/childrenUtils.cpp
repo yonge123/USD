@@ -23,7 +23,7 @@
 //
 /// \file ChildrenUtils.cpp
 
-
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/attributeSpec.h"
 #include "pxr/usd/sdf/changeBlock.h"
 #include "pxr/usd/sdf/childrenPolicies.h"
@@ -40,6 +40,8 @@
 #include "pxr/usd/sdf/variantSpec.h"
 #include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/tf/ostreamMethods.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 //
 // ChildrenUtils
@@ -109,11 +111,7 @@ bool Sdf_ChildrenUtils<ChildPolicy>::CreateSpec(
     const TfToken childrenKey = ChildPolicy::GetChildrenToken(parentPath);
     const FieldType childName = ChildPolicy::GetFieldValue(childPath);
 
-    std::vector<FieldType> siblings = 
-        layer->GetFieldAs<std::vector<FieldType> >(parentPath, childrenKey);
-    
-    siblings.push_back(childName);
-    layer->SetField(parentPath, childrenKey, siblings);
+    layer->_PrimPushChild(parentPath, childrenKey, childName);
 
     return true;  
 }
@@ -485,7 +483,8 @@ Sdf_ChildrenUtils<ChildPolicy>::MoveChildForBatchNamespaceEdit(
             }
         }
 
-        if (oldNameIter - oldSiblingNames.begin() < index) {
+        typedef typename std::vector<FieldType>::difference_type Diff;
+        if (oldNameIter - oldSiblingNames.begin() < static_cast<Diff>(index)) {
             // Index must be shifted down because we're removing an
             // earlier name.
             --index;
@@ -823,3 +822,5 @@ template class Sdf_ChildrenUtils<Sdf_VariantChildPolicy>;
 template class Sdf_ChildrenUtils<Sdf_VariantSetChildPolicy>;
 template class Sdf_ChildrenUtils<Sdf_RelationshipTargetChildPolicy>;
 template class Sdf_ChildrenUtils<Sdf_AttributeConnectionChildPolicy>;
+
+PXR_NAMESPACE_CLOSE_SCOPE

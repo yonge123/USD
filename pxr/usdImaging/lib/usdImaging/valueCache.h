@@ -24,6 +24,8 @@
 #ifndef USDIMAGING_VALUE_CACHE_H
 #define USDIMAGING_VALUE_CACHE_H
 
+#include "pxr/pxr.h"
+#include "pxr/usdImaging/usdImaging/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/pxOsd/subdivTags.h"
 
@@ -39,6 +41,9 @@
 
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_queue.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 
 /// \class UsdImagingValueCache
@@ -518,5 +523,8 @@ private:
         *cache = &_sdfPathCache;
     }
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // USDIMAGING_VALUE_CACHE_H

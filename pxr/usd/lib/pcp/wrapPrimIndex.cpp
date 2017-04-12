@@ -21,12 +21,18 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/usd/pcp/primIndex.h"
 #include "pxr/usd/sdf/siteUtils.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include <boost/python.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static SdfPrimSpecHandleVector
 _GetPrimStack(const PcpPrimIndex& self)
@@ -60,6 +66,8 @@ _ComputePrimPropertyNames( PcpPrimIndex &index )
     index.ComputePrimPropertyNames(&result);
     return result;
 }
+
+} // anonymous namespace 
 
 void wrapPrimIndex()
 {

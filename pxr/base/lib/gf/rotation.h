@@ -27,15 +27,19 @@
 /// \file gf/rotation.h
 /// \ingroup group_gf_LinearAlgebra
 
+#include "pxr/pxr.h"
 #include "pxr/base/gf/quaternion.h"
 #include "pxr/base/gf/quatd.h"
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/gf/vec3d.h"
 #include "pxr/base/gf/vec3f.h"
+#include "pxr/base/gf/api.h"
 
 #include <boost/functional/hash.hpp>
 
 #include <iosfwd>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// \class GfRotation
 /// \ingroup group_gf_LinearAlgebra
@@ -75,6 +79,7 @@ class GfRotation {
     /// This constructor initializes the rotation to one that brings
     /// the \p rotateFrom vector to align with \p rotateTo. The passed
     /// vectors need not be unit length.
+    GF_API
     GfRotation(const GfVec3d &rotateFrom, const GfVec3d &rotateTo) {
         SetRotateInto(rotateFrom, rotateTo);
     }
@@ -90,6 +95,7 @@ class GfRotation {
 
     /// Sets the rotation from a quaternion.  Note that this method accepts
     /// GfQuatf and GfQuath since they implicitly convert to GfQuatd.
+    GF_API
     GfRotation &        SetQuat(const GfQuatd &quat);
 
     /// Sets the rotation from a quaternion.
@@ -100,6 +106,7 @@ class GfRotation {
     /// Sets the rotation to one that brings the \p rotateFrom vector
     /// to align with \p rotateTo. The passed vectors need not be unit
     /// length.
+    GF_API
     GfRotation &        SetRotateInto(const GfVec3d &rotateFrom,
                                       const GfVec3d &rotateTo);
 
@@ -128,6 +135,7 @@ class GfRotation {
     }
 
     /// Returns the rotation expressed as a quaternion.
+    GF_API
     GfQuatd             GetQuat() const;
 
     /// Returns the inverse of this rotation.
@@ -137,6 +145,7 @@ class GfRotation {
 
     /// Decompose rotation about 3 orthogonal axes. 
     /// If the axes are not orthogonal, warnings will be spewed.
+    GF_API
     GfVec3d Decompose( const GfVec3d &axis0,
                        const GfVec3d &axis1,
                        const GfVec3d &axis2 ) const;
@@ -167,6 +176,7 @@ class GfRotation {
     // And moved into GfRotation[12/1/08].  Updated for any 
     // combination of three angles [12/1/11].
     //
+    GF_API
     static void DecomposeRotation(const GfMatrix4d &rot,
                                   const GfVec3d &TwAxis,
                                   const GfVec3d &FBAxis,
@@ -182,14 +192,17 @@ class GfRotation {
     // This function projects the vectors \p v1 and \p v2 onto the plane 
     // normal to \p axis, and then returns the rotation about \p axis that 
     // brings \p v1 onto \p v2.
+    GF_API
     static GfRotation RotateOntoProjected(const GfVec3d &v1,
                                           const GfVec3d &v2,
                                           const GfVec3d &axis);
 
     /// Transforms row vector \p vec by the rotation, returning the result. 
+    GF_API
     GfVec3f TransformDir( const GfVec3f &vec ) const;
 
     /// \overload
+    GF_API
     GfVec3d TransformDir( const GfVec3d &vec ) const;
 
     /// Hash.
@@ -218,6 +231,7 @@ class GfRotation {
     }
 
     /// Post-multiplies rotation \p r into this rotation.
+    GF_API
     GfRotation &        operator *=(const GfRotation &r);
 
     /// Scales rotation angle by multiplying by \p scale.
@@ -269,6 +283,8 @@ class GfRotation {
 
 /// Output a GfRotation using the format [(x y z) a].
 /// \ingroup group_gf_DebuggingOutput
-std::ostream& operator<<(std::ostream&, const GfRotation&);
+GF_API std::ostream& operator<<(std::ostream&, const GfRotation&);
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // GF_ROTATION_H

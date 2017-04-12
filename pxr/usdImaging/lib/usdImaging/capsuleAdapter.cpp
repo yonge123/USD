@@ -39,6 +39,9 @@
 
 #include <cmath>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 TF_REGISTRY_FUNCTION(TfType)
 {
     typedef UsdImagingCapsuleAdapter Adapter;
@@ -67,7 +70,7 @@ UsdImagingCapsuleAdapter::Populate(UsdPrim const& prim,
 void 
 UsdImagingCapsuleAdapter::TrackVariabilityPrep(UsdPrim const& prim,
                                               SdfPath const& cachePath,
-                                              int requestedBits,
+                                              HdDirtyBits requestedBits,
                                               UsdImagingInstancerContext const* 
                                                   instancerContext)
 {
@@ -79,8 +82,8 @@ UsdImagingCapsuleAdapter::TrackVariabilityPrep(UsdPrim const& prim,
 void 
 UsdImagingCapsuleAdapter::TrackVariability(UsdPrim const& prim,
                                           SdfPath const& cachePath,
-                                          int requestedBits,
-                                          int* dirtyBits,
+                                          HdDirtyBits requestedBits,
+                                          HdDirtyBits* dirtyBits,
                                           UsdImagingInstancerContext const* 
                                               instancerContext)
 {
@@ -111,7 +114,7 @@ void
 UsdImagingCapsuleAdapter::UpdateForTimePrep(UsdPrim const& prim,
                                    SdfPath const& cachePath, 
                                    UsdTimeCode time,
-                                   int requestedBits,
+                                   HdDirtyBits requestedBits,
                                    UsdImagingInstancerContext const* 
                                        instancerContext)
 {
@@ -134,8 +137,8 @@ void
 UsdImagingCapsuleAdapter::UpdateForTime(UsdPrim const& prim,
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
-                               int requestedBits,
-                               int* resultBits,
+                               HdDirtyBits requestedBits,
+                               HdDirtyBits* resultBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext)
 {
@@ -328,3 +331,6 @@ UsdImagingCapsuleAdapter::GetMeshTopology()
 
     return VtValue(capsuleTopo);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

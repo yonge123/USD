@@ -24,6 +24,8 @@
 #ifndef HD_RPRIM_SHARED_DATA_H
 #define HD_RPRIM_SHARED_DATA_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/bufferArrayRange.h"
 
@@ -31,7 +33,12 @@
 
 #include "pxr/base/gf/bbox3d.h"
 
-typedef boost::shared_ptr<class HdSurfaceShader> HdSurfaceShaderSharedPtr;
+PXR_NAMESPACE_OPEN_SCOPE
+
+
+typedef boost::shared_ptr<class HdShaderCode> HdShaderCodeSharedPtr;
+
+
 
 // HdRprimSharedData is an assortment of data being shared across HdReprs,
 // owned by HdRprim. HdDrawItem holds a const pointer to HdRprimSharedData.
@@ -48,23 +55,29 @@ typedef boost::shared_ptr<class HdSurfaceShader> HdSurfaceShaderSharedPtr;
 struct HdRprimSharedData {
     HdRprimSharedData(int barContainerSize)
         : barContainer(barContainerSize)
+        , surfaceShader()
+        , bounds()
         , hasInstancer(false)
         , visible(true)
+        , rprimID()
     { }
 
     HdRprimSharedData(int barContainerSize,
                       bool hasInstancer,
                       bool visible)
         : barContainer(barContainerSize)
+        , surfaceShader()
+        , bounds()
         , hasInstancer(hasInstancer)
         , visible(visible)
+        , rprimID()
     { }
 
     // BufferArrayRange array
     HdBufferArrayRangeContainer barContainer;
 
     // The ID of the surface shader to which the Rprim is bound.
-    HdSurfaceShaderSharedPtr surfaceShader;
+    HdShaderCodeSharedPtr surfaceShader;
 
     // Used for CPU frustum culling.
     GfBBox3d bounds;
@@ -78,5 +91,8 @@ struct HdRprimSharedData {
     // The owning Rprim's identifier.
     SdfPath rprimID;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif  // HD_RPRIM_SHARED_DATA_H

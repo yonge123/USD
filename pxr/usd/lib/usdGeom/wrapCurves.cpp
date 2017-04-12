@@ -22,7 +22,6 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/usd/usdGeom/curves.h"
-
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/conversions.h"
 
@@ -38,6 +37,10 @@
 #include <string>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 #define WRAP_CUSTOM                                                     \
     template <class Cls> static void _CustomWrapCode(Cls &_class)
@@ -59,6 +62,8 @@ _CreateWidthsAttr(UsdGeomCurves &self,
     return self.CreateWidthsAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->FloatArray), writeSparsely);
 }
+
+} // anonymous namespace
 
 void wrapUsdGeomCurves()
 {
@@ -120,8 +125,14 @@ void wrapUsdGeomCurves()
 // }
 //
 // Of course any other ancillary or support code may be provided.
+// 
+// Just remember to wrap code in the appropriate delimiters:
+// 'namespace {', '}'.
+//
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
+
+namespace {
 
 static TfPyObjWrapper 
 _ComputeExtent(object points, object widths) {
@@ -167,3 +178,5 @@ WRAP_CUSTOM {
         .staticmethod("ComputeExtent")
         ;
 }
+
+} // anonymous namespace 

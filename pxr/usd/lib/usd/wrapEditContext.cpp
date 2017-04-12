@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/editContext.h"
 
 #include <boost/make_shared.hpp>
@@ -28,6 +29,8 @@
 #include <boost/python.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 struct Usd_PyEditContextAccess {
     static void __enter__(UsdPyEditContext &self) {
@@ -40,6 +43,10 @@ struct Usd_PyEditContextAccess {
         self._editContext.reset();
     }
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void wrapUsdEditContext()
 {

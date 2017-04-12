@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/layerTree.h"
 #include "pxr/base/tf/makePyConstructor.h"
 #include "pxr/base/tf/pyContainerConversions.h"
@@ -29,6 +31,10 @@
 #include <boost/python.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static SdfLayerTreeHandle
 _NewEmpty()
@@ -51,6 +57,8 @@ _New(const SdfLayerHandle & layer,
 {
    return SdfLayerTree::New(layer, childTrees, cumulativeOffset);
 }
+
+} // anonymous namespace 
 
 void wrapLayerTree()
 {    
@@ -79,3 +87,5 @@ void wrapLayerTree()
                           return_value_policy<TfPySequenceToList>()))
         ;
 }
+
+TF_REFPTR_CONST_VOLATILE_GET(SdfLayerTree)

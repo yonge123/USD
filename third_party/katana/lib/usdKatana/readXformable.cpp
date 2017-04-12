@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdKatana/attrMap.h"
 #include "usdKatana/readPrim.h"
 #include "usdKatana/readXformable.h"
@@ -34,6 +35,9 @@
 #include <FnLogging/FnLogging.h>
 
 #include <sstream>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 FnLogSetup("PxrUsdKatanaReadXformable");
 
@@ -49,7 +53,7 @@ PxrUsdKatanaReadXformable(
     // Calculate and set the xform attribute.
     //
 
-    double currentTime = data.GetUsdInArgs()->GetCurrentTime();
+    double currentTime = data.GetCurrentTime();
 
     // Get the ordered xform ops for the prim.
     //
@@ -59,7 +63,7 @@ PxrUsdKatanaReadXformable(
 
     FnKat::GroupBuilder gb;
 
-    const bool isMotionBackward = data.GetUsdInArgs()->IsMotionBackward();
+    const bool isMotionBackward = data.IsMotionBackward();
 
     // For each xform op, construct a matrix containing the 
     // transformation data for each time sample it has.
@@ -122,3 +126,6 @@ PxrUsdKatanaReadXformable(
         attrs.set("xform", xformGb.build());
     }
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

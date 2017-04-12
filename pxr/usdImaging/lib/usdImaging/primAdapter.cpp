@@ -33,6 +33,9 @@
 #include "pxr/base/tf/envSetting.h"
 #include "pxr/base/tf/type.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 TF_REGISTRY_FUNCTION(TfType)
 {
     TfType::Define<UsdImagingPrimAdapter>();
@@ -139,16 +142,18 @@ UsdImagingPrimAdapter::GetPathForInstanceIndex(
 
 /*virtual*/
 bool
-UsdImagingPrimAdapter::PopulateSelection(SdfPath const &path,
+UsdImagingPrimAdapter::PopulateSelection(SdfPath const &usdPath,
                                          VtIntArray const &instanceIndices,
                                          HdxSelectionSharedPtr const &result)
 {
+    const SdfPath indexPath = _delegate->GetPathForIndex(usdPath);
+
     // insert itself into the selection map.
     // XXX: should check the existence of the path
-    result->AddInstance(path, instanceIndices);
+    result->AddInstance(indexPath, instanceIndices);
 
     TF_DEBUG(USDIMAGING_SELECTION).Msg("PopulateSelection: (prim) %s\n",
-                                       path.GetText());
+                                       indexPath.GetText());
 
     return true;
 }
@@ -208,9 +213,9 @@ UsdImagingPrimAdapter::_MergePrimvar(
 bool 
 UsdImagingPrimAdapter::_IsVarying(UsdPrim prim,
                                   TfToken const& attrName, 
-                                  HdChangeTracker::DirtyBits dirtyFlag, 
+                                  HdDirtyBits dirtyFlag,
                                   TfToken const& perfToken,
-                                  int* dirtyFlags,
+                                  HdDirtyBits* dirtyFlags,
                                   bool isInherited)
 {
     HD_TRACE_FUNCTION();
@@ -238,9 +243,9 @@ UsdImagingPrimAdapter::_IsVarying(UsdPrim prim,
 
 bool 
 UsdImagingPrimAdapter::_IsTransformVarying(UsdPrim prim,
-                                           HdChangeTracker::DirtyBits dirtyFlag, 
+                                           HdDirtyBits dirtyFlag,
                                            TfToken const& perfToken,
-                                           int* dirtyFlags)
+                                           HdDirtyBits* dirtyFlags)
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -362,3 +367,6 @@ UsdImagingPrimAdapter::GetRelativeInstancerTransform(
 {
     return GfMatrix4d(1);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

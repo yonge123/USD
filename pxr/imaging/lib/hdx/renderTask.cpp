@@ -34,6 +34,9 @@
 #include "pxr/imaging/hd/rprimCollection.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 // --------------------------------------------------------------------------- //
 
 HdxRenderTask::HdxRenderTask(HdSceneDelegate* delegate, SdfPath const& id)
@@ -49,13 +52,16 @@ HdxRenderTask::_Execute(HdTaskContext* ctx)
     HF_MALLOC_TAG_FUNCTION();
 
     HdRenderPassStateSharedPtr renderPassState;
+    TfTokenVector renderTags;
 
     if (_setupTask) {
         // if _setupTask exists (for backward compatibility), use it
         renderPassState = _setupTask->GetRenderPassState();
+        renderTags = _setupTask->GetRenderTags();
     } else {
         // otherwise, extract from TaskContext
         _GetTaskContextData(ctx, HdxTokens->renderPassState, &renderPassState);
+        _GetTaskContextData(ctx, HdxTokens->renderTags, &renderTags);
     }
     if (!TF_VERIFY(renderPassState)) return;
 
@@ -98,13 +104,21 @@ HdxRenderTask::_Execute(HdTaskContext* ctx)
         renderPassShader->RemoveBufferBinding(HdxTokens->selectionUniforms);
     }
 
+    // Bind the render state and render geometry with the rendertags (if any)
     renderPassState->Bind();
-
-    // execute all render passes.
-    TF_FOR_ALL(it, _passes) {
-        (*it)->Execute(renderPassState);
+    if(renderTags.size() == 0) {
+        // execute all render passes.
+        TF_FOR_ALL(it, _passes) {
+            (*it)->Execute(renderPassState);
+        }
+    } else {
+        // execute all render passes with only a subset of render tags
+        TF_FOR_ALL(it, _passes) {
+            TF_FOR_ALL(rt, renderTags) {
+                (*it)->Execute(renderPassState, *rt);
+            }
+        }
     }
-
     renderPassState->Unbind();
 }
 
@@ -113,7 +127,7 @@ HdxRenderTask::_Sync(HdTaskContext* ctx)
 {
     HD_TRACE_FUNCTION();
 
-    HdChangeTracker::DirtyBits bits = _GetTaskDirtyBits();
+    HdDirtyBits bits = _GetTaskDirtyBits();
 
     if (bits & HdChangeTracker::DirtyCollection) {
 
@@ -179,3 +193,6 @@ HdxRenderTask::_Sync(HdTaskContext* ctx)
         pass->Sync();
     }
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

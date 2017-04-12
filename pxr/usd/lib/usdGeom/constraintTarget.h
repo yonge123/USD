@@ -24,9 +24,14 @@
 #ifndef USDGEOM_CONSTRAINT_TARGET_H
 #define USDGEOM_CONSTRAINT_TARGET_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usdGeom/api.h"
 #include "pxr/usd/usd/attribute.h"
 
 #include <string>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 class GfMatrix4d;
 class UsdGeomXformCache;
@@ -85,12 +90,14 @@ class UsdGeomConstraintTarget
     /// same truth value as the object returned by this constructor, but if
     /// you plan to subsequently use the ConstraintTarget anyways, just construct
     /// the object and bool-evaluate it before proceeding.
+    USDGEOM_API
     explicit UsdGeomConstraintTarget(const UsdAttribute &attr);
 
     /// Test whether a given UsdAttribute represents valid ConstraintTarget, which
     /// implies that creating a UsdGeomConstraintTarget from the attribute will succeed.
     ///
     /// Success implies that \c attr.IsDefined() is true.
+    USDGEOM_API
     static bool IsValid(const UsdAttribute &attr);
 
     // ---------------------------------------------------------------
@@ -121,23 +128,28 @@ class UsdGeomConstraintTarget
 #endif // doxygen
 
     /// Get the attribute value of the ConstraintTarget at \p time 
+    USDGEOM_API
     bool Get(GfMatrix4d* value, UsdTimeCode time = UsdTimeCode::Default()) const;
 
     /// Set the attribute value of the ConstraintTarget at \p time 
+    USDGEOM_API
     bool Set(const GfMatrix4d& value, UsdTimeCode time = UsdTimeCode::Default()) const;
 
     /// Get the stored identifier unique to the enclosing model's namespace for
     /// this constraint target.
     /// \sa SetIdentifier()
+    USDGEOM_API
     TfToken GetIdentifier() const;
 
     /// Explicitly sets the stored identifier to the given string. Clients are
     /// responsible for ensuring the uniqueness of this identifier within the
     /// enclosing model's namespace.
+    USDGEOM_API
     void SetIdentifier(const TfToken &identifier);
 
     /// Returns the fully namespaced constraint attribute name, given the 
     /// constraint name.
+    USDGEOM_API
     static TfToken GetConstraintAttrName(const std::string &constraintName);
 
     /// Computes the value of the constraint target in world space.
@@ -150,6 +162,7 @@ class UsdGeomConstraintTarget
     /// use UsdGeomConstraintTarget::Get(), since the authored values must 
     /// already be in model-space.
     /// 
+    USDGEOM_API
     GfMatrix4d ComputeInWorldSpace(UsdTimeCode time=UsdTimeCode::Default(),
                                    UsdGeomXformCache *xfCache=NULL) const;
 
@@ -157,5 +170,8 @@ private:
 
     UsdAttribute _attr;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // USD_CONSTRAINT_TARGET_H

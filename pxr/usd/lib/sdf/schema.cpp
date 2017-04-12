@@ -21,8 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/sdf/schema.h"
 
+#include "pxr/pxr.h"
+#include "pxr/usd/sdf/schema.h"
 #include "pxr/usd/sdf/layer.h"
 #include "pxr/usd/sdf/layerOffset.h"
 #include "pxr/usd/sdf/parserValueContext.h"
@@ -40,6 +41,7 @@
 #include "pxr/base/tracelite/trace.h"
 #include "pxr/base/vt/dictionary.h"
 
+#include <deque>
 #include <map>
 #include <set>
 #include <vector>
@@ -48,6 +50,8 @@ using std::map;
 using std::set;
 using std::string;
 using std::vector;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 //
 // SdfSchemaBase::FieldDefinition
@@ -352,7 +356,7 @@ _ValidateIsSceneDescriptionValue(const SdfSchemaBase& schema, const VtValue& val
 static SdfAllowed                                                       \
 _Validate ## name_(const SdfSchemaBase& schema, const VtValue& value)   \
 {                                                                       \
-    if (!value.IsHolding<expectedType_>()) {                         \
+    if (!value.IsHolding<expectedType_>()) {                            \
         return SdfAllowed("Expected value of type " # expectedType_);   \
     }                                                                   \
     return SdfSchemaBase::IsValid ## name_(value.Get<expectedType_>()); \
@@ -378,6 +382,7 @@ TF_DEFINE_PUBLIC_TOKENS(SdfFieldKeys, SDF_FIELD_KEYS);
 
 struct Sdf_SchemaFieldTypeRegistrar
 {
+public:
     Sdf_SchemaFieldTypeRegistrar(SdfSchemaBase* schema) : _schema(schema) { }
 
     template <class T>
@@ -452,8 +457,8 @@ SdfSchemaBase::_RegisterStandardFields()
     _DoRegisterField(SdfFieldKeys->Active, true);
     _DoRegisterField(SdfFieldKeys->AllowedTokens, VtTokenArray());
     _DoRegisterField(SdfFieldKeys->AssetInfo, VtDictionary())
-        .MapKeyValidator(&::_ValidateIdentifier)
-        .MapValueValidator(&::_ValidateIsSceneDescriptionValue);
+        .MapKeyValidator(&_ValidateIdentifier)
+        .MapValueValidator(&_ValidateIsSceneDescriptionValue);
     _DoRegisterField(SdfFieldKeys->TimeSamples, SdfTimeSampleMap());
     _DoRegisterField(SdfFieldKeys->Comment, "");
     
@@ -462,17 +467,17 @@ SdfSchemaBase::_RegisterStandardFields()
     // disallowing via the Info API.
     _DoRegisterField(SdfFieldKeys->ConnectionPaths, SdfPathListOp())
         .ReadOnly()
-        .ListValueValidator(&::_ValidateAttributeConnectionPath);
+        .ListValueValidator(&_ValidateAttributeConnectionPath);
 
     _DoRegisterField(SdfFieldKeys->Custom, false);
     _DoRegisterField(SdfFieldKeys->CustomData, VtDictionary())
-        .MapKeyValidator(&::_ValidateIdentifier)
-        .MapValueValidator(&::_ValidateIsSceneDescriptionValue);
+        .MapKeyValidator(&_ValidateIdentifier)
+        .MapValueValidator(&_ValidateIsSceneDescriptionValue);
     _DoRegisterField(SdfFieldKeys->CustomLayerData, VtDictionary())
-        .MapKeyValidator(&::_ValidateIdentifier)
-        .MapValueValidator(&::_ValidateIsSceneDescriptionValue);
+        .MapKeyValidator(&_ValidateIdentifier)
+        .MapValueValidator(&_ValidateIsSceneDescriptionValue);
     _DoRegisterField(SdfFieldKeys->Default, VtValue())
-        .ValueValidator(&::_ValidateIsSceneDescriptionValue);
+        .ValueValidator(&_ValidateIsSceneDescriptionValue);
     _DoRegisterField(SdfFieldKeys->DisplayGroup, "");
     _DoRegisterField(SdfFieldKeys->DisplayName, "");
     _DoRegisterField(SdfFieldKeys->DisplayUnit,
@@ -483,94 +488,98 @@ SdfSchemaBase::_RegisterStandardFields()
     _DoRegisterField(SdfFieldKeys->EndTimeCode, 0.0);
     _DoRegisterField(SdfFieldKeys->FramePrecision, 3);
     _DoRegisterField(SdfFieldKeys->FramesPerSecond, 24.0)
-        .ValueValidator(&::_ValidateFramesPerSecond);
+        .ValueValidator(&_ValidateFramesPerSecond);
     _DoRegisterField(SdfFieldKeys->Hidden, false);
     _DoRegisterField(SdfFieldKeys->HasOwnedSubLayers, false);
     _DoRegisterField(SdfFieldKeys->Instanceable, false);
     _DoRegisterField(SdfFieldKeys->InheritPaths, SdfPathListOp())
-        .ListValueValidator(&::_ValidateInheritPath);
+        .ListValueValidator(&_ValidateInheritPath);
     _DoRegisterField(SdfFieldKeys->Kind, TfToken());
     _DoRegisterField(SdfFieldKeys->Marker, "");
     _DoRegisterField(SdfFieldKeys->MapperArgValue, VtValue())
-        .ValueValidator(&::_ValidateIsSceneDescriptionValue);
+        .ValueValidator(&_ValidateIsSceneDescriptionValue);
     _DoRegisterField(SdfFieldKeys->Owner, "");
     _DoRegisterField(SdfFieldKeys->PrimOrder, std::vector<TfToken>())
-        .ListValueValidator(&::_ValidateIdentifierToken);
+        .ListValueValidator(&_ValidateIdentifierToken);
     _DoRegisterField(SdfFieldKeys->NoLoadHint, false);
     _DoRegisterField(SdfFieldKeys->Payload, SdfPayload())
-        .ListValueValidator(&::_ValidatePayload);
+        .ListValueValidator(&_ValidatePayload);
     _DoRegisterField(SdfFieldKeys->Permission, SdfPermissionPublic);
     _DoRegisterField(SdfFieldKeys->Prefix, "");
     _DoRegisterField(SdfFieldKeys->PrefixSubstitutions, VtDictionary())
-        .MapKeyValidator(&::_ValidateIsNonEmptyString)
-        .MapValueValidator(&::_ValidateIsString);
+        .MapKeyValidator(&_ValidateIsNonEmptyString)
+        .MapValueValidator(&_ValidateIsString);
     _DoRegisterField(SdfFieldKeys->PropertyOrder, std::vector<TfToken>())
-        .ListValueValidator(&::_ValidateNamespacedIdentifierToken);
+        .ListValueValidator(&_ValidateNamespacedIdentifierToken);
     _DoRegisterField(SdfFieldKeys->References, SdfReferenceListOp()) 
-        .ListValueValidator(&::_ValidateReference);
+        .ListValueValidator(&_ValidateReference);
     _DoRegisterField(SdfFieldKeys->SessionOwner, "");
     _DoRegisterField(SdfFieldKeys->Specializes, SdfPathListOp())
-        .ListValueValidator(&::_ValidateSpecializesPath);
+        .ListValueValidator(&_ValidateSpecializesPath);
+    _DoRegisterField(SdfFieldKeys->Suffix, "");
+    _DoRegisterField(SdfFieldKeys->SuffixSubstitutions, VtDictionary())
+        .MapKeyValidator(&_ValidateIsNonEmptyString)
+        .MapValueValidator(&_ValidateIsString);
 
     // See comment on SdfFieldKeys->ConnectionPaths for why this is read-only.
     _DoRegisterField(SdfFieldKeys->TargetPaths,  SdfPathListOp())
         .ReadOnly()
-        .ListValueValidator(&::_ValidateRelationshipTargetPath);
+        .ListValueValidator(&_ValidateRelationshipTargetPath);
 
     _DoRegisterField(SdfFieldKeys->Relocates, SdfRelocatesMap())
-        .MapKeyValidator(&::_ValidateRelocatesPath)
-        .MapValueValidator(&::_ValidateRelocatesPath);
+        .MapKeyValidator(&_ValidateRelocatesPath)
+        .MapValueValidator(&_ValidateRelocatesPath);
     _DoRegisterField(SdfFieldKeys->Script, "");
     _DoRegisterField(SdfFieldKeys->Specifier, SdfSpecifierOver);
     _DoRegisterField(SdfFieldKeys->StartFrame, 0.0);
     _DoRegisterField(SdfFieldKeys->StartTimeCode, 0.0);
     _DoRegisterField(SdfFieldKeys->SubLayers, std::vector<std::string>())
-        .ListValueValidator(&::_ValidateSubLayer);
+        .ListValueValidator(&_ValidateSubLayer);
     _DoRegisterField(SdfFieldKeys->SubLayerOffsets, std::vector<SdfLayerOffset>());
     _DoRegisterField(SdfFieldKeys->SymmetricPeer, "");
     _DoRegisterField(SdfFieldKeys->SymmetryArgs, VtDictionary())
-        .MapKeyValidator(&::_ValidateIdentifier)
-        .MapValueValidator(&::_ValidateIsSceneDescriptionValue);
+        .MapKeyValidator(&_ValidateIdentifier)
+        .MapValueValidator(&_ValidateIsSceneDescriptionValue);
     _DoRegisterField(SdfFieldKeys->SymmetryArguments, VtDictionary())
-        .MapKeyValidator(&::_ValidateIdentifier)
-        .MapValueValidator(&::_ValidateIsSceneDescriptionValue);
+        .MapKeyValidator(&_ValidateIdentifier)
+        .MapValueValidator(&_ValidateIsSceneDescriptionValue);
     _DoRegisterField(SdfFieldKeys->SymmetryFunction, TfToken());
     _DoRegisterField(SdfFieldKeys->TimeCodesPerSecond, 24.0);
     _DoRegisterField(SdfFieldKeys->TypeName, TfToken());
     _DoRegisterField(SdfFieldKeys->VariantSetNames, SdfStringListOp())
-        .ListValueValidator(&::_ValidateIdentifier);
+        .ListValueValidator(&_ValidateIdentifier);
     _DoRegisterField(SdfFieldKeys->VariantSelection, SdfVariantSelectionMap())
-        .MapValueValidator(&::_ValidateVariantIdentifier);
+        .MapValueValidator(&_ValidateVariantIdentifier);
     _DoRegisterField(SdfFieldKeys->Variability, SdfVariabilityVarying);
     
     // Children fields.
     _DoRegisterField(SdfChildrenKeys->ConnectionChildren, std::vector<SdfPath>())
         .Children()
-        .ListValueValidator(&::_ValidateAttributeConnectionPath);
+        .ListValueValidator(&_ValidateAttributeConnectionPath);
     _DoRegisterField(SdfChildrenKeys->ExpressionChildren, std::vector<TfToken>())
         .Children();
     _DoRegisterField(SdfChildrenKeys->MapperArgChildren, std::vector<TfToken>())
         .Children()
-        .ListValueValidator(&::_ValidateIdentifier);
+        .ListValueValidator(&_ValidateIdentifier);
     _DoRegisterField(SdfChildrenKeys->MapperChildren, std::vector<SdfPath>())
         .Children()
-        .ListValueValidator(&::_ValidateAttributeConnectionPath);
+        .ListValueValidator(&_ValidateAttributeConnectionPath);
     _DoRegisterField(SdfChildrenKeys->PrimChildren, std::vector<TfToken>())
         .Children()
-        .ListValueValidator(&::_ValidateIdentifier);
+        .ListValueValidator(&_ValidateIdentifier);
     _DoRegisterField(SdfChildrenKeys->PropertyChildren, std::vector<TfToken>())
         .Children()
-        .ListValueValidator(&::_ValidateIdentifier);
+        .ListValueValidator(&_ValidateIdentifier);
     _DoRegisterField(SdfChildrenKeys->RelationshipTargetChildren,
                    std::vector<SdfPath>())
         .Children()
-        .ListValueValidator(&::_ValidateRelationshipTargetPath);
+        .ListValueValidator(&_ValidateRelationshipTargetPath);
     _DoRegisterField(SdfChildrenKeys->VariantChildren, std::vector<TfToken>())
         .Children()
-        .ListValueValidator(&::_ValidateVariantIdentifier);
+        .ListValueValidator(&_ValidateVariantIdentifier);
     _DoRegisterField(SdfChildrenKeys->VariantSetChildren, std::vector<TfToken>())
         .Children()
-        .ListValueValidator(&::_ValidateIdentifier);
+        .ListValueValidator(&_ValidateIdentifier);
 
     //
     // Spec definitions
@@ -635,6 +644,10 @@ SdfSchemaBase::_RegisterStandardFields()
                        SdfMetadataDisplayGroupTokens->core)
         .MetadataField(SdfFieldKeys->PrefixSubstitutions,
                        SdfMetadataDisplayGroupTokens->core)
+        .MetadataField(SdfFieldKeys->Suffix,
+                       SdfMetadataDisplayGroupTokens->core)
+        .MetadataField(SdfFieldKeys->SuffixSubstitutions,
+                       SdfMetadataDisplayGroupTokens->core)
         .MetadataField(SdfFieldKeys->SymmetricPeer,
                        SdfMetadataDisplayGroupTokens->symmetry)
         .MetadataField(SdfFieldKeys->SymmetryArguments,
@@ -671,6 +684,8 @@ SdfSchemaBase::_RegisterStandardFields()
         .MetadataField(SdfFieldKeys->Permission,
                        SdfMetadataDisplayGroupTokens->core)
         .MetadataField(SdfFieldKeys->Prefix,
+                       SdfMetadataDisplayGroupTokens->core)
+        .MetadataField(SdfFieldKeys->Suffix,
                        SdfMetadataDisplayGroupTokens->core)
         .MetadataField(SdfFieldKeys->SymmetricPeer,
                        SdfMetadataDisplayGroupTokens->symmetry)
@@ -1437,7 +1452,11 @@ SdfSchemaBase::_UpdateMetadataFromPlugins(
                     .MetadataField(fieldName, displayGroup);
             }
 
-            if (appliesTo.empty() || appliesTo.count("variants")) {
+            // All metadata on prims should also apply to variants.
+            // This matches how the variant spec definition is copied
+            // from the prim spec definition in _RegisterStandardFields.
+            if (appliesTo.empty() || appliesTo.count("variants") || 
+                appliesTo.count("prims")) {
                 _ExtendSpecDefinition(SdfSpecTypeVariant)
                     .MetadataField(fieldName, displayGroup);
             }
@@ -1513,7 +1532,7 @@ SdfSchema::_RegisterTypes(_ValueTypeRegistrar r)
     r.AddType("uint",   uint32_t());
     r.AddType("int64",  int64_t());
     r.AddType("uint64", uint64_t());
-    r.AddType("half",   half());
+    r.AddType("half",   GfHalf());
     r.AddType("float",  float());
     r.AddType("double", double());
     r.AddType("string", std::string());
@@ -1702,3 +1721,5 @@ SdfSchema::_NewValueTypeNames() const
 
     return n;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

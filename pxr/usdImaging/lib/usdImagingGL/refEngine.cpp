@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/imaging/glf/glew.h"
 
 #include "pxr/usdImaging/usdImagingGL/refEngine.h"
@@ -36,7 +37,7 @@
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/relationship.h"
 #include "pxr/usd/usd/stage.h"
-#include "pxr/usd/usd/treeIterator.h"
+#include "pxr/usd/usd/primRange.h"
 
 // Geometry Schema
 #include "pxr/usd/usdGeom/scope.h"
@@ -69,6 +70,9 @@
 #include "pxr/base/gf/frustum.h"
 #include "pxr/base/gf/gamma.h"
 #include "pxr/base/tf/stl.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 // Sentinel value for prim restarts, so that multiple prims can be lumped into a
 // single draw call, if the hardware supports it.
@@ -303,6 +307,7 @@ UsdImagingGLRefEngine::Render(const UsdPrim& root, RenderParams params)
     } else {
         static const GLenum USD_2_GL_CULL_FACE[] =
         {
+                0,         // No Opinion - Unused
                 0,         // CULL_STYLE_NOTHING - Unused
                 GL_BACK,   // CULL_STYLE_BACK
                 GL_FRONT,  // CULL_STYLE_FRONT
@@ -606,17 +611,17 @@ UsdImagingGLRefEngine::_TraverseStage(const UsdPrim& root)
 {
     // Instead of using root.begin(), setup a special iterator that does both
     // pre-order and post-order traversal so we can push and pop state.
-    UsdTreeIterator primIt = UsdTreeIterator::PreAndPostVisit(root);
+    UsdPrimRange range = UsdPrimRange::PreAndPostVisit(root);
 
     UsdPrim pseudoRoot = root.GetStage()->GetPseudoRoot();
 
     // Traverse the stage to extract data for drawing.
-    while (primIt) {
-        if (!primIt.IsPostVisit()) {
+    for (auto iter = range.begin(); iter != range.end(); ++iter) {
+        if (!iter.IsPostVisit()) {
 
-            if (_excludedSet.find(primIt->GetPath()) != _excludedSet.end()) {
-                primIt.PruneChildren();
-                ++primIt;
+            if (_excludedSet.find(iter->GetPath()) != _excludedSet.end()) {
+                iter.PruneChildren();
+                ++iter;
                 continue;
             }
 
@@ -625,9 +630,9 @@ UsdImagingGLRefEngine::_TraverseStage(const UsdPrim& root)
             // Because we are pruning invisible subtrees, we can assume all
             // parent prims have "inherited" visibility.
             TfToken visibility;
-            if (*primIt != pseudoRoot &&
-                primIt->GetAttribute(UsdGeomTokens->visibility)
-                                        .Get(&visibility, _params.frame) &&
+            if (*iter != pseudoRoot &&
+                iter->GetAttribute(UsdGeomTokens->visibility)
+                    .Get(&visibility, _params.frame) &&
                 visibility == UsdGeomTokens->invisible) {
                 
                 visible = false;
@@ -635,9 +640,9 @@ UsdImagingGLRefEngine::_TraverseStage(const UsdPrim& root)
 
             // Treat only the purposes we've been asked to show as visible
             TfToken purpose;
-            if (*primIt != pseudoRoot
-                && primIt->GetAttribute(UsdGeomTokens->purpose)
-                                            .Get(&purpose, _params.frame)
+            if (*iter != pseudoRoot
+                && iter->GetAttribute(UsdGeomTokens->purpose)
+                   .Get(&purpose, _params.frame)
                 && purpose != UsdGeomTokens->default_  // fast/common out
                 && (
                      (purpose == UsdGeomTokens->guide 
@@ -652,43 +657,41 @@ UsdImagingGLRefEngine::_TraverseStage(const UsdPrim& root)
 
             // Do pre-visit data extraction.
             if (visible) {
-                if (primIt->IsA<UsdGeomXform>())
-                    _HandleXform(*primIt);
-                else if (primIt->IsA<UsdGeomMesh>())
-                    _HandleMesh(*primIt);
-                else if (primIt->IsA<UsdGeomCurves>())
-                    _HandleCurves(*primIt);
-                else if (primIt->IsA<UsdGeomCube>())
-                    _HandleCube(*primIt);
-                else if (primIt->IsA<UsdGeomSphere>())
-                    _HandleSphere(*primIt);
-                else if (primIt->IsA<UsdGeomCone>())
-                    _HandleCone(*primIt);
-                else if (primIt->IsA<UsdGeomCylinder>())
-                    _HandleCylinder(*primIt);
-                else if (primIt->IsA<UsdGeomCapsule>())
-                    _HandleCapsule(*primIt);
-                else if (primIt->IsA<UsdGeomPoints>())
-                    _HandlePoints(*primIt);
-                else if (primIt->IsA<UsdGeomNurbsPatch>())
-                    _HandleNurbsPatch(*primIt);                    
+                if (iter->IsA<UsdGeomXform>())
+                    _HandleXform(*iter);
+                else if (iter->IsA<UsdGeomMesh>())
+                    _HandleMesh(*iter);
+                else if (iter->IsA<UsdGeomCurves>())
+                    _HandleCurves(*iter);
+                else if (iter->IsA<UsdGeomCube>())
+                    _HandleCube(*iter);
+                else if (iter->IsA<UsdGeomSphere>())
+                    _HandleSphere(*iter);
+                else if (iter->IsA<UsdGeomCone>())
+                    _HandleCone(*iter);
+                else if (iter->IsA<UsdGeomCylinder>())
+                    _HandleCylinder(*iter);
+                else if (iter->IsA<UsdGeomCapsule>())
+                    _HandleCapsule(*iter);
+                else if (iter->IsA<UsdGeomPoints>())
+                    _HandlePoints(*iter);
+                else if (iter->IsA<UsdGeomNurbsPatch>())
+                    _HandleNurbsPatch(*iter);                    
             } else {
-                primIt.PruneChildren();
+                iter.PruneChildren();
             }
 
         } else {
             if (!_xformStack.empty()) {
                 const std::pair<UsdPrim, GfMatrix4d> &entry =
                     _xformStack.back();
-                if (entry.first == *primIt) {
+                if (entry.first == *iter) {
                     // pop state
                     _xformStack.pop_back();
                     _ctm = entry.second;
                 }
             }
         }
-
-        ++primIt;
     }
 
     // Apply the additional offset from the polygon vertex indices, which are
@@ -805,15 +808,29 @@ UsdImagingGLRefEngine::_HandleCurves(const UsdPrim& prim)
 
     _ProcessGprimColor(&curvesSchema, prim, &doubleSided, &color,
                        &colorInterpolation);
-    if (color.size() < 1) {
-        // set default
-        color = VtArray<GfVec3f>(1);
-        color[0] = GfVec3f(0.5, 0.5, 0.5);
-        colorInterpolation = UsdGeomTokens->constant;
-    }
 
     VtVec3fArray pts;
     curvesSchema.GetPointsAttr().Get(&pts, _params.frame);
+
+
+    if (color.size() < 1) {
+
+        // set default
+        color = VtArray<GfVec3f>(1);
+        color[0] = GfVec3f(0.5f, 0.5f, 0.5f);
+        colorInterpolation = UsdGeomTokens->constant;
+
+    // Check for error condition for vertex colors
+    } else if (colorInterpolation == UsdGeomTokens->vertex &&
+               color.size() != pts.size()) {
+
+        // fallback to default
+        color = VtArray<GfVec3f>(1);
+        color[0] = GfVec3f(0.5f, 0.5f, 0.5f);
+        colorInterpolation = UsdGeomTokens->constant;
+        TF_WARN("Color primvar error on prim '%s'", prim.GetPath().GetText());
+    }
+
     int index = 0;
     TF_FOR_ALL(itr, pts) {
         GfVec3f pt = _ctm.Transform(*itr);
@@ -1177,3 +1194,6 @@ UsdImagingGLRefEngine::_RenderPrimitive(const UsdPrim &prim,
         }
     }
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

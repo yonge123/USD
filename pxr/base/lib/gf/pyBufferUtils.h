@@ -24,6 +24,11 @@
 #ifndef GF_PYBUFFER_UTILS_H
 #define GF_PYBUFFER_UTILS_H
 
+#include "pxr/pxr.h"
+#include "pxr/base/gf/api.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 ////////////////////////////////////////////////////////////////////////
 // Format strings matching Python buffer proto / struct module scheme.
 
@@ -31,5 +36,7 @@
 //    bool, [unsigned] (char, short, int, long), half, float, and double.
 template <class T>
 char *Gf_GetPyBufferFmtFor();
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // GF_PYBUFFER_UTILS_H

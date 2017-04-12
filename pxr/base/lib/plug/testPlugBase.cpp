@@ -21,13 +21,16 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/base/plug/testPlugBase.h"
 
+#include "pxr/pxr.h"
+#include "pxr/base/plug/testPlugBase.h"
 #include "pxr/base/plug/registry.h"
 #include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/tf/type.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/type.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 template <int N>
 TfRefPtr< _TestPlugBase<N> >
@@ -49,12 +52,11 @@ _TestPlugBase<N>::Manufacture(const std::string & subclass)
     return TfNullPtr;
 }
 
-// XXX -- These shouldn't be in the library or used by the Python module,
-//        let alone exported.
-template class PLUG_API _TestPlugBase<1>;
-template class PLUG_API _TestPlugBase<2>;
-template class PLUG_API _TestPlugBase<3>;
-template class PLUG_API _TestPlugBase<4>;
+// XXX -- These shouldn't be in the library or used by the Python module.
+template class _TestPlugBase<1>;
+template class _TestPlugBase<2>;
+template class _TestPlugBase<3>;
+template class _TestPlugBase<4>;
 
 // This derived class should be discovered as an available subclass
 // of _TestPlugBase1 even though it is compiled into the base library.
@@ -89,3 +91,5 @@ TF_REGISTRY_FUNCTION(TfType)
     TfType::Define< _TestPlugDerived0, TfType::Bases<_TestPlugBase1> >()
         .SetFactory<_TestPlugFactory<_TestPlugDerived0> >();
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

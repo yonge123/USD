@@ -22,7 +22,6 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "{{ libraryPath }}/{{ cls.GetHeaderFile() }}"
-
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/conversions.h"
 
@@ -39,6 +38,12 @@
 
 using namespace boost::python;
 
+{% if useExportAPI %}
+{{ namespaceUsing }}
+
+namespace {
+
+{% endif %}
 #define WRAP_CUSTOM                                                     \
     template <class Cls> static void _CustomWrapCode(Cls &_class)
 
@@ -54,6 +59,10 @@ _Create{{ Proper(attr.apiName) }}Attr({{ cls.cppClassName }} &self,
         UsdPythonToSdfType(defaultVal, {{ attr.usdType }}), writeSparsely);
 }
 {% endfor %}
+{% if useExportAPI %}
+
+} // anonymous namespace
+{% endif %}
 
 void wrap{{ cls.cppClassName }}()
 {
@@ -121,6 +130,12 @@ void wrap{{ cls.cppClassName }}()
 // }
 //
 // Of course any other ancillary or support code may be provided.
+{% if useExportAPI %}
+// 
+// Just remember to wrap code in the appropriate delimiters:
+// 'namespace {', '}'.
+//
+{% endif %}
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 

@@ -24,9 +24,14 @@
 #ifndef PCP_PRIM_INDEX_STACK_FRAME_H
 #define PCP_PRIM_INDEX_STACK_FRAME_H
 
+#include "pxr/pxr.h"
 #include "pxr/usd/pcp/arc.h"
 #include "pxr/usd/pcp/node.h"
 #include "pxr/usd/pcp/site.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+class PcpPrimIndex;
 
 /// \class PcpPrimIndex_StackFrame
 ///
@@ -36,11 +41,18 @@
 class PcpPrimIndex_StackFrame
 {
 public:
-    PcpPrimIndex_StackFrame()
-        : previousFrame(NULL)
-        , skipDuplicateNodes(false)
-        , arcToParent(NULL)
-    { }
+    PcpPrimIndex_StackFrame(PcpLayerStackSite const &requestedSite,
+                            PcpNodeRef const &parentNode,
+                            PcpArc *arcToParent,
+                            PcpPrimIndex_StackFrame *previousFrame,
+                            PcpPrimIndex const *originatingIndex,
+                            bool skipDuplicateNodes)
+        : previousFrame(previousFrame)
+        , requestedSite(requestedSite)
+        , parentNode(parentNode)
+        , arcToParent(arcToParent)
+        , originatingIndex(originatingIndex)
+        , skipDuplicateNodes(skipDuplicateNodes) {}
 
     /// Link to the previous recursive invocation.
     PcpPrimIndex_StackFrame* previousFrame;
@@ -49,10 +61,6 @@ public:
     /// call to Pcp_BuildPrimIndex.
     PcpLayerStackSite requestedSite;
 
-    /// Whether the prim index being built by this recursive call should
-    /// skip adding nodes if another node exists with the same site.
-    bool skipDuplicateNodes;
-
     /// The node in the parent graph that will be the parent of the prim index 
     /// being built by this recursive call.
     PcpNodeRef parentNode;
@@ -60,6 +68,14 @@ public:
     /// The arc connecting the prim index being built by this recursive
     /// call to the parent node in the previous stack frame.
     PcpArc* arcToParent;
+
+    /// The outer-most index whose computation originated this recursive chain.
+    /// This is meant for debugging support.
+    PcpPrimIndex const *originatingIndex;
+
+    /// Whether the prim index being built by this recursive call should
+    /// skip adding nodes if another node exists with the same site.
+    bool skipDuplicateNodes;
 };
 
 /// \class PcpPrimIndex_StackFrameIterator
@@ -126,5 +142,7 @@ public:
         }
     }
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PCP_PRIM_INDEX_STACK_FRAME_H

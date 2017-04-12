@@ -23,6 +23,7 @@
 //
 #include <boost/python/def.hpp>
 
+#include "pxr/pxr.h"
 #include "pxr/base/tf/pyUtils.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 
@@ -39,6 +40,8 @@
 
 using namespace boost::python;
 using std::vector;
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void wrapMath()
 {    

@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/stageCacheContext.h"
 #include "pxr/usd/usd/stageCache.h"
 
@@ -35,6 +36,8 @@
 using std::vector;
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 namespace {
 
@@ -65,7 +68,7 @@ private:
     boost::function<UsdStageCacheContext *()> _makeContext;
 };
 
-}
+} // anonymous namespace
 
 void wrapUsdStageCacheContext()
 {

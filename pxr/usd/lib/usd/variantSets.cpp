@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/variantSets.h"
 
 #include "pxr/usd/usd/prim.h"
@@ -37,6 +38,9 @@
 
 #include "pxr/usd/pcp/composeSite.h"
 #include "pxr/usd/pcp/primIndex.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 using std::string;
 using std::vector;
@@ -65,9 +69,8 @@ UsdVariantSet::GetVariantNames() const
 {
     std::set<std::string> namesSet;
     TF_REVERSE_FOR_ALL(i, _prim.GetPrimIndex().GetNodeRange()) {
-        if (i->GetSite().path.IsPrimOrPrimVariantSelectionPath()) {
-            PcpComposeSiteVariantSetOptions(
-                i->GetSite(), _variantSetName, &namesSet);
+        if (i->GetPath().IsPrimOrPrimVariantSelectionPath()) {
+            PcpComposeSiteVariantSetOptions(*i, _variantSetName, &namesSet);
         }
     }
 
@@ -108,16 +111,14 @@ UsdVariantSet::GetVariantSelection() const
 bool
 UsdVariantSet::HasAuthoredVariantSelection(std::string *value) const
 {
+    string sel;
+    if (!value) {
+        value = &sel;
+    }
     for (auto nodeIter = _prim.GetPrimIndex().GetNodeRange().first;
          nodeIter != _prim.GetPrimIndex().GetNodeRange().second;
-         ++nodeIter) 
-    {
-        string sel;
-        if (!value) {
-            value = &sel;
-        }
-        if (PcpComposeSiteVariantSelection(
-                nodeIter->GetSite(), _variantSetName, value)) {
+         ++nodeIter) {
+        if (PcpComposeSiteVariantSelection(*nodeIter, _variantSetName, value)) {
             return true;
         }
     }
@@ -253,7 +254,7 @@ bool
 UsdVariantSets::GetNames(std::vector<std::string>* names) const
 {
     TF_REVERSE_FOR_ALL(i, _prim.GetPrimIndex().GetNodeRange()) {
-        PcpComposeSiteVariantSets(i->GetSite(), names);
+        PcpComposeSiteVariantSets(*i, names);
     }
     return true;
 }
@@ -281,4 +282,7 @@ UsdVariantSets::SetSelection(const std::string& variantSetName,
 
     return vset.SetVariantSelection(variantName);
 }
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 

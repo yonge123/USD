@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/changeManager.h"
 #include "pxr/usd/sdf/debugCodes.h"
 #include "pxr/usd/sdf/layer.h"
@@ -35,6 +37,8 @@
 
 using std::string;
 using std::vector;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 TF_INSTANTIATE_SINGLETON(Sdf_ChangeManager);
 
@@ -222,6 +226,14 @@ Sdf_ChangeManager::DidChangeLayerIdentifier(const SdfLayerHandle &layer,
     _data.local().changes[layer].DidChangeLayerIdentifier(oldIdentifier);
 }
 
+void 
+Sdf_ChangeManager::DidChangeLayerResolvedPath(const SdfLayerHandle &layer)
+{
+    if (!layer->_ShouldNotify())
+        return;
+    _data.local().changes[layer].DidChangeLayerResolvedPath();
+}
+
 static bool
 _IsOrderChangeOnly(const VtValue & oldVal, const VtValue & newVal )
 {
@@ -347,6 +359,19 @@ Sdf_ChangeManager::DidChangeField(const SdfLayerHandle &layer,
             std::set_difference(newSet.begin(), newSet.end(),
                                 oldSet.begin(), oldSet.end(), 
                                 std::back_inserter(addedLayers));
+
+            // If the old and new sets are the same, the order is all
+            // that has changed. The changelist protocol does not have
+            // a precise way to describe this, so we represent this as
+            // the removal and re-addition of all layers. (We could make
+            // the changelist protocol more descriptive for this case, but
+            // there isn't any actual speed win to be realized today.)
+            if (addedLayers.empty() && removedLayers.empty()) {
+                removedLayers.insert( removedLayers.end(),
+                                      oldSet.begin(), oldSet.end() );
+                addedLayers.insert( addedLayers.end(),
+                                    newSet.begin(), newSet.end() );
+            }
         }
 
         TF_FOR_ALL(it, addedLayers) {
@@ -548,3 +573,5 @@ Sdf_ChangeManager::DidRemoveSpec(const SdfLayerHandle &layer, const SdfPath &pat
         TF_CODING_ERROR("Unsupported Spec Type for <" + path.GetString() + ">");
     }
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

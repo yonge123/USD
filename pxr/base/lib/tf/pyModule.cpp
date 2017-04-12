@@ -23,9 +23,14 @@
 //
 // Do not include pyModule.h or we'd need an implementation of WrapModule().
 //#include "pxr/base/tf/pyModule.h"
+
+#include "pxr/pxr.h"
+#include "pxr/base/arch/defines.h"
+
 #include "pxr/base/tf/error.h"
 #include "pxr/base/tf/errorMark.h"
 #include "pxr/base/tf/hash.h"
+#include "pxr/base/tf/hashset.h"
 #include "pxr/base/tf/mallocTag.h"
 #include "pxr/base/tf/pyError.h"
 #include "pxr/base/tf/pyModuleNotice.h"
@@ -40,7 +45,6 @@
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/scoped_ptr.hpp>
-#include "pxr/base/tf/hashset.h"
 
 #include <boost/python/docstring_options.hpp>
 #include <boost/python/extract.hpp>
@@ -64,6 +68,7 @@ using std::vector;
 
 using namespace boost::python;
 
+PXR_NAMESPACE_OPEN_SCOPE
 
 class Tf_ModuleProcessor {
 public:
@@ -76,7 +81,7 @@ public:
     
     inline bool IsBoostPythonFunc(object const &obj)
     {
-        if (not _cachedBPFuncType) {
+        if (!_cachedBPFuncType) {
             handle<> typeStr(PyObject_Str((PyObject *)obj.ptr()->ob_type));
             if (strstr(PyString_AS_STRING(typeStr.get()), "Boost.Python.function")) {
                 _cachedBPFuncType = (PyObject *)obj.ptr()->ob_type;
@@ -89,7 +94,7 @@ public:
 
     inline bool IsBoostPythonClass(object const &obj)
     { 
-        if (not _cachedBPClassType) {
+        if (!_cachedBPClassType) {
             handle<> typeStr(PyObject_Str((PyObject *)obj.ptr()->ob_type));
             if (strstr(PyString_AS_STRING(typeStr.get()), "Boost.Python.class")) {
                 _cachedBPClassType = (PyObject *)obj.ptr()->ob_type;
@@ -124,11 +129,11 @@ private:
             size_t lenItems = len(items);
             for (size_t i = 0; i < lenItems; ++i) {
                 object value = items[i][1];
-                if (not visitedObjs->count(value.ptr())) {
+                if (!visitedObjs->count(value.ptr())) {
                     char const *name = PyString_AS_STRING(object(items[i][0]).ptr());
                     bool keepGoing = callback(name, obj, value);
                     visitedObjs->insert(value.ptr());
-                    if (IsBoostPythonClass(value) and keepGoing) {
+                    if (IsBoostPythonClass(value) && keepGoing) {
                         _WalkModule(value, callback, visitedObjs);
                     }
                 }
@@ -173,14 +178,14 @@ public:
 
         // If the call did not complete successfully, just throw back into
         // python.
-        if (ARCH_UNLIKELY(not ret)) {
+        if (ARCH_UNLIKELY(!ret)) {
             TF_VERIFY(PyErr_Occurred());
             throw_error_already_set();
         }
 
         // If the call completed successfully, then we need to see if any tf
         // errors occurred, and if so, convert them to python exceptions.
-        if (ARCH_UNLIKELY(not m.IsClean() and
+        if (ARCH_UNLIKELY(!m.IsClean() &&
                           TfPyConvertTfErrorsToPythonException(m))) {
             throw_error_already_set();
         }
@@ -236,7 +241,7 @@ public:
     bool WrapForErrorHandlingCB(char const *name, object owner, object obj)
     {
         // Handle no-throw list stuff...
-        if (!strcmp(name, "RepostErrors") or 
+        if (!strcmp(name, "RepostErrors") || 
             !strcmp(name, "ReportActiveMarks")) {
             // We don't wrap these with error handling because they are used to
             // manage error handling, and wrapping them with it would make them
@@ -374,6 +379,7 @@ void Tf_PyPostProcessModule()
     }
 }
 
+TF_API
 void Tf_PyInitWrapModule(
     void (*wrapModule)(),                     
     const char* packageModule,
@@ -421,3 +427,5 @@ void Tf_PyInitWrapModule(
     // Notify that a module has been loaded.
     TfPyModuleWasLoaded(packageName).Send();
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

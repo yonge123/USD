@@ -26,7 +26,12 @@
 
 /// \file pxOsd/tokens.h
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/pxOsd/api.h"
 #include "pxr/base/tf/staticTokens.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 #define PXOSD_OPENSUBDIV_TOKENS  \
     (all)                        \
@@ -47,6 +52,10 @@
     (rightHanded)                \
     (smooth)
 
-TF_DECLARE_PUBLIC_TOKENS(PxOsdOpenSubdivTokens, PXOSD_OPENSUBDIV_TOKENS);
+TF_DECLARE_PUBLIC_TOKENS(PxOsdOpenSubdivTokens,
+                         PXOSD_API, PXOSD_OPENSUBDIV_TOKENS);
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXOSD_REFINER_FACTORY_H

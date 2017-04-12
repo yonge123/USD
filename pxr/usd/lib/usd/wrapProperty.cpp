@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/property.h"
 #include "pxr/usd/usd/editTarget.h"
 #include "pxr/usd/usd/wrapUtils.h"
@@ -33,6 +34,8 @@
 using std::string;
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void wrapUsdProperty()
 {
@@ -73,4 +76,3 @@ void wrapUsdProperty()
 
     TfPyRegisterStlSequencesFromPython<UsdProperty>();
 }
-

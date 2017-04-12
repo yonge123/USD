@@ -21,11 +21,17 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/cleanupEnabler.h"
 #include <boost/python.hpp>
 #include <boost/scoped_ptr.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 // This class and its wrapping allow a client to do this:
 // 
@@ -66,6 +72,8 @@ public:
 private :
     boost::scoped_ptr<SdfCleanupEnabler> _state;
 };
+
+} // anonymous namespace 
 
 void wrapCleanupEnabler()
 {

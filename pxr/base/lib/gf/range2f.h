@@ -31,6 +31,9 @@
 /// \file gf/range2f.h
 /// \ingroup group_gf_BasicGeometry
 
+#include "pxr/pxr.h"
+
+#include "pxr/base/gf/api.h"
 #include "pxr/base/gf/vec2d.h"
 #include "pxr/base/gf/vec2f.h"
 #include "pxr/base/gf/traits.h"
@@ -40,6 +43,8 @@
 #include <cfloat>
 #include <cstddef>
 #include <iosfwd>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class GfRange2d;
 class GfRange2f;
@@ -309,21 +314,25 @@ public:
     ///
     /// The values must match exactly and it does exactly what you might
     /// expect when comparing float and double values.
-    inline bool operator ==(const GfRange2d& other) const;
-    inline bool operator !=(const GfRange2d& other) const;
+    GF_API inline bool operator ==(const GfRange2d& other) const;
+    GF_API inline bool operator !=(const GfRange2d& other) const;
 
     /// Compute the squared distance from a point to the range.
+    GF_API
     double GetDistanceSquared(const GfVec2f &p) const;
 
     /// Returns the ith corner of the range, in the following order:
     /// SW, SE, NW, NE.
+    GF_API
     GfVec2f GetCorner(size_t i) const;
 
     /// Returns the ith quadrant of the range, in the following order:
     /// SW, SE, NW, NE.
+    GF_API
     GfRange2f GetQuadrant(size_t i) const;
 
     /// The unit square.
+    GF_API
     static const GfRange2f UnitSquare;
 
   private:
@@ -345,9 +354,11 @@ public:
 
 /// Output a GfRange2f.
 /// \ingroup group_gf_DebuggingOutput
-std::ostream& operator<<(std::ostream &, GfRange2f const &);
+GF_API std::ostream& operator<<(std::ostream &, GfRange2f const &);
 
+PXR_NAMESPACE_CLOSE_SCOPE
 #include "pxr/base/gf/range2d.h"
+PXR_NAMESPACE_OPEN_SCOPE
 
 inline bool
 GfRange2f::operator ==(const GfRange2d& other) const {
@@ -360,5 +371,7 @@ GfRange2f::operator !=(const GfRange2d& other) const {
     return !(*this == other);
 }
 
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // GF_RANGE2F_H

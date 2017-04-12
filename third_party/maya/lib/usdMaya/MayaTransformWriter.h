@@ -24,12 +24,17 @@
 #ifndef _usdExport_MayaTransformWriter_h_
 #define _usdExport_MayaTransformWriter_h_
 
+#include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/MayaPrimWriter.h"
 
 #include "pxr/usd/usdGeom/xform.h"
 #include "pxr/usd/usdGeom/xformOp.h"
 #include <maya/MFnTransform.h>
 #include <maya/MPlugArray.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 class UsdGeomXformable;
 class UsdTimeCode;
@@ -57,14 +62,17 @@ class MayaTransformWriter : public MayaPrimWriter
 {
   public:
 
+    PXRUSDMAYA_API
     MayaTransformWriter(MDagPath & iDag, UsdStageRefPtr stage, const JobExportArgs & iArgs);
     virtual ~MayaTransformWriter() {};
 
+    PXRUSDMAYA_API
     virtual void pushTransformStack(
             const MFnTransform& iTrans, 
             const UsdGeomXformable& usdXForm, 
             bool writeAnim);
     
+    PXRUSDMAYA_API
     virtual UsdPrim write(const UsdTimeCode &usdTime);
 
     virtual bool isShapeAnimated()     const { return mIsShapeAnimated; };
@@ -72,6 +80,7 @@ class MayaTransformWriter : public MayaPrimWriter
     const MDagPath& getTransformDagPath() { return mXformDagPath; };
 
   protected:
+    PXRUSDMAYA_API
     bool writeTransformAttrs(
             const UsdTimeCode& usdTime, 
             UsdGeomXformable& primSchema);
@@ -89,5 +98,8 @@ class MayaTransformWriter : public MayaPrimWriter
 };
 
 typedef shared_ptr < MayaTransformWriter > MayaTransformWriterPtr;
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif  // _usdExport_MayaTransformWriter_h_

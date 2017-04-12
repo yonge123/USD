@@ -24,19 +24,32 @@
 #ifndef _usdExport_usdExport_h_
 #define _usdExport_usdExport_h_
 
+#include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include <maya/MPxCommand.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 class usdExport : public MPxCommand
 {
   public:
+    PXRUSDMAYA_API
     usdExport();
+    PXRUSDMAYA_API
     virtual ~usdExport();
 
+    PXRUSDMAYA_API
     virtual MStatus doIt(const MArgList& args);
     virtual bool  isUndoable () const { return false; };
 
+    PXRUSDMAYA_API
     static MSyntax  createSyntax();
+    PXRUSDMAYA_API
     static void* creator();
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif  // _usdExport_usdExport_h_

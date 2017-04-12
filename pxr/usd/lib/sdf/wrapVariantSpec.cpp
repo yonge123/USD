@@ -23,6 +23,7 @@
 //
 /// \file wrapVariantSpec.cpp
 
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/variantSpec.h"
 #include "pxr/usd/sdf/primSpec.h"
 #include "pxr/usd/sdf/pySpec.h"
@@ -32,6 +33,10 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 typedef SdfPyChildrenProxy<SdfVariantSetView> VariantSetProxy;
 
 static
@@ -40,6 +45,8 @@ _WrapGetVariantSetsProxy(const SdfVariantSpec& owner)
 {
     return VariantSetProxy(owner.GetVariantSets());
 }
+
+} // anonymous namespace 
 
 void wrapVariantSpec()
 {
@@ -61,7 +68,7 @@ void wrapVariantSpec()
                           return_value_policy<return_by_value>()),
             "The variant's name.")
         .add_property("variantSets",
-            &::_WrapGetVariantSetsProxy)
+            &_WrapGetVariantSetsProxy)
         .def("GetVariantNames", &This::GetVariantNames)
         ;
 }

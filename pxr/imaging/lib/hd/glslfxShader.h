@@ -24,6 +24,8 @@
 #ifndef HD_GLSLFX_SHADER_H
 #define HD_GLSLFX_SHADER_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
 #include "pxr/imaging/hd/surfaceShader.h"
@@ -35,17 +37,29 @@
 
 #include <boost/shared_ptr.hpp>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 typedef boost::shared_ptr<class HdGLSLFXShader> HdGLSLFXShaderSharedPtr;
 typedef boost::shared_ptr<class GlfGLSLFX> GlfGLSLFXSharedPtr;
 
 // XXX: DOCS!
 class HdGLSLFXShader : public HdSurfaceShader {
 public:
+    HD_API
     HdGLSLFXShader(GlfGLSLFXSharedPtr const& glslfx);
+    HD_API
     virtual ~HdGLSLFXShader();
+
+    /// If the prim is based on asset, reload that asset.
+    HD_API
+    virtual void Reload();
 
 private:
     GlfGLSLFXSharedPtr _glslfx;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //HD_GLSLFX_SHADER_H

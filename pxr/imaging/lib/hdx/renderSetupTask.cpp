@@ -22,31 +22,42 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/imaging/hdx/renderSetupTask.h"
-#include "pxr/imaging/hdx/camera.h"
 #include "pxr/imaging/hdx/package.h"
 #include "pxr/imaging/hdx/tokens.h"
 #include "pxr/imaging/hdx/debugCodes.h"
 
+#include "pxr/imaging/hdSt/camera.h"
+
 #include "pxr/imaging/hd/changeTracker.h"
+#include "pxr/imaging/hd/glslfxShader.h"
+#include "pxr/imaging/hd/package.h"
 #include "pxr/imaging/hd/renderIndex.h"
 #include "pxr/imaging/hd/renderPassShader.h"
 #include "pxr/imaging/hd/renderPassState.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
-#include "pxr/imaging/hd/sprim.h"
 #include "pxr/imaging/hd/surfaceShader.h"
 
 #include "pxr/imaging/cameraUtil/conformWindow.h"
 
+#include <mutex>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+HdShaderCodeSharedPtr HdxRenderSetupTask::_overrideShader;
+
 HdxRenderSetupTask::HdxRenderSetupTask(HdSceneDelegate* delegate, SdfPath const& id)
     : HdSceneTask(delegate, id)
+    , _renderPassState()
+    , _colorRenderPassShader()
+    , _idRenderPassShader()
     , _viewport()
     , _camera()
+    , _renderTags()    
 {
     _colorRenderPassShader.reset(
         new HdRenderPassShader(HdxPackageRenderPassShader()));
     _idRenderPassShader.reset(
         new HdRenderPassShader(HdxPackageRenderPassIdShader()));
-
     _renderPassState.reset(
         new HdRenderPassState(_colorRenderPassShader));
 }
@@ -59,6 +70,7 @@ HdxRenderSetupTask::_Execute(HdTaskContext* ctx)
 
     // set raster state to TaskContext
     (*ctx)[HdxTokens->renderPassState] = VtValue(_renderPassState);
+    (*ctx)[HdxTokens->renderTags] = VtValue(_renderTags);
 }
 
 void
@@ -67,7 +79,7 @@ HdxRenderSetupTask::_Sync(HdTaskContext* ctx)
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    HdChangeTracker::DirtyBits bits = _GetTaskDirtyBits();
+    HdDirtyBits bits = _GetTaskDirtyBits();
 
     // XXX: for compatibility.
     if (bits & HdChangeTracker::DirtyParams) {
@@ -95,10 +107,13 @@ HdxRenderSetupTask::Sync(HdxRenderTaskParams const &params)
     _renderPassState->SetDrawingRange(params.drawingRange);
     _renderPassState->SetCullStyle(params.cullStyle);
     if (params.enableHardwareShading) {
-        _renderPassState->SetOverrideShader(HdShaderSharedPtr());
+        _renderPassState->SetOverrideShader(HdShaderCodeSharedPtr());
     } else {
-        _renderPassState->SetOverrideShader(
-            GetDelegate()->GetRenderIndex().GetShaderFallback());
+        if (!_overrideShader) {
+            _CreateOverrideShader();
+        }
+
+        _renderPassState->SetOverrideShader(_overrideShader);
     }
     if (params.enableIdRender) {
         _renderPassState->SetRenderPassShader(_idRenderPassShader);
@@ -128,8 +143,10 @@ HdxRenderSetupTask::Sync(HdxRenderTaskParams const &params)
 
     _viewport = params.viewport;
 
+    _renderTags = params.renderTags;
+
     const HdRenderIndex &renderIndex = GetDelegate()->GetRenderIndex();
-    _camera = static_cast<const HdxCamera *>(
+    _camera = static_cast<const HdStCamera *>(
                 renderIndex.GetSprim(HdPrimTypeTokens->camera,
                                      params.camera));
 }
@@ -138,14 +155,14 @@ void
 HdxRenderSetupTask::SyncCamera()
 {
     if (_camera && _renderPassState) {
-        VtValue modelViewVt  = _camera->Get(HdxCameraTokens->worldToViewMatrix);
-        VtValue projectionVt = _camera->Get(HdxCameraTokens->projectionMatrix);
+        VtValue modelViewVt  = _camera->Get(HdStCameraTokens->worldToViewMatrix);
+        VtValue projectionVt = _camera->Get(HdStCameraTokens->projectionMatrix);
         GfMatrix4d modelView = modelViewVt.Get<GfMatrix4d>();
         GfMatrix4d projection= projectionVt.Get<GfMatrix4d>();
 
         // If there is a window policy available in this camera
         // we will extract it and adjust the projection accordingly.
-        VtValue windowPolicy = _camera->Get(HdxCameraTokens->windowPolicy);
+        VtValue windowPolicy = _camera->Get(HdStCameraTokens->windowPolicy);
         if (windowPolicy.IsHolding<CameraUtilConformWindowPolicy>()) {
             const CameraUtilConformWindowPolicy policy = 
                 windowPolicy.Get<CameraUtilConformWindowPolicy>();
@@ -154,7 +171,7 @@ HdxRenderSetupTask::SyncCamera()
                 _viewport[3] != 0.0 ? _viewport[2] / _viewport[3] : 1.0);
         }
 
-        const VtValue &vClipPlanes = _camera->Get(HdxCameraTokens->clipPlanes);
+        const VtValue &vClipPlanes = _camera->Get(HdStCameraTokens->clipPlanes);
         const HdRenderPassState::ClipPlanesVector &clipPlanes =
             vClipPlanes.Get<HdRenderPassState::ClipPlanesVector>();
 
@@ -165,6 +182,25 @@ HdxRenderSetupTask::SyncCamera()
     }
 }
 
+void
+HdxRenderSetupTask::_CreateOverrideShader()
+{
+    static std::mutex shaderCreateLock;
+
+    while (!_overrideShader) {
+        std::lock_guard<std::mutex> lock(shaderCreateLock);
+        {
+            if (!_overrideShader) {
+                GlfGLSLFXSharedPtr glslfx =
+                        GlfGLSLFXSharedPtr(
+                               new GlfGLSLFX(HdPackageFallbackSurfaceShader()));
+
+                _overrideShader =
+                              HdShaderCodeSharedPtr(new HdGLSLFXShader(glslfx));
+            }
+        }
+    }
+}
 
 // --------------------------------------------------------------------------- //
 // VtValue Requirements
@@ -191,8 +227,10 @@ std::ostream& operator<<(std::ostream& out, const HdxRenderTaskParams& pv)
         << pv.hullVisibility << " "
         << pv.surfaceVisibility << " "
         << pv.camera << " "
-        << pv.viewport
-        ;
+        << pv.viewport << " ";
+        TF_FOR_ALL(rt, pv.renderTags) {
+            out << *rt << " ";
+        }
     return out;
 }
 
@@ -216,10 +254,13 @@ bool operator==(const HdxRenderTaskParams& lhs, const HdxRenderTaskParams& rhs)
            lhs.hullVisibility          == rhs.hullVisibility          && 
            lhs.surfaceVisibility       == rhs.surfaceVisibility       && 
            lhs.camera                  == rhs.camera                  && 
-           lhs.viewport                == rhs.viewport;
+           lhs.viewport                == rhs.viewport                &&
+           lhs.renderTags              == rhs.renderTags;
 }
 
 bool operator!=(const HdxRenderTaskParams& lhs, const HdxRenderTaskParams& rhs) 
 {
     return !(lhs == rhs);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

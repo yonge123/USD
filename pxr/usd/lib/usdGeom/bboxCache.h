@@ -24,15 +24,19 @@
 #ifndef USDGEOM_BBOXCACHE_H
 #define USDGEOM_BBOXCACHE_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usdGeom/api.h"
 #include "pxr/usd/usdGeom/xformCache.h"
 #include "pxr/usd/usd/attributeQuery.h"
 #include "pxr/base/gf/bbox3d.h"
-
-#include <boost/shared_array.hpp>
 #include "pxr/base/tf/hashmap.h"
 
+#include <boost/shared_array.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 class UsdGeomModelAPI;
-class UsdGeomPointBased;
 
 /// \class UsdGeomBBoxCache
 ///
@@ -80,7 +84,10 @@ class UsdGeomPointBased;
 ///    the stage in the master-thread prior to spawning the workers.  Querying
 ///    the root will cause all sub-results to be cached.
 ///
-///  * Querying bounds will use multiple threads, upto the limit set in libWork.
+///  * Querying bounds will use multiple threads, up to the limit set in libWork.
+///
+///  * Plugins may be loaded in order to compute extents for prim types provided
+///    by that plugin.  See UsdGeomBoundable::ComputeExtentFromPlugins
 ///
 class UsdGeomBBoxCache
 {
@@ -99,6 +106,7 @@ public:
     /// of includedPurposes by combining bounding box hints that have been
     /// cached for various values of purposes.
     /// 
+    USDGEOM_API
     UsdGeomBBoxCache(UsdTimeCode time, TfTokenVector includedPurposes,
                      bool useExtentsHint=false);
 
@@ -111,6 +119,7 @@ public:
     /// Error handling note: No checking of \p prim validity is performed.
     /// If \p prim is invalid, this method will abort the program; therefore
     /// it is the client's responsibility to ensure \p prim is valid.
+    USDGEOM_API
     GfBBox3d ComputeWorldBound(const UsdPrim& prim);
 
     /// Compute the bound of the given prim in the space of an ancestor prim, 
@@ -120,6 +129,7 @@ public:
     /// \p relativeToAncestorPrim. The computed bound may be incorrect if 
     /// \p relativeToAncestorPrim is not an ancestor of \p prim.
     /// 
+    USDGEOM_API
     GfBBox3d ComputeRelativeBound(const UsdPrim &prim, 
                                   const UsdPrim &relativeToAncestorPrim);
 
@@ -131,6 +141,7 @@ public:
     /// local-to-world transform).
     ///
     /// See ComputeWorldBound() for notes on performance and error handling.
+    USDGEOM_API
     GfBBox3d ComputeLocalBound(const UsdPrim& prim);
 
     /// Computes the bound of the prim's children leveraging any pre-existing,
@@ -143,6 +154,7 @@ public:
     /// axis-aligned bounding box, the client must call ComputeAlignedRange().
     ///
     /// See ComputeWorldBound() for notes on performance and error handling.
+    USDGEOM_API
     GfBBox3d ComputeUntransformedBound(const UsdPrim& prim);
 
     /// \overload
@@ -161,12 +173,14 @@ public:
     /// axis-aligned bounding box, the client must call ComputeAlignedRange().
     ///
     /// See ComputeWorldBound() for notes on performance and error handling.
+    USDGEOM_API
     GfBBox3d ComputeUntransformedBound(
         const UsdPrim &prim, 
         const SdfPathSet &pathsToSkip,
         const TfHashMap<SdfPath, GfMatrix4d, SdfPath::Hash> &ctmOverrides);
 
     /// Clears all pre-cached values.
+    USDGEOM_API
     void Clear();
 
     /// Indicate the set of \p includedPurposes to use when resolving child
@@ -179,6 +193,7 @@ public:
     /// Changing this value  <b>does not invalidate existing caches.</b>
     /// It does mutate the BBoxCache's state, however, so be mindful of
     /// calling in multi-threaded uses.
+    USDGEOM_API
     void SetIncludedPurposes(const TfTokenVector& includedPurposes);
 
     /// Get the current set of included purposes.
@@ -193,6 +208,7 @@ public:
     /// Use the new \p time when computing values and may clear any existing
     /// values cached for the previous time. Setting \p time to the current time
     /// is a no-op.
+    USDGEOM_API
     void SetTime(UsdTimeCode time);
 
     /// Get the current time from which this cache is reading values.
@@ -281,13 +297,6 @@ private:
         const UsdAttributeQuery &extentsHintQuery,
         _PurposeToBBoxMap *bboxes);
 
-    // Computes the extent for a UsdGeomPointBased prim and stores the result
-    // in extent. This function will return false if the extent could not be 
-    // computed, true otherwise.
-    bool _ComputeMissingExtent(const UsdGeomPointBased& pointBasedObj,
-        const VtVec3fArray &points,
-        VtVec3fArray* extent);
-
     // Returns whether the children of the given prim can be pruned 
     // from the traversal to pre-populate entries.
     bool _ShouldPruneChildren(const UsdPrim &prim, _Entry *entry);
@@ -305,5 +314,8 @@ private:
     UsdGeomXformCache   _ctmCache;
     _PrimBBoxHashMap    _bboxCache;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // USDGEOM_BBOXCACHE_H

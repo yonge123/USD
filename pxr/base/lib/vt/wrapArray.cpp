@@ -21,8 +21,11 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/vt/wrapArray.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
 
 namespace Vt_WrapArray {
 
@@ -32,10 +35,12 @@ namespace Vt_WrapArray {
 // GetVtArrayName<VtArray<int> >() -> "VtIntArray".
 #define MAKE_NAME_FUNC(r, unused, elem) \
 template <> \
-string GetVtArrayName< VT_TYPE(elem) >() { \
+VT_API string GetVtArrayName< VT_TYPE(elem) >() { \
     return BOOST_PP_STRINGIZE(VT_TYPE_NAME(elem)); \
 }
 BOOST_PP_SEQ_FOR_EACH(MAKE_NAME_FUNC, ~, VT_ARRAY_VALUE_TYPES)
 #undef MAKE_NAME_FUNC
 
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

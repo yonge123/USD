@@ -22,6 +22,8 @@
 // language governing permissions and limitations under the Apache License.
 //
 /// \file wrapNamespaceEdit.cpp
+
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/namespaceEdit.h"
 #include "pxr/base/tf/pyCall.h"
 #include "pxr/base/tf/pyContainerConversions.h"
@@ -34,6 +36,10 @@
 #include <boost/python/tuple.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static
 std::string
@@ -281,6 +287,8 @@ wrapBatchNamespaceEdit()
 
 static SdfNamespaceEdit::Index _atEnd = SdfNamespaceEdit::AtEnd;
 static SdfNamespaceEdit::Index _same  = SdfNamespaceEdit::Same;
+
+} // anonymous namespace 
 
 void
 wrapNamespaceEdit()

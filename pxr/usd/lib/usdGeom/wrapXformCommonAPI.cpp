@@ -21,12 +21,17 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usdGeom/xformCommonAPI.h"
 
 #include "pxr/base/tf/pyEnum.h"
 #include <boost/python.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static tuple 
 _GetXformVectors(
@@ -60,6 +65,7 @@ _GetXformVectorsByAccumulation(
                   : tuple();
 }
 
+} // anonymous namespace 
 
 void wrapUsdGeomXformCommonAPI()
 {
@@ -119,3 +125,4 @@ void wrapUsdGeomXformCommonAPI()
             arg("resetXformStack"))
         ;
 }
+

@@ -36,7 +36,7 @@
 #include "pxr/imaging/hd/resourceRegistry.h"
 #include "pxr/imaging/hd/renderContextCaps.h"
 #include "pxr/imaging/hd/renderPassState.h"
-#include "pxr/imaging/hd/shader.h"
+#include "pxr/imaging/hd/shaderCode.h"
 #include "pxr/imaging/hd/shaderKey.h"
 #include "pxr/imaging/hd/tokens.h"
 
@@ -49,6 +49,9 @@
 #include "pxr/base/tf/iterator.h"
 
 #include <limits>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 static const GLuint64 HD_CULL_RESULT_TIMEOUT_NS = 5e9; // XXX how long to wait?
 
@@ -992,7 +995,7 @@ Hd_IndirectDrawBatch::ExecuteDraw(
     glUseProgram(programId);
 
     const Hd_ResourceBinder &binder = program.GetBinder();
-    const HdShaderSharedPtrVector &shaders = program.GetComposedShaders();
+    const HdShaderCodeSharedPtrVector &shaders = program.GetComposedShaders();
 
     // XXX: for surfaces shader, we need to iterate all drawItems to
     //      make textures resident, instead of just the first batchItem
@@ -1198,7 +1201,9 @@ Hd_IndirectDrawBatch::_GPUFrustumCulling(
     GfVec2f drawRangeNDC(renderPassState->GetDrawingRangeNDC());
     binder.BindUniformui(HdTokens->ulocDrawCommandNumUints, 1, &drawCommandNumUints);
     binder.BindUniformf(HdTokens->ulocCullMatrix, 16, cullMatrix.GetArray());
-    binder.BindUniformf(HdTokens->ulocDrawRangeNDC, 2, drawRangeNDC.GetArray());
+    if (IsEnabledGPUTinyPrimCulling()) {
+        binder.BindUniformf(HdTokens->ulocDrawRangeNDC, 2, drawRangeNDC.GetArray());
+    }
 
     // run culling shader
     bool validProgram = true;
@@ -1217,7 +1222,8 @@ Hd_IndirectDrawBatch::_GPUFrustumCulling(
         binder.BindUniformi(HdTokens->ulocResetPass, 1, &resetPass);
         glMultiDrawArraysIndirect(
             GL_POINTS,
-            reinterpret_cast<const GLvoid*>(cullCommandBuffer->GetOffset()),
+            reinterpret_cast<const GLvoid*>(
+                static_cast<intptr_t>(cullCommandBuffer->GetOffset())),
             _dispatchBufferCullInput->GetCount(),
             cullCommandBuffer->GetStride());
 
@@ -1229,7 +1235,8 @@ Hd_IndirectDrawBatch::_GPUFrustumCulling(
         binder.BindUniformi(HdTokens->ulocResetPass, 1, &resetPass);
         glMultiDrawArraysIndirect(
             GL_POINTS,
-            reinterpret_cast<const GLvoid*>(cullCommandBuffer->GetOffset()),
+            reinterpret_cast<const GLvoid*>(
+                static_cast<intptr_t>(cullCommandBuffer->GetOffset())),
             _dispatchBufferCullInput->GetCount(),
             cullCommandBuffer->GetStride());
 
@@ -1311,7 +1318,9 @@ Hd_IndirectDrawBatch::_GPUFrustumCullingXFB(
     GfMatrix4f cullMatrix(renderPassState->GetCullMatrix());
     GfVec2f drawRangeNDC(renderPassState->GetDrawingRangeNDC());
     binder.BindUniformf(HdTokens->ulocCullMatrix, 16, cullMatrix.GetArray());
-    binder.BindUniformf(HdTokens->ulocDrawRangeNDC, 2, drawRangeNDC.GetArray());
+    if (IsEnabledGPUTinyPrimCulling()) {
+        binder.BindUniformf(HdTokens->ulocDrawRangeNDC, 2, drawRangeNDC.GetArray());
+    }
 
     glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0,
                      _dispatchBuffer->GetEntireResource()->GetId());
@@ -1547,12 +1556,14 @@ Hd_IndirectDrawBatch::_CullingProgram::_Link(
             : drawElementsOutputs;
 
         const int nOutputs = 5;
-        BOOST_STATIC_ASSERT(
+        static_assert(
             sizeof(drawArraysOutputs)/sizeof(drawArraysOutputs[0])
-            == nOutputs);
-        BOOST_STATIC_ASSERT(
+            == nOutputs,
+            "Size of drawArraysOutputs element must equal nOutputs.");
+        static_assert(
             sizeof(drawElementsOutputs)/sizeof(drawElementsOutputs[0])
-            == nOutputs);
+            == nOutputs,
+            "Size of drawElementsOutputs element must equal nOutputs.");
         glTransformFeedbackVaryings(glslProgram->GetProgram().GetId(),
                                     nOutputs,
                                     outputs, GL_INTERLEAVED_ATTRIBS);
@@ -1560,3 +1571,6 @@ Hd_IndirectDrawBatch::_CullingProgram::_Link(
 
     return Hd_DrawBatch::_DrawingProgram::_Link(glslProgram);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

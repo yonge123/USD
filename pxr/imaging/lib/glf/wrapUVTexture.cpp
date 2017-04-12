@@ -32,6 +32,10 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 static GlfUVTextureRefPtr _NewUVTexture(
     const std::string &filename)
 {
@@ -49,6 +53,8 @@ static GlfUVTextureRefPtr _NewUVTexture_2(
         filename, cropTop, cropBottom, cropLeft, cropRight);
 }
 
+} // anonymous namespace 
+
 void wrapUVTexture()
 {    
     typedef GlfUVTexture This;
@@ -65,4 +71,5 @@ void wrapUVTexture()
             return_value_policy<return_by_value>()))
         ;
 }
-    
+
+TF_REFPTR_CONST_VOLATILE_GET(GlfUVTexture)

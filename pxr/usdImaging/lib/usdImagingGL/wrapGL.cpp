@@ -40,6 +40,10 @@ using namespace std;
 using namespace boost::python;
 using namespace boost;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 static boost::python::tuple
 _TestIntersection(
     UsdImagingGL & self, 
@@ -88,6 +92,8 @@ _SetLightingState(UsdImagingGL &self, GlfSimpleLightVector const &lights,
     self.SetLightingState(lights, material, sceneAmbient);
 }
 
+} // anonymous namespace 
+
 void wrapGL()
 {
     { 
@@ -112,9 +118,9 @@ void wrapGL()
             .def("IsEnabledHydra", &UsdImagingGL::IsEnabledHydra)
                 .staticmethod("IsEnabledHydra")
             .def("IsConverged", &UsdImagingGL::IsConverged)
-            .def("GetRenderGraphPlugins", &UsdImagingGL::GetRenderGraphPlugins,
+            .def("GetRendererPlugins", &UsdImagingGL::GetRendererPlugins,
                  return_value_policy< TfPySequenceToTuple >())
-            .def("SetRenderGraphPlugin", &UsdImagingGL::SetRenderGraphPlugin)
+            .def("SetRendererPlugin", &UsdImagingGL::SetRendererPlugin)
             .def("GetResourceAllocation", &UsdImagingGL::GetResourceAllocation)
         ;
 

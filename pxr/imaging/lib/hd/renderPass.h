@@ -24,15 +24,20 @@
 #ifndef HD_RENDER_PASS_H
 #define HD_RENDER_PASS_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/imaging/hd/commandBuffer.h"
 #include "pxr/imaging/hd/rprimCollection.h"
 #include "pxr/imaging/hd/task.h"
 
-#include "pxr/imaging/glf/simpleLight.h"
-
 #include <boost/shared_ptr.hpp>
+
+#include <unordered_map>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 class HdCommandBuffer;
 class HdRenderIndex;
@@ -49,8 +54,11 @@ typedef boost::shared_ptr<class HdRenderPass> HdRenderPassSharedPtr;
 ///
 class HdRenderPass : boost::noncopyable {
 public:
+    HD_API
     HdRenderPass(HdRenderIndex *index);
+    HD_API
     HdRenderPass(HdRenderIndex *index, const HdRprimCollection &collection);
+    HD_API
     virtual ~HdRenderPass();
 
     /// Returns the HdRprimCollection to be drawn by this RenderPass.
@@ -58,6 +66,7 @@ public:
 
     /// Sets the HdRprimCollection, note that this may invalidate internal
     /// caches used to accelerate drawing.
+    HD_API
     void SetRprimCollection(HdRprimCollection const& col);
 
     /// Returns the dirty list (maintained in the change tracker) for
@@ -66,10 +75,23 @@ public:
         return _dirtyList;
     }
 
+    /// Returns the most recent list of render tags that this render pass
+    /// has found in the render items included in the collection.
+    HD_API
+    TfTokenVector const &GetRenderTags();
+
     /// Execute render pass task
+    HD_API
     void Execute(HdRenderPassStateSharedPtr const &renderPassState);
 
+    /// Execute a specific render bucket specified by the 
+    /// render tag.
+    HD_API
+    void Execute(HdRenderPassStateSharedPtr const &renderPassState,
+                 TfToken const &renderTag);
+
     /// Sync the render pass resources
+    HD_API
     void Sync();
 
     /// Return the render index
@@ -103,10 +125,17 @@ private:
     // Core RenderPass State
     // ---------------------------------------------------------------------- //
     HdRprimCollection _collection;
-    HdCommandBuffer _cmdBuffer;
+    typedef std::unordered_map<TfToken, 
+                               HdCommandBuffer,
+                               boost::hash<TfToken> > _HdCommandBufferMap;
+    _HdCommandBufferMap _cmdBuffers;
+    TfTokenVector _renderTags;
 
     bool _lastCullingDisabledState;
 
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //HD_RENDER_PASS_H

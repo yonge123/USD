@@ -24,6 +24,8 @@
 #ifndef AR_DEFINE_RESOLVER_H
 #define AR_DEFINE_RESOLVER_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/ar/api.h"
 #include "pxr/usd/ar/resolver.h"
 #include "pxr/base/tf/preprocessorUtils.h"
 #include "pxr/base/tf/registryManager.h"
@@ -32,6 +34,8 @@
 #include <boost/preprocessor/comma_if.hpp>
 #include <boost/preprocessor/empty.hpp>
 #include <boost/preprocessor/if.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// \def AR_DEFINE_RESOLVER(ResolverClass, BaseClass1, BaseClass2, ...)
 ///
@@ -48,8 +52,9 @@ TF_REGISTRY_FUNCTION(TfType) {                                      \
     t.SetFactory<ArResolverFactory<c> >();                          \
 }
 
-class AR_API ArResolverFactoryBase : public TfType::FactoryBase {
+class ArResolverFactoryBase : public TfType::FactoryBase {
 public:
+    AR_API
     virtual ArResolver* New() const = 0;
 };
 
@@ -61,5 +66,7 @@ public:
         return new T;
     }
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // AR_DEFINE_RESOLVER_H

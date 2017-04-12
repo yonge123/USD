@@ -24,6 +24,11 @@
 #ifndef GF_MATRIX_DATA_H
 #define GF_MATRIX_DATA_H
 
+#include "pxr/pxr.h"
+#include "pxr/base/gf/api.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 /// \class GfMatrixData
 ///
 /// A class template used by GfMatrixXX to store values.
@@ -55,5 +60,7 @@ private:
 
     T _data[Rows * Columns];
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // GF_MATRIX_DATA_H

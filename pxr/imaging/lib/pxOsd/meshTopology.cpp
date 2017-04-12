@@ -32,19 +32,24 @@
 #include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/tf/debug.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 PxOsdMeshTopology::PxOsdMeshTopology() :
     _scheme(PxOsdOpenSubdivTokens->bilinear),
     _orientation(PxOsdOpenSubdivTokens->rightHanded),
     _faceVertexCounts(),
     _faceVertexIndices(),
-    _holeIndices() { }
+    _holeIndices(),
+    _subdivTags() { }
 
 PxOsdMeshTopology::PxOsdMeshTopology(PxOsdMeshTopology const & src) :
     _scheme(src._scheme),
     _orientation(src._orientation),
     _faceVertexCounts(src._faceVertexCounts),
     _faceVertexIndices(src._faceVertexIndices),
-    _holeIndices(src._holeIndices) { }
+    _holeIndices(src._holeIndices),
+    _subdivTags(src._subdivTags) { }
 
 PxOsdMeshTopology::PxOsdMeshTopology(TfToken scheme,
                                      TfToken orientation,
@@ -53,7 +58,9 @@ PxOsdMeshTopology::PxOsdMeshTopology(TfToken scheme,
     _scheme(scheme),
     _orientation(orientation),
     _faceVertexCounts(faceVertexCounts),
-    _faceVertexIndices(faceVertexIndices) { }
+    _faceVertexIndices(faceVertexIndices),
+    _holeIndices(),
+    _subdivTags() { }
 
 PxOsdMeshTopology::PxOsdMeshTopology(TfToken scheme,
                                      TfToken orientation,
@@ -63,8 +70,10 @@ PxOsdMeshTopology::PxOsdMeshTopology(TfToken scheme,
     _scheme(scheme),
     _orientation(orientation),
     _faceVertexCounts(faceVertexCounts),
-    _faceVertexIndices(faceVertexIndices) {
-
+    _faceVertexIndices(faceVertexIndices),
+    _holeIndices(),
+    _subdivTags()
+{
     SetHoleIndices(holeIndices);
 }
 
@@ -77,17 +86,16 @@ PxOsdMeshTopology::ComputeHash() const {
 
     TRACE_FUNCTION();
 
-    uint32_t hash = _subdivTags.ComputeHash();
-    hash = ArchHash((const char*)&_scheme, sizeof(TfToken), hash);
-    hash = ArchHash((const char*)&_orientation, sizeof(TfToken), hash);
-    hash = ArchHash((const char*)_faceVertexCounts.cdata(),
-                    _faceVertexCounts.size() * sizeof(int), hash);
-    hash = ArchHash((const char*)_faceVertexIndices.cdata(),
-                    _faceVertexIndices.size() * sizeof(int), hash);
-    hash = ArchHash((const char*)_holeIndices.cdata(),
-                    _holeIndices.size() * sizeof(int), hash);
-    // promote to size_t
-    return (ID)hash;
+    ID hash = _subdivTags.ComputeHash();
+    hash = ArchHash64((const char*)&_scheme, sizeof(TfToken), hash);
+    hash = ArchHash64((const char*)&_orientation, sizeof(TfToken), hash);
+    hash = ArchHash64((const char*)_faceVertexCounts.cdata(),
+                      _faceVertexCounts.size() * sizeof(int), hash);
+    hash = ArchHash64((const char*)_faceVertexIndices.cdata(),
+                      _faceVertexIndices.size() * sizeof(int), hash);
+    hash = ArchHash64((const char*)_holeIndices.cdata(),
+                      _holeIndices.size() * sizeof(int), hash);
+    return hash;
 }
 
 bool
@@ -108,8 +116,8 @@ PxOsdMeshTopology::SetHoleIndices(VtIntArray const &holeIndices)
 {
     if (TfDebug::IsEnabled(0)) {
         // make sure faceIndices is given in ascending order.
-        int nFaceIndices = holeIndices.size();
-        for (int i = 1; i < nFaceIndices; ++i) {
+        const size_t nFaceIndices = holeIndices.size();
+        for (size_t i = 1; i < nFaceIndices; ++i) {
             if (holeIndices[i] <= holeIndices[i-1]) {
                 // XXX: would be better to print the prim name.
                 TF_WARN("hole face indices are not in ascending order.");
@@ -135,3 +143,6 @@ bool operator!=(const PxOsdMeshTopology& lhs, const PxOsdMeshTopology& rhs)
 {
     return !(lhs == rhs);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

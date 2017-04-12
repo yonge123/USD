@@ -26,6 +26,7 @@
  * \brief file translator for USD files
  */
 
+#include "pxr/pxr.h"
 #include "usdMaya/usdTranslatorImport.h"
 
 #include "usdMaya/JobArgs.h"
@@ -39,6 +40,9 @@
 
 #include <map>
 #include <string>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 
 void* usdTranslatorImport::creator(const std::string& assemblyTypeName,
@@ -79,7 +83,7 @@ MStatus usdTranslatorImport::reader(const MFileObject & file,
                     jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none;
                 } else if (theOption[1]=="GPrim Colors") {
                     jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
-                } else if (theOption[1]=="Look Colors") {
+                } else if (theOption[1]=="Material Colors") {
                     jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
                 } else if (theOption[1]=="RfM Shaders") {
                     TfToken shadingMode("pxrRis");
@@ -126,3 +130,6 @@ usdTranslatorImport::identifyFile(
     }
     return kNotMyFileType;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

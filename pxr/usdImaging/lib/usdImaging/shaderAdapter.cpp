@@ -38,6 +38,9 @@
 #include "pxr/usd/usdHydra/primvar.h"
 #include "pxr/usd/usdHydra/tokens.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 UsdImagingShaderAdapter::UsdImagingShaderAdapter(UsdImagingDelegate* delegate)
     : _delegate(delegate)
 {
@@ -221,7 +224,9 @@ UsdImagingShaderAdapter::GetSurfaceShaderParams(SdfPath const &usdPath) const
                             usdParam.GetAttr().GetName().GetText());
                     UsdShadeConnectableAPI source;
                     TfToken outputName;
-                    if (usdParam.GetConnectedSource(&source, &outputName)) {
+                    UsdShadeAttributeType sourceType;
+                    if (usdParam.GetConnectedSource(&source, &outputName,
+                                                    &sourceType)) {
                         UsdShadeShader sourceShader(source);
                         if (UsdAttribute attr = sourceShader.GetIdAttr()) {
                             TfToken id;
@@ -235,7 +240,8 @@ UsdImagingShaderAdapter::GetSurfaceShaderParams(SdfPath const &usdPath) const
                                     UsdShadeParameter uv(tex.GetUvAttr());
                                     UsdShadeConnectableAPI uvSource;
                                     if (uv.GetConnectedSource(&uvSource, 
-                                                                &outputName)) {
+                                                              &outputName,
+                                                              &sourceType)) {
                                         TfToken map;
                                         UsdShadeShader uvSourceShader(uvSource);
                                         UsdHydraPrimvar pv(uvSourceShader);
@@ -288,7 +294,7 @@ UsdImagingShaderAdapter::GetSurfaceShaderParams(SdfPath const &usdPath) const
                     if (resolvedPath.IsEmpty()) {
                         resolvedPath = TfToken(ap.GetAssetPath());
                     }
-                    isPtex = GlfPtexTexture::IsPtexTexture(resolvedPath);
+                    isPtex = GlfIsSupportedPtexTexture(resolvedPath);
                     if (!isPtex) {
                         TF_VERIFY(texAttr.GetMetadata(
                                               UsdImagingTokens->uvPrimvar, &t),
@@ -359,9 +365,9 @@ UsdImagingShaderAdapter::GetSurfaceShaderTextures(SdfPath const &usdPath) const
             for (UsdShadeParameter param : shader.GetParameters()) {
                 UsdShadeConnectableAPI source;
                 TfToken outputName;
-                if (param.GetConnectedSource(&source, &outputName)) {
+                UsdShadeAttributeType sourceType;
+                if (param.GetConnectedSource(&source, &outputName, &sourceType))
                     stack.push_back(source.GetPath());
-                }
             }
         }
     } else {
@@ -388,4 +394,7 @@ UsdImagingShaderAdapter::GetSurfaceShaderTextures(SdfPath const &usdPath) const
     
     return textureIDs;
 }
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 

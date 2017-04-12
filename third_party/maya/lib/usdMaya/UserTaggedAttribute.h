@@ -27,6 +27,8 @@
 #ifndef PXRUSDMAYA_USERTAGGEDATTRIBUTE_H
 #define PXRUSDMAYA_USERTAGGEDATTRIBUTE_H
 
+#include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "pxr/base/tf/iterator.h"
 #include "pxr/base/tf/token.h"
 #include "pxr/base/tf/staticTokens.h"
@@ -38,11 +40,15 @@
 #include <string>
 #include <vector>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 #define PXRUSDMAYA_ATTR_TOKENS \
     ((USDAttrTypePrimvar, "primvar")) \
     ((USDAttrTypeUsdRi, "usdRi"))
 
 TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaUserTaggedAttributeTokens,
+    PXRUSDMAYA_API,
     PXRUSDMAYA_ATTR_TOKENS);
 
 /// \brief Represents a single attribute tagged for translation between Maya
@@ -66,6 +72,7 @@ public:
         return false;
     };
 
+    PXRUSDMAYA_API
     PxrUsdMayaUserTaggedAttribute(
             MPlug plug,
             const std::string& name,
@@ -75,25 +82,31 @@ public:
                 GetFallbackTranslateMayaDoubleToUsdSinglePrecision());
 
     /// \brief Gets all of the exported attributes for the given node.
+    PXRUSDMAYA_API
     static std::vector<PxrUsdMayaUserTaggedAttribute>
             GetUserTaggedAttributesForNode(const MDagPath& dagPath);
 
     /// \brief Gets the plug for the Maya attribute to be exported.
+    PXRUSDMAYA_API
     MPlug GetMayaPlug() const;
 
     /// \brief Gets the name of the Maya attribute that will be exported;
     /// the name will not contain the name of the node.
+    PXRUSDMAYA_API
     std::string GetMayaName() const;
 
     /// \brief Gets the name of the USD attribute to which the Maya attribute
     /// will be exported.
+    PXRUSDMAYA_API
     std::string GetUsdName() const;
 
     /// \brief Gets the type of the USD attribute to export: whether it is a
     /// regular attribute, primvar, etc.
+    PXRUSDMAYA_API
     TfToken GetUsdType() const;
 
     /// \brief Gets the interpolation for primvars.
+    PXRUSDMAYA_API
     TfToken GetUsdInterpolation() const;
 
     /// \brief Gets whether the attribute type should be mapped from a double
@@ -110,8 +123,12 @@ public:
     /// 'translateMayaDoubleToUsdSinglePrecision' to true so that the data is
     /// cast to single-precision on export. It will be up-cast back to double
     /// on re-import.
+    PXRUSDMAYA_API
     bool GetTranslateMayaDoubleToUsdSinglePrecision() const;
 };
 
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_USERTAGGEDATTRIBUTE_H

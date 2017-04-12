@@ -21,9 +21,13 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
+
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 
 #include "pxr/base/arch/defines.h"
+#include "pxr/base/arch/pragmas.h"
 
 #include "pxr/base/tf/pyUtils.h"
 #include "pxr/base/tf/stringUtils.h"
@@ -44,9 +48,30 @@
 using namespace boost::python;
 namespace boost_pt = boost::posix_time;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 static const unsigned short usecNumDigits = 6;
 
-static void _ImportPyDateTimeModuleOnce();
+// Python DateTime C API -- the PyDateTime_IMPORT macro requires ignoring
+// -Wwrite-strings as it expands to a call that passes a string literal to
+// Python API whose parameter is char * instead of const char *.  The
+// problematic function signature is fixed in Python 3.x, but won't be fixed
+// in 2.x.  (http://bugs.python.org/issue7463)
+ARCH_PRAGMA_PUSH
+ARCH_PRAGMA_WRITE_STRINGS
+static void
+_ImportPyDateTimeModuleOnce()
+{
+    static std::once_flag once;
+    std::call_once(once, [](){
+        // Python datetime C API requires that this is called before calling
+        // any other datetime function.
+        PyDateTime_IMPORT;
+    });
+}
+ARCH_PRAGMA_POP
 
 struct BoostPtimeToPyDateTime
 {
@@ -141,32 +166,11 @@ struct Tf_BoostPtimeFromPyDateTime
     }
 };
 
+} // anonymous namespace 
+
 void
 wrapPyDateTime()
 {
     to_python_converter<boost_pt::ptime, BoostPtimeToPyDateTime>();
     Tf_BoostPtimeFromPyDateTime();
-}
-
-// Python DateTime C API -- the PyDateTime_IMPORT macro requires ignoring
-// -Wwrite-strings as it expands to a call that passes a string literal to
-// Python API whose parameter is char * instead of const char *.  The
-// problematic function signature is fixed in Python 3.x, but won't be fixed
-// in 2.x.  (http://bugs.python.org/issue7463)
-//
-// XXX: We should remove this pragma as soon as it is reasonable to put the
-//      warning flag in the SConscript instead (bug 44546) or it is no longer
-//      necessary (ie. Python 3).
-#if defined(ARCH_COMPILER_GCC) || defined(ARCH_COMPILER_CLANG)
-#pragma GCC diagnostic ignored "-Wwrite-strings"
-#endif
-static void
-_ImportPyDateTimeModuleOnce()
-{
-    static std::once_flag once;
-    std::call_once(once, [](){
-        // Python datetime C API requires that this is called before calling
-        // any other datetime function.
-        PyDateTime_IMPORT;
-    });
 }

@@ -24,11 +24,15 @@
 #ifndef PXRUSDKATANA_USDIN_PRIVATEDATA_H
 #define PXRUSDKATANA_USDIN_PRIVATEDATA_H
 
+#include "pxr/pxr.h"
 #include "usdKatana/usdInArgs.h"
 
 #include "pxr/usd/usd/prim.h"
 #include <FnGeolib/op/FnGeolibOp.h>
 #include <memory>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// \brief Private data for each non-root invocation of \c PxrUsdIn. 
 ///
@@ -47,9 +51,7 @@ public:
     PxrUsdKatanaUsdInPrivateData(
             const UsdPrim& prim,
             PxrUsdKatanaUsdInArgsRefPtr usdInArgs,
-            const PxrUsdKatanaUsdInPrivateData* parentData = NULL,
-            bool useDefaultMotion = false,
-            std::shared_ptr<const MaterialHierarchy> *materialHierarchy = NULL);
+            const PxrUsdKatanaUsdInPrivateData* parentData = NULL);
 
     virtual ~PxrUsdKatanaUsdInPrivateData()
     {
@@ -71,29 +73,47 @@ public:
         return _masterPath;
     }
 
-    const bool UseDefaultMotionSampleTimes() const {
-        return _useDefaultMotionSampleTimes;
+    const double GetCurrentTime() const {
+        return _currentTime;
     }
 
-    const std::vector<double> GetMotionSampleTimes(const UsdAttribute& attr = UsdAttribute()) const;
-
-    std::shared_ptr<const MaterialHierarchy>
-    GetMaterialHierarchy() const {
-        return _materialHierarchy;
+    const double GetShutterOpen() const {
+        return _shutterOpen;
     }
+
+    const double GetShutterClose() const {
+        return _shutterClose;
+    }
+
+    /// \brief Return true if motion blur is backward.
+    ///
+    /// PxrUsdIn supports both forward and backward motion blur. Motion
+    /// blur is considered backward if multiple samples are requested
+    /// and the first specified sample is later than the last sample.
+    const bool IsMotionBackward() const;
+
+    const std::vector<double> GetMotionSampleTimes(
+        const UsdAttribute& attr = UsdAttribute()) const;
 
 private:
 
     UsdPrim _prim;
-    
+
     PxrUsdKatanaUsdInArgsRefPtr _usdInArgs;
 
     SdfPath _instancePath;
     SdfPath _masterPath;
-    
-    bool _useDefaultMotionSampleTimes;
 
-    std::shared_ptr<const MaterialHierarchy> _materialHierarchy;
+    double _currentTime;
+    double _shutterOpen;
+    double _shutterClose;
+
+    std::vector<double> _motionSampleTimesOverride;
+    std::vector<double> _motionSampleTimesFallback;
+
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDKATANA_USDIN_PRIVATEDATA_H

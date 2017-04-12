@@ -21,9 +21,10 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/plug/registry.h"
 #include "pxr/base/plug/plugin.h"
-
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyFunction.h"
 #include "pxr/base/tf/pyResultConversions.h"
@@ -47,6 +48,10 @@ using std::string;
 using std::vector;
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 typedef TfWeakPtr<PlugRegistry> PlugRegistryPtr;
 
@@ -85,7 +90,6 @@ _GetAllDerivedTypes(TfType const &type)
 }
 
 // For testing -- load plugins in parallel.
-namespace {
 
 typedef bool PluginPredicateSig(PlugPluginPtr);
 typedef boost::function<PluginPredicateSig> PluginPredicateFn;
@@ -191,7 +195,7 @@ void _LoadPluginsConcurrently(PluginPredicateFn pred,
     }
 }
 
-} // anon
+} // anonymous namespace 
 
 void wrapRegistry()
 {
@@ -201,13 +205,13 @@ void wrapRegistry()
     class_<This, TfWeakPtr<This>, boost::noncopyable>
         ("Registry", no_init)
         .def(TfPySingleton())
-        .def("RegisterPlugins", &::_RegisterPlugins,
+        .def("RegisterPlugins", &_RegisterPlugins,
             return_value_policy<TfPySequenceToList>())
-        .def("RegisterPlugins", &::_RegisterPluginsList,
+        .def("RegisterPlugins", &_RegisterPluginsList,
             return_value_policy<TfPySequenceToList>())
-        .def("GetStringFromPluginMetaData", &::_GetStringFromPluginMetaData)
+        .def("GetStringFromPluginMetaData", &_GetStringFromPluginMetaData)
         .def("GetPluginWithName", &This::GetPluginWithName)
-        .def("GetPluginForType", &::_GetPluginForType)
+        .def("GetPluginForType", &_GetPluginForType)
         .def("GetAllPlugins", &This::GetAllPlugins,
              return_value_policy<TfPySequenceToList>())
 

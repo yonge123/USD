@@ -21,8 +21,10 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usdShade/output.h"
-#include "pxr/usd/usdShade/parameter.h"
+
+#include "pxr/usd/usdShade/utils.h"
 
 #include "pxr/usd/sdf/schema.h"
 #include "pxr/usd/usd/relationship.h"
@@ -34,6 +36,9 @@
 
 #include "pxr/base/tf/envSetting.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 using std::vector;
 using std::string;
 
@@ -42,34 +47,40 @@ TF_DEFINE_PRIVATE_TOKENS(
     (renderType)
 );
 
-static UsdRelationship
-_GetOutputConnectionRel(const UsdShadeOutput &output, bool create)
+UsdShadeOutput::UsdShadeOutput(const UsdAttribute &attr)
+    : _prop(attr)
 {
-    const UsdAttribute & attr = output.GetAttr();
-    const UsdPrim& prim = attr.GetPrim();
-    const TfToken& relName = output.GetConnectionRelName();
-    if (UsdRelationship rel = prim.GetRelationship(relName)) {
-        return rel;
-    }
-
-    if (create) {
-        return prim.CreateRelationship(relName, /* custom = */ false);
-    }
-    else {
-        return UsdRelationship();
-    }
 }
 
-UsdShadeOutput::UsdShadeOutput(const UsdAttribute &attr)
-    : _attr(attr)
+UsdShadeOutput::UsdShadeOutput(const UsdRelationship &rel)
+    : _prop(rel)
+{
+}
+
+UsdShadeOutput::UsdShadeOutput(const UsdProperty &prop)
+    : _prop(prop)
 {
 }
 
 TfToken 
-UsdShadeOutput::GetOutputName() const
+UsdShadeOutput::GetBaseName() const
 {
-    string name = GetName();
-    return TfToken(name.substr(UsdShadeTokens->outputs.GetString().size()));
+    string name = GetFullName();
+    if (TfStringStartsWith(name, UsdShadeTokens->outputs)) {
+        return TfToken(name.substr(UsdShadeTokens->outputs.GetString().size()));
+    }
+    return GetFullName();
+}
+
+SdfValueTypeName 
+UsdShadeOutput::GetTypeName() const
+{ 
+    if (UsdAttribute attr = GetAttr()) {
+        return  attr.GetTypeName();
+    }
+
+    // Fallback to token for outputs that represent terninals.
+    return SdfValueTypeNames->Token;
 }
 
 static TfToken
@@ -85,9 +96,9 @@ UsdShadeOutput::UsdShadeOutput(
 {
     // XXX what do we do if the type name doesn't match and it exists already?
     TfToken attrName = _GetOutputAttrName(name);
-    _attr = prim.GetAttribute(attrName);
-    if (!_attr) {
-        _attr = prim.CreateAttribute(attrName, typeName, /* custom = */ false);
+    _prop = prim.GetAttribute(attrName);
+    if (!_prop) {
+        _prop = prim.CreateAttribute(attrName, typeName, /* custom = */ false);
     }
 }
 
@@ -95,139 +106,31 @@ bool
 UsdShadeOutput::Set(const VtValue& value,
                     UsdTimeCode time) const
 {
-    return _attr.Set(value, time);
+    if (UsdAttribute attr = GetAttr()) {
+        return attr.Set(value, time);
+    }
+    return false;
 }
 
 bool 
 UsdShadeOutput::SetRenderType(
         TfToken const& renderType) const
 {
-    return _attr.SetMetadata(_tokens->renderType, renderType);
+    return _prop.SetMetadata(_tokens->renderType, renderType);
 }
 
 TfToken 
 UsdShadeOutput::GetRenderType() const
 {
     TfToken renderType;
-    _attr.GetMetadata(_tokens->renderType, &renderType);
+    _prop.GetMetadata(_tokens->renderType, &renderType);
     return renderType;
 }
 
 bool 
 UsdShadeOutput::HasRenderType() const
 {
-    return _attr.HasMetadata(_tokens->renderType);
-}
-
-
-bool 
-UsdShadeOutput::ConnectToSource(
-        UsdShadeConnectableAPI const &source, 
-        TfToken const &outputName,
-        bool outputIsParameter) const
-{
-    // Only outputs belonging to subgraphs are connectable. We don't allow 
-    // connecting outputs of shaders as it's not meaningful.
-    // 
-    // Note: this warning will not be issued if the prim is untyped.
-    if (UsdShadeConnectableAPI(GetAttr().GetPrim()).IsShader()) {
-        TF_WARN("Attempted to connect an output of a shader <%s> to <%s>.",
-            GetAttr().GetPath().GetText(), 
-            source.GetPath().AppendProperty(outputName).GetText());
-        return false;
-    }
-
-    // Ensure that the source prim is a descendent of the subgraph owning 
-    // the output.
-    const SdfPath sourcePrimPath = source.GetPrim().GetPath();
-    const SdfPath outputOwnerPath = GetAttr().GetPrim().GetPath();
-    if (not sourcePrimPath.HasPrefix(outputOwnerPath)) {
-        TF_WARN("Source of output '%s' on subgraph at path <%s> is outside the "
-            "subgraph: <%s>", outputName.GetText(), outputOwnerPath.GetText(), 
-            sourcePrimPath.GetText());
-        // XXX: Should we disallow this or simply continue?
-    }
-
-    if (UsdRelationship rel = _GetOutputConnectionRel(*this, true)) {
-        return UsdShadeConnectableAPI::MakeConnection(rel, source, outputName,
-            GetTypeName(), outputIsParameter);
-    } 
-
-    return false;
-}
-    
-bool 
-UsdShadeOutput::ConnectToSource(UsdShadeOutput const &output) const
-{
-    UsdShadeConnectableAPI source(output.GetAttr().GetPrim());
-    return ConnectToSource(source, output.GetOutputName(), 
-                           /* outputIsParameter */ false);
-}
-
-bool 
-UsdShadeOutput::ConnectToSource(UsdShadeParameter const &param) const
-{
-    UsdShadeConnectableAPI source(param.GetAttr().GetPrim());
-    return ConnectToSource(source, param.GetName(),
-                           /* outputIsParameter */ true);
-}
-
-bool 
-UsdShadeOutput::DisconnectSource() const
-{
-    bool success = true;
-    if (UsdRelationship rel = _GetOutputConnectionRel(*this, false)) {
-        success = rel.BlockTargets();
-    }
-    return success;
-}
-
-bool
-UsdShadeOutput::ClearSource() const
-{
-    bool success = true;
-    if (UsdRelationship rel = _GetOutputConnectionRel(*this, false)) {
-        success = rel.ClearTargets(/* removeSpec = */ true);
-    }
-    return success;
-}
-
-bool 
-UsdShadeOutput::GetConnectedSource(
-        UsdShadeConnectableAPI *source, 
-        TfToken *outputName) const
-{
-    if (!(source && outputName)){
-        TF_CODING_ERROR("GetConnectedSource() requires non-NULL "
-                        "output parameters");
-        return false;
-    }
-    if (UsdRelationship rel = _GetOutputConnectionRel(*this, false)) {
-        return UsdShadeConnectableAPI::EvaluateConnection(rel, 
-            source, outputName);
-    }
-    else {
-        *source = UsdShadeConnectableAPI();
-        return false;
-    }
-}
-
-bool 
-UsdShadeOutput::IsConnected() const
-{
-    /// This MUST have the same semantics as GetConnectedSource(s).
-    /// XXX someday we might make this more efficient through careful
-    /// refactoring, but safest to just call the exact same code.
-    UsdShadeConnectableAPI source;
-    TfToken        outputName;
-    return GetConnectedSource(&source, &outputName);
-}
-
-TfToken 
-UsdShadeOutput::GetConnectionRelName() const
-{
-    return TfToken(UsdShadeTokens->connectedSourceFor.GetString() + 
-           _attr.GetName().GetString());
+    return _prop.HasMetadata(_tokens->renderType);
 }
 
 /* static */
@@ -237,3 +140,6 @@ UsdShadeOutput::IsOutput(const UsdAttribute &attr)
     return TfStringStartsWith(attr.GetName().GetString(), 
                               UsdShadeTokens->outputs);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

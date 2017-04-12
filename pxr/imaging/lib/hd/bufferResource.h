@@ -24,6 +24,8 @@
 #ifndef HD_BUFFER_RESOURCE_H
 #define HD_BUFFER_RESOURCE_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/resource.h"
 #include "pxr/imaging/hd/conversions.h"
@@ -31,8 +33,12 @@
 #include "pxr/base/tf/token.h"
 
 #include <boost/shared_ptr.hpp>
+#include <cstddef>
 #include <utility>
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 class HdBufferResource;
 
@@ -48,12 +54,14 @@ typedef std::vector<
 ///
 class HdBufferResource : public HdResource {
 public:
+    HD_API
     HdBufferResource(TfToken const &role,
                      int glDataType,
                      short numComponents,
                      int arraySize,
                      int offset,
                      int stride);
+    HD_API
     ~HdBufferResource();
 
     /// OpenGL data type; GL_UNSIGNED_INT, etc
@@ -81,16 +89,18 @@ public:
 
     /// Sets the OpenGL name/identifier for this resource and its size.
     /// also caches the gpu address of the buffer.
-    virtual void SetAllocation(GLuint id, GLsizeiptr size);
+    virtual void SetAllocation(GLuint id, ptrdiff_t size);
 
     /// Returns the gpu address (if available. otherwise returns 0).
     uint64_t GetGPUAddress() const { return _gpuAddr; }
 
     /// Returns the texture buffer view
+    HD_API
     GLuint GetTextureBuffer();
 
     /// Returns the GLSL type name string of this resource
     /// to be used in codegen.
+    HD_API
     TfToken GetGLTypeName() const;
 
 private:
@@ -102,5 +112,8 @@ private:
     uint64_t _gpuAddr;
     GLuint _texId;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //HD_BUFFER_RESOURCE_H

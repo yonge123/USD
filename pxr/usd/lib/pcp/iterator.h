@@ -24,6 +24,8 @@
 #ifndef PCP_ITERATOR_H
 #define PCP_ITERATOR_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/pcp/api.h"
 #include "pxr/usd/pcp/node.h"
 
 #include "pxr/usd/sdf/primSpec.h"
@@ -34,6 +36,8 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/reverse_iterator.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class PcpPrimIndex;
 class PcpPrimIndex_Graph;
@@ -54,6 +58,7 @@ class PcpNodeIterator
 {
 public:
     /// Constructs an invalid iterator.
+    PCP_API
     PcpNodeIterator();
 
     // Returns a compressed Sd site.  For internal use only.
@@ -64,14 +69,21 @@ public:
 
 private:
     friend class PcpPrimIndex;
+    PCP_API
     PcpNodeIterator(PcpPrimIndex_Graph* graph, size_t nodeIdx);
 
     friend class boost::iterator_core_access;
+    PCP_API
     void increment();
+    PCP_API
     void decrement();
+    PCP_API
     void advance(difference_type n);
+    PCP_API
     difference_type distance_to(const PcpNodeIterator& other) const;
+    PCP_API
     bool equal(const PcpNodeIterator& other) const;
+    PCP_API
     reference dereference() const;
 
 private:
@@ -108,26 +120,36 @@ class PcpPrimIterator
 {
 public:
     /// Constructs an invalid iterator.
+    PCP_API
     PcpPrimIterator();
 
     /// Constructs a prim iterator beginning at position \p pos in the
     /// prim stack of prim index \p primIndex.
+    PCP_API
     PcpPrimIterator(const PcpPrimIndex* primIndex, size_t pos);
 
     /// Returns the PcpNode from which the current prim originated.
+    PCP_API
     PcpNodeRef GetNode() const;
 
     // Returns the \c Pcp_SdSiteRef from which the current prim originated.
     // For internal use only.
+    PCP_API
     Pcp_SdSiteRef _GetSiteRef() const;
 
 private:
     friend class boost::iterator_core_access;
+    PCP_API
     void increment();
+    PCP_API
     void decrement();
+    PCP_API
     void advance(difference_type n);
+    PCP_API
     difference_type distance_to(const PcpPrimIterator& other) const;
+    PCP_API
     bool equal(const PcpPrimIterator& other) const;
+    PCP_API
     reference dereference() const;
 
 private:
@@ -175,26 +197,36 @@ class PcpPropertyIterator
 {
 public:
     /// Constructs an invalid iterator.
+    PCP_API
     PcpPropertyIterator();
 
     /// Constructs a property iterator for \p index beginning at position
     /// \p pos in the property stack.
+    PCP_API
     PcpPropertyIterator(const PcpPropertyIndex& index, size_t pos = 0);
 
     /// Returns the PcpNode from which the current property originated.
+    PCP_API
     PcpNodeRef GetNode() const;
 
     /// Returns true if the current property is local to the owning
     /// property index's layer stack, false otherwise.
+    PCP_API
     bool IsLocal() const;
 
 private:
     friend class boost::iterator_core_access;
+    PCP_API
     void increment();
+    PCP_API
     void decrement();
+    PCP_API
     void advance(difference_type n);
+    PCP_API
     difference_type distance_to(const PcpPropertyIterator& other) const;
+    PCP_API
     bool equal(const PcpPropertyIterator& other) const;
+    PCP_API
     reference dereference() const;
 
 private:
@@ -309,5 +341,7 @@ struct PcpIteratorTraits<PcpPropertyIterator>
     typedef PcpPropertyRange RangeType;
     typedef PcpPropertyReverseIterator ReverseIteratorType;
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PCP_ITERATOR_H

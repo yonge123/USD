@@ -36,6 +36,9 @@
 
 #include "pxr/base/tf/type.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 TF_REGISTRY_FUNCTION(TfType)
 {
     typedef UsdImagingNurbsPatchAdapter Adapter;
@@ -63,7 +66,7 @@ UsdImagingNurbsPatchAdapter::Populate(UsdPrim const& prim,
 void 
 UsdImagingNurbsPatchAdapter::TrackVariabilityPrep(UsdPrim const& prim,
                                               SdfPath const& cachePath,
-                                              int requestedBits,
+                                              HdDirtyBits requestedBits,
                                               UsdImagingInstancerContext const* 
                                                   instancerContext)
 {
@@ -75,8 +78,8 @@ UsdImagingNurbsPatchAdapter::TrackVariabilityPrep(UsdPrim const& prim,
 void 
 UsdImagingNurbsPatchAdapter::TrackVariability(UsdPrim const& prim,
                                           SdfPath const& cachePath,
-                                          int requestedBits,
-                                          int* dirtyBits,
+                                          HdDirtyBits requestedBits,
+                                          HdDirtyBits* dirtyBits,
                                           UsdImagingInstancerContext const* 
                                               instancerContext)
 {
@@ -110,7 +113,7 @@ void
 UsdImagingNurbsPatchAdapter::UpdateForTimePrep(UsdPrim const& prim,
                                    SdfPath const& cachePath, 
                                    UsdTimeCode time,
-                                   int requestedBits,
+                                   HdDirtyBits requestedBits,
                                    UsdImagingInstancerContext const* 
                                        instancerContext)
 {
@@ -133,8 +136,8 @@ void
 UsdImagingNurbsPatchAdapter::UpdateForTime(UsdPrim const& prim,
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
-                               int requestedBits,
-                               int* resultBits,
+                               HdDirtyBits requestedBits,
+                               HdDirtyBits* resultBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext)
 {
@@ -248,3 +251,6 @@ UsdImagingNurbsPatchAdapter::GetMeshTopology(UsdPrim const& prim,
 
     return VtValue(topo);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

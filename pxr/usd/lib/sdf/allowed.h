@@ -21,16 +21,21 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef SD_ALLOWED_H
-#define SD_ALLOWED_H
+#ifndef SDF_ALLOWED_H
+#define SDF_ALLOWED_H
 
 /// \file sdf/allowed.h
 
+#include "pxr/pxr.h"
+#include "pxr/usd/sdf/api.h"
 #include "pxr/base/tf/diagnostic.h"
+
 #include <string>
 #include <utility>
 #include <boost/operators.hpp>
 #include <boost/optional.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// \class SdfAllowed
 ///
@@ -89,7 +94,7 @@ public:
 
     /// Returns the reason why the operation is not allowed.  If the
     /// operation is allowed this returns the empty string.
-    const std::string& GetWhyNot() const;
+    SDF_API const std::string& GetWhyNot() const;
 
     /// Returns \c true if allowed, otherwise fills \p whyNot if not \c NULL
     /// and returns \c false.
@@ -112,4 +117,6 @@ private:
     _State _state;
 };
 
-#endif
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // SDF_ALLOWED_H

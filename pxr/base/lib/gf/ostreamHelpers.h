@@ -32,48 +32,23 @@
 /// These functions are useful to help with writing stream operators for
 /// Gf types.  Please do not include this file in any header.
 
-#include <iostream>
-#include <limits>
+#include "pxr/pxr.h"
+#include "pxr/base/tf/stringUtils.h"
 
-// Helper class to write out the correct precision
-template <class T>
-struct Gf_OstreamHelperValue {
-    explicit Gf_OstreamHelperValue(T v) : value(v) {}
-    T value;
-};
+PXR_NAMESPACE_OPEN_SCOPE
 
 // Make the template class general so that we can use the same class
 // (Gf_OstreamHelperP) on all variables and not worry about making a mistake
 template <class T>
 T Gf_OstreamHelperP(T v) { return v; }
 
-inline Gf_OstreamHelperValue<float> Gf_OstreamHelperP(float v) { 
-    return Gf_OstreamHelperValue<float>(v); 
+inline TfStreamFloat Gf_OstreamHelperP(float v) { 
+    return TfStreamFloat(v); 
 }
-inline Gf_OstreamHelperValue<double> Gf_OstreamHelperP(double v) { 
-    return Gf_OstreamHelperValue<double>(v); 
-}
-
-// Helper functions to write out floats / doubles with the correct
-// precision.  Copied from Tf/StringUtils.cpp TfStringify.  See
-// comment in that function regarding precision.
-
-inline std::ostream &
-operator<<(std::ostream &out, const Gf_OstreamHelperValue<float> &data)
-{
-    int oldPrecision = out.precision(std::numeric_limits<float>::digits10);
-    out << data.value;
-    out.precision(oldPrecision);
-    return out;
+inline TfStreamDouble Gf_OstreamHelperP(double v) { 
+    return TfStreamDouble(v); 
 }
 
-inline std::ostream &
-operator<<(std::ostream &out, const Gf_OstreamHelperValue<double> &data)
-{
-    int oldPrecision = out.precision(std::numeric_limits<double>::digits10);
-    out << data.value;
-    out.precision(oldPrecision);
-    return out;
-}
+PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif /* GF_OSTREAM_HELPERS */
+#endif // GF_OSTREAM_HELPERS 

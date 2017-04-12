@@ -23,9 +23,12 @@
 //
 #define NUMERIC_OPERATORS
 #define MOD_OPERATOR
+
+#include "pxr/pxr.h"
 #include "pxr/base/vt/typeHeaders.h"
 #include "pxr/base/vt/wrapArray.h"
 
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void wrapArrayIntegral() {
     BOOST_PP_SEQ_FOR_EACH(VT_WRAP_ARRAY, ~,

@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/gf/frustum.h"
 #include "pxr/base/gf/ray.h"
 
@@ -36,8 +38,11 @@
 #include <boost/python/return_arg.hpp>
 #include <boost/python/tuple.hpp>
 
-
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static std::string _Repr(GfFrustum const &self)
 {
@@ -88,6 +93,8 @@ ComputeViewFrameHelper( const GfFrustum &self ) {
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS( FitToSphere_overloads,
                                         FitToSphere, 2, 3 );
+
+} // anonymous namespace 
 
 void wrapFrustum()
 {    

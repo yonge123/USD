@@ -21,9 +21,11 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/imaging/glf/glew.h"
 
 #include "pxr/imaging/hdSt/points.h"
+#include "pxr/imaging/hdSt/pointsShaderKey.h"
 
 #include "pxr/base/gf/vec2i.h"
 #include "pxr/base/tf/getenv.h"
@@ -31,7 +33,6 @@
 #include "pxr/imaging/hd/bufferSource.h"
 #include "pxr/imaging/hd/geometricShader.h"
 #include "pxr/imaging/hd/perfLog.h"
-#include "pxr/imaging/hd/pointsShaderKey.h"
 #include "pxr/imaging/hd/repr.h"
 #include "pxr/imaging/hd/resourceRegistry.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
@@ -39,12 +40,15 @@
 #include "pxr/imaging/hd/vtBufferSource.h"
 #include "pxr/base/vt/value.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 // static repr configuration
 HdStPoints::_PointsReprConfig HdStPoints::_reprDescConfig;
 
-HdStPoints::HdStPoints(HdSceneDelegate* delegate, SdfPath const& id,
+HdStPoints::HdStPoints(SdfPath const& id,
                        SdfPath const& instancerId)
-  : HdPoints(delegate, id, instancerId)
+  : HdPoints(id, instancerId)
 {
     /*NOTHING*/
 }
@@ -55,8 +59,30 @@ HdStPoints::~HdStPoints()
 }
 
 void
-HdStPoints::_UpdateDrawItem(HdDrawItem *drawItem,
-                            HdChangeTracker::DirtyBits *dirtyBits)
+HdStPoints::Sync(HdSceneDelegate* delegate,
+                 HdRenderParam*   renderParam,
+                 HdDirtyBits*     dirtyBits,
+                 TfToken const&   reprName,
+                 bool             forcedRepr)
+{
+    TF_UNUSED(renderParam);
+
+    HdRprim::_Sync(delegate,
+                  reprName,
+                  forcedRepr,
+                  dirtyBits);
+
+    TfToken calcReprName = _GetReprName(delegate, reprName,
+                                        forcedRepr, dirtyBits);
+    _GetRepr(delegate, calcReprName, dirtyBits);
+
+    *dirtyBits &= ~HdChangeTracker::AllSceneDirtyBits;
+}
+
+void
+HdStPoints::_UpdateDrawItem(HdSceneDelegate *sceneDelegate,
+                            HdDrawItem *drawItem,
+                            HdDirtyBits *dirtyBits)
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -64,20 +90,21 @@ HdStPoints::_UpdateDrawItem(HdDrawItem *drawItem,
     SdfPath const& id = GetId();
 
     /* VISIBILITY */
-    _UpdateVisibility(dirtyBits);
+    _UpdateVisibility(sceneDelegate, dirtyBits);
 
     /* CONSTANT PRIMVARS, TRANSFORM AND EXTENT */
-    _PopulateConstantPrimVars(drawItem, dirtyBits);
+    _PopulateConstantPrimVars(sceneDelegate, drawItem, dirtyBits);
 
     /* INSTANCE PRIMVARS */
-    _PopulateInstancePrimVars(drawItem, dirtyBits, InstancePrimVar);
+    _PopulateInstancePrimVars(sceneDelegate, drawItem, dirtyBits,
+                              InstancePrimVar);
 
-    Hd_PointsShaderKey shaderKey;
+    HdSt_PointsShaderKey shaderKey;
     drawItem->SetGeometricShader(Hd_GeometricShader::Create(shaderKey));
 
     /* PRIMVAR */
     if (HdChangeTracker::IsAnyPrimVarDirty(*dirtyBits, id)) {
-        _PopulateVertexPrimVars(drawItem, dirtyBits);
+        _PopulateVertexPrimVars(sceneDelegate, drawItem, dirtyBits);
     }
 
     // VertexPrimVar may be null, if there are no points in the prim.
@@ -96,8 +123,9 @@ HdStPoints::ConfigureRepr(TfToken const &reprName,
 }
 
 HdReprSharedPtr const &
-HdStPoints::_GetRepr(TfToken const &reprName,
-                     HdChangeTracker::DirtyBits *dirtyBits)
+HdStPoints::_GetRepr(HdSceneDelegate *sceneDelegate,
+                     TfToken const &reprName,
+                     HdDirtyBits *dirtyBits)
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -120,10 +148,15 @@ HdStPoints::_GetRepr(TfToken const &reprName,
         }
     }
 
+    *dirtyBits = _PropagateRprimDirtyBits(*dirtyBits);
+
+
     // points don't have multiple draw items (for now)
     if (isNew || HdChangeTracker::IsDirty(*dirtyBits)) {
         if (descs[0].geomStyle != HdPointsGeomStyleInvalid) {
-            _UpdateDrawItem(it->second->GetDrawItem(0), dirtyBits);
+            _UpdateDrawItem(sceneDelegate,
+                            it->second->GetDrawItem(0),
+                            dirtyBits);
         }
     }
 
@@ -131,8 +164,9 @@ HdStPoints::_GetRepr(TfToken const &reprName,
 }
 
 void
-HdStPoints::_PopulateVertexPrimVars(HdDrawItem *drawItem,
-                                    HdChangeTracker::DirtyBits *dirtyBits)
+HdStPoints::_PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
+                                    HdDrawItem *drawItem,
+                                    HdDirtyBits *dirtyBits)
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -141,8 +175,8 @@ HdStPoints::_PopulateVertexPrimVars(HdDrawItem *drawItem,
     HdResourceRegistry *resourceRegistry = &HdResourceRegistry::GetInstance();
 
     // The "points" attribute is expected to be in this list.
-    TfTokenVector primVarNames = GetPrimVarVertexNames();
-    TfTokenVector const& vars = GetPrimVarVaryingNames();
+    TfTokenVector primVarNames = GetPrimVarVertexNames(sceneDelegate);
+    TfTokenVector const& vars = GetPrimVarVaryingNames(sceneDelegate);
     primVarNames.insert(primVarNames.end(), vars.begin(), vars.end());
 
     HdBufferSourceVector sources;
@@ -158,7 +192,7 @@ HdStPoints::_PopulateVertexPrimVars(HdDrawItem *drawItem,
         // changes, but we need support from the delegate.
 
         //assert name not in range.bufferArray.GetResources()
-        VtValue value = GetPrimVar(*nameIt);
+        VtValue value = GetPrimVar(sceneDelegate, *nameIt);
 
         if (!value.IsEmpty()) {
             // Store where the points will be stored in the source array
@@ -201,7 +235,7 @@ HdStPoints::_PopulateVertexPrimVars(HdDrawItem *drawItem,
         // Check if the range is different and if so force a garbage collection
         // which will make sure the points are up to date
         if(previousRange != newRange) {
-            _GetRenderIndex().GetChangeTracker().SetGarbageCollectionNeeded();
+            sceneDelegate->GetRenderIndex().GetChangeTracker().SetGarbageCollectionNeeded();
         }
     }
 
@@ -210,30 +244,10 @@ HdStPoints::_PopulateVertexPrimVars(HdDrawItem *drawItem,
                                  sources);
 }
 
-/*static*/
-int
-HdStPoints::GetDirtyBitsMask(TfToken const &reprName)
-{
-    int mask = HdChangeTracker::Clean;
-
-    _PointsReprConfig::DescArray descs = _reprDescConfig.Find(reprName);
-
-    for (auto desc : descs) {
-        if (desc.geomStyle == HdPointsGeomStyleInvalid) {
-            continue;
-        }
-        mask |= HdChangeTracker::DirtyPoints
-             |  HdChangeTracker::DirtyPrimVar
-             |  HdChangeTracker::DirtyWidths;
-    }
-
-    return mask;
-}
-
-HdChangeTracker::DirtyBits 
+HdDirtyBits 
 HdStPoints::_GetInitialDirtyBits() const
 {
-    int mask = HdChangeTracker::Clean
+    HdDirtyBits mask = HdChangeTracker::Clean
         | HdChangeTracker::DirtyExtent
         | HdChangeTracker::DirtyInstanceIndex
         | HdChangeTracker::DirtyPoints
@@ -246,5 +260,8 @@ HdStPoints::_GetInitialDirtyBits() const
         | HdChangeTracker::DirtyWidths
         ;
 
-    return (HdChangeTracker::DirtyBits)mask;
+    return mask;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

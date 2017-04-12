@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdMaya/referenceAssembly.h"
 
 #include "usdMaya/JobArgs.h"
@@ -37,7 +38,7 @@
 #include "pxr/usd/usd/editContext.h"
 #include "pxr/usd/usd/editTarget.h"
 #include "pxr/usd/usd/stageCacheContext.h"
-#include "pxr/usd/usd/treeIterator.h"
+#include "pxr/usd/usd/primRange.h"
 #include "pxr/usd/usd/variantSets.h"
 #include "pxr/usd/usdGeom/xformable.h"
 #include "pxr/usd/usdGeom/xformCommonAPI.h"
@@ -69,6 +70,9 @@
 #include <string>
 #include <vector>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 
 TF_DEFINE_ENV_SETTING(PIXMAYA_USE_USD_REF_ASSEMBLIES, true,
                       "Uses USD scene assemblies for set dressing");
@@ -78,6 +82,12 @@ TF_DEFINE_ENV_SETTING(PIXMAYA_USE_USD_ASSEM_NAMESPACE, true,
 
 TF_DEFINE_ENV_SETTING(PIXMAYA_DEBUG_USD_ASSEM, false,
                       "Displays debug information for unrolling USD assemblies");
+
+bool
+UsdMayaUseUsdAssemblyNamespace()
+{
+    return TfGetEnvSetting(PIXMAYA_USE_USD_ASSEM_NAMESPACE);
+}
 
 // == Statics ==
 const MString UsdMayaReferenceAssembly::_classification("drawdb/geometry/transform");
@@ -576,80 +586,64 @@ MStatus UsdMayaReferenceAssembly::computeInStageDataCached(MDataBlock& dataBlock
         //
         std::string fileString = TfStringTrimRight(aFile.asChar());
 
-        fileString = PxrUsdMayaQuery::ResolvePath(fileString);
-
-        // Fall back on checking if path is just a standard absolute path
-        if ( fileString.empty() ) {
-            fileString = aFile.asChar();
-        }
-
         // == Load the Stage
         UsdStageRefPtr usdStage;
         SdfPath        primPath;
 
-        // Don't try to create a stage for a non-existent file. Some processes
-        // such as mbuild may author a file path here does not yet exist until a
-        // later operation.
-        bool isValidPath = (TfStringStartsWith(fileString, "//") ||
-                            TfIsFile(fileString, true /*resolveSymlinks*/));
-
-        if (isValidPath) {
-
-            if (SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(fileString)) {
-                SdfLayerRefPtr sessionLayer;
-                std::vector<std::pair<std::string, std::string> > varSelsVec;
-                MFnDependencyNode depNodeFn(thisMObject());
-                TfToken modelName = UsdUtilsGetModelNameFromRootLayer(rootLayer);
-                const std::set<std::string> varSetNamesForCache = _GetVariantSetNamesForStageCache(depNodeFn);
-                TF_FOR_ALL(variantSet, varSetNamesForCache) {
-                    MString variantSetPlugName(USD_VARIANT_SET_PREFIX.c_str());
-                    variantSetPlugName += variantSet->c_str();
-                    MPlug varSetPlg = depNodeFn.findPlug(variantSetPlugName, true);
-                    if (!varSetPlg.isNull()) {
-                        MString varSetVal = varSetPlg.asString();
-                        if (varSetVal.length() > 0) {
-                            varSelsVec.push_back(
-                                std::make_pair(*variantSet, varSetVal.asChar()));
-                        }
+        if (SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(fileString)) {
+            SdfLayerRefPtr sessionLayer;
+            std::vector<std::pair<std::string, std::string> > varSelsVec;
+            MFnDependencyNode depNodeFn(thisMObject());
+            TfToken modelName = UsdUtilsGetModelNameFromRootLayer(rootLayer);
+            const std::set<std::string> varSetNamesForCache = _GetVariantSetNamesForStageCache(depNodeFn);
+            TF_FOR_ALL(variantSet, varSetNamesForCache) {
+                MString variantSetPlugName(USD_VARIANT_SET_PREFIX.c_str());
+                variantSetPlugName += variantSet->c_str();
+                MPlug varSetPlg = depNodeFn.findPlug(variantSetPlugName, true);
+                if (!varSetPlg.isNull()) {
+                    MString varSetVal = varSetPlg.asString();
+                    if (varSetVal.length() > 0) {
+                        varSelsVec.push_back(
+                            std::make_pair(*variantSet, varSetVal.asChar()));
                     }
                 }
-                
-                sessionLayer = UsdUtilsStageCache::GetSessionLayerForVariantSelections(
-                    modelName, varSelsVec);
-
-                // If we have assembly edits, do not share session layers with
-                // other models that have our same set of variant selections,
-                // since our edits may differ from theirs. Theoretically we
-                // could hash all of our edit strings and share the same usd
-                // stage as other models with the same hash, but it's not
-                // typical to have enough models in a scene that share the same
-                // set of edits in order to make that worthwhile.
-                MObject assemObj = thisMObject();
-                MItEdits assemEdits(_GetEdits(assemObj));
-                if (!assemEdits.isDone()) {
-                    _hasEdits = true;
-                    SdfLayerRefPtr unsharedSessionLayer = SdfLayer::CreateAnonymous();
-                    unsharedSessionLayer->TransferContent(sessionLayer);
-                    sessionLayer = unsharedSessionLayer;
-                }
-
-                UsdStageCacheContext ctx(UsdMayaStageCache::Get());
-                usdStage = UsdStage::Open(rootLayer, 
-                        sessionLayer,
-                        ArGetResolver().GetCurrentContext());
-
-                primPath = usdStage->GetDefaultPrim() ?
-                    usdStage->GetDefaultPrim().GetPath() :
-
-                    // XXX:
-                    // Preserving prior behavior for now-- eventually might make
-                    // more sense to bail in this case.
-                    SdfPath::AbsoluteRootPath();
             }
-            else {
-                retValue = MS::kFailure;
-                CHECK_MSTATUS_AND_RETURN_IT(retValue);
+            
+            sessionLayer = UsdUtilsStageCache::GetSessionLayerForVariantSelections(
+                modelName, varSelsVec);
+
+            // If we have assembly edits, do not share session layers with
+            // other models that have our same set of variant selections,
+            // since our edits may differ from theirs. Theoretically we
+            // could hash all of our edit strings and share the same usd
+            // stage as other models with the same hash, but it's not
+            // typical to have enough models in a scene that share the same
+            // set of edits in order to make that worthwhile.
+            MObject assemObj = thisMObject();
+            MItEdits assemEdits(_GetEdits(assemObj));
+            if (!assemEdits.isDone()) {
+                _hasEdits = true;
+                SdfLayerRefPtr unsharedSessionLayer = SdfLayer::CreateAnonymous();
+                unsharedSessionLayer->TransferContent(sessionLayer);
+                sessionLayer = unsharedSessionLayer;
             }
+
+            UsdStageCacheContext ctx(UsdMayaStageCache::Get());
+            usdStage = UsdStage::Open(rootLayer, 
+                    sessionLayer,
+                    ArGetResolver().GetCurrentContext());
+
+            primPath = usdStage->GetDefaultPrim() ?
+                usdStage->GetDefaultPrim().GetPath() :
+
+                // XXX:
+                // Preserving prior behavior for now-- eventually might make
+                // more sense to bail in this case.
+                SdfPath::AbsoluteRootPath();
+        }
+        else {
+            retValue = MS::kFailure;
+            CHECK_MSTATUS_AND_RETURN_IT(retValue);
         }
 
         // Create the output outData ========
@@ -899,6 +893,47 @@ std::map<std::string, std::string> UsdMayaReferenceAssembly::GetVariantSetSelect
     return result;
 }
 
+void
+UsdMayaReferenceAssembly::ConnectMayaTimeToAssemblyTime()
+{
+    MFnAssembly assemblyFn(thisMObject());
+    MPlug assemblyTimePlug = assemblyFn.findPlug(_psData.time, true);
+    if (!assemblyTimePlug || assemblyTimePlug.isConnected()) {
+        // Bail out if we couldn't find the plug, or if it is already connected.
+        return;
+    }
+
+    const MPlug mayaTimePlug = PxrUsdMayaUtil::GetMayaTimePlug();
+    if (mayaTimePlug.isNull()) {
+        return;
+    }
+
+    MDGModifier dgMod;
+    dgMod.connect(mayaTimePlug, assemblyTimePlug);
+    dgMod.doIt();
+}
+
+void
+UsdMayaReferenceAssembly::DisconnectAssemblyTimeFromMayaTime()
+{
+    MFnAssembly assemblyFn(thisMObject());
+    MPlug assemblyTimePlug = assemblyFn.findPlug(_psData.time, true);
+    if (!assemblyTimePlug || !assemblyTimePlug.isConnected()) {
+        // Bail out if we couldn't find the plug, or if it is NOT already
+        // connected.
+        return;
+    }
+
+    const MPlug mayaTimePlug = PxrUsdMayaUtil::GetMayaTimePlug();
+    if (mayaTimePlug.isNull()) {
+        return;
+    }
+
+    MDGModifier dgMod;
+    dgMod.disconnect(mayaTimePlug, assemblyTimePlug);
+    dgMod.doIt();
+}
+
 // =========================================================
 
 UsdMayaRepresentationBase::UsdMayaRepresentationBase(
@@ -1043,7 +1078,12 @@ UsdMayaRepresentationProxyBase::_PushEditsToProxy()
         stage->GetSessionLayer()->GetSubLayerPaths().clear();
         stage->GetSessionLayer()->GetSubLayerPaths().push_back(
             _sessionSublayer->GetIdentifier());
-        
+
+        // Make the session sublayer the edit target before applying the Maya
+        // edits to ensure that we don't pollute other assemblies using the
+        // same layer(s).
+        UsdEditContext editContext(stage, _sessionSublayer);
+
         PxrUsdMayaEditUtil::ApplyEditsToProxy( refEdits, stage, proxyRootPrim, &failedEdits );
     }
     
@@ -1102,6 +1142,28 @@ UsdMayaRepresentationCollapsed::_OverrideProxyPlugs(MFnDependencyNode &shapeFn,
     
     // Call parent for common proxy overrides
     UsdMayaRepresentationProxyBase::_OverrideProxyPlugs(shapeFn, dgMod);
+}
+
+/* virtual */
+bool
+UsdMayaRepresentationPlayback::activate()
+{
+    UsdMayaReferenceAssembly* usdAssembly =
+        dynamic_cast<UsdMayaReferenceAssembly*>(getAssembly());
+    usdAssembly->ConnectMayaTimeToAssemblyTime();
+
+    return UsdMayaRepresentationProxyBase::activate();
+}
+
+/* virtual */
+bool
+UsdMayaRepresentationPlayback::inactivate()
+{
+    UsdMayaReferenceAssembly* usdAssembly =
+        dynamic_cast<UsdMayaReferenceAssembly*>(getAssembly());
+    usdAssembly->DisconnectAssemblyTimeFromMayaTime();
+
+    return UsdMayaRepresentationProxyBase::inactivate();
 }
 
 void
@@ -1195,9 +1257,6 @@ bool UsdMayaRepresentationHierBase::activate()
     MString usdFilePath(assemblyFn.findPlug(_psData.filePath, true).asString());
     MString usdPrimPath(assemblyFn.findPlug(_psData.primPath, true).asString());
 
-    // Resolve the file path before passing it to the importer for expanded unroll.
-    usdFilePath = MString(PxrUsdMayaQuery::ResolvePath(usdFilePath.asChar()).c_str());
-
     // Get the variant set selections from the Maya assembly node.
     UsdMayaReferenceAssembly* usdAssembly =
         dynamic_cast<UsdMayaReferenceAssembly*>(getAssembly());
@@ -1247,3 +1306,6 @@ bool UsdMayaRepresentationHierBase::activate()
 const MString UsdMayaRepresentationExpanded::_assemblyType("Expanded");
 
 const MString UsdMayaRepresentationFull::_assemblyType("Full");
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

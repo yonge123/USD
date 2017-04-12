@@ -26,11 +26,16 @@
 
 /// \file primWriterArgs.h
 
+#include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "pxr/base/vt/array.h"
 #include "pxr/base/gf/vec3f.h"
 
 #include <maya/MDagPath.h>
 #include <maya/MObject.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// \class PxrUsdMayaPrimWriterArgs
 /// \brief This class holds read-only arguments that are passed into the writer
@@ -42,23 +47,31 @@
 class PxrUsdMayaPrimWriterArgs
 {
 public:
+    PXRUSDMAYA_API
     PxrUsdMayaPrimWriterArgs(
             const MDagPath& dagPath,
             const bool exportRefsAsInstanceable);
 
     /// \brief returns the MObject that should be exported. 
+    PXRUSDMAYA_API
     MObject GetMObject() const;
 
+    PXRUSDMAYA_API
     const MDagPath& GetMDagPath() const;
 
+    PXRUSDMAYA_API
     bool GetExportRefsAsInstanceable() const;
 
     /// helper functions to get data from attribute named \p from the current
     /// MObject.  
     /// \{
+    PXRUSDMAYA_API
     bool ReadAttribute(const std::string& name, std::string* val) const;
+    PXRUSDMAYA_API
     bool ReadAttribute(const std::string& name, VtIntArray* val) const;
+    PXRUSDMAYA_API
     bool ReadAttribute(const std::string& name, VtFloatArray* val) const;
+    PXRUSDMAYA_API
     bool ReadAttribute(const std::string& name, VtVec3fArray* val) const;
     /// \}
 
@@ -66,6 +79,9 @@ private:
     MDagPath _dagPath;
     bool _exportRefsAsInstanceable;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_PRIMWRITERERARGS_H
 

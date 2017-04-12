@@ -24,6 +24,8 @@
 #ifndef HDX_TYPES_H
 #define HDX_TYPES_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hdx/api.h"
 #include "pxr/imaging/hdx/version.h"
 #include "pxr/base/tf/iterator.h"
 #include "pxr/base/tf/token.h"
@@ -31,21 +33,25 @@
 
 #include "pxr/imaging/hd/enums.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 // Struct used to send shader inputs from Presto and send them to Hydra
-struct HdxShaderInputs
-{
+struct HdxShaderInputs {
     VtDictionary         parameters;
     VtDictionary         textures;
     std::vector<TfToken> attributes;
 };
 
+HDX_API
 bool operator==(const HdxShaderInputs& lhs, const HdxShaderInputs& rhs);
+HDX_API
 bool operator!=(const HdxShaderInputs& lhs, const HdxShaderInputs& rhs);
+HDX_API
 std::ostream& operator<<(std::ostream& out, const HdxShaderInputs& pv);
 
 // Struct used to send texture parameters from Presto and send them to Hydra
-struct HdxTextureParameters
-{
+struct HdxTextureParameters {
     HdWrap wrapS;
     HdWrap wrapT;
     HdMinFilter minFilter;
@@ -58,8 +64,14 @@ struct HdxTextureParameters
     bool isPtex;
 };
 
+HDX_API
 bool operator==(const HdxTextureParameters& lhs, const HdxTextureParameters& rhs);
+HDX_API
 bool operator!=(const HdxTextureParameters& lhs, const HdxTextureParameters& rhs);
+HDX_API
 std::ostream& operator<<(std::ostream& out, const HdxTextureParameters& pv);
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //HDX_TYPES_H

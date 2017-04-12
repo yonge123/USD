@@ -40,7 +40,10 @@
 
 #include <iostream>
 
-HdxIntersector::HdxIntersector(HdRenderIndexSharedPtr index)
+PXR_NAMESPACE_OPEN_SCOPE
+
+
+HdxIntersector::HdxIntersector(HdRenderIndex *index)
     : _index(index)
 { 
 }
@@ -135,6 +138,45 @@ HdxIntersector::SetResolution(GfVec2i const& widthHeight)
     }
 }
 
+class HdxIntersector_DrawTask final : public HdTask
+{
+public:
+    HdxIntersector_DrawTask(HdRenderPassSharedPtr const &renderPass,
+                HdRenderPassStateSharedPtr const &renderPassState,
+                TfTokenVector const &renderTags)
+    : HdTask()
+    , _renderPass(renderPass)
+    , _renderPassState(renderPassState)
+    , _renderTags(renderTags)
+    {
+    }
+
+protected:
+    virtual void _Sync( HdTaskContext* ctx) override
+    {
+        _renderPass->Sync();
+        _renderPassState->Sync();
+    }
+
+    virtual void _Execute(HdTaskContext* ctx) override
+    {
+        _renderPassState->Bind();
+        if(_renderTags.size()) {
+            TF_FOR_ALL(rt, _renderTags) {
+                _renderPass->Execute(_renderPassState, *rt);
+            }
+        } else {
+            _renderPass->Execute(_renderPassState);
+        }
+        _renderPassState->Unbind();
+    }
+
+private:
+    HdRenderPassSharedPtr _renderPass;
+    HdRenderPassStateSharedPtr _renderPassState;
+    TfTokenVector _renderTags;
+};
+
 bool
 HdxIntersector::Query(HdxIntersector::Params const& params,
                       HdRprimCollection const& col,
@@ -187,13 +229,6 @@ HdxIntersector::Query(HdxIntersector::Params const& params,
     //
     // Setup GL raster state
     //
-    glPushAttrib(GL_VIEWPORT_BIT |
-                 GL_ENABLE_BIT |
-                 GL_COLOR_BUFFER_BIT |
-                 GL_DEPTH_BUFFER_BIT |
-                 GL_STENCIL_BUFFER_BIT |
-                 GL_TEXTURE_BIT |
-                 GL_POLYGON_BIT);
 
     GLenum drawBuffers[3] = { GL_COLOR_ATTACHMENT0,
                               GL_COLOR_ATTACHMENT1,
@@ -229,21 +264,13 @@ HdxIntersector::Query(HdxIntersector::Params const& params,
         glStencilOp(GL_KEEP,     // stencil failed
                     GL_KEEP,     // stencil passed, depth failed
                     GL_REPLACE); // stencil passed, depth passed
-        // Attempt to protect from GL state corruption.
-        glPushAttrib(GL_VIEWPORT_BIT |
-                     GL_ENABLE_BIT |
-                     GL_COLOR_BUFFER_BIT |
-                     GL_DEPTH_BUFFER_BIT |
-                     GL_STENCIL_BUFFER_BIT |
-                     GL_TEXTURE_BIT |
-                     GL_POLYGON_BIT);
 
         //
         // Condition the stencil buffer.
         //
         params.depthMaskCallback();
+        // we expect any GL state changes are restored.
 
-        glPopAttrib();
         // Disable stencil updates and setup the stencil test.
         glStencilFunc(GL_LESS, 0, 1);
         glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
@@ -270,7 +297,19 @@ HdxIntersector::Query(HdxIntersector::Params const& params,
         // Execute
         //
         // XXX: make intersector a Task
-        engine->Draw(*_index, _renderPass, _renderPassState);
+        HdTaskSharedPtrVector tasks;
+        tasks.push_back(boost::make_shared<HdxIntersector_DrawTask>(_renderPass,
+                                                               _renderPassState,
+                                                            params.renderTags));
+        engine->Execute(*_index, tasks);
+
+        glDisable(GL_STENCIL_TEST);
+
+        if (convRstr) {
+            // XXX: this should come from Glew
+            #define GL_CONSERVATIVE_RASTERIZATION_NV 0x9346
+            glDisable(GL_CONSERVATIVE_RASTERIZATION_NV);
+        }
 
         // Restore
         glBindVertexArray(0);
@@ -305,6 +344,8 @@ HdxIntersector::Query(HdxIntersector::Params const& params,
     glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT,
                     &depths[0]);
 
+    glBindTexture(GL_TEXTURE_2D, 0);
+
     GLF_POST_PENDING_GL_ERRORS();
 
     if (result) {
@@ -313,15 +354,6 @@ HdxIntersector::Query(HdxIntersector::Params const& params,
             std::move(depths), _index, params, viewport);
     }
 
-    //
-    // Restore all modified GL state
-    //
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glPopAttrib(); /* GL_VIEWPORT_BIT |
-                      GL_ENABLE_BIT |
-                      GL_COLOR_BUFFER_BIT
-                      GL_DEPTH_BUFFER_BIT
-                      GL_TEXTURE_BIT */
     drawTarget->Unbind();
     GLF_POST_PENDING_GL_ERRORS();
 
@@ -338,7 +370,7 @@ HdxIntersector::Result::Result(std::unique_ptr<unsigned char[]> primIds,
                         std::unique_ptr<unsigned char[]> instanceIds,
                         std::unique_ptr<unsigned char[]> elementIds,
                         std::unique_ptr<float[]> depths,
-                        HdRenderIndexSharedPtr const& index,
+                        HdRenderIndex const *index,
                         HdxIntersector::Params params,
                         GfVec4i viewport)
     : _primIds(std::move(primIds))
@@ -354,7 +386,6 @@ HdxIntersector::Result::Result(std::unique_ptr<unsigned char[]> primIds,
 HdxIntersector::Result::~Result()
 {
     _params = Params();
-    _index.reset();
     _viewport = GfVec4i(0,0,0,0);
 }
 
@@ -409,13 +440,16 @@ HdxIntersector::Result::_ResolveHit(int index, int x, int y, float z,
                     ((elementIds[idIndex+1] & 0xff) <<  8) |
                     ((elementIds[idIndex+2] & 0xff) << 16);
 
-    HdRprim const* rprim = _index->GetRprim(hit->objectId);
-    if (!TF_VERIFY(rprim, "%s\n", hit->objectId.GetText())) {
+
+
+    bool rprimValid = _index->GetSceneDelegateAndInstancerIds(hit->objectId,
+                                                           &(hit->delegateId),
+                                                           &(hit->instancerId));
+
+    if (!TF_VERIFY(rprimValid, "%s\n", hit->objectId.GetText())) {
         return false;
     }
 
-    hit->delegateId = rprim->GetDelegate()->GetDelegateID();
-    hit->instancerId = rprim->GetInstancerId();
     hit->worldSpaceHitPoint = GfVec3f(hitPoint);
     hit->ndcDepth = float(z);
     hit->instanceIndex = instanceIndex;
@@ -648,4 +682,7 @@ operator<<(std::ostream& out, HdxIntersector::Hit const & h)
         << "Depth: (" << h.ndcDepth << ") ";
     return out;
 }
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 

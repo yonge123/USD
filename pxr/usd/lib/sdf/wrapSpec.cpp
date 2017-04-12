@@ -22,6 +22,8 @@
 // language governing permissions and limitations under the Apache License.
 //
 /// \file wrapSpec.cpp
+
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/spec.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/sdf/pySpec.h"
@@ -33,6 +35,10 @@
 #include <boost/python/class.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static
 VtValue
@@ -100,8 +106,9 @@ _GetAsText(const SdfSpecHandle &self)
     return stream.str();
 }
 
-void
-wrapSpec()
+} // anonymous namespace 
+
+void wrapSpec()
 {
     typedef SdfSpec This;
 
@@ -113,7 +120,7 @@ wrapSpec()
         .add_property("path", &This::GetPath,
             "The absolute scene path.")
 
-        .def("GetAsText", &::_GetAsText)
+        .def("GetAsText", &_GetAsText)
 
         .def("ListInfoKeys", &This::ListInfoKeys,
             return_value_policy<TfPySequenceToList>())
@@ -122,8 +129,8 @@ wrapSpec()
 
         .def("GetMetaDataDisplayGroup", &This::GetMetaDataDisplayGroup)
 
-        .def("GetInfo", &::_WrapGetInfo)
-        .def("SetInfo", &::_WrapSetInfo)
+        .def("GetInfo", &_WrapGetInfo)
+        .def("SetInfo", &_WrapSetInfo)
         .def("SetInfoDictionaryValue", &This::SetInfoDictionaryValue)
         .def("HasInfo", &This::HasInfo,
              "HasInfo(key) -> bool\n\n"

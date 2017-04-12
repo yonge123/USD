@@ -28,6 +28,8 @@
 #include "pxr/usd/sdf/types.h"
 #include "pxr/usd/sdf/assetPath.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
@@ -90,13 +92,20 @@ UsdClipsAPI::GetSchemaAttributeNames(bool includeInherited)
         return localNames;
 }
 
+PXR_NAMESPACE_CLOSE_SCOPE
+
 // ===================================================================== //
 // Feel free to add custom code below this line. It will be preserved by
 // the code generator.
+//
+// Just remember to wrap code in the appropriate delimiters:
+// 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
 #include "pxr/usd/usd/tokens.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 bool 
 UsdClipsAPI::SetClipAssetPaths(const VtArray<SdfAssetPath>& assetPaths)
@@ -254,6 +263,11 @@ UsdClipsAPI::SetClipTemplateStride(const double clipTemplateStride)
         return false;
     }
 
+    if (clipTemplateStride == 0) {
+        TF_CODING_ERROR("clipTemplateStride can not be set to 0.");
+        return false;
+    }
+
     return GetPrim().SetMetadata(UsdTokens->clipTemplateStride, 
                                  clipTemplateStride);
 }
@@ -338,3 +352,5 @@ UsdClipsAPI::ClearNonTemplateClipMetadata()
 
     return true;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

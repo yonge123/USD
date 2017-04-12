@@ -24,11 +24,16 @@
 #ifndef HDX_SIMPLE_LIGHT_BYPASS_TASK_H
 #define HDX_SIMPLE_LIGHT_BYPASS_TASK_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hdx/api.h"
 #include "pxr/imaging/hdx/version.h"
 #include "pxr/imaging/hd/task.h"
 #include "pxr/imaging/glf/simpleLightingContext.h"
 
 #include <boost/shared_ptr.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 //
 //  This class exists to isolate code churn of Hd/Hdx/UsdImaging from exisiting
@@ -42,41 +47,49 @@
 
 class HdRenderIndex;
 class HdSceneDelegate;
-class HdxCamera;
+class HdStCamera;
 
 typedef boost::shared_ptr<class HdxSimpleLightingShader> HdxSimpleLightingShaderSharedPtr;
 
 
 class HdxSimpleLightBypassTask : public HdSceneTask {
 public:
+    HDX_API
     HdxSimpleLightBypassTask(HdSceneDelegate* delegate, SdfPath const& id);
 
 protected:
     /// Execute render pass task
+    HDX_API
     virtual void _Execute(HdTaskContext* ctx);
 
     /// Sync the render pass resources
+    HDX_API
     virtual void _Sync(HdTaskContext* ctx);
 
 private:
-    const HdxCamera *_camera;
+    const HdStCamera *_camera;
     HdxSimpleLightingShaderSharedPtr _lightingShader;
 
     GlfSimpleLightingContextRefPtr _simpleLightingContext;
 };
 
-struct HdxSimpleLightBypassTaskParams
-{
+struct HdxSimpleLightBypassTaskParams {
     SdfPath cameraPath;
     GlfSimpleLightingContextRefPtr simpleLightingContext;
 };
 
 // VtValue requirements
+HDX_API
 std::ostream& operator<<(std::ostream& out,
                          const HdxSimpleLightBypassTaskParams& pv);
+HDX_API
 bool operator==(const HdxSimpleLightBypassTaskParams& lhs,
                 const HdxSimpleLightBypassTaskParams& rhs);
+HDX_API
 bool operator!=(const HdxSimpleLightBypassTaskParams& lhs,
                 const HdxSimpleLightBypassTaskParams& rhs);
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //HDX_SIMPLE_LIGHT_BYPASS_TASK_H

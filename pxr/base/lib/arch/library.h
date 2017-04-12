@@ -24,22 +24,31 @@
 #ifndef ARCH_LIBRARY_H
 #define ARCH_LIBRARY_H
 
+#include "pxr/pxr.h"
 #include "pxr/base/arch/api.h"
 
 #include <string>
 
-#if defined(ARCH_OS_LINUX) || defined(ARCH_OS_DARWIN)
+#if defined(ARCH_OS_WINDOWS)
+#   define ARCH_LIBRARY_LAZY    0
+#   define ARCH_LIBRARY_NOW     0
+#   define ARCH_LIBRARY_LOCAL   0
+#   define ARCH_LIBRARY_GLOBAL  0
+#   define ARCH_LIBRARY_SUFFIX  ".dll"
+#else
 #   include <dlfcn.h>
 #   define ARCH_LIBRARY_LAZY    RTLD_LAZY
 #   define ARCH_LIBRARY_NOW     RTLD_NOW
 #   define ARCH_LIBRARY_LOCAL   RTLD_LOCAL
 #   define ARCH_LIBRARY_GLOBAL  RTLD_GLOBAL
-#else
-#   define ARCH_LIBRARY_LAZY    0
-#   define ARCH_LIBRARY_NOW     0
-#   define ARCH_LIBRARY_LOCAL   0
-#   define ARCH_LIBRARY_GLOBAL  0
+#   if defined(ARCH_OS_DARWIN)
+#       define ARCH_LIBRARY_SUFFIX  ".dylib"
+#   else
+#       define ARCH_LIBRARY_SUFFIX  ".so"
+#   endif
 #endif
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// library.h
 /// Architecture dependent loading and unloading of dynamic libraries.
@@ -63,5 +72,7 @@ std::string ArchLibraryError();
 /// \ingroup group_arch_SystemFunctions
 ARCH_API
 int ArchLibraryClose(void* handle);
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // ARCH_LIBRARY_H

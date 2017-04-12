@@ -24,6 +24,8 @@
 #ifndef SDF_PATH_PARSER_H
 #define SDF_PATH_PARSER_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/sdf/api.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/base/tf/token.h"
 #include <string>
@@ -37,16 +39,17 @@ typedef void *yyscan_t;
 
 // Lexical scanner value type.
 struct Sdf_PathLexerValue {
-    TfToken token;
-    Sdf_PathNodeConstRefPtr path;
+    PXR_NS::TfToken token;
+    PXR_NS::Sdf_PathNodeConstRefPtr path;
 };
 #define YYSTYPE Sdf_PathLexerValue
 
-typedef std::vector< std::pair<TfToken, TfToken> > Sdf_PathVariantSelections;
+typedef std::vector< std::pair<PXR_NS::TfToken, 
+                               PXR_NS::TfToken> > Sdf_PathVariantSelections;
 
 // Lexical scanner context.
 struct Sdf_PathParserContext {
-    Sdf_PathNodeConstRefPtr node;
+    PXR_NS::Sdf_PathNodeConstRefPtr node;
     std::vector<Sdf_PathVariantSelections> variantSelectionStack;
     std::string errStr;
     yyscan_t scanner;
@@ -61,4 +64,17 @@ yy_buffer_state *pathYy_scan_bytes(const char* str, size_t len,
                                    yyscan_t yyscanner);
 void pathYy_delete_buffer(yy_buffer_state *b, yyscan_t yyscanner);
 
-#endif
+PXR_NAMESPACE_OPEN_SCOPE
+
+SDF_API
+int SdfPathYyparse(Sdf_PathParserContext *context);
+SDF_API
+int SdfPathYylex_init(yyscan_t *yyscanner);
+SDF_API
+int SdfPathYylex_destroy(yyscan_t yyscanner);
+SDF_API
+yy_buffer_state *SdfPathYy_scan_string(const char* str, yyscan_t yyscanner);
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // SDF_PATH_PARSER_H

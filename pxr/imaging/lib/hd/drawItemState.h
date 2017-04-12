@@ -24,7 +24,12 @@
 #ifndef HD_DRAW_ITEM_STATE_H
 #define HD_DRAW_ITEM_STATE_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// \class HdDrawItemState
 ///
@@ -37,9 +42,14 @@
 ///
 class HdDrawItemState {
 public:
+    HD_API
     HdDrawItemState();
+    HD_API
     virtual ~HdDrawItemState();
 private:
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //HD_DRAW_ITEM_STATE_H

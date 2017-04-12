@@ -30,6 +30,10 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 static GarchGLPlatformDebugContextPtr
 _New(int majorVersion, int minorVersion,
     bool coreProfile, bool directRendering)
@@ -38,6 +42,8 @@ _New(int majorVersion, int minorVersion,
         GarchGLPlatformDebugContext(majorVersion, minorVersion,
                                     coreProfile, directRendering));
 }
+
+} // anonymous namespace 
 
 void wrapPlatformDebugContext()
 {    
@@ -49,3 +55,5 @@ void wrapPlatformDebugContext()
         .def("makeCurrent", &This::makeCurrent)
     ;
 }
+
+TF_REFPTR_CONST_VOLATILE_GET(GarchGLPlatformDebugContext)

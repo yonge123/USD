@@ -27,10 +27,14 @@
 /// \file gf/size3.h
 /// \ingroup group_gf_LinearAlgebra
 
+#include "pxr/pxr.h"
 #include "pxr/base/arch/inttypes.h"
 #include "pxr/base/gf/vec3i.h"
+#include "pxr/base/gf/api.h" 
 
 #include <iosfwd>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// \class GfSize3
 /// \ingroup group_gf_LinearAlgebra
@@ -191,7 +195,7 @@ public:
     }
 
     /// Output operator
-    friend std::ostream &operator<<(std::ostream &o, GfSize3 const &v);
+    friend GF_API std::ostream &operator<<(std::ostream &o, GfSize3 const &v);
 
     /// Conversion to GfVec3i
     operator GfVec3i() const {
@@ -202,6 +206,8 @@ private:
 };
 
 // Friend functions must be declared
-std::ostream &operator<<(std::ostream &o, GfSize3 const &v);
+GF_API std::ostream &operator<<(std::ostream &o, GfSize3 const &v);
 
-#endif /* GF_SIZE3_H */
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // GF_SIZE3_H 

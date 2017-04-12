@@ -26,6 +26,8 @@
 
 /// \file usdShade/pShader.h
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usdShade/api.h"
 #include "pxr/usd/usd/typed.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
@@ -39,6 +41,8 @@
 
 #include "pxr/base/tf/token.h"
 #include "pxr/base/tf/type.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class SdfAssetPath;
 
@@ -76,11 +80,13 @@ public:
     }
 
     /// Destructor.
+    USDSHADE_API
     virtual ~UsdShadePShader();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
+    USDSHADE_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
@@ -93,6 +99,7 @@ public:
     /// UsdShadePShader(stage->GetPrimAtPath(path));
     /// \endcode
     ///
+    USDSHADE_API
     static UsdShadePShader
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
@@ -118,17 +125,20 @@ public:
     /// specify this schema class, in case a stronger typeName opinion overrides
     /// the opinion at the current EditTarget.
     ///
+    USDSHADE_API
     static UsdShadePShader
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
+    USDSHADE_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
+    USDSHADE_API
     virtual const TfType &_GetTfType() const;
 
 public:
@@ -141,6 +151,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Asset
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDSHADE_API
     UsdAttribute GetSloPathAttr() const;
 
     /// See GetSloPathAttr(), and also 
@@ -148,6 +159,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDSHADE_API
     UsdAttribute CreateSloPathAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -160,6 +172,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->String
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: No Fallback
+    USDSHADE_API
     UsdAttribute GetShaderProtocolAttr() const;
 
     /// See GetShaderProtocolAttr(), and also 
@@ -167,6 +180,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDSHADE_API
     UsdAttribute CreateShaderProtocolAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -179,6 +193,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->String
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: No Fallback
+    USDSHADE_API
     UsdAttribute GetShaderTypeAttr() const;
 
     /// See GetShaderTypeAttr(), and also 
@@ -186,6 +201,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDSHADE_API
     UsdAttribute CreateShaderTypeAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -198,6 +214,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Color3f
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDSHADE_API
     UsdAttribute GetDisplayColorAttr() const;
 
     /// See GetDisplayColorAttr(), and also 
@@ -205,6 +222,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDSHADE_API
     UsdAttribute CreateDisplayColorAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -217,6 +235,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Float
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDSHADE_API
     UsdAttribute GetDisplayOpacityAttr() const;
 
     /// See GetDisplayOpacityAttr(), and also 
@@ -224,6 +243,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDSHADE_API
     UsdAttribute CreateDisplayOpacityAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -231,10 +251,14 @@ public:
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 
     //
-    // Just remember to close the class declaration with }; and complete the
-    // include guard with #endif
+    // Just remember to: 
+    //  - Close the class declaration with }; 
+    //  - Close the namespace with PXR_NAMESPACE_CLOSE_SCOPE
+    //  - Close the include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif

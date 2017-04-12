@@ -22,7 +22,6 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/usd/usdShade/shader.h"
-
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/conversions.h"
 
@@ -39,6 +38,10 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 #define WRAP_CUSTOM                                                     \
     template <class Cls> static void _CustomWrapCode(Cls &_class)
 
@@ -52,6 +55,8 @@ _CreateIdAttr(UsdShadeShader &self,
     return self.CreateIdAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
 }
+
+} // anonymous namespace
 
 void wrapUsdShadeShader()
 {
@@ -108,10 +113,16 @@ void wrapUsdShadeShader()
 // }
 //
 // Of course any other ancillary or support code may be provided.
+// 
+// Just remember to wrap code in the appropriate delimiters:
+// 'namespace {', '}'.
+//
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
 #include "pxr/usd/usdShade/connectableAPI.h"
+
+namespace {
 
 WRAP_CUSTOM {
     _class
@@ -127,7 +138,15 @@ WRAP_CUSTOM {
         .def("GetOutputs", &UsdShadeShader::GetOutputs,
              return_value_policy<TfPySequenceToList>())
 
+        .def("CreateInput", &UsdShadeShader::CreateInput,
+             (arg("name"), arg("type")))
+        .def("GetInput", &UsdShadeShader::GetInput, arg("name"))
+        .def("GetInputs", &UsdShadeShader::GetInputs,
+             return_value_policy<TfPySequenceToList>())
+
         ;
 
     implicitly_convertible<UsdShadeShader, UsdShadeConnectableAPI>();
 }
+
+} // anonymous namespace

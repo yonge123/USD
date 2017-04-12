@@ -24,9 +24,12 @@
 #ifndef AR_RESOLVER_SCOPED_CACHE_H
 #define AR_RESOLVER_SCOPED_CACHE_H
 
+#include "pxr/pxr.h"
 #include "pxr/usd/ar/api.h"
 #include "pxr/base/vt/value.h"
 #include <boost/noncopyable.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// \class ArResolverScopedCache
 ///
@@ -34,22 +37,27 @@
 ///
 /// \see ArResolverContext::_BeginCacheScope
 /// \see ArResolverContext::_EndCacheScope
-class AR_API ArResolverScopedCache
+class ArResolverScopedCache
     : public boost::noncopyable
 {
 public:
     /// Begin an asset resolver cache scope.
+    AR_API
     ArResolverScopedCache();
 
     /// Begin an asset resolver cache scope that shares data
     /// with the given \p parent scope.
+    AR_API
     explicit ArResolverScopedCache(const ArResolverScopedCache* parent);
 
     /// End an asset resolver cache scope.
+    AR_API
     ~ArResolverScopedCache();
 
 private:
     VtValue _cacheScopeData;
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // AR_RESOLVER_SCOPED_CACHE_H

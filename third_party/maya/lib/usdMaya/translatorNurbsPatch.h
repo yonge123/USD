@@ -24,6 +24,8 @@
 #ifndef PXRUSDMAYA_TRANSLATOR_NURBSPATCH_H
 #define PXRUSDMAYA_TRANSLATOR_NURBSPATCH_H
 
+#include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/primReaderArgs.h"
 #include "usdMaya/primReaderContext.h"
 
@@ -31,9 +33,13 @@
 
 #include <maya/MObject.h>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 
 struct PxrUsdMayaTranslatorNurbsPatch
 {
+    PXRUSDMAYA_API
     static bool Read(
             const UsdGeomNurbsPatch& usdNurbsPatch,
             MObject parentNode,
@@ -41,5 +47,8 @@ struct PxrUsdMayaTranslatorNurbsPatch
             PxrUsdMayaPrimReaderContext* context);
 };
 
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_TRANSLATOR_NURBSPATCH_H

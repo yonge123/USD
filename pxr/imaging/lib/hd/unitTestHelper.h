@@ -24,11 +24,13 @@
 #ifndef HD_UNIT_TEST_HELPER
 #define HD_UNIT_TEST_HELPER
 
+#include "pxr/pxr.h"
 #include "pxr/imaging/hd/engine.h"
 #include "pxr/imaging/hd/lightingShader.h"
 #include "pxr/imaging/hd/renderPass.h"
 #include "pxr/imaging/hd/renderPassState.h"
 #include "pxr/imaging/hd/unitTestDelegate.h"
+#include "pxr/imaging/hd/unitTestNullRenderDelegate.h"
 #include "pxr/imaging/glf/glslfx.h"
 
 #include "pxr/base/gf/vec4d.h"
@@ -36,6 +38,9 @@
 
 #include <vector>
 #include <boost/scoped_ptr.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// \class Hd_TestDriver
 ///
@@ -45,10 +50,11 @@
 /// that is is not available, all OpenGL calls become no-ops, but all other work
 /// is performed as usual.
 ///
-class Hd_TestDriver {
+class Hd_TestDriver final {
 public:
     Hd_TestDriver();
     Hd_TestDriver(TfToken const &reprName);
+    ~Hd_TestDriver();
 
     /// Draw
     void Draw(bool withGuides=false);
@@ -73,7 +79,7 @@ public:
     }
 
     /// Returns the UnitTest delegate
-    Hd_UnitTestDelegate& GetDelegate() { return _delegate; }
+    Hd_UnitTestDelegate& GetDelegate() { return *_sceneDelegate; }
 
     /// Switch repr
     void SetRepr(TfToken const &reprName);
@@ -83,7 +89,9 @@ private:
     void _Init(TfToken const &reprName);
 
     HdEngine _engine;
-    Hd_UnitTestDelegate _delegate;
+    Hd_UnitTestNullRenderDelegate _renderDelegate;
+    HdRenderIndex       *_renderIndex;
+    Hd_UnitTestDelegate *_sceneDelegate;
     TfToken _reprName;
     HdRenderPassSharedPtr _geomPass;
     HdRenderPassSharedPtr _geomAndGuidePass;
@@ -101,7 +109,7 @@ public:
     Hd_TestLightingShader();
     virtual ~Hd_TestLightingShader();
 
-    /// HdShader overrides
+    /// HdShaderCode overrides
     virtual ID ComputeHash() const;
     virtual std::string GetSource(TfToken const &shaderStageKey) const;
     virtual void BindResources(Hd_ResourceBinder const &binder, int program);
@@ -125,5 +133,8 @@ private:
     GfVec3f _sceneAmbient;
     boost::scoped_ptr<GlfGLSLFX> _glslfx;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif  // HD_UNIT_TEST_HELPER

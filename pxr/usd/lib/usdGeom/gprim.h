@@ -26,6 +26,8 @@
 
 /// \file usdGeom/gprim.h
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usdGeom/api.h"
 #include "pxr/usd/usdGeom/boundable.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
@@ -39,6 +41,8 @@
 
 #include "pxr/base/tf/token.h"
 #include "pxr/base/tf/type.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class SdfAssetPath;
 
@@ -86,11 +90,13 @@ public:
     }
 
     /// Destructor.
+    USDGEOM_API
     virtual ~UsdGeomGprim();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
+    USDGEOM_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
@@ -103,6 +109,7 @@ public:
     /// UsdGeomGprim(stage->GetPrimAtPath(path));
     /// \endcode
     ///
+    USDGEOM_API
     static UsdGeomGprim
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
@@ -110,11 +117,13 @@ public:
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
+    USDGEOM_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
+    USDGEOM_API
     virtual const TfType &_GetTfType() const;
 
 public:
@@ -131,6 +140,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Color3fArray
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetDisplayColorAttr() const;
 
     /// See GetDisplayColorAttr(), and also 
@@ -138,6 +148,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateDisplayColorAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -153,6 +164,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->FloatArray
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetDisplayOpacityAttr() const;
 
     /// See GetDisplayOpacityAttr(), and also 
@@ -160,6 +172,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateDisplayOpacityAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -188,6 +201,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Bool
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: False
+    USDGEOM_API
     UsdAttribute GetDoubleSidedAttr() const;
 
     /// See GetDoubleSidedAttr(), and also 
@@ -195,6 +209,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateDoubleSidedAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -208,6 +223,7 @@ public:
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: rightHanded
     /// \n  \ref UsdGeomTokens "Allowed Values": [rightHanded, leftHanded]
+    USDGEOM_API
     UsdAttribute GetOrientationAttr() const;
 
     /// See GetOrientationAttr(), and also 
@@ -215,6 +231,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateOrientationAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -222,20 +239,26 @@ public:
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 
     //
-    // Just remember to close the class declaration with }; and complete the
-    // include guard with #endif
+    // Just remember to: 
+    //  - Close the class declaration with }; 
+    //  - Close the namespace with PXR_NAMESPACE_CLOSE_SCOPE
+    //  - Close the include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
 
     /// Convenience function to get the displayColor Attribute as a Primvar.
     ///
     /// \sa GetDisplayColorAttr()
+    USDGEOM_API
     UsdGeomPrimvar GetDisplayColorPrimvar() const;
 
     /// Convenience function to get the displayOpacity Attribute as a Primvar.
     ///
     /// \sa GetDisplayOpacityAttr()
+    USDGEOM_API
     UsdGeomPrimvar GetDisplayOpacityPrimvar() const;
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif

@@ -24,6 +24,8 @@
 #ifndef USD_CRATEINFO_H
 #define USD_CRATEINFO_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usd/api.h"
 #include "pxr/base/tf/token.h"
 
 #include <cstddef>
@@ -31,6 +33,9 @@
 #include <memory>
 #include <string>
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// \class UsdCrateInfo
 ///
@@ -58,18 +63,23 @@ public:
     };
 
     /// Attempt to open and read \p fileName.
+    USD_API
     static UsdCrateInfo Open(std::string const &fileName);
 
     /// Return summary statistics structure for this file.
+    USD_API
     SummaryStats GetSummaryStats() const;
 
     /// Return the named file sections, their location and sizes in the file.
+    USD_API
     std::vector<Section> GetSections() const;
 
     /// Return the file version.
+    USD_API
     TfToken GetFileVersion() const;
     
     /// Return the software version.
+    USD_API
     TfToken GetSoftwareVersion() const;
 
     /// Return true if this object refers to a valid file.
@@ -80,5 +90,8 @@ private:
     struct _Impl;
     std::shared_ptr<_Impl> _impl;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // USD_CRATEINFO_H

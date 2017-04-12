@@ -24,8 +24,10 @@
 #ifndef HDX_SIMPLE_LIGHT_TASK_H
 #define HDX_SIMPLE_LIGHT_TASK_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hdx/api.h"
 #include "pxr/imaging/hdx/version.h"
-#include "pxr/imaging/hdx/light.h"
+#include "pxr/imaging/hdSt/light.h"
 
 #include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/imaging/hd/rprimCollection.h"
@@ -39,9 +41,12 @@
 
 #include <boost/shared_ptr.hpp>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 class HdRenderIndex;
 class HdSceneDelegate;
-class HdxCamera;
+class HdStCamera;
 
 typedef boost::shared_ptr<class HdRenderPass> HdRenderPassSharedPtr;
 typedef boost::shared_ptr<class HdxSimpleLightingShader> HdxSimpleLightingShaderSharedPtr;
@@ -52,8 +57,10 @@ TF_DECLARE_REF_PTRS(GlfSimpleShadowArray);
 
 class HdxSimpleLightTask : public HdSceneTask {
 public:
+    HDX_API
     HdxSimpleLightTask(HdSceneDelegate* delegate, SdfPath const& id);
 
+    HDX_API
     static SdfPathVector ComputeIncludedLights(
         SdfPathVector const & allLightPaths,
         SdfPathVector const & includedPaths,
@@ -61,14 +68,16 @@ public:
 
 protected:
     /// Execute render pass task
+    HDX_API
     virtual void _Execute(HdTaskContext* ctx);
 
     /// Sync the render pass resources
+    HDX_API
     virtual void _Sync(HdTaskContext* ctx);
 
 private:
-    const HdxCamera *_camera;
-    HdxLightPtrConstVector _lights;
+    const HdStCamera *_camera;
+    HdStLightPtrConstVector _lights;
 
     // Should be weak ptrs
     HdxSimpleLightingShaderSharedPtr _lightingShader;
@@ -87,8 +96,7 @@ private:
     GlfSimpleLightVector _glfSimpleLights;
 };
 
-struct HdxSimpleLightTaskParams
-{
+struct HdxSimpleLightTaskParams {
     HdxSimpleLightTaskParams()
         : cameraPath()
         , lightIncludePaths(1, SdfPath::AbsoluteRootPath())
@@ -112,12 +120,14 @@ struct HdxSimpleLightTaskParams
 };
 
 // VtValue requirements
+HDX_API
 std::ostream& operator<<(std::ostream& out, const HdxSimpleLightTaskParams& pv);
+HDX_API
 bool operator==(const HdxSimpleLightTaskParams& lhs, const HdxSimpleLightTaskParams& rhs);
+HDX_API
 bool operator!=(const HdxSimpleLightTaskParams& lhs, const HdxSimpleLightTaskParams& rhs);
 
-struct HdxShadowParams
-{
+struct HdxShadowParams {
     HdxShadowParams()
         : shadowMatrix()
         , bias(0.0)
@@ -134,8 +144,14 @@ struct HdxShadowParams
 };
 
 // VtValue requirements
+HDX_API
 std::ostream& operator<<(std::ostream& out, const HdxShadowParams& pv);
+HDX_API
 bool operator==(const HdxShadowParams& lhs, const HdxShadowParams& rhs);
+HDX_API
 bool operator!=(const HdxShadowParams& lhs, const HdxShadowParams& rhs);
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //HDX_SIMPLE_LIGHT_TASK_H
