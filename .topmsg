@@ -1,4 +1,4 @@
 From: Paul Molodowitch <pm@stanfordalumni.org>
-Subject: branch to merge luma pull-requests with mergeUsdTranslator
+Subject: main luma integration branch, plus mergeUsdTranslator
 
-NO substantive commits should be on this branch - it should ONLY contain merges
+NO substantive commits should be made on this branch!
