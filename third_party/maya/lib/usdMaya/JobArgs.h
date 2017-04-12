@@ -36,6 +36,9 @@
 #include "pxr/usd/usd/usdaFileFormat.h"
 #include "pxr/usd/usd/usdcFileFormat.h"
 
+#include <maya/MString.h>
+#include <maya/MStringArray.h>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 
@@ -64,14 +67,54 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
 TF_DECLARE_PUBLIC_TOKENS(PxUsdExportJobArgsTokens, 
         PXRUSDMAYA_JOBARGS_TOKENS);
 
-struct JobExportArgs
+struct JobSharedArgs
+{
+    JobSharedArgs();
+
+    // Templating since we know at compile time which subclass we have
+    template<typename JobArgClass>
+    void parseOptionsString(const MString &optionsString)
+    {
+        if ( optionsString.length() > 0 ) {
+            MStringArray optionList;
+            MStringArray theOption;
+            optionsString.split(';', optionList);
+            for (unsigned int i = 0; i < optionList.length(); ++i) {
+                theOption.clear();
+                optionList[i].split('=', theOption);
+                static_cast<JobArgClass*>(this)->parseSingleOption(theOption);
+            }
+        }
+    }
+
+    bool parseSharedOption(const MStringArray& theOption);
+
+    void setDefaultMeshScheme(const MString& stringVal);
+
+    std::string fileName;
+    TfToken shadingMode;
+    TfToken defaultMeshScheme;
+    double startTime;
+    double endTime;
+
+};
+
+struct JobExportArgs : JobSharedArgs
 {
     PXRUSDMAYA_API
     JobExportArgs();
 
+    inline void parseExportOptions(const MString &optionsString)
+    {
+        parseOptionsString<JobExportArgs>(optionsString);
+    }
+
+    void parseSingleOption(const MStringArray& theOption);
+
+    std::set<double> frameSamples;
+
     bool exportRefsAsInstanceable;
     bool exportDisplayColor;
-    TfToken shadingMode;
     
     bool mergeTransformAndShape;
     bool exportInstances;
@@ -91,8 +134,6 @@ struct JobExportArgs
 
     TfToken renderLayerMode;
     
-    TfToken defaultMeshScheme;
-
     bool exportVisibility;
 
     std::string melPerFrameCallback;
@@ -120,18 +161,22 @@ struct JobExportArgs
     TfToken rootKind;
 };
 
-struct JobImportArgs
+struct JobImportArgs : JobSharedArgs
 {
     PXRUSDMAYA_API
     JobImportArgs();
 
-    TfToken shadingMode;
-    TfToken defaultMeshScheme;
+    inline void parseImportOptions(const MString &optionsString)
+    {
+        parseOptionsString<JobImportArgs>(optionsString);
+    }
+
+    void parseSingleOption(const MStringArray& theOption);
+
+    std::string primPath;
     TfToken assemblyRep;
     bool readAnimData;
     bool useCustomFrameRange;
-    double startTime;
-    double endTime;
     bool importWithProxyShapes;
 };
 

@@ -96,10 +96,7 @@ usdWriteJob::~usdWriteJob()
 {
 }
 
-bool usdWriteJob::beginJob(const std::string &iFileName,
-                         bool append,
-                         double startTime,
-                         double endTime)
+bool usdWriteJob::beginJob(bool append)
 {
     // Check for DAG nodes that are a child of an already specified DAG node to export
     // if that's the case, report the issue and skip the export
@@ -121,24 +118,23 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
     }  // for m
 
     // Make sure the file name is a valid one with a proper USD extension.
-    const std::string iFileExtension = TfStringGetSuffix(iFileName, '.');
-    if (UsdStage::IsSupportedFile(iFileName)) {
-        mFileName = iFileName;
+    if (UsdStage::IsSupportedFile(mArgs.fileName)) {
+        mArgs.fileName = mArgs.fileName;
     } else {
-        mFileName = TfStringPrintf("%s.%s",
-                                   iFileName.c_str(),
-                                   PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault.GetText());
+        mArgs.fileName = TfStringPrintf("%s.%s",
+                                        mArgs.fileName.c_str(),
+                                        PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault.GetText());
     }
 
-    MGlobal::displayInfo("usdWriteJob::beginJob: Create stage file "+MString(mFileName.c_str()));
+    MGlobal::displayInfo("usdWriteJob::beginJob: Create stage file "+MString(mArgs.fileName.c_str()));
 
-    if (!openFile(mFileName, append)) {
+    if (!openFile(mArgs.fileName, append)) {
         return false;
     }
 
     // Set time range for the USD file
-    mStage->SetStartTimeCode(startTime);
-    mStage->SetEndTimeCode(endTime);
+    mStage->SetStartTimeCode(mArgs.startTime);
+    mStage->SetEndTimeCode(mArgs.endTime);
     
     mModelKindWriter.Reset();
 
