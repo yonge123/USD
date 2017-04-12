@@ -1,14 +1,33 @@
-/*
- * usdCacheFormat.h
- *
- *  Created on: Jan 19, 2017
- *      Author: orenouard
- */
-
+//
+// Copyright 2016 Pixar
+//
+// Licensed under the Apache License, Version 2.0 (the "Apache License")
+// with the following modification; you may not use this file except in
+// compliance with the Apache License and the following modification to it:
+// Section 6. Trademarks. is deleted and replaced with:
+//
+// 6. Trademarks. This License does not grant permission to use the trade
+//    names, trademarks, service marks, or product names of the Licensor
+//    and its affiliates, except as required to comply with Section 4(c) of
+//    the License and to reproduce the content of the NOTICE file.
+//
+// You may obtain a copy of the Apache License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the Apache License with the above modification is
+// distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied. See the Apache License for the specific
+// language governing permissions and limitations under the Apache License.
+//
 #ifndef PXRUSDMAYA_CACHE_FORMAT_H
 #define PXRUSDMAYA_CACHE_FORMAT_H
 
 /// \file usdCacheFormat.h
+
+#include "pxr/pxr.h"
+#include "usdMaya/api.h"
 
 #include <maya/MPxCacheFormat.h>
 #include <maya/MCacheFormatDescription.h>
@@ -26,11 +45,6 @@
 #include "pxr/usd/sdf/path.h"
 
 #include <string>
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/sequenced_index.hpp>
-#include <boost/multi_index/ordered_index.hpp>
-#include <boost/multi_index/identity.hpp>
-#include <boost/multi_index/member.hpp>
 
 #define PXRUSDMAYA_CACHEFORMAT_TOKENS \
     ((UsdFileExtensionDefault, "usd")) \
@@ -44,127 +58,103 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaCacheFormatTokens,
                          PXRUSDMAYA_CACHEFORMAT_TOKENS);
 
 class UsdCacheFormat: public MPxCacheFormat {
-    public:
-        UsdCacheFormat();
-        ~UsdCacheFormat() override;
-        static void* creator();
-        static char const* translatorName();
-        MString extension() override;
-        bool handlesDescription() override;
+private:
+    PXRUSDMAYA_API
+    UsdCacheFormat();
+    PXRUSDMAYA_API
+    ~UsdCacheFormat() override;
+public:
+    PXRUSDMAYA_API
+    static void* creator();
+    PXRUSDMAYA_API
+    static char const* translatorName();
+    PXRUSDMAYA_API
+    MString extension() override;
+    PXRUSDMAYA_API
+    bool handlesDescription() override;
 
-        MStatus open(const MString& fileName,
-                FileAccessMode mode) override;
-        void close() override;
-        MStatus isValid() override;
-        MStatus rewind() override;
+    PXRUSDMAYA_API
+    MStatus open(const MString& fileName,
+            FileAccessMode mode) override;
+    PXRUSDMAYA_API
+    void close() override;
+    PXRUSDMAYA_API
+    MStatus isValid() override;
+    PXRUSDMAYA_API
+    MStatus rewind() override;
 
-        MStatus writeHeader(const MString& version,
-                MTime& startTime,
-                MTime& endTime) override;
-        MStatus readHeader() override;
+    PXRUSDMAYA_API
+    MStatus writeHeader(const MString& version,
+            MTime& startTime,
+            MTime& endTime) override;
+    PXRUSDMAYA_API
+    MStatus readHeader() override;
 
-        MStatus writeTime(MTime& time) override;
-        MStatus readTime(MTime& time) override;
-        MStatus findTime(MTime& time, MTime& foundTime) override;
-        MStatus readNextTime(MTime& foundTime) override;
+    PXRUSDMAYA_API
+    MStatus writeTime(MTime& time) override;
+    PXRUSDMAYA_API
+    MStatus readTime(MTime& time) override;
+    PXRUSDMAYA_API
+    MStatus findTime(MTime& time, MTime& foundTime) override;
+    PXRUSDMAYA_API
+    MStatus readNextTime(MTime& foundTime) override;
 
-        void beginWriteChunk() override;
-        void endWriteChunk() override;
-        MStatus beginReadChunk() override;
-        void endReadChunk() override;
+    PXRUSDMAYA_API
+    void beginWriteChunk() override;
+    PXRUSDMAYA_API
+    void endWriteChunk() override;
+    PXRUSDMAYA_API
+    MStatus beginReadChunk() override;
+    PXRUSDMAYA_API
+    void endReadChunk() override;
 
-        MStatus writeInt32(int) override;
-        int readInt32() override;
-        unsigned readArraySize() override;
-        MStatus writeDoubleArray(const MDoubleArray&) override;
-        MStatus readDoubleArray(MDoubleArray&, unsigned size) override;
-        MStatus writeFloatArray(const MFloatArray&) override;
-        MStatus readFloatArray(MFloatArray&, unsigned size) override;
-        MStatus writeDoubleVectorArray(const MVectorArray& array) override;
-        MStatus readDoubleVectorArray(MVectorArray&, unsigned arraySize) override;
-        MStatus writeFloatVectorArray(const MFloatVectorArray& array) override;
-        MStatus readFloatVectorArray(MFloatVectorArray& array, unsigned arraySize) override;
-        MStatus writeChannelName(const MString& name) override;
-        MStatus findChannelName(const MString& name) override;
-        MStatus readChannelName(MString& name) override;
+    PXRUSDMAYA_API
+    MStatus writeInt32(int) override;
+    PXRUSDMAYA_API
+    int readInt32() override;
+    PXRUSDMAYA_API
+    unsigned readArraySize() override;
+    PXRUSDMAYA_API
+    MStatus writeDoubleArray(const MDoubleArray&) override;
+    PXRUSDMAYA_API
+    MStatus readDoubleArray(MDoubleArray&, unsigned size) override;
+    PXRUSDMAYA_API
+    MStatus writeFloatArray(const MFloatArray&) override;
+    PXRUSDMAYA_API
+    MStatus readFloatArray(MFloatArray&, unsigned size) override;
+    PXRUSDMAYA_API
+    MStatus writeDoubleVectorArray(const MVectorArray& array) override;
+    PXRUSDMAYA_API
+    MStatus readDoubleVectorArray(MVectorArray&, unsigned arraySize) override;
+    PXRUSDMAYA_API
+    MStatus writeFloatVectorArray(const MFloatVectorArray& array) override;
+    PXRUSDMAYA_API
+    MStatus readFloatVectorArray(MFloatVectorArray& array, unsigned arraySize) override;
+    PXRUSDMAYA_API
+    MStatus writeChannelName(const MString& name) override;
+    PXRUSDMAYA_API
+    MStatus findChannelName(const MString& name) override;
+    PXRUSDMAYA_API
+    MStatus readChannelName(MString& name) override;
 
-    private:
-        // Attributes correspondance and type do not follow a systematic rule
-        // so we need some structure to store their specificities.
-        // We will have to access sequentially,since order of creation is important
-        // for Maya readChannelName, but also by Maya name or USD name for some calls
-        struct attributeDefinition {
-            std::string mayaAttrName = "";
-            MCacheFormatDescription::CacheDataType mayaDataType = MCacheFormatDescription::kUnknownData;
-            TfToken usdAttrName = TfToken();
-            SdfValueTypeName usdAttrType = SdfValueTypeName();
-            std::function<VtValue(VtValue x)> convertToUsd = nullptr;
-            std::function<VtValue(VtValue x)> convertFromUsd = nullptr;
+private:
+    // Internal methods for lookup and conversion
+    PXRUSDMAYA_API
+    MStatus readExistingAttributes();
+    PXRUSDMAYA_API
+    void closeLayer();
 
-            attributeDefinition(const std::string& mayaAttrName = "",
-                                MCacheFormatDescription::CacheDataType mayaDataType = MCacheFormatDescription::kUnknownData,
-                                const std::string& usdAttrName = TfToken(),
-                                const SdfValueTypeName& usdAttrType = SdfValueTypeName(),
-                                const std::function<VtValue(VtValue x)> convertToUsd = nullptr,
-                                const std::function<VtValue(VtValue x)> convertFromUsd = nullptr):
-                mayaAttrName(mayaAttrName),
-                mayaDataType(mayaDataType),
-                usdAttrName(usdAttrName),
-                usdAttrType(usdAttrType),
-                convertToUsd(convertToUsd),
-                convertFromUsd(convertFromUsd){}
-        };
-        struct maya{};
-        struct usd{};
-        using attributesSet = boost::multi_index::multi_index_container<
-            attributeDefinition,
-            boost::multi_index::indexed_by<
-                boost::multi_index::sequenced<>,
-                boost::multi_index::ordered_unique<
-                    boost::multi_index::tag<maya>,
-                    boost::multi_index::member<
-                        attributeDefinition,
-                        std::string,
-                        &attributeDefinition::mayaAttrName
-                    >
-                >,
-                boost::multi_index::ordered_unique<
-                    boost::multi_index::tag<usd>,
-                    boost::multi_index::member<
-                        attributeDefinition,
-                        TfToken,
-                        &attributeDefinition::usdAttrName
-                    >
-                >
-            >
-        >;
-        using attrById = attributesSet::nth_index<0>::type;
-        // Internal methods for lookup and conversion
-        SdfPath findOrAddDefaultPrim();
-        SdfValueTypeName MCacheDataTypeToSdfValueTypeName(
-            const MCacheFormatDescription::CacheDataType dataType);
-        MCacheFormatDescription::CacheDataType  SdfValueTypeNameToMCacheDataType(
-            const SdfValueTypeName& attrType);
-        SdfPath usdPathFromAttribute(const TfToken& attr);
-        attrById::iterator findOrAddMayaAttribute(const std::string& mayaAttrName,
-                           const MCacheFormatDescription::CacheDataType mayaDataType);
-        attrById::iterator findOrAddUsdAttribute(const TfToken& usdAttrName,
-                                      const SdfValueTypeName& usdAttrType);
-        MStatus readExistingAttributes();
-        void writeMetadata();
-        void closeLayer();
-        // Declare a set of predefined attributes for the specific cases
-        // ie usd 'ids' are maya's 'id', usd 'points' are maya's 'position' etc..
-        static const attributesSet mDefinedAttributes;
-        // State keeping during access
-        SdfLayerRefPtr mLayerPtr;
-        double mCurrentTime;
-        attrById::iterator mFirstMayaAttr;
-        // We still need to store the name and not just the iterator for deferred add during kWrite,
-        // we could store both and iterator and a name to get a little bit of read speed
-        std::string mCurrentChannel;
-        // Dynamic set for keeping track of created attributes
-        attributesSet mCachedAttributes;
+    // Using an impl to avoid exposing complex boost headers.
+    struct Impl;
+    std::unique_ptr<Impl> impl;
+
+    // State keeping during access
+    SdfLayerRefPtr mLayerPtr;
+
+    // We still need to store the name and not just the iterator for deferred add during kWrite,
+    // we could store both and iterator and a name to get a little bit of read speed
+    std::string mCurrentChannel;
+    double mCurrentTime;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
