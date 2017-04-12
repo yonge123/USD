@@ -4,7 +4,6 @@
 #include "pxr/usd/ar/resolverContext.h"
 #include "pxr/usd/usdGeom/scope.h"
 
-#include "usdMaya/FunctorPrimWriter.h"
 #include "usdMaya/MayaCameraWriter.h"
 #include "usdMaya/MayaMeshWriter.h"
 #include "usdMaya/MayaNurbsCurveWriter.h"
