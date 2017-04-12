@@ -2,8 +2,8 @@
 #define PXRUSDMAYA_USDWRITEJOBCTX_H
 
 #include "pxr/pxr.h"
-#include "usdMaya/api.h"
 #include "pxr/usd/sdf/path.h"
+#include "usdMaya/api.h"
 #include "usdMaya/JobArgs.h"
 
 #include <maya/MDagPath.h>
