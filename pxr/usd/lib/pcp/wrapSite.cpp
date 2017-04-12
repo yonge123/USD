@@ -21,11 +21,17 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/usd/pcp/site.h"
 #include "pxr/base/tf/stringUtils.h"
 #include <boost/python.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static std::string
 _PcpSiteStr(const PcpSite& x)
@@ -38,6 +44,8 @@ _PcpLayerStackSiteStr(const PcpLayerStackSite& x)
 {
     return TfStringify(x);
 }
+
+} // anonymous namespace 
 
 void wrapSite()
 {    

@@ -21,10 +21,14 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/usd/pcp/pyUtils.h"
 
 using namespace boost::python;
 using std::string;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 // Given a python object and a pointer to a variable, 
 // attempts to extract a value of the variable's type out of the object
@@ -53,17 +57,19 @@ PcpVariantFallbackMapFromPython( const dict& d,
         std::string k;
         std::vector<std::string> v;
         
-        if (not _ExtractValue(key, &k)) {
+        if (!_ExtractValue(key, &k)) {
             TF_CODING_ERROR("unrecognized type for PcpVariantFallbackMap key");
             return false;
         }
-        if (not _ExtractValue(value, &v)) {
+        if (!_ExtractValue(value, &v)) {
             TF_CODING_ERROR("unrecognized type for PcpVariantFallbackMap val");
             return false;
         }
-        if (not k.empty() and not v.empty()) { 
+        if (!k.empty() && !v.empty()) { 
             (*result)[k] = v;
         }
     }
     return true;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

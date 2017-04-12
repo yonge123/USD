@@ -21,25 +21,25 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usdShade/interfaceAttribute.h"
+
+#include "pxr/usd/usdShade/connectableAPI.h"
+#include "pxr/usd/usdShade/parameter.h"
+#include "pxr/usd/usdShade/output.h"
 
 #include "pxr/usd/usd/relationship.h"
 #include "pxr/usd/usd/stage.h"
 
-// Windows does a #define for "interface", so 
-// interface -> interfaceNS (for interface namespace)
-TF_DEFINE_PRIVATE_TOKENS(
-    _tokens,
-    ((interfaceNS, "interface:"))
-    ((interfaceRecipientsOf, "interfaceRecipientsOf:"))
-);
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 static std::string
 _GetRelPrefix(const TfToken& renderTarget)
 {
-    return TfStringPrintf("%s:%s", 
-            renderTarget.GetText(),
-            _tokens->interfaceRecipientsOf.GetText());
+    return renderTarget.IsEmpty() ? UsdShadeTokens->interfaceRecipientsOf:
+            TfStringPrintf("%s:%s", renderTarget.GetText(),
+                UsdShadeTokens->interfaceRecipientsOf.GetText());
 }
 
 /* static */ std::string
@@ -53,9 +53,10 @@ UsdShadeInterfaceAttribute::UsdShadeInterfaceAttribute(
         const UsdAttribute &attr)
 {
     TfToken const &interfaceAttrName = attr.GetName();
-    if (TfStringStartsWith(interfaceAttrName, _tokens->interfaceNS)){
+    if (TfStringStartsWith(interfaceAttrName, UsdShadeTokens->interface_)){
         _attr = attr;
-        _name = TfToken(interfaceAttrName.GetString().substr(_tokens->interfaceNS.GetString().size()));
+        _name = TfToken(interfaceAttrName.GetString().substr(
+            UsdShadeTokens->interface_.GetString().size()));
     }
 }
 
@@ -63,12 +64,12 @@ UsdShadeInterfaceAttribute::UsdShadeInterfaceAttribute(
 UsdShadeInterfaceAttribute::_GetName(
         const TfToken& interfaceAttrName)
 {
-    if (TfStringStartsWith(interfaceAttrName, _tokens->interfaceNS)) {
+    if (TfStringStartsWith(interfaceAttrName, UsdShadeTokens->interface_)) {
         return interfaceAttrName;
     }
     
     return TfToken(TfStringPrintf("%s%s",
-            _tokens->interfaceNS.GetText(),
+            UsdShadeTokens->interface_.GetText(),
             interfaceAttrName.GetText()));
 }
 
@@ -217,4 +218,140 @@ UsdShadeInterfaceAttribute::GetDisplayGroup() const
 
     return _attr.GetDisplayGroup();
 }
+
+static TfToken 
+_GetConnectionRelName(const TfToken &attrName)
+{
+    return TfToken(UsdShadeTokens->connectedSourceFor.GetString() + 
+                   attrName.GetString());
+}
+
+static
+UsdRelationship 
+_GetConnectionRel(const UsdAttribute &interfaceAttr, 
+                  bool create)
+{
+    if (!interfaceAttr) {
+        TF_WARN("Invalid attribute: %s", UsdDescribe(interfaceAttr).c_str());
+        return UsdRelationship();
+    }
+
+    const UsdPrim& prim = interfaceAttr.GetPrim();
+    const TfToken& relName = _GetConnectionRelName(interfaceAttr.GetName());
+    if (UsdRelationship rel = prim.GetRelationship(relName)) {
+        return rel;
+    }
+    else if (create) {
+        return prim.CreateRelationship(relName, /* custom = */ false);
+    }
+
+    return UsdRelationship();
+}
+
+bool 
+UsdShadeInterfaceAttribute::ConnectToSource(
+        UsdShadeConnectableAPI const &source, 
+        TfToken const &sourceName,
+        UsdShadeAttributeType const sourceType) const
+{
+    return UsdShadeConnectableAPI::ConnectToSource(GetAttr(), 
+            source, sourceName, sourceType, GetTypeName());
+}
+
+bool 
+UsdShadeInterfaceAttribute::ConnectToSource(const SdfPath &sourcePath) const
+{
+    // sourcePath needs to be a property path for us to make a connection.
+    if (!sourcePath.IsPropertyPath())
+        return false;
+
+    UsdPrim sourcePrim = GetAttr().GetStage()->GetPrimAtPath(
+        sourcePath.GetPrimPath());
+
+    // We don't validate UsdShadeConnectableAPI as the type of the source prim 
+    // may be unknown. (i.e. it could be a pure over or a typeless def).
+    UsdShadeConnectableAPI source(sourcePrim);
+
+    TfToken sourceName;
+    UsdShadeAttributeType sourceType;
+    std::tie(sourceName, sourceType) = UsdShadeUtils::GetBaseNameAndType(
+        sourcePath.GetNameToken());
+
+    return ConnectToSource(source, sourceName, sourceType);
+}
+
+bool 
+UsdShadeInterfaceAttribute::ConnectToSource(UsdShadeOutput const &output) const
+{
+    UsdShadeConnectableAPI source(output.GetAttr().GetPrim());
+    return ConnectToSource(source, output.GetBaseName(), 
+        /* sourceType */ UsdShadeAttributeType::Output);
+}
+
+bool 
+UsdShadeInterfaceAttribute::ConnectToSource(UsdShadeParameter const &param) const
+{
+    UsdShadeConnectableAPI source(param.GetAttr().GetPrim());
+    return ConnectToSource(source, param.GetName(),
+        /* sourceType */ UsdShadeAttributeType::Parameter);
+}
+
+bool 
+UsdShadeInterfaceAttribute::ConnectToSource(
+    UsdShadeInterfaceAttribute const &interfaceAttr) const
+{
+    UsdShadeConnectableAPI source(interfaceAttr.GetAttr().GetPrim());
+    return ConnectToSource(source, interfaceAttr.GetName(),
+        /* sourceType */ UsdShadeAttributeType::Parameter);
+}
+
+bool 
+UsdShadeInterfaceAttribute::DisconnectSource() const
+{
+    bool success = true;
+    if (UsdRelationship rel = _GetConnectionRel(GetAttr(), false)) {
+        success = rel.BlockTargets();
+    }
+    return success;
+}
+
+bool
+UsdShadeInterfaceAttribute::ClearSource() const
+{
+    bool success = true;
+    if (UsdRelationship rel = _GetConnectionRel(GetAttr(), false)) {
+        success = rel.ClearTargets(/* removeSpec = */ true);
+    }
+    return success;
+}
+
+bool 
+UsdShadeInterfaceAttribute::GetConnectedSource(
+        UsdShadeConnectableAPI *source, 
+        TfToken *outputName,
+        UsdShadeAttributeType *sourceType) const
+{
+    if (!(source && outputName)){
+        TF_CODING_ERROR("GetConnectedSource() requires non-NULL "
+                        "output parameters");
+        return false;
+    }
+    
+    return UsdShadeConnectableAPI::GetConnectedSource(GetAttr(), 
+            source, outputName, sourceType);
+}
+
+bool 
+UsdShadeInterfaceAttribute::IsConnected() const
+{
+    /// This MUST have the same semantics as GetConnectedSource(s).
+    /// XXX someday we might make this more efficient through careful
+    /// refactoring, but safest to just call the exact same code.
+    UsdShadeConnectableAPI source;
+    TfToken sourceName;
+    UsdShadeAttributeType sourceType;
+    return GetConnectedSource(&source, &sourceName, &sourceType);
+}
+
+PXR_NAMESPACE_CLOSE_SCOPE
 

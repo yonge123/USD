@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/work/loops.h"
 #include "pxr/base/work/threadLimits.h"
 #include "pxr/base/tf/diagnostic.h"
@@ -29,16 +31,15 @@
 
 #include <boost/bind.hpp>
 
+#include <cstdlib>
 #include <iostream>
 #include <mutex>
-#include <pthread.h>
 #include <set>
-#include <stdio.h>
+#include <thread>
 
+PXR_NAMESPACE_USING_DIRECTIVE
 
-extern TfEnvSetting<int> PXR_WORK_THREAD_LIMIT;
-
-static TfStaticData< std::set<pthread_t> > _uniqueThreads;
+static TfStaticData< std::set<std::thread::id> > _uniqueThreads;
 static TfStaticData< std::mutex > _uniqueThreadsMutex;
 
 static void
@@ -46,11 +47,10 @@ _CountThreads(size_t begin, size_t end)
 {
     // Do something to take up some time
     for (size_t i = begin; i < end; ++i) {
-        int *a = new int[i];
-        delete [] a;
+        srand(rand() * rand() * rand() * rand());
     }
     std::lock_guard<std::mutex> lock(*_uniqueThreadsMutex);
-    _uniqueThreads->insert(pthread_self());
+    _uniqueThreads->insert(std::this_thread::get_id());
 }
 
 static size_t
@@ -91,7 +91,7 @@ _TestArguments(const size_t envVal)
     // value supplied through the API calls.
 
     // Set to maximum concurrency, which should remain within envVal.
-    const size_t numCores = WorkGetPhysicalConcurrencyLimit();
+    const int numCores = WorkGetPhysicalConcurrencyLimit();
     WorkSetConcurrencyLimitArgument(numCores);
     TF_AXIOM(WorkGetConcurrencyLimit() == _ExpectedLimit(envVal, numCores));
 
@@ -139,7 +139,7 @@ int
 main(int argc, char **argv)
 {
     // Read the env setting used to limit threading
-    const size_t envVal = TfGetEnvSetting(PXR_WORK_THREAD_LIMIT);
+    const size_t envVal = WorkGetThreadLimit();
     std::cout << "PXR_WORK_THREAD_LIMIT = " << envVal << '\n';
 
     // Test to make sure that a call to tbb that happens before any of the
@@ -239,7 +239,7 @@ main(int argc, char **argv)
     WorkSetConcurrencyLimit(1000);
     TF_AXIOM(WorkGetConcurrencyLimit() ==
         _ExpectedLimit(envVal, 1000));
-    _TestThreadLimit(envVal, WorkGetPhysicalConcurrencyLimit());
+    _TestThreadLimit(envVal, 1000);
 
     // Test argument parsing
     std::cout << "Testing argument parsing...\n";

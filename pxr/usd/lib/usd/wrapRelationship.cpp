@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/relationship.h"
 #include "pxr/usd/usd/wrapUtils.h"
 
@@ -34,6 +35,10 @@
 using std::string;
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static SdfPathVector
 _GetTargets(const UsdRelationship &self,
@@ -65,6 +70,8 @@ __repr__(const UsdRelationship &self)
     }
 }
 
+} // anonymous namespace 
+
 void wrapUsdRelationship()
 {
     class_<UsdRelationship, bases<UsdProperty> >("Relationship")
@@ -85,4 +92,3 @@ void wrapUsdRelationship()
         ;
     TfPyRegisterStlSequencesFromPython<UsdRelationship>();
 }
-

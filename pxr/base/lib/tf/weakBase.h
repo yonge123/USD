@@ -27,10 +27,15 @@
 /// \file tf/weakBase.h
 /// \ingroup group_tf_Memory
 
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/expiryNotifier.h"
 #include "pxr/base/tf/refPtr.h"
 #include "pxr/base/tf/traits.h"
+#include "pxr/base/tf/api.h"
 #include <atomic>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 // The _Remnant structure is simply a persisent memory of an object's
 // address. When the object dies, the pointer is set to NULL.  A _Remnant
@@ -41,7 +46,7 @@ class Tf_Remnant : public TfRefBase
 {
 public:
 
-    virtual ~Tf_Remnant();
+    TF_API virtual ~Tf_Remnant();
 
     void _Forget() {
         _alive = false;
@@ -57,7 +62,7 @@ public:
 
     // Must return an object's address whose lifetime is as long or longer than
     // this object.  Default implementation returns 'this'.
-    virtual void const *_GetUniqueIdentifier() const;
+    TF_API virtual void const *_GetUniqueIdentifier() const;
 
     // Note: this initializes a class member -- the parameter is a non-const
     // reference.
@@ -93,7 +98,7 @@ public:
 
     // Mark this remnant to call the expiry notification callback function when
     // it dies.  See ExpiryNotifier.h
-    virtual void EnableNotification() const;
+    TF_API virtual void EnableNotification() const;
 
 protected:
     friend class TfWeakBase;
@@ -160,7 +165,7 @@ public:
     // Don't call this.  Really.
     void EnableNotification2() const;
 
-    void const* GetUniqueIdentifier() const;
+    TF_API void const* GetUniqueIdentifier() const;
     
 protected:
     /*
@@ -189,7 +194,7 @@ protected:
     }
 
     bool _HasRemnant() const {
-        return _remnantPtr.load(std::memory_order_relaxed);
+        return _remnantPtr.load(std::memory_order_relaxed) ? true : false;
     }
 
 private:
@@ -211,5 +216,7 @@ public:
 private:
     Tf_WeakBaseAccess();
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // TF_WEAKBASE_H

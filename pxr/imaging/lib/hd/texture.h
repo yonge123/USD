@@ -24,17 +24,22 @@
 #ifndef HD_TEXTURE_H
 #define HD_TEXTURE_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
-
 #include "pxr/imaging/hd/bprim.h"
 
-#include "pxr/usd/sdf/path.h"
-#include "pxr/base/vt/value.h"
-
 #include "pxr/imaging/garch/gl.h"
+
+#include "pxr/usd/sdf/path.h"
+
+#include "pxr/base/vt/value.h"
 #include "pxr/base/tf/token.h"
 
 #include <boost/shared_ptr.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 class HdSceneDelegate;
 
@@ -59,29 +64,38 @@ public:
                                 |DirtyTexture)
     };
 
-    HdTexture(HdSceneDelegate* delegate, SdfPath const & id);
+    HD_API
+    HdTexture(SdfPath const & id);
+    HD_API
     virtual ~HdTexture();
 
     /// Synchronizes state from the delegate to Hydra, for example, allocating
     /// parameters into GPU memory.
-    virtual void Sync() override;
+    HD_API
+    virtual void Sync(HdSceneDelegate *sceneDelegate,
+                      HdRenderParam   *renderParam,
+                      HdDirtyBits     *dirtyBits) override;
 
     /// Returns the minimal set of dirty bits to place in the
     /// change tracker for use in the first sync of this prim.
     /// Typically this would be all dirty bits.
-    virtual int GetInitialDirtyBitsMask() const override;
+    HD_API
+    virtual HdDirtyBits GetInitialDirtyBitsMask() const override;
 
     // ---------------------------------------------------------------------- //
     /// \name Texture API
     // ---------------------------------------------------------------------- //
     
     /// Returns the binary data for the texture.
+    HD_API
     HdTextureResourceSharedPtr GetTextureData() const;
 
     /// Returns true if the texture should be interpreted as a PTex texture.
+    HD_API
     bool IsPtex() const;
 
     /// Returns true if mipmaps should be generated when loading.
+    HD_API
     bool ShouldGenerateMipMaps() const;
 
 private:
@@ -90,6 +104,9 @@ private:
     // life time exists at least as long as this object.
     HdTextureResourceSharedPtr _textureResource;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //HD_TEXTURE_H
 

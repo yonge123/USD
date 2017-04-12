@@ -21,14 +21,20 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/plug/info.h"
 #include "pxr/base/tf/diagnosticLite.h"
 #include "pxr/base/tf/getenv.h"
 #include "pxr/base/tf/pathUtils.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/arch/attributes.h"
+#include "pxr/base/arch/fileSystem.h"
 #include "pxr/base/arch/symbols.h"
+
 #include <boost/preprocessor/stringize.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
 
@@ -42,14 +48,13 @@ _AppendPathList(
     std::vector<std::string>* result, 
     const std::string& paths, const std::string& sharedLibPath)
 {
-    for (const auto& path: TfStringSplit(paths, ":")) {
+    for (const auto& path: TfStringSplit(paths, ARCH_PATH_LIST_SEP)) {
         if (path.empty()) {
             continue;
         }
 
         // Anchor all relative paths to the shared library path.
-        // XXX: This is not sufficient on Windows.
-        const bool isLibraryRelativePath = (path[0] != '/');
+        const bool isLibraryRelativePath = TfIsRelativePath(path);
         if (isLibraryRelativePath) {
             result->push_back(TfStringCatPaths(sharedLibPath, path));
         }
@@ -87,3 +92,5 @@ ARCH_CONSTRUCTOR(Plug_InitConfig, 2, void)
 }
 
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

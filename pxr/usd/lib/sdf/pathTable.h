@@ -24,8 +24,9 @@
 #ifndef SDF_PATHTABLE_H
 #define SDF_PATHTABLE_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/sdf/api.h"
 #include "pxr/usd/sdf/path.h"
-
 #include "pxr/base/tf/pointerAndBits.h"
 
 #include <boost/iterator/iterator_facade.hpp>
@@ -34,6 +35,12 @@
 #include <algorithm>
 #include <utility>
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+// Helper function for clearing path tables.
+SDF_API
+void Sdf_ClearPathTableInParallel(void **, size_t, void (*)(void *));
 
 /// \class SdfPathTable
 ///
@@ -481,8 +488,6 @@ public:
     /// Equivalent to clear(), but destroy contained objects in parallel.  This
     /// requires that running the contained objects' destructors is thread-safe.
     void ClearInParallel() {
-        // Helper function for clearing path tables.
-        void Sdf_ClearPathTableInParallel(void **, size_t, void (*)(void *));
         Sdf_ClearPathTableInParallel(reinterpret_cast<void **>(_buckets.data()),
                                      _buckets.size(), _DeleteEntryChain);
     }        
@@ -615,7 +620,7 @@ private:
 
         // Allocate a new bucket list of twice the size.  Minimum nonzero number
         // of buckets is 8.
-        _mask = std::max(7UL, (_mask << 1) + 1);
+        _mask = std::max(size_t(7), (_mask << 1) + 1);
         _BucketVec newBuckets(_mask + 1);
 
         // Move items to a new bucket list
@@ -658,5 +663,6 @@ private:
 
 };
 
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // SDF_PATHTABLE_H

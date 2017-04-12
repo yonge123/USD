@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/tf/staticData.h"
 #include "pxr/base/tf/regTest.h"
 #include "pxr/base/tf/diagnostic.h"
@@ -30,6 +32,7 @@
 
 using std::map;
 using std::string;
+PXR_NAMESPACE_USING_DIRECTIVE
 
 TfStaticData<string> _str1;
 TfStaticData<string> _str2;
@@ -40,10 +43,12 @@ TF_MAKE_STATIC_DATA(string, _initStr) {
     *_initStr = "initialized";
 }
 
+#if !defined(ARCH_OS_WINDOWS) // Problems with macro to eat parens.
 TF_MAKE_STATIC_DATA((map<int, int>), _initMap) {
     (*_initMap)[1] = 11;
     (*_initMap)[2] = 22;
 }
+#endif
 
 class Count {
 public:
@@ -103,11 +108,13 @@ Test_TfStaticData()
     TF_AXIOM(!_initStr.IsInitialized());
     TF_AXIOM(*_initStr == "initialized");
 
+#if !defined(ARCH_OS_WINDOWS)
     // test a static data obj for a templated type with an initializer.
     TF_AXIOM(!_initMap.IsInitialized());
     TF_AXIOM(_initMap->size() == 2);
     TF_AXIOM((*_initMap)[1] == 11);
     TF_AXIOM((*_initMap)[2] == 22);
+#endif
 
     return true;
 }

@@ -24,6 +24,7 @@
 #ifndef USDIMAGING_POINT_INSTANCER_ADAPTER_H
 #define USDIMAGING_POINT_INSTANCER_ADAPTER_H
 
+#include "pxr/pxr.h"
 #include "pxr/usdImaging/usdImaging/version.h"
 #include "pxr/usdImaging/usdImaging/primAdapter.h"
 #include "pxr/usdImaging/usdImaging/gprimAdapter.h"
@@ -31,6 +32,9 @@
 #include <mutex>
 #include <boost/unordered_map.hpp> 
 #include <boost/shared_ptr.hpp> 
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// Delegate support for UsdGeomMesh.
 ///
@@ -56,22 +60,22 @@ public:
     
     virtual void TrackVariabilityPrep(UsdPrim const& prim,
                                       SdfPath const& cachePath,
-                                      int requestedBits,
+                                      HdDirtyBits requestedBits,
                                       UsdImagingInstancerContext const* 
                                           instancerContext = NULL);
 
     /// Thread Safe.
     virtual void TrackVariability(UsdPrim const& prim,
                                   SdfPath const& cachePath,
-                                  int requestedBits,
-                                  int* dirtyBits,
+                                  HdDirtyBits requestedBits,
+                                  HdDirtyBits* dirtyBits,
                                   UsdImagingInstancerContext const* 
                                       instancerContext = NULL);
 
     virtual void UpdateForTimePrep(UsdPrim const& prim,
                                    SdfPath const& cachePath, 
                                    UsdTimeCode time,
-                                   int requestedBits,
+                                   HdDirtyBits requestedBits,
                                    UsdImagingInstancerContext const* 
                                        instancerContext = NULL);
 
@@ -79,8 +83,8 @@ public:
     virtual void UpdateForTime(UsdPrim const& prim,
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
-                               int requestedBits,
-                               int* resultBits,
+                               HdDirtyBits requestedBits,
+                               HdDirtyBits* resultBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext = NULL);
 
@@ -259,8 +263,8 @@ private:
         _PrototypeSharedPtr prototype;
         // Tracks the variability of the underlying adapter to avoid
         // redundantly reading data. This value is stored as
-        // HdChangeTracker::DirtyBits bit flags.
-        int variabilityBits;
+        // HdDirtyBits bit flags.
+        HdDirtyBits variabilityBits;
         // When variabilityBits does not include HdChangeTracker::DirtyVisibility
         // the visible field is the unvarying value for visibility.
         bool visible;
@@ -288,7 +292,7 @@ private:
         _UsdToCacheMap usdToCacheMap;
         std::vector<_PrototypeSharedPtr> prototypes;
         std::mutex mutex;
-        int dirtyBits;
+        HdDirtyBits dirtyBits;
         bool visible;
     };
 
@@ -300,5 +304,8 @@ private:
     _InstancerDataMap _instancerData;
 };
 
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // USDIMAGING_POINT_INSTANCER_ADAPTER_H

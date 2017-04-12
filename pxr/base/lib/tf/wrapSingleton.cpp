@@ -21,6 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/pyUtils.h"
 
 #include <boost/python/class.hpp>
@@ -29,11 +32,13 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 // Need an empty class to serve as the singleton base class wrapped out to
 // python.
 struct Tf_PySingleton {};
-
 
 static object
 _GetSingletonInstance(object const &classObj) {
@@ -63,6 +68,7 @@ _GetSingletonInstance(object const &classObj) {
 // Need an init method that accepts any arguments and does nothing.
 static object _DummyInit(tuple const &, dict const &) { return object(); }
 
+} // anonymous namespace 
 
 void wrapSingleton() {
     class_<Tf_PySingleton>("Singleton", no_init)

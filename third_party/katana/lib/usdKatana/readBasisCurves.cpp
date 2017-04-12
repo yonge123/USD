@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdKatana/attrMap.h"
 #include "usdKatana/readBasisCurves.h"
 #include "usdKatana/readGprim.h"
@@ -30,6 +31,9 @@
 
 #include <FnAttribute/FnDataBuilder.h>
 #include <FnLogging/FnLogging.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 FnLogSetup("PxrUsdKatanaReadBasisCurves");
 
@@ -137,7 +141,7 @@ PxrUsdKatanaReadBasisCurves(
     // Construct the 'geometry' attribute.
     //
 
-    _SetCurveAttrs(attrs, basisCurves, data.GetUsdInArgs()->GetCurrentTime());
+    _SetCurveAttrs(attrs, basisCurves, data.GetCurrentTime());
     
     // position
     attrs.set("geometry.point.P",
@@ -170,3 +174,6 @@ PxrUsdKatanaReadBasisCurves(
     attrs.set("geometry.arbitrary.SPT_HwColor", 
               PxrUsdKatanaGeomGetDisplayColorAttr(basisCurves, data));
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

@@ -21,17 +21,18 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/base/tf/regTest.h"
 #include "pxr/base/tf/notice.h"
 #include "pxr/base/tf/type.h"
 #include "pxr/base/tf/diagnosticLite.h"
 #include "pxr/base/tf/weakBase.h"
 #include "pxr/base/tf/weakPtr.h"
-#include "pxr/base/arch/nap.h"
 #include "pxr/base/arch/systemInfo.h"
 
 #include <boost/function.hpp>
 
+#include <chrono>
 #include <cstdio>
 #include <iostream>
 #include <mutex>
@@ -46,6 +47,8 @@ using std::ostream;
 using std::string;
 using std::stringstream;
 using std::vector;
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 class TestNotice : public TfNotice {
 public:
@@ -203,7 +206,7 @@ void WorkTask() {
     workerThreadLog << "// WorkListener should respond once\n";
     WorkerNotice("WorkerNotice 1").Send();
 
-    ArchNap(10);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     _DumpLog(&workerThreadLog, &workerThreadList, &workerThreadLock);
 

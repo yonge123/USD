@@ -21,13 +21,16 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/pcp/instanceKey.h"
 
+#include "pxr/pxr.h"
+#include "pxr/usd/pcp/instanceKey.h"
 #include "pxr/usd/pcp/composeSite.h"
 #include "pxr/usd/pcp/diagnostic.h"
 #include "pxr/usd/pcp/instancing.h"
 
 #include "pxr/base/tracelite/trace.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 struct PcpInstanceKey::_Collector
 {
@@ -75,7 +78,7 @@ PcpInstanceKey::PcpInstanceKey(const PcpPrimIndex& primIndex)
     SdfVariantSelectionMap variantSelection;
     for (const PcpNodeRef &node: primIndex.GetNodeRange()) {
         if (node.CanContributeSpecs()) {
-            PcpComposeSiteVariantSelections(node.GetSite(), &variantSelection);
+            PcpComposeSiteVariantSelections(node, &variantSelection);
         }
     }
     _variantSelection.assign(variantSelection.begin(), variantSelection.end());
@@ -137,3 +140,5 @@ PcpInstanceKey::GetString() const
 
     return s;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

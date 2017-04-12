@@ -39,6 +39,9 @@
 
 #include <cmath>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 TF_REGISTRY_FUNCTION(TfType)
 {
     typedef UsdImagingCylinderAdapter Adapter;
@@ -67,7 +70,7 @@ UsdImagingCylinderAdapter::Populate(UsdPrim const& prim,
 void 
 UsdImagingCylinderAdapter::TrackVariabilityPrep(UsdPrim const& prim,
                                               SdfPath const& cachePath,
-                                              int requestedBits,
+                                              HdDirtyBits requestedBits,
                                               UsdImagingInstancerContext const* 
                                                   instancerContext)
 {
@@ -79,8 +82,8 @@ UsdImagingCylinderAdapter::TrackVariabilityPrep(UsdPrim const& prim,
 void 
 UsdImagingCylinderAdapter::TrackVariability(UsdPrim const& prim,
                                           SdfPath const& cachePath,
-                                          int requestedBits,
-                                          int* dirtyBits,
+                                          HdDirtyBits requestedBits,
+                                          HdDirtyBits* dirtyBits,
                                           UsdImagingInstancerContext const* 
                                               instancerContext)
 {
@@ -111,7 +114,7 @@ void
 UsdImagingCylinderAdapter::UpdateForTimePrep(UsdPrim const& prim,
                                    SdfPath const& cachePath, 
                                    UsdTimeCode time,
-                                   int requestedBits,
+                                   HdDirtyBits requestedBits,
                                    UsdImagingInstancerContext const* 
                                        instancerContext)
 {
@@ -134,8 +137,8 @@ void
 UsdImagingCylinderAdapter::UpdateForTime(UsdPrim const& prim,
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
-                               int requestedBits,
-                               int* resultBits,
+                               HdDirtyBits requestedBits,
+                               HdDirtyBits* resultBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext)
 {
@@ -318,3 +321,6 @@ UsdImagingCylinderAdapter::GetMeshTopology()
 
     return VtValue(cylinderTopo);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

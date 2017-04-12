@@ -24,15 +24,20 @@
 #ifndef USD_SCHEMAREGISTRY_H
 #define USD_SCHEMAREGISTRY_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usd/api.h"
+
 #include "pxr/usd/sdf/layer.h"
 #include "pxr/usd/sdf/primSpec.h"
-SDF_DECLARE_HANDLES(SdfAttributeSpec);
-SDF_DECLARE_HANDLES(SdfRelationshipSpec);
 
 #include "pxr/base/tf/hash.h"
 #include "pxr/base/tf/singleton.h"
-
 #include "pxr/base/tf/hashmap.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+SDF_DECLARE_HANDLES(SdfAttributeSpec);
+SDF_DECLARE_HANDLES(SdfRelationshipSpec);
 
 /// \class UsdSchemaRegistry
 ///
@@ -50,6 +55,7 @@ SDF_DECLARE_HANDLES(SdfRelationshipSpec);
 ///
 class UsdSchemaRegistry : public TfSingleton<UsdSchemaRegistry> {
 public:
+    USD_API
     static UsdSchemaRegistry& GetInstance() {
         return TfSingleton<UsdSchemaRegistry>::GetInstance();
     }
@@ -61,11 +67,13 @@ public:
     /// Return the PrimSpec that contains all the builtin metadata and
     /// properties for the given \a primType.  Return null if there is no such
     /// prim defintion.
+    USD_API
     static SdfPrimSpecHandle GetPrimDefinition(const TfToken &primType);
 
     /// Return the PrimSpec that contains all the bulitin metadata and
     /// properties for the given \a primType.  Return null if there is no such
     /// prim defintion.
+    USD_API
     static SdfPrimSpecHandle GetPrimDefinition(const TfType &primType);
 
     /// Return the PrimSpec that contains all the builtin metadata and
@@ -79,6 +87,7 @@ public:
     /// Return the property spec that defines the fallback for the property
     /// named \a propName on prims of type \a primType.  Return null if there is
     /// no such property definition.
+    USD_API
     static SdfPropertySpecHandle
     GetPropertyDefinition(const TfToken& primType,
                           const TfToken& propName);
@@ -86,6 +95,7 @@ public:
     /// This is a convenience method. It is shorthand for
     /// TfDynamic_cast<SdfAttributeSpecHandle>(
     ///     GetPropertyDefinition(primType, attrName));
+    USD_API
     static SdfAttributeSpecHandle
     GetAttributeDefinition(const TfToken& primType,
                            const TfToken& attrName);
@@ -93,6 +103,7 @@ public:
     /// This is a convenience method. It is shorthand for
     /// TfDynamic_cast<SdfRelationshipSpecHandle>(
     ///     GetPropertyDefinition(primType, relName));
+    USD_API
     static SdfRelationshipSpecHandle
     GetRelationshipDefinition(const TfToken& primType, const TfToken& relName);
 
@@ -197,5 +208,9 @@ private:
         _TokenPairHash> _PrimTypePropNameToSpecIdMap;
     _PrimTypePropNameToSpecIdMap _primTypePropNameToSpecIdMap;
 };
+
+USD_API_TEMPLATE_CLASS(TfSingleton<UsdSchemaRegistry>);
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //USD_SCHEMAREGISTRY_H

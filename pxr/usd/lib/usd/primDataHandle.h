@@ -24,8 +24,13 @@
 #ifndef USD_PRIMDATAHANDLE_H
 #define USD_PRIMDATAHANDLE_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usd/api.h"
 #include <boost/functional/hash.hpp>
 #include <boost/intrusive_ptr.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 // To start we always validate.
 #define USD_CHECK_ALL_PRIM_ACCESSES
@@ -35,6 +40,7 @@ void intrusive_ptr_add_ref(const class Usd_PrimData *prim);
 void intrusive_ptr_release(const class Usd_PrimData *prim);
 
 // Forward declarations for Usd_PrimDataHandle's use.  Defined in primData.h.
+USD_API
 void Usd_IssueFatalPrimAccessError(Usd_PrimData const *p);
 bool Usd_IsDead(Usd_PrimData const *p);
 
@@ -136,5 +142,8 @@ private:
 
     Usd_PrimDataConstIPtr _p;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // USD_PRIMDATAHANDLE_H

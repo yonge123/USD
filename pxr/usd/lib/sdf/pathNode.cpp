@@ -21,9 +21,10 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/sdf/tokens.h"
-
 #include "pxr/base/tf/bitUtils.h"
 #include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/tf/hash.h"
@@ -43,6 +44,8 @@
 
 using std::string;
 using std::vector;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 // Size of path nodes is important, so we want the compiler to tell us if it
 // changes.
@@ -323,7 +326,7 @@ void Sdf_PathNode::GetPrefixes(SdfPathVector *prefixes, bool includeRoot) const
     size_t nElems = _elementCount + (includeRoot ? 1 : 0);
     prefixes->resize(nElems);
     Sdf_PathNodeConstRefPtr n(this);
-    for (int i = nElems-1; i >= 0; --i) {
+    for (int i = static_cast<int>(nElems)-1; i >= 0; --i) {
         (*prefixes)[i] = SdfPath(n); 
         n = n->_parent;
     }
@@ -647,7 +650,7 @@ void Sdf_DumpPathStats()
 
     printf("------------------------------------------------");
     printf("-- By Length\n");
-    int totalLen = 0;
+    size_t totalLen = 0;
     for (size_t i=0; i < stats.lengthTable.size();++i) {
         printf("\tnum nodes with %3zu components : %i\n",
                i, stats.lengthTable[i] );
@@ -663,7 +666,7 @@ void Sdf_DumpPathStats()
                i, stats.numChildrenTable[i] );
     }
 
-    int numChildren = 0;
+    size_t numChildren = 0;
     for (size_t i=1; i < stats.numChildrenTable.size(); ++i) {
         numChildren += i*stats.numChildrenTable[i];
     }
@@ -672,3 +675,5 @@ void Sdf_DumpPathStats()
 
     printf("\n");
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

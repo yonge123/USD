@@ -22,7 +22,6 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/usd/usd/clipsAPI.h"
-
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/conversions.h"
 
@@ -39,12 +38,18 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 #define WRAP_CUSTOM                                                     \
     template <class Cls> static void _CustomWrapCode(Cls &_class)
 
 // fwd decl.
 WRAP_CUSTOM;
 
+
+} // anonymous namespace
 
 void wrapUsdClipsAPI()
 {
@@ -92,8 +97,15 @@ void wrapUsdClipsAPI()
 // }
 //
 // Of course any other ancillary or support code may be provided.
+// 
+// Just remember to wrap code in the appropriate delimiters:
+// 'namespace {', '}'.
+//
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
+
+namespace {
+
 static VtArray<SdfAssetPath> _GetClipAssetPaths(const UsdClipsAPI &self) {
     VtArray<SdfAssetPath> result;
     self.GetClipAssetPaths(&result);
@@ -227,3 +239,5 @@ WRAP_CUSTOM {
              &UsdClipsAPI::ClearTemplateClipMetadata)
         ;
 }
+
+} // anonymous namespace

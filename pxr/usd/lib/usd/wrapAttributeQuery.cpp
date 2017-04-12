@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/attributeQuery.h"
 #include "pxr/usd/usd/conversions.h"
 
@@ -40,6 +41,10 @@ using std::string;
 using std::vector;
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static vector<double>
 _GetTimeSamples(const UsdAttributeQuery& query) 
@@ -78,8 +83,9 @@ _Get(const UsdAttributeQuery& self, UsdTimeCode time)
     return UsdVtValueToPython(val);
 }
 
-void
-wrapUsdAttributeQuery()
+} // anonymous namespace 
+
+void wrapUsdAttributeQuery()
 {
     class_<UsdAttributeQuery, boost::noncopyable>
         ("AttributeQuery", no_init)

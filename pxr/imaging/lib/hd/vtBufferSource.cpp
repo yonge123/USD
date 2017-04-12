@@ -62,6 +62,9 @@
 
 #include <iostream>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 // ------------------------------------------------------------------------- //
 // Generic helpers for extracting data from VtValue into char[]
 // ------------------------------------------------------------------------- //
@@ -480,6 +483,7 @@ HdVtBufferSource::_CheckValid() const
             (_glElementDataType > 0));
 }
 
+HD_API
 std::ostream &operator <<(std::ostream &out,
                                  const HdVtBufferSource& self) {
     out << "Buffer Source:\n";
@@ -492,3 +496,6 @@ std::ostream &operator <<(std::ostream &out,
     out << "    Component Size: "        << self.GetComponentSize() << "\n";
     return out;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

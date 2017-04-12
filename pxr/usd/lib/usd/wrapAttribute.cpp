@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/attribute.h"
 #include "pxr/usd/usd/conversions.h"
 #include "pxr/usd/usd/wrapUtils.h"
@@ -39,6 +40,10 @@ using std::string;
 using std::vector;
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static vector<double>
 _GetTimeSamples(const UsdAttribute &self) {
@@ -87,6 +92,8 @@ __repr__(const UsdAttribute &self) {
         : "invalid " + self.GetDescription();
 }
 
+} // anonymous namespace 
+
 void wrapUsdAttribute()
 {
     class_<UsdAttribute, bases<UsdProperty> >("Attribute")
@@ -134,4 +141,3 @@ void wrapUsdAttribute()
         ;
     TfPyRegisterStlSequencesFromPython<UsdAttribute>();
 }
-

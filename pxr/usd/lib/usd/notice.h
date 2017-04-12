@@ -24,11 +24,16 @@
 #ifndef USD_NOTICE_H
 #define USD_NOTICE_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usd/api.h"
 #include "pxr/usd/usd/common.h"
 #include "pxr/usd/usd/object.h"
 
 #include "pxr/usd/sdf/path.h"
 #include "pxr/base/tf/notice.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// \class UsdNotice
 ///
@@ -40,7 +45,9 @@ public:
     /// Base class for UsdStage notices.
     class StageNotice : public TfNotice {
     public:
+        USD_API
         StageNotice(const UsdStageWeakPtr &stage);
+        USD_API
         virtual ~StageNotice();
 
         /// Return the stage associated with this notice.
@@ -66,7 +73,7 @@ public:
     public:
         explicit StageContentsChanged(const UsdStageWeakPtr& stage)
             : StageNotice(stage) {}
-        virtual ~StageContentsChanged();
+        USD_API virtual ~StageContentsChanged();
     };
 
     /// \class ObjectsChanged
@@ -105,7 +112,7 @@ public:
             , _resyncedPaths(resyncedPaths)
             , _changedInfoPaths(changedInfoPaths) {}
     public:
-        virtual ~ObjectsChanged();
+        USD_API virtual ~ObjectsChanged();
 
         /// Return true if \p obj was possibly affected by the layer changes
         /// that generated this notice.  This is the case if either the object
@@ -169,9 +176,12 @@ public:
     public:
         explicit StageEditTargetChanged(const UsdStageWeakPtr &stage)
             : StageNotice(stage) {}
-        virtual ~StageEditTargetChanged();
+        USD_API virtual ~StageEditTargetChanged();
     };
 
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // USD_NOTICE_H

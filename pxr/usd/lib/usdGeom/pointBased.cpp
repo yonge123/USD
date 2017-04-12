@@ -28,6 +28,8 @@
 #include "pxr/usd/sdf/types.h"
 #include "pxr/usd/sdf/assetPath.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
@@ -159,11 +161,21 @@ UsdGeomPointBased::GetSchemaAttributeNames(bool includeInherited)
         return localNames;
 }
 
+PXR_NAMESPACE_CLOSE_SCOPE
+
 // ===================================================================== //
 // Feel free to add custom code below this line. It will be preserved by
 // the code generator.
+//
+// Just remember to wrap code in the appropriate delimiters:
+// 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
+
+#include "pxr/usd/usdGeom/boundableComputeExtent.h"
+#include "pxr/base/tf/registryManager.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 TfToken 
 UsdGeomPointBased::GetNormalsInterpolation() const
@@ -212,3 +224,30 @@ UsdGeomPointBased::ComputeExtent(const VtVec3fArray& points,
     
     return true;
 }
+
+static bool
+_ComputeExtentForPointBased(
+    const UsdGeomBoundable& boundable, 
+    const UsdTimeCode& time, 
+    VtVec3fArray* extent) 
+{
+    const UsdGeomPointBased pointBased(boundable);
+    if (!TF_VERIFY(pointBased)) {
+        return false;
+    }
+
+    VtVec3fArray points;
+    if (!pointBased.GetPointsAttr().Get(&points, time)) {
+        return false;
+    }
+
+    return UsdGeomPointBased::ComputeExtent(points, extent);
+}
+
+TF_REGISTRY_FUNCTION(UsdGeomBoundable)
+{
+    UsdGeomRegisterComputeExtentFunction<UsdGeomPointBased>(
+        _ComputeExtentForPointBased);
+}
+
+PXR_NAMESPACE_CLOSE_SCOPE

@@ -26,13 +26,15 @@
 #include "pxr/imaging/garch/glPlatformDebugContext.h"
 #include "pxr/base/arch/defines.h"
 
-#if defined ARCH_OS_LINUX
+#if defined(ARCH_OS_LINUX)
 #include "pxr/imaging/garch/glPlatformDebugWindowGLX.h"
-#elif defined ARCH_OS_DARWIN
+#elif defined(ARCH_OS_DARWIN)
 #include "pxr/imaging/garch/glPlatformDebugWindowDarwin.h"
-#elif defined ARCH_OS_WINDOWS
-#include "pxr/imaging/garch/glPlatformDebugWindowWin.h"
+#elif defined(ARCH_OS_WINDOWS)
+#include "pxr/imaging/garch/glPlatformDebugWindowWindows.h"
 #endif
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 GarchGLDebugWindow::GarchGLDebugWindow(const char *title, int width, int height)
     : _title(title)
@@ -120,3 +122,6 @@ void
 GarchGLDebugWindow::OnMouseMove(int x, int y, int modKeys)
 {
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

@@ -26,6 +26,8 @@
 
 /// \file pxOsd/meshTopology.h
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/pxOsd/api.h"
 #include "pxr/imaging/pxOsd/subdivTags.h"
 
 #include "pxr/base/vt/array.h"
@@ -35,6 +37,9 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 typedef boost::shared_ptr<class PxOsdMeshTopology> PxOsdMeshTopologySharedPtr;
 
@@ -46,20 +51,25 @@ class PxOsdMeshTopology {
 
 public:
 
-    typedef size_t ID;
+    typedef uint64_t ID;
 
+    PXOSD_API
     PxOsdMeshTopology();
 
+    PXOSD_API
     ~PxOsdMeshTopology();
 
+    PXOSD_API
     PxOsdMeshTopology(const PxOsdMeshTopology &);
 
+    PXOSD_API
     PxOsdMeshTopology(
         TfToken scheme,
         TfToken orientation,
         VtIntArray faceVertexCounts,
         VtIntArray faceVertexIndices);
 
+    PXOSD_API
     PxOsdMeshTopology(
         TfToken scheme,
         TfToken orientation,
@@ -109,6 +119,7 @@ public:
     /// \note Currently this tag is a duplicate from PxOsdSubdivTags, which is
     /// used for refined holes. This distinction allows the user to enable or
     /// disable holes in either representation independently.
+    PXOSD_API
     void SetHoleIndices(VtIntArray const &holeFaceIndices);
 
     /// Returns the hole face indices.
@@ -142,9 +153,11 @@ public:
 public:
 
     /// Returns the hash value of this topology to be used for instancing.
+    PXOSD_API
     ID ComputeHash() const;
 
     /// Equality check between two mesh topologies.
+    PXOSD_API
     bool operator==(PxOsdMeshTopology const &other) const;
 
 private:
@@ -162,7 +175,12 @@ private:
     PxOsdSubdivTags _subdivTags;
 };
 
+PXOSD_API
 std::ostream& operator << (std::ostream &out, PxOsdMeshTopology const &);
+PXOSD_API
 bool operator!=(const PxOsdMeshTopology& lhs, const PxOsdMeshTopology& rhs);
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXOSD_MESH_TOPOLOGY_H

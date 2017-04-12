@@ -30,14 +30,10 @@
 #include "pxr/base/gf/range3d.h"
 #include "pxr/base/gf/matrix4d.h"
 
-HdSceneDelegate::HdSceneDelegate()
-    : _index(new HdRenderIndex)
-    , _delegateID(SdfPath::AbsoluteRootPath())
-{
-}
+PXR_NAMESPACE_OPEN_SCOPE
 
-HdSceneDelegate::HdSceneDelegate(HdRenderIndexSharedPtr const& parentIndex, 
-                    SdfPath const& delegateID)
+HdSceneDelegate::HdSceneDelegate(HdRenderIndex *parentIndex,
+                                 SdfPath const& delegateID)
     : _index(parentIndex)
     , _delegateID(delegateID)
 {
@@ -76,6 +72,13 @@ HdSceneDelegate::IsInCollection(SdfPath const& id,
                             TfToken const& collectionName)
 {
     return true;
+}
+
+/*virtual*/
+TfToken
+HdSceneDelegate::GetRenderTag(SdfPath const& id)
+{
+    return HdTokens->geometry;
 }
 
 // -----------------------------------------------------------------------//
@@ -334,3 +337,6 @@ HdSceneDelegate::GetPrimVarComponents(SdfPath const& id, TfToken const& key)
 {
     return 0;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

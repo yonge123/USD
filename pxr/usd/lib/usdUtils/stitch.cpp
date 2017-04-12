@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usdUtils/stitch.h"
 
 #include "pxr/base/vt/value.h"
@@ -38,6 +39,9 @@
 #include <set>
 #include <string>
 #include <algorithm>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
  
 
 // utility functions, not to be exposed as public facing API
@@ -391,7 +395,7 @@ namespace {
 
     // These keys represent data we wish to filter out of our token search
     // when stitching data in a SdfSpec.
-    TF_MAKE_STATIC_DATA((std::vector<TfToken>), _SortedChildrenTokens) {
+    TF_MAKE_STATIC_DATA(std::vector<TfToken>, _SortedChildrenTokens) {
         *_SortedChildrenTokens = SdfChildrenKeys->allTokens;
         std::sort(_SortedChildrenTokens->begin(), _SortedChildrenTokens->end());
     } 
@@ -501,3 +505,6 @@ UsdUtilsStitchLayers(const SdfLayerHandle& strongLayer,
     // Send warnings if erroneous generation occurs
     _VerifyLayerIntegrity(strongLayer);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

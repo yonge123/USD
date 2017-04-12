@@ -23,11 +23,15 @@
 //
 /// \file wrapPseudoRootSpec.cpp
 
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/pseudoRootSpec.h"
 #include "pxr/usd/sdf/pySpec.h"
+
 #include <boost/python.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void
 wrapPseudoRootSpec()

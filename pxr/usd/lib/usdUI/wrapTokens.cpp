@@ -23,8 +23,9 @@
 //
 // GENERATED FILE.  DO NOT EDIT.
 #include "pxr/usd/usdUI/tokens.h"
-
 #include "pxr/base/tf/pyStaticTokens.h"
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void wrapUsdUITokens()
 {

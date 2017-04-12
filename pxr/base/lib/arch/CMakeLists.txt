@@ -15,6 +15,9 @@ pxr_shared_library(arch
         ${CMAKE_DL_LIBS}
         ${PLATFORM_LIBS}
 
+    INCLUDE_DIRS
+        ${Boost_INCLUDE_DIRS}
+
     PUBLIC_CLASSES
         attributes
         daemon
@@ -28,7 +31,7 @@ pxr_shared_library(arch
         hash
         library
         mallocHook
-        nap
+        regex
         stackTrace
         symbols
         systemInfo

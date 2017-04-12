@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usdGeom/constraintTarget.h"
 
 #include "pxr/usd/usd/conversions.h"
@@ -33,6 +34,10 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 // The python wrapping of ComputeInWorldSpace does not take an xform cache.
 static GfMatrix4d
 _ComputeInWorldSpace(
@@ -41,6 +46,8 @@ _ComputeInWorldSpace(
 {
     return self.ComputeInWorldSpace(time);
 }
+
+} // anonymous namespace 
 
 void wrapUsdGeomConstraintTarget()
 {

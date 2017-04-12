@@ -21,6 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/stringUtils.h"
 
 #include <boost/python/def.hpp>
@@ -38,6 +41,10 @@
 using std::string;
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static int DictionaryStrcmp(string const &l, string const &r) {
     TfDictionaryLessThan lt;
@@ -101,6 +108,8 @@ static long
 _GetLongMin() {
     return std::numeric_limits<long>::min();
 }
+
+} // anonymous namespace 
 
 void wrapStringUtils() {
     def("StringSplit", TfStringSplit, return_value_policy<TfPySequenceToList>());

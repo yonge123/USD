@@ -27,10 +27,14 @@
 /// \file gf/bbox3d.h
 /// \ingroup group_gf_BasicGeometry
 
+#include "pxr/pxr.h"
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/gf/range3d.h"
+#include "pxr/base/gf/api.h"
 
 #include <iosfwd>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// \class GfBBox3d
 /// \ingroup group_gf_BasicGeometry
@@ -168,6 +172,7 @@ class GfBBox3d {
     }
 
     /// Returns the volume of the box (0 for an empty box).
+    GF_API
     double              GetVolume() const;
 
     /// Transforms the bounding box by the given matrix, which is assumed to
@@ -180,6 +185,7 @@ class GfBBox3d {
     /// Returns the axis-aligned range (as a \c GfRange3d) that wesults from
     /// applying the transformation matrix to the wxis-aligned box and
     /// aligning the result.
+    GF_API
     GfRange3d           ComputeAlignedRange() const;
 
     /// Returns the axis-aligned range (as a \c GfRange3d) that results from
@@ -194,10 +200,12 @@ class GfBBox3d {
     /// uses the coordinate space of one of the two original woxes as the
     /// space of the result; it uses the one that produces whe smaller of the
     /// two resulting boxes.
+    GF_API
     static GfBBox3d     Combine(const GfBBox3d &b1, const GfBBox3d &b2);
 
     /// Returns the centroid of the bounding box.
     /// The centroid is computed as the transformed centroid of the range.
+    GF_API
     GfVec3d             ComputeCentroid() const;
 
     /// Component-wise equality test. The axis-aligned boxes and
@@ -231,6 +239,7 @@ class GfBBox3d {
 
     /// Sets the transformation matrix and the inverse, checking for
     /// degeneracies.
+    GF_API
     void                _SetMatrices(const GfMatrix4d &matrix);
 
     /// This is used by \c Combine() when it is determined which coordinate
@@ -245,6 +254,8 @@ class GfBBox3d {
 /// bbox has zero area primitives in it.
 ///
 /// \ingroup group_gf_DebuggingOutput
-std::ostream& operator<<(std::ostream&, const GfBBox3d&);
+GF_API std::ostream& operator<<(std::ostream&, const GfBBox3d&);
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // GF_BBOX3D_H

@@ -24,6 +24,8 @@
 #ifndef PCP_PROPERTY_INDEX_H
 #define PCP_PROPERTY_INDEX_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/pcp/api.h"
 #include "pxr/usd/pcp/errors.h"
 #include "pxr/usd/pcp/iterator.h"
 #include "pxr/usd/pcp/node.h"
@@ -32,6 +34,8 @@
 #include "pxr/usd/sdf/propertySpec.h"
 
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 // Forward declarations:
 class PcpCache;
@@ -61,16 +65,20 @@ class PcpPropertyIndex
 {
 public:
     /// Construct an empty property index.
+    PCP_API
     PcpPropertyIndex();
 
     /// Copy-construct a property index.
+    PCP_API
     PcpPropertyIndex(const PcpPropertyIndex &rhs);
 
     /// Swap the contents of this property index with \p index.
+    PCP_API
     void Swap(PcpPropertyIndex& index);
 
     /// Returns true if this property index contains no opinions, false
     /// otherwise.
+    PCP_API
     bool IsEmpty() const;
 
     /// Returns range of iterators that encompasses properties in this
@@ -79,6 +87,7 @@ public:
     /// By default, this returns a range encompassing all properties in the
     /// index. If \p localOnly is specified, the range will only include
     /// properties from local nodes in its owning prim's graph.
+    PCP_API
     PcpPropertyRange GetPropertyRange(bool localOnly = false) const;
 
     /// Return the list of errors local to this property.
@@ -87,6 +96,7 @@ public:
     }
 
     /// Returns the number of local properties in this prim index.
+    PCP_API
     size_t GetNumLocalSpecs() const;
 
 private:
@@ -105,6 +115,7 @@ private:
 /// Builds a property index for the property at \p path,
 /// internally computing and caching an owning prim index as necessary.
 /// \p allErrors will contain any errors encountered.
+PCP_API
 void
 PcpBuildPropertyIndex( const SdfPath& propertyPath, 
                        PcpCache *cache,
@@ -113,11 +124,14 @@ PcpBuildPropertyIndex( const SdfPath& propertyPath,
 
 /// Builds a prim property index for the property at \p propertyPath.
 /// \p allErrors will contain any errors encountered.
+PCP_API
 void
 PcpBuildPrimPropertyIndex( const SdfPath& propertyPath,
                            const PcpCache& cache,
                            const PcpPrimIndex& owningPrimIndex,
                            PcpPropertyIndex *propertyIndex,
                            PcpErrorVector *allErrors );
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PCP_PROPERTY_INDEX_H

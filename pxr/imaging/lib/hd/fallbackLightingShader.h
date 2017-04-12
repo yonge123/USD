@@ -24,6 +24,8 @@
 #ifndef HD_FALLBACK_LIGHTING_SHADER_H
 #define HD_FALLBACK_LIGHTING_SHADER_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/lightingShader.h"
 #include "pxr/imaging/glf/glslfx.h"
@@ -38,28 +40,42 @@
 
 #include <vector>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 /// \class Hd_FallbackLightingShader
 ///
 /// A shader that provides fallback lighting behavior.
 ///
 class Hd_FallbackLightingShader : public HdLightingShader {
 public:
+    HD_API
     Hd_FallbackLightingShader();
+    HD_API
     virtual ~Hd_FallbackLightingShader();
 
-    // HdShader overrides
+    // HdShaderCode overrides
+    HD_API
     virtual ID ComputeHash() const;
+    HD_API
     virtual std::string GetSource(TfToken const &shaderStageKey) const;
+    HD_API
     virtual void BindResources(Hd_ResourceBinder const &binder, int program);
+    HD_API
     virtual void UnbindResources(Hd_ResourceBinder const &binder, int program);
+    HD_API
     virtual void AddBindings(HdBindingRequestVector *customBindings);
 
     // HdLightingShader overrides
+    HD_API
     virtual void SetCamera(GfMatrix4d const &worldToViewMatrix,
                            GfMatrix4d const &projectionMatrix);
 
 private:
     boost::scoped_ptr<GlfGLSLFX> _glslfx;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // HD_FALLBACK_LIGHTING_SHADER_H

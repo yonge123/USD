@@ -36,6 +36,9 @@
 
 #include <cstdlib>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 ////////////////////////////////////////////////////////////
 
 class Hdx_UnitTestWindow : public GarchGLDebugWindow {
@@ -235,13 +238,9 @@ void
 Hdx_UnitTestGLDrawing::RunTest(int argc, char *argv[])
 {
     bool offscreen = false;
-    bool animate = false;
     for (int i=0; i<argc; ++i) {
         if (std::string(argv[i]) == "--offscreen") {
             offscreen = true;
-        } else
-        if (std::string(argv[i]) == "--animate") {
-            animate = true;
         }
     }
 
@@ -347,3 +346,6 @@ Hdx_UnitTestGLDrawing::GetFrustum() const
     frustum.SetPerspective(45.0, aspectRatio, 1, 100000.0);
     return frustum;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

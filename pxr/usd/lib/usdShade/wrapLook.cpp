@@ -22,7 +22,6 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/usd/usdShade/look.h"
-
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/conversions.h"
 
@@ -39,12 +38,18 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 #define WRAP_CUSTOM                                                     \
     template <class Cls> static void _CustomWrapCode(Cls &_class)
 
 // fwd decl.
 WRAP_CUSTOM;
 
+
+} // anonymous namespace
 
 void wrapUsdShadeLook()
 {
@@ -94,10 +99,16 @@ void wrapUsdShadeLook()
 // }
 //
 // Of course any other ancillary or support code may be provided.
+// 
+// Just remember to wrap code in the appropriate delimiters:
+// 'namespace {', '}'.
+//
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
 #include "pxr/usd/usd/editContext.h"
+
+namespace {
 
 static UsdPyEditContext
 _GetEditContextForVariant(const UsdShadeLook &self,
@@ -151,3 +162,5 @@ WRAP_CUSTOM {
 
         ;
 }
+
+} // anonymous namespace

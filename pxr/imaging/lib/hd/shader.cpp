@@ -23,54 +23,17 @@
 //
 #include "pxr/imaging/hd/shader.h"
 
-#include "pxr/base/tf/iterator.h"
+PXR_NAMESPACE_OPEN_SCOPE
 
-#include <boost/functional/hash.hpp>
-
-HdShader::HdShader()
+HdShader::HdShader(SdfPath const& id)
+ : HdSprim(id)
 {
-    /*NOTHING*/
+    // NOTHING
 }
 
-/*virtual*/
 HdShader::~HdShader()
 {
-    /*NOTHING*/
+    // NOTHING
 }
 
-/* static */
-size_t
-HdShader::ComputeHash(HdShaderSharedPtrVector const &shaders)
-{
-    size_t hash = 0;
-    
-    TF_FOR_ALL(it, shaders) {
-        boost::hash_combine(hash, (*it)->ComputeHash());
-    }
-    
-    return hash;
-}
-
-/*virtual*/
-HdShaderParamVector const&
-HdShader::GetParams() const
-{
-    static HdShaderParamVector const empty;
-    return empty;
-}
-
-/*virtual*/
-HdBufferArrayRangeSharedPtr const&
-HdShader::GetShaderData() const
-{
-    static HdBufferArrayRangeSharedPtr EMPTY;
-    return EMPTY;
-}
-
-/*virtual*/
-HdShader::TextureDescriptorVector 
-HdShader::GetTextures() const
-{
-    return HdShader::TextureDescriptorVector();
-}
-
+PXR_NAMESPACE_CLOSE_SCOPE

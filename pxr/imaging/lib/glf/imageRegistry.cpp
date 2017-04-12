@@ -38,10 +38,19 @@
 #include <set>
 #include <string>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 TF_DEFINE_ENV_SETTING(GLF_IMAGE_PLUGIN_RESTRICTION, "",
                   "Restricts GlfImage plugin loading to the specified plugin");
 
 TF_INSTANTIATE_SINGLETON(GlfImageRegistry);
+
+GlfImageRegistry&
+GlfImageRegistry::GetInstance()
+{
+    return TfSingleton<GlfImageRegistry>::GetInstance();
+}
 
 GlfImageRegistry::GlfImageRegistry() :
     _typeMap(new GlfRankedTypeMap)
@@ -112,3 +121,6 @@ GlfImageRegistry::IsSupportedImageFile(std::string const & filename)
     // We support image files for which we can construct an image object.
     return _ConstructImage(filename) != 0;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

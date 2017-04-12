@@ -23,13 +23,19 @@
 //
 /// \file wrapLayerStackIdentifier.cpp
 
+#include "pxr/pxr.h"
 #include "pxr/usd/pcp/layerStackIdentifier.h"
 #include "pxr/usd/sdf/layer.h"
 #include "pxr/base/tf/pyUtils.h"
 #include "pxr/base/tf/stringUtils.h"
+
 #include <boost/python.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static
 std::string
@@ -41,6 +47,8 @@ _Repr(const PcpLayerStackIdentifier& x)
                           TfPyRepr(x.sessionLayer).c_str(),
                           TfPyRepr(x.pathResolverContext).c_str());
 }
+
+} // anonymous namespace 
 
 void wrapLayerStackIdentifier()
 {
@@ -66,7 +74,7 @@ void wrapLayerStackIdentifier()
                       make_getter(&This::pathResolverContext, 
                                   return_value_policy<return_by_value>()))
 
-        .def("__repr__", &::_Repr)
+        .def("__repr__", &_Repr)
         .def("__hash__", &This::GetHash)
         .def(!self)
         .def(self == self)

@@ -26,6 +26,8 @@
 
 /// \file usdRi/statements.h
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usdRi/api.h"
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
@@ -39,6 +41,8 @@
 
 #include "pxr/base/tf/token.h"
 #include "pxr/base/tf/type.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class SdfAssetPath;
 
@@ -77,11 +81,13 @@ public:
     }
 
     /// Destructor.
+    USDRI_API
     virtual ~UsdRiStatements();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
+    USDRI_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
@@ -94,6 +100,7 @@ public:
     /// UsdRiStatements(stage->GetPrimAtPath(path));
     /// \endcode
     ///
+    USDRI_API
     static UsdRiStatements
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
@@ -101,11 +108,13 @@ public:
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
+    USDRI_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
+    USDRI_API
     virtual const TfType &_GetTfType() const;
 
 public:
@@ -123,6 +132,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Float
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDRI_API
     UsdAttribute GetFocusRegionAttr() const;
 
     /// See GetFocusRegionAttr(), and also 
@@ -130,6 +140,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDRI_API
     UsdAttribute CreateFocusRegionAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -137,8 +148,10 @@ public:
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 
     //
-    // Just remember to close the class declaration with }; and complete the
-    // include guard with #endif
+    // Just remember to: 
+    //  - Close the class declaration with }; 
+    //  - Close the namespace with PXR_NAMESPACE_CLOSE_SCOPE
+    //  - Close the include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
 
@@ -158,6 +171,7 @@ public:
     /// \param riType should be a known RenderMan type definition, which
     /// can be array-valued.  For instance, both "color" and "float[3]"
     /// are valid values for \p riType.
+    USDRI_API
     UsdAttribute
     CreateRiAttribute(
         const TfToken &name, 
@@ -166,6 +180,7 @@ public:
 
     /// Creates an attribute of the given \p tfType.
     /// \overload
+    USDRI_API
     UsdAttribute
     CreateRiAttribute(
         const TfToken &name, 
@@ -182,6 +197,7 @@ public:
     /// the best identifiers, so clients will likely want to transform the 
     /// target's identity into a string for RenderMan, although it is up to 
     /// your pipeline to choose.
+    USDRI_API
     UsdRelationship
     CreateRiAttributeAsRel(
         const TfToken &name, 
@@ -196,9 +212,11 @@ public:
     /// As noted above, rib attributes can be either UsdAttribute or 
     /// UsdRelationship, and like all UsdProperties, need not have a defined 
     /// value.
+    USDRI_API
     std::vector<UsdProperty>
     GetRiAttributes(const std::string &nameSpace = "") const;
 
+    USDRI_API
     bool 
     _IsCompatible(const UsdPrim &prim) const;
 
@@ -216,6 +234,7 @@ public:
     // --------------------------------------------------------------------- //
     /// Return the containing namespace of the rib attribute (e.g.\ "user").
     ///
+    USDRI_API
     static TfToken GetRiAttributeNameSpace(const UsdProperty &prop);
 
     // --------------------------------------------------------------------- //
@@ -223,6 +242,7 @@ public:
     // --------------------------------------------------------------------- //
     /// Return true if the property is in the "ri:attributes" namespace.
     ///
+    USDRI_API
     static bool IsRiAttribute(const UsdProperty &prop);
 
     // --------------------------------------------------------------------- //
@@ -249,6 +269,7 @@ public:
     ///     \em underscore consider the first to be the namespace, and the
     ///     rest the name, joined by underscores
     /// \li else, assume \p attrName is the name, and "user" is the namespace
+    USDRI_API
     static std::string MakeRiAttributePropertyName(const std::string &attrName);
 
     // --------------------------------------------------------------------- //
@@ -262,6 +283,7 @@ public:
     /// prim, if it exists. If this prim is not under a leaf model, no
     /// relationship targets will be authored.
     ///
+    USDRI_API
     void SetCoordinateSystem(const std::string &coordSysName);
 
     // --------------------------------------------------------------------- //
@@ -269,6 +291,7 @@ public:
     // --------------------------------------------------------------------- //
     /// Returns the value in the "ri:coordinateSystem" attribute if it exists.
     ///
+    USDRI_API
     std::string GetCoordinateSystem() const;
 
     // --------------------------------------------------------------------- //
@@ -276,6 +299,7 @@ public:
     // --------------------------------------------------------------------- //
     /// Returns true if the underlying prim has a ri:coordinateSystem opinion.
     ///
+    USDRI_API
     bool HasCoordinateSystem() const;
 
     // --------------------------------------------------------------------- //
@@ -291,6 +315,7 @@ public:
     /// targets on its parent leaf model prim, if it exists. If this prim is
     /// not under a leaf model, no relationship targets will be authored.
     ///
+    USDRI_API
     void SetScopedCoordinateSystem(const std::string &coordSysName);
 
     // --------------------------------------------------------------------- //
@@ -299,6 +324,7 @@ public:
     /// Returns the value in the "ri:scopedCoordinateSystem" attribute if it
     /// exists.
     ///
+    USDRI_API
     std::string GetScopedCoordinateSystem() const;
 
     // --------------------------------------------------------------------- //
@@ -307,6 +333,7 @@ public:
     /// Returns true if the underlying prim has a ri:scopedCoordinateSystem
     /// opinion.
     ///
+    USDRI_API
     bool HasScopedCoordinateSystem() const;
 
     // --------------------------------------------------------------------- //
@@ -316,6 +343,7 @@ public:
     /// ri:modelCoordinateSystems, if any. Returns true if the query was
     /// successful.
     ///
+    USDRI_API
     bool GetModelCoordinateSystems(SdfPathVector *targets) const;
 
     // --------------------------------------------------------------------- //
@@ -325,8 +353,11 @@ public:
     /// ri:modelScopedCoordinateSystems, if any.  Returns true if the query was
     /// successful.
     ///
+    USDRI_API
     bool GetModelScopedCoordinateSystems(SdfPathVector *targets) const;
 
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif

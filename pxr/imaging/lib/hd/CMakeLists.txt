@@ -20,7 +20,6 @@ pxr_shared_library(hd
         sdf
         garch
         hf
-        gal
         glf
         pxOsd
         ${OPENSUBDIV_LIBRARIES}
@@ -35,9 +34,7 @@ pxr_shared_library(hd
 
     PUBLIC_CLASSES
         basisCurves
-        basisCurvesComputations
         basisCurvesTopology
-        basisCurvesShaderKey
         binding
         bprim
         bufferArray
@@ -50,7 +47,6 @@ pxr_shared_library(hd
         codeGen
         commandBuffer
         computation
-        context
         conversions
         copyComputation
         debugCodes
@@ -62,6 +58,7 @@ pxr_shared_library(hd
         drawItemInstance
         drawItemState
         engine
+        fallbackLightingShader
         geometricShader
         glslProgram
         glslfxShader
@@ -73,18 +70,16 @@ pxr_shared_library(hd
         interleavedMemoryManager
         lightingShader
         mesh
-        meshShaderKey
         meshTopology
+        meshUtil
         package
         patchIndex
         perfLog
         persistentBuffer
         points
-        pointsShaderKey
-        quadrangulate
+        primTypeIndex
         renderContextCaps
         renderDelegate
-        renderDelegateRegistry
         renderIndex
         renderPass
         renderPassShader
@@ -98,8 +93,10 @@ pxr_shared_library(hd
         rprimSharedData
         sceneDelegate
         shader
+        shaderCode
         shaderKey
         shaderParam
+        smoothNormals
         sprim
         strategyBase
         surfaceShader
@@ -108,29 +105,24 @@ pxr_shared_library(hd
         textureResource
         tokens
         topology
-        triangulate
+        unitTestDelegate
+        unitTestGLDrawing
         vboMemoryManager
         vboSimpleMemoryManager
         vertexAdjacency
         vtBufferSource
 
     PUBLIC_HEADERS
+        api.h
         enums.h
+        types.h
         version.h
 
     PRIVATE_CLASSES
         cullingShaderKey
-        fallbackLightingShader
-        renderIndexManager
-        smoothNormals
-        subdivision
-        subdivision3
-        unitTestDelegate
         unitTestHelper
+        unitTestNullRenderDelegate
         ${optionalPrivateClasses}
-
-    PRIVATE_HEADERS
-        unitTestGLDrawing.h
 
     RESOURCE_FILES
         plugInfo.json
@@ -150,14 +142,3 @@ pxr_shared_library(hd
         shaders/renderPassShader.glslfx
 )
 
-if (X11_FOUND OR APPLE)
-pxr_build_test(testHdBasicDrawing
-    LIBRARIES
-        hd
-        garch
-        glf
-    CPPFILES
-        unitTestGLDrawing.cpp
-        testenv/testHdBasicDrawing.cpp
-)
-endif()

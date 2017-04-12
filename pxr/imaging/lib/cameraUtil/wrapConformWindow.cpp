@@ -38,6 +38,8 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
 void
 wrapConformWindow()
 {

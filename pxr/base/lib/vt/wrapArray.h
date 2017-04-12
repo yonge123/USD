@@ -21,6 +21,11 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#ifndef VT_WRAP_ARRAY_H
+#define VT_WRAP_ARRAY_H
+
+#include "pxr/pxr.h"
+#include "pxr/base/vt/api.h"
 #include "pxr/base/vt/array.h"
 #include "pxr/base/vt/types.h"
 #include "pxr/base/vt/value.h"
@@ -29,6 +34,7 @@
 
 #include "pxr/base/arch/math.h"
 #include "pxr/base/arch/inttypes.h"
+#include "pxr/base/arch/pragmas.h"
 #include "pxr/base/gf/half.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyFunction.h"
@@ -62,6 +68,8 @@
 #include <string>
 #include <memory>
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 namespace Vt_WrapArray {
 
@@ -253,7 +261,7 @@ setitem_slice(VtArray<T> &self, slice idx, object value)
 
 
 template <class T>
-string GetVtArrayName();
+VT_API string GetVtArrayName();
 
 
 // To avoid overhead we stream out certain builtin types directly
@@ -292,7 +300,7 @@ template <typename T>
 static bool _IsFinite(T const &value) {
     return std::isfinite(value);
 }
-static bool _IsFinite(half const &value) {
+static bool _IsFinite(GfHalf const &value) {
     return std::isfinite(static_cast<float>(value));
 }
 
@@ -383,6 +391,9 @@ VtArray<T> *VtArray__init__2(unsigned int size, object const &values)
 
 // overloading for operator special methods, to allow tuple / list & array
 // combinations
+ARCH_PRAGMA_PUSH
+ARCH_PRAGMA_UNSAFE_USE_OF_BOOL
+ARCH_PRAGMA_UNARY_MINUS_ON_UNSIGNED
 VTOPERATOR_WRAP(+,__add__,__radd__)
 VTOPERATOR_WRAP_NONCOMM(-,__sub__,__rsub__)
 VTOPERATOR_WRAP(*,__mul__,__rmul__)
@@ -395,9 +406,14 @@ VTOPERATOR_WRAP_BOOL(Greater,>)
 VTOPERATOR_WRAP_BOOL(Less,<)
 VTOPERATOR_WRAP_BOOL(GreaterOrEqual,>=)
 VTOPERATOR_WRAP_BOOL(LessOrEqual,<=)
-
+ARCH_PRAGMA_POP
 }
 
+template <typename T>
+static std::string _VtStr(T const &self)
+{
+    return boost::lexical_cast<std::string>(self);
+}
 
 template <typename T>
 void VtWrapArray()
@@ -437,7 +453,8 @@ void VtWrapArray()
         .def("__repr__", __repr1__<Type>)
         .def("__repr2__", __repr2__<Type>)
 
-        .def(str(self))
+//        .def(str(self))
+        .def("__str__", _VtStr<T>)
         .def(self == self)
         .def(self != self)
 
@@ -512,7 +529,7 @@ Vt_ConvertFromPySequence(TfPyObjWrapper const &obj)
     typedef typename Array::ElementType ElemType;
     TfPyLock lock;
     if (PySequence_Check(obj.ptr())) {
-        size_t len = PySequence_Length(obj.ptr());
+        Py_ssize_t len = PySequence_Length(obj.ptr());
         Array result(len);
         ElemType *elem = result.data();
         for (size_t i = 0; i != len; ++i) {
@@ -575,3 +592,7 @@ void VtRegisterValueCastsFromPythonSequencesToArray()
     VtWrapArray< VtArray< VT_TYPE(elem) > >();
 #define VT_WRAP_COMPARISON(r, unused, elem)        \
     VtWrapComparisonFunctions< VtArray< VT_TYPE(elem) > >();
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // VT_WRAP_ARRAY_H

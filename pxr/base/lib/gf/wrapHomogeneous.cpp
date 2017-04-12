@@ -23,11 +23,12 @@
 //
 #include <boost/python/def.hpp>
 
+#include "pxr/pxr.h"
 #include "pxr/base/gf/homogeneous.h"
 
 using namespace boost::python;
 
-
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void wrapHomogeneous()
 {    

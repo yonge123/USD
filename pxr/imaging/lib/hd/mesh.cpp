@@ -23,9 +23,12 @@
 //
 #include "pxr/imaging/hd/mesh.h"
 
-HdMesh::HdMesh(HdSceneDelegate* delegate, SdfPath const& id,
+PXR_NAMESPACE_OPEN_SCOPE
+
+
+HdMesh::HdMesh(SdfPath const& id,
                SdfPath const& instancerId)
-    : HdRprim(delegate, id, instancerId)
+    : HdRprim(id, instancerId)
 {
     /*NOTHING*/
 }
@@ -34,3 +37,6 @@ HdMesh::~HdMesh()
 {
     /*NOTHING*/
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

@@ -24,8 +24,13 @@
 #ifndef USDGEOM_METRICS_H
 #define USDGEOM_METRICS_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usdGeom/api.h"
 #include "pxr/base/tf/token.h"
 #include "pxr/usd/usd/common.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// \file usdGeom/metrics.h
 ///
@@ -82,6 +87,7 @@
 /// an error, in which case returns an empty TfToken
 ///
 /// \sa UsdGeomUpAxis_group
+USDGEOM_API
 TfToken UsdGeomGetStageUpAxis(const UsdStageWeakPtr &stage);
 
 /// Set \p stage 's upAxis to \p axis, which must be one of UsdGeomTokens->y
@@ -91,6 +97,7 @@ TfToken UsdGeomGetStageUpAxis(const UsdStageWeakPtr &stage);
 ///
 /// \return true if upAxis was successfully set.
 /// \sa UsdGeomUpAxis_group
+USDGEOM_API
 bool UsdGeomSetStageUpAxis(const UsdStageWeakPtr &stage, const TfToken &axis);
 
 /// Return the site-level fallback up axis as a TfToken.
@@ -108,8 +115,12 @@ bool UsdGeomSetStageUpAxis(const UsdStageWeakPtr &stage, const TfToken &axis);
 /// we will issue a warning during the first call to this function, and ignore
 /// all of them, so that we devolve to deterministic behavior of Y up axis
 /// until the problem is rectified.
+USDGEOM_API
 TfToken UsdGeomGetFallbackUpAxis();
 
 /// @}
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // USDGEOM_METRICS_H

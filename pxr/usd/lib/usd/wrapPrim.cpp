@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/attribute.h"
 #include "pxr/usd/usd/relationship.h"
@@ -49,13 +50,25 @@ using std::vector;
 
 using namespace boost::python;
 
-static SdfPayload
-_GetPayload(const UsdPrim &self)
+PXR_NAMESPACE_OPEN_SCOPE
+
+bool 
+Usd_PrimIsA(const UsdPrim& prim, const TfType& schemaType)
 {
-    SdfPayload result;
-    self.GetPayload(&result);
-    return result;
+    return prim._IsA(schemaType);
 }
+
+const PcpPrimIndex &
+Usd_PrimGetSourcePrimIndex(const UsdPrim& prim)
+{
+    return prim._GetSourcePrimIndex();
+}
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static SdfPathVector
 _FindAllRelationshipTargetPaths(
@@ -80,6 +93,8 @@ __repr__(const UsdPrim &self)
         return "invalid " + self.GetDescription();
     }
 }
+
+} // anonymous namespace 
 
 void wrapUsdPrim()
 {
@@ -153,7 +168,7 @@ void wrapUsdPrim()
 
         .def("SetPropertyOrder", &UsdPrim::SetPropertyOrder, arg("order"))
 
-        .def("IsA", &UsdPrim::_IsA, arg("schemaType"))
+        .def("IsA", &Usd_PrimIsA, arg("schemaType"))
 
         .def("GetChild", &UsdPrim::GetChild, arg("name"))
 
@@ -226,7 +241,6 @@ void wrapUsdPrim()
              (arg("predicate")=object(), arg("recurseOnTargets")=false))
 
         .def("HasPayload", &UsdPrim::HasPayload)
-        .def("GetPayload", _GetPayload)
         .def("SetPayload",
              (bool (UsdPrim::*)(const SdfPayload &) const)
              &UsdPrim::SetPayload, (arg("payload")))
@@ -264,13 +278,13 @@ void wrapUsdPrim()
         .def("IsInMaster", &UsdPrim::IsInMaster)
         .def("GetMaster", &UsdPrim::GetMaster)
 
+        .def("IsInstanceProxy", &UsdPrim::IsInstanceProxy)
+        .def("GetPrimInMaster", &UsdPrim::GetPrimInMaster)
+
         // Exposed only for testing and debugging.
-        .def("_GetSourcePrimIndex", &UsdPrim::_GetSourcePrimIndex,
+        .def("_GetSourcePrimIndex", &Usd_PrimGetSourcePrimIndex,
              return_value_policy<return_by_value>())
         ;
 
     TfPyRegisterStlSequencesFromPython<UsdPrim>();
 }
-
-
-

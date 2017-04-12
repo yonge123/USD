@@ -23,8 +23,8 @@
 //
 /// \file SpecType.cpp
 
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/specType.h"
-
 #include "pxr/usd/sdf/schema.h"
 #include "pxr/usd/sdf/spec.h"
 
@@ -47,10 +47,12 @@ using std::pair;
 using std::make_pair;
 using std::vector;
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 static inline size_t
 _GetBitmaskForSpecType(SdfSpecType specType)
 {
-    return (1 << specType);
+    return (size_t(1) << specType);
 }
 
 struct Sdf_SpecTypeInfo
@@ -247,7 +249,7 @@ _CanCast(SdfSpecType fromType, const TfType& toType)
     }
 
     const size_t allowedBitmask = 
-        TfMapLookupByValue(specTypeInfo.specTypeToBitmask, toType, 0);
+        TfMapLookupByValue(specTypeInfo.specTypeToBitmask, toType, size_t(0));
     return allowedBitmask & _GetBitmaskForSpecType(fromType);
 }
 
@@ -314,3 +316,5 @@ Sdf_SpecType::CanCast(const SdfSpec& from, const std::type_info& to)
 
     return true;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

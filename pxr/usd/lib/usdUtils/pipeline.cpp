@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usdUtils/pipeline.h"
 
 #include "pxr/usd/sdf/layer.h"
@@ -39,6 +40,9 @@
 #include "pxr/base/tf/stringUtils.h"
 
 #include <string>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 
 TF_DEFINE_PRIVATE_TOKENS(
@@ -212,36 +216,12 @@ UsdPrim
 UsdUtilsGetPrimAtPathWithForwarding(const UsdStagePtr &stage, 
                                     const SdfPath &path)
 {
-   if (UsdPrim p = stage->GetPrimAtPath(path))
-        return p;
-
-    SdfPath validAncestorPath = path;
-    UsdPrim validAncestor;
-    while (!validAncestor) {
-        if (validAncestorPath == SdfPath::AbsoluteRootPath() ||
-            validAncestorPath == SdfPath::EmptyPath()) {
-            break;
-        }
-
-        validAncestorPath = validAncestorPath.GetParentPath();
-        validAncestor = stage->GetPrimAtPath(validAncestorPath);
-    }
-
-    if (validAncestorPath.IsPrimPath()) {
-        if (!validAncestor.IsInstance())
-            return UsdPrim();
-
-        SdfPath instanceRelPath = path.ReplacePrefix(validAncestorPath, 
-            SdfPath::ReflexiveRelativePath());
-        UsdPrim master = validAncestor.GetMaster();
-        if (TF_VERIFY(master)) {
-            SdfPath masterPath = master.GetPath().AppendPath(instanceRelPath);
-
-            return UsdUtilsGetPrimAtPathWithForwarding(stage, masterPath);
-        }
-    }
-
-    return UsdPrim();
+    // If the given path refers to a prim beneath an instance,
+    // UsdStage::GetPrimAtPath will return an instance proxy
+    // from which we can retrieve the corresponding prim in
+    // the master.
+    UsdPrim p = stage->GetPrimAtPath(path);
+    return (p && p.IsInstanceProxy()) ? p.GetPrimInMaster() : p;
 }
 
 UsdPrim 
@@ -249,37 +229,43 @@ UsdUtilsUninstancePrimAtPath(const UsdStagePtr &stage,
                              const SdfPath &path)
 {
     // If a valid prim exists at the requested path, simply return it.
-    if (UsdPrim p = stage->GetPrimAtPath(path))
+    // If the prim is an instance proxy, it means this path indicates
+    // a prim beneath an instance. In order to uninstance it, we need
+    // to uninstance all ancestral instances.
+    UsdPrim p = stage->GetPrimAtPath(path);
+    if (!p || !p.IsInstanceProxy()) {
         return p;
+    }
 
-    // Check if the path can be forwarded to a valid prim in a master.
-    if (!UsdUtilsGetPrimAtPathWithForwarding(stage, path))
-        return UsdPrim();
+    // Skip the last element in prefixes, since that's our own
+    // path and we only want to uninstance ancestors.
+    SdfPathVector prefixes = path.GetPrefixes();
+    if (!prefixes.empty()) {
+        prefixes.pop_back();
+    }
 
-    SdfPath validAncestorPath = path;
-    UsdPrim validAncestor;
-    while (!validAncestor) {
-        if (validAncestorPath == SdfPath::AbsoluteRootPath() ||
-            validAncestorPath == SdfPath::EmptyPath()) {
+    for (const SdfPath& prefixPath : prefixes) {
+        UsdPrim prim = stage->GetPrimAtPath(prefixPath);
+        if (!prim) {
             break;
         }
 
-        validAncestorPath = validAncestorPath.GetParentPath();
-        validAncestor = stage->GetPrimAtPath(validAncestorPath);
+        if (prim.IsInstance()) {
+            prim.SetInstanceable(false);
+        }
     }
 
-    if (validAncestorPath.IsPrimPath()) {
-        if (!TF_VERIFY(validAncestor.IsInstance()))
-            return UsdPrim();
-
-        validAncestor.SetInstanceable(false);
-        return UsdUtilsUninstancePrimAtPath(stage, path);
-    }
-
-    return UsdPrim(); 
+    // Uninstancing should ensure that the prim at the given
+    // path, if it exists, is no longer inside an instance.
+    p = stage->GetPrimAtPath(path);
+    TF_VERIFY(!p || !p.IsInstanceProxy());
+    return p;
 }
 
 TfToken UsdUtilsGetPrimaryUVSetName()
 {
     return TfToken("st");
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

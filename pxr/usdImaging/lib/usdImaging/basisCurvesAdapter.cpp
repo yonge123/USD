@@ -35,6 +35,9 @@
 
 #include "pxr/base/tf/type.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 TF_REGISTRY_FUNCTION(TfType)
 {
     typedef UsdImagingBasisCurvesAdapter Adapter;
@@ -62,7 +65,7 @@ UsdImagingBasisCurvesAdapter::Populate(UsdPrim const& prim,
 void 
 UsdImagingBasisCurvesAdapter::TrackVariabilityPrep(UsdPrim const& prim,
                                              SdfPath const& cachePath,
-                                             int requestedBits,
+                                             HdDirtyBits requestedBits,
                                              UsdImagingInstancerContext const* 
                                                  instancerContext)
 {
@@ -74,8 +77,8 @@ UsdImagingBasisCurvesAdapter::TrackVariabilityPrep(UsdPrim const& prim,
 void 
 UsdImagingBasisCurvesAdapter::TrackVariability(UsdPrim const& prim,
                                                SdfPath const& cachePath,
-                                               int requestedBits,
-                                               int* dirtyBits,
+                                               HdDirtyBits requestedBits,
+                                               HdDirtyBits* dirtyBits,
                                                UsdImagingInstancerContext const* 
                                                    instancerContext)
 {
@@ -122,7 +125,7 @@ void
 UsdImagingBasisCurvesAdapter::UpdateForTimePrep(UsdPrim const& prim,
                                    SdfPath const& cachePath, 
                                    UsdTimeCode time,
-                                   int requestedBits,
+                                   HdDirtyBits requestedBits,
                                    UsdImagingInstancerContext const* 
                                        instancerContext)
 {
@@ -147,8 +150,8 @@ void
 UsdImagingBasisCurvesAdapter::UpdateForTime(UsdPrim const& prim,
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
-                               int requestedBits,
-                               int* resultBits,
+                               HdDirtyBits requestedBits,
+                               HdDirtyBits* resultBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext)
 {
@@ -271,3 +274,6 @@ UsdImagingBasisCurvesAdapter::_GetPoints(UsdPrim const& prim,
         *value = VtVec3fArray();
     }
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

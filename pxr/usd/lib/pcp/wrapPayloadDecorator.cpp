@@ -21,8 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/pcp/payloadDecorator.h"
 
+#include "pxr/pxr.h"
+#include "pxr/usd/pcp/payloadDecorator.h"
 #include "pxr/usd/pcp/payloadContext.h"
 
 #include "pxr/usd/sdf/layer.h"
@@ -38,6 +39,10 @@
 #include <boost/python/pure_virtual.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 class Pcp_PolymorphicPayloadDecorator
     : public PcpPayloadDecorator
@@ -119,6 +124,8 @@ Pcp_PolymorphicPayloadDecorator::~Pcp_PolymorphicPayloadDecorator()
     // Do nothing
 }
 
+} // anonymous namespace 
+
 void
 wrapPayloadDecorator()
 {
@@ -151,3 +158,6 @@ wrapPayloadDecorator()
             pure_virtual(&PolymorphicThis::_IsFieldChangeRelevantForDecoration))
         ;
 }
+
+TF_REFPTR_CONST_VOLATILE_GET(PcpPayloadDecorator)
+TF_REFPTR_CONST_VOLATILE_GET(Pcp_PolymorphicPayloadDecorator)

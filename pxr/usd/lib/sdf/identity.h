@@ -24,12 +24,17 @@
 #ifndef SDF_IDENTITY_H
 #define SDF_IDENTITY_H
 
+#include "pxr/pxr.h"
 #include "pxr/base/tf/hashmap.h"
+#include "pxr/usd/sdf/api.h"
 #include "pxr/usd/sdf/declareHandles.h"
 #include "pxr/usd/sdf/path.h"
+
 #include <boost/intrusive_ptr.hpp>
 #include <boost/noncopyable.hpp>
 #include <tbb/spin_mutex.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class Sdf_IdentityRegistry;
 SDF_DECLARE_HANDLES(SdfLayer);
@@ -43,9 +48,11 @@ SDF_DECLARE_HANDLES(SdfLayer);
 class Sdf_Identity : public boost::noncopyable {
 public:
     /// Returns the layer that this identity refers to.
+    SDF_API
     const SdfLayerHandle &GetLayer() const;
 
     /// Returns the path that this identity refers to.
+    SDF_API
     const SdfPath &GetPath() const;
 
 private:
@@ -55,7 +62,9 @@ private:
 
     friend class Sdf_IdentityRegistry;
 
+    SDF_API
     Sdf_Identity(Sdf_IdentityRegistry *registry, const SdfPath &path);
+    SDF_API
     ~Sdf_Identity();
 
     void _Forget();
@@ -66,10 +75,10 @@ private:
 };
 
 // Specialize boost::intrusive_ptr operations.
-inline void intrusive_ptr_add_ref(Sdf_Identity* p) {
+inline void intrusive_ptr_add_ref(PXR_NS::Sdf_Identity* p) {
     ++p->_refCount;
 }
-inline void intrusive_ptr_release(Sdf_Identity* p) {
+inline void intrusive_ptr_release(PXR_NS::Sdf_Identity* p) {
     if (--p->_refCount == 0) {
         delete p;
     }
@@ -112,4 +121,6 @@ private:
     tbb::spin_mutex _idsMutex;
 };
 
-#endif
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // SDF_IDENTITY_H

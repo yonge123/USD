@@ -24,12 +24,17 @@
 #ifndef PXRUSDMAYA_TRANSLATOR_CAMERA_H
 #define PXRUSDMAYA_TRANSLATOR_CAMERA_H
 
+#include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/primReaderArgs.h"
 #include "usdMaya/primReaderContext.h"
 
 #include "pxr/usd/usdGeom/camera.h"
 
+#include <maya/MFnCamera.h>
 #include <maya/MObject.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 
 /// \brief Provides helper functions for translating to/from UsdGeomCamera
@@ -37,12 +42,24 @@ struct PxrUsdMayaTranslatorCamera
 {
     /// Reads a UsdGeomCamera \p usdCamera from USD and creates a Maya
     /// MFnCamera under \p parentNode.
+    PXRUSDMAYA_API
     static bool Read(
             const UsdGeomCamera& usdCamera,
             MObject parentNode,
             const PxrUsdMayaPrimReaderArgs& args,
             PxrUsdMayaPrimReaderContext* context);
+
+    /// Helper function to access just the logic that writes from a non-animated
+    /// camera into an existing maya camera.
+    PXRUSDMAYA_API
+    static bool ReadToCamera(
+            const UsdGeomCamera& usdCamera,
+            MFnCamera& cameraObject);
+
 };
 
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_TRANSLATOR_CAMERA_H

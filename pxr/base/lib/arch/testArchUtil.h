@@ -24,6 +24,10 @@
 #ifndef ARCH_TEST_UTIL_H
 #define ARCH_TEST_UTIL_H
 
+#include "pxr/pxr.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 // Crash types.
 enum class ArchTestCrashMode {
     Error,
@@ -38,4 +42,6 @@ void ArchTestCrash(ArchTestCrashMode mode);
 // command line arguments to request a crash.
 void ArchTestCrashArgParse(int argc, char** argv);
 
-#endif
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // ARCH_TEST_UTIL_H

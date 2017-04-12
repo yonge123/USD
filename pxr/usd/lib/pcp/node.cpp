@@ -21,8 +21,12 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/usd/pcp/node.h"
 #include "pxr/usd/pcp/primIndex_Graph.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 static inline int _GetNonVariantPathElementCount(const SdfPath &path);
 
@@ -349,8 +353,10 @@ _GetNonVariantPathElementCount(const SdfPath &path)
         cur = cur.GetParentPath();
         for (; cur.ContainsPrimVariantSelection(); cur = cur.GetParentPath())
             result += (!cur.IsPrimVariantSelectionPath());
-        return result + cur.GetPathElementCount();
+        return result + static_cast<int>(cur.GetPathElementCount());
     } else {
-        return path.GetPathElementCount();
+        return static_cast<int>(path.GetPathElementCount());
     }
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

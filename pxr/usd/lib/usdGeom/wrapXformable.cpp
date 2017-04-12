@@ -22,7 +22,6 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/usd/usdGeom/xformable.h"
-
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/conversions.h"
 
@@ -39,6 +38,10 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 #define WRAP_CUSTOM                                                     \
     template <class Cls> static void _CustomWrapCode(Cls &_class)
 
@@ -52,6 +55,8 @@ _CreateXformOpOrderAttr(UsdGeomXformable &self,
     return self.CreateXformOpOrderAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->TokenArray), writeSparsely);
 }
+
+} // anonymous namespace
 
 void wrapUsdGeomXformable()
 {
@@ -106,10 +111,16 @@ void wrapUsdGeomXformable()
 // }
 //
 // Of course any other ancillary or support code may be provided.
+// 
+// Just remember to wrap code in the appropriate delimiters:
+// 'namespace {', '}'.
+//
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
 #include "pxr/base/tf/pyEnum.h"
+
+namespace {
 
 static GfMatrix4d
 _GetLocalTransformation1(const UsdGeomXformable &self,
@@ -289,3 +300,5 @@ WRAP_CUSTOM {
             .staticmethod("IsTransformationAffectedByAttrNamed")
     ;
 }
+
+} // anonymous namespace

@@ -21,8 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef _USDUTILS_PIPELINE_H_
-#define _USDUTILS_PIPELINE_H_
+#ifndef USDUTILS_PIPELINE_H_
+#define USDUTILS_PIPELINE_H_
 
 /// \file usdUtils/pipeline.h
 ///
@@ -30,12 +30,17 @@
 /// conventions for things not currently suitable or possible to canonize in
 /// USD's schema modules.
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usdUtils/api.h"
 #include "pxr/usd/usdUtils/registeredVariantSet.h"
 
 #include "pxr/usd/sdf/declareHandles.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/usd/common.h"
 #include "pxr/base/tf/envSetting.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 SDF_DECLARE_HANDLES(SdfLayer);
 
@@ -49,16 +54,19 @@ SDF_DECLARE_HANDLES(SdfLayer);
 ///
 /// This method uses the presence of old-style customData['isZup'] to determine
 /// whether the cameras is contains are zUp or yUp.
+USDUTILS_API
 bool UsdUtilsGetCamerasAreZup(UsdStageWeakPtr const &stage);
 
 /// Define the shading pipeline's convention for naming a companion
 /// alpha/opacity attribute and primvarnames given the full name of a
 /// color-valued attribute
+USDUTILS_API
 TfToken UsdUtilsGetAlphaAttributeNameForColor(TfToken const &colorAttrName);
 
 /// Returns the model name associated with a given root layer. In order,
 /// it looks for defaultPrim metadata, a prim matching the filename,
 /// and then the first concrete root prim.
+USDUTILS_API
 TfToken UsdUtilsGetModelNameFromRootLayer(const SdfLayerHandle& rootLayer);
 
 /// Certain variant sets can be registered with the system.
@@ -87,6 +95,7 @@ TfToken UsdUtilsGetModelNameFromRootLayer(const SdfLayerHandle& rootLayer);
 ///        ]
 ///    }
 /// \endcode
+USDUTILS_API
 const std::set<UsdUtilsRegisteredVariantSet>& UsdUtilsGetRegisteredVariantSets();
 
 /// If a valid UsdPrim already exists at \p path on the USD stage \p stage, 
@@ -99,6 +108,7 @@ const std::set<UsdUtilsRegisteredVariantSet>& UsdUtilsGetRegisteredVariantSets()
 /// This method is similar to UsdStage::GetPrimAtPath(), in that it will never 
 /// author scene description, and therefore is safe to use as a "reader" in the 
 /// Usd multi-threading model.
+USDUTILS_API
 UsdPrim UsdUtilsGetPrimAtPathWithForwarding(const UsdStagePtr &stage, 
                                             const SdfPath &path);
 
@@ -106,11 +116,16 @@ UsdPrim UsdUtilsGetPrimAtPathWithForwarding(const UsdStagePtr &stage,
 /// returns the resulting prim at the requested path. Returns a NULL prim if the 
 /// given path doesn't exist and does not correspond to a valid prim inside a 
 /// master.
+USDUTILS_API
 UsdPrim UsdUtilsUninstancePrimAtPath(const UsdStagePtr &stage, 
                                      const SdfPath &path);
 
 /// Returns the name of the primary UV set used on meshes and nurbs.
 /// By default the name is "st".
+USDUTILS_API
 TfToken UsdUtilsGetPrimaryUVSetName();
 
-#endif /* _USDUTILS_PIPELINE_H_ */
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif /* USDUTILS_PIPELINE_H_ */

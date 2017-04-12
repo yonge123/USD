@@ -26,10 +26,15 @@
 
 ///\file work/utils.h
 
+#include "pxr/pxr.h"
+#include "pxr/base/work/api.h"
 #include "pxr/base/work/detachedTask.h"
 
 #include <utility>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+WORK_API
 bool Work_ShouldSynchronizeAsyncDestroyCalls();
 
 template <class T>
@@ -64,5 +69,7 @@ void WorkMoveDestroyAsync(T &obj)
     if (!Work_ShouldSynchronizeAsyncDestroyCalls())
         WorkRunDetachedTask(std::move(helper));
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // WORK_UTILS_H

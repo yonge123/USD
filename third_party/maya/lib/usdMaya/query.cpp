@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdMaya/query.h"
 
 #include "usdMaya/usdPrimProvider.h"
@@ -39,6 +40,9 @@
 #include <maya/MStatus.h>
 
 #include <string>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 
 UsdPrim
@@ -60,19 +64,6 @@ PxrUsdMayaQuery::GetPrim(const std::string& shapeName)
     return usdPrim;
 }
 
-std::string
-PxrUsdMayaQuery::ResolvePath(const std::string &filePath)
-{
-    ArResolver& resolver = ArGetResolver();
-
-    ArResolverContext ctx = 
-        resolver.CreateDefaultContextForDirectory(ArchGetCwd());
-    resolver.RefreshContext(ctx);
-
-    ArResolverContextBinder boundCtx(ctx);
-    return resolver.Resolve(filePath);
-}
-
 void
 PxrUsdMayaQuery::ReloadStage(const std::string& shapeName)
 {
@@ -84,4 +75,7 @@ PxrUsdMayaQuery::ReloadStage(const std::string& shapeName)
         }
     }
 }
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 

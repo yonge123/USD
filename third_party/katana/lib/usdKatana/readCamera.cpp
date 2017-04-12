@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdKatana/attrMap.h"
 #include "usdKatana/readCamera.h"
 #include "usdKatana/readXformable.h"
@@ -36,6 +37,9 @@
 #include <FnAttribute/FnDataBuilder.h>
 #include <FnLogging/FnLogging.h>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 FnLogSetup("PxrUsdKatanaReadCamera");
 
 void
@@ -44,7 +48,7 @@ PxrUsdKatanaReadCamera(
         const PxrUsdKatanaUsdInPrivateData& data,
         PxrUsdKatanaAttrMap& attrs)
 {
-    const double currentTime = data.GetUsdInArgs()->GetCurrentTime();
+    const double currentTime = data.GetCurrentTime();
 
     //
     // Set all general attributes for a xformable type.
@@ -130,7 +134,7 @@ PxrUsdKatanaReadCamera(
         const std::vector<double>& motionSampleTimes =
             data.GetMotionSampleTimes(camera.GetFocalLengthAttr());
 
-        const bool isMotionBackward = data.GetUsdInArgs()->IsMotionBackward();
+        const bool isMotionBackward = data.IsMotionBackward();
 
         FnKat::DoubleBuilder fovBuilder(1);
         TF_FOR_ALL(iter, motionSampleTimes)
@@ -204,3 +208,6 @@ PxrUsdKatanaReadCamera(
     
     attrs.set("geometry", geoBuilder.build());
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

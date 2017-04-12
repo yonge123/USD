@@ -15,6 +15,9 @@ pxr_shared_library(pcp
     INCLUDE_DIRS
         ${Boost_INCLUDE_DIRS}
         ${TBB_INCLUDE_DIRS}
+        
+    PUBLIC_HEADERS
+        api.h
 
     PUBLIC_CLASSES
         arc
@@ -22,7 +25,6 @@ pxr_shared_library(pcp
         changes
         composeSite
         dependency
-        diagnostic
         errors
         instanceKey
         iterator
@@ -47,6 +49,7 @@ pxr_shared_library(pcp
     PRIVATE_CLASSES
         debugCodes
         dependencies
+        diagnostic
         instancing
         layerStackRegistry
         node_Iterator

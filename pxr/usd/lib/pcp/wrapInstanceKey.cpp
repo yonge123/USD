@@ -21,8 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/pcp/instanceKey.h"
 
+#include "pxr/pxr.h"
+#include "pxr/usd/pcp/instanceKey.h"
 #include "pxr/usd/pcp/primIndex.h"
 
 #include <boost/python/class.hpp>
@@ -30,11 +31,17 @@
  
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 static size_t
 __hash__(const PcpInstanceKey& key)
 {
     return hash_value(key);
 }
+
+} // anonymous namespace 
 
 void
 wrapInstanceKey()

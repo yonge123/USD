@@ -26,6 +26,7 @@
 
 /// \file sdf/mapEditProxy.h
 
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/allowed.h"
 #include "pxr/usd/sdf/changeBlock.h"
 #include "pxr/usd/sdf/declareHandles.h"
@@ -40,6 +41,8 @@
 #include <boost/operators.hpp>
 #include <iterator>
 #include <utility>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class TfToken;
 
@@ -158,18 +161,26 @@ private:
         template <class U>
         _ValueProxy& operator=(const U& other)
         {
-            _owner->_Set(_data, _pos, other);
+            if (!_owner) {
+                TF_CODING_ERROR("Assignment to invalid map proxy");
+            } else {
+                _owner->_Set(_data, _pos, other);
+            }
             return *this;
         }
 
         operator mapped_type() const
         {
-            return _owner->_Get(_data, _pos);
+            return Get();
         }
 
         // Required for _PairProxy::operator value_type().
         mapped_type Get() const
         {
+            if (!_owner) {
+                TF_CODING_ERROR("Read from invalid map proxy");
+                return mapped_type();
+            }
             return _owner->_Get(_data, _pos);
         }
 
@@ -555,10 +566,11 @@ public:
 
     reference operator[](const key_type& key)
     {
-        inner_iterator result =
-            _Insert(value_type(key, mapped_type())).first.base();
-
-        return reference(this, _Data(), result);
+        auto iter = _Insert(value_type(key, mapped_type())).first;
+        bool failed = iter == iterator();
+        return reference(failed ? nullptr : this,
+                         failed ? nullptr : _Data(),
+                         iter.base());
     }
 
     bool operator==(const Type& other) const
@@ -926,4 +938,6 @@ struct Vt_DefaultValueFactory<SdfMapEditProxy<T, _ValuePolicy> > {
     }
 };
 
-#endif
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // SDF_MAPEDITPROXY_H

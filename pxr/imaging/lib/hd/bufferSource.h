@@ -24,16 +24,21 @@
 #ifndef HD_BUFFER_SOURCE_H
 #define HD_BUFFER_SOURCE_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
+#include "pxr/imaging/hd/bufferSpec.h"
 #include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/tf/token.h"
-#include "pxr/imaging/hd/bufferSpec.h"
 
 #include <atomic>
 #include <vector>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 class HdBufferSource;
 typedef boost::shared_ptr<HdBufferSource> HdBufferSourceSharedPtr;
@@ -56,6 +61,7 @@ class HdBufferSource : public boost::noncopyable {
 public:
     HdBufferSource() : _state(UNRESOLVED) { }
 
+    HD_API
     virtual ~HdBufferSource();
 
     /// Return the name of this buffer source.
@@ -104,13 +110,16 @@ public:
     // overriden for efficiency.
 
     /// The size of a single element in the array, e.g. sizeof(GLuint)
+    HD_API
     virtual size_t GetElementSize() const;
 
     /// Returns the size of a single component.
     /// For example: sizeof(GLuint)
+    HD_API
     virtual size_t GetComponentSize() const;
 
     /// Returns the flat array size in bytes.
+    HD_API
     virtual size_t GetSize() const;
 
     /// Returns true it this computation has already been resolved.
@@ -119,15 +128,18 @@ public:
     }
 
     /// Returns true if this buffer has a chained buffer.
+    HD_API
     virtual bool HasChainedBuffer() const;
 
     /// Returns the chained buffer.
+    HD_API
     virtual HdBufferSourceSharedPtr GetChainedBuffer() const;
 
     /// Checks the validity of the source buffer.
     /// The function should be called to determine if
     /// AddBufferSpec() and Resolve() would return valid
     /// results.
+    HD_API
     bool IsValid() const;
 
 protected:
@@ -182,11 +194,17 @@ private:
 ///
 class HdComputedBufferSource : public HdBufferSource {
 public:
+    HD_API
     virtual TfToken const &GetName() const;
+    HD_API
     virtual void const* GetData() const;
+    HD_API
     virtual int GetGLComponentDataType() const;
+    HD_API
     virtual int GetGLElementDataType() const;
+    HD_API
     virtual int GetNumElements() const;
+    HD_API
     virtual short GetNumComponents() const;
 
 protected:
@@ -203,13 +221,23 @@ private:
 ///
 class HdNullBufferSource : public HdBufferSource {
 public:
+    HD_API
     virtual TfToken const &GetName() const;
+    HD_API
     virtual void const* GetData() const;
+    HD_API
     virtual int GetGLComponentDataType() const;
+    HD_API
     virtual int GetGLElementDataType() const;
+    HD_API
     virtual int GetNumElements() const;
+    HD_API
     virtual short GetNumComponents() const;
+    HD_API
     virtual void AddBufferSpecs(HdBufferSpecVector *specs) const;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //HD_BUFFER_SOURCE_H

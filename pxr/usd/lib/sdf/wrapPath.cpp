@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/base/tf/pyAnnotatedBoolResult.h"
 #include "pxr/base/tf/pyResultConversions.h"
@@ -38,6 +40,10 @@ using namespace boost::python;
 using std::pair;
 using std::string;
 using std::vector;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static vector<SdfPath> GetPrefixesHelper( const SdfPath &path ) {
     return path.GetPrefixes();
@@ -118,6 +124,8 @@ __nonzero__(SdfPath const &self)
     return !self.IsEmpty();
 }
 
+} // anonymous namespace 
+
 void wrapPath() {    
     typedef SdfPath This;
 
@@ -161,7 +169,7 @@ void wrapPath() {
             "The relational attribute target path for this path.\n\n"
             "EmptyPath if this is not a relational attribute path.")
 
-        .def("GetAllTargetPathsRecursively", &::_WrapGetAllTargetPathsRecursively,
+        .def("GetAllTargetPathsRecursively", &_WrapGetAllTargetPathsRecursively,
              return_value_policy<TfPySequenceToList>())
 
         .def("GetVariantSelection", &This::GetVariantSelection,

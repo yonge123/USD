@@ -21,10 +21,13 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/sdf/pyUtils.h"
 
+#include "pxr/pxr.h"
+#include "pxr/usd/sdf/pyUtils.h"
 #include <boost/python/extract.hpp>
 #include <boost/python/object.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 bool
 SdfFileFormatArgumentsFromPython(
@@ -37,9 +40,9 @@ SdfFileFormatArgumentsFromPython(
     typedef SdfLayer::FileFormatArguments::mapped_type ArgValueType;
 
     const boost::python::object items = dict.items();
-    for (int i = 0; i < len(items); ++i) {
+    for (boost::python::ssize_t i = 0; i < len(items); ++i) {
         boost::python::extract<ArgKeyType> keyExtractor(items[i][0]);
-        if (not keyExtractor.check()) {
+        if (!keyExtractor.check()) {
             if (errMsg) {
                 *errMsg = "All file format argument keys must be strings";
             }
@@ -47,7 +50,7 @@ SdfFileFormatArgumentsFromPython(
         }
 
         boost::python::extract<ArgValueType> valueExtractor(items[i][1]);
-        if (not valueExtractor.check()) {
+        if (!valueExtractor.check()) {
             if (errMsg) {
                 *errMsg = "All file format argument values must be strings";
             }
@@ -60,3 +63,5 @@ SdfFileFormatArgumentsFromPython(
     args->swap(argsMap);
     return true;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

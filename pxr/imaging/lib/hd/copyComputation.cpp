@@ -30,6 +30,9 @@
 
 #include "pxr/imaging/hf/perfLog.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 HdCopyComputationGPU::HdCopyComputationGPU(
     HdBufferArrayRangeSharedPtr const &src, TfToken const &name)
     : _src(src), _name(name)
@@ -42,24 +45,24 @@ HdCopyComputationGPU::Execute(HdBufferArrayRangeSharedPtr const &range)
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    if (not glBufferSubData) {
+    if (!glBufferSubData) {
         return;
     }
 
     HdBufferResourceSharedPtr src = _src->GetResource(_name);
     HdBufferResourceSharedPtr dst = range->GetResource(_name);
 
-    if (not TF_VERIFY(src)) {
+    if (!TF_VERIFY(src)) {
         return;
     }
-    if (not TF_VERIFY(dst)) {
+    if (!TF_VERIFY(dst)) {
         return;
     }
 
     int srcBytesPerElement = src->GetNumComponents() * src->GetComponentSize();
     int dstBytesPerElement = dst->GetNumComponents() * dst->GetComponentSize();
 
-    if (not TF_VERIFY(srcBytesPerElement == dstBytesPerElement)) {
+    if (!TF_VERIFY(srcBytesPerElement == dstBytesPerElement)) {
         return;
     }
 
@@ -67,7 +70,7 @@ HdCopyComputationGPU::Execute(HdBufferArrayRangeSharedPtr const &range)
     GLintptr writeOffset = range->GetOffset() * dstBytesPerElement;
     GLsizeiptr copySize = _src->GetNumElements() * srcBytesPerElement;
 
-    if (not TF_VERIFY(_src->GetNumElements() <= range->GetNumElements())) {
+    if (!TF_VERIFY(_src->GetNumElements() <= range->GetNumElements())) {
          return;
     }
 
@@ -85,10 +88,10 @@ HdCopyComputationGPU::Execute(HdBufferArrayRangeSharedPtr const &range)
         GLint srcId = src->GetId();
         GLint dstId = dst->GetId();
 
-        if (not TF_VERIFY(srcId)) {
+        if (!TF_VERIFY(srcId)) {
             return;
         }
-        if (not TF_VERIFY(dstId)) {
+        if (!TF_VERIFY(dstId)) {
             return;
         }
 
@@ -123,3 +126,6 @@ HdCopyComputationGPU::AddBufferSpecs(HdBufferSpecVector *specs) const
                                   resource->GetGLDataType(),
                                   resource->GetNumComponents()));
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

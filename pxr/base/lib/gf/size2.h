@@ -27,9 +27,14 @@
 /// \file gf/size2.h
 /// \ingroup group_gf_LinearAlgebra
 
+#include "pxr/pxr.h"
 #include "pxr/base/arch/inttypes.h"
 #include "pxr/base/gf/vec2i.h"
+#include "pxr/base/gf/api.h"
+
 #include <iosfwd>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// \class GfSize2
 /// \ingroup group_gf_LinearAlgebra
@@ -176,6 +181,7 @@ public:
     }
 
     /// Output operator.
+    GF_API
     friend std::ostream &operator<<(std::ostream &o, GfSize2 const &v);
 
     /// Conversion to GfVec2i.
@@ -187,6 +193,8 @@ public:
 };
 
 // Friend functions must be declared
-std::ostream &operator<<(std::ostream &o, GfSize2 const &v);
+GF_API std::ostream &operator<<(std::ostream &o, GfSize2 const &v);
 
-#endif /* GF_SIZE2_H */
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // GF_SIZE2_H 

@@ -26,6 +26,10 @@
 #include "pxr/base/tf/iterator.h"
 #include "pxr/base/tf/token.h"
 #include <boost/functional/hash.hpp>
+#include <sstream>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 static
 std::string
@@ -126,3 +130,6 @@ HdShaderKey::GetGLSLFXString(TfToken const &glslfxFile,
 
     return ss.str();
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

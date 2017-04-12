@@ -27,6 +27,8 @@
 
 /// \file usdTranslatorImport.h
 
+#include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/JobArgs.h"
 
 #include <maya/MFileObject.h>
@@ -36,10 +38,13 @@
 
 #include <string>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 
 const char* const usdTranslatorImportDefaults =
         "shadingMode=GPrim Colors;"
-        "readAnimData=0;"
+        "readAnimData=1;"
         "useCustomFrameRange=0;"
         "assemblyRep=Collapsed";
 
@@ -51,9 +56,11 @@ class usdTranslatorImport : public MPxFileTranslator
         /**
          * method to create usdTranslatorImport file translator
          */
+        PXRUSDMAYA_API
         static void* creator(const std::string& assemblyTypeName,
                              const std::string& proxyShapeTypeName);
 
+        PXRUSDMAYA_API
         MStatus reader(
                 const MFileObject& file,
                 const MString& optionsString,
@@ -62,6 +69,7 @@ class usdTranslatorImport : public MPxFileTranslator
         bool haveReadMethod() const { return true; }
         bool haveWriteMethod() const { return false; }
 
+        PXRUSDMAYA_API
         MFileKind identifyFile(
                 const MFileObject& file,
                 const char* buffer,
@@ -86,5 +94,8 @@ class usdTranslatorImport : public MPxFileTranslator
         const std::string _assemblyTypeName;
         const std::string _proxyShapeTypeName;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_TRANSLATOR_IMPORT_H

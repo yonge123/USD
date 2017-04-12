@@ -23,6 +23,7 @@
 //
 #define _CRT_SECURE_NO_WARNINGS
 
+#include "pxr/pxr.h"
 #include "pxr/base/arch/testArchUtil.h"
 #include "pxr/base/arch/debugger.h"
 #include "pxr/base/arch/defines.h"
@@ -36,6 +37,7 @@
 #if defined(ARCH_OS_WINDOWS)
 #include <Windows.h>
 #include <process.h>
+#include <csignal>
 #else
 #include <sys/wait.h>
 #include <unistd.h>
@@ -50,6 +52,8 @@ static const char* crashArgument[] = {
 #endif
 
 using namespace std;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
 
@@ -69,6 +73,15 @@ Arch_CorruptMemory(bool spawnthread)
     if (spawnthread) {
         t = std::thread([](){ while(true) ; });
     }
+
+#if defined(ARCH_OS_WINDOWS)
+    // On Windows we simply raise SIGSEGV because we can't reliably
+    // do anything once the heap has been corrupted.  Even if we install
+    // a frame-based structured exception handler, we can't be sure some
+    // other thread won't encounter corrupted memory (and Windows 10
+    // automatically starts several threads in every process).
+    raise(SIGSEGV);
+#endif
 
     for (size_t i = 0; i < 15; ++i) {
         overwrite = (char *)malloc(2);
@@ -144,7 +157,7 @@ ArchTestCrash(ArchTestCrashMode mode)
     // Make a command line for a new copy of this program with an argument
     // to tell it to crash.
     std::string cmdLine =
-        '"' + ArchGetExecutablePath() + '"' +
+        '"' + ArchGetExecutablePath() + "\" " +
         crashArgument[static_cast<int>(mode)];
 
     // Start a new copy of this program and tell it to crash.
@@ -186,7 +199,12 @@ ArchTestCrash(ArchTestCrashMode mode)
 
 #endif
 
-    ARCH_AXIOM(status != 0);
+    // We reserve status 0 for the child executing without error and
+    // status 1 for it having an unexpected error.  Since we expect
+    // the child to fail we expect a status greater than 1.  Raising
+    // a signal with a default handler on Windows exits with status
+    // code 3, a fact we take advantage of in this test.
+    ARCH_AXIOM(status > 1);
 }
 
 void
@@ -207,3 +225,5 @@ ArchTestCrashArgParse(int argc, char** argv)
     // Non-windows platforms don't need this.
 #endif
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

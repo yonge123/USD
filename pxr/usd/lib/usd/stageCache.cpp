@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/stageCache.h"
 
 #include "pxr/usd/sdf/layer.h"
@@ -28,8 +29,6 @@
 #include "pxr/usd/usd/stage.h"
 
 #include "pxr/usd/ar/resolverContext.h"
-
-#include "pxr/base/arch/nap.h"
 
 #include <boost/bind.hpp>
 #include <boost/functional/hash.hpp>
@@ -43,7 +42,11 @@
 
 #include <atomic>
 #include <vector>
+#include <thread>
 #include <utility>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 using std::string;
 using std::vector;
@@ -186,8 +189,9 @@ struct UsdStageCacheRequest::_Mailbox {
     _Mailbox() : state(0) {}
 
     UsdStageRefPtr Wait() {
-        while (state == 1)
-            ArchThreadYield();
+        while (state == 1) {
+            std::this_thread::yield();
+        }
         return stage;
     }
 
@@ -687,3 +691,6 @@ UsdStageCacheRequest::_Subscribe(_Mailbox *mailbox)
     _data->subscribed.push_back(mailbox);
     mailbox->state = 1; // subscribed.
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

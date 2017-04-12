@@ -21,6 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/templateString.h"
 
 #include "pxr/base/tf/pyResultConversions.h"
@@ -36,6 +39,10 @@
 using std::string;
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static string __repr__(TfTemplateString const &self)
 {
@@ -62,6 +69,8 @@ static string _SafeSubstitute(TfTemplateString const &self, dict const &d)
     return self.SafeSubstitute(m);
 }
 
+} // anonymous namespace 
+
 void wrapTemplateString()
 {
     typedef TfTemplateString This;
@@ -81,4 +90,3 @@ void wrapTemplateString()
         .add_property("valid", &This::IsValid)
         ;
 }
-

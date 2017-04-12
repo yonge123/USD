@@ -26,6 +26,8 @@
 
 /// \file usdRi/rslShader.h
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usdRi/api.h"
 #include "pxr/usd/usdShade/shader.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
@@ -39,6 +41,8 @@
 
 #include "pxr/base/tf/token.h"
 #include "pxr/base/tf/type.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class SdfAssetPath;
 
@@ -76,11 +80,13 @@ public:
     }
 
     /// Destructor.
+    USDRI_API
     virtual ~UsdRiRslShader();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
+    USDRI_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
@@ -93,6 +99,7 @@ public:
     /// UsdRiRslShader(stage->GetPrimAtPath(path));
     /// \endcode
     ///
+    USDRI_API
     static UsdRiRslShader
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
@@ -118,17 +125,20 @@ public:
     /// specify this schema class, in case a stronger typeName opinion overrides
     /// the opinion at the current EditTarget.
     ///
+    USDRI_API
     static UsdRiRslShader
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
+    USDRI_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
+    USDRI_API
     virtual const TfType &_GetTfType() const;
 
 public:
@@ -141,6 +151,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Asset
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDRI_API
     UsdAttribute GetSloPathAttr() const;
 
     /// See GetSloPathAttr(), and also 
@@ -148,6 +159,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDRI_API
     UsdAttribute CreateSloPathAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -155,11 +167,15 @@ public:
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 
     //
-    // Just remember to close the class declaration with }; and complete the
-    // include guard with #endif
+    // Just remember to: 
+    //  - Close the class declaration with }; 
+    //  - Close the namespace with PXR_NAMESPACE_CLOSE_SCOPE
+    //  - Close the include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
 
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif

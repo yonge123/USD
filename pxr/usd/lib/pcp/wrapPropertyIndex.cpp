@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/usd/pcp/propertyIndex.h"
 #include "pxr/usd/pcp/primIndex.h"
 #include "pxr/usd/pcp/cache.h"
@@ -29,7 +31,12 @@
 
 #include <boost/python/class.hpp>
 #include <boost/python/def.hpp>
+
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static SdfPropertySpecHandleVector
 _WrapPropertyStack(const PcpPropertyIndex& propIndex)
@@ -45,6 +52,8 @@ _WrapLocalPropertyStack(const PcpPropertyIndex& propIndex)
         propIndex.GetPropertyRange(/* localOnly= */ true);
     return SdfPropertySpecHandleVector(range.first, range.second);
 }
+
+} // anonymous namespace 
 
 void
 wrapPropertyIndex()

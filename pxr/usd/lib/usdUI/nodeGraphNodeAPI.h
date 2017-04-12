@@ -26,6 +26,8 @@
 
 /// \file usdUI/nodeGraphNodeAPI.h
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usdUI/api.h"
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
@@ -39,6 +41,8 @@
 
 #include "pxr/base/tf/token.h"
 #include "pxr/base/tf/type.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class SdfAssetPath;
 
@@ -84,11 +88,13 @@ public:
     }
 
     /// Destructor.
+    USDUI_API
     virtual ~UsdUINodeGraphNodeAPI();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
+    USDUI_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
@@ -101,6 +107,7 @@ public:
     /// UsdUINodeGraphNodeAPI(stage->GetPrimAtPath(path));
     /// \endcode
     ///
+    USDUI_API
     static UsdUINodeGraphNodeAPI
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
@@ -108,11 +115,13 @@ public:
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
+    USDUI_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
+    USDUI_API
     virtual const TfType &_GetTfType() const;
 
 public:
@@ -134,6 +143,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Float2
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: No Fallback
+    USDUI_API
     UsdAttribute GetPosAttr() const;
 
     /// See GetPosAttr(), and also 
@@ -141,6 +151,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDUI_API
     UsdAttribute CreatePosAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -163,6 +174,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Int
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: No Fallback
+    USDUI_API
     UsdAttribute GetStackingOrderAttr() const;
 
     /// See GetStackingOrderAttr(), and also 
@@ -170,6 +182,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDUI_API
     UsdAttribute CreateStackingOrderAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -184,6 +197,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Color3f
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: No Fallback
+    USDUI_API
     UsdAttribute GetDisplayColorAttr() const;
 
     /// See GetDisplayColorAttr(), and also 
@@ -191,6 +205,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDUI_API
     UsdAttribute CreateDisplayColorAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -205,6 +220,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Asset
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: No Fallback
+    USDUI_API
     UsdAttribute GetIconAttr() const;
 
     /// See GetIconAttr(), and also 
@@ -212,6 +228,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDUI_API
     UsdAttribute CreateIconAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -230,6 +247,7 @@ public:
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: No Fallback
     /// \n  \ref UsdUITokens "Allowed Values": [open, closed, minimized]
+    USDUI_API
     UsdAttribute GetExpansionStateAttr() const;
 
     /// See GetExpansionStateAttr(), and also 
@@ -237,6 +255,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDUI_API
     UsdAttribute CreateExpansionStateAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -244,10 +263,14 @@ public:
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 
     //
-    // Just remember to close the class declaration with }; and complete the
-    // include guard with #endif
+    // Just remember to: 
+    //  - Close the class declaration with }; 
+    //  - Close the namespace with PXR_NAMESPACE_CLOSE_SCOPE
+    //  - Close the include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif

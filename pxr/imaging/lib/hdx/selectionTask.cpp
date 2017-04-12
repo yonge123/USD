@@ -34,6 +34,9 @@
 #include "pxr/imaging/hd/sceneDelegate.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 // -------------------------------------------------------------------------- //
 
 typedef std::vector<HdBufferSourceSharedPtr> HdBufferSourceSharedPtrVector;
@@ -69,7 +72,7 @@ HdxSelectionTask::_Sync(HdTaskContext* ctx)
     HdSceneDelegate* delegate = GetDelegate();
     HdRenderIndex& index = delegate->GetRenderIndex();
     HdChangeTracker& changeTracker = index.GetChangeTracker();
-    HdChangeTracker::DirtyBits bits = changeTracker.GetTaskDirtyBits(id);
+    HdDirtyBits bits = changeTracker.GetTaskDirtyBits(id);
     HdResourceRegistry* resourceRegistry = &HdResourceRegistry::GetInstance();
 
     bool paramsChanged = bits & HdChangeTracker::DirtyParams;
@@ -169,3 +172,6 @@ bool operator!=(const HdxSelectionTaskParams& lhs,
                 const HdxSelectionTaskParams& rhs) {
     return !(lhs == rhs);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

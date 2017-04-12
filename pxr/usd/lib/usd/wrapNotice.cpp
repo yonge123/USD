@@ -23,12 +23,17 @@
 //
 ///
 /// \file Sdf/wrapNotice.cpp
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/notice.h"
 #include "pxr/base/tf/pyNoticeWrapper.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include <boost/python.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 TF_INSTANTIATE_NOTICE_WRAPPER(UsdNotice::StageNotice, 
                                 TfNotice);
@@ -40,8 +45,9 @@ TF_INSTANTIATE_NOTICE_WRAPPER(UsdNotice::ObjectsChanged,
 TF_INSTANTIATE_NOTICE_WRAPPER(UsdNotice::StageEditTargetChanged,
                                 UsdNotice::StageNotice);
 
-void
-wrapUsdNotice()
+} // anonymous namespace 
+
+void wrapUsdNotice()
 {
     scope s = class_<UsdNotice>("Notice", no_init);
 
@@ -69,3 +75,4 @@ wrapUsdNotice()
         UsdNotice::StageEditTargetChanged, UsdNotice::StageNotice>::Wrap()
         ;
 }
+

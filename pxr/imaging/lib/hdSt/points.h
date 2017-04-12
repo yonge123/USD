@@ -23,6 +23,9 @@
 //
 #ifndef HDST_POINTS_H
 #define HDST_POINTS_H
+
+#include "pxr/pxr.h"
+#include "pxr/imaging/hdSt/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/drawingCoord.h"
 #include "pxr/imaging/hd/enums.h"
@@ -33,6 +36,9 @@
 #include "pxr/base/vt/array.h"
 
 #include <boost/shared_ptr.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// \class HdStPointsReprDesc
 ///
@@ -54,36 +60,52 @@ struct HdStPointsReprDesc {
 class HdStPoints final : public HdPoints {
 public:
     HF_MALLOC_TAG_NEW("new HdStPoints");
-    HdStPoints(HdSceneDelegate* delegate, SdfPath const& id,
+
+    HDST_API
+    HdStPoints(SdfPath const& id,
              SdfPath const& instancerId = SdfPath());
+    HDST_API
     virtual ~HdStPoints();
 
+    HDST_API
+    virtual void Sync(HdSceneDelegate* delegate,
+                      HdRenderParam*   renderParam,
+                      HdDirtyBits*     dirtyBits,
+                      TfToken const&   reprName,
+                      bool             forcedRepr) override;
+
     /// Configure geometric style of drawItems for \p reprName
+    HDST_API
     static void ConfigureRepr(TfToken const &reprName,
                               const HdStPointsReprDesc &desc);
 
-    /// Return the dirtyBits mask to be tracked for \p reprName
-    static int GetDirtyBitsMask(TfToken const &reprName);
 
 protected:
-    virtual HdReprSharedPtr const & _GetRepr(
-        TfToken const &reprName, HdChangeTracker::DirtyBits *dirtyBitsState);
+    virtual HdReprSharedPtr const &
+        _GetRepr(HdSceneDelegate *sceneDelegate,
+                 TfToken const &reprName,
+                 HdDirtyBits *dirtyBitsState) override;
 
-    void _PopulateVertexPrimVars(HdDrawItem *drawItem,
-                                 HdChangeTracker::DirtyBits *dirtyBitsState);
+    void _PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
+                                 HdDrawItem *drawItem,
+                                 HdDirtyBits *dirtyBitsState);
 
-    virtual HdChangeTracker::DirtyBits _GetInitialDirtyBits() const final override;
+    virtual HdDirtyBits _GetInitialDirtyBits() const override;
 
 private:
     enum DrawingCoord {
         InstancePrimVar = HdDrawingCoord::CustomSlotsBegin
     };
 
-    void _UpdateDrawItem(HdDrawItem *drawItem,
-                         HdChangeTracker::DirtyBits *dirtyBits);
+    void _UpdateDrawItem(HdSceneDelegate *sceneDelegate,
+                         HdDrawItem *drawItem,
+                         HdDirtyBits *dirtyBits);
 
     typedef _ReprDescConfigs<HdStPointsReprDesc> _PointsReprConfig;
     static _PointsReprConfig _reprDescConfig;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // HDST_POINTS_H

@@ -23,6 +23,8 @@
 // language governing permissions and limitations under the Apache License.
 //
 
+#include "pxr/pxr.h"
+#include "pxr/base/arch/fileSystem.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/usd/sdf/textParserContext.h"
 #include "pxr/usd/sdf/parserHelpers.h"
@@ -30,8 +32,17 @@
 // Token table from yacc file
 #include "textFileFormat.tab.h"
 
+#ifndef fileno
+#define fileno(fd) ArchFileNo(fd)
+#endif
+#ifndef isatty
+#define isatty(fd) ArchFileIsaTTY(fd)
+#endif
+
 using std::map;
 using std::vector;
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 #define YYSTYPE Sdf_ParserHelpers::Value
 
@@ -111,6 +122,7 @@ using std::vector;
 "rootPrims"           { (*yylval_param) = std::string(yytext, yyleng); return TOK_ROOTPRIMS; }
 "scale"               { (*yylval_param) = std::string(yytext, yyleng); return TOK_SCALE; }
 "subLayers"           { (*yylval_param) = std::string(yytext, yyleng); return TOK_SUBLAYERS; }
+"suffixSubstitutions" { (*yylval_param) = std::string(yytext, yyleng); return TOK_SUFFIX_SUBSTITUTIONS; }
 "specializes"         { (*yylval_param) = std::string(yytext, yyleng); return TOK_SPECIALIZES; }
 "symmetryArguments"   { (*yylval_param) = std::string(yytext, yyleng); return TOK_SYMMETRYARGUMENTS; }
 "symmetryFunction"    { (*yylval_param) = std::string(yytext, yyleng); return TOK_SYMMETRYFUNCTION; }

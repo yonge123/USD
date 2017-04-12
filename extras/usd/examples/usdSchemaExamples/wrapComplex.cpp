@@ -22,7 +22,6 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "./complex.h"
-
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/conversions.h"
 
@@ -39,6 +38,10 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 #define WRAP_CUSTOM                                                     \
     template <class Cls> static void _CustomWrapCode(Cls &_class)
 
@@ -52,6 +55,8 @@ _CreateComplexStringAttr(UsdSchemaExamplesComplex &self,
     return self.CreateComplexStringAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->String), writeSparsely);
 }
+
+} // anonymous namespace
 
 void wrapUsdSchemaExamplesComplex()
 {
@@ -108,8 +113,16 @@ void wrapUsdSchemaExamplesComplex()
 // }
 //
 // Of course any other ancillary or support code may be provided.
+// 
+// Just remember to wrap code in the appropriate delimiters:
+// 'namespace {', '}'.
+//
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
+namespace {
+
 WRAP_CUSTOM {
 }
+
+} // anonymous namespace 

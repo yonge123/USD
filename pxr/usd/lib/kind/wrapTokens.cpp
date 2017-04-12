@@ -21,9 +21,12 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/kind/registry.h"
 
+#include "pxr/pxr.h"
+#include "pxr/usd/kind/registry.h"
 #include "pxr/base/tf/pyStaticTokens.h"
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void wrapTokens()
 {

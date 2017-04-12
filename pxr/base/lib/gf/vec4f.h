@@ -31,7 +31,9 @@
 /// \file gf/vec4f.h
 /// \ingroup group_gf_LinearAlgebra
 
+#include "pxr/pxr.h"
 #include "pxr/base/tf/diagnostic.h"
+#include "pxr/base/gf/api.h"
 #include "pxr/base/gf/limits.h"
 #include "pxr/base/gf/traits.h"
 #include "pxr/base/gf/math.h"
@@ -42,6 +44,10 @@
 #include <cmath>
 
 #include <iosfwd>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+class GfVec4f;
 
 template <>
 struct GfIsGfVec<class GfVec4f> { static const bool value = true; };
@@ -176,10 +182,13 @@ public:
 
     // TODO Add inequality for other vec types...
     /// Equality comparison.
+    GF_API
     bool operator==(class GfVec4d const &other) const;
     /// Equality comparison.
+    GF_API
     bool operator==(class GfVec4h const &other) const;
     /// Equality comparison.
+    GF_API
     bool operator==(class GfVec4i const &other) const;
     
     /// Create a vec with negated elements.
@@ -300,11 +309,16 @@ private:
 
 /// Output a GfVec4f.
 /// \ingroup group_gf_DebuggingOutput
-std::ostream& operator<<(std::ostream &, GfVec4f const &);
+GF_API std::ostream& operator<<(std::ostream &, GfVec4f const &);
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #include "pxr/base/gf/vec4d.h"
 #include "pxr/base/gf/vec4h.h"
 #include "pxr/base/gf/vec4i.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 inline
 GfVec4f::GfVec4f(class GfVec4d const &other)
@@ -416,4 +430,6 @@ GfIsClose(GfVec4f const &v1, GfVec4f const &v2, double tolerance)
 
  
  
+PXR_NAMESPACE_CLOSE_SCOPE
+
 #endif // GF_VEC4F_H

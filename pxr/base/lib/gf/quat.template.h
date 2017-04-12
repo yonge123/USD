@@ -31,15 +31,20 @@
 /// \file gf/quat{{ SUFFIX }}.h
 /// \ingroup group_gf_LinearAlgebra
 
+#include "pxr/pxr.h"
+#include "pxr/base/gf/api.h"
+#include "pxr/base/gf/declare.h"
 #include "pxr/base/gf/vec3{{ SUFFIX }}.h"
 #include "pxr/base/gf/traits.h"
-{% if SCL == 'half' -%}
+{% if SCL == 'GfHalf' -%}
 #include "pxr/base/gf/half.h"
 {% endif %}
 
 #include <boost/functional/hash.hpp>
 
 #include <iosfwd>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 template <>
 struct GfIsGfQuat<class {{ QUAT }}> { static const bool value = true; };
@@ -82,6 +87,7 @@ class {{ QUAT }}
 
 {% for S in SCALARS if S != SCL %}
     /// {{ "Implicitly convert" if ALLOW_IMPLICIT_CONVERSION(S, SCL) else "Construct" }} from {{ QUATNAME(S) }}.
+    GF_API
     {{ '' if ALLOW_IMPLICIT_CONVERSION(S, SCL) else 'explicit ' }}{{ QUAT }}(class {{ QUATNAME(S) }} const &other);
 {% endfor %}
 
@@ -123,6 +129,7 @@ class {{ QUAT }}
     /// Normalizes this quaternion in place to unit length, returning the
     /// length before normalization. If the length of this quaternion is
     /// smaller than \p eps, this sets the quaternion to identity.
+    GF_API
     {{ SCL }} Normalize({{ SCL }} eps = GF_MIN_VECTOR_LENGTH);
 
     /// Return this quaternion's conjugate, which is the quaternion with the
@@ -163,6 +170,7 @@ class {{ QUAT }}
     }
 
     /// Post-multiply quaternion \p q into this quaternion.
+    GF_API
     {{ QUAT }} &operator *=(const {{ QUAT }} &q);
 
     /// Multiply this quaternion's coefficients by \p s.
@@ -247,14 +255,16 @@ class {{ QUAT }}
 ///
 /// If the interpolant \p alpha is zero, then the result is \p q0, while
 /// \p alpha of one yields \p q1.
-{{ QUAT }}
+GF_API {{ QUAT }}
 GfSlerp(double alpha, const {{ QUAT }}& q0, const {{ QUAT }}& q1);
 
-{{ QUAT }}
+GF_API {{ QUAT }}
 GfSlerp(const {{ QUAT }}& q0, const {{ QUAT }}& q1, double alpha);
 
 /// Output a GfQuatd using the format (re, i, j, k)
 /// \ingroup group_gf_DebuggingOutput
-std::ostream& operator<<(std::ostream &, {{ QUAT }} const &);
+GF_API std::ostream& operator<<(std::ostream &, {{ QUAT }} const &);
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // GF_{{ UPPER(QUAT)[2:] }}_H

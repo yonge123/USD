@@ -21,10 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/assetPath.h"
-
 #include "pxr/base/vt/valueFromPython.h"
-
 #include "pxr/base/tf/hash.h"
 #include "pxr/base/tf/pyResultConversions.h"
 
@@ -37,6 +36,15 @@
 #include <sstream>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
+static std::string _Str(SdfAssetPath const &self)
+{
+    return boost::lexical_cast<std::string>(self);
+}
 
 static std::string
 _Repr(SdfAssetPath const &self)
@@ -66,6 +74,8 @@ static size_t _Hash(SdfAssetPath const &self)
     return hash;
 }
 
+} // anonymous namespace 
+
 void wrapAssetPath()
 {
     typedef SdfAssetPath This;
@@ -80,7 +90,8 @@ void wrapAssetPath()
 
         .def( self == self )
         .def( self != self )
-        .def( str(self) )
+//        .def( str(self) )
+        .def("__str__", _Str)
 
         .add_property("path", 
                       make_function(&This::GetAssetPath,

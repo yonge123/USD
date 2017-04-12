@@ -21,6 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/declarePtrs.h"
 #include "pxr/base/tf/enum.h"
 #include "pxr/base/tf/error.h"
@@ -55,11 +58,13 @@
 #include <string>
 #include <vector>
 
-
 using namespace boost::python;
 using std::string;
 using std::vector;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 // Base
 typedef TfWeakPtr<class Tf_TestBase> Tf_TestBasePtr;
@@ -158,8 +163,7 @@ struct polymorphic_Tf_TestBase : public T, public TfPyPolymorphic<T> {
     }
     string default_Virtual4() const { return T::Virtual4(); }
     virtual string Virtual4() const {
-        return this->template
-            CallVirtual("Virtual4", &This::default_Virtual4)();
+        return this->CallVirtual("Virtual4", &This::default_Virtual4)();
     }
     virtual string UnwrappedVirtual() const {
         return this->template CallPureVirtual<string>("UnwrappedVirtual")();
@@ -178,17 +182,15 @@ struct polymorphic_Tf_TestDerived : public polymorphic_Tf_TestBase<T> {
     typedef polymorphic_Tf_TestDerived This;
     string default_Virtual() const { return T::Virtual(); }
     virtual string Virtual() const {
-        return this->template CallVirtual("Virtual", &This::default_Virtual)();
+        return this->CallVirtual("Virtual", &This::default_Virtual)();
     }
     void default_Virtual2() const { return T::Virtual2(); }
     virtual void Virtual2() const {
-        return this->template
-            CallVirtual("Virtual2", &This::default_Virtual2)();
+        return this->CallVirtual("Virtual2", &This::default_Virtual2)();
     }
     void default_Virtual3(string const &arg) { return T::Virtual3(arg); }
     virtual void Virtual3(string const &arg) {
-        return this->template
-            CallVirtual("Virtual3", &This::default_Virtual3)(arg);
+        return this->CallVirtual("Virtual3", &This::default_Virtual3)(arg);
     }
 };
 
@@ -435,6 +437,8 @@ _MakeClassWithVarArgInit(bool allowExtraArgs,
     return rval;
 }
 
+PXR_NAMESPACE_CLOSE_SCOPE
+
 void wrapTf_TestTfPython()
 {
 
@@ -536,3 +540,9 @@ void wrapTf_TestTfPython()
         ;
 
 }
+
+TF_REFPTR_CONST_VOLATILE_GET(Tf_ClassWithVarArgInit)
+TF_REFPTR_CONST_VOLATILE_GET(Tf_TestBase)
+TF_REFPTR_CONST_VOLATILE_GET(Tf_TestDerived)
+TF_REFPTR_CONST_VOLATILE_GET(polymorphic_Tf_TestBase<class Tf_TestBase>)
+TF_REFPTR_CONST_VOLATILE_GET(polymorphic_Tf_TestDerived<class Tf_TestDerived>)

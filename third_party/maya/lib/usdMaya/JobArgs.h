@@ -26,6 +26,8 @@
 
 /// \file JobArgs.h
 
+#include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/util.h"
 
 #include "pxr/base/tf/staticTokens.h"
@@ -33,6 +35,9 @@
 #include "pxr/usd/usd/usdFileFormat.h"
 #include "pxr/usd/usd/usdaFileFormat.h"
 #include "pxr/usd/usd/usdcFileFormat.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 #define PXRUSDMAYA_TRANSLATOR_TOKENS \
     ((UsdFileExtensionDefault, \
@@ -61,6 +66,7 @@ TF_DECLARE_PUBLIC_TOKENS(PxUsdExportJobArgsTokens,
 
 struct JobExportArgs
 {
+    PXRUSDMAYA_API
     JobExportArgs();
 
     bool exportRefsAsInstanceable;
@@ -109,6 +115,7 @@ struct JobExportArgs
 
 struct JobImportArgs
 {
+    PXRUSDMAYA_API
     JobImportArgs();
 
     TfToken shadingMode;
@@ -121,5 +128,8 @@ struct JobImportArgs
     bool importWithProxyShapes;
 };
 
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_JOBARGS_H

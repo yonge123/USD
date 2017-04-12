@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdMaya/usdWriteJob.h"
 
 #include "usdMaya/JobArgs.h"
@@ -30,9 +31,8 @@
 #include "usdMaya/MayaTransformWriter.h"
 #include "usdMaya/MayaCameraWriter.h"
 
-#include "usdMaya/translatorLook.h"
+#include "usdMaya/translatorMaterial.h"
 #include "usdMaya/primWriterRegistry.h"
-#include "usdMaya/PluginPrimWriter.h"
 
 #include "usdMaya/Chaser.h"
 #include "usdMaya/ChaserRegistry.h"
@@ -43,7 +43,7 @@
 
 #include "pxr/usd/usd/variantSets.h"
 #include "pxr/usd/usd/editContext.h"
-#include "pxr/usd/usd/treeIterator.h"
+#include "pxr/usd/usd/primRange.h"
 #include "pxr/usd/usdGeom/metrics.h"
 #include "pxr/usd/usdGeom/xform.h"
 #include "pxr/usd/usdUtils/pipeline.h"
@@ -68,6 +68,9 @@
 #include <limits>
 #include <map>
 #include <unordered_set>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 usdWriteJob::usdWriteJob(const JobExportArgs & iArgs) :
     mArgs(iArgs), mModelKindWriter(iArgs)
@@ -254,8 +257,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
         }
     }
 
-    // Writing Looks/Shading
-    PxrUsdMayaTranslatorLook::ExportShadingEngines(
+    // Writing Materials/Shading
+    PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
                 mStage, 
                 mArgs.dagPaths,
                 mArgs.shadingMode,
@@ -437,9 +440,9 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
                 UsdEditContext editContext(mStage, editTarget);
 
                 // == Activate/Deactivate UsdPrims
-                UsdTreeIterator it = UsdTreeIterator::AllPrims(mStage->GetPseudoRoot());
+                UsdPrimRange rng = UsdPrimRange::AllPrims(mStage->GetPseudoRoot());
                 std::vector<UsdPrim> primsToDeactivate;
-                for ( ; it; ++it) {
+                for (auto it = rng.begin(); it != rng.end(); ++it) {
                     UsdPrim usdPrim = *it;
                     // For all xformable usdPrims...
                     if (usdPrim && usdPrim.IsA<UsdGeomXformable>()) {
@@ -457,7 +460,7 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
                         }
                     }
                 }
-                // Now deactivate the prims (done outside of the UsdTreeIterator 
+                // Now deactivate the prims (done outside of the UsdPrimRange 
                 // so not to modify the iterator while in the loop)
                 for ( UsdPrim const& prim : primsToDeactivate ) {
                     prim.SetActive(false);
@@ -496,7 +499,7 @@ bool usdWriteJob::createPrimWriter(
         return false;
     }
 
-    // Check whether a PluginPrimWriter exists for the node first, since plugin
+    // Check whether a user prim writer exists for the node first, since plugin
     // nodes may provide the same function sets as native Maya nodes. If a
     // writer can't be found, we'll fall back on the standard writers below.
     if (ob.hasFn(MFn::kPluginDependNode) && ob.hasFn(MFn::kDagNode) && ob.hasFn(MFn::kDependencyNode)) {
@@ -505,13 +508,12 @@ bool usdWriteJob::createPrimWriter(
 
         std::string mayaTypeName(pxNode->typeName().asChar());
 
-        if (PxrUsdMayaPrimWriterRegistry::WriterFn primWriter =
+        if (PxrUsdMayaPrimWriterRegistry::WriterFactoryFn primWriterFactory =
                 PxrUsdMayaPrimWriterRegistry::Find(mayaTypeName)) {
-            PxrUsdExport_PluginPrimWriter::Ptr primPtr(new PxrUsdExport_PluginPrimWriter(
-                        curDag, mStage, mArgs, primWriter));
-            if (primPtr->isValid()) {
-                // We found a PluginPrimWriter that handles this node type, so
-                // return now.
+            MayaPrimWriterPtr primPtr(primWriterFactory(curDag, mStage, mArgs));
+            if (primPtr && primPtr->isValid()) {
+                // We found a registered user prim writer that handles this node
+                // type, so return now.
                 *primWriterOut = primPtr;
                 return true;
             }
@@ -595,4 +597,7 @@ void usdWriteJob::postCallback()
     }
 }
 
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 

@@ -23,6 +23,8 @@
 //
 ///
 /// \file Sdf/wrapNotice.cpp
+
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/layer.h"
 #include "pxr/usd/sdf/notice.h"
 #include "pxr/base/tf/pyNoticeWrapper.h"
@@ -30,6 +32,10 @@
 #include <boost/python.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 TF_INSTANTIATE_NOTICE_WRAPPER(
     SdfNotice::Base, TfNotice);
@@ -49,6 +55,8 @@ TF_INSTANTIATE_NOTICE_WRAPPER(
     SdfNotice::LayerDirtinessChanged, SdfNotice::Base);
 TF_INSTANTIATE_NOTICE_WRAPPER(
     SdfNotice::LayerMutenessChanged, SdfNotice::Base);
+
+} // anonymous namespace 
 
 void
 wrapNotice()

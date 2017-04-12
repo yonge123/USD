@@ -22,7 +22,6 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/usd/usdRi/risIntegrator.h"
-
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/conversions.h"
 
@@ -38,6 +37,10 @@
 #include <string>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 #define WRAP_CUSTOM                                                     \
     template <class Cls> static void _CustomWrapCode(Cls &_class)
@@ -59,6 +62,8 @@ _CreateArgsPathAttr(UsdRiRisIntegrator &self,
     return self.CreateArgsPathAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Asset), writeSparsely);
 }
+
+} // anonymous namespace
 
 void wrapUsdRiRisIntegrator()
 {
@@ -122,8 +127,16 @@ void wrapUsdRiRisIntegrator()
 // }
 //
 // Of course any other ancillary or support code may be provided.
+// 
+// Just remember to wrap code in the appropriate delimiters:
+// 'namespace {', '}'.
+//
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
+namespace {
+
 WRAP_CUSTOM {
 }
+
+} // anonymous namespace

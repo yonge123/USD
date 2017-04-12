@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/gf/lineSeg.h"
 
 #include "pxr/base/tf/pyUtils.h"
@@ -39,7 +41,9 @@ using namespace boost::python;
 
 using std::string;
 
+PXR_NAMESPACE_USING_DIRECTIVE
 
+namespace {
 
 static string _Repr(GfLineSeg const &self) {
     return TF_PY_REPR_PREFIX + "LineSeg(" + TfPyRepr(self.GetPoint(0.0)) + ", " +
@@ -72,6 +76,8 @@ FindClosestPointHelper( const GfLineSeg &self, const GfVec3d &point )
     GfVec3d p1 = self.FindClosestPoint( point, &t );
     return boost::python::make_tuple( p1, t );
 }
+
+} // anonymous namespace 
 
 void wrapLineSeg()
 {    

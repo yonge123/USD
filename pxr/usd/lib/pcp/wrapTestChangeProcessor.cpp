@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/usd/pcp/cache.h"
 #include "pxr/usd/pcp/changes.h"
 
@@ -33,6 +35,10 @@
 #include <boost/python.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 class Pcp_PyTestChangeProcessor
     : public TfWeakBase
@@ -105,6 +111,8 @@ private:
     TfNotice::Key _layerChangedNoticeKey;
     PcpChanges _changes;
 };
+
+} // anonymous namespace 
 
 void
 wrapTestChangeProcessor()

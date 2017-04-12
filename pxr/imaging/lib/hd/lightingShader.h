@@ -24,11 +24,16 @@
 #ifndef HD_LIGHTING_SHADER_H
 #define HD_LIGHTING_SHADER_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
-#include "pxr/imaging/hd/shader.h"
+#include "pxr/imaging/hd/shaderCode.h"
 #include "pxr/base/gf/matrix4d.h"
 
 #include <boost/shared_ptr.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 typedef boost::shared_ptr<class HdLightingShader> HdLightingShaderSharedPtr;
 
@@ -36,14 +41,25 @@ typedef boost::shared_ptr<class HdLightingShader> HdLightingShaderSharedPtr;
 ///
 /// A lighting shader base class.
 ///
-class HdLightingShader : public HdShader {
+class HdLightingShader : public HdShaderCode {
 public:
+    HD_API
     HdLightingShader();
+    HD_API
     virtual ~HdLightingShader();
 
     /// Sets camera state.
     virtual void SetCamera(GfMatrix4d const &worldToViewMatrix,
                            GfMatrix4d const &projectionMatrix) = 0;
+
+private:
+
+    // No copying
+    HdLightingShader(const HdLightingShader &)                     = delete;
+    HdLightingShader &operator =(const HdLightingShader &)         = delete;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif  // HD_LIGHTING_SHADER_H

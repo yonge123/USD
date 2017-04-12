@@ -23,6 +23,8 @@
 //
 /// \file wrapRefPtrTracker.cpp
 
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/refPtr.h"
 #include "pxr/base/tf/weakPtr.h"
 #include "pxr/base/tf/refPtrTracker.h"
@@ -32,6 +34,10 @@
 #include <sstream>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static
 std::string
@@ -59,6 +65,8 @@ _ReportTracesForWatched(TfRefPtrTracker& tracker, uintptr_t ptr)
     tracker.ReportTracesForWatched(s, (TfRefBase*)ptr);
     return s.str();
 }
+
+} // anonymous namespace 
 
 void
 wrapRefPtrTracker()

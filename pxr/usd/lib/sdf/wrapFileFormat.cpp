@@ -24,8 +24,8 @@
 ///
 /// \file Sdf/wrapFileFormat.cpp
 
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/fileFormat.h"
-
 #include "pxr/base/tf/pyCall.h"
 #include "pxr/base/tf/pyPtrHelpers.h"
 #include "pxr/base/tf/pyStaticTokens.h"
@@ -34,6 +34,8 @@
 #include <boost/python/scope.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 namespace {
 
@@ -92,7 +94,7 @@ _RegisterFileFormat(object classObject)
     fileFormatType.SetFactory(Sdf_PyFileFormatFactory::New(classObject));
 }
 
-}
+} // anonymous namespace 
 
 void wrapFileFormat()
 {
@@ -143,3 +145,4 @@ void wrapFileFormat()
         "Tokens", SdfFileFormatTokens, SDF_FILE_FORMAT_TOKENS);
 }
 
+TF_REFPTR_CONST_VOLATILE_GET(SdfFileFormat)

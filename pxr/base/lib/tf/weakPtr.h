@@ -28,6 +28,8 @@
 /// \ingroup group_tf_Memory
 /// Pointer storage with deletion detection.
 
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/nullPtr.h"
 #include "pxr/base/tf/refPtr.h"
 #include "pxr/base/tf/tf.h"
@@ -43,6 +45,8 @@
 
 #include <cstddef>
 #include <type_traits>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class TfHash;
 template <class U> class TfRefPtr;
@@ -70,8 +74,8 @@ template <class T> class TfWeakPtr;
 ///
 /// <b>Basic Use</b>
 ///
-/// A \c TfWeakPtr<T> can access \c T's public members by the \c -> operator;
-/// however, the dereference operator "\c *" is not defined.
+/// A \c TfWeakPtr<T> can access \c T's public members by the \c -> operator
+/// and can be dereferenced by the "\c *" operator.
 ///
 /// A \c TfWeakPtr converts to a \c true bool value (for example, in an \c if
 /// statement) only if the pointer points to an unexpired object.  Otherwise,
@@ -442,5 +446,7 @@ struct Tf_SupportsWeakPtr
     virtual TfWeakBase const &__GetTfWeakBase__() const {       \
         return *this;                                           \
     }
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // TF_WEAKPTR_H

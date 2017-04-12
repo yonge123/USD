@@ -28,6 +28,8 @@
 #ifndef PXRUSDMAYAGL_HDRENDERER_H
 #define PXRUSDMAYAGL_HDRENDERER_H
 
+#include "pxr/pxr.h"
+#include "pxrUsdMayaGL/api.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usdImaging/usdImagingGL/gl.h"
 #include <boost/scoped_ptr.hpp>
@@ -38,6 +40,8 @@
 
 class M3dView;
 class MPxSurfaceShape;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// \brief This is an helper object that shapes can hold to get consistent usd
 /// drawing in maya.
@@ -96,12 +100,14 @@ public:
 
     /// \brief Should be called when the prim to \p usdPrim to draw or \p
     /// excludePaths change
+    PXRUSDMAYAGL_API
     void CheckRendererSetup(
             const UsdPrim& usdPrim, 
             const SdfPathVector& excludePaths);
 
     /// \brief Generate an array of draw requests based on the selection status
     /// of \c objPath
+    PXRUSDMAYAGL_API
     void GenerateDefaultVp2DrawRequests(
             const MDagPath& objPath,
             const MHWRender::MFrameContext& frameContext,
@@ -111,6 +117,7 @@ public:
     ///
     /// This function overrides some of the members of \p params, in particular,
     /// the \c drawMode.
+    PXRUSDMAYAGL_API
     void Render(
             const MDrawRequest& aRequest, 
             M3dView& aView, 
@@ -121,12 +128,14 @@ public:
     /// This function assumes that you have already set your desired values for
     /// \c complexity \c shotGuides and \c showRenderGuides members of
     /// \p params 
+    PXRUSDMAYAGL_API
     void RenderVp2(
         const RequestDataArray &requests,
         const MHWRender::MDrawContext& context,
         UsdImagingGL::RenderParams params) const;
 
     /// \brief Test for intersection, for use in \c select().
+    PXRUSDMAYAGL_API
     bool TestIntersection(
             M3dView& aView, 
             UsdImagingGL::RenderParams params,
@@ -134,6 +143,7 @@ public:
 
     /// \brief Helper function to convert from \p subdLevel (int) into Hydra's
     /// \p complexity parameter (\p float)
+    PXRUSDMAYAGL_API
     static float SubdLevelToComplexity(int subdLevel);
 
 private:
@@ -141,5 +151,8 @@ private:
     SdfPathVector _excludePrimPaths;
     boost::scoped_ptr<UsdImagingGL> _renderer;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYAGL_HDRENDERER_H

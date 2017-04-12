@@ -24,11 +24,16 @@
 #ifndef HDX_RENDER_TASK_H
 #define HDX_RENDER_TASK_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hdx/api.h"
 #include "pxr/imaging/hdx/version.h"
 #include "pxr/imaging/hd/task.h"
 #include "pxr/imaging/hdx/renderSetupTask.h"  // for short-term compatibility.
 
 #include <boost/shared_ptr.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 class HdSceneDelegate;
 
@@ -44,13 +49,16 @@ typedef std::vector<HdRenderPassSharedPtr> HdRenderPassSharedPtrVector;
 class HdxRenderTask : public HdSceneTask 
 {
 public:
+    HDX_API
     HdxRenderTask(HdSceneDelegate* delegate, SdfPath const& id);
 
 protected:
     /// Execute render pass task
+    HDX_API
     virtual void _Execute(HdTaskContext* ctx);
 
     /// Sync the render pass resources
+    HDX_API
     virtual void _Sync(HdTaskContext* ctx);
 
 private:
@@ -59,5 +67,8 @@ private:
     // XXX: temp members to keep compatibility (optional)
     HdxRenderSetupTaskSharedPtr _setupTask;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //HDX_RENDER_TASK_H

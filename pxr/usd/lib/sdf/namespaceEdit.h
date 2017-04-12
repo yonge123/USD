@@ -26,12 +26,18 @@
 
 /// \file sdf/namespaceEdit.h
 
+#include "pxr/pxr.h"
+#include "pxr/usd/sdf/api.h"
 #include "pxr/usd/sdf/path.h"
+
 #include <boost/function.hpp>
 #include <boost/operators.hpp>
+
 #include <iosfwd>
 #include <string>
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// \class SdfNamespaceEdit
 ///
@@ -107,7 +113,7 @@ public:
                     index);
     }
 
-    bool operator==(const This& rhs) const;
+    SDF_API bool operator==(const This& rhs) const;
 
 public:
     Path currentPath;   ///< Path of the object when this edit starts.
@@ -118,8 +124,8 @@ public:
 /// A sequence of \c SdfNamespaceEdit.
 typedef std::vector<SdfNamespaceEdit> SdfNamespaceEditVector;
 
-std::ostream& operator<<(std::ostream&, const SdfNamespaceEdit&);
-std::ostream& operator<<(std::ostream&, const SdfNamespaceEditVector&);
+SDF_API std::ostream& operator<<(std::ostream&, const SdfNamespaceEdit&);
+SDF_API std::ostream& operator<<(std::ostream&, const SdfNamespaceEditVector&);
 
 /// \struct SdfNamespaceEditDetail
 ///
@@ -135,11 +141,11 @@ public:
         Okay,           ///< Edit will succeed as a batch.
     };
 
-    SdfNamespaceEditDetail();
-    SdfNamespaceEditDetail(Result, const SdfNamespaceEdit& edit,
+    SDF_API SdfNamespaceEditDetail();
+    SDF_API SdfNamespaceEditDetail(Result, const SdfNamespaceEdit& edit,
                            const std::string& reason);
 
-    bool operator==(const SdfNamespaceEditDetail& rhs) const;
+    SDF_API bool operator==(const SdfNamespaceEditDetail& rhs) const;
 
 public:
     Result result;          ///< Validity.
@@ -150,8 +156,8 @@ public:
 /// A sequence of \c SdfNamespaceEditDetail.
 typedef std::vector<SdfNamespaceEditDetail> SdfNamespaceEditDetailVector;
 
-std::ostream& operator<<(std::ostream&, const SdfNamespaceEditDetail&);
-std::ostream& operator<<(std::ostream&, const SdfNamespaceEditDetailVector&);
+SDF_API std::ostream& operator<<(std::ostream&, const SdfNamespaceEditDetail&);
+SDF_API std::ostream& operator<<(std::ostream&, const SdfNamespaceEditDetailVector&);
 
 /// Combine two results, yielding Error over Unbatched over Okay.
 inline
@@ -207,12 +213,12 @@ CombineUnbatched(SdfNamespaceEditDetail::Result other)
 class SdfBatchNamespaceEdit {
 public:
     /// Create an empty sequence of edits.
-    SdfBatchNamespaceEdit();
-    SdfBatchNamespaceEdit(const SdfBatchNamespaceEdit&);
-    SdfBatchNamespaceEdit(const SdfNamespaceEditVector&);
-    ~SdfBatchNamespaceEdit();
+    SDF_API SdfBatchNamespaceEdit();
+    SDF_API SdfBatchNamespaceEdit(const SdfBatchNamespaceEdit&);
+    SDF_API SdfBatchNamespaceEdit(const SdfNamespaceEditVector&);
+    SDF_API ~SdfBatchNamespaceEdit();
 
-    SdfBatchNamespaceEdit& operator=(const SdfBatchNamespaceEdit&);
+    SDF_API SdfBatchNamespaceEdit& operator=(const SdfBatchNamespaceEdit&);
 
     /// Add a namespace edit.
     void Add(const SdfNamespaceEdit& edit)
@@ -279,6 +285,7 @@ public:
     /// \p processedEdits to a new edit sequence at least as efficient as
     /// the input sequence.  If not allowed it returns \c false and appends
     /// reasons why not to \p details.
+    SDF_API
     bool Process(SdfNamespaceEditVector* processedEdits,
                  const HasObjectAtPath& hasObjectAtPath,
                  const CanEdit& canEdit,
@@ -289,4 +296,6 @@ private:
     SdfNamespaceEditVector _edits;
 };
 
-#endif
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // SDF_NAMESPACEEDIT_H

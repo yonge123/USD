@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include <boost/python/class.hpp>
 #include <boost/python/operators.hpp>
 #include <boost/python/return_arg.hpp>
@@ -32,15 +33,28 @@ using std::string;
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
+static std::string _Str(UsdStagePopulationMask const &self)
+{
+    return boost::lexical_cast<std::string>(self);
+}
+
 static string __repr__(UsdStagePopulationMask const &self)
 {
     return TF_PY_REPR_PREFIX + "StagePopulationMask(" +
         TfPyRepr(self.GetPaths()) + ")";
 }
 
+} // anonymous namespace 
+
 void wrapUsdStagePopulationMask()
 {
     class_<UsdStagePopulationMask>("StagePopulationMask")
+        .def(init<std::vector<SdfPath>>())
+        
         .def("All", &UsdStagePopulationMask::All)
         .staticmethod("All")
         
@@ -57,6 +71,15 @@ void wrapUsdStagePopulationMask()
                  SdfPath const &) const)
              &UsdStagePopulationMask::GetUnion,
              arg("path"))
+
+        .def("Intersection", &UsdStagePopulationMask::Intersection)
+        .staticmethod("Intersection")
+
+        .def("GetIntersection",
+             (UsdStagePopulationMask (UsdStagePopulationMask::*)(
+                 UsdStagePopulationMask const &) const)
+             &UsdStagePopulationMask::GetIntersection,
+             arg("other"))
 
         .def("Includes",
              (bool (UsdStagePopulationMask::*)(
@@ -90,7 +113,8 @@ void wrapUsdStagePopulationMask()
         .def(self == self)
         .def(self != self)
 
-        .def(str(self))
+//        .def(str(self))
+        .def("__str__", _Str)
         .def("__repr__", __repr__)
 
         ;

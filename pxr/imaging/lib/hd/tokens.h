@@ -24,8 +24,13 @@
 #ifndef HD_TOKENS_H
 #define HD_TOKENS_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/base/tf/staticTokens.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
             
 #define HD_TOKENS                               \
     (adjacency)                                 \
@@ -90,6 +95,7 @@
     (refined)                                   \
     (refinedWire)                               \
     (refinedWireOnSurf)                         \
+    (renderTags)                                \
     (ulocDrawCommandNumUints)                   \
     (ulocResetPass)                             \
     (ulocCullMatrix)                            \
@@ -151,8 +157,12 @@
     (vboRelocated)
 
 #define HD_GLSL_PROGRAM_TOKENS                  \
-    (smoothNormalsFloat)                        \
-    (smoothNormalsDouble)                       \
+    (smoothNormalsFloatToFloat)                 \
+    (smoothNormalsFloatToDouble)                \
+    (smoothNormalsFloatToPacked)                \
+    (smoothNormalsDoubleToFloat)                \
+    (smoothNormalsDoubleToDouble)               \
+    (smoothNormalsDoubleToPacked)               \
     (quadrangulateFloat)                        \
     (quadrangulateDouble)
 
@@ -182,9 +192,6 @@
 #define HD_OPTION_TOKENS                        \
     (parallelRprimSync)                        
 
-#define HD_DELEGATE_TOKENS                      \
-    (none)
-
 #define HD_PRIMTYPE_TOKENS                      \
     /* Rprims */                                \
     (mesh)                                      \
@@ -195,17 +202,19 @@
     (camera)                                    \
     (light)                                     \
     (drawTarget)                                \
+    (shader)                                    \
                                                 \
     /* Bprims */                                \
     (texture)
 
-TF_DECLARE_PUBLIC_TOKENS(HdTokens, HD_TOKENS);
-TF_DECLARE_PUBLIC_TOKENS(HdPerfTokens, HD_PERF_TOKENS);
-TF_DECLARE_PUBLIC_TOKENS(HdGLSLProgramTokens, HD_GLSL_PROGRAM_TOKENS);
-TF_DECLARE_PUBLIC_TOKENS(HdShaderTokens, HD_SHADER_TOKENS);
-TF_DECLARE_PUBLIC_TOKENS(HdOptionTokens, HD_OPTION_TOKENS);
-TF_DECLARE_PUBLIC_TOKENS(HdDelegateTokens, HD_DELEGATE_TOKENS);
-TF_DECLARE_PUBLIC_TOKENS(HdPrimTypeTokens, HD_PRIMTYPE_TOKENS);
+TF_DECLARE_PUBLIC_TOKENS(HdTokens, HD_API, HD_TOKENS);
+TF_DECLARE_PUBLIC_TOKENS(HdPerfTokens, HD_API, HD_PERF_TOKENS);
+TF_DECLARE_PUBLIC_TOKENS(HdGLSLProgramTokens, HD_API, HD_GLSL_PROGRAM_TOKENS);
+TF_DECLARE_PUBLIC_TOKENS(HdShaderTokens, HD_API, HD_SHADER_TOKENS);
+TF_DECLARE_PUBLIC_TOKENS(HdOptionTokens, HD_API, HD_OPTION_TOKENS);
+TF_DECLARE_PUBLIC_TOKENS(HdPrimTypeTokens, HD_API, HD_PRIMTYPE_TOKENS);
 
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //HD_TOKENS_H

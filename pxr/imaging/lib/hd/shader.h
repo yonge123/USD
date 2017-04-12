@@ -24,79 +24,110 @@
 #ifndef HD_SHADER_H
 #define HD_SHADER_H
 
-#include "pxr/imaging/hd/version.h"
+#include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
+#include "pxr/imaging/hd/sprim.h"
+#include "pxr/imaging/hd/sceneDelegate.h"
 
-#include "pxr/imaging/hd/resourceBinder.h"  // XXX: including a private class
-#include "pxr/imaging/hd/shaderParam.h"
-#include "pxr/base/tf/token.h"
+PXR_NAMESPACE_OPEN_SCOPE
 
-#include <boost/shared_ptr.hpp>
+// XXX: Temporary until Rprim moves to HdSt.
+typedef boost::shared_ptr<class HdShaderCode> HdShaderCodeSharedPtr;
 
-#include <string>
-#include <vector>
-
-typedef std::vector<class HdBindingRequest> HdBindingRequestVector;
-
-typedef boost::shared_ptr<class HdShader> HdShaderSharedPtr;
-typedef std::vector<HdShaderSharedPtr> HdShaderSharedPtrVector;
-typedef std::vector<HdShaderSharedPtr> HdTextureSharedPtrVector;
-
-/// \class HdShader
 ///
-/// A shader base class, used in conjunction with HdRenderPass.
+/// Hydra Schema for a shader object.
 ///
-/// This interface provides a simple way for clients to affect the
-/// composition of shading programs used for a render pass.
-class HdShader {
+class HdShader : public HdSprim {
 public:
-    typedef size_t ID;
+    // change tracking for HdShader prim
+    enum DirtyBits {
+        Clean                 = 0,
+        // XXX: Got to skip varying and force sync bits for now
+        DirtySurfaceShader    = 1 << 2,
+        DirtyParams           = 1 << 3,
+        AllDirty              = (DirtySurfaceShader
+                                 |DirtyParams)
+    };
 
-    HdShader();
+    HD_API
     virtual ~HdShader();
 
-    /// Returns the hash value of this shader.
-    virtual ID ComputeHash() const = 0;
+    /// Obtain the source code for the Surface Shader for this prim from
+    /// the scene delegate.
+    inline std::string GetSurfaceShaderSource(
+        HdSceneDelegate* sceneDelegate) const;
 
-    /// Returns the combined hash values of multiple shaders.
-    static ID ComputeHash(HdShaderSharedPtrVector const &shaders);
+    /// Obtain the source code for the Displacement Shader for this prim from
+    /// the scene delegate.
+    inline std::string GetDisplacementShaderSource(
+        HdSceneDelegate* sceneDelegate) const;
 
-    /// Returns the shader source provided by this shader
-    /// for \a shaderStageKey
-    virtual std::string GetSource(TfToken const &shaderStageKey) const = 0;
+    /// Obtain the collection of shader Primvar descriptions for this prim from
+    /// the scene delegate.
+    inline HdShaderParamVector GetSurfaceShaderParams(
+        HdSceneDelegate* sceneDelegate) const;
 
-    // XXX: Should be pure-virtual
-    /// Returns the shader parameters for this shader.
-    virtual HdShaderParamVector const& GetParams() const;
+    /// Obtain the value of the specified Primvar for this prim from the
+    /// scene delegate.
+    inline VtValue GetSurfaceShaderParamValue(HdSceneDelegate* sceneDelegate,
+                                              TfToken const &paramName) const;
 
-    struct TextureDescriptor {
-        TfToken name;
-        size_t handle; // GLuint64, for bindless textures
-        enum { TEXTURE_2D, TEXTURE_PTEX_TEXEL, TEXTURE_PTEX_LAYOUT };
-        int type;
-        unsigned int sampler;
-    };
-    typedef std::vector<TextureDescriptor> TextureDescriptorVector;
+    /// Obtain the scene delegates's globally unique id for the texture
+    /// resource identified by textureId.
+    inline HdTextureResource::ID GetTextureResourceID(
+        HdSceneDelegate* sceneDelegate,
+        SdfPath const& textureId) const;
 
-    // XXX: DOC
-    virtual TextureDescriptorVector GetTextures() const;
+    /// Causes the shader to be reloaded.
+    virtual void Reload() = 0;
 
-    // XXX: Should be pure-virtual
-    /// Returns a buffer which stores parameter fallback values and texture
-    /// handles.
-    virtual HdBufferArrayRangeSharedPtr const& GetShaderData() const;
+    // XXX: Temporary until Rprim moves to HdSt.
+    // Obtains the render delegate specific representation of the shader.
+    virtual HdShaderCodeSharedPtr GetShaderCode() const = 0;
 
-    /// Binds shader-specific resources to \a program
-    /// XXX: this interface is meant to be used for bridging
-    /// the GlfSimpleLightingContext mechanism, and not for generic use-cases.
-    virtual void BindResources(Hd_ResourceBinder const &binder,
-                               int program) = 0;
+protected:
+    HD_API
+    HdShader(SdfPath const& id);
 
-    /// Unbinds shader-specific resources.
-    virtual void UnbindResources(Hd_ResourceBinder const &binder,
-                                 int program) = 0;
-
-    /// Add custom bindings (used by codegen)
-    virtual void AddBindings(HdBindingRequestVector* customBindings) = 0;
+private:
+    // Class can not be default constructed or copied.
+    HdShader()                             = delete;
+    HdShader(const HdShader &)             = delete;
+    HdShader &operator =(const HdShader &) = delete;
 };
 
-#endif //HD_SHADER_H
+inline std::string
+HdShader::GetSurfaceShaderSource(HdSceneDelegate* sceneDelegate) const
+{
+    return sceneDelegate->GetSurfaceShaderSource(GetID());
+}
+
+inline std::string
+HdShader::GetDisplacementShaderSource(HdSceneDelegate* sceneDelegate) const
+{
+    return sceneDelegate->GetDisplacementShaderSource(GetID());
+}
+
+inline HdShaderParamVector
+HdShader::GetSurfaceShaderParams(HdSceneDelegate* sceneDelegate) const
+{
+    return sceneDelegate->GetSurfaceShaderParams(GetID());
+}
+
+inline VtValue
+HdShader::GetSurfaceShaderParamValue(HdSceneDelegate* sceneDelegate,
+                                          TfToken const &paramName) const
+{
+    return sceneDelegate->GetSurfaceShaderParamValue(GetID(), paramName);
+}
+
+inline HdTextureResource::ID
+HdShader::GetTextureResourceID(HdSceneDelegate* sceneDelegate,
+                               SdfPath const& textureId) const
+{
+    return sceneDelegate->GetTextureResourceID(textureId);
+}
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // HD_SHADER_H

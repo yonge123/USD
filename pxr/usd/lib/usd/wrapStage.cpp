@@ -21,9 +21,10 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usd/conversions.h"
-#include "pxr/usd/usd/treeIterator.h"
+#include "pxr/usd/usd/primRange.h"
 
 #include "pxr/usd/ar/resolverContext.h"
 #include "pxr/usd/pcp/pyUtils.h"
@@ -42,6 +43,10 @@
 using std::string;
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static bool
 _Export(const UsdStagePtr &self, const std::string& filename, 
@@ -138,6 +143,18 @@ _GetEditTargetForLocalLayer(const UsdStagePtr &self,
 {
     return self->GetEditTargetForLocalLayer(layer);
 }
+
+static void
+_ExpandPopulationMask(UsdStage &self, boost::python::object pypred)
+{
+    using Predicate = std::function<bool (UsdRelationship const &)>;
+    Predicate pred;
+    if (pypred != boost::python::object())
+        pred = boost::python::extract<Predicate>(pypred);
+    return self.ExpandPopulationMask(pred);
+}
+
+} // anonymous namespace 
 
 void wrapUsdStage()
 {
@@ -322,6 +339,9 @@ void wrapUsdStage()
         .def("Close", &UsdStage::Close)
         .def("Reload", &UsdStage::Reload)
 
+        .def("Save", &UsdStage::Save)
+        .def("SaveSessionLayers", &UsdStage::SaveSessionLayers)
+
         .def("GetGlobalVariantFallbacks",
              &UsdStage::GetGlobalVariantFallbacks,
              return_value_policy<TfPyMapToDictionary>())
@@ -346,6 +366,9 @@ void wrapUsdStage()
              return_value_policy<TfPySequenceToList>())
 
         .def("GetPopulationMask", &UsdStage::GetPopulationMask)
+        .def("SetPopulationMask", &UsdStage::SetPopulationMask, arg("mask"))
+        .def("ExpandPopulationMask", &_ExpandPopulationMask,
+             arg("predicate")=object())
 
         .def("GetPseudoRoot", &UsdStage::GetPseudoRoot)
 
@@ -355,10 +378,10 @@ void wrapUsdStage()
         .def("HasDefaultPrim", &UsdStage::HasDefaultPrim)
 
         .def("GetPrimAtPath", &UsdStage::GetPrimAtPath, arg("path"))
-        .def("Traverse", (UsdTreeIterator (UsdStage::*)())
+        .def("Traverse", (UsdPrimRange (UsdStage::*)())
              &UsdStage::Traverse)
         .def("Traverse",
-             (UsdTreeIterator (UsdStage::*)(const Usd_PrimFlagsPredicate &))
+             (UsdPrimRange (UsdStage::*)(const Usd_PrimFlagsPredicate &))
              &UsdStage::Traverse, arg("predicate"))
         .def("TraverseAll", &UsdStage::TraverseAll)
 
@@ -450,3 +473,5 @@ void wrapUsdStage()
              return_value_policy<TfPySequenceToList>())
         ;
 }
+
+TF_REFPTR_CONST_VOLATILE_GET(UsdStage)

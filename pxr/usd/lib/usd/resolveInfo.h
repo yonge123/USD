@@ -26,14 +26,19 @@
 
 /// \file usd/resolveInfo.h
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usd/api.h"
+#include "pxr/usd/usd/stage.h"
 #include "pxr/usd/sdf/layerOffset.h"
 #include "pxr/usd/sdf/path.h"
-#include "pxr/usd/usd/stage.h"
 #include "pxr/usd/pcp/node.h"
 
 #include "pxr/base/tf/declarePtrs.h"
 
 #include <limits>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 TF_DECLARE_WEAK_PTRS(PcpLayerStack);
 
@@ -157,5 +162,8 @@ private:
     friend class UsdStage_ResolveInfoAccess;
     friend class UsdAttributeQuery;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // USD_RESOLVE_INFO_H

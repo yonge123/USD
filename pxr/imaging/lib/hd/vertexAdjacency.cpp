@@ -25,11 +25,15 @@
 #include "pxr/imaging/hd/meshTopology.h"
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/smoothNormals.h"
+#include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
 #include "pxr/imaging/hf/perfLog.h"
 
 #include "pxr/base/work/loops.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 Hd_VertexAdjacency::Hd_VertexAdjacency()
     : _stride(0)
@@ -154,10 +158,12 @@ Hd_VertexAdjacency::GetSmoothNormalsComputation(
 HdComputationSharedPtr
 Hd_VertexAdjacency::GetSmoothNormalsComputationGPU(TfToken const &srcName,
                                                    TfToken const &dstName,
+                                                   GLenum srcDataType,
                                                    GLenum dstDataType)
 {
     return HdComputationSharedPtr(new Hd_SmoothNormalsComputationGPU(
-                                      this, srcName, dstName, dstDataType));
+                                      this, srcName, dstName,
+                                      srcDataType, dstDataType));
 }
 
 
@@ -325,3 +331,6 @@ Hd_AdjacencyBuilderForGPUComputation::_CheckValid() const
 {
     return true;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

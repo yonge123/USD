@@ -26,6 +26,7 @@
 
 /// \file sdf/pyListEditorProxy.h
 
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/listEditorProxy.h"
 #include "pxr/usd/sdf/listOp.h"
 #include "pxr/usd/sdf/pyListProxy.h"
@@ -38,6 +39,8 @@
 #include "pxr/base/tf/pyUtils.h"
 #include "pxr/base/tf/stringUtils.h"
 #include <boost/python.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class Sdf_PyListEditorUtils {
 public:
@@ -57,7 +60,7 @@ public:
 
             TfPyLock pyLock;
             object result = _callback(_owner, value, op);
-            if (not TfPyIsNone(result)) {
+            if (! TfPyIsNone(result)) {
                 extract<V> e(result);
                 if (e.check()) {
                     return boost::optional<V>(e());
@@ -90,7 +93,7 @@ public:
 
             TfPyLock pyLock;
             object result = _callback(value);
-            if (not TfPyIsNone(result)) {
+            if (! TfPyIsNone(result)) {
                 extract<V> e(result);
                 if (e.check()) {
                     return boost::optional<V>(e());
@@ -235,4 +238,6 @@ private:
     }
 };
 
-#endif
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // SDF_PYLISTEDITORPROXY_H

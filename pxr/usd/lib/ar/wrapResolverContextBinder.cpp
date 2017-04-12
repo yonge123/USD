@@ -24,14 +24,16 @@
 #include <boost/python/class.hpp>
 #include <boost/python/object.hpp>
 
+#include "pxr/pxr.h"
 #include "pxr/usd/ar/resolverContextBinder.h"
 
 #include <memory>
 
 using namespace boost::python;
 
-namespace
-{
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 class _PyResolverContextBinder
     : public boost::noncopyable
@@ -62,7 +64,7 @@ private:
     std::unique_ptr<ArResolverContextBinder> _binder;
 };
 
-};
+} // anonymous namespace 
 
 void
 wrapResolverContextBinder()

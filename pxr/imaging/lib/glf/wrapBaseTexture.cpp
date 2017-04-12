@@ -28,6 +28,8 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
 void wrapBaseTexture()
 {    
     typedef GlfBaseTexture This;
@@ -57,5 +59,5 @@ void wrapBaseTexture()
             return_value_policy<return_by_value>()))
         ;
 }
-    
 
+TF_REFPTR_CONST_VOLATILE_GET(GlfBaseTexture)

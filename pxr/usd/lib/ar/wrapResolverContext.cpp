@@ -24,10 +24,15 @@
 #include <boost/python/to_python_converter.hpp>
 #include <boost/python/object.hpp>
 
+#include "pxr/pxr.h"
 #include "pxr/usd/ar/resolverContext.h"
 #include "pxr/usd/ar/pyResolverContext.h"
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 struct Ar_ResolverContextToPython
 {
@@ -76,6 +81,8 @@ struct Ar_ResolverContextFromPython
         data->convertible = storage;
     }
 };
+
+} // anonymous namespace 
 
 void
 wrapResolverContext()

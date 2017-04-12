@@ -24,16 +24,24 @@
 #ifndef USDSHADE_INTERFACEATTRIBUTE_H
 #define USDSHADE_INTERFACEATTRIBUTE_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usdShade/api.h"
 #include "pxr/usd/usd/attribute.h"
 #include "pxr/usd/usdShade/parameter.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+
+class UsdShadeParameter;
+class UsdShadeOutput;
 
 /// \class UsdShadeInterfaceAttribute
 ///
 /// Schema wrapper for UsdAttribute for authoring and introspecting
-/// interface attributes, which are attributes on a UsdShadeSubgraph that provide
+/// interface attributes, which are attributes on a UsdShadeNodeGraph that provide
 /// values that can be instanced onto UsdShadeParameter's in shading networks .
 ///
-/// See \ref UsdShadeSubgraph_Interfaces "Look Interface Attributes" for more 
+/// See \ref UsdShadeNodeGraph_Interfaces "Look Interface Attributes" for more 
 /// detail on Look Interfaces and the API for using them.
 ///
 class UsdShadeInterfaceAttribute
@@ -47,10 +55,18 @@ public:
     }
 
     /// Convenience wrapper for UsdAttribute::Get()
+    USDSHADE_API
     bool Get(VtValue* value, UsdTimeCode time = UsdTimeCode::Default()) const;
 
     /// Returns the un-namespaced name of this interface attribute.
+    USDSHADE_API
     TfToken GetName() const;
+
+    /// Get the "scene description" value type name of the attribute associated 
+    /// with the interface attribute.
+    SdfValueTypeName GetTypeName() const { 
+        return  _attr.GetTypeName();
+    }
 
     /// Returns a list of all of the shader parameters in the specified
     /// \p renderTarget that should be driven by this InterfaceAttribute's
@@ -58,6 +74,7 @@ public:
     ///
     /// \todo Provide a way to retrieve \em all driven parameters of all
     /// render targets.
+    USDSHADE_API
     std::vector<UsdShadeParameter> GetRecipientParameters(
             const TfToken& renderTarget) const;
 
@@ -65,7 +82,14 @@ public:
     /// @{
 
     /// Set the value for the look attribute.
+    USDSHADE_API
     bool Set(const VtValue& value, UsdTimeCode time = UsdTimeCode::Default()) const;
+
+    /// Set the attribute value of the interface attribute at \p time 
+    template <typename T>
+    bool Set(const T& value, UsdTimeCode time = UsdTimeCode::Default()) const {
+        return _attr.Set(value, time);
+    }
 
     /// Make this InterfaceAttribute drive the value of UsdShadeParameter
     /// \p recipient
@@ -75,6 +99,7 @@ public:
     /// parameters to, uniquely, \p recipient
     ///
     /// \return true if this was successfully authored.
+    USDSHADE_API
     bool SetRecipient(
             const TfToken& renderTarget,
             const UsdShadeParameter& recipient) const;
@@ -87,28 +112,178 @@ public:
     /// for a \p renderTarget network.  This version of the function is useful
     /// if you're connecting to something that may not exist in the current 
     /// stage.
+    USDSHADE_API
     bool SetRecipient(
             const TfToken& renderTarget,
             const SdfPath& recipientPath) const;
 
+    /// \name Connections
+    /// 
+    /// Interface attributes on node-graphs are connectable.
+    /// 
+    /// Node-graphs can be connected to interface attributes on enclosing material 
+    /// prims or to outputs of shaders in the material.
+    /// 
+    /// @{
+
+    /// Connect this interface attribute to a named input on a given \p source.
+    ///
+    /// This action simply records an introspectable relationship:
+    /// it implies no actual dataflow in USD, and makes no statement
+    /// about what client behavior should be when an interface attribute
+    /// is determined to possess both a value and a connection
+    /// to a value source - client renderers are required to impose their
+    /// own, self-consistent rules.
+    ///
+    /// The only constraint imposed by the shading model is that interface 
+    /// attribute connections can be only single-targetted; that is, any given 
+    /// interface attribute can target at most a single source/sourceName pair.
+    ///
+    /// \param source  the shader or node-graph object producing the value
+    ///        
+    /// \param sourceName  the particular computation or parameter we 
+    ///        want to consume. This does not include the namespace prefix
+    ///        associated with the source type.
+    ///
+    /// \param sourceType outputs, parameters and interfaceAttributes are 
+    ///        namespaced differently on a connectable prim, therefore we need 
+    ///        to know to which we are connecting.  By default, we assume we are
+    ///        connecting to a computational output, but you can specify
+    ///        instead an input with a value of 
+    ///        \c UsdShadeAttributeType::Input or an interface 
+    ///        attribute with a value of 
+    ///        \c UsdShadeAttributeType::InterfaceAttribute. 
+    ///        
+    /// Interface attribute are typically connected to interface attributes 
+    /// on enclosing the material or to outputs of shaders in the material's 
+    /// shading network. 
+    ///       
+    /// \sa GetConnectedSource(), GetConnectedSources()
+    USDSHADE_API
+    bool ConnectToSource(
+            UsdShadeConnectableAPI const &source, 
+            TfToken const &sourceName,
+            UsdShadeAttributeType sourceType=
+                UsdShadeAttributeType::Output) const;
+
+    /// \overload
+    /// Connect InterfaceAttribute to the source, whose location is specified 
+    /// by \p sourcePath.
+    /// 
+    /// \p sourcePath should be the properly namespaced property path. 
+    /// 
+    /// This overload is provided for convenience, for use in contexts where 
+    /// the prim types are unknown or unavailable.
+    /// 
+    USDSHADE_API
+    bool ConnectToSource(const SdfPath &sourcePath) const;
+
+    /// \overload
+    ///
+    /// Connects this interface attribute to the given \p param.
+    /// 
+    USDSHADE_API
+    bool ConnectToSource(UsdShadeParameter const &param) const;
+
+    /// \overload
+    ///
+    /// Connects this interface attribute to the given \p output.
+    /// 
+    USDSHADE_API
+    bool ConnectToSource(UsdShadeOutput const &output) const;
+
+    /// \overload
+    ///
+    /// Connects this interface attribute to the given \p interfaceAttribute.
+    /// 
+    USDSHADE_API
+    bool ConnectToSource(UsdShadeInterfaceAttribute const &interfaceAttribute) const;
+
+    /// Disconnect source for this interface attribute.
+    ///
+    /// This may author more scene description than you might expect - we define
+    /// the behavior of disconnect to be that, even if an interface attribute 
+    /// becomes connected in a weaker layer than the current UsdEditTarget, it 
+    /// will \em still be disconnected in the composition, therefore we must 
+    /// "block" it (see for e.g. UsdRelationship::BlockTargets()) in the current 
+    /// UsdEditTarget. 
+    ///
+    /// \sa ConnectToSource().
+    USDSHADE_API
+    bool DisconnectSource() const;
+
+    /// Clears source for this interface attribute in the current UsdEditTarget.
+    ///
+    /// Most of the time, what you probably want is DisconnectSource()
+    /// rather than this function.
+    ///
+    /// \sa DisconnectSource(), UsdRelationship::ClearTargets()
+    USDSHADE_API
+    bool ClearSource() const;
+
+    /// If this interface attribute is connected, retrieve the \p source prim
+    /// and \p sourceName, which is the name of the parameter, output or 
+    /// interface attribute to which it is connected. \p sourceType indicates 
+    /// the type of the source.
+    ///
+    /// We name the object that an interface attribute is connected to a 
+    /// "source," as the "source" produces or contains a value for the 
+    /// interface attribute.
+    /// 
+    /// \return 
+    /// \c true if \p source is a defined prim on the stage, and 
+    /// \p source has an attribute that connects to this interface attribute;
+    /// \c false if not connected to a defined prim.
+    ///
+    /// \note The python wrapping for this method returns a 
+    /// (source, sourceName, sourceType) tuple if the interface attribute is 
+    /// connected, else \c None
+    USDSHADE_API
+    bool GetConnectedSource(
+            UsdShadeConnectableAPI *source, 
+            TfToken *sourceName,
+            UsdShadeAttributeType *sourceType) const;
+
+    /// Returns true if and only if the interface attribute is currently 
+    /// connected to another \em defined object.
+    ///
+    /// If you will be calling GetConnectedSource() afterwards anyways, 
+    /// it will be \em much faster to instead guard like so:
+    /// \code
+    /// if (interfaceAttribute.GetConnectedSource(&src, &sourceName, 
+    ///                                           &sourceType)){
+    ///      // process connected interfaceAttribute
+    /// } else {
+    ///      // process unconnected interfaceAttribute
+    /// }
+    /// \endcode
+    USDSHADE_API
+    bool IsConnected() const;
+
+    /// @}
+
     /// Set documentation string for this attribute.
     /// \sa UsdObject::SetDocumentation()
+    USDSHADE_API
     bool SetDocumentation(
             const std::string& docs) const;
 
     /// Get documentation string for this attribute.
     /// \sa UsdObject::GetDocumentation()
+    USDSHADE_API
     std::string GetDocumentation() const;
 
     /// Set the displayGroup metadata for this interface attribute,
     /// i.e. hinting for the location and nesting of the attribute.
     /// \sa UsdProperty::SetDisplayGroup(), UsdProperty::SetNestedDisplayGroup()
+    USDSHADE_API
     bool SetDisplayGroup(
             const std::string& displayGroup) const;
 
     /// Get the displayGroup metadata for this interface attribute,
     /// i.e. hinting for the location and nesting of the attribute.
     /// \sa UsdProperty::GetDisplayGroup(), UsdProperty::GetNestedDisplayGroup()
+    USDSHADE_API
     std::string GetDisplayGroup() const;
 
     /// @}
@@ -125,6 +300,7 @@ public:
     /// produces an \em invalid Parameter otherwise (i.e. 
     /// \ref UsdShadeParameter_bool_type "unspecified-bool-type()" will return
     /// false).
+    USDSHADE_API
     explicit UsdShadeInterfaceAttribute(const UsdAttribute &attr);
 
     /// Test whether a given UsdAttribute represents valid Primvar, which
@@ -162,7 +338,7 @@ public:
     }
 #endif // doxygen
 private:
-    friend class UsdShadeSubgraph;
+    friend class UsdShadeNodeGraph;
 
     static std::string _GetInterfaceAttributeRelPrefix(
             const TfToken& relTarget);
@@ -174,7 +350,12 @@ private:
             SdfValueTypeName const& typeName);
 
     UsdAttribute _attr;
+
+    // The unnamespaced nane of the interface attribute.
     TfToken _name;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // USDSHADE_INTERFACEATTRIBUTE_H

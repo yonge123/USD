@@ -23,8 +23,11 @@
 //
 /// \file wrapAttributeSpec.cpp
 
+#ifndef TF_MAX_ARITY
 #define TF_MAX_ARITY 8
+#endif
 
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/attributeSpec.h"
 #include "pxr/usd/sdf/mapperSpec.h"
 #include "pxr/usd/sdf/primSpec.h"
@@ -37,32 +40,7 @@
 
 using namespace boost::python;
 
-static 
-std::vector<TfToken> 
-_WrapGetAllowedTokens(
-    const SdfAttributeSpec& spec)
-{
-    VtTokenArray tokenArray = spec.GetAllowedTokens();
-    return std::vector<TfToken>(tokenArray.begin(), tokenArray.end());
-}
-
-static void 
-_WrapSetAllowedTokens(
-    SdfAttributeSpec& spec,
-    const std::vector<TfToken>& tokens)
-{
-    VtTokenArray tokenArray;
-    tokenArray.assign(tokens.begin(), tokens.end());
-    spec.SetAllowedTokens(tokenArray);
-}
-
-static
-SdfPyChildrenProxy<SdfConnectionMappersView>
-_WrapGetConnectionMappersProxy(const SdfAttributeSpec& self)
-{
-    return SdfPyChildrenProxy<SdfConnectionMappersView>(
-        self.GetConnectionMappers());
-}
+PXR_NAMESPACE_OPEN_SCOPE
 
 template <>
 class Sdf_PyMarkerPolicy<SdfAttributeSpec> 
@@ -93,6 +71,39 @@ public:
     }
 };
 
+PXR_NAMESPACE_CLOSE_SCOPE
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
+static 
+std::vector<TfToken> 
+_WrapGetAllowedTokens(
+    const SdfAttributeSpec& spec)
+{
+    VtTokenArray tokenArray = spec.GetAllowedTokens();
+    return std::vector<TfToken>(tokenArray.begin(), tokenArray.end());
+}
+
+static void 
+_WrapSetAllowedTokens(
+    SdfAttributeSpec& spec,
+    const std::vector<TfToken>& tokens)
+{
+    VtTokenArray tokenArray;
+    tokenArray.assign(tokens.begin(), tokens.end());
+    spec.SetAllowedTokens(tokenArray);
+}
+
+static
+SdfPyChildrenProxy<SdfConnectionMappersView>
+_WrapGetConnectionMappersProxy(const SdfAttributeSpec& self)
+{
+    return SdfPyChildrenProxy<SdfConnectionMappersView>(
+        self.GetConnectionMappers());
+}
+
 static
 SdfPyMarkerProxy<SdfAttributeSpec>
 _WrapGetMarkers(const SdfAttributeSpec& spec)
@@ -118,6 +129,8 @@ _WrapSetMarkers(SdfAttributeSpec& attr, const dict& d)
     }
     attr.SetConnectionMarkers(markers);
 }
+
+} // anonymous namespace 
 
 void wrapAttributeSpec()
 {
@@ -213,7 +226,7 @@ void wrapAttributeSpec()
             "for more information.")
 
         .add_property("connectionMappers",
-            &::_WrapGetConnectionMappersProxy,
+            &_WrapGetConnectionMappersProxy,
             "The mappers for this attribute in a map proxy keyed by "
             "connection path.\n\n"
             "The returned proxy can be used to remove the mapper for a given "
@@ -222,16 +235,16 @@ void wrapAttributeSpec()
             "to assign a mapper.")
               
         .add_property("connectionMarkers",
-            &::_WrapGetMarkers,
-            &::_WrapSetMarkers,
+            &_WrapGetMarkers,
+            &_WrapSetMarkers,
             "The markers for this attribute in a map proxy keyed by "
             "connection path.\n\n"
             "The returned proxy can be used to set or remove the marker for a "
             "given path or to access the markers.")
 
 	.add_property("allowedTokens",
-	    &::_WrapGetAllowedTokens,
-	    &::_WrapSetAllowedTokens,
+	    &_WrapGetAllowedTokens,
+	    &_WrapSetAllowedTokens,
 	    "The allowed value tokens for this property")
 
         .def("GetConnectionMarker", &This::GetConnectionMarker)

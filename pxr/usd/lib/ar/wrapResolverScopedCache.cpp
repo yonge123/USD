@@ -24,14 +24,16 @@
 #include <boost/python/class.hpp>
 #include <boost/python/object.hpp>
 
+#include "pxr/pxr.h"
 #include "pxr/usd/ar/resolverScopedCache.h"
 
 #include <memory>
 
 using namespace boost::python;
 
-namespace
-{
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 class _PyResolverScopedCache
     : public boost::noncopyable
@@ -60,7 +62,7 @@ private:
     std::unique_ptr<ArResolverScopedCache> _scopedCache;
 };
 
-};
+} // anonymous namespace 
 
 void
 wrapResolverScopedCache()

@@ -21,12 +21,13 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/tf/regTest.h"
 #include "pxr/base/tf/notice.h"
 #include "pxr/base/tf/noticeRegistry.h"
 #include "pxr/base/tf/type.h"
 #include "pxr/base/tf/diagnosticLite.h"
-#include "pxr/base/arch/nap.h"
 #include "pxr/base/arch/systemInfo.h"
 #include <string>
 #include <vector>
@@ -35,6 +36,7 @@
 #include <sstream>
 
 using namespace std;
+PXR_NAMESPACE_USING_DIRECTIVE
 
 int beginSendCount = 0;
 int endSendCount = 0;

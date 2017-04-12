@@ -23,6 +23,8 @@
 // language governing permissions and limitations under the Apache License.
 //
 #}
+
+#include "pxr/pxr.h"
 #include "pxr/base/gf/matrix{{ DIM }}d.h"
 #include "pxr/base/gf/matrix{{ DIM }}f.h"
 
@@ -50,6 +52,10 @@
 using namespace boost::python;
 using std::string;
 using std::vector;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 ////////////////////////////////////////////////////////////////////////
 // Python buffer protocol support.
@@ -250,6 +256,8 @@ struct {{ MAT }}_Pickle_Suite : boost::python::pickle_suite
 };
 
 static size_t __hash__({{ MAT }} const &m) { return hash_value(m); }
+
+} // anonymous namespace 
 
 void wrapMatrix{{ SUFFIX }}()
 {    

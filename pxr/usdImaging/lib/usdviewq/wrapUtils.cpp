@@ -36,6 +36,10 @@
 using namespace boost::python;
 using std::vector;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 // We return primInfo by unrolling it into a single tuple.  This allows
 // python clients to extract the information 40% faster than if we were
 // to wrap out UsdviewqUtils::PrimInfo directly.
@@ -56,6 +60,8 @@ _GetPrimInfo(UsdPrim const &prim, UsdTimeCode time)
                                      info.name,
                                      info.typeName);
 }
+
+} // anonymous namespace 
 
 void wrapUtils() {    
     typedef UsdviewqUtils This;

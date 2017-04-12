@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdMaya/usdReadJob.h"
 
 #include "usdMaya/primReaderArgs.h"
@@ -40,7 +41,7 @@
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usd/stageCacheContext.h"
-#include "pxr/usd/usd/treeIterator.h"
+#include "pxr/usd/usd/primRange.h"
 #include "pxr/usd/usdGeom/camera.h"
 #include "pxr/usd/usdGeom/gprim.h"
 #include "pxr/usd/usdUtils/pipeline.h"
@@ -56,6 +57,9 @@
 #include <map>
 #include <string>
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((PointInstancerTypeName, "PxPointInstancer"))
@@ -304,7 +308,7 @@ usdReadJob::_ProcessCameraPrims(const std::vector<UsdPrim>& cameraPrims)
 }
 
 bool
-usdReadJob::_DoImportWithProxies(UsdTreeIterator& primIt)
+usdReadJob::_DoImportWithProxies(UsdPrimRange& range)
 {
     MStatus status;
 
@@ -320,7 +324,7 @@ usdReadJob::_DoImportWithProxies(UsdTreeIterator& primIt)
     UsdPrim pxrGeomRoot;
     std::vector<std::string> collapsePointPathStrings;
 
-    for(; primIt; ++primIt) {
+    for(auto primIt = range.begin(); primIt != range.end(); ++primIt) {
         const UsdPrim& prim = *primIt;
 
         if (prim.IsA<UsdGeomCamera>()) {
@@ -382,3 +386,6 @@ usdReadJob::_DoImportWithProxies(UsdTreeIterator& primIt)
 
     return true;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdKatana/baseMaterialHelpers.h"
 #include "pxr/usd/pcp/layerStack.h"
 #include "pxr/usd/pcp/node.h"
@@ -30,6 +31,9 @@
 #include "pxr/usd/usd/relationship.h"
 #include "pxr/usd/sdf/relationshipSpec.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 // This tests if a given node represents a "live" base material,
 // i.e. once that hasn't been "flattened out" due to being
 // pulled across a reference to a library.
@@ -37,23 +41,27 @@ static bool
 _NodeRepresentsLiveBaseMaterial(const PcpNodeRef &node)
 {
     bool isLiveBaseMaterial = false;
-    for (PcpNodeRef n = node; n; n = n.GetOriginNode()) {
+    for (PcpNodeRef n = node; 
+            n; // 0, or false, means we are at the root node
+            n = n.GetOriginNode()) {
         switch(n.GetArcType()) {
         case PcpArcTypeLocalSpecializes:
         case PcpArcTypeGlobalSpecializes:
             isLiveBaseMaterial = true;
             break;
-        case PcpArcTypeReference:
-            if (isLiveBaseMaterial) {
-                // Node is within a base material, but that is in turn
-                // across a reference. That means this is a library
-                // material, so it is not live and we should flatten it
-                // out.  Continue iterating, however, since this
-                // might be referenced into some other live base material
-                // downstream.
-                isLiveBaseMaterial = false;
-            }
-            break;
+        // dakrunch: specializes across references are actually still valid.
+        // 
+        // case PcpArcTypeReference:
+        //     if (isLiveBaseMaterial) {
+        //         // Node is within a base material, but that is in turn
+        //         // across a reference. That means this is a library
+        //         // material, so it is not live and we should flatten it
+        //         // out.  Continue iterating, however, since this
+        //         // might be referenced into some other live base material
+        //         // downstream.
+        //         isLiveBaseMaterial = false;
+        //     }
+        //     break;
         default:
             break;
         }
@@ -109,3 +117,6 @@ PxrUsdKatana_AreRelTargetsFromBaseMaterial(const UsdRelationship &rel)
     }
     return false;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

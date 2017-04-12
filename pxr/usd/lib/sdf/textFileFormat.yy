@@ -24,6 +24,7 @@
 
 %{
 
+#include "pxr/pxr.h"
 #include "pxr/base/arch/errno.h"
 #include "pxr/base/arch/fileSystem.h"
 #include "pxr/base/vt/array.h"
@@ -42,7 +43,7 @@
 
 #include "pxr/base/tracelite/trace.h"
 
-
+#include "pxr/base/arch/errno.h"
 #include "pxr/base/tf/enum.h"
 #include "pxr/base/tf/iterator.h"
 #include "pxr/base/tf/ostreamMethods.h"
@@ -58,13 +59,13 @@
 
 #include <sstream>
 #include <string>
-#include <sys/mman.h>
-#include <unistd.h>
 #include <vector>
 
 // See this page for info as to why this is here.  Especially note the last
 // paragraph.  http://www.delorie.com/gnu/docs/bison/bison_91.html
 #define YYINITDEPTH 1500
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 using Sdf_ParserHelpers::Value;
 using boost::get;
@@ -80,7 +81,7 @@ using boost::get;
 #define ERROR_IF_NOT_ALLOWED(context, allowed)                   \
     {                                                            \
         const SdfAllowed allow = allowed;                        \
-        if (!allow) {                                         \
+        if (!allow) {                                            \
             Err(context, "%s", allow.GetWhyNot().c_str());       \
         }                                                        \
     }
@@ -88,7 +89,7 @@ using boost::get;
 #define ERROR_AND_RETURN_IF_NOT_ALLOWED(context, allowed)        \
     {                                                            \
         const SdfAllowed allow = allowed;                        \
-        if (!allow) {                                         \
+        if (!allow) {                                            \
             Err(context, "%s", allow.GetWhyNot().c_str());       \
             return;                                              \
         }                                                        \
@@ -108,7 +109,7 @@ void textFileFormatYyerror(Sdf_TextParserContext *context, const char *s);
 
 extern int textFileFormatYylex(YYSTYPE *yylval_param, yyscan_t yyscanner);
 extern char *textFileFormatYyget_text(yyscan_t yyscanner);
-extern int textFileFormatYyget_leng(yyscan_t yyscanner);
+extern size_t textFileFormatYyget_leng(yyscan_t yyscanner);
 extern int textFileFormatYylex_init(yyscan_t *yyscanner);
 extern int textFileFormatYylex_destroy(yyscan_t yyscanner);
 extern void textFileFormatYyset_extra(Sdf_TextParserContext *context, 
@@ -923,8 +924,8 @@ _SetItemsIfListOp(const TfType& type, Sdf_TextParserContext *context)
 
     typedef VtArray<typename ListOpType::value_type> ArrayType;
 
-    if (!TF_VERIFY(context->currentValue.IsHolding<ArrayType>() || 
-                      context->currentValue.IsEmpty())) {
+    if (!TF_VERIFY(context->currentValue.IsHolding<ArrayType>() ||
+                   context->currentValue.IsEmpty())) {
         return true;
     }
 
@@ -1197,6 +1198,7 @@ _GenericMetadataEnd(SdfSpecType specType, Sdf_TextParserContext *context)
 %token TOK_PERMISSION
 %token TOK_PAYLOAD
 %token TOK_PREFIX_SUBSTITUTIONS
+%token TOK_SUFFIX_SUBSTITUTIONS
 %token TOK_PROPERTIES
 %token TOK_REFERENCES
 %token TOK_RELOCATES
@@ -1247,6 +1249,7 @@ keyword:
     | TOK_PAYLOAD
     | TOK_PERMISSION
     | TOK_PREFIX_SUBSTITUTIONS
+    | TOK_SUFFIX_SUBSTITUTIONS
     | TOK_PROPERTIES
     | TOK_REFERENCES
     | TOK_RELOCATES
@@ -1739,6 +1742,14 @@ prim_metadata:
     | TOK_PREFIX_SUBSTITUTIONS '=' string_dictionary {
             _SetField(
                 context->path, SdfFieldKeys->PrefixSubstitutions, 
+                context->currentDictionaries[0], context);
+            context->currentDictionaries[0].clear();
+        }
+    // Not parsed with generic metadata because: uses special Python-like
+    // dictionary syntax
+    | TOK_SUFFIX_SUBSTITUTIONS '=' string_dictionary {
+            _SetField(
+                context->path, SdfFieldKeys->SuffixSubstitutions, 
                 context->currentDictionaries[0], context);
             context->currentDictionaries[0].clear();
         }
@@ -3120,7 +3131,7 @@ Sdf_MemoryFlexBuffer::Sdf_MemoryFlexBuffer(FILE* file,
     int64_t fileSize = ArchGetFileLength(file);
     if (fileSize == -1) {
         TF_RUNTIME_ERROR("Error retrieving file size for @%s@: %s", 
-                         name.c_str(), strerror(errno));
+                         name.c_str(), ArchStrerror(errno).c_str());
         return;
     }
 

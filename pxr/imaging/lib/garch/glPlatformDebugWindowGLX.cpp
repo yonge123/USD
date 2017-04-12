@@ -29,6 +29,9 @@
 #include "pxr/base/arch/defines.h"
 #include "pxr/base/tf/diagnostic.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 typedef GLXContext (*GLXCREATECONTEXTATTRIBSARBPROC)(Display*, GLXFBConfig, GLXContext, Bool, const int*);
 
 // ---------------------------------------------------------------------------
@@ -118,9 +121,9 @@ Garch_GLPlatformDebugWindow::Init(const char *title,
 static int
 Garch_GetButton(unsigned int button)
 {
-    if (button == Button1) return 0;
-    else if (button == Button2) return 1;
-    else if (button == Button3) return 2;
+    if (button == Button1) return GarchGLDebugWindow::MyButton1;
+    else if (button == Button2) return GarchGLDebugWindow::MyButton2;
+    else if (button == Button3) return GarchGLDebugWindow::MyButton3;
     return 0;
 }
 
@@ -216,3 +219,6 @@ Garch_GLPlatformDebugWindow::ExitApp()
 {
     _running = false;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

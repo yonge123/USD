@@ -21,6 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/type.h"
 #include "pxr/base/tf/wrapTypeHelpers.h"
 
@@ -46,6 +49,10 @@
 
 using namespace boost::python;
 using namespace std;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 ////////////////////////////////////////////////////////////////////////
 // Python -> C++ TfType conversion
@@ -160,7 +167,7 @@ _Repr( const TfType & t )
 }
 
 static size_t
-_Hash( const TfType & t )
+_TypeHash( const TfType & t )
 {
     return TfHash()(t);
 }
@@ -243,6 +250,8 @@ _DumpTypeHierarchy( TfType t )
     _DumpTypeHierarchyRecursive(t);
 }
 
+} // anonymous namespace
+
 void wrapType()
 {
     typedef TfType This;
@@ -257,21 +266,21 @@ void wrapType()
         .def( self > self )
         .def( self <= self )
         .def( self >= self )
-        .def( "__repr__", &::_Repr)
-        .def( "__hash__", &::_Hash)
+        .def( "__repr__", &_Repr)
+        .def( "__hash__", &_TypeHash)
 
-        .def( "GetRoot", &::_GetRoot)
+        .def( "GetRoot", &_GetRoot)
         .staticmethod("GetRoot")
 
-        .def( "Find", &::_FindByPythonClass)
+        .def( "Find", &_FindByPythonClass)
         .staticmethod("Find")
 
-        .def( "FindByName", &::_FindByName)
+        .def( "FindByName", &_FindByName)
         .staticmethod("FindByName")
 
-        .def("FindDerivedByName", &::_FindDerivedByName)
+        .def("FindDerivedByName", &_FindDerivedByName)
 
-        .def("IsA", &::_IsA )
+        .def("IsA", &_IsA )
 
         .add_property("isUnknown", &This::IsUnknown)
         .add_property("isEnumType", &This::IsEnumType)
@@ -293,9 +302,9 @@ void wrapType()
 
         .def("GetAliases", &This::GetAliases,
              return_value_policy< TfPySequenceToTuple >() )
-        .def("GetAllDerivedTypes", &::_GetAllDerivedTypes,
+        .def("GetAllDerivedTypes", &_GetAllDerivedTypes,
              return_value_policy< TfPySequenceToTuple >() )
-        .def("GetAllAncestorTypes", &::_GetAllAncestorTypes,
+        .def("GetAllAncestorTypes", &_GetAllAncestorTypes,
              return_value_policy< TfPySequenceToTuple >() )
 
         .def("Define", &TfType_DefinePythonTypeAndBases)
@@ -304,7 +313,7 @@ void wrapType()
         .def("AddAlias", (void (TfType::*)(TfType, const std::string &) const)
                          &This::AddAlias)
 
-        .def("_DumpTypeHierarchy", &::_DumpTypeHierarchy,
+        .def("_DumpTypeHierarchy", &_DumpTypeHierarchy,
             "_DumpTypeHierarchy(TfType): "
             "Diagnostic method to print the type hierarchy beneath a given "
             "TfType.")

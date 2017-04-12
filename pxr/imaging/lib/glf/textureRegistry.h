@@ -26,6 +26,8 @@
 
 /// \file glf/textureRegistry.h
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/glf/api.h"
 #include "pxr/base/tf/declarePtrs.h"
 #include "pxr/base/tf/refPtr.h"
 #include "pxr/base/tf/singleton.h"
@@ -37,6 +39,9 @@
 #include <boost/scoped_ptr.hpp>
 #include <map>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfTextureHandle);
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfTexture);
 
@@ -45,27 +50,35 @@ class GlfTextureFactoryBase;
 
 /// \class GlfTextureRegistry
 ///
-class GlfTextureRegistry : boost::noncopyable
-{
-  public:
+class GlfTextureRegistry : boost::noncopyable {
+public:
+    GLF_API
     static GlfTextureRegistry & GetInstance();
 
+    GLF_API
     GlfTextureHandleRefPtr GetTextureHandle(const TfToken &texture);
+    GLF_API
     GlfTextureHandleRefPtr GetTextureHandle(const TfTokenVector &textures);
+    GLF_API
     GlfTextureHandleRefPtr GetTextureHandle(GlfTextureRefPtr texture);
 
     // garbage collection methods
+    GLF_API
     void RequiresGarbageCollection();
+    GLF_API
     void GarbageCollectIfNeeded();
 
     // Returns true if the registry contains a texture sampler for \a texture;
+    GLF_API
     bool HasTexture(const TfToken &texture) const;
 
     // diagnostics
+    GLF_API
     std::vector<VtDictionary> GetTextureInfos() const;
 
     // Resets the registry contents. Clients that call this are expected to
     // manage their texture handles accordingly.
+    GLF_API
     void Reset();
 
 private:
@@ -119,5 +132,8 @@ private:
 
     bool _requiresGarbageCollection;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // GLF_TEXTURE_REGISTRY_H

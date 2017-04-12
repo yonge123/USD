@@ -23,19 +23,23 @@
 //
 /// \file debugger.cpp
 
+#include "pxr/pxr.h"
 #include "pxr/base/arch/debugger.h"
 #include "pxr/base/arch/daemon.h"
 #include "pxr/base/arch/error.h"
 #include "pxr/base/arch/export.h"
 #include "pxr/base/arch/stackTrace.h"
 #include "pxr/base/arch/systemInfo.h"
-#if defined(ARCH_OS_LINUX) || defined(ARCH_OS_DARWIN)
+
+#include <atomic>
+#if defined(ARCH_OS_WINDOWS)
+#include <Windows.h>
+#else
 #include "pxr/base/arch/inttypes.h"
 #include <sys/types.h>
 #include <sys/ptrace.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#include <atomic>
 #include <cstdio>
 #include <cstdlib>
 #include <csignal>
@@ -45,9 +49,8 @@
 #include <unistd.h>
 #include <string>
 #endif
-#if defined(ARCH_OS_WINDOWS)
-#include <Windows.h>
-#endif
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 // We don't want this inlined so ArchDebuggerTrap() is as clean as
 // possible.  The fewer instructions in that function, the more likely
@@ -322,9 +325,11 @@ Arch_DebuggerRunUnrelatedProcessPosix(bool (*cb)(void*), void* data)
     _exit(0);
 }
 
+PXR_NAMESPACE_CLOSE_SCOPE
 
 extern char** environ;
 
+PXR_NAMESPACE_OPEN_SCOPE
 
 static
 bool
@@ -565,8 +570,8 @@ _ArchAvoidJIT()
 bool
 ArchDebuggerAttach()
 {
-    return ArchDebuggerIsAttached() ||
-            (!_ArchAvoidJIT() && Arch_DebuggerAttach());
+    return !_ArchAvoidJIT() &&
+            (ArchDebuggerIsAttached() || Arch_DebuggerAttach());
 }
 
 bool
@@ -584,7 +589,7 @@ ArchDebuggerIsAttached()
 void
 ArchAbort(bool logging)
 {
-    if (ArchDebuggerIsAttached() || !_ArchAvoidJIT()) {
+    if (!_ArchAvoidJIT() || ArchDebuggerIsAttached()) {
         if (!logging) {
 #if !defined(ARCH_OS_WINDOWS)
             // Remove signal handler.
@@ -602,3 +607,5 @@ ArchAbort(bool logging)
     // The exit code for abort() (128 + SIGABRT).
     _exit(134);
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

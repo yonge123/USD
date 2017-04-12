@@ -21,11 +21,16 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
+
 #include <boost/python/class.hpp>
 
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 namespace {
 
@@ -62,7 +67,9 @@ namespace {
         }
 
     };
-}
+
+} // anonymous namespace 
+
 
 void wrapTf_TestPyDateTime()
 {

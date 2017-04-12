@@ -21,6 +21,10 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
+
+#include "pxr/base/tf/api.h"
 #include "pxr/base/tf/token.h"
 
 #include "pxr/base/tf/hashset.h"
@@ -46,6 +50,8 @@
 using std::vector;
 using std::string;
 using std::pair;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 char const *TfToken::_emptyStr = "";
 
@@ -335,7 +341,9 @@ operator <<(std::ostream &stream, const TfToken& token)
     return stream << token.GetText();
 }
 
-void TfDumpTokenStats()
+TF_API void TfDumpTokenStats()
 {
     Tf_TokenRegistry::_GetInstance()._DumpStats();
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

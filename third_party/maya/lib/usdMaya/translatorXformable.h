@@ -24,6 +24,8 @@
 #ifndef PXRUSDMAYA_TRANSLATOR_XFORMABLE_H
 #define PXRUSDMAYA_TRANSLATOR_XFORMABLE_H
 
+#include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/gf/vec3d.h"
 #include "pxr/usd/usdGeom/xformable.h"
@@ -33,11 +35,15 @@
 
 #include <maya/MObject.h>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 /// \brief Provides helper functions for reading UsdGeomXformable.  
 struct PxrUsdMayaTranslatorXformable
 {
     /// \brief reads xform attributes from \p xformable and converts them into
     /// maya transform values.
+    PXRUSDMAYA_API
     static void Read(
             const UsdGeomXformable& xformable, 
             MObject mayaNode,
@@ -45,11 +51,15 @@ struct PxrUsdMayaTranslatorXformable
             PxrUsdMayaPrimReaderContext* context);
 
     /// \brief Convenince function for decomposing \p usdMatrix.
+    PXRUSDMAYA_API
     static bool ConvertUsdMatrixToComponents(
             const GfMatrix4d &usdMatrix, 
             GfVec3d *trans, 
             GfVec3d *rot,
             GfVec3d *scale);
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSD_TRANSLATOR_XFORMABLE_H

@@ -26,6 +26,8 @@
 
 /// \file glf/textureHandle.h
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/glf/api.h"
 #include "pxr/imaging/glf/texture.h"
 
 #include "pxr/imaging/garch/gl.h"
@@ -37,32 +39,43 @@
 #include <string>
 #include <map>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfTextureHandle);
 
 class GlfTextureHandle : public TfRefBase, public TfWeakBase {
 public:
-
+    GLF_API
     static GlfTextureHandleRefPtr New(GlfTextureRefPtr texture);
 
+    GLF_API
     virtual ~GlfTextureHandle();
 
     GlfTexturePtr GetTexture() {
         return _texture;
     }
 
+    GLF_API
     void AddMemoryRequest(size_t targetMemory);
 
+    GLF_API
     void DeleteMemoryRequest(size_t targetMemory);
 
 protected:
+    GLF_API
     GlfTextureHandle(GlfTextureRefPtr texture);
 
     GlfTextureRefPtr _texture;
 
+    GLF_API
     void _ComputeMemoryRequirement();
 
     // requested memory map
     std::map<size_t, size_t> _requestedMemories;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif

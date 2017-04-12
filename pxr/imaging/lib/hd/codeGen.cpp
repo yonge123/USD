@@ -33,7 +33,7 @@
 #include "pxr/imaging/hd/renderContextCaps.h"
 #include "pxr/imaging/hd/resourceBinder.h"
 #include "pxr/imaging/hd/resourceRegistry.h"
-#include "pxr/imaging/hd/shader.h"
+#include "pxr/imaging/hd/shaderCode.h"
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
@@ -47,6 +47,9 @@
 #include <sstream>
 
 #include <opensubdiv/osd/glslPatchShaderSource.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
@@ -73,7 +76,7 @@ TF_DEFINE_PRIVATE_TOKENS(
 );
 
 Hd_CodeGen::Hd_CodeGen(Hd_GeometricShaderPtr const &geometricShader,
-                       HdShaderSharedPtrVector const &shaders)
+                       HdShaderCodeSharedPtrVector const &shaders)
     : _geometricShader(geometricShader), _shaders(shaders)
 {
     TF_VERIFY(geometricShader);
@@ -87,7 +90,7 @@ Hd_CodeGen::ComputeHash() const
 
     ID hash = _geometricShader->ComputeHash();
     boost::hash_combine(hash, _metaData.ComputeHash());
-    boost::hash_combine(hash, HdShader::ComputeHash(_shaders));
+    boost::hash_combine(hash, HdShaderCode::ComputeHash(_shaders));
 
     return hash;
 }
@@ -540,7 +543,7 @@ Hd_CodeGen::Compile()
 
     // other shaders (renderpass, lighting, surface) first
     TF_FOR_ALL(it, _shaders) {
-        HdShaderSharedPtr const &shader = *it;
+        HdShaderCodeSharedPtr const &shader = *it;
         if (hasVS)
             _genVS  << shader->GetSource(HdShaderTokens->vertexShader);
         if (hasTCS)
@@ -1929,3 +1932,6 @@ Hd_CodeGen::_GenerateShaderParameters()
     _genGS << declarations.str()
            << accessors.str();
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

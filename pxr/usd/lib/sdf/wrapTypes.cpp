@@ -21,8 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/sdf/types.h"
 
+#include "pxr/pxr.h"
+#include "pxr/usd/sdf/types.h"
 #include "pxr/usd/sdf/attributeSpec.h"
 #include "pxr/usd/sdf/listOp.h"
 #include "pxr/usd/sdf/mapperArgSpec.h"
@@ -54,6 +55,10 @@
 
 using namespace boost::python;
 using std::string;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 struct Sdf_TimeSampleMapConverter {
 public:
@@ -292,15 +297,13 @@ _SdfValueBlockHash(const SdfValueBlock &self)
     return boost::hash<SdfValueBlock>()(self);  
 }
 
-namespace {
-
 SdfValueTypeName
 _FindType(const std::string& typeName)
 {
     return SdfSchema::GetInstance().FindType(typeName);
 }
 
-}
+} // anonymous namespace 
 
 void wrapTypes()
 {

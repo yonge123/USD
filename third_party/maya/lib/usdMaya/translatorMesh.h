@@ -27,6 +27,8 @@
 #ifndef PXRUSDMAYA_TRANSLATOR_MESH_H
 #define PXRUSDMAYA_TRANSLATOR_MESH_H
 
+#include "pxr/pxr.h"
+#include "usdMaya/api.h"
 #include "usdMaya/primReaderArgs.h"
 #include "usdMaya/primReaderContext.h"
 
@@ -36,11 +38,15 @@
 #include <maya/MFnMesh.h>
 #include <maya/MObject.h>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 
 /// \brief Provides helper functions for creating UsdGeomMesh
 struct PxrUsdMayaTranslatorMesh
 {
     /// Creates an MFnMesh under \p parentNode from \p mesh.
+    PXRUSDMAYA_API
     static bool Create(
             const UsdGeomMesh& mesh,
             MObject parentNode,
@@ -63,5 +69,8 @@ private:
             MFnMesh& meshFn);
 };
 
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_TRANSLATOR_MESH_H

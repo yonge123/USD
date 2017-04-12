@@ -486,8 +486,18 @@ static yyconst flex_int16_t yy_chk[32] =
 // language governing permissions and limitations under the Apache License.
 //
 
-#include <string>
+#include "pxr/pxr.h"
+#include "pxr/base/arch/fileSystem.h"
 #include "layerIdentifier.tab.h"
+ 
+#include <string>
+
+#ifndef fileno
+#define fileno(fd) ArchFileNo(fd)
+#endif
+#ifndef isatty
+#define isatty(fd) ArchFileIsaTTY(fd)
+#endif
 
 #define YYSTYPE std::string
 
@@ -497,8 +507,10 @@ typedef void *yyscan_t;
 // As a pure parser, we must define the following
 #define YY_DECL int layerIdentifierYylex(YYSTYPE *yylval_param, yyscan_t yyscanner)
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
 /* Configuration options for flex */
-#line 479 "<stdout>"
+#line 491 "<stdout>"
 
 #define INITIAL 0
 
@@ -765,13 +777,13 @@ YY_DECL
 		}
 
 	{
-#line 45 "pxr/usd/sdf/layerIdentifier.ll"
+#line 57 "pxr/usd/sdf/layerIdentifier.ll"
 
 
  /* Match characters other than the argument separators at the beginning
     of an identifier as the path to the layer.
   */
-#line 752 "<stdout>"
+#line 764 "<stdout>"
 
 	while ( 1 )		/* loops until end-of-file is reached */
 		{
@@ -832,7 +844,7 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 /* rule 1 can match eol */
 YY_RULE_SETUP
-#line 50 "pxr/usd/sdf/layerIdentifier.ll"
+#line 62 "pxr/usd/sdf/layerIdentifier.ll"
 {
     (*yylval_param) = yytext;
     return TOK_LAYER_PATH;
@@ -841,7 +853,7 @@ YY_RULE_SETUP
 /* Return argument separators and = as themselves. */
 case 2:
 YY_RULE_SETUP
-#line 56 "pxr/usd/sdf/layerIdentifier.ll"
+#line 68 "pxr/usd/sdf/layerIdentifier.ll"
 {
     return yytext[0];
 }
@@ -849,7 +861,7 @@ YY_RULE_SETUP
 /* unquoted C/Python identifier */
 case 3:
 YY_RULE_SETUP
-#line 61 "pxr/usd/sdf/layerIdentifier.ll"
+#line 73 "pxr/usd/sdf/layerIdentifier.ll"
 {
     (*yylval_param) = std::string(yytext, yyleng);
     return TOK_IDENTIFIER;
@@ -861,7 +873,7 @@ YY_RULE_SETUP
 case 4:
 /* rule 4 can match eol */
 YY_RULE_SETUP
-#line 69 "pxr/usd/sdf/layerIdentifier.ll"
+#line 81 "pxr/usd/sdf/layerIdentifier.ll"
 {
     (*yylval_param) = std::string(yytext, yyleng);
     return TOK_VALUE;
@@ -869,10 +881,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 74 "pxr/usd/sdf/layerIdentifier.ll"
+#line 86 "pxr/usd/sdf/layerIdentifier.ll"
 ECHO;
 	YY_BREAK
-#line 853 "<stdout>"
+#line 865 "<stdout>"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2002,7 +2014,7 @@ void layerIdentifierYyfree (void * ptr , yyscan_t yyscanner)
 
 #define YYTABLES_NAME "yytables"
 
-#line 74 "pxr/usd/sdf/layerIdentifier.ll"
+#line 86 "pxr/usd/sdf/layerIdentifier.ll"
 
 
 

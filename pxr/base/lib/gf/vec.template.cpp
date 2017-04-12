@@ -27,6 +27,7 @@
 
 #include "pxr/base/gf/vec{{ SUFFIX }}.h"
 
+#include "pxr/pxr.h"
 #include "pxr/base/gf/math.h"
 #include "pxr/base/gf/ostreamHelpers.h"
 #include "pxr/base/tf/type.h"
@@ -34,11 +35,13 @@
 // Include headers for other vec types to support wrapping conversions and
 // operators.
 {% for S in SCALARS if S != SCL -%}
-#include "pxr/base/gf/vec{{ DIM }}{{ S[0] }}.h"
+#include "pxr/base/gf/vec{{ DIM }}{{ SCALAR_SUFFIX(S) }}.h"
 {% endfor %}
 
 #include <vector>
 #include <iostream>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 TF_REGISTRY_FUNCTION(TfType) {
     TfType::Define<{{ VEC }}>();
@@ -252,3 +255,4 @@ GfSlerp(double alpha, const {{ VEC }} &v0, const {{ VEC }} &v1)
 
 {% endif %}
 
+PXR_NAMESPACE_CLOSE_SCOPE

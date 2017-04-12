@@ -24,10 +24,15 @@
 #ifndef GARCH_GLPLATFORM_DEBUG_CONTEXT_H
 #define GARCH_GLPLATFORM_DEBUG_CONTEXT_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/garch/api.h"
 #include "pxr/base/tf/declarePtrs.h"
 #include "pxr/base/tf/weakBase.h"
 
 #include <boost/scoped_ptr.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 class GarchGLPlatformDebugContextPrivate;
 
@@ -39,21 +44,31 @@ TF_DECLARE_WEAK_PTRS(GarchGLPlatformDebugContext);
 ///
 class GarchGLPlatformDebugContext : public TfWeakBase {
 public:
+    GARCH_API
     GarchGLPlatformDebugContext(int majorVersion,
                                int minorVersion,
                                bool coreProfile,
                                bool directRenderering);
     virtual ~GarchGLPlatformDebugContext();
 
+    GARCH_API
     static bool IsEnabledDebugOutput();
+
+    GARCH_API
     static bool IsEnabledCoreProfile();
 
+    GARCH_API
     void makeCurrent();
+
+    GARCH_API
     void *chooseMacVisual();
 
 public:
     boost::scoped_ptr<GarchGLPlatformDebugContextPrivate> _private;
     bool _coreProfile;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // GARCH_GLPLATFORM_DEBUG_CONTEXT_H

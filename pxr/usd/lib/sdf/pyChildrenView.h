@@ -26,11 +26,14 @@
 
 /// \file sdf/pyChildrenView.h
 
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/childrenView.h"
 #include "pxr/base/arch/demangle.h"
 #include "pxr/base/tf/pyUtils.h"
 #include "pxr/base/tf/stringUtils.h"
 #include <boost/python.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 template <class _View>
 class SdfPyWrapChildrenView {
@@ -172,7 +175,7 @@ private:
     static std::string _GetRepr(const View& x)
     {
         std::string result("{");
-        if (not x.empty()) {
+        if (! x.empty()) {
             const_iterator i = x.begin(), n = x.end();
             result += TfPyRepr(x.key(i)) + ": " + TfPyRepr(*i);
             while (++i != n) {
@@ -276,4 +279,6 @@ private:
     }
 };
 
-#endif
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // SDF_PYCHILDRENVIEW_H

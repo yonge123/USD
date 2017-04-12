@@ -26,9 +26,14 @@
 
 /// \file utils_legacy.h
 
+#include "pxr/pxr.h"
+#include "px_vp20/api.h"
 #include "pxr/base/gf/matrix4d.h"
 
 #include <maya/M3dView.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// This class contains helper methods and utilities to help with the
 /// transition from the Maya legacy viewport to Viewport 2.0.
@@ -37,6 +42,7 @@ class px_LegacyViewportUtils
 public:
     /// Get the view and projection matrices used for selection from the given
     /// M3dView \p view.
+    PX_VP20_API
     static void GetViewSelectionMatrices(M3dView& view,
                                          GfMatrix4d* viewMatrix,
                                          GfMatrix4d* projectionMatrix);
@@ -48,5 +54,8 @@ private:
     ~px_LegacyViewportUtils();
 };
 
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // __PX_VP20_UTILS_LEGACY_H__

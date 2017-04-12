@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usdGeom/xformOp.h"
 
 #include "pxr/usd/usd/conversions.h"
@@ -35,6 +36,10 @@
 #include <boost/python/implicit.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static bool
 _Set(const UsdGeomXformOp &self, TfPyObjWrapper pyVal, UsdTimeCode time)
@@ -70,6 +75,8 @@ _GetOpName(const UsdGeomXformOp &self)
 {
     return self.GetOpName();
 }
+
+} // anonymous namespace 
 
 void wrapUsdGeomXformOp()
 {
@@ -127,3 +134,4 @@ void wrapUsdGeomXformOp()
     TfPyContainerConversions::from_python_sequence<std::vector<XformOp >,
         TfPyContainerConversions::variable_capacity_policy >();
 }
+

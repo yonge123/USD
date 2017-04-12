@@ -26,13 +26,16 @@
 #include "pxr/base/tf/registryManager.h"
 #include "pxr/base/tf/type.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 TF_REGISTRY_FUNCTION(TfType)
 {
     TfType::Define<HdRenderDelegate>();
 }
 
 //
-// WORKAROUND: As this class is a pure interface class, it does not need a
+// WORKAROUND: As these classes are pure interface classes, they do not need a
 // vtable.  However, it is possible that some users will use rtti.
 // This will cause a problem for some of our compilers:
 //
@@ -42,4 +45,8 @@ TF_REGISTRY_FUNCTION(TfType)
 // As destruction of the class is not on the performance path,
 // the body of the deleter is provided here, so a vtable is created
 // in this compilation unit.
+HdRenderParam::~HdRenderParam() = default;
 HdRenderDelegate::~HdRenderDelegate() = default;
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

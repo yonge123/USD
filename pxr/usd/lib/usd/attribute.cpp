@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/attribute.h"
 #include "pxr/usd/usd/attributeQuery.h"
 
@@ -41,6 +42,9 @@
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 // ------------------------------------------------------------------------- //
 // UsdAttribute 
@@ -167,7 +171,7 @@ UsdAttribute::Get(VtValue* value, UsdTimeCode time) const
 
 // Specializations for SdfAssetPath(Array) that do path resolution.
 template <>
-bool
+USD_API bool
 UsdAttribute::_Get(SdfAssetPath *assetPath, UsdTimeCode time) const
 {
     auto stage = _GetStage();
@@ -181,7 +185,7 @@ UsdAttribute::_Get(SdfAssetPath *assetPath, UsdTimeCode time) const
 }
 
 template <>
-bool
+USD_API bool
 UsdAttribute::_Get(VtArray<SdfAssetPath> *assetPaths, UsdTimeCode time) const
 {
     auto stage = _GetStage();
@@ -279,10 +283,13 @@ UsdAttribute::_Create(const SdfValueTypeName& typeName, bool custom,
 // Explicitly instantiate templated getters for all Sdf value
 // types.
 #define _INSTANTIATE_GET(r, unused, elem)                               \
-    template bool UsdAttribute::_Get(                                   \
+    template USD_API bool UsdAttribute::_Get(                           \
         SDF_VALUE_TRAITS_TYPE(elem)::Type*, UsdTimeCode) const;         \
-    template bool UsdAttribute::_Get(                                   \
+    template USD_API bool UsdAttribute::_Get(                           \
         SDF_VALUE_TRAITS_TYPE(elem)::ShapedType*, UsdTimeCode) const;
 
 BOOST_PP_SEQ_FOR_EACH(_INSTANTIATE_GET, ~, SDF_VALUE_TYPES)
 #undef _INSTANTIATE_GET
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

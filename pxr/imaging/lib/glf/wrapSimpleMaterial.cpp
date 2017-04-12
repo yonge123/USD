@@ -27,6 +27,8 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
 void wrapSimpleMaterial()
 {
     typedef GlfSimpleMaterial This;
@@ -59,4 +61,3 @@ void wrapSimpleMaterial()
                       &This::SetShininess)
         ;
 }
-

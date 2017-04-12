@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/gf/half.h"
 #include "pxr/base/gf/matrix2d.h"
 #include "pxr/base/gf/matrix2f.h"
@@ -36,6 +38,8 @@
 #include "pxr/base/gf/vec4i.h"
 
 #include "pxr/base/tf/diagnostic.h"
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 int
 main(int argc, char *argv[])
@@ -159,18 +163,18 @@ main(int argc, char *argv[])
     
     // half
     {
-        float halfPosInf = half::posInf();
+        float halfPosInf = GfHalf::posInf();
         TF_AXIOM(!std::isfinite(halfPosInf));
         TF_AXIOM(std::isinf(halfPosInf));
 
-        float halfNegInf = half::negInf();
+        float halfNegInf = GfHalf::negInf();
         TF_AXIOM(!std::isfinite(halfNegInf));
         TF_AXIOM(std::isinf(halfNegInf));
 
-        float halfqNan = half::qNan();
+        float halfqNan = GfHalf::qNan();
         TF_AXIOM(std::isnan(halfqNan));
 
-        float halfsNan = half::sNan();
+        float halfsNan = GfHalf::sNan();
         TF_AXIOM(std::isnan(halfsNan));
     }
     

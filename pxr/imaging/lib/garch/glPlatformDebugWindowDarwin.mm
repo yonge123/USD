@@ -22,12 +22,15 @@
 // language governing permissions and limitations under the Apache License.
 //
 
+#include "pxr/pxr.h"
 #include "pxr/imaging/garch/glDebugWindow.h"
 #include "pxr/imaging/garch/glPlatformDebugWindowDarwin.h"
 
 #import <Cocoa/Cocoa.h>
 #import <OpenGL/OpenGL.h>
 #import <OpenGL/gl.h>
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 static int
 Garch_GetModifierKeys(NSUInteger flags)
@@ -124,7 +127,7 @@ Garch_GetModifierKeys(NSUInteger flags)
     NSPoint p = [event locationInWindow];
     NSRect r = [self frame];
     NSUInteger modflags = [event modifierFlags];
-    _callback->OnMousePress(GarchGLDebugWindow::Button1,
+    _callback->OnMousePress(GarchGLDebugWindow::MyButton1,
                             p.x, r.size.height - 1 - p.y,
                             Garch_GetModifierKeys(modflags));
 
@@ -136,7 +139,7 @@ Garch_GetModifierKeys(NSUInteger flags)
     NSPoint p = [event locationInWindow];
     NSRect r = [self frame];
     NSUInteger modflags = [event modifierFlags];
-    _callback->OnMouseRelease(GarchGLDebugWindow::Button1,
+    _callback->OnMouseRelease(GarchGLDebugWindow::MyButton1,
                               p.x, r.size.height - 1 - p.y,
                               Garch_GetModifierKeys(modflags));
 
@@ -185,6 +188,8 @@ Garch_GetModifierKeys(NSUInteger flags)
 
 // ---------------------------------------------------------------------------
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 Garch_GLPlatformDebugWindow::Garch_GLPlatformDebugWindow(GarchGLDebugWindow *w)
     : _callback(w)
 {
@@ -232,3 +237,5 @@ Garch_GLPlatformDebugWindow::ExitApp()
 {
     [NSApp stop:nil];
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

@@ -27,9 +27,14 @@
 #include <boost/python/def.hpp>
 #include <boost/python/tuple.hpp>
 
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/textReferenceParser.h"
 
 namespace bp = boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static bp::tuple
 _ExtractExternalReferences(
@@ -52,8 +57,9 @@ _ExtractExternalReferencesFromString(
         subLayers, references, payloads);
 }
 
-void
-wrapTextReferenceParser()
+} // anonymous namespace 
+
+void wrapTextReferenceParser()
 {
     bp::def("ExtractExternalReferences", _ExtractExternalReferences);
     bp::def("ExtractExternalReferencesFromString",

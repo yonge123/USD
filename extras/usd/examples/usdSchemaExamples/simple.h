@@ -26,6 +26,8 @@
 
 /// \file usdSchemaExamples/simple.h
 
+#include "pxr/pxr.h"
+#include "./api.h"
 #include "pxr/usd/usd/typed.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
@@ -39,6 +41,8 @@
 
 #include "pxr/base/tf/token.h"
 #include "pxr/base/tf/type.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class SdfAssetPath;
 
@@ -78,11 +82,13 @@ public:
     }
 
     /// Destructor.
+    USDSCHEMAEXAMPLES_API
     virtual ~UsdSchemaExamplesSimple();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
+    USDSCHEMAEXAMPLES_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
@@ -95,6 +101,7 @@ public:
     /// UsdSchemaExamplesSimple(stage->GetPrimAtPath(path));
     /// \endcode
     ///
+    USDSCHEMAEXAMPLES_API
     static UsdSchemaExamplesSimple
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
@@ -102,11 +109,13 @@ public:
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
+    USDSCHEMAEXAMPLES_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
+    USDSCHEMAEXAMPLES_API
     virtual const TfType &_GetTfType() const;
 
 public:
@@ -119,6 +128,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Int
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: 0
+    USDSCHEMAEXAMPLES_API
     UsdAttribute GetIntAttrAttr() const;
 
     /// See GetIntAttrAttr(), and also 
@@ -126,6 +136,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDSCHEMAEXAMPLES_API
     UsdAttribute CreateIntAttrAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -135,10 +146,12 @@ public:
     /// A relationship called target that could point to another prim
     /// or a property
     ///
+    USDSCHEMAEXAMPLES_API
     UsdRelationship GetTargetRel() const;
 
     /// See GetTargetRel(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create
+    USDSCHEMAEXAMPLES_API
     UsdRelationship CreateTargetRel() const;
 
 public:
@@ -146,10 +159,14 @@ public:
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 
     //
-    // Just remember to close the class declaration with }; and complete the
-    // include guard with #endif
+    // Just remember to: 
+    //  - Close the class declaration with }; 
+    //  - Close the namespace with PXR_NAMESPACE_CLOSE_SCOPE
+    //  - Close the include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif

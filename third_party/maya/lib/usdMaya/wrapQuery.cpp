@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdMaya/query.h"
 
 #include <boost/python/def.hpp>
@@ -32,9 +33,10 @@ using namespace std;
 using namespace boost::python;
 using namespace boost;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
 void wrapQuery()
 {
     def("GetPrim", PxrUsdMayaQuery::GetPrim);
-    def("ResolvePath", PxrUsdMayaQuery::ResolvePath);
     def("ReloadStage", PxrUsdMayaQuery::ReloadStage);
 }

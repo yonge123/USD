@@ -23,6 +23,7 @@
 //
 /// \file wrapRelationshipSpec.cpp
 
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/relationshipSpec.h"
 #include "pxr/usd/sdf/attributeSpec.h"
 #include "pxr/usd/sdf/path.h"
@@ -41,6 +42,42 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+template <>
+class Sdf_PyMarkerPolicy<SdfRelationshipSpec> 
+{
+public:
+    static SdfPathVector GetMarkerPaths(const SdfRelationshipSpecHandle& spec)
+    {
+        return spec->GetTargetMarkerPaths();
+    }
+
+    static std::string GetMarker(const SdfRelationshipSpecHandle& spec,
+                                 const SdfPath& path)
+    {
+        return spec->GetTargetMarker(path);
+    }
+
+    static void SetMarker(const SdfRelationshipSpecHandle& spec,
+                          const SdfPath& path, const std::string& marker)
+    {
+        spec->SetTargetMarker(path, marker);
+    }
+
+    static void SetMarkers(const SdfRelationshipSpecHandle& spec,
+                           const std::map<SdfPath, std::string>& markers)
+    {
+        SdfRelationshipSpec::TargetMarkerMap m(markers.begin(), markers.end());
+        spec->SetTargetMarkers(m);
+    }
+};
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 class Sdf_RelationalAttributesProxy {
 public:
@@ -1064,35 +1101,6 @@ _WrapSetTargetAttributeOrders(
 
 ////////////////////////////////////////////////////////////////////////////////
 
-template <>
-class Sdf_PyMarkerPolicy<SdfRelationshipSpec> 
-{
-public:
-    static SdfPathVector GetMarkerPaths(const SdfRelationshipSpecHandle& spec)
-    {
-        return spec->GetTargetMarkerPaths();
-    }
-
-    static std::string GetMarker(const SdfRelationshipSpecHandle& spec,
-                                 const SdfPath& path)
-    {
-        return spec->GetTargetMarker(path);
-    }
-
-    static void SetMarker(const SdfRelationshipSpecHandle& spec,
-                          const SdfPath& path, const std::string& marker)
-    {
-        spec->SetTargetMarker(path, marker);
-    }
-
-    static void SetMarkers(const SdfRelationshipSpecHandle& spec,
-                           const std::map<SdfPath, std::string>& markers)
-    {
-        SdfRelationshipSpec::TargetMarkerMap m(markers.begin(), markers.end());
-        spec->SetTargetMarkers(m);
-    }
-};
-
 static
 SdfPyMarkerProxy<SdfRelationshipSpec>
 _WrapGetMarkers(const SdfRelationshipSpec& spec)
@@ -1159,6 +1167,8 @@ _WrapInsertAttributeForTargetPathWithIndex(
 
 ////////////////////////////////////////////////////////////////////////////////
 
+} // anonymous namespace 
+
 void wrapRelationshipSpec()
 {    
     typedef SdfRelationshipSpec This;
@@ -1196,7 +1206,7 @@ void wrapRelationshipSpec()
             "for more information.")
 
         .add_property("targetAttributes",
-            &::_WrapGetRelationalAttributes,
+            &_WrapGetRelationalAttributes,
             "A dictionary of the attributes for each target path, keyed by path.\n\n"
             "Each dictionary value is a dictionary of attributes,"
             "keyed by attribute name.  The targetAttributes property itself "
@@ -1204,14 +1214,14 @@ void wrapRelationshipSpec()
             "modified just as you might modify a prim's attributes.")
 
         .add_property("targetAttributeOrders",
-            &::_WrapGetTargetAttributeOrders,
-            &::_WrapSetTargetAttributeOrders,
+            &_WrapGetTargetAttributeOrders,
+            &_WrapSetTargetAttributeOrders,
             "A dictionary of relational attribute order name lists for each "
             "target path, keyed by path.\n\n")
 
         .add_property("targetMarkers",
-            &::_WrapGetMarkers,
-            &::_WrapSetMarkers,
+            &_WrapGetMarkers,
+            &_WrapSetMarkers,
             "The markers for this relationship in a map proxy\n"
             "keyed by target path.\n\n"
             "The returned proxy can be used to set or remove the\n"
@@ -1223,14 +1233,14 @@ void wrapRelationshipSpec()
             "whether the target must be loaded to load the prim this\n"
             "relationship is attached to.")
 
-        .def("GetTargetPathForAttribute", &::_WrapGetTargetPathForAttribute)
+        .def("GetTargetPathForAttribute", &_WrapGetTargetPathForAttribute)
         .def("ReplaceTargetPath", &This::ReplaceTargetPath)
         .def("RemoveTargetPath", &This::RemoveTargetPath,
              (arg("preserveTargetOrder") = false))
         .def("InsertAttributeForTargetPath",
-             &::_WrapInsertAttributeForTargetPath)
+             &_WrapInsertAttributeForTargetPath)
         .def("InsertAttributeForTargetPath",
-             &::_WrapInsertAttributeForTargetPathWithIndex)
+             &_WrapInsertAttributeForTargetPathWithIndex)
 
         .def("HasAttributeOrderForTargetPath",
              &This::HasAttributeOrderForTargetPath)

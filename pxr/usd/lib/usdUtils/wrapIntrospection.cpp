@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include <boost/python/def.hpp>
 
 #include "pxr/usd/usdUtils/introspection.h"
@@ -29,6 +30,10 @@
 #include "pxr/base/tf/pyStaticTokens.h"
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 VtDictionary 
 _WrapUsdUtilsComputeUsdStageStats_1(const std::string &rootLayerPath) {
@@ -43,6 +48,8 @@ _WrapUsdUtilsComputeUsdStageStats_2(const UsdStageWeakPtr &stage) {
     UsdUtilsComputeUsdStageStats(stage, &stats);
     return stats;
 }
+
+} // anonymous namespace 
 
 void wrapIntrospection()
 {

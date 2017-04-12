@@ -21,12 +21,16 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/usd/sdf/changeList.h"
 #include "pxr/base/tf/enum.h"
 #include "pxr/base/tf/instantiateSingleton.h"
 #include "pxr/base/tf/type.h"
 
 #include <iostream>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 TF_INSTANTIATE_SINGLETON(SdfChangeList);
 
@@ -70,6 +74,8 @@ std::ostream& operator<<(std::ostream &os, const SdfChangeList &cl)
             os << "   didRename\n";
         if (entry.flags.didChangeIdentifier)
             os << "   didChangeIdentifier\n";
+        if (entry.flags.didChangeResolvedPath)
+            os << "   didChangeResolvedPath\n";
         if (entry.flags.didReplaceContent)
             os << "   didReplaceContent\n";
         if (entry.flags.didReloadContent)
@@ -150,6 +156,12 @@ SdfChangeList::DidChangeLayerIdentifier(const std::string &oldIdentifier)
         entry.flags.didChangeIdentifier = true;
         entry.oldIdentifier = oldIdentifier;
     }
+}
+
+void 
+SdfChangeList::DidChangeLayerResolvedPath()
+{
+    GetEntry(SdfPath::AbsoluteRootPath()).flags.didChangeResolvedPath = true;
 }
 
 void 
@@ -361,3 +373,5 @@ SdfChangeList::DidRemoveTarget(const SdfPath &targetPath)
 {
     GetEntry(targetPath).flags.didRemoveTarget = true;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

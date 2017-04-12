@@ -21,8 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/base/gf/size2.h"
 
+#include "pxr/pxr.h"
+#include "pxr/base/gf/size2.h"
 #include "pxr/base/tf/pyUtils.h"
 #include "pxr/base/tf/wrapTypeHelpers.h"
 #include "pxr/base/tf/pyContainerConversions.h"
@@ -38,7 +39,9 @@ using namespace boost::python;
 
 using std::string;
 
+PXR_NAMESPACE_USING_DIRECTIVE
 
+namespace {
 
 static int
 normalizeIndex(int index) {
@@ -68,6 +71,8 @@ static bool __contains__(const GfSize2 &self, size_t value) {
 static string _Repr(GfSize2 const &self) {
     return TF_PY_REPR_PREFIX + "Size2(" + TfPyRepr(self[0]) + ", " + TfPyRepr(self[1]) + ")";
 }
+
+} // anonymous namespace 
 
 void wrapSize2()
 {    

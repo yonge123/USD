@@ -37,6 +37,9 @@
 
 #include <sstream>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 void
 GlfPostPendingGLErrors(std::string const & where)
 {
@@ -76,7 +79,7 @@ GlfRegisterDefaultDebugOutputMessageCallback()
 void
 GlfDefaultDebugOutputMessageCallback(
         GLenum source, GLenum type, GLuint id, GLenum severity,
-        GLsizei length, GLchar const * message, GLvoid * userParam)
+        GLsizei length, GLchar const * message, GLvoid const * userParam)
 {
 #if defined(GL_ARB_debug_output) || defined(GL_VERSION_4_3)
     if (type == GL_DEBUG_TYPE_ERROR_ARB) {
@@ -226,3 +229,6 @@ GlfGLQueryObject::GetResultNoWait()
     }
     return value;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

@@ -105,7 +105,7 @@
 /// count decremented.
 ///
 /// A \c TfRefPtr<T> can access \c T's public members by the
-/// \c -> operator; however, the dereference operator "\c *" is not defined.
+/// \c -> operator and can be dereferenced by the "\c *" operator.
 /// Here is a simple example:
 /// \code
 ///    #include "pxr/base/tf/refPtr.h"
@@ -424,11 +424,14 @@
 /// \endcode
 ///
 
+#include "pxr/pxr.h"
+
 #include "pxr/base/tf/diagnosticLite.h"
 #include "pxr/base/tf/nullPtr.h"
 #include "pxr/base/tf/refBase.h"
 #include "pxr/base/tf/safeTypeCompare.h"
 #include "pxr/base/tf/typeFunctions.h"
+#include "pxr/base/tf/api.h"
 
 #include "pxr/base/arch/demangle.h"
 #include "pxr/base/arch/hints.h"
@@ -443,6 +446,8 @@
 #include <typeinfo>
 #include <type_traits>
 #include <cstddef>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 // Tf_SupportsUniqueChanged is a metafunction that may be specialized to return
 // false for classes (and all derived classes) that *cannot* ever invoke unique
@@ -503,10 +508,10 @@ struct Tf_RefPtr_UniqueChangedCounter {
         return false;
     }
 
-    static bool _RemoveRef(TfRefBase const *refBase,
+    TF_API static bool _RemoveRef(TfRefBase const *refBase,
                            TfRefBase::UniqueChangedListener const &listener);
 
-    static int _AddRef(TfRefBase const *refBase,
+    TF_API static int _AddRef(TfRefBase const *refBase,
                        TfRefBase::UniqueChangedListener const &listener);
 };
 
@@ -844,6 +849,11 @@ public:
             TF_FATAL_ERROR("attempted member lookup on NULL %s",
                            ArchGetDemangled(typeid(TfRefPtr)).c_str());
         return static_cast<T*>(const_cast<TfRefBase*>(_refBase));
+    }
+
+    /// Dereferences the stored pointer.
+    T& operator *() const {
+        return *operator->();
     }
 
 #if !defined(doxygen)
@@ -1221,16 +1231,20 @@ swap(TfRefPtr<T>& lhs, TfRefPtr<T>& rhs)
     lhs.swap(rhs);
 }
 
+PXR_NAMESPACE_CLOSE_SCOPE
+
 namespace boost {
 
 template<typename T>
 T *
-get_pointer(TfRefPtr<T> const& p)
+get_pointer(PXR_NS::TfRefPtr<T> const& p)
 {
     return get_pointer(p);
 }
 
-}
+} // end namespace boost
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 // Extend boost::hash to support TfRefPtr.
 template <class T>
@@ -1248,4 +1262,25 @@ hash_value(const TfRefPtr<T>& ptr)
 
 #define TF_SUPPORTS_REFPTR(T)   boost::is_base_of<TfRefBase, T >::value
 
+#if defined(ARCH_COMPILER_MSVC) 
+// There is a bug in the compiler which means we have to provide this
+// implementation. See here for more information:
+// https://connect.microsoft.com/VisualStudio/Feedback/Details/2852624
+
+#define TF_REFPTR_CONST_VOLATILE_GET(x)                                       \
+        namespace boost                                                       \
+        {                                                                     \
+            template<>                                                        \
+            const volatile x*                                                 \
+                get_pointer(const volatile x* p)                              \
+            {                                                                 \
+                return p;                                                     \
+            }                                                                 \
+        }
+#else
+#define TF_REFPTR_CONST_VOLATILE_GET(x)
 #endif
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // TF_REFPTR_H

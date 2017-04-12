@@ -26,6 +26,7 @@
  * \brief file translator for USD files
  */
 
+#include "pxr/pxr.h"
 #include "usdMaya/usdTranslatorExport.h"
 
 #include "usdMaya/JobArgs.h"
@@ -38,6 +39,9 @@
 #include <maya/MString.h>
 
 #include <string>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 
 void* usdTranslatorExport::creator() {
@@ -80,7 +84,7 @@ usdTranslatorExport::writer(const MFileObject &file,
                 
                 if (theOption[1]=="None") {
                     jobArgs.exportDisplayColor = false;
-                }else if (theOption[1]=="Look Colors") {
+                }else if (theOption[1]=="Material Colors") {
                     jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
                 } else if (theOption[1]=="RfM Shaders") {
                     TfToken shadingMode("pxrRis");
@@ -211,3 +215,6 @@ usdTranslatorExport::identifyFile(
     }
     return kNotMyFileType;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

@@ -24,6 +24,8 @@
 #ifndef PCP_SITE_H
 #define PCP_SITE_H
 
+#include "pxr/pxr.h"
+#include "pxr/usd/pcp/api.h"
 #include "pxr/usd/pcp/layerStackIdentifier.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/sdf/types.h"
@@ -31,6 +33,8 @@
 
 #include <boost/operators.hpp>
 #include <iosfwd>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DECLARE_WEAK_AND_REF_PTRS(PcpLayerStack);
 class PcpLayerStackSite;
@@ -45,15 +49,22 @@ public:
     PcpLayerStackIdentifier layerStackIdentifier;
     SdfPath path;
 
+    PCP_API
     PcpSite();
 
+    PCP_API
     PcpSite( const PcpLayerStackIdentifier &, const SdfPath & path );
+    PCP_API
     PcpSite( const PcpLayerStackPtr &, const SdfPath & path );
+    PCP_API
     PcpSite( const SdfLayerHandle &, const SdfPath & path );
+    PCP_API
     explicit PcpSite( const PcpLayerStackSite & );
 
+    PCP_API
     bool operator==(const PcpSite &rhs) const;
     
+    PCP_API
     bool operator<(const PcpSite &rhs) const;
 
     struct Hash {
@@ -84,7 +95,9 @@ public:
     };
 };
 
+PCP_API
 std::ostream& operator<<(std::ostream&, const PcpSite&);
+PCP_API
 std::ostream& operator<<(std::ostream&, const PcpLayerStackSite&);
 
 static inline
@@ -101,4 +114,6 @@ hash_value(const PcpLayerStackSite& site)
     return PcpLayerStackSite::Hash()(site);
 }
 
-#endif
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // PCP_SITE_H

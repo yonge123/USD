@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdKatana/attrMap.h"
 #include "usdKatana/readConstraintTarget.h"
 #include "usdKatana/usdInPrivateData.h"
@@ -35,6 +36,9 @@
 #include <FnLogging/FnLogging.h>
 
 #include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 FnLogSetup("PxrUsdKatanaReadConstraintTarget");
 
@@ -95,11 +99,11 @@ _BuildMatrixAttr(
     if (!constraintAttr)
         return FnKat::Attribute();
 
-    double currentTime = data.GetUsdInArgs()->GetCurrentTime();
+    double currentTime = data.GetCurrentTime();
     const std::vector<double>& motionSampleTimes = 
         data.GetMotionSampleTimes(constraintAttr);
 
-    const bool isMotionBackward = data.GetUsdInArgs()->IsMotionBackward();
+    const bool isMotionBackward = data.IsMotionBackward();
 
     FnKat::DoubleBuilder matBuilder(16);
     TF_FOR_ALL(iter, motionSampleTimes) {
@@ -174,3 +178,6 @@ PxrUsdKatanaReadConstraintTarget(
     viewerBuilder.set("default.drawOptions.fill", FnKat::StringAttribute("wireframe"));
     attrs.set("viewer", viewerBuilder.build());
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

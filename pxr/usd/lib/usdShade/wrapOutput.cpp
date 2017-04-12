@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usdShade/output.h"
 #include "pxr/usd/usdShade/parameter.h"
 #include "pxr/usd/usdShade/connectableAPI.h"
@@ -40,45 +41,30 @@
 using std::vector;
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 static bool
 _Set(const UsdShadeOutput &self, object val, const UsdTimeCode &time) 
 {
     return self.Set(UsdPythonToSdfType(val, self.GetTypeName()), time);
 }
 
-static object
-_GetConnectedSource(const UsdShadeOutput &self)
-{
-    UsdShadeConnectableAPI source;
-    TfToken outputName;
-    
-    if (self.GetConnectedSource(&source, &outputName)){
-        return make_tuple(source, outputName);
-    }
-    else {
-        return object();
-    }
-}
+} // anonymous namespace 
 
 void wrapUsdShadeOutput()
 {
     typedef UsdShadeOutput Output;
 
-    bool (Output::*ConnectToSource_1)(UsdShadeConnectableAPI const &,
-                                   TfToken const &,
-                                   bool) const = &Output::ConnectToSource;
-    bool (Output::*ConnectToSource_2)(UsdShadeOutput const &) const =
-                                    &Output::ConnectToSource;
-    bool (Output::*ConnectToSource_3)(UsdShadeParameter const &) const =
-                                    &Output::ConnectToSource;
-
     class_<Output>("Output")
         .def(init<UsdAttribute>(arg("attr")))
         .def(!self)
 
-        .def("GetName", &Output::GetName,
+        .def("GetFullName", &Output::GetFullName,
                 return_value_policy<return_by_value>())
-        .def("GetOutputName", &Output::GetOutputName)
+        .def("GetBaseName", &Output::GetBaseName)
+        .def("GetPrim", &Output::GetPrim)
         .def("GetTypeName", &Output::GetTypeName)
         .def("Set", _Set, (arg("value"), arg("time")=UsdTimeCode::Default()))
         .def("SetRenderType", &Output::SetRenderType,
@@ -86,26 +72,18 @@ void wrapUsdShadeOutput()
         .def("GetRenderType", &Output::GetRenderType)
         .def("HasRenderType", &Output::HasRenderType)
 
-        .def("IsConnected", &Output::IsConnected)
-
-        .def("ConnectToSource", ConnectToSource_1,
-             (arg("source"), arg("outputName"), arg("outputIsParameter")=false))
-        .def("ConnectToSource", ConnectToSource_2,
-             (arg("output")))
-        .def("ConnectToSource", ConnectToSource_3,
-             (arg("param")))
-
-        .def("DisconnectSource", &Output::DisconnectSource)
-        .def("ClearSource", &Output::ClearSource)
-
-        .def("GetConnectedSource", _GetConnectedSource)
-        .def("GetAttr", &Output::GetAttr,
+        .def("GetAttr", &Output::GetAttr)
+        .def("GetRel", &Output::GetRel)
+        .def("GetProperty", &Output::GetProperty,
                 return_value_policy<return_by_value>())
         ;
 
     implicitly_convertible<Output, UsdAttribute>();
+    implicitly_convertible<Output, UsdProperty>();
+
     to_python_converter<
         std::vector<Output>,
         TfPySequenceToPython<std::vector<Output> > >();
 }
+
 

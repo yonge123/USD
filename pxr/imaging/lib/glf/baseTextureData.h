@@ -24,15 +24,18 @@
 #ifndef GLF_BASETEXTUREDATA_H
 #define GLF_BASETEXTUREDATA_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/glf/api.h"
+#include "pxr/imaging/glf/utils.h"
+#include "pxr/imaging/garch/gl.h"
 #include "pxr/base/tf/declarePtrs.h"
 #include "pxr/base/tf/refPtr.h"
 #include "pxr/base/tf/weakPtr.h"
 
-#include "pxr/imaging/garch/gl.h"
-
-#include "pxr/imaging/glf/utils.h"
-
 #include <boost/noncopyable.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfBaseTextureData);
 
@@ -41,7 +44,7 @@ class GlfBaseTextureData : public TfRefBase,
                            boost::noncopyable
 {
 public:
-
+    GLF_API
     virtual ~GlfBaseTextureData();
 
     struct WrapInfo {
@@ -87,9 +90,13 @@ public:
 
 protected:
     // Map image format and type and encoding to GL format.
+    GLF_API
     static GLenum _GLInternalFormatFromImageData(
         GLenum format, GLenum type, bool isSRGB);
 
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // GLF_BASETEXTURE_DATA

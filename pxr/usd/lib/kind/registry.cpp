@@ -21,12 +21,16 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/usd/kind/registry.h"
 #include "pxr/base/plug/plugin.h"
 #include "pxr/base/plug/registry.h"
 #include "pxr/base/tf/instantiateSingleton.h"
 #include "pxr/base/tf/iterator.h"
 #include "pxr/base/tf/stringUtils.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 TF_INSTANTIATE_SINGLETON(KindRegistry);
 TF_DEFINE_PUBLIC_TOKENS(KindTokens, KIND_TOKENS);
@@ -85,7 +89,7 @@ KindRegistry::HasKind(const TfToken& kind)
 bool
 KindRegistry::_HasKind(const TfToken& kind) const
 {
-    return _kindMap.count(kind);
+    return _kindMap.count(kind) != 0;
 }
 
 /* static */
@@ -215,3 +219,4 @@ KindRegistry::_RegisterDefaults()
     }
 }
 
+PXR_NAMESPACE_CLOSE_SCOPE

@@ -27,13 +27,17 @@
 /// \file gf/interval.h
 /// \ingroup group_gf_BasicMath
 
+#include "pxr/pxr.h"
 #include "pxr/base/gf/math.h"
+#include "pxr/base/gf/api.h" 
 
 #include <boost/functional/hash.hpp>
 
 #include <float.h>
 #include <iosfwd>
 #include <limits>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// \class GfInterval
 /// \ingroup group_gf_BasicMath
@@ -416,6 +420,8 @@ private:
 
 /// Output a GfInterval using the format (x, y).
 /// \ingroup group_gf_DebuggingOutput
-std::ostream &operator<<(std::ostream&, const GfInterval&);
+GF_API std::ostream &operator<<(std::ostream&, const GfInterval&);
 
-#endif /* GF_INTERVAL_H */
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // GF_INTERVAL_H 

@@ -31,6 +31,9 @@
 #include "pxr/imaging/glf/baseTexture.h"
 #include "pxr/imaging/glf/ptexTexture.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
+
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
 
@@ -179,7 +182,13 @@ bool HdSimpleTextureResource::IsPtex() const
 GLuint HdSimpleTextureResource::GetTexelsTextureId() 
 {
     if (_isPtex) {
+#ifdef PXR_PTEX_SUPPORT_ENABLED
         return TfDynamic_cast<GlfPtexTextureRefPtr>(_texture)->GetTexelsTextureName();
+#else
+        TF_CODING_ERROR("Ptex support is disabled.  "
+            "This code path should be unreachable");
+        return 0;
+#endif
     }
 
     return TfDynamic_cast<GlfBaseTextureRefPtr>(_texture)->GetGlTextureName();
@@ -209,7 +218,13 @@ GLuint64EXT HdSimpleTextureResource::GetTexelsTextureHandle()
 
 GLuint HdSimpleTextureResource::GetLayoutTextureId() 
 {
+#ifdef PXR_PTEX_SUPPORT_ENABLED
     return TfDynamic_cast<GlfPtexTextureRefPtr>(_texture)->GetLayoutTextureName();
+#else
+    TF_CODING_ERROR("Ptex support is disabled.  "
+        "This code path should be unreachable");
+    return 0;
+#endif
 }
 
 GLuint64EXT HdSimpleTextureResource::GetLayoutTextureHandle() 
@@ -231,3 +246,6 @@ size_t HdSimpleTextureResource::GetMemoryUsed()
 {
     return _texture->GetMemoryUsed();
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

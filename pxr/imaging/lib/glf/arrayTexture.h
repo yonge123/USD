@@ -26,12 +26,17 @@
 
 /// \file glf/arrayTexture.h
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/glf/api.h"
 #include "pxr/imaging/glf/uvTexture.h"
 
 #include "pxr/base/tf/declarePtrs.h"
 #include "pxr/base/tf/token.h"
 
 #include <string>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfArrayTexture);
 
@@ -53,6 +58,7 @@ public:
     /// If given, \p cropTop, \p cropBottom, \p cropLeft, and \p cropRight
     /// specifies the number of pixels to crop from the indicated border of
     /// the source image.
+    GLF_API
     static GlfArrayTextureRefPtr New(
         TfTokenVector const &imageFilePaths,
         unsigned int arraySize     ,
@@ -61,6 +67,7 @@ public:
         unsigned int cropLeft   = 0,
         unsigned int cropRight  = 0);
 
+    GLF_API
     static GlfArrayTextureRefPtr New(
         std::vector<std::string> const &imageFilePaths,
         unsigned int arraySize     ,
@@ -69,14 +76,16 @@ public:
         unsigned int cropLeft   = 0,
         unsigned int cropRight  = 0);
 
-    
+    GLF_API
     static bool IsSupportedImageFile(TfToken const &imageFilePath);
 
     // GlfBaseTexture overrides
+    GLF_API
     virtual BindingVector GetBindings(TfToken const & identifier,
                                       GLuint samplerName) const;
 
 protected:
+    GLF_API
     GlfArrayTexture(
         TfTokenVector const &imageFilePaths,
         unsigned int arraySize,
@@ -85,10 +94,13 @@ protected:
         unsigned int cropLeft,
         unsigned int cropRight);
 
+    GLF_API
     virtual void _OnSetMemoryRequested(size_t targetMemory);
+    GLF_API
     const TfToken& _GetImageFilePath(size_t index) const;
     using GlfUVTexture::_GetImageFilePath;
 
+    GLF_API
     void _CreateTexture(GlfBaseTextureDataConstRefPtrVector texDataVec,
                         bool const generateMipmap);
 
@@ -97,5 +109,8 @@ private:
     TfTokenVector _imageFilePaths;
     const unsigned int _arraySize;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // GLF_ARRAYTEXTURE_H

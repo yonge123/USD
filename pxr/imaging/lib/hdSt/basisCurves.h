@@ -24,9 +24,10 @@
 #ifndef HDST_BASIS_CURVES_H
 #define HDST_BASIS_CURVES_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hdSt/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/basisCurves.h"
-#include "pxr/imaging/hd/basisCurvesTopology.h"
 #include "pxr/imaging/hd/drawingCoord.h"
 #include "pxr/imaging/hd/enums.h"
 #include "pxr/imaging/hd/perfLog.h"
@@ -35,6 +36,9 @@
 #include "pxr/base/vt/array.h"
 
 #include <boost/shared_ptr.hpp>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// \class HdStBasisCurvesReprDesc
 ///
@@ -49,6 +53,9 @@ struct HdStBasisCurvesReprDesc {
     HdBasisCurvesGeomStyle geomStyle:2;
 };
 
+typedef boost::shared_ptr<class HdSt_BasisCurvesTopology>
+                                              HdSt_BasisCurvesTopologySharedPtr;
+
 /// \class HdStBasisCurves
 ///
 /// A collection of curves using a particular basis.
@@ -56,38 +63,51 @@ struct HdStBasisCurvesReprDesc {
 class HdStBasisCurves final: public HdBasisCurves {
 public:
     HF_MALLOC_TAG_NEW("new HdStBasisCurves");
-    HdStBasisCurves(HdSceneDelegate* delegate, SdfPath const& id,
+
+    HDST_API
+    HdStBasisCurves(SdfPath const& id,
                     SdfPath const& instancerId = SdfPath());
+    HDST_API
     virtual ~HdStBasisCurves();
 
+    HDST_API
+    virtual void Sync(HdSceneDelegate* delegate,
+                      HdRenderParam*   renderParam,
+                      HdDirtyBits*     dirtyBits,
+                      TfToken const &  reprName,
+                      bool             forcedRepr) override;
+
     /// Configure geometric style of drawItems for \p reprName
+    HDST_API
     static void ConfigureRepr(TfToken const &reprName,
                               HdStBasisCurvesReprDesc desc);
 
-    /// Return the dirtyBits mask to be tracked for \p reprName
-    static int GetDirtyBitsMask(TfToken const &reprName);
-
     /// Returns whether refinement is always on or not.
+    HDST_API
     static bool IsEnabledForceRefinedCurves();
     
 protected:
-    virtual HdReprSharedPtr const & _GetRepr(
-        TfToken const &reprName, HdChangeTracker::DirtyBits *dirtyBits);
+    virtual HdReprSharedPtr const &
+        _GetRepr(HdSceneDelegate *sceneDelegate,
+                 TfToken const &reprName,
+                 HdDirtyBits *dirtyBitsState) override;
 
-    void _PopulateTopology(HdDrawItem *drawItem,
-                           HdChangeTracker::DirtyBits *dirtyBits,
+    void _PopulateTopology(HdSceneDelegate *sceneDelegate,
+                           HdDrawItem *drawItem,
+                           HdDirtyBits *dirtyBits,
                            const HdStBasisCurvesReprDesc &desc);
 
-    void _PopulateVertexPrimVars(HdDrawItem *drawItem,
-                                 HdChangeTracker::DirtyBits *dirtyBits);
+    void _PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
+                                 HdDrawItem *drawItem,
+                                 HdDirtyBits *dirtyBits);
 
-    void _PopulateElementPrimVars(HdDrawItem *drawItem,
-                                  HdChangeTracker::DirtyBits *dirtyBits);
+    void _PopulateElementPrimVars(HdSceneDelegate *sceneDelegate,
+                                  HdDrawItem *drawItem,
+                                  HdDirtyBits *dirtyBits);
 
-    HdChangeTracker::DirtyBits _PropagateDirtyBits(
-        HdChangeTracker::DirtyBits dirtyBits);
+    HdDirtyBits _PropagateDirtyBits(HdDirtyBits dirtyBits);
 
-    virtual HdChangeTracker::DirtyBits _GetInitialDirtyBits() const final override;
+    virtual HdDirtyBits _GetInitialDirtyBits() const override;
 
 private:
     enum DrawingCoord {
@@ -106,8 +126,9 @@ private:
     bool _SupportsSmoothCurves(const HdStBasisCurvesReprDesc &desc,
                                int refineLevel);
 
-    void _UpdateDrawItem(HdDrawItem *drawItem,
-                         HdChangeTracker::DirtyBits *dirtyBits,
+    void _UpdateDrawItem(HdSceneDelegate *sceneDelegate,
+                         HdDrawItem *drawItem,
+                         HdDirtyBits *dirtyBits,
                          const HdStBasisCurvesReprDesc &desc);
 
     void _UpdateDrawItemGeometricShader(HdDrawItem *drawItem,
@@ -117,7 +138,7 @@ private:
 
     void _ResetGeometricShaders();
 
-    HdBasisCurvesTopologySharedPtr _topology;
+    HdSt_BasisCurvesTopologySharedPtr _topology;
     HdTopology::ID _topologyId;
     int _customDirtyBitsInUse;
     int _refineLevel;  // XXX: could be moved into HdBasisCurveTopology.
@@ -126,4 +147,7 @@ private:
     static _BasisCurvesReprConfig _reprDescConfig;
 };
 
-#endif // HD_BASIS_CURVES_H
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // HDST_BASIS_CURVES_H

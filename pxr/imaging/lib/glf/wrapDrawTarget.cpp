@@ -34,6 +34,10 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 static GlfDrawTargetRefPtr _NewDrawTarget(
     GfVec2i const & size)
 {
@@ -45,6 +49,8 @@ static GlfDrawTargetRefPtr _NewDrawTarget2(
 {
     return GlfDrawTarget::New(GfVec2i(width, height));
 }
+
+} // anonymous namespace 
 
 void wrapDrawTarget()
 {
@@ -67,3 +73,5 @@ void wrapDrawTarget()
         
         ;
 }
+
+TF_REFPTR_CONST_VOLATILE_GET(GlfDrawTarget)

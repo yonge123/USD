@@ -26,6 +26,8 @@
 
 /// \file usdGeom/pointInstancer.h
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usdGeom/api.h"
 #include "pxr/usd/usdGeom/boundable.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
@@ -39,6 +41,8 @@
 
 #include "pxr/base/tf/token.h"
 #include "pxr/base/tf/type.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class SdfAssetPath;
 
@@ -199,7 +203,7 @@ class SdfAssetPath;
 /// 
 /// There \em is a pattern one can deploy for organizing the prototypes
 /// such that they will automatically be skipped by basic UsdPrim::GetChildren()
-/// or UsdTreeIterator traversals.  Usd prims each have a 
+/// or UsdPrimRange traversals.  Usd prims each have a 
 /// \ref Usd_PrimSpecifiers "specifier" of "def", "over", or "class".  The
 /// default traversals skip over prims that are "pure overs" or classes.  So
 /// to protect prototypes from all generic traversals and processing, place
@@ -278,11 +282,13 @@ public:
     }
 
     /// Destructor.
+    USDGEOM_API
     virtual ~UsdGeomPointInstancer();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
+    USDGEOM_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
@@ -295,6 +301,7 @@ public:
     /// UsdGeomPointInstancer(stage->GetPrimAtPath(path));
     /// \endcode
     ///
+    USDGEOM_API
     static UsdGeomPointInstancer
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
@@ -320,17 +327,20 @@ public:
     /// specify this schema class, in case a stronger typeName opinion overrides
     /// the opinion at the current EditTarget.
     ///
+    USDGEOM_API
     static UsdGeomPointInstancer
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
+    USDGEOM_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
+    USDGEOM_API
     virtual const TfType &_GetTfType() const;
 
 public:
@@ -346,6 +356,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->IntArray
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetProtoIndicesAttr() const;
 
     /// See GetProtoIndicesAttr(), and also 
@@ -353,6 +364,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateProtoIndicesAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -370,6 +382,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Int64Array
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetIdsAttr() const;
 
     /// See GetIdsAttr(), and also 
@@ -377,6 +390,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateIdsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -390,6 +404,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Point3fArray
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetPositionsAttr() const;
 
     /// See GetPositionsAttr(), and also 
@@ -397,6 +412,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreatePositionsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -420,6 +436,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->QuathArray
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetOrientationsAttr() const;
 
     /// See GetOrientationsAttr(), and also 
@@ -427,6 +444,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateOrientationsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -442,6 +460,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Float3Array
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetScalesAttr() const;
 
     /// See GetScalesAttr(), and also 
@@ -449,6 +468,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateScalesAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -468,6 +488,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Vector3fArray
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetVelocitiesAttr() const;
 
     /// See GetVelocitiesAttr(), and also 
@@ -475,6 +496,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateVelocitiesAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -494,6 +516,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Vector3fArray
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetAngularVelocitiesAttr() const;
 
     /// See GetAngularVelocitiesAttr(), and also 
@@ -501,6 +524,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateAngularVelocitiesAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -514,6 +538,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Int64Array
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetInvisibleIdsAttr() const;
 
     /// See GetInvisibleIdsAttr(), and also 
@@ -521,6 +546,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateInvisibleIdsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -536,6 +562,7 @@ public:
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: fullGeom
     /// \n  \ref UsdGeomTokens "Allowed Values": [point, card, fullGeom]
+    USDGEOM_API
     UsdAttribute GetPrototypeDrawModeAttr() const;
 
     /// See GetPrototypeDrawModeAttr(), and also 
@@ -543,6 +570,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreatePrototypeDrawModeAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -557,10 +585,12 @@ public:
     /// instance that prototype. Since relationships are uniform, this property
     /// cannot be animated.
     ///
+    USDGEOM_API
     UsdRelationship GetPrototypesRel() const;
 
     /// See GetPrototypesRel(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create
+    USDGEOM_API
     UsdRelationship CreatePrototypesRel() const;
 
 public:
@@ -568,8 +598,10 @@ public:
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 
     //
-    // Just remember to close the class declaration with }; and complete the
-    // include guard with #endif
+    // Just remember to: 
+    //  - Close the class declaration with }; 
+    //  - Close the namespace with PXR_NAMESPACE_CLOSE_SCOPE
+    //  - Close the include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
     
@@ -585,6 +617,7 @@ public:
     /// This does not guarantee that the instance will be rendered, because
     /// it may still be "invisible" due to \p id being present in the 
     /// \em invisibleIds attribute (see VisId(), InvisId())
+    USDGEOM_API
     bool ActivateId(int64_t id) const;
 
     /// Ensure that the instances identified by \p ids are active over all time.
@@ -593,6 +626,7 @@ public:
     /// This does not guarantee that the instances will be rendered, because
     /// each may still be "invisible" due to its presence in the 
     /// \em invisibleIds attribute (see VisId(), InvisId())
+    USDGEOM_API
     bool ActivateIds(VtInt64Array const &ids) const;
 
     /// Ensure that all instances are active over all time.
@@ -600,6 +634,7 @@ public:
     /// This does not guarantee that the instances will be rendered, because
     /// each may still be "invisible" due to its presence in the 
     /// \em invisibleIds attribute (see VisId(), InvisId())
+    USDGEOM_API
     bool ActivateAllIds() const;
 
     /// Ensure that the instance identified by \p id is inactive over all time.
@@ -607,6 +642,7 @@ public:
     ///
     /// A deactivated instance is guaranteed not to render if the renderer
     /// honors masking.
+    USDGEOM_API
     bool DeactivateId(int64_t id) const;
 
     /// Ensure that the instances identified by \p ids are inactive over all time.
@@ -614,6 +650,7 @@ public:
     ///
     /// A deactivated instance is guaranteed not to render if the renderer
     /// honors masking.
+    USDGEOM_API
     bool DeactivateIds(VtInt64Array const &ids) const;
 
 
@@ -627,6 +664,7 @@ public:
     /// This does not guarantee that the instance will be rendered, because
     /// it may still be "inactive" due to \p id being present in the 
     /// \em inactivevIds metadata (see ActivateId(), DeactivateId())
+    USDGEOM_API
     bool VisId(int64_t id, UsdTimeCode const &time) const;
 
     /// Ensure that the instances identified by \p ids are visible at \p time.
@@ -639,6 +677,7 @@ public:
     /// This does not guarantee that the instances will be rendered, because
     /// each may still be "inactive" due to \p id being present in the 
     /// \em inactivevIds metadata (see ActivateId(), DeactivateId())
+    USDGEOM_API
     bool VisIds(VtInt64Array const &ids, UsdTimeCode const &time) const;
 
     /// Ensure that all instances are visible at \p time.
@@ -647,6 +686,7 @@ public:
     /// This does not guarantee that the instances will be rendered, because
     /// each may still be "inactive" due to its id being present in the 
     /// \em inactivevIds metadata (see ActivateId(), DeactivateId())
+    USDGEOM_API
     bool VisAllIds(UsdTimeCode const &time) const;
 
     /// Ensure that the instance identified by \p id is invisible at \p time.
@@ -657,6 +697,7 @@ public:
     ///
     /// An invised instance is guaranteed not to render if the renderer
     /// honors masking.
+    USDGEOM_API
     bool InvisId(int64_t id, UsdTimeCode const &time) const;
 
     /// Ensure that the instances identified by \p ids are invisible at \p time.
@@ -667,6 +708,7 @@ public:
     ///
     /// An invised instance is guaranteed not to render if the renderer
     /// honors masking.
+    USDGEOM_API
     bool InvisIds(VtInt64Array const &ids, UsdTimeCode const &time) const;
 
     /// Computes a presence mask to be applied to per-instance data arrays
@@ -680,12 +722,13 @@ public:
     /// and must match the length of \em protoIndices at \p time . 
     /// If NULL, we will call GetIdsAttr().Get(time)
     ///
-    /// \note If all "live" isntances at timeCode \p time pass the mask,
+    /// \note If all "live" instances at UsdTimeCode \p time pass the mask,
     /// we will return an <b>empty</b> mask so that clients can trivially
     /// recognize the common "no masking" case.
     ///
     /// The returned mask can be used with ApplyMaskToArray(), and will contain
     /// a \c true value for every element that should survive.
+    USDGEOM_API
     std::vector<bool> ComputeMaskAtTime(UsdTimeCode time, 
                                         VtInt64Array const *ids = nullptr) const;
 
@@ -710,7 +753,125 @@ public:
     /// @}
     // --------------------------------------------------------------------- //
  
+    /// \enum ProtoXformInclusion
+    /// 
+    /// Encodes whether to include each prototype's root prim's transformation
+    /// as the most-local component of computed instance transforms.
+    enum ProtoXformInclusion {
+        IncludeProtoXform, //!< Include the transform on the proto's root
+        ExcludeProtoXform  //!< Exclude the transform on the proto's root
+    };
 
+    
+    /// \enum MaskApplication
+    /// 
+    /// Encodes whether to evaluate and apply the PointInstancer's
+    /// mask to computed results.
+    /// \sa ComputeMaskAtTime()
+    enum MaskApplication {
+        ApplyMask,    //!< Compute and apply the PointInstancer mask
+        IgnoreMask    //!< Ignore the PointInstancer mask
+    };
+
+    
+    /// Compute the per-instance, "PointInstancer relative" transforms given
+    /// the positions, scales, orientations, velocities and angularVelocities
+    /// at \p time, as described in \ref UsdGeomPointInstancer_transform .
+    ///
+    /// This will return \c false and leave \p xforms untouched if:
+    /// - \p xforms is NULL
+    /// - there is no authored \em protoIndices attribute
+    /// - the size of any of the per-instance attributes does not match the
+    ///   size of \em protoIndices
+    /// - \p doProtoXforms is \c IncludeProtoXform but an index value in
+    ///   \em protoIndices is outside the range [0, prototypes.size())
+    /// - \p applyMask is \c ApplyMask and a mask is set but the size of the
+    ///   mask does not match the size of \em protoIndices.
+    ///
+    /// If there is no error, we will return \c true and \p xforms will contain
+    /// the computed transformations.
+    /// 
+    /// \param xforms - the out parameter for the transformations.  Its size
+    ///                 will depend on the authored data and \p applyMask
+    /// \param time - UsdTimeCode at which we want to evaluate the transforms
+    /// \param baseTime - required for correct interpolation between samples
+    ///                   when \em velocities or \em angularVelocities are
+    ///                   present. If there are samples for \em positions and
+    ///                   \em velocities at t1 and t2, normal value resolution
+    ///                   would attempt to interpolate between the two samples,
+    ///                   and if they could not be interpolated because they
+    ///                   differ in size (common in cases where velocity is
+    ///                   authored), will choose the sample at t1.  When
+    ///                   sampling for the purposes of motion-blur, for example,
+    ///                   it is common, when rendering the frame at t2, to 
+    ///                   sample at [ t2-shutter/2, t2+shutter/2 ] for a
+    ///                   shutter interval of \em shutter.  The first sample
+    ///                   falls between t1 and t2, but we must sample at t2
+    ///                   and apply velocity-based interpolation based on those
+    ///                   samples to get a correct result.  In such scenarios,
+    ///                   one should provide a \p baseTime of t2 when querying
+    ///                   \em both samples. If your application does not care
+    ///                   about off-sample interpolation, it can supply the
+    ///                   same value for \p baseTime that it does for \p time.
+    ///                   When \p baseTime is less than or equal to \p time,
+    ///                   we will choose the lower bracketing timeSample.
+    /// \param doProtoXforms - specifies whether to include the root 
+    ///                   transformation of each instance's prototype in the
+    ///                   instance's transform.  Default is to include it, but
+    ///                   some clients may want to apply the proto transform as
+    ///                   part of the prototype itself, so they can specify
+    ///                   \c ExcludeProtoXform instead.
+    /// \param applyMask - specifies whether to apply ApplyMaskToArray() to the
+    ///                    computed result.  The default is \c ApplyMask.
+    USDGEOM_API
+    bool
+    ComputeInstanceTransformsAtTime(
+                        VtArray<GfMatrix4d>* xforms,
+                        const UsdTimeCode time,
+                        const UsdTimeCode baseTime,
+                        const ProtoXformInclusion doProtoXforms = IncludeProtoXform,
+                        const MaskApplication applyMask = ApplyMask) const;
+
+    /// Compute the extent of the point instancer based on the per-instance,
+    /// "PointInstancer relative" transforms at \p time, as described in
+    /// \ref UsdGeomPointInstancer_transform .
+    ///
+    /// If there is no error, we return \c true and \p extent will be the
+    /// tightest bounds we can compute efficiently.  If an error occurs,
+    /// \c false will be returned and \p extent will be left untouched.
+    ///
+    /// For now, this uses a UsdGeomBBoxCache with the "default", "proxy", and
+    /// "render" purposes.
+    ///
+    /// \param extent - the out parameter for the extent.  On success, it will
+    ///                 contain two elements representing the min and max.
+    /// \param time - UsdTimeCode at which we want to evaluate the extent
+    /// \param baseTime - required for correct interpolation between samples
+    ///                   when \em velocities or \em angularVelocities are
+    ///                   present. If there are samples for \em positions and
+    ///                   \em velocities at t1 and t2, normal value resolution
+    ///                   would attempt to interpolate between the two samples,
+    ///                   and if they could not be interpolated because they
+    ///                   differ in size (common in cases where velocity is
+    ///                   authored), will choose the sample at t1.  When
+    ///                   sampling for the purposes of motion-blur, for example,
+    ///                   it is common, when rendering the frame at t2, to 
+    ///                   sample at [ t2-shutter/2, t2+shutter/2 ] for a
+    ///                   shutter interval of \em shutter.  The first sample
+    ///                   falls between t1 and t2, but we must sample at t2
+    ///                   and apply velocity-based interpolation based on those
+    ///                   samples to get a correct result.  In such scenarios,
+    ///                   one should provide a \p baseTime of t2 when querying
+    ///                   \em both samples. If your application does not care
+    ///                   about off-sample interpolation, it can supply the
+    ///                   same value for \p baseTime that it does for \p time.
+    ///                   When \p baseTime is less than or equal to \p time,
+    ///                   we will choose the lower bracketing timeSample.
+    USDGEOM_API
+    bool ComputeExtentAtTime(
+                        VtVec3fArray* extent,
+                        const UsdTimeCode time,
+                        const UsdTimeCode baseTime) const;
 };
 
 template <class T>
@@ -719,38 +880,40 @@ UsdGeomPointInstancer::ApplyMaskToArray(std::vector<bool> const &mask,
                                         VtArray<T> *dataArray,
                                         const int elementSize)
 {
-    if (!dataArray){
+    if (!dataArray) {
         TF_CODING_ERROR("NULL dataArray.");
         return false;
     }
-    size_t size = mask.size();
-    if (size == 0 || dataArray->size() == elementSize){
+    size_t maskSize = mask.size();
+    if (maskSize == 0 || dataArray->size() == elementSize){
         return true;
     }
-    else if ((size * elementSize) != dataArray->size()){
-        TF_WARNING("Input mask's size (%d) is not compatible with the "
-                   "input dataArray (%d) and elementSize (%d).",
-                   size, dataArray->size(), elementSize);
+    else if ((maskSize * elementSize) != dataArray->size()){
+        TF_WARN("Input mask's size (%zu) is not compatible with the "
+                "input dataArray (%zu) and elementSize (%d).",
+                maskSize, dataArray->size(), elementSize);
         return false;
     }
-    
-    T *beginData = dataArray->GetData();
-    T *currData = beginData;
+
+    T* beginData = dataArray->data();
+    T* currData = beginData;
     size_t numPreserved = 0;
-    for (size_t i=0; i<size; ++i){
+    for (size_t i = 0; i < maskSize; ++i) {
         // XXX Could add a fast-path for elementSize == 1 ?
-        if (mask[i]){
-            for (size_t j=0; j<elementSize; ++j){
-                *currData = beginData[i] + j;
+        if (mask[i]) {
+            for (size_t j = 0; j < elementSize; ++j) {
+                *currData = beginData[i + j];
                 ++currData;
             }
             numPreserved += elementSize;
         }
     }
-    if (numPreserved < dataArray->size()){
+    if (numPreserved < dataArray->size()) {
         dataArray->resize(numPreserved);
     }
     return true;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif

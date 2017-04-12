@@ -28,6 +28,7 @@
 /// \ingroup group_arch_SystemFunctions
 /// Architecture dependent file system access
 
+#include "pxr/pxr.h"
 #include "pxr/base/arch/api.h"
 #include "pxr/base/arch/defines.h"
 #include "pxr/base/arch/inttypes.h"
@@ -52,6 +53,8 @@
 #include <io.h>
 #endif
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 /// \addtogroup group_arch_SystemFunctions
 ///@{
 #if !defined(ARCH_OS_WINDOWS)
@@ -67,19 +70,25 @@
     // See https://msdn.microsoft.com/en-us/library/1w06ktdy.aspx
     // XXX -- Should probably have Arch enum for these.
     #define F_OK    0       // Test for existence.
+    #define X_OK    1       // Test for execute permission.
     #define W_OK    2       // Test for write permission.
     #define R_OK    4       // Test for read permission.
 #endif
 
-#if !defined(ARCH_OS_WINDOWS)
-    #define ARCH_GLOB_DEFAULT   GLOB_NOCHECK|GLOB_MARK
+#if defined(ARCH_OS_WINDOWS)
+    #define ARCH_GLOB_NOCHECK   1
+    #define ARCH_GLOB_MARK      2
+    #define ARCH_GLOB_NOSORT    4
 #else
-    #define ARCH_GLOB_DEFAULT   0
+    #define ARCH_GLOB_NOCHECK   GLOB_NOCHECK
+    #define ARCH_GLOB_MARK      GLOB_MARK
+    #define ARCH_GLOB_NOSORT    GLOB_NOSORT
 #endif
+#define ARCH_GLOB_DEFAULT   (ARCH_GLOB_NOCHECK | ARCH_GLOB_MARK)
 
 #ifndef ARCH_PATH_MAX
-    #ifdef _POSIX_VERSION
-        #define ARCH_PATH_MAX _POSIX_PATH_MAX
+    #ifdef PATH_MAX
+        #define ARCH_PATH_MAX PATH_MAX
     #else
         #ifdef MAXPATHLEN
             #define ARCH_PATH_MAX MAXPATHLEN
@@ -94,11 +103,11 @@
 #endif
 
 #if defined(ARCH_OS_WINDOWS)
-    #define ARCH_PATH_SEP       '\\'
+    #define ARCH_PATH_SEP       "\\"
     #define ARCH_PATH_LIST_SEP  ";"
     #define ARCH_REL_PATH_IDENT ".\\"
 #else
-    #define ARCH_PATH_SEP       '/'
+    #define ARCH_PATH_SEP       "/"
     #define ARCH_PATH_LIST_SEP  ":"
     #define ARCH_REL_PATH_IDENT "./"
 #endif
@@ -323,5 +332,7 @@ void ArchFileAdvise(FILE *file, int64_t offset, size_t count,
                     ArchFileAdvice adv);
 
 ///@}
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // ARCH_FILESYSTEM_H

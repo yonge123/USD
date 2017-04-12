@@ -26,12 +26,16 @@
 #include <boost/python/reference_existing_object.hpp>
 #include <boost/python/return_value_policy.hpp>
 
+#include "pxr/pxr.h"
 #include "pxr/usd/ar/resolver.h"
 #include "pxr/usd/ar/resolverContext.h"
+#include "pxr/base/tf/refPtr.h"
 
 #include <boost/noncopyable.hpp>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void
 wrapResolver()
@@ -52,3 +56,5 @@ wrapResolver()
     def("GetResolver", ArGetResolver,
         return_value_policy<reference_existing_object>());
 }
+
+TF_REFPTR_CONST_VOLATILE_GET(ArResolver)

@@ -21,9 +21,11 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "pxr/usd/usd/primFlags.h"
 
 #include <boost/python/class.hpp>
+#include <boost/python/def.hpp>
 #include <boost/python/implicit.hpp>
 #include <boost/python/operators.hpp>
 #include <boost/python/scope.hpp>
@@ -34,6 +36,8 @@
 using namespace boost::python;
 
 using std::string;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 // Python does not allow overloading logical operators ('and', 'or', etc).  Also
 // python's __nonzero__ (invoked by 'not') must return a python bool or int.
@@ -67,6 +71,12 @@ operator ~(Usd_PrimFlagsConjunction conj) { return !conj; }
 static Usd_PrimFlagsConjunction
 operator ~(Usd_PrimFlagsDisjunction disj) { return !disj; }
 
+PXR_NAMESPACE_CLOSE_SCOPE
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 // Hash implementations.
 size_t __hash__Term(const Usd_Term &t) {
     size_t h = static_cast<size_t>(t.flag);
@@ -77,6 +87,8 @@ size_t __hash__Term(const Usd_Term &t) {
 size_t __hash__Predicate(const Usd_PrimFlagsPredicate &p) {
     return hash_value(p);
 }
+
+} // anonymous namespace 
 
 void wrapUsdPrimFlags()
 {
@@ -127,4 +139,13 @@ void wrapUsdPrimFlags()
     scope().attr("PrimIsInstance") = Usd_Term(UsdPrimIsInstance);
     scope().attr("PrimHasDefiningSpecifier") 
         = Usd_Term(UsdPrimHasDefiningSpecifier);
+
+    scope().attr("PrimDefaultPredicate") = UsdPrimDefaultPredicate;
+
+    def("TraverseInstanceProxies", 
+        (Usd_PrimFlagsPredicate(*)())&UsdTraverseInstanceProxies);
+    def("TraverseInstanceProxies", 
+        (Usd_PrimFlagsPredicate(*)(Usd_PrimFlagsPredicate))
+            &UsdTraverseInstanceProxies, 
+        arg("predicate"));
 }

@@ -21,8 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/base/gf/bbox3d.h"
 
+#include "pxr/pxr.h"
+#include "pxr/base/gf/bbox3d.h"
 #include "pxr/base/tf/pyUtils.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/wrapTypeHelpers.h"
@@ -38,12 +39,16 @@ using namespace boost::python;
 
 using std::string;
 
+PXR_NAMESPACE_USING_DIRECTIVE
 
+namespace {
 
-static string _Repr(GfBBox3d const &self) {
+string _Repr(GfBBox3d const &self) {
     return TF_PY_REPR_PREFIX + "BBox3d(" + TfPyRepr(self.GetRange()) + ", " +
         TfPyRepr(self.GetMatrix()) + ")";
 }
+
+} // anonymous namespace
 
 void wrapBBox3d()
 {    

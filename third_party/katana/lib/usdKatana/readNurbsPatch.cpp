@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdKatana/attrMap.h"
 #include "usdKatana/readGprim.h"
 #include "usdKatana/readNurbsPatch.h"
@@ -30,6 +31,9 @@
 #include "pxr/usd/usdGeom/nurbsPatch.h"
 
 #include <FnLogging/FnLogging.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 FnLogSetup("PxrUsdKatanaReadNurbsPatch");
 
@@ -304,7 +308,7 @@ PxrUsdKatanaReadNurbsPatch(
         const PxrUsdKatanaUsdInPrivateData& data,
         PxrUsdKatanaAttrMap& attrs)
 {
-    const double currentTime = data.GetUsdInArgs()->GetCurrentTime();
+    const double currentTime = data.GetCurrentTime();
     const std::vector<double>& motionSampleTimes = 
         data.GetMotionSampleTimes(UsdGeomPointBased(nurbsPatch).GetPointsAttr());
 
@@ -325,7 +329,7 @@ PxrUsdKatanaReadNurbsPatch(
     //
 
     attrs.set("geometry.point.Pw", _GetPwAttr(
-        nurbsPatch, currentTime, motionSampleTimes, data.GetUsdInArgs()->IsMotionBackward()));
+        nurbsPatch, currentTime, motionSampleTimes, data.IsMotionBackward()));
     attrs.set("geometry.u", _GetUAttr(nurbsPatch, currentTime));
     attrs.set("geometry.v", _GetVAttr(nurbsPatch, currentTime));
     attrs.set("geometry.uSize", _GetUSizeAttr(nurbsPatch, currentTime));       
@@ -360,3 +364,6 @@ PxrUsdKatanaReadNurbsPatch(
     attrs.set("viewer.default.drawOptions.windingOrder",
         PxrUsdKatanaGeomGetWindingOrderAttr(nurbsPatch, data));
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

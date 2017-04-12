@@ -31,6 +31,9 @@
 /// \file gf/range1d.h
 /// \ingroup group_gf_BasicGeometry
 
+#include "pxr/pxr.h"
+
+#include "pxr/base/gf/api.h"
 #include "pxr/base/gf/traits.h"
 
 #include <boost/functional/hash.hpp>
@@ -38,6 +41,8 @@
 #include <cfloat>
 #include <cstddef>
 #include <iosfwd>
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class GfRange1d;
 class GfRange1f;
@@ -305,10 +310,11 @@ public:
     ///
     /// The values must match exactly and it does exactly what you might
     /// expect when comparing float and double values.
-    inline bool operator ==(const GfRange1f& other) const;
-    inline bool operator !=(const GfRange1f& other) const;
+    GF_API inline bool operator ==(const GfRange1f& other) const;
+    GF_API inline bool operator !=(const GfRange1f& other) const;
 
     /// Compute the squared distance from a point to the range.
+    GF_API
     double GetDistanceSquared(double p) const;
 
 
@@ -329,9 +335,11 @@ public:
 
 /// Output a GfRange1d.
 /// \ingroup group_gf_DebuggingOutput
-std::ostream& operator<<(std::ostream &, GfRange1d const &);
+GF_API std::ostream& operator<<(std::ostream &, GfRange1d const &);
 
+PXR_NAMESPACE_CLOSE_SCOPE
 #include "pxr/base/gf/range1f.h"
+PXR_NAMESPACE_OPEN_SCOPE
 
 inline bool
 GfRange1d::operator ==(const GfRange1f& other) const {
@@ -344,5 +352,7 @@ GfRange1d::operator !=(const GfRange1f& other) const {
     return !(*this == other);
 }
 
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // GF_RANGE1D_H

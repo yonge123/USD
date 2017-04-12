@@ -24,9 +24,14 @@
 #ifndef HD_RENDER_DELEGATE_H
 #define HD_RENDER_DELEGATE_H
 
+#include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
+#include "pxr/imaging/hf/pluginBase.h"
+#include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/base/tf/token.h"
 
-#include "pxr/imaging/hf/pluginDelegateBase.h"
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 class SdfPath;
 class HdRprim;
@@ -34,29 +39,75 @@ class HdSprim;
 class HdBprim;
 class HdSceneDelegate;
 
+///
+/// The HdRenderParam is an opaque (to core Hydra) handle, to an object
+/// that is obtained from the render delegate and passed to each prim
+/// during Sync processing.
+///
+class HdRenderParam {
+public:
+    HdRenderParam() {}
+    HD_API
+    virtual ~HdRenderParam();
+
+private:
+    // Hydra will not attempt to copy the class.
+    HdRenderParam(const HdRenderParam &) = delete;
+    HdRenderParam &operator =(const HdRenderParam &) = delete;
+};
+
 /// \class HdRenderDelegate
 ///
-class HdRenderDelegate : public HfPluginDelegateBase
+class HdRenderDelegate : public HfPluginBase
 {
 public:
+    HD_API
+    virtual ~HdRenderDelegate();
+
     ///
-    /// Allows the delegate an opinion on the default Gal to use.
-    /// Return an empty token for no opinion.
-    /// Return HdDelegateTokens->None for no Gal.
+    /// Returns a list of typeId's of all supported Sprims by this render
+    /// delegate.
     ///
-    virtual TfToken GetDefaultGalId() const = 0;
+    virtual const TfTokenVector &GetSupportedSprimTypes() const = 0;
+
+
+    ///
+    /// Returns a list of typeId's of all supported Bprims by this render
+    /// delegate.
+    ///
+    virtual const TfTokenVector &GetSupportedBprimTypes() const = 0;
+
+    ///
+    /// Returns an opaque handle to a render param, that in turn is
+    /// passed to each prim created by the render delegate during sync
+    /// processing.  This avoids the need to store a global state pointer
+    /// in each prim.
+    ///
+    /// The typical lifetime of the renderParam would match that of the
+    /// RenderDelegate, however the minimal lifetime is that of the Sync
+    /// processing.  The param maybe queried multiple times during sync.
+    ///
+    /// A render delegate may return null for the param.
+    ///
+    virtual HdRenderParam *GetRenderParam() const = 0;
+
+
+    ////////////////////////////////////////////////////////////////////////////
+    ///
+    /// Prim Factories
+    ///
+    ////////////////////////////////////////////////////////////////////////////
+
 
     ///
     /// Request to Allocate and Construct a new Rprim.
     /// \param typeId the type identifier of the prim to allocate
-    /// \param delegate the scene delegate that provides the data for the prim
     /// \param rprimId a unique identifier for the prim
     /// \param instancerId the unique identifier for the instancer that uses
     ///                    the prim (optional: May be empty).
     /// \return A pointer to the new prim or nullptr on error.
     ///                     
     virtual HdRprim *CreateRprim(TfToken const& typeId,
-                                 HdSceneDelegate* delegate,
                                  SdfPath const& rprimId,
                                  SdfPath const& instancerId) = 0;
 
@@ -68,38 +119,77 @@ public:
     ///
     /// Request to Allocate and Construct a new Sprim.
     /// \param typeId the type identifier of the prim to allocate
-    /// \param delegate the scene delegate that provides the data for the prim
     /// \param sprimId a unique identifier for the prim
     /// \return A pointer to the new prim or nullptr on error.
     ///
     virtual HdSprim *CreateSprim(TfToken const& typeId,
-                                 HdSceneDelegate* delegate,
                                  SdfPath const& sprimId) = 0;
+
+    ///
+    /// Request to Allocate and Construct an Sprim to use as a standin, if there
+    /// if an error with another another Sprim of the same type.  For example,
+    /// if another prim references a non-exisiting Sprim, the fallback could
+    /// be used.
+    ///
+    /// \param typeId the type identifier of the prim to allocate
+    /// \return A pointer to the new prim or nullptr on error.
+    ///
+    virtual HdSprim *CreateFallbackSprim(TfToken const& typeId) = 0;
 
     ///
     /// Request to Destruct and deallocate the prim.
     ///
-    virtual void DestroySprim(HdSprim *sPrim) = 0;
+    virtual void DestroySprim(HdSprim *sprim) = 0;
 
     ///
     /// Request to Allocate and Construct a new Bprim.
     /// \param typeId the type identifier of the prim to allocate
-    /// \param delegate the scene delegate that provides the data for the prim
     /// \param sprimId a unique identifier for the prim
     /// \return A pointer to the new prim or nullptr on error.
     ///
     virtual HdBprim *CreateBprim(TfToken const& typeId,
-                                 HdSceneDelegate* delegate,
                                  SdfPath const& bprimId) = 0;
+
+
+    ///
+    /// Request to Allocate and Construct a Bprim to use as a standin, if there
+    /// if an error with another another Bprim of the same type.  For example,
+    /// if another prim references a non-exisiting Bprim, the fallback could
+    /// be used.
+    ///
+    /// \param typeId the type identifier of the prim to allocate
+    /// \return A pointer to the new prim or nullptr on error.
+    ///
+    virtual HdBprim *CreateFallbackBprim(TfToken const& typeId) = 0;
 
     ///
     /// Request to Destruct and deallocate the prim.
     ///
-    virtual void DestroyBprim(HdBprim *bPrim) = 0;
+    virtual void DestroyBprim(HdBprim *bprim) = 0;
+
+    ////////////////////////////////////////////////////////////////////////////
+    ///
+    /// Sync, Execute & Dispatch Hooks
+    ///
+    ////////////////////////////////////////////////////////////////////////////
+
+    ///
+    /// Notification point from the Engine to the delegate.
+    /// This notification occurs after all Sync's have completed and
+    /// before task execution.
+    ///
+    /// This notification gives the Render Delegate a chance to
+    /// update and move memory that the render may need.
+    ///
+    /// For example, the render delegate might fill primvar buffers or texture
+    /// memory.
+    ///
+    virtual void CommitResources(HdChangeTracker *tracker) = 0;
+
+
 protected:
     /// This class must be derived from
     HdRenderDelegate()          = default;
-    virtual ~HdRenderDelegate();
 
     ///
     /// This class is not intended to be copied.
@@ -107,5 +197,8 @@ protected:
     HdRenderDelegate(const HdRenderDelegate &) = delete;
     HdRenderDelegate &operator=(const HdRenderDelegate &) = delete;
 };
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif //HD_RENDER_DELEGATE_H

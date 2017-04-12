@@ -26,6 +26,8 @@
 
 /// \file usdGeom/nurbsPatch.h
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usdGeom/api.h"
 #include "pxr/usd/usdGeom/pointBased.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
@@ -39,6 +41,8 @@
 
 #include "pxr/base/tf/token.h"
 #include "pxr/base/tf/type.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class SdfAssetPath;
 
@@ -129,11 +133,13 @@ public:
     }
 
     /// Destructor.
+    USDGEOM_API
     virtual ~UsdGeomNurbsPatch();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
+    USDGEOM_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
@@ -146,6 +152,7 @@ public:
     /// UsdGeomNurbsPatch(stage->GetPrimAtPath(path));
     /// \endcode
     ///
+    USDGEOM_API
     static UsdGeomNurbsPatch
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
@@ -171,17 +178,20 @@ public:
     /// specify this schema class, in case a stronger typeName opinion overrides
     /// the opinion at the current EditTarget.
     ///
+    USDGEOM_API
     static UsdGeomNurbsPatch
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
+    USDGEOM_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
+    USDGEOM_API
     virtual const TfType &_GetTfType() const;
 
 public:
@@ -195,6 +205,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Int
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetUVertexCountAttr() const;
 
     /// See GetUVertexCountAttr(), and also 
@@ -202,6 +213,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateUVertexCountAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -215,6 +227,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Int
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetVVertexCountAttr() const;
 
     /// See GetVVertexCountAttr(), and also 
@@ -222,6 +235,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateVVertexCountAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -235,6 +249,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Int
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetUOrderAttr() const;
 
     /// See GetUOrderAttr(), and also 
@@ -242,6 +257,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateUOrderAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -255,6 +271,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Int
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetVOrderAttr() const;
 
     /// See GetVOrderAttr(), and also 
@@ -262,6 +279,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateVOrderAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -276,6 +294,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->DoubleArray
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetUKnotsAttr() const;
 
     /// See GetUKnotsAttr(), and also 
@@ -283,6 +302,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateUKnotsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -297,6 +317,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->DoubleArray
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetVKnotsAttr() const;
 
     /// See GetVKnotsAttr(), and also 
@@ -304,6 +325,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateVKnotsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -320,6 +342,7 @@ public:
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: open
     /// \n  \ref UsdGeomTokens "Allowed Values": [open, closed, periodic]
+    USDGEOM_API
     UsdAttribute GetUFormAttr() const;
 
     /// See GetUFormAttr(), and also 
@@ -327,6 +350,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateUFormAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -343,6 +367,7 @@ public:
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: open
     /// \n  \ref UsdGeomTokens "Allowed Values": [open, closed, periodic]
+    USDGEOM_API
     UsdAttribute GetVFormAttr() const;
 
     /// See GetVFormAttr(), and also 
@@ -350,6 +375,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateVFormAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -366,6 +392,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Double2
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetURangeAttr() const;
 
     /// See GetURangeAttr(), and also 
@@ -373,6 +400,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateURangeAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -389,6 +417,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Double2
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetVRangeAttr() const;
 
     /// See GetVRangeAttr(), and also 
@@ -396,6 +425,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateVRangeAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -413,6 +443,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->DoubleArray
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetPointWeightsAttr() const;
 
     /// See GetPointWeightsAttr(), and also 
@@ -420,6 +451,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreatePointWeightsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -436,6 +468,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->IntArray
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetTrimCurveCountsAttr() const;
 
     /// See GetTrimCurveCountsAttr(), and also 
@@ -443,6 +476,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateTrimCurveCountsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -455,6 +489,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->IntArray
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetTrimCurveOrdersAttr() const;
 
     /// See GetTrimCurveOrdersAttr(), and also 
@@ -462,6 +497,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateTrimCurveOrdersAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -475,6 +511,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->IntArray
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetTrimCurveVertexCountsAttr() const;
 
     /// See GetTrimCurveVertexCountsAttr(), and also 
@@ -482,6 +519,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateTrimCurveVertexCountsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -497,6 +535,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->DoubleArray
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetTrimCurveKnotsAttr() const;
 
     /// See GetTrimCurveKnotsAttr(), and also 
@@ -504,6 +543,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateTrimCurveKnotsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -517,6 +557,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Double2Array
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetTrimCurveRangesAttr() const;
 
     /// See GetTrimCurveRangesAttr(), and also 
@@ -524,6 +565,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateTrimCurveRangesAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -538,6 +580,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Double3Array
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: No Fallback
+    USDGEOM_API
     UsdAttribute GetTrimCurvePointsAttr() const;
 
     /// See GetTrimCurvePointsAttr(), and also 
@@ -545,6 +588,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateTrimCurvePointsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -552,10 +596,14 @@ public:
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 
     //
-    // Just remember to close the class declaration with }; and complete the
-    // include guard with #endif
+    // Just remember to: 
+    //  - Close the class declaration with }; 
+    //  - Close the namespace with PXR_NAMESPACE_CLOSE_SCOPE
+    //  - Close the include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif

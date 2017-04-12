@@ -21,8 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/base/gf/rect2i.h"
 
+#include "pxr/pxr.h"
+#include "pxr/base/gf/rect2i.h"
 #include "pxr/base/tf/pyUtils.h"
 #include "pxr/base/tf/wrapTypeHelpers.h"
 #include "pxr/base/tf/pyContainerConversions.h"
@@ -38,12 +39,16 @@ using namespace boost::python;
 
 using std::string;
 
+PXR_NAMESPACE_USING_DIRECTIVE
 
+namespace {
 
 static string _Repr(GfRect2i const &self) {
     return TF_PY_REPR_PREFIX + "Rect2i(" + TfPyRepr(self.GetLower()) + ", " +
         TfPyRepr(self.GetHigher()) + ")";
 }
+
+} // anonymous namespace 
 
 void wrapRect2i()
 {    

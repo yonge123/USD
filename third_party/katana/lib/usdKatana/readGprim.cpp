@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 #include "usdKatana/attrMap.h"
 #include "usdKatana/readGprim.h"
 #include "usdKatana/readXformable.h"
@@ -34,6 +35,9 @@
 #include "pxr/base/gf/gamma.h"
 
 #include <FnLogging/FnLogging.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 FnLogSetup("PxrUsdKatanaReadGprim");
 
@@ -55,7 +59,7 @@ PxrUsdKatanaGeomGetDisplayColorAttr(
     // Eval color.
     VtArray<GfVec3f> color;
     if (!gprim.GetDisplayColorPrimvar().ComputeFlattened(
-        &color, data.GetUsdInArgs()->GetCurrentTime())) {
+        &color, data.GetCurrentTime())) {
         return FnKat::Attribute();
     }
 
@@ -123,7 +127,7 @@ _ConvertGeomAttr(
         return FnKat::Attribute();
     }
 
-    const double currentTime = data.GetUsdInArgs()->GetCurrentTime();
+    const double currentTime = data.GetCurrentTime();
     const std::vector<double>& motionSampleTimes = data.GetMotionSampleTimes(usdAttr);
 
     // Flag to check if we discovered the topology is varying, in
@@ -133,7 +137,7 @@ _ConvertGeomAttr(
     // Used to compare value sizes to identify varying topology.
     int arraySize = -1;
 
-    const bool isMotionBackward = data.GetUsdInArgs()->IsMotionBackward();
+    const bool isMotionBackward = data.IsMotionBackward();
 
     FnKat::DataBuilder<T_ATTR> attrBuilder(tupleSize);
     TF_FOR_ALL(iter, motionSampleTimes)
@@ -205,3 +209,6 @@ PxrUsdKatanaGeomGetVelocityAttr(
             points.GetVelocitiesAttr(), 3, data);
 
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

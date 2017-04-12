@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/tf/diagnosticMgr.h"
 #include "pxr/base/tf/getenv.h"
@@ -35,6 +37,8 @@
 #include <csignal>
 
 using std::string;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 TF_REGISTRY_FUNCTION(TfEnum) {
     TF_ADD_ENUM_NAME(TF_DIAGNOSTIC_CODING_ERROR_TYPE,"Coding Error");
@@ -122,10 +126,10 @@ Tf_TerminateHandler()
         /*
          * If there's no exception, we'll end up in the handler above.
          */
-        std::set_terminate(::_BadThrowHandler);
+        std::set_terminate(_BadThrowHandler);
         throw;
     }
-    catch (std::bad_alloc& exc) {
+    catch (std::bad_alloc&) {
         std::set_terminate(Tf_TerminateHandler);
         reason = "allocation failed (you've run out of memory)";
         type = "bad_alloc";
@@ -164,7 +168,11 @@ std::string TfGetProgramNameForErrors()
 
 // Called when we get a fatal signal.
 static void
-_fatalSignalHandler(int signo, siginfo_t*, void* uctx)
+#if !defined(ARCH_OS_WINDOWS)
+_fatalSignalHandler(int signo, siginfo_t*, void*)
+#else
+_fatalSignalHandler(int signo)
+#endif
 {
     const char* msg = "unknown signal";
     switch (signo) {
@@ -172,9 +180,11 @@ _fatalSignalHandler(int signo, siginfo_t*, void* uctx)
         msg = "received SIGSEGV";
         break;
 
+#if !defined(ARCH_OS_WINDOWS)
     case SIGBUS:
         msg = "received SIGBUS";
         break;
+#endif
 
     case SIGFPE:
         msg = "received SIGFPE";
@@ -206,12 +216,15 @@ _fatalSignalHandler(int signo, siginfo_t*, void* uctx)
     _exit(128 + signo);
 }
 
-
 void
 TfInstallTerminateAndCrashHandlers()
 {
     std::set_terminate(Tf_TerminateHandler);
-
+#if defined(ARCH_OS_WINDOWS)
+    signal(SIGSEGV, &_fatalSignalHandler);
+    signal(SIGFPE,  &_fatalSignalHandler);
+    signal(SIGABRT, &_fatalSignalHandler);
+#else
     // Catch segvs and bus violations
     struct sigaction act;
     act.sa_sigaction = _fatalSignalHandler;
@@ -236,4 +249,7 @@ TfInstallTerminateAndCrashHandlers()
     sigaction(SIGBUS,  &act, NULL);
     sigaction(SIGFPE,  &act, NULL);
     sigaction(SIGABRT, &act, NULL);
+#endif
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

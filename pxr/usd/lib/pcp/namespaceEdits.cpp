@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+#include "pxr/pxr.h"
 #include "pxr/usd/pcp/namespaceEdits.h" 
 #include "pxr/usd/pcp/debugCodes.h"
 #include "pxr/usd/pcp/dependencies.h"
@@ -36,6 +38,8 @@ using std::pair;
 using std::vector;
 
 using boost::dynamic_pointer_cast;
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 TF_REGISTRY_FUNCTION(TfEnum)
 {
@@ -445,8 +449,7 @@ PcpComputeNamespaceEdits(
 
     // Find all specs at (primaryLayerStack, primPath).
     SdfSiteVector primSites;
-    PcpComposeSitePrimSites(
-        PcpLayerStackSite(primaryLayerStack, primPath), &primSites);
+    PcpComposeSitePrimSites(primaryLayerStack, primPath, &primSites);
 
     // Find the nodes corresponding to primPath in any relevant layer
     // stack over all caches.
@@ -489,8 +492,7 @@ PcpComputeNamespaceEdits(
                     /* recurseOnIndex */ true,
                     /* filter */ true);
             auto visitNodeFn = [&](const SdfPath &depIndexPath,
-                                   const PcpNodeRef &node,
-                                   PcpDependencyFlags flags) {
+                                   const PcpNodeRef &node) {
                 _CacheNodeHelper::InsertCacheNodePair(cacheIndex,
                                                       node, &nodes);
             };
@@ -517,17 +519,15 @@ PcpComputeNamespaceEdits(
                         /* recurseOnIndex */ false,
                         /* filter */ true);
                 auto visitNodeFn = [&](const SdfPath &depIndexPath,
-                                       const PcpNodeRef &node,
-                                       PcpDependencyFlags flags) {
+                                       const PcpNodeRef &node) {
                     TF_DEBUG(PCP_NAMESPACE_EDIT)
                         .Msg(" found dep node: <%s> -> <%s> %s\n",
                              depIndexPath.GetText(),
                              node.GetPath().GetText(),
-                            PcpDependencyFlagsToString(flags).c_str());
-                    if (flags != PcpDependencyTypeNone) {
-                        _CacheNodeHelper::InsertCacheNodePair(cacheIndex,
-                                                              node, &nodes);
-                    }
+                             PcpDependencyFlagsToString(
+                                 PcpClassifyNodeDependency(node)).c_str());
+                    _CacheNodeHelper::InsertCacheNodePair(cacheIndex,
+                                                          node, &nodes);
                 };
                 for(const PcpDependency &dep: deps) {
                     Pcp_ForEachDependentNode(dep.sitePath, primSite.layer,
@@ -871,8 +871,7 @@ PcpComputeNamespaceEdits(
                         /* recurseOnIndex */ true,
                         /* filter */ true);
                 auto visitNodeFn = [&](const SdfPath &depIndexPath,
-                                       const PcpNodeRef &node,
-                                       PcpDependencyFlags flags) {
+                                       const PcpNodeRef &node) {
                     if (!depIndexPath.IsPrimPath() ||
                         node.GetPath() != curPath) {
                         descendantPathsAndNodes[depIndexPath] = node;
@@ -884,8 +883,7 @@ PcpComputeNamespaceEdits(
                     // with recurseOnIndex, which may not actually
                     // have depended on this site (and exist for other
                     // reasons).
-                    if (PcpComposeSiteHasPrimSpecs(
-                            PcpLayerStackSite(layerStack, dep.sitePath))) {
+                    if (PcpComposeSiteHasPrimSpecs(layerStack, dep.sitePath)) {
                         Pcp_ForEachDependentNode(dep.sitePath, layerStack,
                                                  dep.indexPath,
                                                  *cache, visitNodeFn);
@@ -1016,3 +1014,5 @@ PcpComputeNamespaceEdits(
 
     return result;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

@@ -32,6 +32,10 @@
 
 using namespace boost::python;
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
 static GlfUVTextureStorageRefPtr _NewUVTextureStorage(
     unsigned int width,
     unsigned int height, 
@@ -39,6 +43,8 @@ static GlfUVTextureStorageRefPtr _NewUVTextureStorage(
 {
     return GlfUVTextureStorage::New(width, height, storageData);
 }
+
+} // anonymous namespace 
 
 void wrapUVTextureStorage()
 {    
@@ -52,4 +58,5 @@ void wrapUVTextureStorage()
 
         ;
 }
-    
+
+TF_REFPTR_CONST_VOLATILE_GET(GlfUVTextureStorage)
