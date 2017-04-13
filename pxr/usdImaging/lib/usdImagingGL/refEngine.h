@@ -38,11 +38,11 @@
 #include "pxr/base/tf/hashmap.h"
 #include "pxr/base/tf/hashset.h"
 
-PXR_NAMESPACE_OPEN_SCOPE
-
-
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagecache.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
 
 struct ImagePlaneDef;
 
