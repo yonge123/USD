@@ -510,13 +510,7 @@ void usdReadJob::setJoinedParentRefPaths(const std::string& joinedRefPaths)
     std::string str;
     while (std::getline(stream, str, ',')) {
         mParentRefPaths.push_back(str);
-            // std::insert will preserve existing entries if present, which in this
-            // case, is what we what
-            currentPathVariants.insert(std::pair<std::string, std::string>(
-                    variantMapIter->first, variantValue));
-        }
     }
-    return true;
 }
 
 bool usdReadJob::_DoImport(UsdPrimRange& range,
