@@ -175,7 +175,7 @@ MStatus initializePlugin(
     }
 
     // A MPxCacheFormat to save Maya point data to UsdGeomPoints
-    status = plugin.registerCacheFormat(UsdCacheFormat::translatorName(),
+    status = plugin.registerCacheFormat(UsdCacheFormat::translatorName,
                                         UsdCacheFormat::creator);
 
     if (!status) {
