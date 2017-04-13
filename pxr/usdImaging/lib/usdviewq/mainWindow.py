@@ -209,13 +209,22 @@ class MainWindow(QtGui.QMainWindow):
     @classmethod
     def clearSettings(cls):
         settingsPath = cls._outputBaseDirectory()
-        settingsPath = os.path.join(settingsPath, 'state')
-        if not os.path.exists(settingsPath):
-            print "INFO: ClearSettings requested, but there were no settings " \
-                    "currently stored"
-            return
-        os.remove(settingsPath)
-        print "INFO: Settings restored to default"
+        if settingsPath is None:
+            return None
+        else:
+            settingsPath = os.path.join(settingsPath, 'state')
+            if not os.path.exists(settingsPath):
+                print 'INFO: ClearSettings requested, but there ' \
+                      'were no settings currently stored.'
+                return None
+
+            if not os.access(settingsPath, os.W_OK):
+                print 'ERROR: Could not remove settings file.'
+                return None
+            else:
+                os.remove(settingsPath)
+
+        print 'INFO: Settings restored to default.'
 
     def _configurePlugins(self):
         from plugContext import PlugContext
@@ -289,37 +298,41 @@ class MainWindow(QtGui.QMainWindow):
         self.setStatusBar(self._statusBar)
 
         settingsPathDir = self._outputBaseDirectory()
-        settingsPath = os.path.join(settingsPathDir, self._statusFileName)
-        deprecatedSettingsPath = \
-            os.path.join(settingsPathDir, self._deprecatedStatusFileName)
-        if (os.path.isfile(deprecatedSettingsPath) and
-            not os.path.isfile(settingsPath)):
-            warning = ('\nWARNING: The settings file at: '
-                       + str(deprecatedSettingsPath) + ' is deprecated.\n'
-                       + 'These settings are not being used, the new '
-                       + 'settings file will be located at: '
-                       + str(settingsPath) + '.\n')
-            print warning
+        if settingsPathDir is None:
+            # Create an ephemeral settings object with a non existent filepath
+            self._settings = Settings('', seq=None, ephemeral=True) 
+        else:
+            settingsPath = os.path.join(settingsPathDir, self._statusFileName)
+            deprecatedSettingsPath = \
+                os.path.join(settingsPathDir, self._deprecatedStatusFileName)
+            if (os.path.isfile(deprecatedSettingsPath) and
+                not os.path.isfile(settingsPath)):
+                warning = ('\nWARNING: The settings file at: '
+                           + str(deprecatedSettingsPath) + ' is deprecated.\n'
+                           + 'These settings are not being used, the new '
+                           + 'settings file will be located at: '
+                           + str(settingsPath) + '.\n')
+                print warning
 
-        self._settings = Settings(settingsPath)
+            self._settings = Settings(settingsPath)
 
-        try:
-            self._settings.load()
-        except IOError:
-            # try to force out a new settings file
             try:
-                self._settings.save()
+                self._settings.load()
+            except IOError:
+                # try to force out a new settings file
+                try:
+                    self._settings.save()
+                except:
+                    _settingsWarning(settingsPath)
+
+            except EOFError:
+                # try to force out a new settings file
+                try:
+                    self._settings.save()
+                except:
+                    _settingsWarning(settingsPath)
             except:
                 _settingsWarning(settingsPath)
-
-        except EOFError:
-            # try to force out a new settings file
-            try:
-                self._settings.save()
-            except:
-                _settingsWarning(settingsPath)
-        except:
-            _settingsWarning(settingsPath)
 
         QtGui.QApplication.setOverrideCursor(QtCore.Qt.BusyCursor)
 
@@ -729,10 +742,6 @@ class MainWindow(QtGui.QMainWindow):
                                QtCore.SIGNAL('triggered()'),
                                self._toggleViewerMode)
 
-        QtCore.QObject.connect(self._ui.actionRenderGraphDefault,
-                               QtCore.SIGNAL('triggered()'),
-                               self._defaultRenderGraph)
-
         QtCore.QObject.connect(self._ui.showBBoxes,
                                QtCore.SIGNAL('toggled(bool)'),
                                self._showBBoxes)
@@ -1140,8 +1149,8 @@ class MainWindow(QtGui.QMainWindow):
         if self._printTiming and not self._noRender:
             t.PrintTime("create first image")
 
-        # configure render graph plugins after stageView initialized its renderer.
-        self._configureRenderGraphPlugins()
+        # configure render plugins after stageView initialized its renderer.
+        self._configureRendererPlugins()
         
         if self._mallocTags == 'stageAndImaging':
             DumpMallocTags(self._stage, "stage-loading and imaging")
@@ -1221,7 +1230,7 @@ class MainWindow(QtGui.QMainWindow):
                 # We can only safely do Sdf-level ops inside an Sdf.ChangeBlock,
                 # so gather all the paths from the UsdStage first
                 modelPaths = [p.GetPath() for p in \
-                                  Usd.TreeIterator.Stage(stage, 
+                                  Usd.PrimRange.Stage(stage, 
                                                          Usd.PrimIsGroup) ]
                 with Sdf.ChangeBlock():
                     for mpp in modelPaths:
@@ -1346,34 +1355,40 @@ class MainWindow(QtGui.QMainWindow):
         self._refreshCameraListAndMenu(preserveCurrCamera = False)
 
 
-    # Render graph plugin support
-    def _defaultRenderGraph(self):
-        self._stageView.SetRenderGraphPlugin(Tf.Type())
+    # Render plugin support
+    def _rendererPluginChanged(self, plugin):
+        self._stageView.SetRendererPlugin(plugin)
 
-    def _pluginRenderGraphChanged(self, plugin):
-        self._stageView.SetRenderGraphPlugin(plugin)
-
-    def _configureRenderGraphPlugins(self):
+    def _configureRendererPlugins(self):
         if self._stageView:
-            self._ui.renderGraphActionGroup = QtGui.QActionGroup(self)
-            self._ui.renderGraphActionGroup.setExclusive(True)
-            self._ui.renderGraphActionGroup.addAction(
-                self._ui.actionRenderGraphDefault)
+            self._ui.rendererPluginActionGroup = QtGui.QActionGroup(self)
+            self._ui.rendererPluginActionGroup.setExclusive(True)
 
-            pluginTypes = self._stageView.GetRenderGraphPlugins()
+            pluginTypes = self._stageView.GetRendererPlugins()
             for pluginType in pluginTypes:
                 name = Plug.Registry().GetStringFromPluginMetaData(
                     pluginType, 'displayName')
-                action = self._ui.menuRenderGraph.addAction(name)
+                action = self._ui.menuRendererPlugin.addAction(name)
                 action.setCheckable(True)
                 action.pluginType = pluginType
-                self._ui.renderGraphActionGroup.addAction(action)
+                self._ui.rendererPluginActionGroup.addAction(action)
 
                 QtCore.QObject.connect(
                     action,
                     QtCore.SIGNAL('triggered()'),
                     lambda pluginType = pluginType:
-                        self._pluginRenderGraphChanged(pluginType))
+                        self._rendererPluginChanged(pluginType))
+
+            # If any plugins exist, the first render plugin is the default one.
+            if len(self._ui.rendererPluginActionGroup.actions()) > 0:
+                self._ui.rendererPluginActionGroup.actions()[0].setChecked(True)
+
+            # Otherwise, put a no-op placeholder in.
+            else:
+                action = self._ui.menuRendererPlugin.addAction('Default')
+                action.setCheckable(True)
+                action.setChecked(True)
+                self._ui.rendererPluginActionGroup.addAction(action)
 
     # Topology-dependent UI changes
     def _reloadVaryingUI(self):
@@ -1795,7 +1810,7 @@ class MainWindow(QtGui.QMainWindow):
             isMatch = lambda x: pattern in x.lower()
 
         matches = [prim.GetPath() for prim
-                   in Usd.TreeIterator.Stage(self._stage, 
+                   in Usd.PrimRange.Stage(self._stage, 
                                              self._displayPredicate)
                    if isMatch(prim.GetName())]
 
@@ -1803,7 +1818,7 @@ class MainWindow(QtGui.QMainWindow):
         if showMasters:
             for master in self._stage.GetMasters():
                 matches += [prim.GetPath() for prim
-                            in Usd.TreeIterator(master, self._displayPredicate)
+                            in Usd.PrimRange(master, self._displayPredicate)
                             if isMatch(prim.GetName())]
         
         return matches
@@ -1928,13 +1943,19 @@ class MainWindow(QtGui.QMainWindow):
 
     @classmethod
     def _outputBaseDirectory(cls):
-        import os
+        import os, sys
 
-        baseDir = os.getenv('HOME') + "/.usdview/"
+        baseDir = os.path.join(os.path.expanduser('~'), '.usdview')
 
-        if not os.path.exists(baseDir):
-            os.makedirs(baseDir)
-        return baseDir
+        try:
+            if not os.path.exists(baseDir):
+                os.makedirs(baseDir)
+            return baseDir
+
+        except OSError:
+            sys.stderr.write('ERROR: Unable to create base directory '
+                             'for settings file, settings will not be saved.\n')
+            return None 
                    
     # View adjustment functionality ===========================================
 
@@ -2768,7 +2789,7 @@ class MainWindow(QtGui.QMainWindow):
         childTypeDict = {} 
         primCount = 0
 
-        for child in Usd.TreeIterator(prim):
+        for child in Usd.PrimRange(prim):
             typeString = _GetType(child)
             # skip pseudoroot
             if typeString is NOTYPE and not prim.GetParent():
@@ -4122,6 +4143,11 @@ class MainWindow(QtGui.QMainWindow):
                     pathParts[-1] = "<b>%s</b>" % pathParts[-1]
                 return '/'.join(pathParts)
     
+            def _HTMLEscape(s):
+                return s.replace('&', '&amp;'). \
+                         replace('<', '&lt;'). \
+                         replace('>', '&gt;')
+
             # First add in all model-related data, if present
             if model:
                 groupPath = model.GetPath().GetParentPath()
@@ -4138,12 +4164,12 @@ class MainWindow(QtGui.QMainWindow):
                 if assetInfo and len(assetInfo) > 0:
                     from common import GetAssetCreationTime
                     specs = model.GetPrimStack()
-                    results = GetAssetCreationTime(specs, 
+                    name, time, owner = GetAssetCreationTime(specs, 
                                                    mAPI.GetAssetIdentifier())
                     for key, value in assetInfo.iteritems():
-                        aiStr += "<br> -- <em>%s</em> : %s" % (key, str(value))
+                        aiStr += "<br> -- <em>%s</em> : %s" % (key, _HTMLEscape(str(value)))
                     aiStr += "<br><em><small>%s created on %s by %s</small></em>" % \
-                        results
+                        (_HTMLEscape(name), time, _HTMLEscape(owner))
                 else:
                     aiStr += "<br><small><em>No assetInfo!</em></small>"
                 

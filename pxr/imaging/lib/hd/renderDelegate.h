@@ -25,10 +25,10 @@
 #define HD_RENDER_DELEGATE_H
 
 #include "pxr/pxr.h"
-#include "pxr/base/tf/token.h"
-
-#include "pxr/imaging/hf/pluginDelegateBase.h"
+#include "pxr/imaging/hd/api.h"
+#include "pxr/imaging/hf/pluginBase.h"
 #include "pxr/imaging/hd/changeTracker.h"
+#include "pxr/base/tf/token.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -47,6 +47,7 @@ class HdSceneDelegate;
 class HdRenderParam {
 public:
     HdRenderParam() {}
+    HD_API
     virtual ~HdRenderParam();
 
 private:
@@ -57,15 +58,11 @@ private:
 
 /// \class HdRenderDelegate
 ///
-class HdRenderDelegate : public HfPluginDelegateBase
+class HdRenderDelegate : public HfPluginBase
 {
 public:
-    ///
-    /// Allows the delegate an opinion on the default Gal to use.
-    /// Return an empty token for no opinion.
-    /// Return HdDelegateTokens->None for no Gal.
-    ///
-    virtual TfToken GetDefaultGalId() const = 0;
+    HD_API
+    virtual ~HdRenderDelegate();
 
     ///
     /// Returns a list of typeId's of all supported Sprims by this render
@@ -193,7 +190,6 @@ public:
 protected:
     /// This class must be derived from
     HdRenderDelegate()          = default;
-    virtual ~HdRenderDelegate();
 
     ///
     /// This class is not intended to be copied.

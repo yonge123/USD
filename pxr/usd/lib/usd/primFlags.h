@@ -32,7 +32,7 @@
 /// conjunction (via &&) or a disjunction (via ||).  The result is a
 /// predicate functor object that tests those flags on the passed prim.
 /// Currently UsdPrim::GetFilteredChildren(), UsdPrim::GetNextFilteredSibling(),
-/// UsdPrim::GetFilteredDescendants(), and UsdTreeIterator() accept these
+/// UsdPrim::GetFilteredDescendants(), and UsdPrimRange() accept these
 /// predicates to filter out unwanted prims.
 ///
 /// For example:
@@ -247,12 +247,13 @@ private:
     }
 
     // Convenience method for evaluating \p pred using \p prim and 
-    // \p primPath to determine whether this is for an instance proxy prim.
+    // \p proxyPrimPath to determine whether this is for an instance proxy 
+    // prim.
     template <class PrimPtr>
     friend bool 
     Usd_EvalPredicate(const Usd_PrimFlagsPredicate &pred, const PrimPtr &prim,
-                      const SdfPath &primPath) {
-        return pred._Eval(prim, Usd_IsInstanceProxy(prim, primPath));
+                      const SdfPath &proxyPrimPath) {
+        return pred._Eval(prim, Usd_IsInstanceProxy(prim, proxyPrimPath));
     }
 
     // Equality comparison.
@@ -506,7 +507,7 @@ extern unspecified UsdPrimIsInstance;
 extern unspecified UsdPrimHasDefiningSpecifier;
 
 /// The default predicate used for prim traversals in methods like
-/// UsdPrim::GetChildren, UsdStage::Traverse, and by UsdTreeIterator.
+/// UsdPrim::GetChildren, UsdStage::Traverse, and by UsdPrimRange.
 /// This is a conjunction that includes all active, loaded, defined, 
 /// non-abstract prims, equivalent to:
 /// \code

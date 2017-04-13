@@ -26,8 +26,10 @@ pxr_shared_library(${PXR_PACKAGE}
     INCLUDE_DIRS
         ${MAYA_INCLUDE_DIRS}
 
+    PUBLIC_HEADERS
+        api.h
+
     PUBLIC_CLASSES
-        debugCodes
         editUtil
         stageCache
         stageData
@@ -49,7 +51,9 @@ pxr_shared_library(${PXR_PACKAGE}
         translatorPrim
         translatorUtil
         translatorXformable
+        roundTripUtil
         shadingModeExporter
+        shadingModeExporterContext
         shadingModeImporter
         shadingModeRegistry
         util
@@ -80,6 +84,7 @@ pxr_shared_library(${PXR_PACKAGE}
         UserTaggedAttribute
 
     PRIVATE_CLASSES
+        debugCodes
         registryHelper
         MayaCameraWriter
         MayaMeshWriter
@@ -112,6 +117,7 @@ pxr_shared_library(${PXR_PACKAGE}
         wrapAssembly.cpp
         wrapEditUtil.cpp
         wrapQuery.cpp
+        wrapRoundTripUtil.cpp
         wrapStageCache.cpp
         wrapUserTaggedAttribute.cpp
 
@@ -150,6 +156,8 @@ pxr_shared_library(${PXR_PACKAGE}
         usdMaya.mel
         usdTranslatorExport.mel
         usdTranslatorImport.mel
+
+    DISABLE_PRECOMPILED_HEADERS
 )
 
 pxr_test_scripts(

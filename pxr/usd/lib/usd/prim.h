@@ -52,7 +52,8 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class UsdTreeIterator;
+class UsdPrim;
+class UsdPrimRange;
 class Usd_PrimData;
 
 class UsdAttribute;
@@ -382,7 +383,7 @@ public:
     bool HasProperty(const TfToken &propName) const;
 
 private:
-    friend void wrapUsdPrim();
+    friend bool Usd_PrimIsA(const UsdPrim&, const TfType& schemaType);
     /// The non-templated implementation of UsdPrim::IsA using the
     /// TfType system.
     USD_API
@@ -459,7 +460,7 @@ public:
     ///
     /// See \ref Usd_PrimFlags "Prim predicate flags" and 
     /// #UsdPrimDefaultPredicate for more information, UsdStage::Traverse(), 
-    /// and \c UsdTreeIterator for more general Stage traversal behaviors.
+    /// and \c UsdPrimRange for more general Stage traversal behaviors.
     inline SubtreeRange GetDescendants() const;
 
     /// Return all this prim's descendants as an iterable range.
@@ -469,7 +470,7 @@ public:
     ///
     /// See \ref Usd_PrimFlags "Prim predicate flags" and 
     /// #UsdPrimDefaultPredicate for more information, UsdStage::Traverse(), 
-    /// and \c UsdTreeIterator for more general Stage traversal behaviors.
+    /// and \c UsdPrimRange for more general Stage traversal behaviors.
     inline SubtreeRange GetAllDescendants() const;
 
     /// Return a subset of all of this prim's descendants filtered by
@@ -494,7 +495,7 @@ public:
     ///
     /// See \ref Usd_PrimFlags "Prim predicate flags" and 
     /// #UsdPrimDefaultPredicate for more information, UsdStage::Traverse(), 
-    /// and \c UsdTreeIterator for more general Stage traversal behaviors.
+    /// and \c UsdPrimRange for more general Stage traversal behaviors.
     inline SubtreeRange
     GetFilteredDescendants(const Usd_PrimFlagsPredicate &predicate) const;
 
@@ -507,9 +508,9 @@ public:
     /// root prim.
     UsdPrim GetParent() const {
         Usd_PrimDataConstPtr prim = get_pointer(_Prim());
-        SdfPath primPath = GetPrimPath();
-        Usd_MoveToParent(prim, primPath);
-        return UsdPrim(prim, primPath);
+        SdfPath proxyPrimPath = _ProxyPrimPath();
+        Usd_MoveToParent(prim, proxyPrimPath);
+        return UsdPrim(prim, proxyPrimPath);
     }
 
     /// Return this prim's next active, loaded, defined, non-abstract sibling 
@@ -920,7 +921,7 @@ public:
     /// An instance proxy prim represents a descendent of an instance
     /// prim.
     bool IsInstanceProxy() const { 
-        return Usd_IsInstanceProxy(_Prim(), GetPrimPath());
+        return Usd_IsInstanceProxy(_Prim(), _ProxyPrimPath());
     }
 
     /// Return true if this prim is a master prim, false otherwise.
@@ -946,7 +947,7 @@ public:
     /// invalid UsdPrim.
     UsdPrim GetPrimInMaster() const {
         if (IsInstanceProxy()) {
-            return UsdPrim(_Prim(), _Prim()->GetPath());
+            return UsdPrim(_Prim(), SdfPath());
         }
         return UsdPrim();
     }
@@ -958,22 +959,22 @@ private:
     friend class UsdProperty;
     friend class UsdSchemaBase;
     friend class UsdStage;
-    friend class UsdTreeIterator;
+    friend class UsdPrimRange;
     friend class Usd_PrimData;
     friend class Usd_PrimFlagsPredicate;
     friend struct UsdPrim_TargetFinder;
 
     // Prim constructor.
     UsdPrim(const Usd_PrimDataHandle &primData,
-            const SdfPath &primPath) 
-        : UsdObject(primData, primPath) { }
+            const SdfPath &proxyPrimPath) 
+        : UsdObject(primData, proxyPrimPath) { }
 
     // General constructor.
     UsdPrim(UsdObjType objType,
             const Usd_PrimDataHandle &prim, 
-            const SdfPath &primPath,
+            const SdfPath &proxyPrimPath,
             const TfToken &propName)
-        : UsdObject(objType, prim, primPath, propName) {}
+        : UsdObject(objType, prim, proxyPrimPath, propName) {}
 
     // Helper to make a sibling range.
     inline SiblingRange
@@ -1008,6 +1009,7 @@ private:
     USD_API
     bool _PrimPathIsInMaster() const;
 
+    friend const PcpPrimIndex &Usd_PrimGetSourcePrimIndex(const UsdPrim&);
     // Return a const reference to the source PcpPrimIndex for this prim.
     //
     // For all prims in masters (which includes the master prim itself), 
@@ -1131,13 +1133,13 @@ private:
     friend class UsdPrim;
 
     // Constructor used by Prim.
-    UsdPrimSiblingIterator(const base_type &i, const SdfPath& primPath,
+    UsdPrimSiblingIterator(const base_type &i, const SdfPath& proxyPrimPath,
                            const Usd_PrimFlagsPredicate &predicate)
         : iterator_adaptor_(i)
-        , _primPath(primPath)
+        , _proxyPrimPath(proxyPrimPath)
         , _predicate(predicate) {
         // Need to advance iterator to first matching element.
-        if (base() && !Usd_EvalPredicate(_predicate, base(), _primPath))
+        if (base() && !Usd_EvalPredicate(_predicate, base(), _proxyPrimPath))
             increment();
     }
 
@@ -1145,23 +1147,23 @@ private:
     friend class boost::iterator_core_access;
     bool equal(const UsdPrimSiblingIterator &other) const {
         return base() == other.base() && 
-            _primPath == other._primPath &&
+            _proxyPrimPath == other._proxyPrimPath &&
             _predicate == other._predicate;
     }
 
     void increment() {
         base_type &base = base_reference();
-        if (Usd_MoveToNextSiblingOrParent(base, _primPath, _predicate)) {
+        if (Usd_MoveToNextSiblingOrParent(base, _proxyPrimPath, _predicate)) {
             base = nullptr;
-            _primPath = SdfPath();
+            _proxyPrimPath = SdfPath();
         }
     }
 
     reference dereference() const {
-        return UsdPrim(base(), _primPath);
+        return UsdPrim(base(), _proxyPrimPath);
     }
 
-    SdfPath _primPath;
+    SdfPath _proxyPrimPath;
     Usd_PrimFlagsPredicate _predicate;
 };
 
@@ -1183,7 +1185,7 @@ UsdPrimSiblingRange
 UsdPrim::GetFilteredChildren(const Usd_PrimFlagsPredicate &pred) const
 {
     return _MakeSiblingRange(
-        Usd_CreatePredicateForTraversal(_Prim(), GetPrimPath(), pred));
+        Usd_CreatePredicateForTraversal(_Prim(), _ProxyPrimPath(), pred));
 }
 
 UsdPrimSiblingRange
@@ -1202,7 +1204,7 @@ UsdPrim::GetChildren() const
 UsdPrim::SiblingRange
 UsdPrim::_MakeSiblingRange(const Usd_PrimFlagsPredicate &pred) const {
     Usd_PrimDataConstPtr firstChild = get_pointer(_Prim());
-    SdfPath firstChildPath = GetPrimPath();
+    SdfPath firstChildPath = _ProxyPrimPath();
     if (!Usd_MoveToChild(firstChild, firstChildPath, pred)) {
         firstChild = nullptr;
         firstChildPath = SdfPath();
@@ -1292,7 +1294,7 @@ public:
     /// Advance this range's end iterator.
     iterator_range& advance_end(difference_type n);
 
-    ;    /// Return begin() == end().
+    /// Return begin() == end().
     bool empty() const;
 
 private:
@@ -1323,17 +1325,18 @@ private:
     friend class UsdPrim;
 
     // Constructor used by Prim.
-    UsdPrimSubtreeIterator(const base_type &i, const SdfPath &primPath,
+    UsdPrimSubtreeIterator(const base_type &i, const SdfPath &proxyPrimPath,
                            const Usd_PrimFlagsPredicate &predicate)
         : iterator_adaptor_(i)
-        , _primPath(primPath)
+        , _proxyPrimPath(proxyPrimPath)
         , _predicate(predicate) {
         // Need to advance iterator to first matching element.
         base_type &base = base_reference();
-        if (base && !Usd_EvalPredicate(_predicate, base, _primPath)) {
-            if (Usd_MoveToNextSiblingOrParent(base, _primPath, _predicate)) {
+        if (base && !Usd_EvalPredicate(_predicate, base, _proxyPrimPath)) {
+            if (Usd_MoveToNextSiblingOrParent(base, _proxyPrimPath, 
+                                              _predicate)) {
                 base = nullptr;
-                _primPath = SdfPath();
+                _proxyPrimPath = SdfPath();
             }
         }
     }
@@ -1342,23 +1345,23 @@ private:
     friend class boost::iterator_core_access;
     bool equal(const UsdPrimSubtreeIterator &other) const {
         return base() == other.base() && 
-            _primPath == other._primPath &&
+            _proxyPrimPath == other._proxyPrimPath &&
             _predicate == other._predicate;
     }
 
     void increment() {
         base_type &base = base_reference();
-        if (!Usd_MoveToChild(base, _primPath, _predicate)) {
-            while (Usd_MoveToNextSiblingOrParent(base, _primPath, 
+        if (!Usd_MoveToChild(base, _proxyPrimPath, _predicate)) {
+            while (Usd_MoveToNextSiblingOrParent(base, _proxyPrimPath, 
                                                  _predicate)) {}
         }
     }
 
     reference dereference() const {
-        return UsdPrim(base(), _primPath);
+        return UsdPrim(base(), _proxyPrimPath);
     }
 
-    SdfPath _primPath;
+    SdfPath _proxyPrimPath;
     Usd_PrimFlagsPredicate _predicate;
 };
 
@@ -1379,7 +1382,7 @@ UsdPrimSubtreeRange
 UsdPrim::GetFilteredDescendants(const Usd_PrimFlagsPredicate &pred) const
 {
     return _MakeDescendantsRange(
-        Usd_CreatePredicateForTraversal(_Prim(), GetPrimPath(), pred));
+        Usd_CreatePredicateForTraversal(_Prim(), _ProxyPrimPath(), pred));
 }
 
 UsdPrimSubtreeRange
@@ -1398,7 +1401,7 @@ UsdPrim::GetDescendants() const
 UsdPrim::SubtreeRange
 UsdPrim::_MakeDescendantsRange(const Usd_PrimFlagsPredicate &pred) const {
     Usd_PrimDataConstPtr firstChild = get_pointer(_Prim());
-    SdfPath firstChildPath = GetPrimPath();
+    SdfPath firstChildPath = _ProxyPrimPath();
     Usd_PrimDataConstPtr endChild = firstChild;
     SdfPath endChildPath = firstChildPath;
     if (Usd_MoveToChild(firstChild, firstChildPath, pred)) {
@@ -1417,7 +1420,7 @@ UsdPrim::_MakeDescendantsRange(const Usd_PrimFlagsPredicate &pred) const {
 inline UsdPrim
 UsdObject::GetPrim() const
 {
-    return UsdPrim(_prim, _primPath);
+    return UsdPrim(_prim, _proxyPrimPath);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
