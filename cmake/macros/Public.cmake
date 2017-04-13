@@ -131,14 +131,10 @@ function(pxr_cpp_bin BIN_NAME)
     )
 
     target_include_directories(${BIN_NAME}
-        PRIVATE
+        PRIVATE 
+        ${cb_INCLUDE_DIRS}
         ${PRIVATE_INC_DIR}
     )
-
-    target_include_directories(${BIN_NAME}
-        SYSTEM
-        PRIVATE
-        ${cb_INCLUDE_DIRS})
 
     set_target_properties(${BIN_NAME}
         PROPERTIES 
@@ -413,7 +409,6 @@ function(pxr_shared_library LIBRARY_NAME)
     # that conflict; for example, half.h in EXR versus gf
     if (sl_INCLUDE_DIRS)
         target_include_directories(${LIBRARY_NAME}
-            SYSTEM
             BEFORE
             PUBLIC
             ${sl_INCLUDE_DIRS}
@@ -597,7 +592,6 @@ function(pxr_static_library LIBRARY_NAME)
     # that conflict; for example, half.h in EXR versus gf
     if (sl_INCLUDE_DIRS)
         target_include_directories(${LIBRARY_NAME}
-            SYSTEM
             BEFORE
             PUBLIC
             ${sl_INCLUDE_DIRS}
@@ -806,7 +800,6 @@ function(pxr_plugin PLUGIN_NAME)
     # that conflict; for example, half.h in EXR versus gf
     if (sl_INCLUDE_DIRS)
         target_include_directories(${PLUGIN_NAME}
-            SYSTEM
             BEFORE
             PUBLIC
             ${sl_INCLUDE_DIRS}
