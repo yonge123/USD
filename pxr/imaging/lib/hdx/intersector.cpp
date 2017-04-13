@@ -43,7 +43,7 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-HdxIntersector::HdxIntersector(HdRenderIndexSharedPtr index)
+HdxIntersector::HdxIntersector(HdRenderIndex *index)
     : _index(index)
 { 
 }
@@ -137,6 +137,45 @@ HdxIntersector::SetResolution(GfVec2i const& widthHeight)
         _drawTarget->Unbind();
     }
 }
+
+class HdxIntersector_DrawTask final : public HdTask
+{
+public:
+    HdxIntersector_DrawTask(HdRenderPassSharedPtr const &renderPass,
+                HdRenderPassStateSharedPtr const &renderPassState,
+                TfTokenVector const &renderTags)
+    : HdTask()
+    , _renderPass(renderPass)
+    , _renderPassState(renderPassState)
+    , _renderTags(renderTags)
+    {
+    }
+
+protected:
+    virtual void _Sync( HdTaskContext* ctx) override
+    {
+        _renderPass->Sync();
+        _renderPassState->Sync();
+    }
+
+    virtual void _Execute(HdTaskContext* ctx) override
+    {
+        _renderPassState->Bind();
+        if(_renderTags.size()) {
+            TF_FOR_ALL(rt, _renderTags) {
+                _renderPass->Execute(_renderPassState, *rt);
+            }
+        } else {
+            _renderPass->Execute(_renderPassState);
+        }
+        _renderPassState->Unbind();
+    }
+
+private:
+    HdRenderPassSharedPtr _renderPass;
+    HdRenderPassStateSharedPtr _renderPassState;
+    TfTokenVector _renderTags;
+};
 
 bool
 HdxIntersector::Query(HdxIntersector::Params const& params,
@@ -258,7 +297,11 @@ HdxIntersector::Query(HdxIntersector::Params const& params,
         // Execute
         //
         // XXX: make intersector a Task
-        engine->Draw(*_index, _renderPass, _renderPassState);
+        HdTaskSharedPtrVector tasks;
+        tasks.push_back(boost::make_shared<HdxIntersector_DrawTask>(_renderPass,
+                                                               _renderPassState,
+                                                            params.renderTags));
+        engine->Execute(*_index, tasks);
 
         glDisable(GL_STENCIL_TEST);
 
@@ -327,7 +370,7 @@ HdxIntersector::Result::Result(std::unique_ptr<unsigned char[]> primIds,
                         std::unique_ptr<unsigned char[]> instanceIds,
                         std::unique_ptr<unsigned char[]> elementIds,
                         std::unique_ptr<float[]> depths,
-                        HdRenderIndexSharedPtr const& index,
+                        HdRenderIndex const *index,
                         HdxIntersector::Params params,
                         GfVec4i viewport)
     : _primIds(std::move(primIds))
@@ -343,7 +386,6 @@ HdxIntersector::Result::Result(std::unique_ptr<unsigned char[]> primIds,
 HdxIntersector::Result::~Result()
 {
     _params = Params();
-    _index.reset();
     _viewport = GfVec4i(0,0,0,0);
 }
 

@@ -33,7 +33,6 @@
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/points.h"
 #include "pxr/imaging/hd/renderDelegate.h"
-#include "pxr/imaging/hd/renderDelegateRegistry.h"
 #include "pxr/imaging/hd/repr.h"
 #include "pxr/imaging/hd/rprim.h"
 #include "pxr/imaging/hd/rprimCollection.h"
@@ -64,7 +63,7 @@ typedef tbb::concurrent_unordered_map<TfToken,
                         tbb::concurrent_vector<HdDrawItem const*>, 
                         TfToken::HashFunctor > _ConcurrentDrawItemView; 
 
-HdRenderIndex::HdRenderIndex()
+HdRenderIndex::HdRenderIndex(HdRenderDelegate *renderDelegate)
     : _delegateRprimMap()
     , _rprimMap()
     , _rprimIDSet()
@@ -76,37 +75,26 @@ HdRenderIndex::HdRenderIndex()
     , _nextPrimId(1)
     , _instancerMap()
     , _syncQueue()
-    , _renderDelegate(nullptr)
-    , _ownsDelegateXXX(false)
+    , _renderDelegate(renderDelegate)
 {
+    // Note: HdRenderIndex::New(...) guarantees renderDelegate is non-null.
 
     // Register well-known collection types (to be deprecated)
     // XXX: for compatibility and smooth transition,
     //      leave geometry collection for a while.
     _tracker.AddCollection(HdTokens->geometry);
 
+    // Register the prim types our render delegate supports.
+    _InitPrimTypes();
+    // Create fallback prims.
+    _CreateFallbackPrims();
 }
 
 HdRenderIndex::~HdRenderIndex()
 {
     HD_TRACE_FUNCTION();
     Clear();
-    DestroyFallbackPrims();
-
-    {
-        // XXX: Transitional Code - to be removed.
-        // If the render index created the render delegate, it needs
-        // to release it.
-        if (_ownsDelegateXXX)
-        {
-            HdRenderDelegateRegistry &renderRegistry =
-                                        HdRenderDelegateRegistry::GetInstance();
-
-            renderRegistry.ReleaseDelegate(_renderDelegate);
-            _renderDelegate = nullptr;
-        }
-    }
-
+    _DestroyFallbackPrims();
 }
 
 void
@@ -129,27 +117,6 @@ HdRenderIndex::InsertRprim(TfToken const& typeId,
 
     if (ARCH_UNLIKELY(TfMapLookupPtr(_rprimMap, rprimId)))
         return;
-
-    {
-        // XXX: Transitional code.
-        // If the application didn't use the new context api to
-        // create a render delegate, create one on its behalf.
-        //
-        // In the future, this would be an error condition as the context api
-        // would create the delegate and provide it to the render index..
-        if (_renderDelegate == nullptr)
-        {
-            HdRenderDelegateRegistry &renderRegistry =
-                                        HdRenderDelegateRegistry::GetInstance();
-            const TfToken &defaultRenderDelegateId =
-                                          renderRegistry.GetDefaultDelegateId();
-             _renderDelegate =
-                      renderRegistry.GetRenderDelegate(defaultRenderDelegateId);
-             _ownsDelegateXXX = true;
-             _InitPrimTypes();
-             CreateFallbackPrims();
-        }
-    }
 
     HdRprim *rprim = _renderDelegate->CreateRprim(typeId,
                                                   rprimId,
@@ -231,6 +198,7 @@ HdRenderIndex::RemoveRprim(SdfPath const& id)
     _tracker.RprimRemoved(id);
 
     // Ask delegate to actually delete the rprim
+    rprimInfo.rprim->Finalize(_renderDelegate->GetRenderParam());
     _renderDelegate->DestroyRprim(rprimInfo.rprim);
     rprimInfo.rprim = nullptr;
 
@@ -359,27 +327,6 @@ HdRenderIndex::InsertSprim(TfToken const& typeId,
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    {
-        // XXX: Transitional code.
-        // If the application didn't use the new context api to
-        // create a render delegate, create one on its behalf.
-        //
-        // In the future, this would be an error condition as the context api
-        // would create the delegate and provide it to the render index..
-        if (_renderDelegate == nullptr)
-        {
-            HdRenderDelegateRegistry &renderRegistry =
-                                        HdRenderDelegateRegistry::GetInstance();
-            const TfToken &defaultRenderDelegateId =
-                                          renderRegistry.GetDefaultDelegateId();
-             _renderDelegate =
-                      renderRegistry.GetRenderDelegate(defaultRenderDelegateId);
-             _ownsDelegateXXX = true;
-             _InitPrimTypes();
-             CreateFallbackPrims();
-        }
-    }
-
     _sprimIndex.InsertPrim(typeId, sceneDelegate, sprimId,
                            _tracker, _renderDelegate);
 }
@@ -436,27 +383,6 @@ HdRenderIndex::InsertBprim(TfToken const& typeId,
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    {
-        // XXX: Transitional code.
-        // If the application didn't use the new context api to
-        // create a render delegate, create one on its behalf.
-        //
-        // In the future, this would be an error condition as the context api
-        // would create the delegate and provide it to the render index..
-        if (_renderDelegate == nullptr)
-        {
-            HdRenderDelegateRegistry &renderRegistry =
-                                        HdRenderDelegateRegistry::GetInstance();
-            const TfToken &defaultRenderDelegateId =
-                                          renderRegistry.GetDefaultDelegateId();
-             _renderDelegate =
-                      renderRegistry.GetRenderDelegate(defaultRenderDelegateId);
-             _ownsDelegateXXX = true;
-             _InitPrimTypes();
-             CreateFallbackPrims();
-        }
-    }
-
     _bprimIndex.InsertPrim(typeId, sceneDelegate, bprimId,
                            _tracker, _renderDelegate);
 }
@@ -500,30 +426,6 @@ HdRenderIndex::GetFallbackBprim(TfToken const& typeId) const
     return _bprimIndex.GetFallbackPrim(typeId);
 }
 
-void
-HdRenderIndex::SetRenderDelegate(HdRenderDelegate *renderDelegate)
-{
-    if (_renderDelegate != nullptr && _renderDelegate != renderDelegate) {
-        TF_CODING_ERROR("Render Delegate already set on render index and "
-                        "switching render delegates is not supported");
-        return;
-    }
-
-    _renderDelegate = renderDelegate;
-    {
-        // Small hack until applications migrate to using new
-        // context API.
-        // XXX: To be removed
-
-        HdRenderDelegateRegistry &renderRegistry =
-                                        HdRenderDelegateRegistry::GetInstance();
-
-        renderRegistry.AddDelegateReference(_renderDelegate);
-    }
-
-    _InitPrimTypes();
-}
-
 HdRenderDelegate *HdRenderIndex::GetRenderDelegate() const
 {
     return _renderDelegate;
@@ -543,7 +445,7 @@ HdRenderIndex::GetRenderDelegateType() const
 }
 
 bool
-HdRenderIndex::CreateFallbackPrims()
+HdRenderIndex::_CreateFallbackPrims()
 {
     bool success = true;
 
@@ -559,7 +461,7 @@ HdRenderIndex::CreateFallbackPrims()
 }
 
 void
-HdRenderIndex::DestroyFallbackPrims()
+HdRenderIndex::_DestroyFallbackPrims()
 {
     // If the render delegate never got assigned, or already removed we can't
     // free the fallback prims.
@@ -587,11 +489,45 @@ _AppendDrawItem(HdSceneDelegate* delegate,
         std::vector<HdDrawItem> *drawItems =
                 rprim->GetDrawItems(delegate, reprName, forcedRepr);
 
+        TfToken const & t =  rprim->GetRenderTag(delegate);
         TF_FOR_ALL(drawItemIt, *drawItems) {
-            TfToken t =  rprim->GetRenderTag(delegate);
             (*result)[t].push_back(&(*drawItemIt));
         }
     }
+}
+
+static
+bool
+_IsPathExcluded(SdfPath const & path,
+                SdfPathVector const & rootPaths,
+                SdfPathVector const & excludePaths)
+{
+    // XXX : We will need something more efficient
+    //       specially if the list of excluded paths is big.
+    //       Also, since the array of excluded paths is sorted
+    //       we could for instance use lower_bound
+    bool isExcludedPath = false;
+
+    for (SdfPathVector::const_iterator excludeIt = excludePaths.begin();
+            excludeIt != excludePaths.end(); excludeIt++) {
+
+        SdfPath const& excludePath = *excludeIt;
+        if (path.HasPrefix(excludePath)) { 
+            isExcludedPath = true;
+
+            // Looking for paths that might be included inside the 
+            // excluded paths
+            for (SdfPathVector::const_iterator includedIt = rootPaths.begin();
+                    includedIt != rootPaths.end(); includedIt++) 
+            {
+                if (path.HasPrefix(*includedIt) && 
+                        includedIt->HasPrefix(excludePath)) {
+                    isExcludedPath = false;
+                }
+            }
+        }
+    }
+    return isExcludedPath;
 }
 
 HdRenderIndex::HdDrawItemView 
@@ -641,7 +577,9 @@ HdRenderIndex::GetDrawItems(HdRprimCollection const& collection)
         }
 
         dispatcher.Run(
-          [children, collectionName, reprName, forcedRepr, &result, this](){
+          [children, collectionName, reprName, forcedRepr, 
+            rootPaths, excludePaths, &result, this]() {
+            
             // In the loop below, we process the previous item while fetching
             // the next, this is done to hide the memory latency of accessing
             // each item.
@@ -655,6 +593,10 @@ HdRenderIndex::GetDrawItems(HdRprimCollection const& collection)
 
             // Main loop.
             for (; pathIt != children->end(); pathIt++) {
+                if (_IsPathExcluded(*pathIt, rootPaths, excludePaths)) {
+                    continue;
+                }
+                
                 // Grab the current item.
                 HdRprim*         rprim         = info->rprim;
                 HdSceneDelegate *sceneDelegate = info->sceneDelegate;
@@ -709,22 +651,7 @@ HdRenderIndex::GetDrawItems(HdRprimCollection const& collection)
         } else {
             // Here we know the path is potentially renderable
             // now we need to check if the path is excluded
-            // XXX : We will need something more efficient
-            //       specially if the list of excluded paths is big.
-            //       Also, since the array of excluded paths is sorted
-            //       we could for instance use lower_bound
-            bool isExcludedPath = false;
-            for (SdfPathVector::const_iterator excludeIt = excludePaths.begin();
-                    excludeIt != excludePaths.end(); excludeIt++) {
-
-                SdfPath const& excludePath = *excludeIt;
-                if (pathIt->HasPrefix(excludePath)) { 
-                    isExcludedPath = true;
-                    break;
-                }
-            }
-
-            if (isExcludedPath) {
+            if (_IsPathExcluded(*pathIt, rootPaths, excludePaths)) {
                 pathIt++;
                 continue;
             }
