@@ -58,16 +58,18 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaCacheFormatTokens,
                          PXRUSDMAYA_CACHEFORMAT_TOKENS);
 
 class UsdCacheFormat: public MPxCacheFormat {
-private:
+public:
+    constexpr static auto translatorName = "usd";
+    static void* creator() { return new UsdCacheFormat(); };
+
     PXRUSDMAYA_API
     UsdCacheFormat();
     PXRUSDMAYA_API
     ~UsdCacheFormat() override;
-public:
-    PXRUSDMAYA_API
-    static void* creator();
-    PXRUSDMAYA_API
-    static char const* translatorName();
+
+    UsdCacheFormat(const UsdCacheFormat& o) = delete;
+    UsdCacheFormat& operator=(const UsdCacheFormat& o) = delete;
+
     PXRUSDMAYA_API
     MString extension() override;
     PXRUSDMAYA_API
@@ -155,6 +157,11 @@ private:
     // we could store both and iterator and a name to get a little bit of read speed
     std::string mCurrentChannel;
     double mCurrentTime;
+    // Writing time to the cache file is bugged out. If a single file is used
+    // only the write header is called. If there is a file per frame, write header called once
+    // with 0-0, then write time for each frame. So if write time is called, we have to
+    // overwrite start and end time code the first time, and expand the range at subsequent calls.
+    bool mWriteTimeCalledOnce;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

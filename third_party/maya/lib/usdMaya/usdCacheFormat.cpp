@@ -44,7 +44,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
     // Some constants
-    constexpr auto _translatorName = "usd";
     constexpr auto _defaultPrimName = "cache";
     constexpr auto _defaultPrimType = "Points";
     constexpr auto _timeUnit = MTime::k6000FPS;
@@ -334,9 +333,7 @@ struct UsdCacheFormat::Impl {
             if (mayaDataType == itName->mayaDataType) {
                 foundIt = cachedAttributes.project<0>(itName);
             } else {
-                MGlobal::displayError(
-                    "UsdCacheFormat::Impl::findOrAddMayaAttribute: Attribute type mismatch on cached attribute "
-                    + MString(mayaAttrName.c_str()));
+                TF_WARN("Attribute type mismatch on cached attribute %s", mayaAttrName.c_str());
                 return cachedAttributes.end();
             }
         } else {
@@ -348,24 +345,18 @@ struct UsdCacheFormat::Impl {
                 if (mayaDataType == itDefined->mayaDataType) {
                     attrDef = *itDefined;
                 } else {
-                    MGlobal::displayError(
-                        "UsdCacheFormat::Impl::findOrAddMayaAttribute: Attribute type mismatch on defined attribute "
-                        + MString(mayaAttrName.c_str()));
+                    TF_WARN("Attribute type mismatch on defined attribute %s", mayaAttrName.c_str());
                     return cachedAttributes.end();
                 }
             } else {
                 // Build a description for it
                 if (!SdfAttributeSpec::IsValidName(mayaAttrName)) {
-                    MGlobal::displayError(
-                        "UsdCacheFormat::Impl::findOrAddMayaAttribute: Invalid attribute name "
-                        + MString(mayaAttrName.c_str()));
+                    TF_WARN("Invalid attribute name %s", mayaAttrName.c_str());
                     return cachedAttributes.end();
                 }
                 const auto usdAttrType = _mCacheDataTypeToSdfValueTypeName(mayaDataType);
                 if (!usdAttrType) {
-                    MGlobal::displayError(
-                        "UsdCacheFormat::Impl::findOrAddMayaAttribute: Unknown attribute type for "
-                        + MString(mayaAttrName.c_str()));
+                    TF_WARN("Unknown attribute type for %s", mayaAttrName.c_str());
                     return cachedAttributes.end();
                 }
                 attrDef.mayaAttrName = mayaAttrName;
@@ -377,18 +368,14 @@ struct UsdCacheFormat::Impl {
             SdfPath primPath(layerPtr->GetDefaultPrim());
             SdfPrimSpecHandle primSpec = layerPtr->GetPrimAtPath(primPath);
             if (!primSpec) {
-                MGlobal::displayError(
-                    "UsdCacheFormat::Impl::findOrAddMayaAttribute: Invalid default prim path "
-                    + MString(primPath.GetString().c_str()));
+                TF_WARN("Invalid default prim path %s", primPath.GetText());
                 return cachedAttributes.end();
             }
             const auto attrPath = _usdPathFromAttribute(layerPtr, attrDef.usdAttrName);
             auto attrSpec = layerPtr->GetAttributeAtPath(attrPath);
             if (attrSpec) {
                 if (attrSpec->GetTypeName() != attrDef.usdAttrType) {
-                    MGlobal::displayError(
-                        "UsdCacheFormat::Impl::findOrAddAttribute: Attribute type mismatch on existing attribute "
-                        + MString(attrPath.GetString().c_str()));
+                    TF_WARN("Attribute type mismatch on existing attribute %s", attrPath.GetText());
                     return cachedAttributes.end();
                 }
             } else {
@@ -406,9 +393,7 @@ struct UsdCacheFormat::Impl {
                 cachedAttributes.push_back(attrDef);
                 foundIt = std::prev(cachedAttributes.end());
             } else {
-                MGlobal::displayError(
-                    "UsdCacheFormat::Impl::findOrAddMayaAttribute: failed to add attribute "
-                    + MString(mayaAttrName.c_str()));
+                TF_WARN("Failed to add attribute %s", mayaAttrName.c_str());
                 return cachedAttributes.end();
             }
         }
@@ -429,9 +414,7 @@ struct UsdCacheFormat::Impl {
             if (usdAttrType == itName->usdAttrType) {
                 foundIt = cachedAttributes.project<0>(itName);
             } else {
-                MGlobal::displayError(
-                    "UsdCacheFormat::Impl::findOrAddUsdAttribute: Attribute type mismatch on cached attribute "
-                    + MString(usdAttrName.GetString().c_str()));
+                TF_WARN("Attribute type mismatch on cached attribute %s", usdAttrName.GetText());
                 return cachedAttributes.end();
             }
         } else {
@@ -443,18 +426,14 @@ struct UsdCacheFormat::Impl {
                 if (usdAttrType == itDefined->usdAttrType) {
                     attrDef = *itDefined;
                 } else {
-                    MGlobal::displayError(
-                        "UsdCacheFormat::Impl::findOrAddUsdAttribute: Attribute type mismatch on defined attribute "
-                        + MString(usdAttrName.GetString().c_str()));
+                    TF_WARN("Attribute type mismatch on defined attribute %s", usdAttrName.GetText());
                     return cachedAttributes.end();
                 }
             } else {
                 // Build a description for it
                 MCacheFormatDescription::CacheDataType mayaDataType = _sdfValueTypeNameToMCacheDataType(usdAttrType);
                 if (mayaDataType == MCacheFormatDescription::kUnknownData) {
-                    MGlobal::displayError(
-                        "UsdCacheFormat::Impl::findOrAddUsdAttribute: Unknown or unsupported attribute type for "
-                        + MString(usdAttrName.GetString().c_str()));
+                    TF_WARN("Unknown or unsupported attribute type for %s", usdAttrName.GetText());
                     return cachedAttributes.end();
                 }
                 attrDef.mayaAttrName = usdAttrName;
@@ -476,19 +455,10 @@ struct UsdCacheFormat::Impl {
 TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaCacheFormatTokens,
                         PXRUSDMAYA_CACHEFORMAT_TOKENS);
 
-UsdCacheFormat::UsdCacheFormat() : impl(new Impl) {
+UsdCacheFormat::UsdCacheFormat() : impl(new Impl), mWriteTimeCalledOnce(false) {
 }
 
 UsdCacheFormat::~UsdCacheFormat() {
-}
-
-void* UsdCacheFormat::creator() {
-    return new UsdCacheFormat();
-}
-
-char const* UsdCacheFormat::translatorName() {
-    // For presentation in GUI
-    return _translatorName;
 }
 
 MString UsdCacheFormat::extension() {
@@ -502,7 +472,7 @@ bool UsdCacheFormat::handlesDescription() {
 
 MStatus UsdCacheFormat::open(const MString& fileName, FileAccessMode mode) {
     if (fileName.length() == 0) {
-        MGlobal::displayError("UsdCacheFormat::open: empty filename");
+        TF_WARN("Empty filename!");
         return MS::kFailure;
     }
     std::string iFileName = fileName.asChar();
@@ -539,9 +509,7 @@ MStatus UsdCacheFormat::open(const MString& fileName, FileAccessMode mode) {
             mLayerPtr->SetPermissionToSave(true);
             return MS::kSuccess;
         } else {
-            MGlobal::displayError(
-                    "UsdCacheFormat::open: (write) could not create a layer to "
-                            + MString(iFileName.c_str()));
+            TF_WARN("(write) could not create a layer to %s", iFileName.c_str());
             return MS::kFailure;
         }
     } else if (mode == kRead) {
@@ -569,18 +537,15 @@ MStatus UsdCacheFormat::open(const MString& fileName, FileAccessMode mode) {
                 mLayerPtr->SetPermissionToSave(false);
                 return MS::kSuccess;
             } else {
-                MGlobal::displayError("UsdCacheFormat::open: (read) invalid cache format "
-                    + MString(iFileName.c_str()));
+                TF_WARN("(read) invalid cache format %s", iFileName.c_str());
                 return MS::kFailure;
             }
         } else {
-            MGlobal::displayError("UsdCacheFormat::open: (read) could not read a layer from "
-                + MString(iFileName.c_str()));
+            TF_WARN("(read) could not read a layer from %s", iFileName.c_str());
             return MS::kFailure;
         }
     } else {
-        MGlobal::displayError(
-                "UsdCacheFormat::open: append (read + write) file open mode unsupported");
+        TF_WARN("Append (read + write) file open mode unsupported");
         return MS::kFailure;
     }
 }
@@ -612,7 +577,7 @@ MStatus UsdCacheFormat::writeHeader(const MString& version,
         MTime& startTime,
         MTime& endTime) {
     if (mLayerPtr) {
-        mLayerPtr->SetComment(translatorName()
+        mLayerPtr->SetComment(translatorName
                               + std::string(" version ")
                               + version.asChar());
         // When writeHeader is called, we get a startTime of 0 and endTime of 1 ?
@@ -633,13 +598,11 @@ MStatus UsdCacheFormat::writeHeader(const MString& version,
         if (specPath.IsPrimPath()) {
             return MS::kSuccess;
         } else {
-            MGlobal::displayError(
-                "UsdCacheFormat::writeHeader: could not find or create the cache default prim.");
+            TF_WARN("Could not find or create the cache default prim.");
             return MS::kFailure;
         }
     } else {
-        MGlobal::displayError(
-            "UsdCacheFormat::writeHeader: got called with no open layer.");
+        TF_WARN("Got called with no open layer.");
         return MS::kFailure;
     }
 }
@@ -647,9 +610,8 @@ MStatus UsdCacheFormat::writeHeader(const MString& version,
 MStatus UsdCacheFormat::readHeader() {
     if (mLayerPtr) {
         const auto comment = mLayerPtr->GetComment();
-        const std::string expected = translatorName();
-        if (TfStringStartsWith(comment, expected)) {
-            // If it looks like a proper cache file, read the attributes decalred
+        if (TfStringStartsWith(comment, translatorName)) {
+            // If it looks like a proper cache file, read the attributes declared
             // on the default prim
             return readExistingAttributes();
         }
@@ -687,16 +649,14 @@ MStatus UsdCacheFormat::readExistingAttributes()
         if (it != impl->cachedAttributes.end()) {
             // TODO: figure out what needs to be added here.
         } else {
-            MGlobal::displayError(MString("UsdCacheFormat::readExistingAttributes could not add ")
-                                 + MString(usdAttrName.GetString().c_str()));
+            TF_WARN("Could not add %s", usdAttrName.GetString().c_str());
             status = MS::kFailure;
         }
     }
     if (!impl->cachedAttributes.empty()) {
         return status;
     } else {
-        MGlobal::displayError(MString("UsdCacheFormat::readExistingAttributes found not attributes on default prim ")
-                             + MString(primPath.GetString().c_str()));
+        TF_WARN("Found not attributes on default prim %s", primPath.GetString().c_str());
         return MS::kFailure;
     }
 }
@@ -704,13 +664,19 @@ MStatus UsdCacheFormat::readExistingAttributes()
 MStatus UsdCacheFormat::writeTime(MTime& time)
 {
     mCurrentTime = time.asUnits(_timeUnit);
-    if ((!mLayerPtr->HasStartTimeCode())
-        || (mCurrentTime < mLayerPtr->GetStartTimeCode())) {
+    if (mWriteTimeCalledOnce) {
+        if ((!mLayerPtr->HasStartTimeCode())
+            || (mCurrentTime < mLayerPtr->GetStartTimeCode())) {
+            mLayerPtr->SetStartTimeCode(mCurrentTime);
+        }
+        if ((!mLayerPtr->HasEndTimeCode())
+            || (mCurrentTime > mLayerPtr->GetEndTimeCode())) {
+            mLayerPtr->SetEndTimeCode(mCurrentTime);
+        }
+    } else {
         mLayerPtr->SetStartTimeCode(mCurrentTime);
-    }
-    if ((!mLayerPtr->HasEndTimeCode())
-        || (mCurrentTime > mLayerPtr->GetEndTimeCode())) {
         mLayerPtr->SetEndTimeCode(mCurrentTime);
+        mWriteTimeCalledOnce = true;
     }
     return MS::kSuccess;
 }
@@ -780,8 +746,7 @@ MStatus UsdCacheFormat::findChannelName(const MString& name) {
         return MS::kSuccess;
     } else {
         mCurrentChannel = "";
-        MGlobal::displayError(MString("UsdCacheFormat::findChannelName failure for ")
-                              + name);
+        TF_WARN("Error finding channel %s", name.asChar());
         return MS::kFailure;
     }
 }
@@ -806,7 +771,7 @@ MStatus UsdCacheFormat::readChannelName(MString& name) {
             const std::string nextChannel = TfStringPrintf("%s_%s", mayaNodeName.c_str(), nextMayaAttrName.c_str());
             // Advance by one channel
             mCurrentChannel = nextChannel;
-            name = MString(nextChannel.c_str());
+            name = nextChannel.c_str();
             return MS::kSuccess;
         }
     }
@@ -855,6 +820,7 @@ MStatus UsdCacheFormat::writeInt32(int i)
         }
         return MS::kSuccess;
     } else {
+        TF_WARN("Error writing integer %i to %s", i, mCurrentChannel.c_str());
         return MS::kFailure;
     }
 }
@@ -913,10 +879,13 @@ MStatus UsdCacheFormat::writeDoubleArray(const MDoubleArray& array) {
                                      mCurrentTime,
                                      _convertOutArray<MDoubleArray, unsigned long>(array, it->convertToUsd));
         } else {
+            TF_WARN("Incorrect SdfType for double array %s , %s",
+                    mCurrentChannel.c_str(), usdAttrType.GetAsToken().GetText());
             return MS::kFailure;
         }
         return MS::kSuccess;
     } else {
+        TF_WARN("Error writing double array to %s", mCurrentChannel.c_str());
         return MS::kFailure;
     }
 }
@@ -953,10 +922,13 @@ MStatus UsdCacheFormat::writeFloatArray(const MFloatArray& array) {
                                      mCurrentTime,
                                      _convertOutArray<MFloatArray, unsigned long>(array, it->convertToUsd));
         } else {
+            TF_WARN("Incorrect SdfType for float array %s , %s",
+                    mCurrentChannel.c_str(), usdAttrType.GetAsToken().GetText());
             return MS::kFailure;
         }
         return MS::kSuccess;
     } else {
+        TF_WARN("Error writing float array to %s", mCurrentChannel.c_str());
         return MS::kFailure;
     }
 }
@@ -984,10 +956,13 @@ MStatus UsdCacheFormat::writeDoubleVectorArray(const MVectorArray& array) {
                                      mCurrentTime,
                                      _convertOutVectorArray<MVectorArray, GfVec3f>(array, it->convertToUsd));
         } else {
+            TF_WARN("Incorrect SdfType for double vector array %s , %s",
+                    mCurrentChannel.c_str(), usdAttrType.GetAsToken().GetText());
             return MS::kFailure;
         }
         return MS::kSuccess;
     } else {
+        TF_WARN("Error writing double vector array to %s", mCurrentChannel.c_str());
         return MS::kFailure;
     }
 }
@@ -1015,10 +990,13 @@ MStatus UsdCacheFormat::writeFloatVectorArray(const MFloatVectorArray& array) {
                                      mCurrentTime,
                                      _convertOutVectorArray<MFloatVectorArray, GfVec3f>(array, it->convertToUsd));
         } else {
+            TF_WARN("Incorrect SdfType for float array %s , %s",
+                    mCurrentChannel.c_str(), usdAttrType.GetAsToken().GetText());
             return MS::kFailure;
         }
         return MS::kSuccess;
     } else {
+        TF_WARN("Error writing float vector array to %s", mCurrentChannel.c_str());
         return MS::kFailure;
     }
 }
@@ -1043,12 +1021,10 @@ unsigned UsdCacheFormat::readArraySize() {
                 result = 1;
             }
         } else {
-            MGlobal::displayError("UsdCacheFormat::readArraySize: unsupported type for attribute "
-                    + MString(usdAttrName.GetString().c_str()));
+            TF_WARN("Unsupported type for attribute %s", usdAttrName.GetText());
         }
     } else {
-        MGlobal::displayError("UsdCacheFormat::readArraySize: cannot find attribute for channel "
-                              + MString(mCurrentChannel.c_str()));
+        TF_WARN("Cannot find attribute for channel %s", mCurrentChannel.c_str());
     }
     return result;
 }
