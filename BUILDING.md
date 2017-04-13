@@ -23,6 +23,10 @@ Disable this component by specifying the cmake flag ```PXR_BUILD_IMAGING=FALSE``
 invoking cmake. Disabling this component will also disable the [USD Imaging](#usd-imaging)
 component.
 
+Support for Ptex can optionally be disabled by specifying the cmake flag
+```PXR_ENABLE_PTEX_SUPPORT=FALSE```.
+
+
 ##### USD Imaging
 
 This component provides the USD imaging delegates for Hydra, as well as
@@ -41,7 +45,7 @@ These plugins are not built by default and must be enabled via the instructions 
 
 ##### Alembic Plugin
 
-Enable the [Alembic](https://https://github.com/alembic/alembic) plugin in the build
+Enable the [Alembic](https://github.com/alembic/alembic) plugin in the build
 by specifying the cmake flag ```PXR_BUILD_ALEMBIC_PLUGIN=TRUE``` when invoking cmake.
 This plugin is compatible with Alembic 1.5.2. The additional dependencies that must be supplied when invoking cmake are:
 
@@ -136,7 +140,7 @@ pxr/pxr.h, which facilitates using namespaces:
 ##### ASCII Parser Editing/Validation
 
 There is an ASCII parser for the USD file format, which can be found in 
-[sdf](pxr/usd/sdf/). Most users will not have a need to edit the parser, but 
+[sdf](pxr/usd/lib/sdf/). Most users will not have a need to edit the parser, but 
 for the adventurous ones, there are a couple additional requirements.
 
 If you choose to edit the ASCII parsers, make sure 

@@ -28,7 +28,7 @@
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/stage.h"
-#include "pxr/usd/usd/treeIterator.h"
+#include "pxr/usd/usd/primRange.h"
 
 #include "pxr/usd/kind/registry.h"
 
@@ -120,7 +120,7 @@ Usd_PrimData::_ComposeAndCacheFlags(Usd_PrimDataConstPtr parent,
     } 
     else {
         // Compose and cache 'active'.
-        UsdPrim self(Usd_PrimDataIPtr(this), _path);
+        UsdPrim self(Usd_PrimDataIPtr(this), SdfPath());
         bool active = true;
         self.GetMetadata(SdfFieldKeys->Active, &active);
         _flags[Usd_PrimActiveFlag] = active;
