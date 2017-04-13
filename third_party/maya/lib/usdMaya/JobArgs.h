@@ -32,10 +32,12 @@
 
 #include "pxr/base/tf/staticTokens.h"
 #include "pxr/base/tf/token.h"
+#include "pxr/usd/usdGeom/tokens.h"
 #include "pxr/usd/usd/usdFileFormat.h"
 #include "pxr/usd/usd/usdaFileFormat.h"
 #include "pxr/usd/usd/usdcFileFormat.h"
 
+#include <maya/MGlobal.h>
 #include <maya/MString.h>
 #include <maya/MStringArray.h>
 
@@ -160,6 +162,10 @@ struct JobExportArgs : JobSharedArgs
     SdfPath exportRootSdfPath;
 
     TfToken rootKind;
+
+    // Whether to try to handle namespaces added by usd references / assemblies,
+    // so that usd paths on export match the original usd paths
+    bool handleUsdNamespaces;
 };
 
 struct JobImportArgs : JobSharedArgs
@@ -174,11 +180,19 @@ struct JobImportArgs : JobSharedArgs
 
     void parseSingleOption(const MStringArray& theOption);
 
+    void setJoinedParentRefPaths(const std::string& joinedRefPaths);
+
     std::string primPath;
     TfToken assemblyRep;
     bool readAnimData;
     bool useCustomFrameRange;
     bool importWithProxyShapes;
+    // If true, will use maya assemblies for usd sub-references; if false, will
+    // use maya references
+    bool useAssemblies;
+    std::string parentNode;
+    std::vector<std::string> parentRefPaths;
+    std::string variantSelectionNode;
 };
 
 

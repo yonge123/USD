@@ -95,9 +95,9 @@ SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool inst
         }
     } else {
         path = mParentScopePath.IsEmpty() ?
-               PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false) :
+               PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false, mArgs.handleUsdNamespaces) :
                SdfPath(mParentScopePath.GetString() +
-                       PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false).GetString());
+                       PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false, mArgs.handleUsdNamespaces).GetString());
     }
     return rootOverridePath(mArgs, path);
 }

@@ -30,6 +30,7 @@
 #include "usdMaya/primReaderContext.h"
 
 #include "pxr/usd/usd/prim.h"
+#include "pxr/base/tf/envSetting.h"
 
 #include <maya/MObject.h>
 #include <maya/MString.h>
@@ -37,6 +38,23 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
+extern TfEnvSetting<bool> PIXMAYA_DEBUG_USD_ASSEM;
+
+// TODO: determine if the TfEnvSetting check here is performant, and cache if
+// not...
+
+/// \brief Print \p msg if the PIXMAYA_DEBUG_USD_ASSEM is enabled, otherwise,
+/// do nothing.
+#define DEBUG_PRINT(msg) \
+{ \
+    if( TfGetEnvSetting(PIXMAYA_DEBUG_USD_ASSEM) ) \
+    { \
+        MString msg_var("PXRUSD: "); \
+        msg_var += msg; \
+        MGlobal::displayInfo(msg_var); \
+        std::cout << msg_var.asChar() << std::endl; \
+    } \
+} \
 
 /// \brief Provides helper functions for other readers to use.
 struct PxrUsdMayaTranslatorUtil
@@ -105,6 +123,39 @@ struct PxrUsdMayaTranslatorUtil
             return source.GetTimeSamples(outSamples);
         }
     }
+
+    /// \brief Helper to get a maya namespace string from a usd path string
+    /// \p primPathStr - essentially just replaces '/' with ':'
+    static std::string
+    GetNamespace(const std::string& primPathStr, bool trailingColon=true);
+
+    /// \brief Helper to get a maya namespace name from a usd path
+    /// \p primPath - essentially just replaces '/' with ':'
+    static std::string
+    GetNamespace(const SdfPath& primPath, bool trailingColon=true);
+
+    /// \brief Helper to get a maya namespace string from the parent of a usd path
+    /// string \p primPathStr - essentially just calls
+    /// GetNamespace(TfGetPathName(\p primPathStr))
+    static std::string
+    GetParentNamespace(const std::string& primPathStr, bool trailingColon=true);
+
+    /// \brief Helper to get a maya namespace string from the parent of a usd path
+    /// string \p primPath - essentially just calls
+    /// GetNamespace(\p primPath.ParentPath())
+    static std::string
+    GetParentNamespace(const SdfPath& primPath, bool trailingColon=true);
+
+    /// \brief Helper to create a maya namespace recursively, including all
+    /// parent namespaces. Returns true if the namespace was successfully created.
+    static bool
+    CreateNamespace(const std::string& fullNamespace);
+
+    /// \brief Helper to create the parent namespace of the given maya namespace
+    /// \p fullNamespace recursively. Returns true if the parent namespace was
+    /// successfully created.
+    static bool
+    CreateParentNamespace(const std::string& fullNamespace);
 };
 
 

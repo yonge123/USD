@@ -29,6 +29,7 @@
 #include "usdMaya/proxyShape.h"
 #include "usdMaya/referenceAssembly.h"
 #include "usdMaya/stageData.h"
+#include "usdMaya/variantSelectionNode.h"
 
 #include <boost/noncopyable.hpp>
 
@@ -61,11 +62,15 @@ public:
             const MString& refAssemblyName,
 
             const MTypeId& stageDataId,
-            const MString& stageDataName);
+            const MString& stageDataName,
+
+            const MTypeId& variantSelectionId,
+            const MString& variantSelectionName);
 
     UsdMayaProxyShape::PluginStaticData proxyShape;
     UsdMayaReferenceAssembly::PluginStaticData referenceAssembly;
     UsdMayaStageData::PluginStaticData stageData;
+    UsdMayaVariantSelectionNode::PluginStaticData variantSelectionNode;
 
     // instance of PxrUsdMayaPluginStaticData used by the "pxrUsd" plugin.
     // Should not be used until the pxrUsd class is initialized.

@@ -27,11 +27,14 @@
 #include "usdMaya/shadingModeRegistry.h"
 
 #include "pxr/base/tf/staticTokens.h"
+#include "pxr/base/tf/envSetting.h"
 #include "pxr/usd/usdGeom/tokens.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 
+
+extern TfEnvSetting<bool> PIXMAYA_USE_USD_REF_ASSEMBLIES;
 
 TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
         PXRUSDMAYA_TRANSLATOR_TOKENS);
@@ -39,6 +42,9 @@ TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
 TF_DEFINE_PUBLIC_TOKENS(PxUsdExportJobArgsTokens, 
         PXRUSDMAYA_JOBARGS_TOKENS);
 
+namespace {
+    static bool _useAssembliesDefault = TfGetEnvSetting(PIXMAYA_USE_USD_REF_ASSEMBLIES);
+}
 
 JobSharedArgs::JobSharedArgs()
     :
@@ -132,7 +138,8 @@ JobExportArgs::JobExportArgs()
         renderLayerMode(PxUsdExportJobArgsTokens->defaultLayer),
         exportVisibility(true),
         exportRootPath(""),
-        exportRootSdfPath(SdfPath())
+        exportRootSdfPath(SdfPath()),
+        handleUsdNamespaces(false)
 {
 }
 
@@ -183,9 +190,12 @@ void JobExportArgs::parseSingleOption(const MStringArray& theOption)
     }
     else if (theOption[0] == MString("frameSample")) {
         frameSamples.insert(theOption[1].asDouble());
-    }    
+    }
     else if (theOption[0] == MString("root")) {
         exportRootPath = theOption[1].asChar();
+    }
+    else if (theOption[0] == MString("handleUsdNamespaces")) {
+        handleUsdNamespaces = theOption[1].asInt();
     }
     else if (theOption[0] == MString("parentScope")) {
         parentScope = theOption[1].asChar();
@@ -199,7 +209,9 @@ JobImportArgs::JobImportArgs()
         assemblyRep(PxUsdExportJobArgsTokens->Collapsed),
         readAnimData(true),
         useCustomFrameRange(false),
-        importWithProxyShapes(false)
+        importWithProxyShapes(false),
+        useAssemblies(_useAssembliesDefault),
+        variantSelectionNode("")
 {
 }
 
@@ -218,6 +230,24 @@ void JobImportArgs::parseSingleOption(const MStringArray& theOption)
         importWithProxyShapes = theOption[1].asInt();
     } else if (theOption[0] == MString("primPath")) {
         primPath = theOption[1].asChar();
+    } else if (theOption[0] == MString("topLayerUsd")) {
+        fileName = theOption[1].asChar();
+    } else if (theOption[0] == MString("parent")) {
+        parentNode = theOption[1].asChar();
+    } else if (theOption[0] == MString("parentRefPaths")) {
+        setJoinedParentRefPaths(theOption[1].asChar());
+    } else if (theOption[0] == MString("variantSelectionNode")) {
+        variantSelectionNode = theOption[1].asChar();
+    }
+}
+
+void JobImportArgs::setJoinedParentRefPaths(const std::string& joinedRefPaths)
+{
+    parentRefPaths.clear();
+    std::stringstream stream(joinedRefPaths);
+    std::string str;
+    while (std::getline(stream, str, ',')) {
+        parentRefPaths.push_back(str);
     }
 }
 

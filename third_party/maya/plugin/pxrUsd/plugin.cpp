@@ -31,11 +31,12 @@
 #include "pxrUsdMayaGL/proxyShapeUI.h"
 
 #include "usdMaya/pluginStaticData.h"
+#include "usdMaya/usdCacheFormat.h"
 #include "usdMaya/usdImport.h"
 #include "usdMaya/usdExport.h"
 #include "usdMaya/usdListShadingModes.h"
 #include "usdMaya/usdTranslator.h"
-#include "usdMaya/usdCacheFormat.h"
+#include "usdMaya/variantSelectionNode.h"
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -88,6 +89,19 @@ MStatus initializePlugin(
             },
         MPxNode::kAssembly,
         &UsdMayaReferenceAssembly::_classification);
+    CHECK_MSTATUS(status);
+
+    status = plugin.registerNode(
+            _data.variantSelectionNode.typeName,
+            _data.variantSelectionNode.typeId,
+            []() {
+                return UsdMayaVariantSelectionNode::creator(
+                    _data.variantSelectionNode);
+            },
+            []() {
+                return UsdMayaVariantSelectionNode::initialize(
+                    &(_data.variantSelectionNode));
+            });
     CHECK_MSTATUS(status);
 
     status =
@@ -171,7 +185,7 @@ MStatus initializePlugin(
                                     }, 
                                     "usdTranslator", // options script name
                                     const_cast<char*>(usdTranslatorDefaults),
-                                    false);
+                                    false); // requiresFullMel
 
     if (!status) {
         status.perror("pxrUsd: unable to register USD translator.");

@@ -130,6 +130,10 @@ global proc int usdTranslatorExport (string $parent,
          
         checkBox -l "Export all cameras" allCamerasCheckBox;
 
+        checkBox -l "Handle USD Namespaces"
+            -annotation "For any nodes which come from a USD reference or assembly, trip to strip or convert namespaces added by USD, so that exported paths match the original USD paths"
+            handleUsdNamespacesCheckBox;
+
         textFieldGrp -l "Parent Scope:" parentScopeField;
 
         optionMenuGrp -l "Render Layer Mode:" renderLayerModePopup;
@@ -176,6 +180,8 @@ global proc int usdTranslatorExport (string $parent,
                     usdTranslatorExport_SetCheckbox($optionBreakDown[1], "renderableOnlyCheckBox");
                 } else if ($optionBreakDown[0] == "allCameras") {
                     usdTranslatorExport_SetCheckbox($optionBreakDown[1], "allCamerasCheckBox");
+                } else if ($optionBreakDown[0] == "handleUsdNamespaces") {
+                    usdTranslatorExport_SetCheckbox($optionBreakDown[1], "handleUsdNamespacesCheckBox");
                 } else if ($optionBreakDown[0] == "renderLayerMode") {
                     optionMenuGrp -e -value $optionBreakDown[1] renderLayerModePopup;
                 } else if ($optionBreakDown[0] == "mergeXForm") {
@@ -223,6 +229,7 @@ global proc int usdTranslatorExport (string $parent,
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "exportColorSets", "exportColorSetsCheckBox");
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "renderableOnly", "renderableOnlyCheckBox");
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "allCameras", "allCamerasCheckBox");
+        $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "handleUsdNamespaces", "handleUsdNamespacesCheckBox");
         $currentOptions = usdTranslatorExport_AppendFromPopup($currentOptions, "renderLayerMode", "renderLayerModePopup");
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "mergeXForm", "mergeXFormCheckBox");
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "exportInstances", "exportInstancesCheckBox");

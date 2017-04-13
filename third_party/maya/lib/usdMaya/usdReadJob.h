@@ -30,6 +30,7 @@
 #include "usdMaya/api.h"
 #include "usdMaya/JobArgs.h"
 #include "usdMaya/primReaderContext.h"
+#include "usdMaya/variantSelectionNode.h"
 
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/primRange.h"
@@ -43,14 +44,13 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-
+extern const TfToken MAYA_NATIVE_FILE_REF_ATTR;
 
 class usdReadJob
 {
   public:
-
     PXRUSDMAYA_API
-    usdReadJob(const std::map<std::string, std::string>& iVariants,
+    usdReadJob(const std::map<std::string, std::string>& topVariants,
         const JobImportArgs & iArgs,
 
         // We need to know the names of the assembly and proxy shape types for
@@ -71,8 +71,11 @@ class usdReadJob
 
     // Getters/Setters
     void setMayaRootDagPath(const MDagPath &mayaRootDagPath) { mMayaRootDagPath = mayaRootDagPath; };
+    void setJoinedParentRefPaths(const std::string& joinedRefPaths);
 
   private:
+    bool _InitVariantsByPath(const std::map<std::string, std::string>& topVariants);
+
     // XXX: Activating the 'Expanded' representation of a USD reference
     // assembly node is very much like performing a regular usdReadJob but with
     // a few key differences (e.g. creating proxy shapes at collapse points).
@@ -94,18 +97,44 @@ class usdReadJob
 
     // Data
     JobImportArgs mArgs;
-    std::map<std::string,std::string> mVariants;
+
+    // TODO: allow the class to hold just a reference (perhaps a smart
+    // pointer?), as these maps could get large, and we may want to avoid
+    // copying unless necessary.
+
+    // Variant selections, by usd path. An empty string can be used to indicate
+    // the variant selection for the root layer prim (ie, whatever
+    // UsdUtilsGetModelNameFromRootLayer resolves to). If, after resolving the
+    // root prim, it is the same as an entry already in the mVariantsByPath,
+    // the two variant-maps will be merged, but the ones stored under the
+    // "empty string" will take precedence.
+    //
+    // Ie, say mVariantsByPath looks like this:
+    //
+    // mVariantsByPath = {
+    //     "": {"color": "black", "detail": "high"},
+    //     "/World/superDude": {"color": "red", "utilityBelt": "combat"},
+    // }
+    //
+    // ...and the mArgs.primPath resolves to "/World/superDude". Then the final
+    // merged variant-selections that will be used for "/World/superDude" are:
+    //
+    // {"color": "black", "detail": "high", "utilityBelt": "combat"}
+    //
+    // Note that "color" is "black", since the entries for the empty string take
+    // precedence.
+    VariantMapByPath mVariantsByPath;
+
     MDagModifier mDagModifierUndo;
     bool mDagModifierSeeded;
     typedef PxrUsdMayaPrimReaderContext::ObjectRegistry PathNodeMap;
     PathNodeMap mNewNodeRegistry;
     MDagPath mMayaRootDagPath;
+    std::vector<std::string> mParentRefPaths;
 
     const std::string _assemblyTypeName;
     const std::string _proxyShapeTypeName;
 };
-
-
 PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_USDREADJOB_H

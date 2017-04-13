@@ -24,13 +24,18 @@
 #include "pxr/pxr.h"
 #include "usdMaya/usdReadJob.h"
 
+#include "usdMaya/pluginStaticData.h"
 #include "usdMaya/primReaderRegistry.h"
 #include "usdMaya/shadingModeRegistry.h"
 #include "usdMaya/stageCache.h"
 #include "usdMaya/translatorMaterial.h"
 #include "usdMaya/translatorModelAssembly.h"
 #include "usdMaya/translatorXformable.h"
+#include "usdMaya/translatorUtil.h"
+#include "usdMaya/variantSelectionNode.h"
 
+#include "pxr/base/js/json.h"
+#include "pxr/base/js/value.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/token.h"
 #include "pxr/usd/sdf/layer.h"
@@ -52,10 +57,14 @@
 #include <maya/MObject.h>
 #include <maya/MTime.h>
 #include <maya/MSelectionList.h>
+#include <maya/MFileIO.h>
+#include <maya/MFnDependencyNode.h>
+#include <maya/MItDependencyNodes.h>
 
 #include <map>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -67,19 +76,77 @@ PXR_NAMESPACE_OPEN_SCOPE
 // (usdMaya/referenceAssembly.cpp)
 const static TfToken ASSEMBLY_SHADING_MODE = PxrUsdMayaShadingModeTokens->displayColor;
 
+const TfToken MAYA_NATIVE_FILE_REF_ATTR("maya:reference");
+
 usdReadJob::usdReadJob(
-    const std::map<std::string, std::string>& iVariants,
+    const std::map<std::string, std::string>& topVariants,
     const JobImportArgs &iArgs,
     const std::string& assemblyTypeName,
     const std::string& proxyShapeTypeName) :
     mArgs(iArgs),
-    mVariants(iVariants),
     mDagModifierUndo(),
     mDagModifierSeeded(false),
     mMayaRootDagPath(),
     _assemblyTypeName(assemblyTypeName),
     _proxyShapeTypeName(proxyShapeTypeName)
 {
+    if (mArgs.parentNode.length())
+    {
+        // Get the value
+        MSelectionList selList;
+        selList.add(mArgs.parentNode.c_str());
+        MDagPath dagPath;
+        MStatus status = selList.getDagPath(0, dagPath);
+        if (status != MS::kSuccess) {
+            std::string errorStr = TfStringPrintf(
+                    "Invalid path \"%s\" for parent option.",
+                    mArgs.parentNode.c_str());
+            MGlobal::displayError(MString(errorStr.c_str()));
+        }
+        setMayaRootDagPath( dagPath );
+    }
+
+    // Add the current scene, and the currently loading file (if any) to the
+    // list of parent refs
+
+    std::vector<std::string> pathsToAdd;
+    pathsToAdd.emplace_back(MFileIO::currentFile().asChar());
+    pathsToAdd.emplace_back(MFileIO::fileCurrentlyLoading().asChar());
+    if (pathsToAdd.back() == pathsToAdd.front()) {
+        pathsToAdd.pop_back();
+    }
+
+    auto remove_empty_iterator = std::remove_if(pathsToAdd.begin(),
+                                                pathsToAdd.end(),
+                                                [](const std::string& str) {
+                                                    return str.empty();
+                                                });
+
+    pathsToAdd.erase(remove_empty_iterator, pathsToAdd.end());
+    // Now make sure that mArgs.parentRefPaths doesn't already contain the new
+    // paths...
+    if (pathsToAdd.size() > 0) {
+        for (const auto& oldPath : mArgs.parentRefPaths) {
+            auto remove_matching_iterator = std::remove_if(
+                    pathsToAdd.begin(), pathsToAdd.end(),
+                    [&](const std::string& str) {
+                        return str == oldPath;
+                    });
+            pathsToAdd.erase(remove_matching_iterator, pathsToAdd.end());
+            if (pathsToAdd.size() == 0) {
+                break;
+            }
+        }
+
+        if (pathsToAdd.size() > 0) {
+            mArgs.parentRefPaths.reserve(mArgs.parentRefPaths.size()
+                                         + pathsToAdd.size());
+            mArgs.parentRefPaths.insert(mArgs.parentRefPaths.end(),
+                                        pathsToAdd.begin(), pathsToAdd.end());
+        }
+    }
+
+    _InitVariantsByPath(topVariants);
 }
 
 usdReadJob::~usdReadJob()
@@ -122,7 +189,22 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
     primSdfPath = primSdfPath.MakeAbsolutePath(SdfPath::AbsoluteRootPath()).GetAbsoluteRootOrPrimPath();
 
     std::vector<std::pair<std::string, std::string> > varSelsVec;
-    TF_FOR_ALL(iter, mVariants) {
+
+    // Note that this will create an entry for primSdfPath if it doesn't exist,
+    // and it might end up empty... but it's only one additional entry, so there
+    // shouldn't be much of a performance impact.
+    std::map<std::string, std::string>& primVariants = mVariantsByPath[primSdfPath.GetString()];
+    auto emptyStrVariants = mVariantsByPath.find("");
+    if (emptyStrVariants != mVariantsByPath.end()) {
+        // Add the entries from mVariantsByPath[""] - they override the explicit
+        // path entries
+        TF_FOR_ALL(iter, emptyStrVariants->second)
+        {
+            primVariants[iter->first] = iter->second;
+        }
+    }
+
+    TF_FOR_ALL(iter, primVariants) {
         const std::string& variantSetName = iter->first;
         const std::string& variantSelectionName = iter->second;
         varSelsVec.push_back(
@@ -248,9 +330,192 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
         }
     }
 
+    if (MFileIO::isReferencingFile())
+    {
+        // TODO: figure out what to do with "byproduct" DG nodes
+        // For nodes for which there is a one-to-one mapping to a USD node, there
+        // should hopefully be entry in mNewNodeRegistry, which is it's usd path;
+        // these paths are guaranteed to be unique, so after replacing the "/"
+        // with ":", we can guarantee a namespaced name that is unique (within
+        // a USD reference tree, at least)
+
+        // However, for many maya nodes there is not a direct mapping to a USD
+        // node - examples include AnimCurves, CreaseSets, and GroupIds.  These
+        // nodes are created as "byproducts" of creating of a USD node - they
+        // may contain data which is an attribute in USD (ie, AnimCurves,
+        // CreaseSets), or may be a wholly maya concept (GroupId). They may not
+        // exist in mNewNodeRegistry at all... and even if they do, we have no
+        // guarantee that the name there is unique.
+
+        // Such nodes may eventually create problems, because the names might not
+        // be unique (within a top-level USD reference), and therfore, they may
+        // change depending on the order in which subreferences are loaded (ie, if
+        // we have two subrefs which try to create "myNode1", one will actually
+        // get named "myNode2").  If there is a reference edit on one of these
+        // nodes, this will create problems...
+
+        MFnDependencyNode depNode;
+        MString newName;
+        // Need to find all DG nodes created, and add the appropriate
+        // namespace
+        for (PathNodeMap::iterator it=mNewNodeRegistry.begin(); it!=mNewNodeRegistry.end(); ++it) {
+            DEBUG_PRINT(MString("made node: ") + it->first.c_str());
+            MObject& mobj = it->second;
+            if (! mobj.hasFn(MFn::kDagNode)) {
+                depNode.setObject(mobj);
+                newName = MString(PxrUsdMayaTranslatorUtil::GetParentNamespace(it->first).c_str()) + depNode.name();
+                depNode.setName(newName, true);
+            }
+
+        }
+    }
+
     return (status == MS::kSuccess);
 }
 
+bool usdReadJob::_InitVariantsByPath(const std::map<std::string, std::string>& topVariants)
+{
+    const MTypeId& varSelTypeId = PxrUsdMayaPluginStaticData::pxrUsd.variantSelectionNode.typeId;
+
+    MStatus status = MS::kSuccess;
+
+    // Update mVariantsByPath[""] with topVariants
+    if (!topVariants.empty()) {
+        std::map<std::string, std::string>& rootVariants = mVariantsByPath[""];
+        TF_FOR_ALL(iter, topVariants)
+        {
+            rootVariants[iter->first] = iter->second;
+        }
+    }
+
+    // Now find the variantSelectionNode
+
+    MObject variantSelectionMObj;
+    if (mArgs.variantSelectionNode.empty()) {
+        // See if a top-level variantSelectionNode exists, and if so, use that
+
+        // Note that there seems to be no direct way to get a list of all
+        // the nodes of a specific plugin node type - the best we can do is
+        // get all plugin nodes (kPluginDependNode) and then check the MTypeId
+        // ourselves...
+        MFnDependencyNode depNode;
+        for (MItDependencyNodes pluginNodesIter(MFn::kPluginDependNode);
+                !pluginNodesIter.isDone(); pluginNodesIter.next()) {
+            status = depNode.setObject(pluginNodesIter.thisNode());
+            if (!status)
+                continue;
+            if (depNode.typeId() == varSelTypeId
+                    && !depNode.isFromReferencedFile()) {
+                // Just use the first one we find. There shouldn't be more than
+                // one in a scene (and if there is, they can specify which one
+                // they want with an option string).
+                mArgs.variantSelectionNode = depNode.name().asChar();
+                variantSelectionMObj = depNode.object();
+                break;
+            }
+        }
+    }
+    else {
+        PxrUsdMayaUtil::GetMObjectByName(mArgs.variantSelectionNode,
+                variantSelectionMObj);
+    }
+
+    if (variantSelectionMObj.isNull())
+    {
+        return true;
+    }
+
+    // ...and then use it to fill out mVariantsByPath
+
+    MFnDependencyNode depNode(variantSelectionMObj, &status);
+    if (!status) {
+        // Do this just to print an error message... should never happen
+        CHECK_MSTATUS(status);
+        return false;
+    }
+    if (depNode.typeId() != varSelTypeId) {
+        std::string errorMsg = TfStringPrintf(
+            "Node \"%s\" was not of \"%s\" node type",
+            depNode.name().asChar(),
+            PxrUsdMayaPluginStaticData::pxrUsd.variantSelectionNode.typeName.asChar());
+        MGlobal::displayError(errorMsg.c_str());
+        return false;
+    }
+
+    MPlug selectionsPlug = depNode.findPlug(
+            PxrUsdMayaPluginStaticData::pxrUsd.variantSelectionNode.selections,
+            true, &status);
+    if (!status) {
+        // Do this just to print an error message... should never happen
+        CHECK_MSTATUS(status);
+        return false;
+    }
+
+    std::string selectionsString = selectionsPlug.asString(MDGContext::fsNormal, &status).asChar();
+    if (!status) {
+        std::string errorMsg = TfStringPrintf(
+            "Error reading selection string from %s",
+            selectionsPlug.name().asChar());
+        MGlobal::displayError(errorMsg.c_str());
+        return false;
+    }
+
+    if (selectionsString.empty())
+    {
+        return true;
+    }
+
+    JsParseError jsError;
+    JsValue jsValue = JsParseString(selectionsString, &jsError);
+    if (!jsValue) {
+        MString errorMsg(TfStringPrintf(
+            "Failed to parse variant selection JSON string on attribute '%s'"
+            " at line %d, column %d: %s",
+            selectionsPlug.name().asChar(),
+            jsError.line, jsError.column, jsError.reason.c_str()).c_str());
+        MGlobal::displayError(errorMsg);
+        return false;
+    }
+
+    const JsObject& jsonSelections = jsValue.GetJsObject();
+    if (jsonSelections.empty()) {
+        return false;
+    }
+
+    TF_FOR_ALL(pathMapIter, jsonSelections) {
+        const JsObject& jsonSelectionsForPath = pathMapIter->second.GetJsObject();
+        if (jsonSelectionsForPath.empty()) {
+            continue;
+        }
+        std::map<std::string, std::string>& currentPathVariants = mVariantsByPath[pathMapIter->first];
+
+        TF_FOR_ALL(variantMapIter, jsonSelectionsForPath) {
+            if (variantMapIter->first.empty()) {
+                continue;
+            }
+            const std::string& variantValue = variantMapIter->second.GetString();
+            if (variantValue.empty()) {
+                continue;
+            }
+
+            // std::insert will preserve existing entries if present, which in this
+            // case, is what we what
+            currentPathVariants.insert(std::pair<std::string, std::string>(
+                    variantMapIter->first, variantValue));
+        }
+    }
+    return true;
+}
+
+void usdReadJob::setJoinedParentRefPaths(const std::string& joinedRefPaths)
+{
+    mParentRefPaths.clear();
+    std::stringstream stream(joinedRefPaths);
+    std::string str;
+    while (std::getline(stream, str, ',')) {
+        mParentRefPaths.push_back(str);
+    }
+}
 
 bool usdReadJob::_DoImport(UsdPrimRange& range,
                            const UsdPrim& usdRootPrim)
@@ -279,7 +544,7 @@ bool usdReadJob::_DoImport(UsdPrimRange& range,
                 &assetIdentifier,
                 &assetPrimPath)) {
             const bool isSceneAssembly = mMayaRootDagPath.node().hasFn(MFn::kAssembly);
-            if (isSceneAssembly) {
+            if (isSceneAssembly || MFileIO::isReferencingFile()) {
                 // If we ARE importing on behalf of an assembly, we use the
                 // file path of the top-level assembly and the path to the prim
                 // within that file when creating the reference assembly.
@@ -298,8 +563,10 @@ bool usdReadJob::_DoImport(UsdPrimRange& range,
                                                         parentNode,
                                                         args,
                                                         &ctx,
+                                                        mArgs.useAssemblies,
                                                         _assemblyTypeName,
-                                                        mArgs.assemblyRep)) {
+                                                        mArgs.assemblyRep,
+                                                        mParentRefPaths)) {
                 if (ctx.GetPruneChildren()) {
                     primIt.PruneChildren();
                 }
@@ -314,6 +581,29 @@ bool usdReadJob::_DoImport(UsdPrimRange& range,
                 primIt.PruneChildren();
             }
         }
+
+        if (UsdAttribute mayaRefAttr = prim.GetAttribute(
+                MAYA_NATIVE_FILE_REF_ATTR)) {
+            SdfAssetPath mayaRefAssetPath;
+
+            if (mayaRefAttr.Get(&mayaRefAssetPath)) {
+                const std::string* pMayaPath = &mayaRefAssetPath.GetResolvedPath();
+                if (pMayaPath->empty()) {
+                    pMayaPath = &mayaRefAssetPath.GetAssetPath();
+                }
+                if (!pMayaPath->empty()) {
+                    // TODO: get grouping / parenting of native maya references
+                    // working
+                    if (PxrUsdMayaTranslatorModelAssembly::CreateNativeMayaRef(
+                            prim, *pMayaPath, ctx)) {
+                        if (ctx.GetPruneChildren()) {
+                            primIt.PruneChildren();
+                        }
+                    }
+                }
+            }
+        }
+
     }
 
     return true;

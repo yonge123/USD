@@ -61,11 +61,12 @@ MayaPrimWriter::MayaPrimWriter(const MDagPath& iDag,
     mUsdPath(uPath),
     mIsValid(true)
 {
-
-    if (!job.getArgs().exportRootPath.empty() ) {
-        // trim the prim path to start at export root
-        mUsdPath = mUsdPath.ReplacePrefix(job.getArgs().exportRootSdfPath.GetParentPath(), SdfPath("/"));
-    }
+    // TODO: fix exportRootPath / exportRootSdfPath to work with the instances
+    // branch - currently not functional!
+//    if (!job.getArgs().exportRootPath.empty() ) {
+//        // trim the prim path to start at export root
+//        mUsdPath = mUsdPath.ReplacePrefix(job.getArgs().exportRootSdfPath.GetParentPath(), SdfPath("/"));
+//    }
 }
 
 bool

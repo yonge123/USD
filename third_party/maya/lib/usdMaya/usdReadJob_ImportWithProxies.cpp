@@ -184,6 +184,8 @@ usdReadJob::_ProcessProxyPrims(
         const UsdPrim& pxrGeomRoot,
         const std::vector<std::string>& collapsePointPathStrings)
 {
+    static TfStaticData<const std::map<std::string, std::string>> _emptyVariantMap;
+
     TF_FOR_ALL(iter, proxyPrims) {
         const UsdPrim proxyPrim = *iter;
         PxrUsdMayaPrimReaderArgs args(proxyPrim,
@@ -200,8 +202,18 @@ usdReadJob::_ProcessProxyPrims(
         }
 
         MObject parentNode = ctx.GetMayaNode(proxyPrim.GetPath().GetParentPath(), false);
+
+        const std::map<std::string, std::string>* pVariantSelections;
+        auto foundVariants = mVariantsByPath.find(proxyPrim.GetPath().GetString());
+        if (foundVariants == mVariantsByPath.end()) {
+            pVariantSelections = &(*_emptyVariantMap);
+        }
+        else {
+            pVariantSelections = &(foundVariants->second);
+        }
+
         if (!PxrUsdMayaTranslatorModelAssembly::ReadAsProxy(proxyPrim,
-                                                               mVariants,
+                                                               *pVariantSelections,
                                                                parentNode,
                                                                args,
                                                                &ctx,
@@ -271,8 +283,10 @@ usdReadJob::_ProcessSubAssemblyPrims(const std::vector<UsdPrim>& subAssemblyPrim
                                                         parentNode,
                                                         args,
                                                         &ctx,
+                                                        mArgs.useAssemblies,
                                                         _assemblyTypeName,
-                                                        mArgs.assemblyRep)) {
+                                                        mArgs.assemblyRep,
+                                                        mParentRefPaths)) {
             return false;
         }
     }
