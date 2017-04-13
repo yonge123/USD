@@ -225,6 +225,7 @@ def _findFiles(args):
                     for file in files]
         return set(ret)
 
+    # Must have FILE FILE, DIR DIR, DIR FILES... or FILES... DIR.
     err = ValueError("Error: File arguments must be one of: "
                      "FILE FILE, DIR DIR, DIR FILES..., or FILES... DIR.")
     if len(args) < 2:
