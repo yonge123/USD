@@ -34,6 +34,7 @@ class "AiNodeAPI" (
              interface for getting and setting user parameters."""
 ) {
 }
+
 class "AiShapeAPI" (
     doc = """API for interacting with common Arnold shape parameters on prims.
 
@@ -124,7 +125,9 @@ class "AiMaterialAPI" (
             string apiName = "displacement"
         }
     )
-}class AiShader "AiShader" (
+}
+
+class AiShader "AiShader" (
     doc = """Represents an Arnold shader node."""
     inherits = </Shader>
 )
