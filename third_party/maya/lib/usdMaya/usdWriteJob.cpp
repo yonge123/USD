@@ -245,7 +245,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
         }
     }
 
-    // Writing Looks/Shading
+    // Writing Materials/Shading
     PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
                 mStage, 
                 mArgs.dagPaths,
@@ -481,8 +481,8 @@ bool usdWriteJob::needToTraverse(const MDagPath& curDag)
         return false;
     }
 
-    // Ignore default cameras
     if (!mArgs.exportDefaultCameras && ob.hasFn(MFn::kTransform)) {
+        // Ignore transforms of default cameras 
         MString fullPathName = curDag.fullPathName();
         if (fullPathName == "|persp" ||
             fullPathName == "|top" ||
