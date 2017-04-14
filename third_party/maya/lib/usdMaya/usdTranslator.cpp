@@ -26,6 +26,7 @@
  * \brief file translator for USD files
  */
 
+#include "pxr/pxr.h"
 #include "usdMaya/usdTranslator.h"
 
 #include "usdMaya/JobArgs.h"
