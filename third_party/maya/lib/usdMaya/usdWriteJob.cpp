@@ -119,7 +119,7 @@ bool usdWriteJob::beginJob(bool append)
     const std::string iFileExtension = TfStringGetSuffix(mArgs.fileName, '.');
     if (!UsdStage::IsSupportedFile(mArgs.fileName)) {
         mArgs.fileName = TfStringPrintf("%s.%s",
-                                        TfStringGetBeforeSuffix(mArgs.fileName, '.').c_str(),
+                                        mArgs.fileName.c_str(),
                                         PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault.GetText());
     }
 
