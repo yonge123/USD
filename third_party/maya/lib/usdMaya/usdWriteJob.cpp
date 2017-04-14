@@ -116,7 +116,6 @@ bool usdWriteJob::beginJob(bool append)
     }  // for m
 
     // Make sure the file name is a valid one with a proper USD extension.
-    const std::string iFileExtension = TfStringGetSuffix(mArgs.fileName, '.');
     if (!UsdStage::IsSupportedFile(mArgs.fileName)) {
         mArgs.fileName = TfStringPrintf("%s.%s",
                                         mArgs.fileName.c_str(),
