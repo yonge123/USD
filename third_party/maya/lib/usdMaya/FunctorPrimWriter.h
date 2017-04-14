@@ -29,7 +29,6 @@
 #include "pxr/pxr.h"
 #include "usdMaya/api.h"
 #include "usdMaya/MayaTransformWriter.h"
-#include "usdMaya/JobArgs.h"
 
 #include "usdMaya/primWriterArgs.h"
 #include "usdMaya/primWriterContext.h"
