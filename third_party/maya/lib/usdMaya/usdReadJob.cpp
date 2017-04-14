@@ -378,7 +378,7 @@ bool usdReadJob::_DoImport(UsdPrimRange& range,
                                                         mArgs.useAssemblies,
                                                         _assemblyTypeName,
                                                         mArgs.assemblyRep,
-                                                        mParentRefPaths)) {
+                                                        mArgs.mParentRefPaths)) {
                 if (ctx.GetPruneChildren()) {
                     primIt.PruneChildren();
                 }

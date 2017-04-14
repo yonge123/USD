@@ -100,7 +100,6 @@ class usdReadJob
     typedef PxrUsdMayaPrimReaderContext::ObjectRegistry PathNodeMap;
     PathNodeMap mNewNodeRegistry;
     MDagPath mMayaRootDagPath;
-    std::vector<std::string> mParentRefPaths;
 
     const std::string _assemblyTypeName;
     const std::string _proxyShapeTypeName;
