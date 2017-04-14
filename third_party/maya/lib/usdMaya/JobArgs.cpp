@@ -26,8 +26,8 @@
 
 #include "usdMaya/shadingModeRegistry.h"
 
-#include "pxr/base/tf/staticTokens.h"
 #include "pxr/base/tf/envSetting.h"
+#include "pxr/base/tf/staticTokens.h"
 #include "pxr/usd/usdGeom/tokens.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
