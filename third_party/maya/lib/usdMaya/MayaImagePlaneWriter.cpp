@@ -63,6 +63,12 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
             setUsdPath(usdPath);
         }
     }
+
+    UsdGeomImagePlane primSchema =
+        UsdGeomImagePlane::Define(getUsdStage(), getUsdPath());
+    TF_AXIOM(primSchema);
+    mUsdPrim = primSchema.GetPrim();
+    TF_AXIOM(mUsdPrim);
 }
 
 void MayaImagePlaneWriter::write(const UsdTimeCode& usdTime) {
