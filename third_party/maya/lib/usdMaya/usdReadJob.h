@@ -71,7 +71,6 @@ class usdReadJob
 
     // Getters/Setters
     void setMayaRootDagPath(const MDagPath &mayaRootDagPath) { mMayaRootDagPath = mayaRootDagPath; };
-    void setJoinedParentRefPaths(const std::string& joinedRefPaths);
 
   private:
     // XXX: Activating the 'Expanded' representation of a USD reference
