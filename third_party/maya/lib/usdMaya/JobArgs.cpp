@@ -224,10 +224,6 @@ void JobImportArgs::parseSingleOption(const MStringArray& theOption)
         readAnimData = theOption[1].asInt();
     } else if (theOption[0] == MString("assemblyRep")) {
         assemblyRep = TfToken(theOption[1].asChar());
-    } else if (theOption[0] == MString("startTime")) {
-        startTime = theOption[1].asDouble();
-    } else if (theOption[0] == MString("endTime")) {
-        endTime = theOption[1].asDouble();
     } else if (theOption[0] == MString("useCustomFrameRange")) {
         useCustomFrameRange = theOption[1].asInt();
     } else if (theOption[0] == MString("importWithProxyShapes")) {
