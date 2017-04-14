@@ -32,7 +32,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-extern TfEnvSetting<bool> PIXMAYA_READ_ANIM_BY_DEFAULT;
 
 extern TfEnvSetting<bool> PIXMAYA_USE_USD_REF_ASSEMBLIES;
 
@@ -43,7 +42,6 @@ TF_DEFINE_PUBLIC_TOKENS(PxUsdExportJobArgsTokens,
         PXRUSDMAYA_JOBARGS_TOKENS);
 
 namespace {
-    static bool _readAnimDataDefault = TfGetEnvSetting(PIXMAYA_READ_ANIM_BY_DEFAULT);
     static bool _useAssembliesDefault = TfGetEnvSetting(PIXMAYA_USE_USD_REF_ASSEMBLIES);
 }
 
@@ -209,7 +207,7 @@ JobImportArgs::JobImportArgs()
     :
         primPath("/"),
         assemblyRep(PxUsdExportJobArgsTokens->Collapsed),
-        readAnimData(_readAnimDataDefault),
+        readAnimData(true),
         useCustomFrameRange(false),
         importWithProxyShapes(false),
         useAssemblies(_useAssembliesDefault),

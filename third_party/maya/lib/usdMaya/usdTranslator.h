@@ -41,12 +41,12 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-const char* const usdTranslatorDefaultsTemplate =
+const char* const usdTranslatorDefaults =
         // Shared options
         "shadingMode=GPrim Colors;"
         "defaultMeshScheme=CatmullClark SDiv;"
         // import options
-        "readAnimData=%d;"
+        "readAnimData=1;"
         "useCustomFrameRange=0;"
         "assemblyRep=Collapsed;"
 
@@ -66,7 +66,6 @@ const char* const usdTranslatorDefaultsTemplate =
         "startTime=1;"
         "endTime=1";
 
-extern const char* const usdTranslatorDefaults;
 
 class usdTranslator : public MPxFileTranslator
 {
