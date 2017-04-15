@@ -156,7 +156,7 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         std::string mayaTypeName(pxNode->typeName().asChar());
 
         if (PxrUsdMayaPrimWriterRegistry::WriterFactoryFn primWriterFactory =
-            PxrUsdMayaPrimWriterRegistry::Find(mayaTypeName)) {
+                PxrUsdMayaPrimWriterRegistry::Find(mayaTypeName)) {
             MayaPrimWriterPtr primPtr(primWriterFactory(
                 curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
             if (primPtr && primPtr->isValid()) {
@@ -170,27 +170,27 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
     if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator) ||
         (mArgs.exportInstances && curDag.isInstanced() && !instanceSource)) {
         MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
-        if (primPtr->isValid() ) {
+        if (primPtr->isValid()) {
             return primPtr;
         }
     } else if (ob.hasFn(MFn::kMesh)) {
         MayaMeshWriterPtr primPtr(new MayaMeshWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
-        if (primPtr->isValid() ) {
+        if (primPtr->isValid()) {
             return primPtr;
         }
     } else if (ob.hasFn(MFn::kNurbsCurve)) {
         MayaNurbsCurveWriterPtr primPtr(new MayaNurbsCurveWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
-        if (primPtr->isValid() ) {
+        if (primPtr->isValid()) {
             return primPtr;
         }
     } else if (ob.hasFn(MFn::kNurbsSurface)) {
         MayaNurbsSurfaceWriterPtr primPtr(new MayaNurbsSurfaceWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
-        if (primPtr->isValid() ) {
+        if (primPtr->isValid()) {
             return primPtr;
         }
     } else if (ob.hasFn(MFn::kCamera)) {
         MayaCameraWriterPtr primPtr(new MayaCameraWriter(curDag, getUsdPathFromDagPath(curDag, false), *this));
-        if (primPtr->isValid() ) {
+        if (primPtr->isValid()) {
             return primPtr;
         }
     } else if (ob.hasFn(MFn::kImagePlane)) {
