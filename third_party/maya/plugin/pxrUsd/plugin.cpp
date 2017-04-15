@@ -217,7 +217,7 @@ MStatus uninitializePlugin(
         status.perror("pxrUsd: unable to deregister USD translator.");
     }
 
-    status = plugin.deregisterFileTranslator("usdListShadingModes");
+    status = plugin.deregisterCommand("usdListShadingModes");
     if (!status) {
         status.perror("deregisterCommand usdListShadingModes");
     }
