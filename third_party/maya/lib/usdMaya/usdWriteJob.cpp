@@ -109,7 +109,7 @@ bool usdWriteJob::beginJob(bool append)
             iFileExtension != PxrUsdMayaTranslatorTokens->UsdFileExtensionASCII &&
             iFileExtension != PxrUsdMayaTranslatorTokens->UsdFileExtensionCrate) {
         mArgs.fileName = TfStringPrintf("%s.%s",
-                                   TfStringGetBeforeSuffix(mArgs.fileName, '.').c_str(),
+                                   mArgs.fileName.c_str(),
                                    PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault.GetText());
     }
 
