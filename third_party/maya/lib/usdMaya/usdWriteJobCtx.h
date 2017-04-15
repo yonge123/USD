@@ -3,7 +3,7 @@
 
 #include "pxr/pxr.h"
 #include "pxr/usd/sdf/path.h"
-#include "usdMaya/api.h" 
+#include "usdMaya/api.h"
 #include "usdMaya/JobArgs.h"
 
 #include <maya/MDagPath.h>
@@ -48,8 +48,9 @@ private:
         }
     };
     std::map<MObjectHandle, SdfPath, MObjectHandleComp> mMasterToUsdPath;
+    PXRUSDMAYA_API
     MayaPrimWriterPtr _createPrimWriter(const MDagPath& curDag, bool instanceSource);
-    UsdPrim mInstancesPrim;     
+    UsdPrim mInstancesPrim;
     SdfPath mParentScopePath;
     bool mNoInstances;
 };
