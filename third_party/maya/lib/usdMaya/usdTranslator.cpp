@@ -90,6 +90,7 @@ usdTranslator::writer(const MFileObject &file,
 
     JobExportArgs jobArgs;
     jobArgs.fileName = file.fullName().asChar();
+    jobArgs.parseExportOptions(optionsString);
     bool append=false;
 
     // Now resync start and end frame based on animation mode

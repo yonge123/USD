@@ -170,12 +170,6 @@ MStatus initializePlugin(
         status.perror("registerCommand usdListShadingModes");
     }
     
-    // Formerly had separate import/export translators, but due to a bug where
-    // referenced .usd files had the wrong type saved (ie, they were saved as
-    // pxrUsdExport type, which didn't have a read method!), they are now
-    // combined into a single translator.
-    // Main downside of this is that the options UI is now less specific - ie,
-    // the import options UI will show items which only make sense on export.
     status = plugin.registerFileTranslator("pxrUsd",
                                     "", 
                                     []() { 

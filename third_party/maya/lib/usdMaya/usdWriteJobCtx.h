@@ -23,6 +23,7 @@ public:
     const JobExportArgs& getArgs() const { return mArgs; };
     const UsdStageRefPtr& getUsdStage() const { return mStage; };
     // Querying the master path for instancing. This also creates the mesh if it doesn't exists.
+    PXRUSDMAYA_API
     SdfPath getMasterPath(const MDagPath& dg);
 protected:
     PXRUSDMAYA_API
