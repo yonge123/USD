@@ -118,9 +118,7 @@ bool usdWriteJob::beginJob(bool append)
     }  // for m
 
     // Make sure the file name is a valid one with a proper USD extension.
-    if (UsdStage::IsSupportedFile(mArgs.fileName)) {
-        mArgs.fileName = mArgs.fileName;
-    } else {
+    if (!UsdStage::IsSupportedFile(mArgs.fileName)) {
         mArgs.fileName = TfStringPrintf("%s.%s",
                                         mArgs.fileName.c_str(),
                                         PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault.GetText());
@@ -238,10 +236,11 @@ bool usdWriteJob::beginJob(bool append)
             if (primWriter) {
                 mMayaPrimWriterList.push_back(primWriter);
 
-                primWriter->write(UsdTimeCode::Default());
-
                 // Write out data (non-animated/default values).
-                if (const auto& usdPrim = primWriter->getPrim()) {
+                const auto& usdPrim = primWriter->getPrim();
+                if (usdPrim && usdPrim.IsValid()) {
+                    primWriter->write(UsdTimeCode::Default());
+
                     MDagPath dag = primWriter->getDagPath();
                     mDagPathToUsdPathMap[dag] = usdPrim.GetPath();
 
@@ -265,7 +264,7 @@ bool usdWriteJob::beginJob(bool append)
         }
     }
 
-    // Writing Looks/Shading
+    // Writing Materials/Shading
     PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
                 mStage, 
                 mArgs.dagPaths,
@@ -503,8 +502,8 @@ bool usdWriteJob::needToTraverse(const MDagPath& curDag)
         return false;
     }
 
-    // Ignore default cameras
     if (!mArgs.exportDefaultCameras && ob.hasFn(MFn::kTransform)) {
+        // Ignore transforms of default cameras 
         MString fullPathName = curDag.fullPathName();
         if (fullPathName == "|persp" ||
             fullPathName == "|top" ||
