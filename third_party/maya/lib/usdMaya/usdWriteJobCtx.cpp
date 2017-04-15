@@ -125,7 +125,7 @@ bool usdWriteJobCtx::openFile(const std::string& filename, bool append)
         }
         SdfPath parentScopePath(mArgs.parentScope);
         mParentScopePath = UsdGeomScope::Define(mStage, rootOverridePath(mArgs, parentScopePath)).GetPrim().GetPrimPath();
-    }    
+    }
 
     if (mArgs.exportInstances) {
         SdfPath instancesPath(mParentScopePath.IsEmpty() ?
