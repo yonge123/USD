@@ -33,7 +33,6 @@
 #include "usdMaya/pluginStaticData.h"
 #include "usdMaya/usdImport.h"
 #include "usdMaya/usdExport.h"
-#include "usdMaya/usdListShadingModes.h"
 #include "usdMaya/usdCacheFormat.h"
 #include "usdMaya/usdListShadingModes.h"
 #include "usdMaya/usdTranslator.h"
@@ -184,10 +183,6 @@ MStatus initializePlugin(
 
     if (!status) {
         status.perror("pxrUsd: unable to register USD translator.");
-    }
-
-    if (!status) {
-        status.perror("pxrUsd: unable to register USD Export translator.");
     }
 
     // A MPxCacheFormat to save Maya point data to UsdGeomPoints
