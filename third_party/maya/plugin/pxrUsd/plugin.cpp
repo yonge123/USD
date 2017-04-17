@@ -216,6 +216,11 @@ MStatus uninitializePlugin(
         status.perror("pxrUsd: unable to deregister USD Export translator.");
     }
 
+    status = plugin.deregisterFileTranslator("usdListShadingModes");
+    if (!status) {
+        status.perror("deregisterCommand usdListShadingModes");
+    }
+
     status = MGlobal::executeCommand("assembly -e -deregister " + _data.referenceAssembly.typeName);
     CHECK_MSTATUS(status);
 

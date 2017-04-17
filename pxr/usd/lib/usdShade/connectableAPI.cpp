@@ -105,6 +105,11 @@ PXR_NAMESPACE_CLOSE_SCOPE
 
 #include "pxr/base/tf/envSetting.h"
 
+#include "pxr/usd/pcp/layerStack.h"
+#include "pxr/usd/pcp/node.h"
+#include "pxr/usd/pcp/primIndex.h"
+#include "pxr/usd/sdf/relationshipSpec.h"
+
 #include "pxr/usd/usdShade/tokens.h"
 
 #include "debugCodes.h"
@@ -538,6 +543,27 @@ UsdShadeConnectableAPI::GetConnectedSource(
     return *source;
 }
 
+/* static  */
+bool 
+UsdShadeConnectableAPI::GetRawConnectedSourcePaths(
+    UsdProperty const &shadingProp, 
+    SdfPathVector *sourcePaths)
+{
+    TfToken relName = _GetConnectionRelName(shadingProp.GetName());
+    UsdRelationship rel = shadingProp.GetPrim().GetRelationship(relName);
+    if (!rel) {
+        return false;
+    }
+
+    if (!rel.GetTargets(sourcePaths)) {
+        TF_WARN("Unable to get targets for relationship <%s>",
+                rel.GetPath().GetText());
+        return false;
+    }
+
+    return true;
+}
+
 /* static */
 bool 
 UsdShadeConnectableAPI::HasConnectedSource(const UsdProperty &shadingProp)
@@ -552,6 +578,78 @@ UsdShadeConnectableAPI::HasConnectedSource(const UsdProperty &shadingProp)
         &source, &sourceName, &sourceType);
 }
 
+// This tests if a given node represents a "live" base material,
+// i.e. once that hasn't been "flattened out" due to being
+// pulled across a reference to a library.
+static bool
+_NodeRepresentsLiveBaseMaterial(const PcpNodeRef &node)
+{
+    bool isLiveBaseMaterial = false;
+    for (PcpNodeRef n = node; 
+            n; // 0, or false, means we are at the root node
+            n = n.GetOriginNode()) {
+        switch(n.GetArcType()) {
+        case PcpArcTypeLocalSpecializes:
+        case PcpArcTypeGlobalSpecializes:
+            isLiveBaseMaterial = true;
+            break;
+        // dakrunch: specializes across references are actually still valid.
+        // 
+        // case PcpArcTypeReference:
+        //     if (isLiveBaseMaterial) {
+        //         // Node is within a base material, but that is in turn
+        //         // across a reference. That means this is a library
+        //         // material, so it is not live and we should flatten it
+        //         // out.  Continue iterating, however, since this
+        //         // might be referenced into some other live base material
+        //         // downstream.
+        //         isLiveBaseMaterial = false;
+        //     }
+        //     break;
+        default:
+            break;
+        }
+    }
+    return isLiveBaseMaterial;
+}
+
+/* static */
+bool 
+UsdShadeConnectableAPI::IsSourceFromBaseMaterial(
+    const UsdProperty &shadingProp)
+{
+    UsdRelationship rel = _GetConnectionRel(shadingProp, /*create*/ false);
+    if (!rel) {
+        return false;
+    }
+
+    // USD core doesn't provide a UsdResolveInfo style API for asking where
+    // relationship targets are authored, so we do it here ourselves.
+    // Find the strongest opinion about the relationship targets.
+    SdfRelationshipSpecHandle strongestRelSpec;
+    SdfPropertySpecHandleVector propStack = rel.GetPropertyStack();
+    for (const SdfPropertySpecHandle &prop: propStack) {
+        if (SdfRelationshipSpecHandle relSpec =
+            TfDynamic_cast<SdfRelationshipSpecHandle>(prop)) {
+            if (relSpec->HasTargetPathList()) {
+                strongestRelSpec = relSpec;
+                break;
+            }
+        }
+    }
+    // Find which prim node introduced that opinion.
+    if (strongestRelSpec) {
+        for(const PcpNodeRef &node:
+            rel.GetPrim().GetPrimIndex().GetNodeRange()) {
+            if (node.GetPath() == strongestRelSpec->GetPath().GetPrimPath() &&
+                node.GetLayerStack()->HasLayer(strongestRelSpec->GetLayer())) {
+                return _NodeRepresentsLiveBaseMaterial(node);
+            }
+        }
+    }
+    return false;
+
+}
 
 /* static */
 bool 
@@ -696,17 +794,14 @@ UsdShadeConnectableAPI::GetInputs() const
         // Support for old style encoding containing interface attributes 
         // and parameters.
         if (UsdShadeUtils::ReadOldEncoding()) {
-            static const TfToken interfaceNSToken(TfStringPrintf(":%s", 
-                UsdShadeTokens->interface_.GetText()));
             if (IsNodeGraph() && 
-                (TfStringContains(attr.GetName().GetString(), 
-                                 interfaceNSToken) || 
-                 TfStringStartsWith(attr.GetName().GetString(), 
-                                  UsdShadeTokens->interface_))) {                    
+                (TfStringStartsWith(attr.GetName().GetString(), 
+                                  UsdShadeTokens->interface_))) {
                 // If it's an interface attribute on a node-graph, wrap it in a 
                 // UsdShadeInput object and add it to the list of inputs.
                 ret.push_back(UsdShadeInput(attr));
-            } else if (IsShader() && attr.GetNamespace().IsEmpty()) {
+            } else if (attr.GetNamespace().IsEmpty()) {
+                // Assume that the attribute belongs to a shader.
                 // If it's an unnamespaced (parameter) attribute on a shader, 
                 // wrap it in a UsdShadeInput object and add it to the list of 
                 // inputs.
