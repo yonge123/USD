@@ -123,6 +123,15 @@ _GetConnectedSource(const UsdProperty &shadingProp)
     }
 }
 
+static SdfPathVector
+_GetRawConnectedSourcePaths(const UsdProperty &shadingProp) 
+{
+    SdfPathVector sourcePaths;
+    UsdShadeConnectableAPI::GetRawConnectedSourcePaths(shadingProp, 
+            &sourcePaths);
+    return sourcePaths;
+}
+
 WRAP_CUSTOM {
 
     bool (*ConnectToSource_1)(
@@ -152,6 +161,18 @@ WRAP_CUSTOM {
     bool (*CanConnect_Output)(
         UsdShadeOutput const &,
         UsdAttribute const &) = &UsdShadeConnectableAPI::CanConnect;
+
+    bool (*IsSourceFromBaseMaterial)(UsdProperty const &) = 
+        &UsdShadeConnectableAPI::IsSourceFromBaseMaterial;
+
+    bool (*HasConnectedSource)(UsdProperty const &) = 
+        &UsdShadeConnectableAPI::HasConnectedSource;
+
+    bool (*DisconnectSource)(UsdProperty const &) = 
+        &UsdShadeConnectableAPI::DisconnectSource;
+
+    bool (*ClearSource)(UsdProperty const &) = 
+        &UsdShadeConnectableAPI::ClearSource;
 
     _class
         .def(init<UsdShadeShader const &>(arg("shader")))
@@ -183,15 +204,24 @@ WRAP_CUSTOM {
             (arg("shadingProp")))
             .staticmethod("GetConnectedSource")
 
-        .def("HasConnectedSource", &UsdShadeConnectableAPI::HasConnectedSource,
+        .def("GetRawConnectedSourcePaths", _GetRawConnectedSourcePaths, 
+            (arg("shadingProp")),
+            return_value_policy<TfPySequenceToList>())
+            .staticmethod("GetRawConnectedSourcePaths")
+
+        .def("HasConnectedSource", HasConnectedSource,
             (arg("shadingProp")))
             .staticmethod("HasConnectedSource")
+
+        .def("IsSourceFromBaseMaterial", IsSourceFromBaseMaterial,
+            (arg("shadingProp")))
+            .staticmethod("IsSourceFromBaseMaterial")
         
-        .def("DisconnectSource", &UsdShadeConnectableAPI::DisconnectSource,
+        .def("DisconnectSource", DisconnectSource,
             (arg("shadingProp")))
             .staticmethod("DisconnectSource")
         
-        .def("ClearSource", &UsdShadeConnectableAPI::ClearSource,
+        .def("ClearSource", ClearSource,
             (arg("shadingProp")))
             .staticmethod("ClearSource")
         
