@@ -1041,23 +1041,11 @@ HdRenderIndex::_AllocatePrimId(HdRprim *prim)
 }
 
 SdfPath
-HdRenderIndex::GetPrimPathFromPrimIdColor(GfVec4i const& primIdColor,
-                                          GfVec4i const& instanceIdColor,
-                                          int* instanceIndexOut) const
+HdRenderIndex::GetRprimPathFromPrimId(int primId) const
 {
-    int32_t primId = ((primIdColor[0] & 0xff) <<  0) | 
-                     ((primIdColor[1] & 0xff) <<  8) |
-                     ((primIdColor[2] & 0xff) << 16);
-
     _RprimPrimIDMap::const_iterator it = _rprimPrimIdMap.find(primId);
     if(it == _rprimPrimIdMap.end()) {
         return SdfPath();
-    }
-
-    if (instanceIndexOut) {
-        *instanceIndexOut = ((instanceIdColor[0] & 0xff) <<  0) | 
-                            ((instanceIdColor[1] & 0xff) <<  8) |
-                            ((instanceIdColor[2] & 0xff) << 16);
     }
 
     return it->second;
@@ -1174,6 +1162,27 @@ HdRenderIndex::_InitPrimTypes()
 
     _sprimIndex.InitPrimTypes(_renderDelegate->GetSupportedSprimTypes());
     _bprimIndex.InitPrimTypes(_renderDelegate->GetSupportedBprimTypes());
+}
+
+bool
+HdRenderIndex::IsRprimTypeSupported(TfToken const& typeId) const
+{
+    TfTokenVector const& supported = _renderDelegate->GetSupportedRprimTypes();
+    return (std::find(supported.begin(), supported.end(), typeId) != supported.end());
+}
+
+bool
+HdRenderIndex::IsSprimTypeSupported(TfToken const& typeId) const
+{
+    TfTokenVector const& supported = _renderDelegate->GetSupportedSprimTypes();
+    return (std::find(supported.begin(), supported.end(), typeId) != supported.end());
+}
+
+bool
+HdRenderIndex::IsBprimTypeSupported(TfToken const& typeId) const
+{
+    TfTokenVector const& supported = _renderDelegate->GetSupportedBprimTypes();
+    return (std::find(supported.begin(), supported.end(), typeId) != supported.end());
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
