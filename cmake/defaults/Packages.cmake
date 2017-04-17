@@ -24,8 +24,8 @@
 # Core USD Package Requirements 
 # ----------------------------------------------
 # --Python.  We are generally but not completely 2.6 compliant.
-find_package(PythonLibs 2.7 REQUIRED)
 find_package(PythonInterp 2.7 REQUIRED)
+find_package(PythonLibs 2.7 REQUIRED)
 
 # --Boost
 find_package(Boost
@@ -40,7 +40,7 @@ find_package(Boost
 )
 
 # --TBB
-find_package(TBB REQUIRED)
+find_package(TBB REQUIRED COMPONENTS tbb)
 add_definitions(${TBB_DEFINITIONS})
 
 # --OpenEXR
