@@ -46,6 +46,7 @@ pxr_shared_library(usdImagingGL
 
     PUBLIC_HEADERS
         api.h
+        version.h
 
     PRIVATE_HEADERS
         unitTestGLDrawing.h
