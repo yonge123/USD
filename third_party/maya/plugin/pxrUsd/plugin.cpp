@@ -225,11 +225,6 @@ MStatus uninitializePlugin(
         status.perror("pxrUsd: unable to deregister USD Export translator.");
     }
 
-    status = plugin.deregisterFileTranslator("usdListShadingModes");
-    if (!status) {
-        status.perror("deregisterCommand usdListShadingModes");
-    }
-
     status = plugin.deregisterCacheFormat("pxrUsdCacheFormat");
     if (!status) {
         status.perror("pxrUsd: unable to deregister USD Cache format.");
