@@ -1,2 +1,0 @@
-From: Pal Mezei <sirpalee@gmail.com>
-Subject: [imaging] Fixing image reads if OIIO built with asserts enabled.
