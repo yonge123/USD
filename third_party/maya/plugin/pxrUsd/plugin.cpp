@@ -33,6 +33,7 @@
 #include "usdMaya/pluginStaticData.h"
 #include "usdMaya/usdImport.h"
 #include "usdMaya/usdExport.h"
+#include "usdMaya/usdListShadingModes.h"
 #include "usdMaya/usdTranslator.h"
 #include "usdMaya/variantSelectionNode.h"
 
@@ -160,7 +161,15 @@ MStatus initializePlugin(
         status.perror("registerCommand usdImport");
     }
 
-    status = plugin.registerFileTranslator("pxrUsd",
+    status = plugin.registerCommand("usdListShadingModes",
+                                    usdListShadingModes::creator,
+                                    usdListShadingModes::createSyntax);
+
+    if (!status) {
+        status.perror("registerCommand usdListShadingModes");
+    }
+    
+    status = plugin.registerFileTranslator("pxrUsd", 
                                     "", 
                                     []() { 
                                         return usdTranslator::creator(
@@ -197,6 +206,11 @@ MStatus uninitializePlugin(
     status = plugin.deregisterFileTranslator("pxrUsd");
     if (!status) {
         status.perror("pxrUsd: unable to deregister USD translator.");
+    }
+
+    status = plugin.deregisterFileTranslator("usdListShadingModes");
+    if (!status) {
+        status.perror("deregisterCommand usdListShadingModes");
     }
 
     status = MGlobal::executeCommand("assembly -e -deregister " + _data.referenceAssembly.typeName);
