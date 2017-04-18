@@ -1,2 +1,2 @@
-From: Pal Mezei <sirpalee@gmail.com>
-Subject: [usdMaya] Setting up the shading mode option menu dynamically.
+From: Paul Molodowitch <pm@stanfordalumni.org>
+Subject: [usdMaya] Fix for deregistering usdListShadingModes command
