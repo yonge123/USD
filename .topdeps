@@ -20,3 +20,4 @@ pseudo_root_warning
 ptex_prefer_static
 readAnimByDefault
 symlink_headers
+tests_use_maya_base_dir
