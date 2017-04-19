@@ -1054,6 +1054,8 @@ MStatus UsdCacheFormat::readDoubleArray(MDoubleArray& array,
             }
             if (array.length() == arraySize) {
                 return MS::kSuccess;
+            } else {
+                TF_WARN("Incorrect array length wheb reading %u <> %u", array.length(), arraySize);
             }
         }
     }
@@ -1084,6 +1086,8 @@ MStatus UsdCacheFormat::readFloatArray(MFloatArray& array,
             }
             if (array.length() == arraySize) {
                 return MS::kSuccess;
+            } else {
+                TF_WARN("Incorrect array length wheb reading %u <> %u", array.length(), arraySize);
             }
         }
     }
@@ -1116,6 +1120,8 @@ MStatus UsdCacheFormat::readDoubleVectorArray(MVectorArray& array,
             }
             if (array.length() == arraySize) {
                 return MS::kSuccess;
+            } else {
+                TF_WARN("Incorrect array length wheb reading %u <> %u", array.length(), arraySize);
             }
         }
     }
@@ -1148,6 +1154,8 @@ MStatus UsdCacheFormat::readFloatVectorArray(MFloatVectorArray& array,
             }
             if (array.length() == arraySize) {
                 return MS::kSuccess;
+            } else {
+                TF_WARN("Incorrect array length wheb reading %u <> %u", array.length(), arraySize);
             }
         }
     }
