@@ -791,6 +791,7 @@ MStatus UsdCacheFormat::readChannelName(MString& name) {
     }
     // No more channels
     // mCurrentChannel = "";
+    mCurrentChannel = "";
     name = MString("");
     return MS::kFailure;
 }
