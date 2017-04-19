@@ -656,7 +656,7 @@ MStatus UsdCacheFormat::readExistingAttributes()
     if (!impl->cachedAttributes.empty()) {
         return status;
     } else {
-        TF_WARN("Found not attributes on default prim %s", primPath.GetString().c_str());
+        TF_WARN("Found no attributes on default prim %s", primPath.GetString().c_str());
         return MS::kFailure;
     }
 }
