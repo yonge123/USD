@@ -312,6 +312,18 @@ namespace {
             SdfValueTypeNames->FloatArray
         }
     };
+
+    // When single files used instead of one cache file, the current time is never setup
+    // in that case only one sample will exists in any given file. Just query the
+    // time there and return the sample. We are setting the currentTime to infinity by default.
+    template <typename T>
+    bool _queryTimeSample(SdfLayerRefPtr& layerPtr, const SdfPath& attrPath, const double& currentTime, T& value) {
+        if (currentTime == std::numeric_limits<double>::infinity()) {
+            return layerPtr->QueryTimeSample(attrPath, layerPtr->GetStartTimeCode(), &value);
+        } else {
+            return layerPtr->QueryTimeSample(attrPath, currentTime, &value);
+        }
+    }
 }
 
 struct UsdCacheFormat::Impl {
@@ -455,7 +467,9 @@ struct UsdCacheFormat::Impl {
 TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaCacheFormatTokens,
                         PXRUSDMAYA_CACHEFORMAT_TOKENS);
 
-UsdCacheFormat::UsdCacheFormat() : impl(new Impl), mWriteTimeCalledOnce(false) {
+UsdCacheFormat::UsdCacheFormat() : impl(new Impl),
+                                   mCurrentTime(std::numeric_limits<double>::infinity()),
+                                   mWriteTimeCalledOnce(false) {
 }
 
 UsdCacheFormat::~UsdCacheFormat() {
@@ -826,23 +840,24 @@ MStatus UsdCacheFormat::writeInt32(int i)
 }
 
 int UsdCacheFormat::readInt32() {
-    int result = 0;
+    constexpr int _default_value = 0;
     const auto it = impl->findOrAddMayaAttribute(
         mLayerPtr,
         _mayaAttrFromChannel(mCurrentChannel),
         MCacheFormatDescription::kDouble);
     if (it != impl->cachedAttributes.end()) {
-        VtValue value(result);
-        mLayerPtr->QueryTimeSample(_usdPathFromAttribute(mLayerPtr, it->usdAttrName),
-                                   mCurrentTime,
-                                   &value);
-        if (it->convertFromUsd == nullptr) {
-            result = value.UncheckedGet<int>();
-        } else {
-            result = it->convertFromUsd(value).UncheckedGet<int>();
+        VtValue value(_default_value);
+        if (_queryTimeSample(mLayerPtr,
+                         _usdPathFromAttribute(mLayerPtr, it->usdAttrName),
+                         mCurrentTime, value)) {
+            if (it->convertFromUsd == nullptr) {
+                return value.UncheckedGet<int>();
+            } else {
+                return it->convertFromUsd(value).UncheckedGet<int>();
+            }
         }
     }
-    return result;
+    return _default_value;
 }
 
 MStatus UsdCacheFormat::writeDoubleArray(const MDoubleArray& array) {
@@ -1004,7 +1019,7 @@ MStatus UsdCacheFormat::writeFloatVectorArray(const MFloatVectorArray& array) {
 unsigned UsdCacheFormat::readArraySize() {
     // Might be able to pass back a default size && wait until the actual read for resizing
     // All attributes should exist already on the defaultPrim since we're doing a read
-    unsigned result = 0;
+    constexpr unsigned _result = 0;
     const auto mayaAttrName = _mayaAttrFromChannel(mCurrentChannel);
     const auto it = impl->cachedAttributes.get<_Maya>().find(mayaAttrName);
     if (it != impl->cachedAttributes.get<_Maya>().end()) {
@@ -1014,11 +1029,11 @@ unsigned UsdCacheFormat::readArraySize() {
         if (usdAttrType) {
             if (usdAttrType.IsArray()) {
                 VtValue varray;
-                if (mLayerPtr->QueryTimeSample(attrPath, mCurrentTime, &varray)) {
-                    result = varray.GetArraySize();
+                if (_queryTimeSample(mLayerPtr, attrPath, mCurrentTime, varray)) {
+                    return static_cast<unsigned int>(varray.GetArraySize());
                 }
             } else {
-                result = 1;
+                return 1;
             }
         } else {
             TF_WARN("Unsupported type for attribute %s", usdAttrName.GetText());
@@ -1026,7 +1041,7 @@ unsigned UsdCacheFormat::readArraySize() {
     } else {
         TF_WARN("Cannot find attribute for channel %s", mCurrentChannel.c_str());
     }
-    return result;
+    return _result;
 }
 
 MStatus UsdCacheFormat::readDoubleArray(MDoubleArray& array,
@@ -1037,9 +1052,7 @@ MStatus UsdCacheFormat::readDoubleArray(MDoubleArray& array,
     if (it != impl->cachedAttributes.get<_Maya>().end()) {
         auto attrPath = _usdPathFromAttribute(mLayerPtr, it->usdAttrName);
         VtValue value;
-        if (mLayerPtr->QueryTimeSample(attrPath,
-                                       mCurrentTime,
-                                       &value)) {
+        if (_queryTimeSample(mLayerPtr, attrPath, mCurrentTime, value)) {
             SdfValueTypeName usdAttrType = it->usdAttrType;
             if (SdfValueTypeNames->DoubleArray == usdAttrType) {
                 _convertInArray<double, MDoubleArray>(value, array, it->convertFromUsd);
@@ -1069,9 +1082,7 @@ MStatus UsdCacheFormat::readFloatArray(MFloatArray& array,
     if (it != impl->cachedAttributes.get<_Maya>().end()) {
         SdfPath attrPath = _usdPathFromAttribute(mLayerPtr, it->usdAttrName);
         VtValue value;
-        if (mLayerPtr->QueryTimeSample(attrPath,
-                                       mCurrentTime,
-                                       &value)) {
+        if (_queryTimeSample(mLayerPtr, attrPath, mCurrentTime, value)) {
             SdfValueTypeName usdAttrType = it->usdAttrType;
             if (SdfValueTypeNames->DoubleArray == usdAttrType) {
                 _convertInArray<double, MFloatArray>(value, array, it->convertFromUsd);
@@ -1101,9 +1112,7 @@ MStatus UsdCacheFormat::readDoubleVectorArray(MVectorArray& array,
     if (it != impl->cachedAttributes.get<_Maya>().end()) {
         SdfPath attrPath = _usdPathFromAttribute(mLayerPtr, it->usdAttrName);
         VtValue value;
-        if (mLayerPtr->QueryTimeSample(attrPath,
-                                       mCurrentTime,
-                                       &value)) {
+        if (_queryTimeSample(mLayerPtr, attrPath, mCurrentTime, value)) {
             SdfValueTypeName usdAttrType = it->usdAttrType;
             if ((SdfValueTypeNames->Vector3dArray == usdAttrType)
                 || (SdfValueTypeNames->Point3dArray == usdAttrType)
@@ -1135,9 +1144,7 @@ MStatus UsdCacheFormat::readFloatVectorArray(MFloatVectorArray& array,
     if (it != impl->cachedAttributes.get<_Maya>().end()) {
         SdfPath attrPath = _usdPathFromAttribute(mLayerPtr, it->usdAttrName);
         VtValue value;
-        if (mLayerPtr->QueryTimeSample(attrPath,
-                                       mCurrentTime,
-                                       &value)) {
+        if (_queryTimeSample(mLayerPtr, attrPath, mCurrentTime, value)) {
             SdfValueTypeName usdAttrType = it->usdAttrType;
             if ((SdfValueTypeNames->Vector3dArray == usdAttrType)
                 || (SdfValueTypeNames->Point3dArray == usdAttrType)
