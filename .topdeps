@@ -15,9 +15,10 @@ tg/simple_features/usdRender
 tg/simple_features/usdview_reload_shortcut
 tg/simple_features/vp2_maya_proxy
 assembly_cmd_import_maya_cmds
-unify_usdVariantSet_prefix_token
+fix_py_setprogramname
 pseudo_root_warning
 ptex_prefer_static
 readAnimByDefault
 symlink_headers
 tests_use_maya_base_dir
+unify_usdVariantSet_prefix_token
