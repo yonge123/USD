@@ -666,6 +666,7 @@ MStatus UsdCacheFormat::readExistingAttributes()
             TF_WARN("Could not add %s", usdAttrName.GetString().c_str());
             status = MS::kFailure;
         }
+        impl->firstMayaAttr = impl->cachedAttributes.begin();
     }
     if (!impl->cachedAttributes.empty()) {
         return status;
