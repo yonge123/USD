@@ -63,6 +63,8 @@ PXR_NAMESPACE_OPEN_SCOPE
     (extent)                                    \
     (faceColors)                                \
     (geometry)                                  \
+    (guide)                                     \
+    (hidden)                                    \
     (hull)                                      \
     (hullIndices)                               \
     (indices)                                   \
@@ -90,6 +92,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (primVar)                                   \
     (primID)                                    \
     (primitiveParam)                            \
+    (proxy)                                     \
     (quadInfo)                                  \
     (refineLevel)                               \
     (refined)                                   \
@@ -117,6 +120,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (wireOnSurf)
 
 #define HD_PERF_TOKENS                          \
+    (adjacencyBufSize)                          \
     (basisCurvesTopology)                       \
     (bufferSourcesResolved)                     \
     (bufferArrayRangeMerged)                    \

@@ -26,8 +26,8 @@
 
 #include "usdMaya/shadingModeRegistry.h"
 
-#include "pxr/base/tf/staticTokens.h"
 #include "pxr/base/tf/envSetting.h"
+#include "pxr/base/tf/staticTokens.h"
 #include "pxr/usd/usdGeom/tokens.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -73,6 +73,15 @@ bool JobSharedArgs::parseSharedOption(const MStringArray& theOption)
                 MGlobal::displayError(
                         TfStringPrintf("No shadingMode '%s' found.  Setting shadingMode='none'",
                                        rfmShadingMode.GetText()).c_str());
+                shadingMode = PxrUsdMayaShadingModeTokens->none;
+            }
+        } else {
+            TfToken modeToken(theOption[1].asChar());
+            if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(modeToken)) {
+                shadingMode = modeToken;
+            } else {
+                MGlobal::displayError(
+                    TfStringPrintf("No shadingMode '%s' found. Setting shadingMode='none'", modeToken.GetText()).c_str());
                 shadingMode = PxrUsdMayaShadingModeTokens->none;
             }
         }
