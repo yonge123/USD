@@ -402,7 +402,7 @@ class MainWindow(QtGui.QMainWindow):
                                QtCore.SIGNAL('timeout()'),
                                self._updateNodeView)
 
-        # This creates the _stageView and restores state from setings file
+        # This creates the _stageView and restores state from settings file
         self._resetSettings()
         
         if self._stageView:
@@ -964,7 +964,7 @@ class MainWindow(QtGui.QMainWindow):
                                QtCore.SIGNAL('triggered()'),
                                self._toggleShowInactiveNodes)
 
-        QtCore.QObject.connect(self._ui.actionShow_Master_Prims,
+        QtCore.QObject.connect(self._ui.actionShow_All_Master_Prims,
                                QtCore.SIGNAL('triggered()'),
                                self._toggleShowMasterPrims)
 
@@ -1068,10 +1068,6 @@ class MainWindow(QtGui.QMainWindow):
         QtCore.QObject.connect(self._ui.actionJump_to_Bound_Material,
                                QtCore.SIGNAL('triggered()'),
                                self.jumpToBoundMaterialSelectedPrims)
-
-        QtCore.QObject.connect(self._ui.actionJump_to_Master,
-                               QtCore.SIGNAL('triggered()'),
-                               self.jumpToMasterSelectedPrims)
 
         QtCore.QObject.connect(self._ui.actionMake_Visible,
                                QtCore.SIGNAL('triggered()'),
@@ -1885,7 +1881,7 @@ class MainWindow(QtGui.QMainWindow):
                                              self._displayPredicate)
                    if isMatch(prim.GetName())]
 
-        showMasters = self._ui.actionShow_Master_Prims.isChecked()
+        showMasters = self._ui.actionShow_All_Master_Prims.isChecked()
         if showMasters:
             for master in self._stage.GetMasters():
                 matches += [prim.GetPath() for prim
@@ -2047,10 +2043,11 @@ class MainWindow(QtGui.QMainWindow):
     def _resetSettings(self):
         """Reloads the UI and Sets up the initial settings for the 
         _stageView object created in _reloadVaryingUI"""
+        
         self._ui.actionShow_Inactive_Nodes.setChecked(\
                         self._settings.get("actionShow_Inactive_Nodes", True))
-        self._ui.actionShow_Master_Prims.setChecked(\
-                        self._settings.get("actionShow_Master_Prims", False))
+        self._ui.actionShow_All_Master_Prims.setChecked(\
+                        self._settings.get("actionShow_All_Master_Prims", False))
         self._ui.actionShow_Undefined_Prims.setChecked(\
                         self._settings.get("actionShow_Undefined_Prims", False))
         self._ui.actionShow_Abstract_Prims.setChecked(\
@@ -2829,8 +2826,8 @@ class MainWindow(QtGui.QMainWindow):
         self._resetNodeView()
 
     def _toggleShowMasterPrims(self):
-        self._settings.setAndSave(actionShow_Master_Prims = 
-                self._ui.actionShow_Master_Prims.isChecked())
+        self._settings.setAndSave(actionShow_All_Master_Prims = 
+                self._ui.actionShow_All_Master_Prims.isChecked())
         self._resetNodeView()
 
     def _toggleShowUndefinedPrims(self):
@@ -2909,7 +2906,7 @@ class MainWindow(QtGui.QMainWindow):
         showInactive = self._ui.actionShow_Inactive_Nodes.isChecked()
         showUndefined = self._ui.actionShow_Undefined_Prims.isChecked()
         showAbstract = self._ui.actionShow_Abstract_Prims.isChecked()
-        showMasters = self._ui.actionShow_Master_Prims.isChecked()
+        showMasters = self._ui.actionShow_All_Master_Prims.isChecked()
         
         return ((prim.IsActive() or showInactive) and
                 (prim.IsDefined() or showUndefined) and
@@ -2922,7 +2919,7 @@ class MainWindow(QtGui.QMainWindow):
         rootItem = self._populateItem(rootNode)
         self._populateChildren(rootItem)
 
-        showMasters = self._ui.actionShow_Master_Prims.isChecked()
+        showMasters = self._ui.actionShow_All_Master_Prims.isChecked()
         if showMasters:
             self._populateChildren(rootItem,
                                    childrenToAdd=self._stage.GetMasters())
@@ -2939,7 +2936,7 @@ class MainWindow(QtGui.QMainWindow):
         showInactive = self._ui.actionShow_Inactive_Nodes.isChecked()
         showUndefined = self._ui.actionShow_Undefined_Prims.isChecked()
         showAbstract = self._ui.actionShow_Abstract_Prims.isChecked()
-        showMasters = self._ui.actionShow_Master_Prims.isChecked()
+        showMasters = self._ui.actionShow_All_Master_Prims.isChecked()
 
         self._displayPredicate = None
 
@@ -2957,6 +2954,10 @@ class MainWindow(QtGui.QMainWindow):
                 else self._displayPredicate & ~Usd.PrimIsAbstract
         if self._displayPredicate is None:
             self._displayPredicate = Usd._PrimFlagsPredicate.Tautology()
+            
+        # Unless user experience indicates otherwise, we think we always
+        # want to show instance proxies
+        self._displayPredicate = Usd.TraverseInstanceProxies(self._displayPredicate)
 
 
     def _getItemAtPath(self, path, ensureExpanded=False):
@@ -3972,7 +3973,6 @@ class MainWindow(QtGui.QMainWindow):
         anyBoundMaterials = False
         anyActive = False
         anyInactive = False
-        anyInstances = False
         for prim in self._currentNodes:
             if prim.IsA(UsdGeom.Imageable):
                 imageable = UsdGeom.Imageable(prim)
@@ -3981,7 +3981,6 @@ class MainWindow(QtGui.QMainWindow):
             anyModels = anyModels or GetEnclosingModelPrim(prim) is not None
             material, bound = GetClosestBoundMaterial(prim)
             anyBoundMaterials = anyBoundMaterials or material is not None
-            anyInstances = anyInstances or prim.IsInstance()
             if prim.IsActive():
                 anyActive = True
             else:
@@ -3989,7 +3988,6 @@ class MainWindow(QtGui.QMainWindow):
 
         self._ui.actionJump_to_Model_Root.setEnabled(anyModels)
         self._ui.actionJump_to_Bound_Material.setEnabled(anyBoundMaterials)
-        self._ui.actionJump_to_Master.setEnabled(anyInstances)
 
         self._ui.actionRemove_Session_Visibility.setEnabled(removeEnabled)
         self._ui.actionMake_Visible.setEnabled(anyImageable)
@@ -4039,26 +4037,6 @@ class MainWindow(QtGui.QMainWindow):
                 newSel.append(material)
         self._setSelectionFromPrimList(newSel)
 
-    def jumpToMasterSelectedPrims(self):
-        foundMasters = False
-        newSel = []
-        added = set()
-        # We don't expect this to take long, so no BusyContext
-        for prim in self._currentNodes:
-            if prim.IsInstance():
-                prim = prim.GetMaster()
-                foundMasters = True
-            if not (prim in added):
-                added.add(prim)
-                newSel.append(prim)
-
-        showMasters = self._ui.actionShow_Master_Prims.isChecked()
-        if foundMasters and not showMasters:
-            self._ui.actionShow_Master_Prims.setChecked(True)
-            self._toggleShowMasterPrims()
-
-        self._setSelectionFromPrimList(newSel)
-        
     def visSelectedPrims(self):
         with BusyContext():
             for item in self.getSelectedItems():
