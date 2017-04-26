@@ -1,0 +1,8 @@
+From: Paul Molodowitch <pm@stanfordalumni.org>
+Subject: [usdUtils] GetSessionLayerForVariantSelections takes full path, not model name
+    
+This makes the variant-selections cache key more accurate, as the variants are tied to a particular prim-path, not a root name.
+    
+This necessitated some other changes - for instance, pxrUsdReferenceAssembly.inStageDataCached is now affected by .primPath.  Also, it allowed us to eliminate a double-setting of variants that was (potentially) occuring in usdReadJob::doIt
+
+
