@@ -185,18 +185,7 @@ try
         MString stringVal;
 
         argData.getFlagArgument("defaultMeshScheme", 0, stringVal);
-        if (stringVal=="none") {
-            jobArgs.defaultMeshScheme = UsdGeomTokens->none;
-        } else if (stringVal=="catmullClark") {
-            jobArgs.defaultMeshScheme = UsdGeomTokens->catmullClark;
-        } else if (stringVal=="loop") {
-            jobArgs.defaultMeshScheme = UsdGeomTokens->loop;
-        } else if (stringVal=="bilinear") {
-            jobArgs.defaultMeshScheme = UsdGeomTokens->bilinear;
-        } else {
-            MGlobal::displayWarning("Incorrect Default Mesh Schema: " + stringVal +
-            " defaulting to: " + MString(jobArgs.defaultMeshScheme.GetText()));
-        }
+        setDefaultMeshScheme(jobArgs, stringVal);
     }
 
     if (argData.isFlagSet("exportVisibility")) {

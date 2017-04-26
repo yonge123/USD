@@ -32,6 +32,9 @@
 
 #include "pxr/base/tf/staticTokens.h"
 #include "pxr/base/tf/token.h"
+#include "pxr/usd/usdGeom/tokens.h"
+
+#include <maya/MGlobal.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -120,6 +123,22 @@ struct JobImportArgs
     bool importWithProxyShapes;
 };
 
+template<typename JobArgs>
+void setDefaultMeshScheme(JobArgs& jobArgs, const MString& stringVal)
+{
+    if (stringVal=="none" || stringVal=="Polygonal Mesh") {
+        jobArgs.defaultMeshScheme = UsdGeomTokens->none;
+    } else if (stringVal=="catmullClark" || stringVal=="CatmullClark SDiv") {
+        jobArgs.defaultMeshScheme = UsdGeomTokens->catmullClark;
+    } else if (stringVal=="loop" || stringVal=="Loop SDiv") {
+        jobArgs.defaultMeshScheme = UsdGeomTokens->loop;
+    } else if (stringVal=="bilinear" || stringVal=="Bilinear SubDiv") {
+        jobArgs.defaultMeshScheme = UsdGeomTokens->bilinear;
+    } else {
+        MGlobal::displayWarning("Incorrect Default Mesh Schema: " + stringVal +
+                                " defaulting to: " + MString(jobArgs.defaultMeshScheme.GetText()));
+    }
+}
 
 
 PXR_NAMESPACE_CLOSE_SCOPE
