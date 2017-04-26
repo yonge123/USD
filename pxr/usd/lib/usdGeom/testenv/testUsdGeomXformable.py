@@ -27,14 +27,8 @@ import unittest, math
 
 class TestUsdGeomXformable(unittest.TestCase):
     def _AssertCloseXf(self, a, b):
-        aRows = [a.GetRow(i) for i in range(0,5)]
-        bRows = [b.GetRow(i) for i in range(0,5)]
-                
-        # XXX: Figure out numerical instability
-        #for av, bv in zip(aRows, bRows):
-        #    if any(map(math.isnan, av)) or any(map(math.isnan, bv)):
-        #        continue
-        #    self.assertTrue(Gf.IsClose(av, bv, 1e-4), '%s != %s'%(str(av),str(bv)))
+        for av, bv in zip(a, b):
+            self.assertTrue(Gf.IsClose(av, bv, 1e-4))
 
     def test_TranslateOp(self):
         s = Usd.Stage.CreateInMemory()
@@ -440,7 +434,7 @@ class TestUsdGeomXformable(unittest.TestCase):
 
         self.assertEqual(xformOpOrder, x.GetXformOpOrderAttr().Get())
 
-    def testAddExistingXformOp(self):
+    def test_AddExistingXformOp(self):
         s = Usd.Stage.CreateInMemory()
         x = UsdGeom.Xform.Define(s, '/World')
         xlateOp = x.AddTranslateOp()
@@ -609,7 +603,7 @@ class TestUsdGeomXformable(unittest.TestCase):
         xf.MakeMatrixXform().Set(Gf.Matrix4d(1.0))
         xf.SetXformOpOrder(xf.GetOrderedXformOps(), False)
 
-    def TestBug109853():
+    def test_Bug109853(self):
         s = Usd.Stage.CreateInMemory()
         x = UsdGeom.Xform.Define(s, '/World')
 
