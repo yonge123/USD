@@ -26,8 +26,46 @@
 
 #include "pxr/usd/usdGeom/points.h"
 #include "pxr/usd/usd/timeCode.h"
+#include "pxr/base/vt/array.h"
+#include "pxr/base/gf/vec3f.h"
+
+#include <maya/MFnParticleSystem.h>
+#include <maya/MVectorArray.h>
+#include <maya/MAnimControl.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+namespace {
+    template <typename T>
+    inline T _convertVector(const MVector& v) {
+        // I wish we had concepts
+        return T(static_cast<typename T::ScalarType>(v.x),
+                 static_cast<typename T::ScalarType>(v.y),
+                 static_cast<typename T::ScalarType>(v.z));
+    }
+
+    template <typename T>
+    VtArray<T> _convertVectorArray(const MVectorArray& a) {
+        VtArray<T> ret;
+        const auto count = a.length();
+        ret.resize(count);
+        for (auto i = decltype(count){0}; i < count; ++i) {
+            ret[i] = _convertVector<T>(a[i]);
+        }
+        return ret;
+    }
+
+    template <typename T>
+    VtArray<T> _convertArray(const MDoubleArray& a) {
+        VtArray<T> ret; // All hail to RVO
+        const auto count = a.length();
+        ret.resize(count);
+        for (auto i = decltype(count){0}; i < count; ++i) {
+            ret[i] = static_cast<T>(a[i]);
+        }
+        return ret;
+    }
+}
 
 MayaParticleWriter::MayaParticleWriter(
     MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs)
@@ -50,6 +88,27 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
     if (usdTime.IsDefault() == isShapeAnimated()) {
         return;
     }
+
+    MStatus status;
+    MFnParticleSystem particleFn;
+    particleFn.setObject(getDagPath().node());
+
+    auto currTime = MAnimControl::currentTime();
+    const auto playFromCachePlug = particleFn.findPlug("playFromCache");
+    if (!playFromCachePlug.isNull() && playFromCachePlug.asBool()) {
+        particleFn.evaluateDynamics(currTime, false);
+    }
+
+    MVectorArray positions;
+    MVectorArray velocities;
+    MDoubleArray ids;
+    particleFn.getPerParticleAttribute("particleId", ids);
+    particleFn.velocity(velocities);
+    particleFn.position(positions);
+
+    points.GetPointsAttr().Set(_convertVectorArray<GfVec3f>(positions), usdTime);
+    points.GetVelocitiesAttr().Set(_convertVectorArray<GfVec3f>(velocities), usdTime);
+    points.GetIdsAttr().Set(_convertArray<long>(ids), usdTime);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
