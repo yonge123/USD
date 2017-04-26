@@ -1601,53 +1601,6 @@ UsdImagingDelegate::_UpdateSingleValue(SdfPath const& usdPath, int requestBits)
     }
 }
 
-/*virtual*/
-bool 
-UsdImagingDelegate::IsInCollection(SdfPath const& id, 
-                    TfToken const& collectionName)
-{
-    HD_TRACE_FUNCTION();
-    SdfPath usdPath = GetPathForUsd(id);
-
-    if (usdPath.IsPropertyPath() 
-        && !IsInCollection(usdPath.GetPrimPath(), collectionName)) {
-        return false;
-    }
-
-    bool res = true;
-
-    // If guide rendering is enabled (for the whole delegate) 
-    // and we are rendering a prim that is a guide, let's render it
-    TfToken const & tag = GetRenderTag(id);
-    if (tag == UsdGeomTokens->guide) {
-        res = false;
-        if (_displayGuides) {
-            res = true;
-        }
-    }
-
-    // Only render points for those paths that have been identified in the
-    // data structure that collects prims with point rendering.
-    if (collectionName == UsdGeomTokens->points) {
-        res = false;
-
-        auto itCol = _collectionMap.find(collectionName);
-        if (itCol != _collectionMap.end()) {
-            auto itPrim = itCol->second.find(usdPath);
-            if (itPrim != itCol->second.end()) {
-                res = true;
-            }
-        }
-    }
-
-    TF_DEBUG(USDIMAGING_COLLECTIONS).Msg("IsInCollection %s -> %s, "
-                                    "UsdPrim: <%s> \n",
-                                    collectionName.GetText(),
-                                    res ? "true " : "false",
-                                    usdPath.GetText());
-    return res;
-}
-
 void
 UsdImagingDelegate::ClearPickabilityMap()
 {
@@ -1678,7 +1631,7 @@ UsdImagingDelegate::SetDisplayGuides(bool displayGuides)
 
 /*virtual*/
 TfToken
-UsdImagingDelegate::GetRenderTag(SdfPath const& id)
+UsdImagingDelegate::GetRenderTag(SdfPath const& id, TfToken const& reprName)
 {
     SdfPath usdPath = GetPathForUsd(id);
 
@@ -1700,9 +1653,13 @@ UsdImagingDelegate::GetRenderTag(SdfPath const& id)
         }
     }
 
-    // Simple mapping so all render tags in multiple delegates match
     if (purpose == UsdGeomTokens->default_) {
+        // Simple mapping so all render tags in multiple delegates match
         purpose = HdTokens->geometry;    
+    } else if (purpose == UsdGeomTokens->guide && !_displayGuides) {
+        // When guides are disabled on the delegate we move the
+        // guide prims to the hidden command buffer
+        purpose = HdTokens->hidden;
     }
 
     TF_DEBUG(USDIMAGING_COLLECTIONS).Msg("GetRenderTag %s -> %s \n",
@@ -2172,19 +2129,6 @@ UsdImagingDelegate::SetRootVisibility(bool isVisible)
     }
 }
 
-void
-UsdImagingDelegate::SetCollectionMap(CollectionMap const &collectionMap)
-{
-    HdChangeTracker &tracker = GetRenderIndex().GetChangeTracker();
-    TF_FOR_ALL(it, _collectionMap) {
-        tracker.MarkCollectionDirty(it->first);
-    }
-    _collectionMap = collectionMap;
-    TF_FOR_ALL(it, _collectionMap) {
-        tracker.MarkCollectionDirty(it->first);
-    }
-}
-
 SdfPath 
 UsdImagingDelegate::GetPathForInstanceIndex(SdfPath const& protoPrimPath,
                                             int instanceIndex,
@@ -2270,11 +2214,26 @@ UsdImagingDelegate::PopulateSelection(SdfPath const &path,
     // handled.
     _ProcessPendingUpdates();
 
+    // UsdImagingDelegate currently only supports hiliting an instance in its
+    // entirety.  With the advent of UsdPrim "instance proxies", it will be
+    // natural to select prims inside of instances.  When 'path' is such
+    // a sub-instance path, rather than hilite nothing, we will find and hilite
+    // our top-level instance.
     SdfPath usdPath = GetPathForUsd(path);
+    UsdPrim usdPrim = _stage->GetPrimAtPath(usdPath);
+    // Should not need to check for pseudoroot since it can never be 
+    // an instance proxy
+    while (usdPrim && usdPrim.IsInstanceProxy()){
+        usdPrim = usdPrim.GetParent();
+    }
+    if (usdPrim){
+        usdPath = usdPrim.GetPath();
+    }
+    
     _AdapterSharedPtr const& adapter = _AdapterLookupByPath(usdPath);
     bool added = false;
 
-    // UsdImagingDelegate only supports top-most level instance highlighting
+    // UsdImagingDelegate only supports top-most level per-instance highlighting
     VtIntArray instanceIndices;
     if (instanceIndex != ALL_INSTANCES) {
         instanceIndices.push_back(instanceIndex);
