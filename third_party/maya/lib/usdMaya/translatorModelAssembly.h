@@ -40,6 +40,7 @@
 #include <maya/MObject.h>
 
 #include <map>
+#include <vector>
 #include <string>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -81,8 +82,10 @@ struct PxrUsdMayaTranslatorModelAssembly
         MObject parentNode,
         const PxrUsdMayaPrimReaderArgs& args,
         PxrUsdMayaPrimReaderContext* context,
+        bool useAssemblies,
         const std::string& assemblyTypeName,
-        const std::string& assemblyRep);
+        const std::string& assemblyRep,
+        const std::vector<std::string>& parentRefs);
 
     /// Creates a Maya USD proxy shape node for the USD prim \p prim under
     /// \p parentNode. A node of type \p proxyShapeTypeName will be created.

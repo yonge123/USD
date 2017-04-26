@@ -30,6 +30,7 @@
 #include "usdMaya/primReaderContext.h"
 
 #include "pxr/usd/usd/prim.h"
+#include "pxr/base/tf/envSetting.h"
 
 #include <maya/MObject.h>
 #include <maya/MString.h>
@@ -37,6 +38,23 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
+extern TfEnvSetting<bool> PIXMAYA_DEBUG_USD_ASSEM;
+
+// TODO: determine if the TfEnvSetting check here is performant, and cache if
+// not...
+
+/// \brief Print \p msg if the PIXMAYA_DEBUG_USD_ASSEM is enabled, otherwise,
+/// do nothing.
+#define DEBUG_PRINT(msg) \
+{ \
+    if( TfGetEnvSetting(PIXMAYA_DEBUG_USD_ASSEM) ) \
+    { \
+        MString msg_var("PXRUSD: "); \
+        msg_var += msg; \
+        MGlobal::displayInfo(msg_var); \
+        std::cout << msg_var.asChar() << std::endl; \
+    } \
+} \
 
 /// \brief Provides helper functions for other readers to use.
 struct PxrUsdMayaTranslatorUtil
@@ -105,6 +123,9 @@ struct PxrUsdMayaTranslatorUtil
             return source.GetTimeSamples(outSamples);
         }
     }
+
+    static std::string
+    GetNamespace(const std::string& primPathStr);
 };
 
 
