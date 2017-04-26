@@ -146,6 +146,10 @@ struct JobExportArgs : JobSharedArgs
     SdfPath usdModelRootOverridePath;
 
     TfToken rootKind;
+
+    // Whether to try to handle namespaces added by usd references / assemblies,
+    // so that usd paths on export match the original usd paths
+    bool handleUsdNamespaces;
 };
 
 struct JobImportArgs : JobSharedArgs

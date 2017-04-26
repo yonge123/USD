@@ -64,7 +64,8 @@ MayaPrimWriter::MayaPrimWriter(MDagPath & iDag,
     // XXX: see MayaTransformWriter where it will eventually muck with
     // this path to get the right behavior.  Ideally, we should have all the
     // mergeTransformAndShape logic in one spot.
-    mUsdPath = PxrUsdMayaUtil::MDagPathToUsdPath(iDag, false);
+    mUsdPath = PxrUsdMayaUtil::MDagPathToUsdPath(iDag, false,
+                                                 mArgs.handleUsdNamespaces);
 
     if (!mArgs.usdModelRootOverridePath.IsEmpty() ) {
         mUsdPath = mUsdPath.ReplacePrefix(mUsdPath.GetPrefixes()[0], mArgs.usdModelRootOverridePath);
