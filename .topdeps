@@ -1,4 +1,5 @@
 tg/ar_resolver_fixes/maya_usdImport
+tg/bugfixes/fix_py_setprogramname
 tg/bugfixes/gcc_warnings
 tg/bugfixes/oiio_read_with_asserts
 tg/bugfixes/ubuntu_katana_build_fix
@@ -15,7 +16,6 @@ tg/simple_features/usdRender
 tg/simple_features/usdview_reload_shortcut
 tg/simple_features/vp2_maya_proxy
 assembly_cmd_import_maya_cmds
-fix_py_setprogramname
 pseudo_root_warning
 ptex_prefer_static
 readAnimByDefault
