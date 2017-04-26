@@ -14,7 +14,7 @@ pxr_shared_library(usd
         vt
         work
         ${Boost_PYTHON_LIBRARY}
-        ${TBB_LIBRARIES}
+        ${TBB_tbb_LIBRARY}
 
     INCLUDE_DIRS
         ${Boost_INCLUDE_DIRS}
@@ -133,27 +133,8 @@ else()
 endif()
 
 pxr_test_scripts(
-    testenv/testUsdFlatten.py
-    testenv/testUsdFlatten2.py
-    testenv/testUsdNotices.py
-    testenv/testUsdMetadata.py
-    testenv/testUsdPayloads.py
-    testenv/testUsdPrims.py
-    testenv/testUsdReferences.py
-    testenv/testUsdRelationships.py
-    testenv/testUsdSpecializes.py
-    testenv/testUsdStageCache.py
-    testenv/testUsdStageLoadUnload.py
-    testenv/testUsdStagePopulationMasks.py
-    testenv/testUsdStage.py
-    testenv/testUsdTimeOffsets.py
-    testenv/testUsdTimeSamples.py
-    testenv/testUsdTreeIterator.py
-    testenv/testUsdValueClips.py
-    testenv/testUsdVariantEditing.py
-    testenv/testUsdVariantFallbacks.py
-    testenv/testUsdVariants.py
     testenv/testUsdAttributeBlocking.py
+    testenv/testUsdAttributeConnections.py
     testenv/testUsdBug119633.py
     testenv/testUsdBug141491.py
     testenv/testUsdChangeProcessing.py
@@ -161,10 +142,30 @@ pxr_test_scripts(
     testenv/testUsdCreateProperties.py
     testenv/testUsdDataFormats.py
     testenv/testUsdFileFormats.py
+    testenv/testUsdFlatten.py
+    testenv/testUsdFlatten2.py
     testenv/testUsdInherits.py
     testenv/testUsdInstanceProxy.py
     testenv/testUsdInstancing.py
+    testenv/testUsdMetadata.py
     testenv/testUsdModel.py
+    testenv/testUsdNotices.py
+    testenv/testUsdPayloads.py
+    testenv/testUsdPrims.py
+    testenv/testUsdReferences.py
+    testenv/testUsdRelationships.py
+    testenv/testUsdSpecializes.py
+    testenv/testUsdStage.py
+    testenv/testUsdStageCache.py
+    testenv/testUsdStageLoadUnload.py
+    testenv/testUsdStagePopulationMasks.py
+    testenv/testUsdTimeOffsets.py
+    testenv/testUsdTimeSamples.py
+    testenv/testUsdTreeIterator.py
+    testenv/testUsdValueClips.py
+    testenv/testUsdVariantEditing.py
+    testenv/testUsdVariantFallbacks.py
+    testenv/testUsdVariants.py
 )
 
 pxr_build_test(testUsdAttributeBlockingCpp
@@ -370,6 +371,12 @@ pxr_register_test(testUsdAttributeBlocking
 
 pxr_register_test(testUsdAttributeBlockingCpp
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdAttributeBlockingCpp"
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdAttributeConnections
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdAttributeConnections"
     EXPECTED_RETURN_CODE 0
 )
 

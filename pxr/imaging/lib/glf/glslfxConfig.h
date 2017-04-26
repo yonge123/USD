@@ -59,7 +59,7 @@ public:
         RoleColor = 1,
     };
 
-    /// \class GlfGLSLFXConfig::Parameter
+    /// \class Parameter
     ///
     /// A class representing a parameter.
     ///
@@ -82,7 +82,7 @@ public:
 
     typedef std::vector<Parameter> Parameters;
 
-    /// \class GlfGLSLFXConfig::Texture
+    /// \class Texture
     ///
     /// A class representing a texture.
     ///
@@ -102,7 +102,7 @@ public:
 
     typedef std::vector<Texture> Textures;
 
-    /// \class GlfGLSLFXConfig::Attribute
+    /// \class Attribute
     ///
     /// A class representing an attribute.
     ///
@@ -130,6 +130,8 @@ public:
 
     typedef std::vector<std::string> SourceKeys;
 
+    typedef VtDictionary MetadataDictionary;
+
     /// Return the set of source keys for a particular shader stage
     GLF_API
     SourceKeys GetSourceKeys(TfToken const & shaderStageKey) const;
@@ -146,6 +148,10 @@ public:
     GLF_API
     Attributes GetAttributes() const;
 
+    /// Returns the metadata specified in the configuration
+    GLF_API
+    MetadataDictionary GetMetadata() const;
+
 private:
     // private ctor. should only be called by ::Read
     GlfGLSLFXConfig(VtDictionary const & dict, std::string *errorStr);
@@ -160,6 +166,9 @@ private:
     Attributes _GetAttributes(VtDictionary const & dict,
                               std::string *errorStr) const;
 
+    MetadataDictionary _GetMetadata(VtDictionary const & dict,
+                                    std::string *errorStr) const;
+
     typedef std::map<std::string, SourceKeys> _SourceKeyMap;
     _SourceKeyMap _GetSourceKeyMap(VtDictionary const & dict,
                                    std::string *errorStr) const;
@@ -167,6 +176,7 @@ private:
     Parameters _params;
     Textures _textures;
     Attributes _attributes;
+    MetadataDictionary _metadata;
     _SourceKeyMap _sourceKeyMap;
 };
 
