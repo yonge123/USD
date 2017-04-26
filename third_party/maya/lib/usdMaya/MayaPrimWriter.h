@@ -47,7 +47,7 @@ class MayaPrimWriter
     virtual ~MayaPrimWriter() {};
 
     virtual void write(const UsdTimeCode &usdTime) = 0;
-    virtual bool isShapeAnimated()     const = 0;
+    virtual bool isShapeAnimated() const = 0;
 
     /// Does this PrimWriter directly create one or more gprims on the UsdStage?
     ///
