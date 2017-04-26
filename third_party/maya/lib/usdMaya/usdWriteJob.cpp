@@ -30,6 +30,7 @@
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
 #include "usdMaya/MayaTransformWriter.h"
 #include "usdMaya/MayaCameraWriter.h"
+#include "usdMaya/VdbVisualizerWriter.h"
 
 #include "usdMaya/translatorMaterial.h"
 #include "usdMaya/primWriterRegistry.h"
@@ -345,7 +346,9 @@ void usdWriteJob::endJob()
     }
 
     postCallback();
-    
+    // clear this so that no stage references are left around
+    // also, we are triggering a before save cleanup here
+    mMayaPrimWriterList.clear();
     // Unfortunately, MGlobal::isZAxisUp() is merely session state that does
     // not get recorded in Maya files, so we cannot rely on it being set
     // properly.  Since "Y" is the more common upAxis, we'll just use
@@ -364,7 +367,6 @@ void usdWriteJob::endJob()
         mStage->GetRootLayer()->Save();
     }
     mStage->Close();
-    mMayaPrimWriterList.clear(); // clear this so that no stage references are left around
     MGlobal::displayInfo("usdWriteJob::endJob Saving Stage");
 }
 
@@ -568,7 +570,17 @@ bool usdWriteJob::createPrimWriter(
             return true;
         }
     }
-
+    else if (ob.hasFn(MFn::kPluginShape)) {
+        MFnDependencyNode dn(ob);
+        if (dn.typeName() == "vdb_visualizer") {
+            VdbVisualizerWriterPtr primPtr(new VdbVisualizerWriter(curDag, mStage, mArgs));
+            if (primPtr->isValid()) {
+                *primWriterOut = primPtr;
+                return true;
+            }
+        }
+    }
+    
     *primWriterOut = nullptr;
     return true;
 }
