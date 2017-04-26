@@ -47,6 +47,7 @@ import re, sys, os
 import prettyPrint
 import watchWindow
 import adjustClipping
+import adjustDefaultMaterial
 import referenceEditor
 from settings import Settings
 
@@ -206,6 +207,13 @@ def _GetShortString(prop, frame):
 
 class MainWindow(QtGui.QMainWindow):
 
+    ###########
+    # Signals #
+    ###########
+
+    # emitted when any aspect of the defaultMaterial changes
+    signalDefaultMaterialChanged = QtCore.Signal()
+
     @classmethod
     def clearSettings(cls):
         settingsPath = cls._outputBaseDirectory()
@@ -358,6 +366,14 @@ class MainWindow(QtGui.QMainWindow):
         self._selHighlightMode = "Only when paused"
         self._highlightColorName = "Yellow"
 
+        self.ResetDefaultMaterialSettings(store=False)
+        self._defaultMaterialAmbient = \
+           self._settings.get("DefaultMaterialAmbient",
+                              self._defaultMaterialAmbient)
+        self._defaultMaterialSpecular = \
+           self._settings.get("DefaultMaterialSpecular",
+                              self._defaultMaterialSpecular)
+
         # Initialize the upper HUD info
         self._upperHUDInfo = dict()
 
@@ -386,7 +402,7 @@ class MainWindow(QtGui.QMainWindow):
                                QtCore.SIGNAL('timeout()'),
                                self._updateNodeView)
 
-        # This creates the _stageView and restores state from setings file
+        # This creates the _stageView and restores state from settings file
         self._resetSettings()
         
         if self._stageView:
@@ -782,6 +798,12 @@ class MainWindow(QtGui.QMainWindow):
                                QtCore.SIGNAL('triggered(bool)'),
                                self._adjustClippingPlanes)
 
+
+        QtCore.QObject.connect(self._ui.actionAdjust_Default_Material,
+                               QtCore.SIGNAL('triggered(bool)'),
+                               self._adjustDefaultMaterial)
+
+
         QtCore.QObject.connect(self._ui.actionOpen,
                                QtCore.SIGNAL('triggered()'),
                                self._openFile)
@@ -942,7 +964,7 @@ class MainWindow(QtGui.QMainWindow):
                                QtCore.SIGNAL('triggered()'),
                                self._toggleShowInactiveNodes)
 
-        QtCore.QObject.connect(self._ui.actionShow_Master_Prims,
+        QtCore.QObject.connect(self._ui.actionShow_All_Master_Prims,
                                QtCore.SIGNAL('triggered()'),
                                self._toggleShowMasterPrims)
 
@@ -1046,10 +1068,6 @@ class MainWindow(QtGui.QMainWindow):
         QtCore.QObject.connect(self._ui.actionJump_to_Bound_Material,
                                QtCore.SIGNAL('triggered()'),
                                self.jumpToBoundMaterialSelectedPrims)
-
-        QtCore.QObject.connect(self._ui.actionJump_to_Master,
-                               QtCore.SIGNAL('triggered()'),
-                               self.jumpToMasterSelectedPrims)
 
         QtCore.QObject.connect(self._ui.actionMake_Visible,
                                QtCore.SIGNAL('triggered()'),
@@ -1351,11 +1369,10 @@ class MainWindow(QtGui.QMainWindow):
     def _clearCaches(self):
         self._valueCache = dict()
 
-        # create new bounding box cache and xform cache. If there was an instance
-        # of the cache before, this will effectively clear the cache.
+        # create new xform, bounding box, and camera caches. If there was an
+        # instance of the cache before, this will effectively clear the
+        # cache.
         self._xformCache = UsdGeom.XformCache(self._currentFrame)
-        if self._stageView:
-            self._stageView.xformCache = self._xformCache
         self._setUseExtentsHint(self._ui.useExtentsHint.isChecked())
         self._refreshCameraListAndMenu(preserveCurrCamera = False)
 
@@ -1429,17 +1446,13 @@ class MainWindow(QtGui.QMainWindow):
         # on the GL state established by the StageView (bug 56866).
         Glf.TextureRegistry.Reset()
         if not self._stageView:
-            self._stageView = StageView(parent=self, 
-                                        xformCache=self._xformCache,
-                                        bboxCache=self._bboxCache)
+            self._stageView = StageView(parent=self, dataModel=self)
             self._stageView.SetStage(self._stage)
             self._stageView.noRender = self._noRender
 
             self._stageView.fpsHUDInfo = self._fpsHUDInfo
             self._stageView.fpsHUDKeys = self._fpsHUDKeys
             
-            self._stageView.signalCurrentFrameChanged.connect(
-                self.onCurrentFrameChanged)
             self._stageView.signalPrimSelected.connect(self.onPrimSelected)
             self._stageView.signalPrimRollover.connect(self.onRollover)
             self._stageView.signalMouseDrag.connect(self.onStageViewMouseDrag)
@@ -1567,11 +1580,65 @@ class MainWindow(QtGui.QMainWindow):
             self._stageView.update()
 
     def _adjustClippingPlanes(self, checked):
-        if (not checked):
-            self._adjustClipping.accept()
+        if (checked):
+            self._adjustClippingDlg = adjustClipping.AdjustClipping(self, 
+                                                                 self._stageView)
+            QtCore.QObject.connect(self._adjustClippingDlg,
+                                   QtCore.SIGNAL('finished(int)'),
+                                   lambda status : self._ui.actionAdjust_Clipping.setChecked(False))
+
+            self._adjustClippingDlg.show()
         else:
-            self._adjustClipping = adjustClipping.AdjustClipping(self)
-            self._adjustClipping.show()
+            self._adjustClippingDlg.close()
+
+    @property
+    def xformCache(self):
+        return self._xformCache
+
+    @property
+    def bboxCache(self):
+        return self._bboxCache
+
+    @property
+    def defaultMaterialAmbient(self):
+        return self._defaultMaterialAmbient
+
+    @defaultMaterialAmbient.setter
+    def defaultMaterialAmbient(self, value):
+        if value != self._defaultMaterialAmbient:
+            self._defaultMaterialAmbient = value
+            self._settings.setAndSave(DefaultMaterialAmbient=value)
+            self.signalDefaultMaterialChanged.emit()
+
+    @property
+    def defaultMaterialSpecular(self):
+        return self._defaultMaterialSpecular
+
+    @defaultMaterialSpecular.setter
+    def defaultMaterialSpecular(self, value):
+        if value != self._defaultMaterialSpecular:
+            self._defaultMaterialSpecular = value
+            self._settings.setAndSave(DefaultMaterialSpecular=value)
+            self.signalDefaultMaterialChanged.emit()
+
+    def ResetDefaultMaterialSettings(self, store=True):
+        self._defaultMaterialAmbient = .2
+        self._defaultMaterialSpecular = .1
+        if store:
+            self._settings.setAndSave(DefaultMaterialAmbient=self._defaultMaterialAmbient)
+            self._settings.setAndSave(DefaultMaterialSpecular=self._defaultMaterialSpecular)
+        self.signalDefaultMaterialChanged.emit()
+        
+    def _adjustDefaultMaterial(self, checked):
+        if (checked):
+            self._adjustDefaultMaterialDlg = adjustDefaultMaterial.AdjustDefaultMaterial(self, self)
+            QtCore.QObject.connect(self._adjustDefaultMaterialDlg,
+                                   QtCore.SIGNAL('finished(int)'),
+                                   lambda status : self._ui.actionAdjust_Default_Material.setChecked(False))
+
+            self._adjustDefaultMaterialDlg.show()
+        else:
+            self._adjustDefaultMaterialDlg.close()
 
     def _redrawOptionToggled(self, checked):
         self._settings.setAndSave(RedrawOnScrub=checked)
@@ -1819,7 +1886,7 @@ class MainWindow(QtGui.QMainWindow):
                                              self._displayPredicate)
                    if isMatch(prim.GetName())]
 
-        showMasters = self._ui.actionShow_Master_Prims.isChecked()
+        showMasters = self._ui.actionShow_All_Master_Prims.isChecked()
         if showMasters:
             for master in self._stage.GetMasters():
                 matches += [prim.GetPath() for prim
@@ -1981,10 +2048,11 @@ class MainWindow(QtGui.QMainWindow):
     def _resetSettings(self):
         """Reloads the UI and Sets up the initial settings for the 
         _stageView object created in _reloadVaryingUI"""
+        
         self._ui.actionShow_Inactive_Nodes.setChecked(\
                         self._settings.get("actionShow_Inactive_Nodes", True))
-        self._ui.actionShow_Master_Prims.setChecked(\
-                        self._settings.get("actionShow_Master_Prims", False))
+        self._ui.actionShow_All_Master_Prims.setChecked(\
+                        self._settings.get("actionShow_All_Master_Prims", False))
         self._ui.actionShow_Undefined_Prims.setChecked(\
                         self._settings.get("actionShow_Undefined_Prims", False))
         self._ui.actionShow_Abstract_Prims.setChecked(\
@@ -2313,12 +2381,10 @@ class MainWindow(QtGui.QMainWindow):
 
     def _setUseExtentsHint(self, state):
         self._bboxCache = UsdGeom.BBoxCache(self._currentFrame, 
-                                            stageView.BBOXPURPOSES, 
+                                            stageView.StageView.DefaultDataModel.BBOXPURPOSES, 
                                             useExtentsHint=state)
 
-        if self._stageView:
-            self._stageView.bboxCache = self._bboxCache
-            self._updateAttributeView()
+        self._updateAttributeView()
 
         #recompute and display bbox
         self._refreshBBox()
@@ -2430,7 +2496,7 @@ class MainWindow(QtGui.QMainWindow):
         '''Returns a QImage of the full usdview window '''
         # generate an image of the window. Due to how Qt's rendering
         # works, this will not pick up the GL Widget(_stageView)'s 
-        # contents, and well need to compose it separately.
+        # contents, and we'll need to compose it separately.
         windowShot = QtGui.QImage(self.size(), 
                                   QtGui.QImage.Format_ARGB32_Premultiplied)
         painter = QtGui.QPainter(windowShot)
@@ -2765,8 +2831,8 @@ class MainWindow(QtGui.QMainWindow):
         self._resetNodeView()
 
     def _toggleShowMasterPrims(self):
-        self._settings.setAndSave(actionShow_Master_Prims = 
-                self._ui.actionShow_Master_Prims.isChecked())
+        self._settings.setAndSave(actionShow_All_Master_Prims = 
+                self._ui.actionShow_All_Master_Prims.isChecked())
         self._resetNodeView()
 
     def _toggleShowUndefinedPrims(self):
@@ -2845,7 +2911,7 @@ class MainWindow(QtGui.QMainWindow):
         showInactive = self._ui.actionShow_Inactive_Nodes.isChecked()
         showUndefined = self._ui.actionShow_Undefined_Prims.isChecked()
         showAbstract = self._ui.actionShow_Abstract_Prims.isChecked()
-        showMasters = self._ui.actionShow_Master_Prims.isChecked()
+        showMasters = self._ui.actionShow_All_Master_Prims.isChecked()
         
         return ((prim.IsActive() or showInactive) and
                 (prim.IsDefined() or showUndefined) and
@@ -2858,7 +2924,7 @@ class MainWindow(QtGui.QMainWindow):
         rootItem = self._populateItem(rootNode)
         self._populateChildren(rootItem)
 
-        showMasters = self._ui.actionShow_Master_Prims.isChecked()
+        showMasters = self._ui.actionShow_All_Master_Prims.isChecked()
         if showMasters:
             self._populateChildren(rootItem,
                                    childrenToAdd=self._stage.GetMasters())
@@ -2875,7 +2941,7 @@ class MainWindow(QtGui.QMainWindow):
         showInactive = self._ui.actionShow_Inactive_Nodes.isChecked()
         showUndefined = self._ui.actionShow_Undefined_Prims.isChecked()
         showAbstract = self._ui.actionShow_Abstract_Prims.isChecked()
-        showMasters = self._ui.actionShow_Master_Prims.isChecked()
+        showMasters = self._ui.actionShow_All_Master_Prims.isChecked()
 
         self._displayPredicate = None
 
@@ -2893,6 +2959,10 @@ class MainWindow(QtGui.QMainWindow):
                 else self._displayPredicate & ~Usd.PrimIsAbstract
         if self._displayPredicate is None:
             self._displayPredicate = Usd._PrimFlagsPredicate.Tautology()
+            
+        # Unless user experience indicates otherwise, we think we always
+        # want to show instance proxies
+        self._displayPredicate = Usd.TraverseInstanceProxies(self._displayPredicate)
 
 
     def _getItemAtPath(self, path, ensureExpanded=False):
@@ -3176,6 +3246,10 @@ class MainWindow(QtGui.QMainWindow):
 
             self._currentFrame = closestFrame
 
+        # XXX Why do we *always* update the widget, but only
+        # conditionally update?  All this function should do, after
+        # computing a new frame number, is emit a signal that the 
+        # time has changed.  Future work.
         self._ui.frameField.setText(str(round(self._currentFrame,2)))
 
         if self._currentFrame != frameAtStart or forceUpdate:
@@ -3904,7 +3978,6 @@ class MainWindow(QtGui.QMainWindow):
         anyBoundMaterials = False
         anyActive = False
         anyInactive = False
-        anyInstances = False
         for prim in self._currentNodes:
             if prim.IsA(UsdGeom.Imageable):
                 imageable = UsdGeom.Imageable(prim)
@@ -3913,7 +3986,6 @@ class MainWindow(QtGui.QMainWindow):
             anyModels = anyModels or GetEnclosingModelPrim(prim) is not None
             material, bound = GetClosestBoundMaterial(prim)
             anyBoundMaterials = anyBoundMaterials or material is not None
-            anyInstances = anyInstances or prim.IsInstance()
             if prim.IsActive():
                 anyActive = True
             else:
@@ -3921,7 +3993,6 @@ class MainWindow(QtGui.QMainWindow):
 
         self._ui.actionJump_to_Model_Root.setEnabled(anyModels)
         self._ui.actionJump_to_Bound_Material.setEnabled(anyBoundMaterials)
-        self._ui.actionJump_to_Master.setEnabled(anyInstances)
 
         self._ui.actionRemove_Session_Visibility.setEnabled(removeEnabled)
         self._ui.actionMake_Visible.setEnabled(anyImageable)
@@ -3971,26 +4042,6 @@ class MainWindow(QtGui.QMainWindow):
                 newSel.append(material)
         self._setSelectionFromPrimList(newSel)
 
-    def jumpToMasterSelectedPrims(self):
-        foundMasters = False
-        newSel = []
-        added = set()
-        # We don't expect this to take long, so no BusyContext
-        for prim in self._currentNodes:
-            if prim.IsInstance():
-                prim = prim.GetMaster()
-                foundMasters = True
-            if not (prim in added):
-                added.add(prim)
-                newSel.append(prim)
-
-        showMasters = self._ui.actionShow_Master_Prims.isChecked()
-        if foundMasters and not showMasters:
-            self._ui.actionShow_Master_Prims.setChecked(True)
-            self._toggleShowMasterPrims()
-
-        self._setSelectionFromPrimList(newSel)
-        
     def visSelectedPrims(self):
         with BusyContext():
             for item in self.getSelectedItems():
