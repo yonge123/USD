@@ -60,7 +60,7 @@ public:
             const MDagPath& iDag,
             const SdfPath& uPath,
             bool instanceSource,
-            usdWriteJobCtx& job,
+            usdWriteJobCtx& jobCtx,
             WriterFn plugFn);
 
     PXRUSDMAYA_API
@@ -84,7 +84,7 @@ public:
             const MDagPath& dag,
             const SdfPath& path,
             bool instanceSource,
-            usdWriteJobCtx& job,
+            usdWriteJobCtx& jobCtx,
             WriterFn plugFn);
 
     PXRUSDMAYA_API

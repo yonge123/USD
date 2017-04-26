@@ -236,6 +236,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
                             mDagPathToUsdPathMap[xformDag] = usdPrim.GetPath();
                         }
                     }
+
+                     mModelKindWriter.OnWritePrim(usdPrim, primWriter);
                 }
 
                 if (primWriter->shouldPruneChildren()) {

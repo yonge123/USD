@@ -32,9 +32,9 @@ FunctorPrimWriter::FunctorPrimWriter(
         const MDagPath& iDag,
         const SdfPath& uPath,
         bool instanceSource,
-        usdWriteJobCtx& job,
+        usdWriteJobCtx& jobCtx,
         WriterFn plugFn) :
-    MayaTransformWriter(iDag, uPath, instanceSource, job),
+    MayaTransformWriter(iDag, uPath, instanceSource, jobCtx),
     _plugFn(plugFn),
     _exportsGprims(false),
     _exportsReferences(false),
@@ -97,10 +97,10 @@ FunctorPrimWriter::Create(
     const MDagPath& dag,
     const SdfPath& path,
     bool instanceSource,
-    usdWriteJobCtx& job,
+    usdWriteJobCtx& jobCtx,
     WriterFn plugFn)
 {
-    return MayaPrimWriterPtr(new FunctorPrimWriter(dag, path, instanceSource, job, plugFn));
+    return MayaPrimWriterPtr(new FunctorPrimWriter(dag, path, instanceSource, jobCtx, plugFn));
 }
 
 /* static */

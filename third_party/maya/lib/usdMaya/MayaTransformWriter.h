@@ -62,7 +62,7 @@ class MayaTransformWriter : public MayaPrimWriter
   public:
 
     PXRUSDMAYA_API
-    MayaTransformWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& job);
+    MayaTransformWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx);
     virtual ~MayaTransformWriter() {};
 
     PXRUSDMAYA_API

@@ -55,8 +55,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 MayaPrimWriter::MayaPrimWriter(const MDagPath& iDag,
                                const SdfPath& uPath,
-                               usdWriteJobCtx& job) :
-    mJob(job),
+                               usdWriteJobCtx& jobCtx) :
+    mWriteJobCtx(jobCtx),
     mDagPath(iDag),
     mUsdPath(uPath),
     mIsValid(true)
@@ -70,7 +70,7 @@ MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime,
     MFnDependencyNode depFn(getDagPath().node());
     MFnDependencyNode depFnT(dagT.node()); // optionally also scan a shape's transform if merging transforms
 
-    if (mJob.getArgs().exportVisibility) {
+    if (mWriteJobCtx.getArgs().exportVisibility) {
         bool isVisible  = true;   // if BOTH shape or xform is animated, then visible
         bool isAnimated = false;  // if either shape or xform is animated, then animated
 
