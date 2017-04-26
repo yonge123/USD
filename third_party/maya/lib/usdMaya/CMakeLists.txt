@@ -73,8 +73,7 @@ pxr_shared_library(${PXR_PACKAGE}
         usdImport
         usdExport
         usdListShadingModes
-        usdTranslatorExport
-        usdTranslatorImport
+        usdTranslator
 
         Chaser
         ChaserRegistry
@@ -155,6 +154,7 @@ pxr_shared_library(${PXR_PACKAGE}
         out_pxrUsdProxyShape.xpm
         out_pxrUsdReferenceAssembly.xpm
         usdMaya.mel
+        usdTranslator.mel
         usdTranslatorExport.mel
         usdTranslatorImport.mel
 

@@ -34,8 +34,7 @@
 #include "usdMaya/usdImport.h"
 #include "usdMaya/usdExport.h"
 #include "usdMaya/usdListShadingModes.h"
-#include "usdMaya/usdTranslatorImport.h"
-#include "usdMaya/usdTranslatorExport.h"
+#include "usdMaya/usdTranslator.h"
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -156,30 +155,19 @@ MStatus initializePlugin(
         status.perror("registerCommand usdListShadingModes");
     }
     
-    status = plugin.registerFileTranslator("pxrUsdImport", 
+    status = plugin.registerFileTranslator("pxrUsd", 
                                     "", 
                                     []() { 
-                                        return usdTranslatorImport::creator(
+                                        return usdTranslator::creator(
                                             _data.referenceAssembly.typeName.asChar(),
                                             _data.proxyShape.typeName.asChar());
                                     }, 
-                                    "usdTranslatorImport", // options script name
-                                    const_cast<char*>(usdTranslatorImportDefaults), 
+                                    "usdTranslator", // options script name
+                                    const_cast<char*>(usdTranslatorDefaults),
                                     false);
 
     if (!status) {
-        status.perror("pxrUsd: unable to register USD Import translator.");
-    }
-    
-    status = plugin.registerFileTranslator("pxrUsdExport", 
-                                    "", 
-                                    usdTranslatorExport::creator,
-                                    "usdTranslatorExport", // options script name
-                                    const_cast<char*>(usdTranslatorExportDefaults), 
-                                    true);
-
-    if (!status) {
-        status.perror("pxrUsd: unable to register USD Export translator.");
+        status.perror("pxrUsd: unable to register USD translator.");
     }
 
     return status;
@@ -201,14 +189,9 @@ MStatus uninitializePlugin(
         status.perror("deregisterCommand usdExport");
     }
 
-    status = plugin.deregisterFileTranslator("pxrUsdImport");
+    status = plugin.deregisterFileTranslator("pxrUsd");
     if (!status) {
-        status.perror("pxrUsd: unable to deregister USD Import translator.");
-    }
-
-    status = plugin.deregisterFileTranslator("pxrUsdExport");
-    if (!status) {
-        status.perror("pxrUsd: unable to deregister USD Export translator.");
+        status.perror("pxrUsd: unable to deregister USD translator.");
     }
 
     status = plugin.deregisterFileTranslator("usdListShadingModes");
