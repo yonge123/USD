@@ -30,6 +30,7 @@
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
 #include "usdMaya/MayaTransformWriter.h"
 #include "usdMaya/MayaCameraWriter.h"
+#include "usdMaya/MayaImagePlaneWriter.h"
 
 #include "usdMaya/translatorMaterial.h"
 #include "usdMaya/primWriterRegistry.h"
@@ -581,6 +582,13 @@ bool usdWriteJob::createPrimWriter(
         }
         MayaCameraWriterPtr primPtr(new MayaCameraWriter(curDag, mStage, mArgs));
         if (primPtr->isValid() ) {
+            *primWriterOut = primPtr;
+            return true;
+        }
+    }
+    else if (ob.hasFn(MFn::kImagePlane)) {
+        MayaImagePlaneWriterPtr primPtr(new MayaImagePlaneWriter(curDag, mStage, mArgs));
+        if (primPtr->isValid()) {
             *primWriterOut = primPtr;
             return true;
         }

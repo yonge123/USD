@@ -294,6 +294,158 @@ public:
 
 public:
     // --------------------------------------------------------------------- //
+    // USEFRAMEEXTENSION 
+    // --------------------------------------------------------------------- //
+    /// Using frame extension
+    ///
+    /// \n  C++ Type: bool
+    /// \n  Usd Type: SdfValueTypeNames->Bool
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: False
+    UsdAttribute GetUseFrameExtensionAttr() const;
+
+    /// See GetUseFrameExtensionAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateUseFrameExtensionAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // FRAMEOFFSET 
+    // --------------------------------------------------------------------- //
+    /// Frame offset
+    ///
+    /// \n  C++ Type: int
+    /// \n  Usd Type: SdfValueTypeNames->Int
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: 0
+    UsdAttribute GetFrameOffsetAttr() const;
+
+    /// See GetFrameOffsetAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateFrameOffsetAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // FRAMECACHE 
+    // --------------------------------------------------------------------- //
+    /// Precached frame count
+    ///
+    /// \n  C++ Type: int
+    /// \n  Usd Type: SdfValueTypeNames->Int
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: 45
+    UsdAttribute GetFrameCacheAttr() const;
+
+    /// See GetFrameCacheAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateFrameCacheAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // WIDTH 
+    // --------------------------------------------------------------------- //
+    /// Width
+    ///
+    /// \n  C++ Type: float
+    /// \n  Usd Type: SdfValueTypeNames->Float
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: 0.0
+    UsdAttribute GetWidthAttr() const;
+
+    /// See GetWidthAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateWidthAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // HEIGHT 
+    // --------------------------------------------------------------------- //
+    /// Height
+    ///
+    /// \n  C++ Type: float
+    /// \n  Usd Type: SdfValueTypeNames->Float
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: 0.0
+    UsdAttribute GetHeightAttr() const;
+
+    /// See GetHeightAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateHeightAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // ALPHAGAIN 
+    // --------------------------------------------------------------------- //
+    /// Alpha Gain
+    ///
+    /// \n  C++ Type: float
+    /// \n  Usd Type: SdfValueTypeNames->Float
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: 1.0
+    UsdAttribute GetAlphaGainAttr() const;
+
+    /// See GetAlphaGainAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateAlphaGainAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // DEPTH 
+    // --------------------------------------------------------------------- //
+    /// Depth
+    ///
+    /// \n  C++ Type: float
+    /// \n  Usd Type: SdfValueTypeNames->Float
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: 100.0
+    UsdAttribute GetDepthAttr() const;
+
+    /// See GetDepthAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateDepthAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // SQUEEZECORRECTION 
+    // --------------------------------------------------------------------- //
+    /// Squeeze Correction
+    ///
+    /// \n  C++ Type: float
+    /// \n  Usd Type: SdfValueTypeNames->Float
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: 1.0
+    UsdAttribute GetSqueezeCorrectionAttr() const;
+
+    /// See GetSqueezeCorrectionAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    UsdAttribute CreateSqueezeCorrectionAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
     // CAMERA 
     // --------------------------------------------------------------------- //
     /// Link to the camera from where aperture sizes are queried.
@@ -309,7 +461,7 @@ public:
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 
     //
-    // Just remember to close the class delcaration with }; and complete the
+    // Just remember to close the class declaration with }; and complete the
     // include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
