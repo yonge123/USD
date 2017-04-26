@@ -85,6 +85,8 @@ pxr_shared_library(${PXR_PACKAGE}
 
         UserTaggedAttribute
 
+        ArnoldShaderExport
+
     PRIVATE_CLASSES
         debugCodes
         registryHelper
