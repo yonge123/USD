@@ -42,6 +42,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \hideinitializer
 #define USDGEOM_TOKENS \
     (all) \
+    (alphaGain) \
     (alwaysSharp) \
     (angularVelocities) \
     (axis) \
@@ -73,6 +74,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (cubic) \
     (curveVertexCounts) \
     ((default_, "default")) \
+    (depth) \
     (doubleSided) \
     (edgeAndCorner) \
     (edgeOnly) \
@@ -90,6 +92,8 @@ PXR_NAMESPACE_OPEN_SCOPE
     (focalLength) \
     (focusDistance) \
     (frame) \
+    (frameCache) \
+    (frameOffset) \
     (fStop) \
     (fullGeom) \
     (guide) \
@@ -148,6 +152,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     ((shutterClose, "shutter:close")) \
     ((shutterOpen, "shutter:open")) \
     (size) \
+    (squeezeCorrection) \
     (stereoRole) \
     (subdivisionScheme) \
     ((toSize, "to size")) \
@@ -165,6 +170,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (uOrder) \
     (upAxis) \
     (uRange) \
+    (useFrameExtension) \
     (uVertexCount) \
     (varying) \
     (velocities) \
@@ -178,6 +184,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (vOrder) \
     (vRange) \
     (vVertexCount) \
+    (width) \
     (widths) \
     (wrap) \
     ((x, "X")) \
@@ -206,6 +213,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///
 /// The tokens are:
 /// \li <b>all</b> - Possible value for UsdGeomMesh::GetFaceVaryingLinearInterpolationAttr()
+/// \li <b>alphaGain</b> - UsdGeomImagePlane
 /// \li <b>alwaysSharp</b> - Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->boundaries.
 /// \li <b>angularVelocities</b> - UsdGeomPointInstancer
 /// \li <b>axis</b> - UsdGeomCone, UsdGeomCapsule, UsdGeomCylinder
@@ -237,6 +245,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \li <b>cubic</b> - Possible value for UsdGeomBasisCurves::GetTypeAttr(), Default value for UsdGeomBasisCurves::GetTypeAttr()
 /// \li <b>curveVertexCounts</b> - UsdGeomCurves
 /// \li <b>default_</b> - Possible value for UsdGeomImageable::GetPurposeAttr(), Default value for UsdGeomImageable::GetPurposeAttr()
+/// \li <b>depth</b> - UsdGeomImagePlane
 /// \li <b>doubleSided</b> - UsdGeomGprim
 /// \li <b>edgeAndCorner</b> - Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->cornersPlus1, Possible value for UsdGeomMesh::GetInterpolateBoundaryAttr(), Default value for UsdGeomMesh::GetInterpolateBoundaryAttr()
 /// \li <b>edgeOnly</b> - Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->none., Possible value for UsdGeomMesh::GetInterpolateBoundaryAttr()
@@ -254,10 +263,12 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \li <b>focalLength</b> - UsdGeomCamera
 /// \li <b>focusDistance</b> - UsdGeomCamera
 /// \li <b>frame</b> - UsdGeomImagePlane
+/// \li <b>frameCache</b> - UsdGeomImagePlane
+/// \li <b>frameOffset</b> - UsdGeomImagePlane
 /// \li <b>fStop</b> - UsdGeomCamera
 /// \li <b>fullGeom</b> - Possible value for UsdGeomPointInstancer::GetPrototypeDrawModeAttr(), Default value for UsdGeomPointInstancer::GetPrototypeDrawModeAttr()
 /// \li <b>guide</b> - Possible value for UsdGeomImageable::GetPurposeAttr()
-/// \li <b>height</b> - UsdGeomCone, UsdGeomCapsule, UsdGeomCylinder
+/// \li <b>height</b> - UsdGeomCone, UsdGeomCapsule, UsdGeomCylinder, UsdGeomImagePlane
 /// \li <b>hermite</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr()
 /// \li <b>holeIndices</b> - UsdGeomMesh
 /// \li <b>horizontal</b> - Possible value for UsdGeomImagePlane::GetFitAttr()
@@ -312,6 +323,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \li <b>shutterClose</b> - UsdGeomCamera
 /// \li <b>shutterOpen</b> - UsdGeomCamera
 /// \li <b>size</b> - UsdGeomCube, UsdGeomImagePlane
+/// \li <b>squeezeCorrection</b> - UsdGeomImagePlane
 /// \li <b>stereoRole</b> - UsdGeomCamera
 /// \li <b>subdivisionScheme</b> - UsdGeomMesh
 /// \li <b>toSize</b> - Possible value for UsdGeomImagePlane::GetFitAttr()
@@ -329,6 +341,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \li <b>uOrder</b> - UsdGeomNurbsPatch
 /// \li <b>upAxis</b> - Stage-level metadata that encodes a scene's orientation as a token whose value can be "Y" or "Z".
 /// \li <b>uRange</b> - UsdGeomNurbsPatch
+/// \li <b>useFrameExtension</b> - UsdGeomImagePlane
 /// \li <b>uVertexCount</b> - UsdGeomNurbsPatch
 /// \li <b>varying</b> - Possible value for UsdGeomPrimvar::SetInterpolation. Four values are interpolated over each uv patch segment of the  surface. Bilinear interpolation is used for interpolation  between the four values.
 /// \li <b>velocities</b> - UsdGeomPointInstancer, UsdGeomPointBased
@@ -342,6 +355,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \li <b>vOrder</b> - UsdGeomNurbsPatch
 /// \li <b>vRange</b> - UsdGeomNurbsPatch
 /// \li <b>vVertexCount</b> - UsdGeomNurbsPatch
+/// \li <b>width</b> - UsdGeomImagePlane
 /// \li <b>widths</b> - UsdGeomPoints, UsdGeomCurves
 /// \li <b>wrap</b> - UsdGeomBasisCurves
 /// \li <b>x</b> - Possible value for UsdGeomCone::GetAxisAttr(), Possible value for UsdGeomCapsule::GetAxisAttr(), Possible value for UsdGeomCylinder::GetAxisAttr()
