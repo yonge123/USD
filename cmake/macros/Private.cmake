@@ -101,6 +101,13 @@ function(_pxrNamespace_subst)
     )
 endfunction()
 
+# Generate a doxygen config file
+function(_pxrDoxyConfig_subst)
+    configure_file(${CMAKE_SOURCE_DIR}/pxr/usd/lib/usd/Doxyfile.in
+                   ${CMAKE_BINARY_DIR}/Doxyfile
+    )  
+endfunction()
+
 # Install compiled python files alongside the python object,
 # e.g. lib/python/pxr/Ar/__init__.pyc
 function(_install_python LIBRARY_NAME)
@@ -343,7 +350,7 @@ function(_append_to_rpath orig_rpath new_rpath output)
     string(REGEX REPLACE "/+$" "" new_rpath ${new_rpath})
     string(FIND ${orig_rpath} ${new_rpath} rpath_exists)
     if (rpath_exists EQUAL -1)
-        set(${output} "${orig_rpath}:${new_rpath}" PARENT_SCOPE)
+        set(${output} "${orig_rpath};${new_rpath}" PARENT_SCOPE)
     endif()
 endfunction() # _add_to_rpath
 
