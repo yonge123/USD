@@ -8,7 +8,7 @@ if(WIN32)
     set(WINLIBS Shlwapi.lib)
 endif()
 
-add_definitions(-DUSD_PYTHON_EXECUTABLE_STR=\"${PYTHON_EXECUTABLE}\")
+add_definitions(-DPXR_PYTHON_EXECUTABLE_STR=\"${PYTHON_EXECUTABLE}\")
 
 pxr_shared_library(tf
     LIBRARIES
@@ -19,7 +19,6 @@ pxr_shared_library(tf
         ${Boost_IOSTREAMS_LIBRARY}
         ${Boost_DATE_TIME_LIBRARY}
         ${TBB_tbb_LIBRARY}
-        ${TBB_tbbmalloc_LIBRARY}
 
     INCLUDE_DIRS
         ${PYTHON_INCLUDE_DIR}
