@@ -62,6 +62,7 @@
 #include <maya/MObject.h>
 #include <maya/MPlug.h>
 #include <maya/MString.h>
+#include <maya/MFileIO.h>
 
 #include <map>
 #include <string>
@@ -691,5 +692,39 @@ PxrUsdMayaTranslatorModelAssembly::ReadAsProxy(
     return true;
 }
 
-PXR_NAMESPACE_CLOSE_SCOPE
+/* static */
+bool
+PxrUsdMayaTranslatorModelAssembly::CreateNativeMayaRef(
+    const UsdPrim& prim,
+    const std::string& mayaFilePath,
+    PxrUsdMayaPrimReaderContext& context)
+{
+    MStatus status;
 
+    // TODO: implement proper grouping / parenting
+    std::string nameSpace = PxrUsdMayaTranslatorUtil::GetNamespace(prim.GetPath(),
+                                                                   false);
+
+    if (!PxrUsdMayaTranslatorUtil::CreateParentNamespace(nameSpace))
+    {
+        std::string errorMsg = TfStringPrintf(
+                "Error creating parent namespace of: \"%s\"",
+                nameSpace.c_str());
+        MGlobal::displayError(errorMsg.c_str());
+        return false;
+    }
+    MFileIO::reference(mayaFilePath.c_str(), false, false, nameSpace.c_str());
+
+    // We currently always prune, regardless of the mstatus result of this command,
+    // because maya often has errors loading scenes even when they "mostly" load
+    // correctly, and we don't want to bring in the usd-standin version of the
+    // scene in these situations.
+
+    // When we implement proper grouping / parenting, this function may return
+    // false in some situations...
+
+    context.SetPruneChildren(true);
+    return true;
+}
+
+PXR_NAMESPACE_CLOSE_SCOPE

@@ -25,8 +25,10 @@
 #include "usdMaya/referenceAssembly.h"
 
 #include "usdMaya/util.h"
+#include "usdMaya/usdReadJob.h"
 
 #include "pxr/base/tf/pyContainerConversions.h"
+#include "pxr/base/tf/pyStaticTokens.h"
 
 #include <maya/MFnAssembly.h>
 #include <maya/MObject.h>
@@ -72,4 +74,6 @@ void wrapAssembly()
     def("GetVariantSetSelections",
         &_GetVariantSetSelections,
         arg("assemblyName"));
+
+    scope().attr("MAYA_NATIVE_FILE_REF_ATTR") = MAYA_NATIVE_FILE_REF_ATTR.GetText();
 }
