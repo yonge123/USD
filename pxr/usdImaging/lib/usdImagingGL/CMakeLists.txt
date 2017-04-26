@@ -28,7 +28,6 @@ pxr_shared_library(usdImagingGL
         ${OPENGL_glu_LIBRARY}
         ${GLEW_LIBRARY}
         ${TBB_tbb_LIBRARY}
-        ${TBB_tbbmalloc_LIBRARY}
 
     INCLUDE_DIRS
         ${PYTHON_INCLUDE_PATH}
@@ -45,6 +44,7 @@ pxr_shared_library(usdImagingGL
 
     PUBLIC_HEADERS
         api.h
+        version.h
 
     PRIVATE_HEADERS
         unitTestGLDrawing.h

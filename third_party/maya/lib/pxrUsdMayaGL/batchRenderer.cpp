@@ -64,6 +64,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     (selectionTask)
     (simpleLightTask)
     (camera)
+    (render)
 );
 
 TF_REGISTRY_FUNCTION(TfDebug)
@@ -159,14 +160,15 @@ UsdMayaGLBatchRenderer::ShapeRenderer::PrepareForQueue(
 
     // XXX Not yet adding ability to turn off display of proxy geometry, but
     // we should at some point, as in usdview
-    if( showGuides )
-        _baseParams.geometryCol =
-            showRenderGuides ? UsdImagingCollectionTokens->geometryAllPurposes
-                             : UsdImagingCollectionTokens->geometryAndProxyAndGuides;
-    else
-        _baseParams.geometryCol =
-            showRenderGuides ? UsdImagingCollectionTokens->geometryAndProxyAndRender
-                             : UsdImagingCollectionTokens->geometryAndProxy;
+    _baseParams.renderTags.clear();
+    _baseParams.renderTags.push_back(HdTokens->geometry);
+    _baseParams.renderTags.push_back(HdTokens->proxy);
+    if (showGuides) {
+        _baseParams.renderTags.push_back(HdTokens->guide);
+    } 
+    if (showRenderGuides) {
+        _baseParams.renderTags.push_back(_tokens->render);
+    }
     
     if( tint )
         _baseParams.overrideColor = tintColor;
@@ -501,6 +503,10 @@ UsdMayaGLBatchRenderer::TaskDelegate::TaskDelegate(
 
     // camera
     {
+        // Since we're hardcoded to use HdStRenderDelegate, we expect to
+        // have camera Sprims.
+        TF_VERIFY(renderIndex->IsSprimTypeSupported(HdPrimTypeTokens->camera));
+
         renderIndex->InsertSprim(HdPrimTypeTokens->camera, this, _cameraId);
         _ValueCache &cache = _valueCacheMap[_cameraId];
         cache[HdStCameraTokens->matrices] = VtValue(HdStCameraMatrices());
@@ -631,6 +637,10 @@ UsdMayaGLBatchRenderer::TaskDelegate::_SetLightingStateFromLightingContext()
                            (int)_lightIds.size()));
         _lightIds.push_back(lightId);
 
+        // Since we're hardcoded to use HdStRenderDelegate, we expect to have
+        // light Sprims.
+        TF_VERIFY(GetRenderIndex().IsSprimTypeSupported(HdPrimTypeTokens->light));
+
         GetRenderIndex().InsertSprim(HdPrimTypeTokens->light, this, lightId);
         hasNumLightsChanged = true;
     }
@@ -706,6 +716,7 @@ UsdMayaGLBatchRenderer::TaskDelegate::GetRenderTask(
     TfToken colName = renderParams.geometryCol;
     HdRprimCollection rprims(colName, renderParams.drawRepr);
     rprims.SetRootPaths(roots);
+    rprims.SetRenderTags(renderParams.renderTags);
 
     // update value cache
     _SetValue(renderTaskId, HdTokens->collection, rprims);
@@ -1026,9 +1037,11 @@ UsdMayaGLBatchRenderer::_GetHitInfo(
             TfToken colName = renderParams.geometryCol;
             HdRprimCollection rprims(colName, renderParams.drawRepr);
             rprims.SetRootPaths(roots);
+            rprims.SetRenderTags(renderParams.renderTags);
 
             qparams.cullStyle = renderParams.cullStyle;
-            
+            qparams.renderTags = renderParams.renderTags;
+
             HdxIntersector::Result result;
             HdxIntersector::HitVector hits;
 

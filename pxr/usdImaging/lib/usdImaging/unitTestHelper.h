@@ -56,11 +56,13 @@ public:
     UsdImaging_TestDriver(std::string const& usdFilePath);
     UsdImaging_TestDriver(std::string const& usdFilePath,
                           TfToken const &collectioName,
-                          TfToken const &reprName);
+                          TfToken const &reprName,
+                          TfTokenVector const &renderTags);
     UsdImaging_TestDriver(UsdStageRefPtr const& usdStage);
     UsdImaging_TestDriver(UsdStageRefPtr const& usdStage,
                           TfToken const &collectioName,
-                          TfToken const &reprName);
+                          TfToken const &reprName,
+                          TfTokenVector const &renderTags);
 
     ~UsdImaging_TestDriver();
 
@@ -98,9 +100,25 @@ private:
 
     void _Init(UsdStageRefPtr const& usdStage,
                TfToken const &collectionName,
-               TfToken const &reprName);
+               TfToken const &reprName,
+               TfTokenVector const &renderTags);
 };
 
+/// A simple drawing task that just executes a render pass.
+class UsdImaging_DrawTask final : public HdTask
+{
+public:
+    UsdImaging_DrawTask(HdRenderPassSharedPtr const &renderPass,
+                        HdRenderPassStateSharedPtr const &renderPassState);
+
+protected:
+    virtual void _Sync(HdTaskContext* ctx) override;
+    virtual void _Execute(HdTaskContext* ctx) override;
+
+private:
+    HdRenderPassSharedPtr _renderPass;
+    HdRenderPassStateSharedPtr _renderPassState;
+};
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
