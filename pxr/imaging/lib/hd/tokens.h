@@ -64,6 +64,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (faceColors)                                \
     (geometry)                                  \
     (guide)                                     \
+    (hidden)                                    \
     (hull)                                      \
     (hullIndices)                               \
     (indices)                                   \
@@ -119,6 +120,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (wireOnSurf)
 
 #define HD_PERF_TOKENS                          \
+    (adjacencyBufSize)                          \
     (basisCurvesTopology)                       \
     (bufferSourcesResolved)                     \
     (bufferArrayRangeMerged)                    \
