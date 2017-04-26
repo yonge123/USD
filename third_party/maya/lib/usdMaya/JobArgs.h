@@ -160,11 +160,18 @@ struct JobImportArgs : JobSharedArgs
 
     void parseSingleOption(const MStringArray& theOption);
 
+    void setJoinedParentRefPaths(const std::string& joinedRefPaths);
+
     std::string primPath;
     TfToken assemblyRep;
     bool readAnimData;
     bool useCustomFrameRange;
     bool importWithProxyShapes;
+    // If true, will use maya assemblies for usd sub-references; if false, will
+    // use maya references
+    bool useAssemblies;
+    std::string parentNode;
+    std::vector<std::string> parentRefPaths;
 };
 
 
