@@ -20,6 +20,7 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
         mIsShapeAnimated = PxrUsdMayaUtil::isAnimated(obj);
     }
 
+    // TODO inherit from the TransformWriter and handle it like the other shapes
     if (getArgs().mergeTransformAndShape) {
         // the path will always look like :
         // camera transform -> camera shape -> image plane transform -> image plane shape
@@ -63,6 +64,12 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
             setUsdPath(usdPath);
         }
     }
+
+    UsdGeomImagePlane primSchema =
+        UsdGeomImagePlane::Define(getUsdStage(), getUsdPath());
+    TF_AXIOM(primSchema);
+    mUsdPrim = primSchema.GetPrim();
+    TF_AXIOM(mUsdPrim);
 }
 
 void MayaImagePlaneWriter::write(const UsdTimeCode& usdTime) {
