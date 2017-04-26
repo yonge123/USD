@@ -7,21 +7,11 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-namespace {
-    enum {
-        IMAGE_PLANE_FIT_FILL,
-        IMAGE_PLANE_FIT_BEST,
-        IMAGE_PLANE_FIT_HORIZONTAL,
-        IMAGE_PLANE_FIT_VERTICAL,
-        IMAGE_PLANE_FIT_TO_SIZE
-    };
-
-    const TfToken image_plane_fill("fill");
-    const TfToken image_plane_best("best");
-    const TfToken image_plane_horizontal("horizontal");
-    const TfToken image_plane_vertical("vertical");
-    const TfToken image_plane_to_size("to size");
-}
+const TfToken MayaImagePlaneWriter::image_plane_fill("fill");
+const TfToken MayaImagePlaneWriter::image_plane_best("best");
+const TfToken MayaImagePlaneWriter::image_plane_horizontal("horizontal");
+const TfToken MayaImagePlaneWriter::image_plane_vertical("vertical");
+const TfToken MayaImagePlaneWriter::image_plane_to_size("to size");
 
 MayaImagePlaneWriter::MayaImagePlaneWriter(MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs)
     : MayaPrimWriter(iDag, stage, iArgs), mIsShapeAnimated(false) {
