@@ -237,14 +237,6 @@ public:
     USDIMAGING_API
     void SetRigidXformOverrides(RigidXformOverridesMap const &overrides);
 
-    /// Sets the collection map
-    /// (discard previously set existing map by SetInCollection)
-    USDIMAGING_API
-    void SetCollectionMap(CollectionMap const &collectionMap);
-
-    /// Returns the collection map
-    CollectionMap GetCollectionMap() const { return _collectionMap; }
-
     /// Returns the root paths of pickable objects.
     USDIMAGING_API
     PickabilityMap GetPickabilityMap() const;
@@ -266,10 +258,7 @@ public:
     // See HdSceneDelegate for documentation of the following virtual methods.
     // ---------------------------------------------------------------------- //
     USDIMAGING_API
-    virtual bool IsInCollection(SdfPath const& id, 
-                                TfToken const& collectionName);
-    USDIMAGING_API
-    virtual TfToken GetRenderTag(SdfPath const& id);
+    virtual TfToken GetRenderTag(SdfPath const& id, TfToken const& reprName);
     USDIMAGING_API
     virtual HdMeshTopology GetMeshTopology(SdfPath const& id);
     USDIMAGING_API
@@ -765,10 +754,10 @@ private:
     //
     // Note that this method does not implicitly add a dependency because the
     // child is likely to represent a different prim in the Usd scene graph.
-    template <typename T>
-    SdfPath _InsertRprim(SdfPath const& usdPath,
-                        SdfPath const& shaderBinding,
-                        UsdImagingInstancerContext const* instancerContext);
+    SdfPath _InsertRprim(TfToken const& primType,
+                         SdfPath const& usdPath,
+                         SdfPath const& shaderBinding,
+                         UsdImagingInstancerContext const* instancerContext);
 
     void _AddTask(SdfPath const& usdPath);   
 
