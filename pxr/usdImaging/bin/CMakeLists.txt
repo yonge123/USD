@@ -1,5 +1,6 @@
 set(DIRS
     usdview
+    usdrender
 )
 
 foreach(d ${DIRS})
