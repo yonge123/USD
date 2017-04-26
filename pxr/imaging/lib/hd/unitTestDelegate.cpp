@@ -50,15 +50,11 @@ TF_DEFINE_PRIVATE_TOKENS(
     (translate)
 );
 
-TF_DEFINE_PUBLIC_TOKENS(Hd_UnitTestTokens, HD_UNIT_TEST_TOKENS);
-
 Hd_UnitTestDelegate::Hd_UnitTestDelegate(HdRenderIndex *parentIndex,
                                          SdfPath const& delegateID)
   : HdSceneDelegate(parentIndex, delegateID)
   , _hasInstancePrimVars(true), _refineLevel(0)
 {
-    HdChangeTracker &tracker = GetRenderIndex().GetChangeTracker();
-    tracker.AddCollection(Hd_UnitTestTokens->geometryAndGuides);
 }
 
 void
@@ -110,9 +106,7 @@ Hd_UnitTestDelegate::AddMesh(SdfPath const &id,
     HD_TRACE_FUNCTION();
 
     HdRenderIndex& index = GetRenderIndex();
-    SdfPath shaderId;
-    TfMapLookup(_surfaceShaderBindings, id, &shaderId);
-    index.InsertRprim<HdMesh>(this, id, shaderId, instancerId);
+    index.InsertRprim(HdPrimTypeTokens->mesh, this, id, instancerId);
 
     _meshes[id] = _Mesh(scheme, orientation, transform,
                         points, numVerts, verts, PxOsdSubdivTags(),
@@ -140,9 +134,7 @@ Hd_UnitTestDelegate::AddMesh(SdfPath const &id,
     HD_TRACE_FUNCTION();
 
     HdRenderIndex& index = GetRenderIndex();
-    SdfPath shaderId;
-    TfMapLookup(_surfaceShaderBindings, id, &shaderId);
-    index.InsertRprim<HdMesh>(this, id, shaderId, instancerId);
+    index.InsertRprim(HdPrimTypeTokens->mesh, this, id, instancerId);
 
     _meshes[id] = _Mesh(scheme, orientation, transform,
                         points, numVerts, verts, subdivTags,
@@ -169,7 +161,7 @@ Hd_UnitTestDelegate::AddBasisCurves(SdfPath const &id,
     HdRenderIndex& index = GetRenderIndex();
     SdfPath shaderId;
     TfMapLookup(_surfaceShaderBindings, id, &shaderId);
-    index.InsertRprim<HdBasisCurves>(this, id, shaderId, instancerId);
+    index.InsertRprim(HdPrimTypeTokens->basisCurves, this, id, instancerId);
 
     _curves[id] = _Curves(points, curveVertexCounts, 
                           normals,
@@ -195,7 +187,7 @@ Hd_UnitTestDelegate::AddPoints(SdfPath const &id,
     HdRenderIndex& index = GetRenderIndex();
     SdfPath shaderId;
     TfMapLookup(_surfaceShaderBindings, id, &shaderId);
-    index.InsertRprim<HdPoints>(this, id, shaderId, instancerId);
+    index.InsertRprim(HdPrimTypeTokens->points, this, id, instancerId);
 
     _points[id] = _Points(points,
                           color, colorInterpolation,
@@ -430,35 +422,28 @@ Hd_UnitTestDelegate::UpdateTask(SdfPath const &id,
 }
 
 /*virtual*/
-bool 
-Hd_UnitTestDelegate::IsInCollection(SdfPath const& id,
-                    TfToken const& collectionName)
+TfToken
+Hd_UnitTestDelegate::GetRenderTag(SdfPath const& id, TfToken const& reprName)
 {
     HD_TRACE_FUNCTION();
-    if (_hiddenRprims.find(id) != _hiddenRprims.end())
-        return false;
 
-    // Visible collection.
-    if (collectionName == HdTokens->geometry) {
-        if (_Mesh *mesh = TfMapLookupPtr(_meshes, id)) {
-            return !mesh->guide;
-        } else if (_curves.count(id) > 0) {
-            return true;
-        } else if (_points.count(id) > 0) {
-            return true;
-        }
-    } else if (collectionName == Hd_UnitTestTokens->geometryAndGuides) {
-        return (_meshes.count(id) > 0 ||
-                _curves.count(id) > 0 ||
-                _points.count(id));
+    if (_hiddenRprims.find(id) != _hiddenRprims.end()) {
+        return HdTokens->hidden;
     }
 
-    // All other collections are considered coding errors, with no constituent
-    // prims.
-    TF_CODING_ERROR("Rprim Collection is unknown to Hd_UnitTestDelegate: %s",
-            collectionName.GetString().c_str());
+    if (_Mesh *mesh = TfMapLookupPtr(_meshes, id)) {
+        if (mesh->guide) {
+            return HdTokens->guide;
+        } else {
+            return HdTokens->geometry;
+        }
+    } else if (_curves.count(id) > 0) {
+        return HdTokens->geometry;
+    } else if (_points.count(id) > 0) {
+        return HdTokens->geometry;
+    }
 
-    return false;
+    return HdTokens->hidden;
 }
 
 /*virtual*/
