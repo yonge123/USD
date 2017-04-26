@@ -35,6 +35,7 @@
 #include "usdMaya/usdExport.h"
 #include "usdMaya/usdListShadingModes.h"
 #include "usdMaya/usdTranslator.h"
+#include "usdMaya/variantSelectionNode.h"
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -87,6 +88,19 @@ MStatus initializePlugin(
             },
         MPxNode::kAssembly,
         &UsdMayaReferenceAssembly::_classification);
+    CHECK_MSTATUS(status);
+
+    status = plugin.registerNode(
+            _data.variantSelectionNode.typeName,
+            _data.variantSelectionNode.typeId,
+            []() {
+                return UsdMayaVariantSelectionNode::creator(
+                    _data.variantSelectionNode);
+            },
+            []() {
+                return UsdMayaVariantSelectionNode::initialize(
+                    &(_data.variantSelectionNode));
+            });
     CHECK_MSTATUS(status);
 
     status =

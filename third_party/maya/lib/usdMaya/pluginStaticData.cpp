@@ -39,7 +39,12 @@ PxrUsdMayaPluginStaticData PxrUsdMayaPluginStaticData::pxrUsd(
         MTypeId(0x0010A251), MString("pxrUsdReferenceAssembly"),
 
         // UsdMayaStageData
-        MTypeId(0x0010A257), MString("pxrUsdStageData"));
+        MTypeId(0x0010A257), MString("pxrUsdStageData"),
+
+        // TODO: confirm it's ok to use 0x00126400 !!
+
+        // UsdMayaVariantSelectionNode
+        MTypeId(0x00126400), MString("pxrUsdVariantSelection"));
 
 PxrUsdMayaPluginStaticData::PxrUsdMayaPluginStaticData(
         const MTypeId& proxyShapeId,
@@ -47,11 +52,14 @@ PxrUsdMayaPluginStaticData::PxrUsdMayaPluginStaticData(
         const MTypeId& refAssemblyId,
         const MString& refAssemblyName,
         const MTypeId& stageDataId,
-        const MString& stageDataName)
+        const MString& stageDataName,
+        const MTypeId& variantSelectionId,
+        const MString& variantSelectionName)
     : 
         proxyShape(proxyShapeId, proxyShapeName, stageDataId),
         referenceAssembly(refAssemblyId, refAssemblyName, stageDataId, proxyShape),
-        stageData(stageDataId, stageDataName)
+        stageData(stageDataId, stageDataName),
+        variantSelectionNode(variantSelectionId, variantSelectionName)
 {
 }
 
