@@ -216,7 +216,7 @@ MStatus usdImport::doIt(const MArgList & args)
             status = selList.getDagPath(0, dagPath);
             if (status != MS::kSuccess) {
                 std::string errorStr = TfStringPrintf(
-                        "Invalid path \"%s\"for -parent.",
+                        "Invalid path \"%s\" for -parent.",
                         tmpVal.asChar());
                 MGlobal::displayError(MString(errorStr.c_str()));
                 return MS::kFailure;
