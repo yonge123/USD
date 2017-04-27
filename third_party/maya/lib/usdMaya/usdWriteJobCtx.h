@@ -17,12 +17,13 @@ class MayaPrimWriter;
 typedef std::shared_ptr<MayaPrimWriter> MayaPrimWriterPtr;
 
 class usdWriteJobCtx {
-public:
+protected:
     PXRUSDMAYA_API
     usdWriteJobCtx(const JobExportArgs& args);
+public:
     const JobExportArgs& getArgs() const { return mArgs; };
     const UsdStageRefPtr& getUsdStage() const { return mStage; };
-    // Querying the master path for instancing. This also creates the mesh if it doesn't exists.
+    // Querying the master path for instancing. This also creates the shape if it doesn't exists.
     PXRUSDMAYA_API
     SdfPath getMasterPath(const MDagPath& dg);
 protected:

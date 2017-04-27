@@ -59,10 +59,10 @@ struct AnimChannel
 // Writes an MFnTransform
 class MayaTransformWriter : public MayaPrimWriter
 {
-  public:
+public:
 
     PXRUSDMAYA_API
-    MayaTransformWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& job);
+    MayaTransformWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx);
     virtual ~MayaTransformWriter() {};
 
     PXRUSDMAYA_API
@@ -78,13 +78,13 @@ class MayaTransformWriter : public MayaPrimWriter
 
     const MDagPath& getTransformDagPath() { return mXformDagPath; };
 
-  protected:
+protected:
     PXRUSDMAYA_API
     bool writeTransformAttrs(
             const UsdTimeCode& usdTime, 
             UsdGeomXformable& primSchema);
 
-  private:
+private:
     bool mWriteTransformAttrs;
     MDagPath mXformDagPath;
     bool mIsShapeAnimated;
@@ -97,7 +97,7 @@ class MayaTransformWriter : public MayaPrimWriter
 
 };
 
-typedef std::shared_ptr < MayaTransformWriter > MayaTransformWriterPtr;
+typedef std::shared_ptr<MayaTransformWriter> MayaTransformWriterPtr;
 
 
 PXR_NAMESPACE_CLOSE_SCOPE

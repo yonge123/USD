@@ -242,8 +242,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
                 mMayaPrimWriterList.push_back(primWriter);
 
                 // Write out data (non-animated/default values).
-                const auto& usdPrim = primWriter->getPrim();
-                if (usdPrim && usdPrim.IsValid()) {
+                if (const auto& usdPrim = primWriter->getPrim()) {
                     primWriter->write(UsdTimeCode::Default());
 
                     MDagPath dag = primWriter->getDagPath();
@@ -260,6 +259,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
                             mDagPathToUsdPathMap[xformDag] = usdPrim.GetPath();
                         }
                     }
+
+                     mModelKindWriter.OnWritePrim(usdPrim, primWriter);
                 }
 
                 if (primWriter->shouldPruneChildren()) {

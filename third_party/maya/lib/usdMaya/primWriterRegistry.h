@@ -81,8 +81,9 @@ struct PxrUsdMayaPrimWriterRegistry
     /// class MyWriter : public MayaPrimWriter {
     ///     static MayaPrimWriterPtr Create(
     ///             MDagPath &curDag,
-    ///             UsdStageRefPtr& stage,
-    ///             const JobExportArgs& args);
+    ///             const SdfPath& uPath,
+    ///             bool instanceSource,
+    ///             usdWriteJobCtx& jobCtx);
     /// };
     /// TF_REGISTRY_FUNCTION_WITH_TAG(PxrUsdMayaPrimWriterRegistry, MyWriter) {
     ///     PxrUsdMayaPrimWriterRegistry::Register("MyCustomPrim",
