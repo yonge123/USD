@@ -22,6 +22,8 @@
 
 #include <dlfcn.h>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 namespace {
     constexpr uint8_t AI_TYPE_BYTE = 0x00;
     constexpr uint8_t AI_TYPE_INT = 0x01;
@@ -812,3 +814,5 @@ void ArnoldShaderExport::setup_shaders() {
                   << (tbb::tick_count::now() - tc).seconds() << std::endl;
     }
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
