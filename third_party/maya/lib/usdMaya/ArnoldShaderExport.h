@@ -8,6 +8,8 @@
 #include <maya/MObject.h>
 #include <maya/MDagPath.h>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 struct AtNode;
 
 class ArnoldShaderExport {
@@ -37,5 +39,7 @@ public:
     SdfPath export_shader(MObject obj);
     void setup_shaders();
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif
