@@ -44,8 +44,8 @@ MayaNurbsSurfaceWriter::MayaNurbsSurfaceWriter(
         const MDagPath & iDag,
         const SdfPath& uPath,
         bool instanceSource,
-        usdWriteJobCtx& job) :
-    MayaTransformWriter(iDag, uPath, instanceSource, job)
+        usdWriteJobCtx& jobCtx) :
+    MayaTransformWriter(iDag, uPath, instanceSource, jobCtx)
 {
     UsdGeomNurbsPatch primSchema =
         UsdGeomNurbsPatch::Define(getUsdStage(), getUsdPath());
