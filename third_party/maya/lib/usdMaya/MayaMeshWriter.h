@@ -45,7 +45,7 @@ class MayaMeshWriter : public MayaTransformWriter
     MayaMeshWriter(const MDagPath & iDag,
                    const SdfPath& uPath,
                    bool instanceSource,
-                   usdWriteJobCtx& job);
+                   usdWriteJobCtx& jobCtx);
     virtual ~MayaMeshWriter() {};
 
     virtual void write(const UsdTimeCode &usdTime);

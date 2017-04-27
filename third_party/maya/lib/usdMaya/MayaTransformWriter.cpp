@@ -412,8 +412,8 @@ MayaTransformWriter::MayaTransformWriter(
         const MDagPath& iDag,
         const SdfPath& uPath,
         bool instanceSource,
-        usdWriteJobCtx& job) :
-    MayaPrimWriter(iDag, uPath, job),
+        usdWriteJobCtx& jobCtx) :
+    MayaPrimWriter(iDag, uPath, jobCtx),
     mXformDagPath(iDag),
     mIsShapeAnimated(false),
     mIsInstanceSource(instanceSource)
@@ -503,7 +503,7 @@ MayaTransformWriter::MayaTransformWriter(
             }
 
             if (isInstance) {
-                const auto masterPath = mJob.getMasterPath(getDagPath());
+                const auto masterPath = mWriteJobCtx.getMasterPath(getDagPath());
                 if (!masterPath.IsEmpty()){
                     mUsdPrim.GetInherits().AppendInherit(masterPath);
                     mUsdPrim.SetInstanceable(true);

@@ -36,7 +36,7 @@ class UsdGeomNurbsCurves;
 class MayaNurbsCurveWriter : public MayaTransformWriter
 {
   public:
-    MayaNurbsCurveWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& job);
+    MayaNurbsCurveWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx);
     virtual ~MayaNurbsCurveWriter() {};
 
     virtual void write(const UsdTimeCode &usdTime);

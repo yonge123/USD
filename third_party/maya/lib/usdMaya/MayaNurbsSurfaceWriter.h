@@ -39,7 +39,7 @@ class MayaNurbsSurfaceWriter : public MayaTransformWriter
     MayaNurbsSurfaceWriter(const MDagPath & iDag,
             const SdfPath& uPath,
             bool instanceSource,
-            usdWriteJobCtx& job);
+            usdWriteJobCtx& jobCtx);
     virtual ~MayaNurbsSurfaceWriter() {};
     
     virtual void write(const UsdTimeCode &usdTime);
