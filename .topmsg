@@ -1,6 +1,4 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/simple_features/ccache
-
-<patch description>
+Subject: Adding an option to use ccache
 
 Signed-off-by: Pal Mezei <palm@lumapictures.com>
