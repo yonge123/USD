@@ -10,6 +10,8 @@
 #include "usdMaya/translatorUtil.h"
 #include "MayaImagePlaneWriter.h"
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 namespace {
     // From the camera translator code, cleaned the code up a bit
     const TfToken frameOffsetToken("frameOffset");
@@ -431,3 +433,5 @@ bool PxrUsdMayaTranslatorImagePlane::Read(
 
     return true;
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
