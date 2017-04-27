@@ -28,42 +28,105 @@
 #include "pxr/usd/usd/timeCode.h"
 #include "pxr/base/vt/array.h"
 #include "pxr/base/gf/vec3f.h"
+#include "pxr/usd/usdGeom/primvar.h"
+#include "pxr/usd/usdGeom/tokens.h"
 
 #include <maya/MFnParticleSystem.h>
 #include <maya/MVectorArray.h>
 #include <maya/MAnimControl.h>
 
+#include <type_traits>
+#include <memory>
+#include <limits>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
     template <typename T>
-    inline T _convertVector(const MVector& v) {
+    inline void _convertVector(T& t, const MVector& v) {
         // I wish we had concepts
-        return T(static_cast<typename T::ScalarType>(v.x),
-                 static_cast<typename T::ScalarType>(v.y),
-                 static_cast<typename T::ScalarType>(v.z));
+        // We are guaranteed to have arithmetic types
+        using _t = decltype(+t[0]);
+        t[0] = static_cast<_t>(v.x);
+        t[1] = static_cast<_t>(v.y);
+        t[2] = static_cast<_t>(v.z);
     }
 
     template <typename T>
-    VtArray<T> _convertVectorArray(const MVectorArray& a) {
-        VtArray<T> ret;
+    using _sharedVtArray = std::shared_ptr<VtArray<T>>;
+
+    template <typename T>
+    _sharedVtArray<T> _convertVectorArray(const MVectorArray& a) {
         const auto count = a.length();
-        ret.resize(count);
+        auto* ret = new VtArray<T>(count);
         for (auto i = decltype(count){0}; i < count; ++i) {
-            ret[i] = _convertVector<T>(a[i]);
+            _convertVector<T>(ret->operator[](i), a[i]);
         }
-        return ret;
+        return _sharedVtArray<T>(ret);
     }
 
     template <typename T>
-    VtArray<T> _convertArray(const MDoubleArray& a) {
-        VtArray<T> ret; // All hail to RVO
+    _sharedVtArray<T> _convertArray(const MDoubleArray& a) {
         const auto count = a.length();
-        ret.resize(count);
+        auto* ret = new VtArray<T>(count);
         for (auto i = decltype(count){0}; i < count; ++i) {
-            ret[i] = static_cast<T>(a[i]);
+            ret->operator[](i) = static_cast<T>(a[i]);
         }
-        return ret;
+        return _sharedVtArray<T>(ret);
+    }
+
+    template <typename T>
+    _sharedVtArray<T> _convertArray(const MIntArray& a) {
+        const auto count = a.length();
+        auto* ret = new VtArray<T>(count);
+        for (auto i = decltype(count){0}; i < count; ++i) {
+            ret->operator[](i) = static_cast<T>(a[i]);
+        }
+        return _sharedVtArray<T>(ret);
+    }
+
+    template <typename T>
+    using _strVecPair = std::pair<TfToken, _sharedVtArray<T>>;
+
+    template <typename T>
+    using _strVecPairVec = std::vector<_strVecPair<T>>;
+
+    template <typename T>
+    size_t _minCount(const _strVecPairVec<T>& a) {
+        auto mn = std::numeric_limits<size_t>::max();
+        for (const auto& v : a) {
+            mn = std::min(mn, v.second->size());
+        }
+
+        return mn;
+    }
+
+    template <typename T>
+    void _resizeVectors(_strVecPairVec<T>& a, size_t size) {
+        for (const auto& v : a) {
+            v.second->resize(size);
+        }
+    }
+
+    template <typename T>
+    inline void _addPrimVar(UsdGeomPoints& points, const TfToken& name, const SdfValueTypeName& typeName,
+                            const VtArray<T>& a, const UsdTimeCode& usdTime) {
+        auto primVar = points.CreatePrimvar(name, typeName, UsdGeomTokens->vertex, a.size(), true);
+        primVar.Set(a, usdTime);
+    }
+
+    const TfToken _rgbName("rgb");
+    const TfToken _emissionName("emission");
+    const TfToken _opacityName("opacity");
+    const TfToken _lifespanName("lifespan");
+    const TfToken _massName("mass");
+
+    template <typename T>
+    void _addPrimVarVec(UsdGeomPoints& points, const SdfValueTypeName& typeName, const _strVecPairVec<T>& a,
+                        const UsdTimeCode& usdTime) {
+        for (const auto& v : a) {
+            _addPrimVar(points, v.first, typeName, *v.second, usdTime);
+        }
     }
 }
 
@@ -89,26 +152,101 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
         return;
     }
 
-    MStatus status;
-    MFnParticleSystem particleFn;
-    particleFn.setObject(getDagPath().node());
+    // using the code from partioExport
+    MFnParticleSystem PS(getDagPath().node());
+    MFnParticleSystem DPS(getDagPath().node());
 
-    auto currTime = MAnimControl::currentTime();
-    const auto playFromCachePlug = particleFn.findPlug("playFromCache");
-    if (!playFromCachePlug.isNull() && playFromCachePlug.asBool()) {
-        particleFn.evaluateDynamics(currTime, false);
+    if (PS.isDeformedParticleShape()) {
+        auto origObj = PS.originalParticleShape();
+        PS.setObject(origObj);
+    } else {
+        MObject defObj = PS.deformedParticleShape();
+        DPS.setObject(defObj);
     }
 
-    MVectorArray positions;
-    MVectorArray velocities;
-    MDoubleArray ids;
-    particleFn.getPerParticleAttribute("particleId", ids);
-    particleFn.velocity(velocities);
-    particleFn.position(positions);
+    // TODO: non nParticle systems
 
-    points.GetPointsAttr().Set(_convertVectorArray<GfVec3f>(positions), usdTime);
-    points.GetVelocitiesAttr().Set(_convertVectorArray<GfVec3f>(velocities), usdTime);
-    points.GetIdsAttr().Set(_convertArray<long>(ids), usdTime);
+    // In some cases, especially whenever particles are dying,
+    // the length of the attribute vector returned
+    // from Maya is smaller than the total number of particles.
+    // So we have to first read all the attributes, then
+    // determine the minimum amount of particles that all have valid data
+    // then write the data out for them in one go.
+
+    const auto particleCount = PS.count();
+    if (particleCount == 0) {
+        return;
+    }
+
+    _strVecPairVec<GfVec3f> vectors;
+    _strVecPairVec<float> floats;
+    _strVecPairVec<long> ints;
+
+    MVectorArray mayaVectors;
+    MDoubleArray mayaDoubles;
+    MIntArray mayaInts;
+
+    DPS.position(mayaVectors);
+    auto positions = _convertVectorArray<GfVec3f>(mayaVectors);
+    PS.velocity(mayaVectors);
+    auto velocities = _convertVectorArray<GfVec3f>(mayaVectors);
+    PS.particleIds(mayaInts);
+    auto ids = _convertArray<long>(mayaInts);
+    PS.radius(mayaDoubles);
+    auto radii = _convertArray<float>(mayaDoubles);
+    PS.mass(mayaDoubles);
+    auto masses = _convertArray<float>(mayaDoubles);
+
+    if (PS.hasRgb()) {
+        PS.rgb(mayaVectors);
+        vectors.emplace_back(_rgbName, _convertVectorArray<GfVec3f>(mayaVectors));
+    }
+
+    if (PS.hasEmission()) {
+        PS.rgb(mayaVectors);
+        vectors.emplace_back(_emissionName, _convertVectorArray<GfVec3f>(mayaVectors));
+    }
+
+    if (PS.hasOpacity()) {
+        PS.opacity(mayaDoubles);
+        floats.emplace_back(_opacityName, _convertArray<float>(mayaDoubles));
+    }
+
+    if (PS.hasLifespan()) {
+        PS.lifespan(mayaDoubles);
+        floats.emplace_back(_lifespanName, _convertArray<float>(mayaDoubles));
+    }
+
+    const auto minSize = std::min(
+        {
+            _minCount(vectors), _minCount(floats), _minCount(ints),
+            positions->size(), velocities->size(), ids->size(), radii->size(), masses->size()
+        }
+    );
+
+    if (minSize == 0) {
+        return;
+    }
+
+    _resizeVectors(vectors, minSize);
+    _resizeVectors(floats, minSize);
+    _resizeVectors(ints, minSize);
+    positions->resize(minSize);
+    velocities->resize(minSize);
+    ids->resize(minSize);
+    radii->resize(minSize);
+    masses->resize(minSize);
+
+    points.GetPointsAttr().Set(*positions, usdTime);
+    points.GetVelocitiesAttr().Set(*velocities, usdTime);
+    points.GetIdsAttr().Set(*ids, usdTime);
+    points.GetWidthsAttr().Set(*radii, usdTime);
+
+    _addPrimVar(points, _massName, SdfValueTypeNames->Float, *masses, usdTime);
+    // TODO: check if we need the array suffix!!
+    _addPrimVarVec(points, SdfValueTypeNames->Vector3f, vectors, usdTime);
+    _addPrimVarVec(points, SdfValueTypeNames->Float, floats, usdTime);
+    _addPrimVarVec(points, SdfValueTypeNames->Int, ints, usdTime);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
