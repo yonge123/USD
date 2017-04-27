@@ -53,8 +53,8 @@ MayaMeshWriter::MayaMeshWriter(
         const MDagPath & iDag,
         const SdfPath& uPath,
         bool instanceSource,
-        usdWriteJobCtx& job) :
-    MayaTransformWriter(iDag, uPath, instanceSource, job)
+        usdWriteJobCtx& jobCtx) :
+    MayaTransformWriter(iDag, uPath, instanceSource, jobCtx)
 {
     if ( !isMeshValid() ) {
         return;

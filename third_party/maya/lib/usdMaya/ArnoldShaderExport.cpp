@@ -458,6 +458,7 @@ namespace {
     void clean_arnold_name(std::string& name) {
         std::replace(name.begin(), name.end(), '@', '_');
         std::replace(name.begin(), name.end(), '.', '_');
+        std::replace(name.begin(), name.end(), '|', '_');
     }
 
     const TfToken ai_surface_token("ai:surface");

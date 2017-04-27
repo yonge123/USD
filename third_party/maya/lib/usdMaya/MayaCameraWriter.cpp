@@ -40,8 +40,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 
-MayaCameraWriter::MayaCameraWriter(const MDagPath & iDag, const SdfPath& uPath, usdWriteJobCtx& job) :
-    MayaTransformWriter(iDag, uPath, false, job) // cameras are not instanced
+MayaCameraWriter::MayaCameraWriter(const MDagPath & iDag, const SdfPath& uPath, usdWriteJobCtx& jobCtx) :
+    MayaTransformWriter(iDag, uPath, false, jobCtx) // cameras are not instanced
 {
     UsdGeomCamera primSchema =
         UsdGeomCamera::Define(getUsdStage(), getUsdPath());

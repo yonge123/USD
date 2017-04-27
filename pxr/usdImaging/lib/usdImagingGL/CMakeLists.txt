@@ -28,6 +28,7 @@ pxr_shared_library(usdImagingGL
         ${OPENGL_glu_LIBRARY}
         ${GLEW_LIBRARY}
         ${TBB_tbb_LIBRARY}
+        ${TBB_tbbmalloc_LIBRARY}
         ${OIIO_LIBRARIES}
 
     INCLUDE_DIRS
