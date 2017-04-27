@@ -27,6 +27,7 @@
 /// \file usdAi/aiVolume.h
 
 #include "pxr/pxr.h"
+#include "pxr/usd/usdAi/api.h"
 #include "pxr/usd/usdAi/aiProcedural.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
@@ -84,11 +85,13 @@ public:
     }
 
     /// Destructor.
+    USDAI_API
     virtual ~UsdAiVolume();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
+    USDAI_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
@@ -101,6 +104,7 @@ public:
     /// UsdAiVolume(stage->GetPrimAtPath(path));
     /// \endcode
     ///
+    USDAI_API
     static UsdAiVolume
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
@@ -126,17 +130,20 @@ public:
     /// specify this schema class, in case a stronger typeName opinion overrides
     /// the opinion at the current EditTarget.
     ///
+    USDAI_API
     static UsdAiVolume
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
+    USDAI_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
+    USDAI_API
     virtual const TfType &_GetTfType() const;
 
 public:
@@ -150,6 +157,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Float
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: 0.0
+    USDAI_API
     UsdAttribute GetStepSizeAttr() const;
 
     /// See GetStepSizeAttr(), and also 
@@ -157,6 +165,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDAI_API
     UsdAttribute CreateStepSizeAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:

@@ -27,6 +27,7 @@
 /// \file usdAi/aiShapeAPI.h
 
 #include "pxr/pxr.h"
+#include "pxr/usd/usdAi/api.h"
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
@@ -99,11 +100,13 @@ public:
     }
 
     /// Destructor.
+    USDAI_API
     virtual ~UsdAiShapeAPI();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
+    USDAI_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
@@ -116,6 +119,7 @@ public:
     /// UsdAiShapeAPI(stage->GetPrimAtPath(path));
     /// \endcode
     ///
+    USDAI_API
     static UsdAiShapeAPI
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
@@ -123,11 +127,13 @@ public:
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
+    USDAI_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
+    USDAI_API
     virtual const TfType &_GetTfType() const;
 
 public:
@@ -142,6 +148,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Bool
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: True
+    USDAI_API
     UsdAttribute GetOpaqueAttr() const;
 
     /// See GetOpaqueAttr(), and also 
@@ -149,6 +156,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDAI_API
     UsdAttribute CreateOpaqueAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -169,6 +177,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Bool
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: False
+    USDAI_API
     UsdAttribute GetMatteAttr() const;
 
     /// See GetMatteAttr(), and also 
@@ -176,6 +185,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDAI_API
     UsdAttribute CreateMatteAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -188,6 +198,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Bool
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: True
+    USDAI_API
     UsdAttribute GetReceiveShadowsAttr() const;
 
     /// See GetReceiveShadowsAttr(), and also 
@@ -195,6 +206,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDAI_API
     UsdAttribute CreateReceiveShadowsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -207,6 +219,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Bool
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: True
+    USDAI_API
     UsdAttribute GetSelfShadowsAttr() const;
 
     /// See GetSelfShadowsAttr(), and also 
@@ -214,6 +227,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDAI_API
     UsdAttribute CreateSelfShadowsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -231,6 +245,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->UChar
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: 255
+    USDAI_API
     UsdAttribute GetVisibilityAttr() const;
 
     /// See GetVisibilityAttr(), and also 
@@ -238,6 +253,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDAI_API
     UsdAttribute CreateVisibilityAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -255,6 +271,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->UChar
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: 255
+    USDAI_API
     UsdAttribute GetSidednessAttr() const;
 
     /// See GetSidednessAttr(), and also 
@@ -262,6 +279,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDAI_API
     UsdAttribute CreateSidednessAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
