@@ -15,6 +15,7 @@ tg/simple_features/tx_hydra
 tg/simple_features/usdRender
 tg/simple_features/usdview_reload_shortcut
 tg/simple_features/vp2_maya_proxy
+tg/simple_features/ccache
 assembly_cmd_import_maya_cmds
 pseudo_root_warning
 ptex_prefer_static
