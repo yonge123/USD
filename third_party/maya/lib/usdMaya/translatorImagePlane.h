@@ -8,6 +8,7 @@
 
 #include <maya/MObject.h>
 
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// \brief Provides helper functions for translating to/from UsdGeomImagePlane
 struct PxrUsdMayaTranslatorImagePlane
@@ -21,5 +22,7 @@ struct PxrUsdMayaTranslatorImagePlane
         PxrUsdMayaPrimReaderContext* context,
         bool isCompacted);
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDMAYA_TRANSLATOR_IMAGEPLANE_H
