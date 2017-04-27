@@ -148,9 +148,9 @@ void wrapUsdAiProcedural()
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
-PXR_NAMESPACE_OPEN_SCOPE
+namespace {
 
 WRAP_CUSTOM {
 }
 
-PXR_NAMESPACE_CLOSE_SCOPE
+}
