@@ -106,7 +106,7 @@ void wrapUsdAiProcedural()
         .def("GetDsoAttr",
              &This::GetDsoAttr)
         .def("CreateDsoAttr",
-             &_CreateDsoAttr,
+             &_CreateDsoPXR_NAMESPACE_CLOSE_SCOPEAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
@@ -148,9 +148,9 @@ void wrapUsdAiProcedural()
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
-PXR_NAMESPACE_OPEN_SCOPE
+namespace {
 
 WRAP_CUSTOM {
 }
 
-PXR_NAMESPACE_CLOSE_SCOPE
+}
