@@ -106,7 +106,7 @@ void wrapUsdAiProcedural()
         .def("GetDsoAttr",
              &This::GetDsoAttr)
         .def("CreateDsoAttr",
-             &_CreateDsoAttr,
+             &_CreateDsoPXR_NAMESPACE_CLOSE_SCOPEAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
