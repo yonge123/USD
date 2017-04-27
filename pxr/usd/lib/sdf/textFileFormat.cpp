@@ -32,10 +32,10 @@
 
 #include "pxr/base/tracelite/trace.h"
 #include "pxr/base/tf/atomicOfstreamWrapper.h"
-
 #include "pxr/base/tf/fileUtils.h"
 #include "pxr/base/tf/registryManager.h"
 #include "pxr/base/tf/staticData.h"
+#include "pxr/base/arch/fileSystem.h"
 
 #include <boost/assign.hpp>
 #include <ostream>
@@ -107,7 +107,7 @@ SdfTextFileFormat::CanRead(const string& filePath) const
     bool canRead = false;
 
     const string& cookie = GetFileCookie();
-    if (FILE *f = fopen(filePath.c_str(), "rt")) {
+    if (FILE *f = ArchOpenFile(filePath.c_str(), "rb")) {
         char aLine[512];
 
         if (fgets(aLine, sizeof(aLine), f)) {
@@ -124,10 +124,8 @@ SdfTextFileFormat::CanRead(const string& filePath) const
 class Sdf_ScopedFilePointer : boost::noncopyable
 {
 public:
-    explicit Sdf_ScopedFilePointer(
-        const string& filePath,
-        const string& mode = string("rt"))
-        : _fp(fopen(filePath.c_str(), mode.c_str()))
+    explicit Sdf_ScopedFilePointer(const string& filePath)
+        : _fp(ArchOpenFile(filePath.c_str(), "rb"))
     { }
 
     ~Sdf_ScopedFilePointer() {
@@ -151,7 +149,7 @@ SdfTextFileFormat::Read(
 {
     TRACE_FUNCTION();
 
-    Sdf_ScopedFilePointer fp(resolvedPath.c_str());
+    Sdf_ScopedFilePointer fp(resolvedPath);
     if (!*fp)
         return false;
 
@@ -258,7 +256,7 @@ _WriteLayerToMenva(
             {
                 _WriteAssetPath(header, 2, l->GetSubLayerPaths()[i]);
                 _WriteLayerOffset(header, 0, false /* multiLine */, 
-                                  l->GetSubLayerOffset(i));
+                                  l->GetSubLayerOffset(static_cast<int>(i)));
                 _Write(header, 0, (i < c-1) ? ",\n" : "\n");
             }
             _Write(header, 1, "]\n");
@@ -342,9 +340,9 @@ SdfTextFileFormat::ReadFromString(
 
     SdfAbstractDataRefPtr data = InitData(layerBase->GetFileFormatArguments());
     if (!Sdf_ParseMenvaFromString(str, 
-                                     GetFormatId(),
-                                     GetVersionString(),
-                                     TfDynamic_cast<SdfDataRefPtr>(data))) {
+                                  GetFormatId(),
+                                  GetVersionString(),
+                                  TfDynamic_cast<SdfDataRefPtr>(data))) {
         return false;
     }
 

@@ -43,6 +43,7 @@
 
 #include "pxr/base/tracelite/trace.h"
 
+#include "pxr/base/arch/errno.h"
 #include "pxr/base/tf/enum.h"
 #include "pxr/base/tf/iterator.h"
 #include "pxr/base/tf/ostreamMethods.h"
@@ -58,8 +59,6 @@
 
 #include <sstream>
 #include <string>
-#include <sys/mman.h>
-#include <unistd.h>
 #include <vector>
 
 // See this page for info as to why this is here.  Especially note the last
@@ -82,7 +81,7 @@ using boost::get;
 #define ERROR_IF_NOT_ALLOWED(context, allowed)                   \
     {                                                            \
         const SdfAllowed allow = allowed;                        \
-        if (!allow) {                                         \
+        if (!allow) {                                            \
             Err(context, "%s", allow.GetWhyNot().c_str());       \
         }                                                        \
     }
@@ -90,7 +89,7 @@ using boost::get;
 #define ERROR_AND_RETURN_IF_NOT_ALLOWED(context, allowed)        \
     {                                                            \
         const SdfAllowed allow = allowed;                        \
-        if (!allow) {                                         \
+        if (!allow) {                                            \
             Err(context, "%s", allow.GetWhyNot().c_str());       \
             return;                                              \
         }                                                        \
@@ -110,7 +109,7 @@ void textFileFormatYyerror(Sdf_TextParserContext *context, const char *s);
 
 extern int textFileFormatYylex(YYSTYPE *yylval_param, yyscan_t yyscanner);
 extern char *textFileFormatYyget_text(yyscan_t yyscanner);
-extern int textFileFormatYyget_leng(yyscan_t yyscanner);
+extern size_t textFileFormatYyget_leng(yyscan_t yyscanner);
 extern int textFileFormatYylex_init(yyscan_t *yyscanner);
 extern int textFileFormatYylex_destroy(yyscan_t yyscanner);
 extern void textFileFormatYyset_extra(Sdf_TextParserContext *context, 
@@ -600,8 +599,7 @@ _AttributeAppendConnectionPath(Sdf_TextParserContext *context)
         TF_WARN("Connection path <%s> (in file @%s@, line %i) has a variant "
                 "selection, but variant selections are not meaningful in "
                 "connection paths.  Stripping the variant selection and "
-                "using <%s> instead.  Resaving the menva file will fix "
-                "this issue.  (See also bug 68132.)",
+                "using <%s> instead.  Resaving the file will fix this issue.",
                 absPath.GetText(),
                 context->fileContext.c_str(),
                 context->menvaLineNo,
@@ -915,6 +913,23 @@ _PathSetProperty(const Value& arg1, Sdf_TextParserContext *context)
     }
 }
 
+static void
+_PathSetPrimOrPropertyScenePath(const Value& arg1,
+                                Sdf_TextParserContext *context)
+{
+    const std::string& pathStr = arg1.Get<std::string>();
+    context->savedPath = SdfPath(pathStr);
+    // Valid paths are prim or property paths that do not contain variant
+    // selections.
+    SdfPath const &path = context->savedPath;
+    bool pathValid = (path.IsPrimPath() || path.IsPropertyPath()) &&
+        !path.ContainsPrimVariantSelection();
+    if (!pathValid) {
+        Err(context, "'%s' is not a valid prim or property scene path",
+            pathStr.c_str());
+    }
+}
+
 template <class ListOpType>
 static bool
 _SetItemsIfListOp(const TfType& type, Sdf_TextParserContext *context)
@@ -925,8 +940,8 @@ _SetItemsIfListOp(const TfType& type, Sdf_TextParserContext *context)
 
     typedef VtArray<typename ListOpType::value_type> ArrayType;
 
-    if (!TF_VERIFY(context->currentValue.IsHolding<ArrayType>() || 
-                      context->currentValue.IsEmpty())) {
+    if (!TF_VERIFY(context->currentValue.IsHolding<ArrayType>() ||
+                   context->currentValue.IsEmpty())) {
         return true;
     }
 
@@ -2270,7 +2285,7 @@ connect_list:
     ;
 
 connect_item:
-    property_path {
+    prim_or_property_scene_path {
             _AttributeAppendConnectionPath(context);
         }
     | property_path {
@@ -2980,6 +2995,12 @@ property_path:
         }
     ;
 
+prim_or_property_scene_path:
+    TOK_PATHREF {
+            _PathSetPrimOrPropertyScenePath($1, context);
+        }
+    ;
+
 marker:
     prim_path {
             context->marker = context->savedPath.GetString();
@@ -3132,7 +3153,7 @@ Sdf_MemoryFlexBuffer::Sdf_MemoryFlexBuffer(FILE* file,
     int64_t fileSize = ArchGetFileLength(file);
     if (fileSize == -1) {
         TF_RUNTIME_ERROR("Error retrieving file size for @%s@: %s", 
-                         name.c_str(), strerror(errno));
+                         name.c_str(), ArchStrerror(errno).c_str());
         return;
     }
 

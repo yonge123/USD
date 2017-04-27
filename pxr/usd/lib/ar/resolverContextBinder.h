@@ -24,6 +24,8 @@
 #ifndef AR_RESOLVER_CONTEXT_BINDER_H
 #define AR_RESOLVER_CONTEXT_BINDER_H
 
+/// \file ar/resolverContextBinder.h
+
 #include "pxr/pxr.h"
 #include "pxr/usd/ar/api.h"
 #include "pxr/usd/ar/resolverContext.h"
@@ -38,22 +40,25 @@ class ArResolver;
 /// Helper object for managing the binding and unbinding of 
 /// ArResolverContext objects with the asset resolver.
 ///
-/// \see ArResolverContext::BindContext
-/// \see ArResolverContext::UnbindContext
-class AR_API ArResolverContextBinder
+/// \see \ref ArResolver_context "Path Resolver Context Operations"
+/// \see \ref ArResolver_contextBinder "Path Resolver Context Binder"
+class ArResolverContextBinder
 {
 public:
     /// Bind the given \p context with the asset resolver.
+    AR_API
     ArResolverContextBinder(
         const ArResolverContext& context);
 
     /// Bind the given \p context to the given \p assetResolver.
+    AR_API
     ArResolverContextBinder(
         ArResolver* assetResolver,
         const ArResolverContext& context);
 
     /// Unbinds the context specified in the constructor of this
     /// object from the asset resolver.
+    AR_API
     ~ArResolverContextBinder();
 
 private:

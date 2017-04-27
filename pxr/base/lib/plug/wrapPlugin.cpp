@@ -37,7 +37,9 @@ using namespace boost::python;
 using std::string;
 using std::vector;
 
-PXR_NAMESPACE_OPEN_SCOPE
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 static dict
 _ConvertDict( const JsObject & dictionary )
@@ -63,6 +65,8 @@ _GetMetadataForType(PlugPluginPtr plugin, const TfType &type)
 {
     return _ConvertDict(plugin->GetMetadataForType(type));
 }
+
+} // anonymous namespace 
 
 void wrapPlugin()
 {
@@ -107,4 +111,4 @@ void wrapPlugin()
         TfPySequenceToPython<std::vector<object> > >();
 }
 
-PXR_NAMESPACE_CLOSE_SCOPE
+TF_REFPTR_CONST_VOLATILE_GET(PlugPlugin)

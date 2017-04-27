@@ -33,10 +33,11 @@
 #include "usdMaya/pluginStaticData.h"
 #include "usdMaya/usdImport.h"
 #include "usdMaya/usdExport.h"
+#include "usdMaya/usdListShadingModes.h"
 #include "usdMaya/usdTranslatorImport.h"
 #include "usdMaya/usdTranslatorExport.h"
 
-PXR_NAMESPACE_OPEN_SCOPE
+PXR_NAMESPACE_USING_DIRECTIVE
 
 static PxrUsdMayaPluginStaticData& _data(PxrUsdMayaPluginStaticData::pxrUsd);
 
@@ -147,6 +148,14 @@ MStatus initializePlugin(
         status.perror("registerCommand usdImport");
     }
 
+    status = plugin.registerCommand("usdListShadingModes",
+                                    usdListShadingModes::creator,
+                                    usdListShadingModes::createSyntax);
+
+    if (!status) {
+        status.perror("registerCommand usdListShadingModes");
+    }
+    
     status = plugin.registerFileTranslator("pxrUsdImport", 
                                     "", 
                                     []() { 
@@ -202,6 +211,11 @@ MStatus uninitializePlugin(
         status.perror("pxrUsd: unable to deregister USD Export translator.");
     }
 
+    status = plugin.deregisterFileTranslator("usdListShadingModes");
+    if (!status) {
+        status.perror("deregisterCommand usdListShadingModes");
+    }
+
     status = MGlobal::executeCommand("assembly -e -deregister " + _data.referenceAssembly.typeName);
     CHECK_MSTATUS(status);
 
@@ -223,5 +237,3 @@ MStatus uninitializePlugin(
 
     return status;
 }
-
-PXR_NAMESPACE_CLOSE_SCOPE

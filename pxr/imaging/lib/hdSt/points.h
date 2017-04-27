@@ -23,7 +23,9 @@
 //
 #ifndef HDST_POINTS_H
 #define HDST_POINTS_H
+
 #include "pxr/pxr.h"
+#include "pxr/imaging/hdSt/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/drawingCoord.h"
 #include "pxr/imaging/hd/enums.h"
@@ -58,25 +60,37 @@ struct HdStPointsReprDesc {
 class HdStPoints final : public HdPoints {
 public:
     HF_MALLOC_TAG_NEW("new HdStPoints");
+
+    HDST_API
     HdStPoints(SdfPath const& id,
              SdfPath const& instancerId = SdfPath());
+    HDST_API
     virtual ~HdStPoints();
 
+    HDST_API
+    virtual void Sync(HdSceneDelegate* delegate,
+                      HdRenderParam*   renderParam,
+                      HdDirtyBits*     dirtyBits,
+                      TfToken const&   reprName,
+                      bool             forcedRepr) override;
+
     /// Configure geometric style of drawItems for \p reprName
+    HDST_API
     static void ConfigureRepr(TfToken const &reprName,
                               const HdStPointsReprDesc &desc);
+
 
 protected:
     virtual HdReprSharedPtr const &
         _GetRepr(HdSceneDelegate *sceneDelegate,
                  TfToken const &reprName,
-                 HdChangeTracker::DirtyBits *dirtyBitsState) override;
+                 HdDirtyBits *dirtyBitsState) override;
 
     void _PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
                                  HdDrawItem *drawItem,
-                                 HdChangeTracker::DirtyBits *dirtyBitsState);
+                                 HdDirtyBits *dirtyBitsState);
 
-    virtual HdChangeTracker::DirtyBits _GetInitialDirtyBits() const override;
+    virtual HdDirtyBits _GetInitialDirtyBits() const override;
 
 private:
     enum DrawingCoord {
@@ -85,7 +99,7 @@ private:
 
     void _UpdateDrawItem(HdSceneDelegate *sceneDelegate,
                          HdDrawItem *drawItem,
-                         HdChangeTracker::DirtyBits *dirtyBits);
+                         HdDirtyBits *dirtyBits);
 
     typedef _ReprDescConfigs<HdStPointsReprDesc> _PointsReprConfig;
     static _PointsReprConfig _reprDescConfig;

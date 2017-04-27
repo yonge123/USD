@@ -35,7 +35,7 @@
 
 using namespace boost::python;
 
-PXR_NAMESPACE_OPEN_SCOPE
+PXR_NAMESPACE_USING_DIRECTIVE
 
 namespace {
 
@@ -94,7 +94,7 @@ _RegisterFileFormat(object classObject)
     fileFormatType.SetFactory(Sdf_PyFileFormatFactory::New(classObject));
 }
 
-}
+} // anonymous namespace 
 
 void wrapFileFormat()
 {
@@ -145,4 +145,4 @@ void wrapFileFormat()
         "Tokens", SdfFileFormatTokens, SDF_FILE_FORMAT_TOKENS);
 }
 
-PXR_NAMESPACE_CLOSE_SCOPE
+TF_REFPTR_CONST_VOLATILE_GET(SdfFileFormat)

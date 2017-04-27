@@ -32,7 +32,7 @@
 
 using namespace boost::python;
 
-PXR_NAMESPACE_OPEN_SCOPE
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void wrapLayerBase()
 {
@@ -50,4 +50,4 @@ void wrapLayerBase()
         ;
 }
 
-PXR_NAMESPACE_CLOSE_SCOPE
+TF_REFPTR_CONST_VOLATILE_GET(SdfLayerBase)

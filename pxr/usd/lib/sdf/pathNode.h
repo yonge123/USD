@@ -25,6 +25,7 @@
 #define SDF_PATHNODE_H
 
 #include "pxr/pxr.h"
+#include "pxr/usd/sdf/api.h"
 #include "pxr/base/tf/token.h"
 #include "pxr/base/tf/mallocTag.h"
 
@@ -176,6 +177,7 @@ public:
     inline TfToken GetElement() const;
 
     // Return the stringified path to this node as a TfToken.
+    SDF_API
     const TfToken &GetPathToken() const;
     
     // Lexicographic ordering for Compare().
@@ -239,7 +241,7 @@ protected:
     TfToken _CreatePathToken() const;
 
     // Helper for dtor, removes this path node's token from the token table.
-    void _RemovePathTokenFromTable() const;
+    SDF_API void _RemovePathTokenFromTable() const;
 
     struct _Equal {
         inline bool operator()(NodeType a, NodeType b) const {
@@ -344,7 +346,7 @@ private:
         : Sdf_PathNode(parent, nodeType)
         , _name(name) {}
 
-    ~Sdf_PrimPathNode();
+    SDF_API ~Sdf_PrimPathNode();
     
     const ComparisonType &_GetComparisonValue() const { return _name; }
 
@@ -369,7 +371,7 @@ private:
         : Sdf_PathNode(parent, nodeType)
         , _name(name) {}
 
-    ~Sdf_PrimPropertyPathNode();
+    SDF_API ~Sdf_PrimPropertyPathNode();
     
     friend class Sdf_PathNode;
     friend struct Sdf_PathNodePrivateAccess;
@@ -397,7 +399,7 @@ private:
         : Sdf_PathNode(parent, nodeType)
         , _variantSelection(variantSelection) {}
 
-    ~Sdf_PrimVariantSelectionNode();
+    SDF_API ~Sdf_PrimVariantSelectionNode();
 
     const ComparisonType &_GetComparisonValue() const {
         return _variantSelection;
@@ -426,7 +428,7 @@ private:
         : Sdf_PathNode(parent, nodeType)
         , _targetPath(targetPath) {}
 
-    ~Sdf_TargetPathNode();
+    SDF_API ~Sdf_TargetPathNode();
 
     const ComparisonType& _GetComparisonValue() const { return _targetPath; }
 
@@ -451,7 +453,7 @@ private:
         : Sdf_PathNode(parent, nodeType)
         , _name(name) {}
 
-    ~Sdf_RelationalAttributePathNode();
+    SDF_API ~Sdf_RelationalAttributePathNode();
 
     const ComparisonType& _GetComparisonValue() const { return _name; }
 
@@ -478,7 +480,7 @@ private:
         : Sdf_PathNode(parent, nodeType)
         , _targetPath(targetPath) {}
 
-    ~Sdf_MapperPathNode();
+    SDF_API ~Sdf_MapperPathNode();
 
     const ComparisonType& _GetComparisonValue() const { return _targetPath; }
 
@@ -505,7 +507,7 @@ private:
         : Sdf_PathNode(parent, nodeType)
         , _name(name) {}
 
-    ~Sdf_MapperArgPathNode();
+    SDF_API ~Sdf_MapperArgPathNode();
 
     const ComparisonType& _GetComparisonValue() const { return _name; }
 
@@ -530,7 +532,7 @@ private:
     Sdf_ExpressionPathNode(Sdf_PathNodeConstRefPtr const &parent)
         : Sdf_PathNode(parent, nodeType) {}
 
-    ~Sdf_ExpressionPathNode();
+    SDF_API ~Sdf_ExpressionPathNode();
 
     ComparisonType _GetComparisonValue() const { return nullptr; }
 
@@ -741,7 +743,7 @@ Sdf_PathNode::GetElement() const
 }
 
 /// Diagnostic output.
-void Sdf_DumpPathStats();
+SDF_API void Sdf_DumpPathStats();
 
 inline void intrusive_ptr_add_ref(const PXR_NS::Sdf_PathNode* p) {
     ++p->_refCount;

@@ -53,6 +53,12 @@ UsdImagingCylinderAdapter::~UsdImagingCylinderAdapter()
 {
 }
 
+bool
+UsdImagingCylinderAdapter::IsSupported(HdRenderIndex* renderIndex)
+{
+    return renderIndex->IsRprimTypeSupported(HdPrimTypeTokens->mesh);
+}
+
 SdfPath
 UsdImagingCylinderAdapter::Populate(UsdPrim const& prim, 
                             UsdImagingIndexProxy* index,
@@ -70,7 +76,7 @@ UsdImagingCylinderAdapter::Populate(UsdPrim const& prim,
 void 
 UsdImagingCylinderAdapter::TrackVariabilityPrep(UsdPrim const& prim,
                                               SdfPath const& cachePath,
-                                              int requestedBits,
+                                              HdDirtyBits requestedBits,
                                               UsdImagingInstancerContext const* 
                                                   instancerContext)
 {
@@ -82,8 +88,8 @@ UsdImagingCylinderAdapter::TrackVariabilityPrep(UsdPrim const& prim,
 void 
 UsdImagingCylinderAdapter::TrackVariability(UsdPrim const& prim,
                                           SdfPath const& cachePath,
-                                          int requestedBits,
-                                          int* dirtyBits,
+                                          HdDirtyBits requestedBits,
+                                          HdDirtyBits* dirtyBits,
                                           UsdImagingInstancerContext const* 
                                               instancerContext)
 {
@@ -114,7 +120,7 @@ void
 UsdImagingCylinderAdapter::UpdateForTimePrep(UsdPrim const& prim,
                                    SdfPath const& cachePath, 
                                    UsdTimeCode time,
-                                   int requestedBits,
+                                   HdDirtyBits requestedBits,
                                    UsdImagingInstancerContext const* 
                                        instancerContext)
 {
@@ -137,8 +143,8 @@ void
 UsdImagingCylinderAdapter::UpdateForTime(UsdPrim const& prim,
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
-                               int requestedBits,
-                               int* resultBits,
+                               HdDirtyBits requestedBits,
+                               HdDirtyBits* resultBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext)
 {

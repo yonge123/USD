@@ -78,6 +78,13 @@
 #include <tuple>
 #include <type_traits>
 
+#if defined(ARCH_OS_WINDOWS)
+// Avoid deprecation warning on Windows.  We only scan unsigned ints so
+// the behavior is identical for valid arguments.
+#define sscanf sscanf_s
+#define strcpy strcpy_s
+#endif
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 TF_REGISTRY_FUNCTION(TfType) {
@@ -113,7 +120,7 @@ struct _IsBitwiseReadWrite {
     static const bool value =
         std::is_enum<T>::value ||
         std::is_arithmetic<T>::value ||
-        std::is_same<T, half>::value ||
+        std::is_same<T, GfHalf>::value ||
         std::is_trivial<T>::value ||
         GfIsGfVec<T>::value ||
         GfIsGfMatrix<T>::value ||
@@ -148,11 +155,11 @@ constexpr _SectionName _KnownSections[] = {
 template <class T>
 constexpr bool _IsInlinedType() {
     using std::is_same;
-    return is_same<T, string>::value    ||
-        is_same<T, TfToken>::value      ||
-        is_same<T, SdfPath>::value      ||
+    return is_same<T, string>::value ||
+        is_same<T, TfToken>::value ||
+        is_same<T, SdfPath>::value ||
         is_same<T, SdfAssetPath>::value ||
-        (sizeof(T) <= sizeof(uint32_t)  && _IsBitwiseReadWrite<T>::value);
+        (sizeof(T) <= sizeof(uint32_t) && _IsBitwiseReadWrite<T>::value);
 }
 
 template <class T>
@@ -1083,7 +1090,10 @@ public:
 // ValueHandler class hierarchy.  See comment for _ValueHandler itself for more
 // information.
 
-struct CrateFile::_ValueHandlerBase {};
+struct CrateFile::_ValueHandlerBase {
+    // Base Clear() does nothing.
+    void Clear() {}
+};
 
 // Scalar handler for non-inlined types -- does deduplication.
 template <class T, class Enable>
@@ -1126,6 +1136,9 @@ struct CrateFile::_ScalarValueHandlerBase : _ValueHandlerBase
         // Otherwise we have to read it from the file.
         reader.Seek(rep.GetPayload());
         *out = reader.template Read<T>();
+    }
+    void Clear() {
+        _valueDedup.reset();
     }
     std::unique_ptr<std::unordered_map<T, ValueRep, _Hasher>> _valueDedup;
 };
@@ -1228,6 +1241,12 @@ struct CrateFile::_ArrayValueHandlerBase<
         }
     }
 
+    void Clear() {
+        // Invoke base implementation to clear scalar table.
+        _ScalarValueHandlerBase<T>::Clear();
+        _arrayDedup.reset();
+    }
+    
     std::unique_ptr<
         std::unordered_map<VtArray<T>, ValueRep, _Hasher>> _arrayDedup;
 };
@@ -1246,7 +1265,7 @@ struct CrateFile::_ValueHandler : public _ArrayValueHandlerBase<T> {};
 /*static*/ bool
 CrateFile::CanRead(string const &fileName) {
     // Create a unique_ptr with a functor that fclose()s for a deleter.
-    _UniqueFILE in(fopen(fileName.c_str(), "rb"));
+    _UniqueFILE in(ArchOpenFile(fileName.c_str(), "rb"));
 
     if (!in)
         return false;
@@ -1286,7 +1305,7 @@ CrateFile::Open(string const &fileName)
     std::unique_ptr<CrateFile> result;
 
     // Create a unique_ptr with a functor that fclose()s for a deleter.
-    _UniqueFILE inputFile(fopen(fileName.c_str(), "rb"));
+    _UniqueFILE inputFile(ArchOpenFile(fileName.c_str(), "rb"));
 
     if (!inputFile) {
         TF_RUNTIME_ERROR("Failed to open file '%s'", fileName.c_str());
@@ -1377,7 +1396,7 @@ CrateFile::StartPacking(string const &fileName)
     TF_VERIFY(_fileName.empty() || _fileName == fileName);
     // We open the file for read/write (update) here in case we already have the
     // file, since we're not rewriting the whole thing.
-    _UniqueFILE out(fopen(fileName.c_str(), _fileName.empty() ? "w+b" : "r+b"));
+    _UniqueFILE out(ArchOpenFile(fileName.c_str(), _fileName.empty() ? "w+b" : "r+b"));
     if (!out) {
         TF_RUNTIME_ERROR("Failed to open '%s' for writing", fileName.c_str());
     } else {
@@ -1643,6 +1662,9 @@ CrateFile::_Write()
 
     _toc = toc;
     _boot = boot;
+
+    // Clear dedup tables.
+    _ClearValueHandlerDedupTables();
 
     return true;
 }
@@ -2090,12 +2112,10 @@ CrateFile::_ReadPathsRecursively(Reader reader,
 
     auto const &elemToken = _tokens[h.elementTokenIndex.value];
 
-    auto thisPath = isPrimPropertyPath ?
+    // Create this path.
+    _paths[h.index.value] = isPrimPropertyPath ?
         parentPath.AppendProperty(elemToken) :
         parentPath.AppendElementToken(elemToken);
-
-    // Create this path.
-    _paths[h.index.value] = thisPath;
 
     // If this one has a sibling, read out the pointer.
     auto siblingOffset =
@@ -2408,6 +2428,17 @@ CrateFile::_DeleteValueHandlers() {
 #define xx(_unused1, _unused2, T, _unused3)                                    \
     delete static_cast<_ValueHandler<T> *>(                                    \
         _valueHandlers[static_cast<int>(TypeEnumFor<T>())]);
+
+#include "crateDataTypes.h"
+
+#undef xx
+}
+
+void
+CrateFile::_ClearValueHandlerDedupTables() {
+#define xx(_unused1, _unused2, T, _unused3)                                    \
+    static_cast<_ValueHandler<T> *>(                                           \
+        _valueHandlers[static_cast<int>(TypeEnumFor<T>())])->Clear();
 
 #include "crateDataTypes.h"
 

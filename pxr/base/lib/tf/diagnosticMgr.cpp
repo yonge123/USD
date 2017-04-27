@@ -85,21 +85,15 @@ TF_REGISTRY_FUNCTION(TfDebug)
 }
 
 
-// Abort, but first remove Tf's signal handler so we don't invoke the session
-// logging mechanism.  This is meant for use by things like TF_FATAL_ERROR,
+// Abort without logging.  This is meant for use by things like TF_FATAL_ERROR,
 // which already log (more extensive) session information before doing the
 // abort.
 static
 void
 Tf_UnhandledAbort()
 {
-    // Remove signal handler.
-    struct sigaction act;
-    act.sa_handler = SIG_DFL;
-    act.sa_flags   = 0;
-    sigemptyset(&act.sa_mask);
-    sigaction(SIGABRT, &act, NULL);
-    abort();
+    constexpr bool logging = true;
+    ArchAbort(!logging);
 }
 
 TF_INSTANTIATE_SINGLETON(TfDiagnosticMgr);
@@ -388,51 +382,46 @@ TfDiagnosticMgr::EraseRange(ErrorIterator first, ErrorIterator last)
     return result;
 }
 
-TfDiagnosticMgr::ErrorIterator
+void
 TfDiagnosticMgr::ErrorHelper::PostWithInfo(
     const string& msg, TfDiagnosticInfo info) const
 {
     TfDiagnosticMgr::GetInstance().PostError(_errorCode, _errorCodeString,
         _context, msg, info, false);
-    return boost::prior(TfDiagnosticMgr::GetInstance().GetErrorEnd());
 }
 
-TfDiagnosticMgr::ErrorIterator
+void
 TfDiagnosticMgr::ErrorHelper::Post(const string& msg) const
 {
     TfDiagnosticMgr::GetInstance().PostError(_errorCode, _errorCodeString,
         _context, msg, TfDiagnosticInfo(), false);
-    return boost::prior(TfDiagnosticMgr::GetInstance().GetErrorEnd());
 }
 
-TfDiagnosticMgr::ErrorIterator
+void
 TfDiagnosticMgr::ErrorHelper::PostQuietly(
     const string& msg, TfDiagnosticInfo info) const
 {
     TfDiagnosticMgr::GetInstance().PostError(_errorCode, _errorCodeString,
         _context, msg, info, true);
-    return boost::prior(TfDiagnosticMgr::GetInstance().GetErrorEnd());
 }
 
 
-TfDiagnosticMgr::ErrorIterator
+void
 TfDiagnosticMgr::ErrorHelper::Post(const char* fmt, ...) const
 {
     va_list ap;
     va_start(ap, fmt);
     Post(TfVStringPrintf(fmt, ap));
     va_end(ap);
-    return boost::prior(TfDiagnosticMgr::GetInstance().GetErrorEnd());
 }
 
-TfDiagnosticMgr::ErrorIterator
+void
 TfDiagnosticMgr::ErrorHelper::PostQuietly(const char* fmt, ...) const
 {
     va_list ap;
     va_start(ap, fmt);
     PostQuietly(TfVStringPrintf(fmt, ap));
     va_end(ap);
-    return boost::prior(TfDiagnosticMgr::GetInstance().GetErrorEnd());
 }
 
 void

@@ -53,6 +53,12 @@ UsdImagingConeAdapter::~UsdImagingConeAdapter()
 {
 }
 
+bool
+UsdImagingConeAdapter::IsSupported(HdRenderIndex* renderIndex)
+{
+    return renderIndex->IsRprimTypeSupported(HdPrimTypeTokens->mesh);
+}
+
 SdfPath
 UsdImagingConeAdapter::Populate(UsdPrim const& prim, 
                             UsdImagingIndexProxy* index,
@@ -69,7 +75,7 @@ UsdImagingConeAdapter::Populate(UsdPrim const& prim,
 void 
 UsdImagingConeAdapter::TrackVariabilityPrep(UsdPrim const& prim,
                                             SdfPath const& cachePath,
-                                            int requestedBits,
+                                            HdDirtyBits requestedBits,
                                             UsdImagingInstancerContext const* 
                                                 instancerContext)
 {
@@ -81,8 +87,8 @@ UsdImagingConeAdapter::TrackVariabilityPrep(UsdPrim const& prim,
 void 
 UsdImagingConeAdapter::TrackVariability(UsdPrim const& prim,
                                         SdfPath const& cachePath,
-                                        int requestedBits,
-                                        int* dirtyBits,
+                                        HdDirtyBits requestedBits,
+                                        HdDirtyBits* dirtyBits,
                                         UsdImagingInstancerContext const* 
                                             instancerContext)
 {
@@ -115,7 +121,7 @@ void
 UsdImagingConeAdapter::UpdateForTimePrep(UsdPrim const& prim,
                                    SdfPath const& cachePath, 
                                    UsdTimeCode time,
-                                   int requestedBits,
+                                   HdDirtyBits requestedBits,
                                    UsdImagingInstancerContext const* 
                                        instancerContext)
 {
@@ -138,8 +144,8 @@ void
 UsdImagingConeAdapter::UpdateForTime(UsdPrim const& prim,
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
-                               int requestedBits,
-                               int* resultBits,
+                               HdDirtyBits requestedBits,
+                               HdDirtyBits* resultBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext)
 {

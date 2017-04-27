@@ -34,6 +34,8 @@
 #include <cstring>
 #elif defined(ARCH_OS_WINDOWS)
 #include <Windows.h>
+#include <chrono>
+#include <thread>
 #endif
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -63,51 +65,76 @@ Arch_InitTickTimer()
     char linebuffer[1024];
     double cpuHz = 0.0;
 
-    in = fopen("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq", "r");
+    in = fopen("/proc/cpuinfo", "r");
+
     if (in) {
-	if (fgets(linebuffer, sizeof(linebuffer), in)) {
-	    // We just read the cpuspeed in kHz.  Convert.
-	    //
-	    cpuHz = 1000 * atof(linebuffer);
-	}
-	fclose(in);
+
+        while (fgets(linebuffer, sizeof(linebuffer), in)) {
+            char* colon;
+
+            if (strncmp(linebuffer, "bogomips", 8) == 0 &&
+                (colon = strchr(linebuffer, ':'))) {
+
+                colon++;
+            
+                // The bogomips line is Millions of Instructions / sec
+                // So convert.
+                // The magic 2.0 is from Red Hat, which corresponds
+                // to modern Intel / AMD processors.
+                cpuHz = 1e6 * atof(colon) / 2.0;
+                break;
+            }
+        }
+        
+        fclose(in);
+    }
+
+    if (cpuHz == 0.0) {
+        in = fopen("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq", "r");
+        if (in) {
+            if (fgets(linebuffer, sizeof(linebuffer), in)) {
+                // We just read the cpuspeed in kHz.  Convert.
+                //
+                cpuHz = 1000 * atof(linebuffer);
+            }
+           fclose(in);
+
+        }
     }
 
     // If we could not find that file (the cpufreq driver is unavailable
     // for some reason, fall back to /proc/cpuinfo.
     //
     if (cpuHz == 0.0) {
-	in = fopen("/proc/cpuinfo","r");
+        in = fopen("/proc/cpuinfo","r");
 
-	if (!in) {
-	    // Note: ARCH_ERROR will abort the program
-	    //
-	    ARCH_ERROR("Cannot open /proc/cpuinfo");
-	}
+        if (!in) {
+            // Note: ARCH_ERROR will abort the program
+            //
+            ARCH_ERROR("Cannot open /proc/cpuinfo");
+        }
 
-	while (fgets(linebuffer, sizeof(linebuffer), in)) {
-	    char* colon;
-	    if (strncmp(linebuffer, "cpu MHz", 7) == 0 &&
-		(colon = strchr(linebuffer, ':')))
-	    {
-		colon++;
+        while (fgets(linebuffer, sizeof(linebuffer), in)) {
+            char* colon;
+            if (strncmp(linebuffer, "cpu MHz", 7) == 0 &&
+                (colon = strchr(linebuffer, ':'))) {
+                colon++;
 
-		// colon is pointing to a cpu speed in MHz.  Convert.
-		//
-		cpuHz = 1e6 * atof(colon);
+                // colon is pointing to a cpu speed in MHz.  Convert.
+                cpuHz = 1e6 * atof(colon);
 
-		break;
-	    }
-	}
+                break;
+            }
+        }
 
-	fclose(in);
+        fclose(in);
 
-	if (cpuHz == 0.0) {
-	    ARCH_ERROR("Could not find 'cpu MHz' in /proc/cpuinfo");
-	}
+        if (cpuHz == 0.0) {
+            ARCH_ERROR("Could not find 'cpu MHz' in /proc/cpuinfo");
+        }
     }
 
-    Arch_NanosecondsPerTick = 1e9 / cpuHz;
+    Arch_NanosecondsPerTick = double(1e9) / double(cpuHz);
 }
 #elif defined(ARCH_OS_WINDOWS)
 
@@ -115,9 +142,32 @@ ARCH_HIDDEN
 void
 Arch_InitTickTimer()
 {
-    LARGE_INTEGER freq;
-    QueryPerformanceFrequency(&freq);
-    Arch_NanosecondsPerTick = 1e9 / freq.QuadPart;
+    // We want to use rdtsc so we need to find the frequency.  We run a
+    // small sleep here to compute it using QueryPerformanceCounter()
+    // which is independent of rdtsc.  So we wait for some duration using
+    // QueryPerformanceCounter() (whose frequency we know) then compute
+    // how many ticks elapsed during that time and from that the number
+    // of ticks per nanosecond.
+    LARGE_INTEGER qpcFreq, qpcStart, qpcEnd;
+    QueryPerformanceFrequency(&qpcFreq);
+    const auto delay = (qpcFreq.QuadPart >> 4); // 1/16th of a second.
+    QueryPerformanceCounter(&qpcStart);
+    const auto t1 = ArchGetTickTime();
+    do {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        QueryPerformanceCounter(&qpcEnd);
+    } while (qpcEnd.QuadPart - qpcStart.QuadPart < delay);
+    QueryPerformanceCounter(&qpcEnd);
+    const auto t2 = ArchGetTickTime();
+
+    // Total time take during the loop in seconds.
+    const auto durationInSeconds =
+        static_cast<double>(qpcEnd.QuadPart - qpcStart.QuadPart) /
+        qpcFreq.QuadPart;
+
+    // Nanoseconds per tick.
+    constexpr auto nanosPerSecond = 1.0e9;
+    Arch_NanosecondsPerTick = nanosPerSecond * durationInSeconds / (t2 - t1);
 }
 
 #else    

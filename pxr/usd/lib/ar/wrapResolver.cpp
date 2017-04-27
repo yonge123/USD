@@ -29,12 +29,13 @@
 #include "pxr/pxr.h"
 #include "pxr/usd/ar/resolver.h"
 #include "pxr/usd/ar/resolverContext.h"
+#include "pxr/base/tf/refPtr.h"
 
 #include <boost/noncopyable.hpp>
 
 using namespace boost::python;
 
-PXR_NAMESPACE_OPEN_SCOPE
+PXR_NAMESPACE_USING_DIRECTIVE
 
 void
 wrapResolver()
@@ -56,4 +57,4 @@ wrapResolver()
         return_value_policy<reference_existing_object>());
 }
 
-PXR_NAMESPACE_CLOSE_SCOPE
+TF_REFPTR_CONST_VOLATILE_GET(ArResolver)

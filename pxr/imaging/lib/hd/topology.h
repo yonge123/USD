@@ -23,7 +23,9 @@
 //
 #ifndef _HD_TOPOLOGY_H_
 #define _HD_TOPOLOGY_H_
+
 #include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/base/arch/inttypes.h"
 
@@ -34,10 +36,9 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 typedef boost::shared_ptr<class HdTopology> HdTopologySharedPtr;
 
-class HdTopology
-{
+class HdTopology {
 public:
-    typedef size_t ID;
+    typedef uint64_t ID;
 
     HdTopology() {};
     virtual ~HdTopology() {};
@@ -46,6 +47,7 @@ public:
     virtual ID ComputeHash() const = 0;
 };
 
+HD_API
 std::ostream& operator << (std::ostream &out, HdTopology const &);
 
 

@@ -25,13 +25,16 @@
 #define HD_SURFACESHADER_H
 
 #include "pxr/pxr.h"
-#include "pxr/imaging/hd/shaderCode.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
-
-#include "pxr/usd/sdf/path.h"
-#include "pxr/base/vt/value.h"
+#include "pxr/imaging/hd/shaderCode.h"
+#include "pxr/imaging/hd/bufferSource.h"
 
 #include "pxr/imaging/garch/gl.h"
+
+#include "pxr/usd/sdf/path.h"
+
+#include "pxr/base/vt/value.h"
 #include "pxr/base/tf/token.h"
 
 #include <boost/shared_ptr.hpp>
@@ -58,54 +61,66 @@ typedef boost::shared_ptr<class HdSurfaceShader> HdSurfaceShaderSharedPtr;
 /// expressed as well.
 class HdSurfaceShader : public HdShaderCode {
 public:
-    HdSurfaceShader(SdfPath const & id);
-
+    HD_API
+    HdSurfaceShader();
+    HD_API
     virtual ~HdSurfaceShader();
 
-    /// Returns the identifer by which this surface shader is known. This
-    /// identifier is a common associative key used by the SceneDelegate,
-    /// RenderIndex, and for binding to the Rprim.
-    SdfPath const& GetID() const { return _id; }
-
-    /// Synchronizes state from the delegate to Hydra, for example, allocating
-    /// parameters into GPU memory.
-    void Sync(HdSceneDelegate *sceneDelegate);
 
     // ---------------------------------------------------------------------- //
     /// \name HdShader Virtual Interface                                      //
     // ---------------------------------------------------------------------- //
+    HD_API
     virtual std::string GetSource(TfToken const &shaderStageKey) const;
+    HD_API
     virtual HdShaderParamVector const& GetParams() const;
+    HD_API
     virtual HdBufferArrayRangeSharedPtr const& GetShaderData() const;
+    HD_API
     virtual TextureDescriptorVector GetTextures() const;
+    HD_API
     virtual void BindResources(Hd_ResourceBinder const &binder, int program);
+    HD_API
     virtual void UnbindResources(Hd_ResourceBinder const &binder, int program);
+    HD_API
     virtual void AddBindings(HdBindingRequestVector *customBindings);
+    HD_API
     virtual ID ComputeHash() const;
 
-    /// Returns if the two shaders can be aggregated in a same drawbatch or not.
-    static bool CanAggregate(HdShaderCodeSharedPtr const &shaderA,
-                             HdShaderCodeSharedPtr const &shaderB);
+    /// Setter method for prim
+    HD_API
+    void SetFragmentSource(const std::string &source);
+    HD_API
+    void SetGeometrySource(const std::string &source);
+    HD_API
+    void SetParams(const HdShaderParamVector &params);
+    HD_API
+    void SetTextureDescriptors(const TextureDescriptorVector &texDesc);
+    HD_API
+    void SetBufferSources(HdBufferSourceVector &bufferSources);
+
+    /// If the prim is based on asset, reload that asset.
+    HD_API
+    virtual void Reload();
 
 protected:
+    HD_API
     void _SetSource(TfToken const &shaderStageKey, std::string const &source);
 
 private:
-    HdSceneDelegate* _delegate;
     std::string _fragmentSource;
     std::string _geometrySource;
-    SdfPath _id;
 
-    // Data populated by delegate
+    // Shader Parameters
+    HdShaderParamVector         _params;
+    HdBufferSpecVector          _paramSpec;
     HdBufferArrayRangeSharedPtr _paramArray;
-    HdShaderParamVector _params;
 
     TextureDescriptorVector _textureDescriptors;
 
     // No copying
     HdSurfaceShader(const HdSurfaceShader &)                     = delete;
     HdSurfaceShader &operator =(const HdSurfaceShader &)         = delete;
-
 };
 
 

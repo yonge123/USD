@@ -395,7 +395,7 @@ namespace {
 
     // These keys represent data we wish to filter out of our token search
     // when stitching data in a SdfSpec.
-    TF_MAKE_STATIC_DATA((std::vector<TfToken>), _SortedChildrenTokens) {
+    TF_MAKE_STATIC_DATA(std::vector<TfToken>, _SortedChildrenTokens) {
         *_SortedChildrenTokens = SdfChildrenKeys->allTokens;
         std::sort(_SortedChildrenTokens->begin(), _SortedChildrenTokens->end());
     } 
@@ -472,6 +472,23 @@ UsdUtilsStitchInfo(const SdfSpecHandle& strongObj,
                 // of weakRelHandles target path list
                 strongRelHandle->GetTargetPathList().CopyItems( 
                         weakRelHandle->GetTargetPathList());
+            }
+        // Connection lists need the same treatment as TargetPaths, but needs
+        // to maintain a connection instead of a relationship.  See comments
+        // about TargetPaths above as to why this is necessary.
+        } else if (key == SdfFieldKeys->ConnectionPaths) {
+            if (!strongObj->HasInfo(key)) {
+                SdfAttributeSpecHandle strongAttrHandle
+                    = TfDynamic_cast<SdfAttributeSpecHandle>(strongObj);
+                SdfAttributeSpecHandle weakAttrHandle
+                    = TfDynamic_cast<SdfAttributeSpecHandle>(weakObj);
+
+                if (!TF_VERIFY(strongAttrHandle && weakAttrHandle)) {
+                    continue;
+                }
+
+                strongAttrHandle->GetConnectionPathList().CopyItems(
+                        weakAttrHandle->GetConnectionPathList());
             }
         } else {
             // if its not a dictionary type, insert as normal

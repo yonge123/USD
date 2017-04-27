@@ -90,7 +90,7 @@ public:
     /// TrackVariability().
     virtual void TrackVariabilityPrep(UsdPrim const& prim,
                                       SdfPath const& cachePath,
-                                      int requestedBits,
+                                      HdDirtyBits requestedBits,
                                       UsdImagingInstancerContext const* 
                                           instancerContext = NULL) = 0;
 
@@ -100,8 +100,8 @@ public:
     /// This method is expected to be called from multiple threads.
     virtual void TrackVariability(UsdPrim const& prim,
                                   SdfPath const& cachePath,
-                                  int requestedBits,
-                                  int* dirtyBits,
+                                  HdDirtyBits requestedBits,
+                                  HdDirtyBits* dirtyBits,
                                   UsdImagingInstancerContext const* 
                                       instancerContext = NULL) = 0;
 
@@ -109,7 +109,7 @@ public:
     virtual void UpdateForTimePrep(UsdPrim const& prim,
                                    SdfPath const& cachePath, 
                                    UsdTimeCode time,
-                                   int requestedBits,
+                                   HdDirtyBits requestedBits,
                                    UsdImagingInstancerContext const* 
                                        instancerContext = NULL) = 0;
 
@@ -120,8 +120,8 @@ public:
     virtual void UpdateForTime(UsdPrim const& prim,
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
-                               int requestedBits,
-                               int* resultBits,
+                               HdDirtyBits requestedBits,
+                               HdDirtyBits* resultBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext = NULL) = 0;
 
@@ -201,7 +201,7 @@ public:
     // ---------------------------------------------------------------------- //
     /// \name Selection
     // ---------------------------------------------------------------------- //
-    virtual bool PopulateSelection(SdfPath const &path,
+    virtual bool PopulateSelection(SdfPath const &usdPath,
                                    VtIntArray const &instanceIndices,
                                    HdxSelectionSharedPtr const &result);
 
@@ -240,6 +240,13 @@ public:
     /// Used for change tracking over subtree boundary (e.g. instancing)
     virtual SdfPathVector GetDependPaths(SdfPath const &path) const;
 
+    // ---------------------------------------------------------------------- //
+    /// \name Render Index Compatibility
+    // ---------------------------------------------------------------------- //
+
+    /// Returns whether the adapter can be populated into the target render index.
+    virtual bool IsSupported(HdRenderIndex* renderIndex) { return true; }
+
 protected:
     typedef std::vector<UsdImagingValueCache::PrimvarInfo> PrimvarInfoVector;
     typedef UsdImagingValueCache::Key Keys;
@@ -271,16 +278,16 @@ protected:
     // \p dirtyFlag in the \p dirtyFlags and increments a perf counter. Returns
     // true if the attribute is varying.
     bool _IsVarying(UsdPrim prim, TfToken const& attrName, 
-           HdChangeTracker::DirtyBits dirtyFlag, TfToken const& perfToken,
-           int* dirtyFlags, bool isInherited);
+           HdDirtyBits dirtyFlag, TfToken const& perfToken,
+           HdDirtyBits* dirtyFlags, bool isInherited);
 
     // Determines if the prim's transform (CTM) is varying and if so, sets the 
     // given \p dirtyFlag in the \p dirtyFlags and increments a perf counter. 
     // Returns true if the prim's transform is varying.
     bool _IsTransformVarying(UsdPrim prim,
-                             HdChangeTracker::DirtyBits dirtyFlag, 
+                             HdDirtyBits dirtyFlag,
                              TfToken const& perfToken,
-                             int* dirtyFlags);
+                             HdDirtyBits* dirtyFlags);
 
     void _MergePrimvar(UsdImagingValueCache::PrimvarInfo const& primvar, 
                        PrimvarInfoVector* vec);

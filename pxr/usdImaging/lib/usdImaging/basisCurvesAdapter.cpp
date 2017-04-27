@@ -49,6 +49,12 @@ UsdImagingBasisCurvesAdapter::~UsdImagingBasisCurvesAdapter()
 {
 }
 
+bool
+UsdImagingBasisCurvesAdapter::IsSupported(HdRenderIndex* renderIndex)
+{
+    return renderIndex->IsRprimTypeSupported(HdPrimTypeTokens->basisCurves);
+}
+
 SdfPath
 UsdImagingBasisCurvesAdapter::Populate(UsdPrim const& prim, 
                             UsdImagingIndexProxy* index,
@@ -65,7 +71,7 @@ UsdImagingBasisCurvesAdapter::Populate(UsdPrim const& prim,
 void 
 UsdImagingBasisCurvesAdapter::TrackVariabilityPrep(UsdPrim const& prim,
                                              SdfPath const& cachePath,
-                                             int requestedBits,
+                                             HdDirtyBits requestedBits,
                                              UsdImagingInstancerContext const* 
                                                  instancerContext)
 {
@@ -77,8 +83,8 @@ UsdImagingBasisCurvesAdapter::TrackVariabilityPrep(UsdPrim const& prim,
 void 
 UsdImagingBasisCurvesAdapter::TrackVariability(UsdPrim const& prim,
                                                SdfPath const& cachePath,
-                                               int requestedBits,
-                                               int* dirtyBits,
+                                               HdDirtyBits requestedBits,
+                                               HdDirtyBits* dirtyBits,
                                                UsdImagingInstancerContext const* 
                                                    instancerContext)
 {
@@ -125,7 +131,7 @@ void
 UsdImagingBasisCurvesAdapter::UpdateForTimePrep(UsdPrim const& prim,
                                    SdfPath const& cachePath, 
                                    UsdTimeCode time,
-                                   int requestedBits,
+                                   HdDirtyBits requestedBits,
                                    UsdImagingInstancerContext const* 
                                        instancerContext)
 {
@@ -150,8 +156,8 @@ void
 UsdImagingBasisCurvesAdapter::UpdateForTime(UsdPrim const& prim,
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
-                               int requestedBits,
-                               int* resultBits,
+                               HdDirtyBits requestedBits,
+                               HdDirtyBits* resultBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext)
 {

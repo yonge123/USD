@@ -27,17 +27,16 @@
 #include "pxr/usd/kind/registry.h"
 
 #include "pxr/usd/usdGeom/boundable.h"
-#include "pxr/usd/usdGeom/curves.h"
 #include "pxr/usd/usdGeom/debugCodes.h"
 #include "pxr/usd/usdGeom/modelAPI.h"
-#include "pxr/usd/usdGeom/points.h"
 #include "pxr/usd/usdGeom/pointBased.h"
 #include "pxr/usd/usdGeom/xform.h"
 
-#include "pxr/usd/usd/treeIterator.h"
+#include "pxr/usd/usd/primRange.h"
 #include "pxr/base/tracelite/trace.h"
 
 #include "pxr/base/tf/pyLock.h"
+#include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/token.h"
 
 #include <tbb/enumerable_thread_specific.h>
@@ -170,9 +169,11 @@ private:
                                _ThreadXformCache* xfCaches,
                                WorkDispatcher* dispatcher)
     {
-        UsdGeomBBoxCache::_BBoxTask& rootTask = *new(tbb::task::allocate_root()) 
-            UsdGeomBBoxCache::_BBoxTask(master, GfMatrix4d(1.0), 
-                                        _owner, xfCaches);
+        tbb::task_group_context context;
+        UsdGeomBBoxCache::_BBoxTask& rootTask =
+            *new(tbb::task::allocate_root(context)) 
+                UsdGeomBBoxCache::_BBoxTask(master, GfMatrix4d(1.0), 
+                                            _owner, xfCaches);
         tbb::task::spawn_root_and_wait(rootTask);
 
         // Update all of the master prims that depended on the completed master
@@ -264,7 +265,7 @@ UsdGeomBBoxCache::ComputeWorldBound(const UsdPrim& prim)
     GfBBox3d bbox;
 
     if (!prim) {
-        TF_CODING_ERROR("Invalid prim.");
+        TF_CODING_ERROR("Invalid prim: %s", UsdDescribe(prim).c_str());
         return bbox;
     }
 
@@ -286,7 +287,7 @@ UsdGeomBBoxCache::ComputeRelativeBound(const UsdPrim& prim,
 {
     GfBBox3d bbox;
     if (!prim) {
-        TF_CODING_ERROR("Invalid prim.");
+        TF_CODING_ERROR("Invalid prim: %s", UsdDescribe(prim).c_str());
         return bbox;
     }
 
@@ -312,7 +313,7 @@ UsdGeomBBoxCache::ComputeLocalBound(const UsdPrim& prim)
     GfBBox3d bbox;
 
     if (!prim) {
-        TF_CODING_ERROR("Invalid prim.");
+        TF_CODING_ERROR("Invalid prim: %s", UsdDescribe(prim).c_str());
         return bbox;
     }
 
@@ -335,7 +336,7 @@ UsdGeomBBoxCache::ComputeUntransformedBound(const UsdPrim& prim)
     GfBBox3d empty;
 
     if (!prim) {
-        TF_CODING_ERROR("Invalid prim.");
+        TF_CODING_ERROR("Invalid prim: %s", UsdDescribe(prim).c_str());
         return empty;
     }
 
@@ -355,7 +356,7 @@ UsdGeomBBoxCache::ComputeUntransformedBound(
     GfBBox3d empty;
 
     if (!prim) {
-        TF_CODING_ERROR("Invalid prim.");
+        TF_CODING_ERROR("Invalid prim: %s", UsdDescribe(prim).c_str());
         return empty;
     }
 
@@ -374,7 +375,8 @@ UsdGeomBBoxCache::ComputeUntransformedBound(
     }
 
     GfBBox3d result;
-    for (UsdTreeIterator it(prim); it ; ++it) {
+    UsdPrimRange range(prim);
+    for (auto it = range.begin(); it != range.end(); ++it) {
         const UsdPrim &p = *it;
         const SdfPath &primPath = p.GetPath();
 
@@ -534,8 +536,9 @@ UsdGeomBBoxCache::_ShouldIncludePrim(const UsdPrim& prim)
     if (img.GetVisibilityAttr().Get(&vis, _time)
         && vis == UsdGeomTokens->invisible) {
         TF_DEBUG(USDGEOM_BBOX).Msg("[BBox Cache] excluded for VISIBILITY. "
-                                   "prim: %s visibility: %s\n",
+                                   "prim: %s visibility at time %s: %s\n",
                                    prim.GetPath().GetText(),
+                                   TfStringify(_time).c_str(),
                                    vis.GetText());
         return false;
     }
@@ -731,10 +734,9 @@ UsdGeomBBoxCache::_FindOrCreateEntriesForPrim(
 
     TfHashSet<UsdPrim, _UsdPrimHash> seenMasterPrims;
 
-    for (UsdTreeIterator it(
-            prim, (UsdPrimIsActive && UsdPrimIsDefined 
-                   && !UsdPrimIsAbstract)); it; ++it) {
-
+    UsdPrimRange range(
+        prim, (UsdPrimIsActive && UsdPrimIsDefined && !UsdPrimIsAbstract));
+    for (auto it = range.begin(); it != range.end(); ++it) {
         _PrimBBoxHashMap::iterator cacheIt = _bboxCache.insert(
             std::make_pair(*it, _Entry())).first;
         if (_ShouldPruneChildren(*it, &cacheIt->second)) {
@@ -865,56 +867,6 @@ UsdGeomBBoxCache::_GetBBoxFromExtentsHint(
     }
 
     return true;
-}
-
-bool
-UsdGeomBBoxCache::_ComputeMissingExtent(
-    const UsdGeomPointBased &pointBasedObj, 
-    const VtVec3fArray &points,
-    VtVec3fArray* extent)
-{
-    //  We provide this method to compute extent for PointBased prims.
-    //  Specifically, if a pointbased prim does not have a valid authored 
-    //  extent we try to compute it here.
-    //  See Bugzilla #s 97111, 115735.
-
-    // Calculate Extent Based on Prim Type
-    if (UsdGeomPoints pointsObj = UsdGeomPoints(pointBasedObj.GetPrim())) {
-        
-        // Extract any width data
-        VtFloatArray widths;
-        bool hasWidth = pointsObj.GetWidthsAttr().Get(&widths);
-
-        if (hasWidth) {
-            return UsdGeomPoints::ComputeExtent(points, widths, extent);
-        }
-
-    } else if (UsdGeomCurves curvesObj = 
-                    UsdGeomCurves(pointBasedObj.GetPrim())) {
-        // Calculate Extent for a Curve;
-
-        // XXX: All curves can be bounded by their control points, excluding
-        //      catmull rom and hermite. For now, we treat hermite and catmull
-        //      rom curves like their convex-hull counterparts. While there are
-        //      some bounds approximations we could perform, hermite's
-        //      implementation is not fully supported and catmull rom splines
-        //      are very rare. For simplicity, we ignore these odd corner cases
-        //      and provide a still reasonable approximation, but we also 
-        //      recognize there could be some out-of-bounds error. 
-        //      For the purposes of BBox-Cache extent fallback, some small 
-        //      chance of error is probably OK.
-
-        // Extract any width data; if no width, create 0 width array
-        VtFloatArray widths;
-        if (!curvesObj.GetWidthsAttr().Get(&widths)) {
-            widths.push_back(0);
-        }
-
-        return UsdGeomCurves::ComputeExtent(points, widths, extent);
-    }
-
-    // The prim should be calculated as a PointBased;
-    return UsdGeomPointBased::ComputeExtent(points, extent);
 }
 
 void 
@@ -1064,16 +1016,14 @@ UsdGeomBBoxCache::_ResolvePrim(_BBoxTask* task,
                         prim.GetPath().GetString().c_str());
 
                     // Create extent
-                    VtVec3fArray points;
-                    if (pointBasedObj.GetPointsAttr().Get(&points)) {
-                        successGettingExtent = _ComputeMissingExtent(
-                            pointBasedObj, points, &extent);
+                    successGettingExtent = 
+                        UsdGeomBoundable::ComputeExtentFromPlugins(
+                            pointBasedObj, _time, &extent);
 
-                        if (!successGettingExtent) {
-                            TF_DEBUG(USDGEOM_BBOX).Msg(
-                                "[BBox Cache] WARNING: Unable to compute extent for "
-                                "<%s>.", prim.GetPath().GetString().c_str());
-                        }
+                    if (!successGettingExtent) {
+                        TF_DEBUG(USDGEOM_BBOX).Msg(
+                            "[BBox Cache] WARNING: Unable to compute extent for "
+                            "<%s>.", prim.GetPath().GetString().c_str());
                     }
                 }
 

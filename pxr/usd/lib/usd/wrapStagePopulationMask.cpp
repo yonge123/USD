@@ -29,12 +29,18 @@
 #include "pxr/usd/usd/stagePopulationMask.h"
 #include "pxr/base/tf/pyUtils.h"
 
-PXR_NAMESPACE_OPEN_SCOPE
-
-
 using std::string;
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
+
+static std::string _Str(UsdStagePopulationMask const &self)
+{
+    return boost::lexical_cast<std::string>(self);
+}
 
 static string __repr__(UsdStagePopulationMask const &self)
 {
@@ -42,9 +48,13 @@ static string __repr__(UsdStagePopulationMask const &self)
         TfPyRepr(self.GetPaths()) + ")";
 }
 
+} // anonymous namespace 
+
 void wrapUsdStagePopulationMask()
 {
     class_<UsdStagePopulationMask>("StagePopulationMask")
+        .def(init<std::vector<SdfPath>>())
+        
         .def("All", &UsdStagePopulationMask::All)
         .staticmethod("All")
         
@@ -61,6 +71,15 @@ void wrapUsdStagePopulationMask()
                  SdfPath const &) const)
              &UsdStagePopulationMask::GetUnion,
              arg("path"))
+
+        .def("Intersection", &UsdStagePopulationMask::Intersection)
+        .staticmethod("Intersection")
+
+        .def("GetIntersection",
+             (UsdStagePopulationMask (UsdStagePopulationMask::*)(
+                 UsdStagePopulationMask const &) const)
+             &UsdStagePopulationMask::GetIntersection,
+             arg("other"))
 
         .def("Includes",
              (bool (UsdStagePopulationMask::*)(
@@ -94,11 +113,9 @@ void wrapUsdStagePopulationMask()
         .def(self == self)
         .def(self != self)
 
-        .def(str(self))
+//        .def(str(self))
+        .def("__str__", _Str)
         .def("__repr__", __repr__)
 
         ;
 }
-
-PXR_NAMESPACE_CLOSE_SCOPE
-

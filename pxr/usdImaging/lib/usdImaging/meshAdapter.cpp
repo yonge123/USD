@@ -52,6 +52,12 @@ UsdImagingMeshAdapter::~UsdImagingMeshAdapter()
 {
 }
 
+bool
+UsdImagingMeshAdapter::IsSupported(HdRenderIndex *renderIndex)
+{
+    return renderIndex->IsRprimTypeSupported(HdPrimTypeTokens->mesh);
+}
+
 SdfPath
 UsdImagingMeshAdapter::Populate(UsdPrim const& prim,
                             UsdImagingIndexProxy* index,
@@ -68,7 +74,7 @@ UsdImagingMeshAdapter::Populate(UsdPrim const& prim,
 void
 UsdImagingMeshAdapter::TrackVariabilityPrep(UsdPrim const& prim,
                                             SdfPath const& cachePath,
-                                            int requestedBits,
+                                            HdDirtyBits requestedBits,
                                             UsdImagingInstancerContext const* 
                                                 instancerContext)
 {
@@ -80,8 +86,8 @@ UsdImagingMeshAdapter::TrackVariabilityPrep(UsdPrim const& prim,
 void
 UsdImagingMeshAdapter::TrackVariability(UsdPrim const& prim,
                                         SdfPath const& cachePath,
-                                        int requestedBits,
-                                        int* dirtyBits,
+                                        HdDirtyBits requestedBits,
+                                        HdDirtyBits* dirtyBits,
                                         UsdImagingInstancerContext const* 
                                             instancerContext)
 {
@@ -134,7 +140,7 @@ void
 UsdImagingMeshAdapter::UpdateForTimePrep(UsdPrim const& prim,
                                    SdfPath const& cachePath,
                                    UsdTimeCode time,
-                                   int requestedBits,
+                                   HdDirtyBits requestedBits,
                                    UsdImagingInstancerContext const* 
                                        instancerContext)
 {
@@ -156,8 +162,8 @@ void
 UsdImagingMeshAdapter::UpdateForTime(UsdPrim const& prim,
                                SdfPath const& cachePath,
                                UsdTimeCode time,
-                               int requestedBits,
-                               int* resultBits,
+                               HdDirtyBits requestedBits,
+                               HdDirtyBits* resultBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext)
 {
@@ -214,8 +220,6 @@ UsdImagingMeshAdapter::_GetMeshTopology(UsdPrim const& prim,
     HF_MALLOC_TAG_FUNCTION();
     TfToken schemeToken;
     _GetPtr(prim, UsdGeomTokens->subdivisionScheme, time, &schemeToken);
-    if (schemeToken == UsdGeomTokens->none)
-        schemeToken = PxOsdOpenSubdivTokens->bilinear;
 
     *topo = HdMeshTopology(
         schemeToken,

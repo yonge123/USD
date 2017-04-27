@@ -86,17 +86,16 @@ PxOsdMeshTopology::ComputeHash() const {
 
     TRACE_FUNCTION();
 
-    uint32_t hash = _subdivTags.ComputeHash();
-    hash = ArchHash((const char*)&_scheme, sizeof(TfToken), hash);
-    hash = ArchHash((const char*)&_orientation, sizeof(TfToken), hash);
-    hash = ArchHash((const char*)_faceVertexCounts.cdata(),
-                    _faceVertexCounts.size() * sizeof(int), hash);
-    hash = ArchHash((const char*)_faceVertexIndices.cdata(),
-                    _faceVertexIndices.size() * sizeof(int), hash);
-    hash = ArchHash((const char*)_holeIndices.cdata(),
-                    _holeIndices.size() * sizeof(int), hash);
-    // promote to size_t
-    return (ID)hash;
+    ID hash = _subdivTags.ComputeHash();
+    hash = ArchHash64((const char*)&_scheme, sizeof(TfToken), hash);
+    hash = ArchHash64((const char*)&_orientation, sizeof(TfToken), hash);
+    hash = ArchHash64((const char*)_faceVertexCounts.cdata(),
+                      _faceVertexCounts.size() * sizeof(int), hash);
+    hash = ArchHash64((const char*)_faceVertexIndices.cdata(),
+                      _faceVertexIndices.size() * sizeof(int), hash);
+    hash = ArchHash64((const char*)_holeIndices.cdata(),
+                      _holeIndices.size() * sizeof(int), hash);
+    return hash;
 }
 
 bool
@@ -117,8 +116,8 @@ PxOsdMeshTopology::SetHoleIndices(VtIntArray const &holeIndices)
 {
     if (TfDebug::IsEnabled(0)) {
         // make sure faceIndices is given in ascending order.
-        int nFaceIndices = holeIndices.size();
-        for (int i = 1; i < nFaceIndices; ++i) {
+        const size_t nFaceIndices = holeIndices.size();
+        for (size_t i = 1; i < nFaceIndices; ++i) {
             if (holeIndices[i] <= holeIndices[i-1]) {
                 // XXX: would be better to print the prim name.
                 TF_WARN("hole face indices are not in ascending order.");

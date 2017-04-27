@@ -24,6 +24,8 @@
 #ifndef AR_RESOLVER_SCOPED_CACHE_H
 #define AR_RESOLVER_SCOPED_CACHE_H
 
+/// \file ar/resolverScopedCache.h
+
 #include "pxr/pxr.h"
 #include "pxr/usd/ar/api.h"
 #include "pxr/base/vt/value.h"
@@ -35,20 +37,28 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///
 /// Helper object for managing asset resolver cache scopes.
 ///
-/// \see ArResolverContext::_BeginCacheScope
-/// \see ArResolverContext::_EndCacheScope
-class AR_API ArResolverScopedCache
+/// A scoped resolution cache indicates to the resolver that results of
+/// calls to Resolve should be cached for a certain scope. This is
+/// important for performance and also for consistency -- it ensures 
+/// that repeated calls to Resolve with the same parameters will
+/// return the same result.
+///
+/// \see \ref ArResolver_scopedCache_impl "Scoped Resolution Cache"
+class ArResolverScopedCache
     : public boost::noncopyable
 {
 public:
     /// Begin an asset resolver cache scope.
+    AR_API
     ArResolverScopedCache();
 
     /// Begin an asset resolver cache scope that shares data
     /// with the given \p parent scope.
+    AR_API
     explicit ArResolverScopedCache(const ArResolverScopedCache* parent);
 
     /// End an asset resolver cache scope.
+    AR_API
     ~ArResolverScopedCache();
 
 private:

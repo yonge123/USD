@@ -37,9 +37,9 @@ PXR_NAMESPACE_OPEN_SCOPE
 static std::string
 _GetRelPrefix(const TfToken& renderTarget)
 {
-    return TfStringPrintf("%s:%s", 
-            renderTarget.GetText(),
-            UsdShadeTokens->interfaceRecipientsOf.GetText());
+    return renderTarget.IsEmpty() ? UsdShadeTokens->interfaceRecipientsOf:
+            TfStringPrintf("%s:%s", renderTarget.GetText(),
+                UsdShadeTokens->interfaceRecipientsOf.GetText());
 }
 
 /* static */ std::string
@@ -53,10 +53,10 @@ UsdShadeInterfaceAttribute::UsdShadeInterfaceAttribute(
         const UsdAttribute &attr)
 {
     TfToken const &interfaceAttrName = attr.GetName();
-    if (TfStringStartsWith(interfaceAttrName, UsdShadeTokens->interface)){
+    if (TfStringStartsWith(interfaceAttrName, UsdShadeTokens->interface_)){
         _attr = attr;
         _name = TfToken(interfaceAttrName.GetString().substr(
-            UsdShadeTokens->interface.GetString().size()));
+            UsdShadeTokens->interface_.GetString().size()));
     }
 }
 
@@ -64,12 +64,12 @@ UsdShadeInterfaceAttribute::UsdShadeInterfaceAttribute(
 UsdShadeInterfaceAttribute::_GetName(
         const TfToken& interfaceAttrName)
 {
-    if (TfStringStartsWith(interfaceAttrName, UsdShadeTokens->interface)) {
+    if (TfStringStartsWith(interfaceAttrName, UsdShadeTokens->interface_)) {
         return interfaceAttrName;
     }
     
     return TfToken(TfStringPrintf("%s%s",
-            UsdShadeTokens->interface.GetText(),
+            UsdShadeTokens->interface_.GetText(),
             interfaceAttrName.GetText()));
 }
 
@@ -219,26 +219,50 @@ UsdShadeInterfaceAttribute::GetDisplayGroup() const
     return _attr.GetDisplayGroup();
 }
 
+static TfToken 
+_GetConnectionRelName(const TfToken &attrName)
+{
+    return TfToken(UsdShadeTokens->connectedSourceFor.GetString() + 
+                   attrName.GetString());
+}
+
+static
+UsdRelationship 
+_GetConnectionRel(const UsdAttribute &interfaceAttr, 
+                  bool create)
+{
+    if (!interfaceAttr) {
+        TF_WARN("Invalid attribute: %s", UsdDescribe(interfaceAttr).c_str());
+        return UsdRelationship();
+    }
+
+    const UsdPrim& prim = interfaceAttr.GetPrim();
+    const TfToken& relName = _GetConnectionRelName(interfaceAttr.GetName());
+    if (UsdRelationship rel = prim.GetRelationship(relName)) {
+        return rel;
+    }
+    else if (create) {
+        return prim.CreateRelationship(relName, /* custom = */ false);
+    }
+
+    return UsdRelationship();
+}
+
 bool 
 UsdShadeInterfaceAttribute::ConnectToSource(
         UsdShadeConnectableAPI const &source, 
         TfToken const &sourceName,
         UsdShadeAttributeType const sourceType) const
 {
-    if (UsdRelationship rel = UsdShadeConnectableAPI::GetConnectionRel(
-            GetAttr(), true)) {
-        return UsdShadeConnectableAPI::MakeConnection(rel, source, sourceName,
-            GetTypeName(), sourceType);
-    }
-
-    return false;
+    return UsdShadeConnectableAPI::ConnectToSource(GetAttr(), 
+            source, sourceName, sourceType, GetTypeName());
 }
 
 bool 
 UsdShadeInterfaceAttribute::ConnectToSource(const SdfPath &sourcePath) const
 {
     // sourcePath needs to be a property path for us to make a connection.
-    if (not sourcePath.IsPropertyPath())
+    if (!sourcePath.IsPropertyPath())
         return false;
 
     UsdPrim sourcePrim = GetAttr().GetStage()->GetPrimAtPath(
@@ -250,7 +274,7 @@ UsdShadeInterfaceAttribute::ConnectToSource(const SdfPath &sourcePath) const
 
     TfToken sourceName;
     UsdShadeAttributeType sourceType;
-    std::tie(sourceName, sourceType) = UsdShadeUtilsGetBaseNameAndType(
+    std::tie(sourceName, sourceType) = UsdShadeUtils::GetBaseNameAndType(
         sourcePath.GetNameToken());
 
     return ConnectToSource(source, sourceName, sourceType);
@@ -285,8 +309,7 @@ bool
 UsdShadeInterfaceAttribute::DisconnectSource() const
 {
     bool success = true;
-    if (UsdRelationship rel = UsdShadeConnectableAPI::GetConnectionRel(
-            GetAttr(), false)) {
+    if (UsdRelationship rel = _GetConnectionRel(GetAttr(), false)) {
         success = rel.BlockTargets();
     }
     return success;
@@ -296,8 +319,7 @@ bool
 UsdShadeInterfaceAttribute::ClearSource() const
 {
     bool success = true;
-    if (UsdRelationship rel = UsdShadeConnectableAPI::GetConnectionRel(
-            GetAttr(), false)) {
+    if (UsdRelationship rel = _GetConnectionRel(GetAttr(), false)) {
         success = rel.ClearTargets(/* removeSpec = */ true);
     }
     return success;
@@ -315,7 +337,7 @@ UsdShadeInterfaceAttribute::GetConnectedSource(
         return false;
     }
     
-    return UsdShadeConnectableAPI::EvaluateConnection(GetAttr(), 
+    return UsdShadeConnectableAPI::GetConnectedSource(GetAttr(), 
             source, outputName, sourceType);
 }
 
@@ -329,13 +351,6 @@ UsdShadeInterfaceAttribute::IsConnected() const
     TfToken sourceName;
     UsdShadeAttributeType sourceType;
     return GetConnectedSource(&source, &sourceName, &sourceType);
-}
-
-TfToken 
-UsdShadeInterfaceAttribute::GetConnectionRelName() const
-{
-    return TfToken(UsdShadeTokens->connectedSourceFor.GetString() + 
-           _attr.GetName().GetString());
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

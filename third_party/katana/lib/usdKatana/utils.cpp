@@ -22,7 +22,6 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/pxr.h"
-#include "usdKatana/utils.h"
 
 #include "pxr/base/gf/vec3f.h"
 #include "pxr/base/gf/vec3d.h"
@@ -34,6 +33,7 @@
 #include "pxr/base/vt/array.h"
 #include "pxr/base/vt/value.h"
 #include "pxr/usd/ar/resolver.h"
+#include "pxr/usd/pcp/mapExpression.h"
 #include "pxr/usd/usd/relationship.h"
 #include "pxr/usd/usd/attribute.h"
 #include "pxr/usd/usd/modelAPI.h"
@@ -45,6 +45,8 @@
 #include "pxr/usd/usdShade/shader.h"
 #include "pxr/usd/usdShade/material.h"
 #include "pxr/usd/usdUtils/pipeline.h"
+
+#include "usdKatana/utils.h"
 #include "usdKatana/lookAPI.h"
 
 #include <FnLogging/FnLogging.h>
@@ -979,13 +981,17 @@ PxrUsdKatanaUtils::ConvertUsdMaterialPathToKatLocation(
         return basePath;
     }
 
+    SdfPath parentPath;
+
     UsdShadeMaterial materialSchema = UsdShadeMaterial(prim);
-    if (!materialSchema.HasBaseMaterial()) {
-        return basePath;
+    if (materialSchema.HasBaseMaterial()) {
+        // This base material is defined as a derivesFrom relationship
+        parentPath = materialSchema.GetBaseMaterialPath();
     }
 
-    SdfPath parentPath = materialSchema.GetBaseMaterialPath();
-    UsdPrim parentPrim = data.GetUsdInArgs()->GetStage()->GetPrimAtPath(parentPath);
+    UsdPrim parentPrim = 
+        data.GetUsdInArgs()->GetStage()->GetPrimAtPath(parentPath);
+
 
     // Asset sanity check. It is possible the derivesFrom relationship
     // for a Look exists but references a non-existent location. If so,
@@ -1358,12 +1364,11 @@ namespace
 
 FnKat::GroupAttribute
 PxrUsdKatanaUtils::BuildInstanceMasterMapping(
-        const UsdStageRefPtr& stage)
+        const UsdStageRefPtr& stage, const SdfPath &rootPath)
 {
     StringMap masterToKey;
     StringSetMap keyToMasters;
-    _walkForMasters(stage->GetPseudoRoot(), masterToKey, keyToMasters);
-    
+    _walkForMasters(stage->GetPrimAtPath(rootPath), masterToKey, keyToMasters);
     
     FnKat::GroupBuilder gb;
     TF_FOR_ALL(I, keyToMasters)

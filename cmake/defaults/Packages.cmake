@@ -24,8 +24,8 @@
 # Core USD Package Requirements 
 # ----------------------------------------------
 # --Python.  We are generally but not completely 2.6 compliant.
-find_package(PythonLibs 2.7 REQUIRED)
 find_package(PythonInterp 2.7 REQUIRED)
+find_package(PythonLibs 2.7 REQUIRED)
 
 # --Boost
 find_package(Boost
@@ -38,11 +38,9 @@ find_package(Boost
         system
     REQUIRED
 )
-# --Double Conversion
-find_package(DoubleConversion REQUIRED)
 
 # --TBB
-find_package(TBB REQUIRED)
+find_package(TBB REQUIRED COMPONENTS tbb)
 add_definitions(${TBB_DEFINITIONS})
 
 # --OpenEXR
@@ -91,7 +89,10 @@ if (PXR_BUILD_IMAGING)
     # --Opensubdiv
     find_package(OpenSubdiv 3 REQUIRED)
     # --Ptex
-    find_package(PTex REQUIRED)
+    if (PXR_ENABLE_PTEX_SUPPORT)
+        find_package(PTex REQUIRED)
+        add_definitions(-DPXR_PTEX_SUPPORT_ENABLED)
+    endif()
     # --X11
     if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
         find_package(X11)
@@ -115,7 +116,6 @@ endif()
 
 if (PXR_BUILD_MAYA_PLUGIN)
     find_package(Maya REQUIRED)
-    find_package(GLUT REQUIRED)
 endif()
 
 if (PXR_BUILD_ALEMBIC_PLUGIN)

@@ -84,14 +84,23 @@ usdTranslatorExport::writer(const MFileObject &file,
                 
                 if (theOption[1]=="None") {
                     jobArgs.exportDisplayColor = false;
-                }else if (theOption[1]=="Look Colors") {
+                }else if (theOption[1]=="Material Colors") {
                     jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
                 } else if (theOption[1]=="RfM Shaders") {
                     TfToken shadingMode("pxrRis");
                     if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode)) {
                         jobArgs.shadingMode = shadingMode;
                     }
-                }
+                } else { 
+                    TfToken modeToken(theOption[1].asChar()); 
+                    if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(modeToken)) { 
+                        jobArgs.shadingMode = modeToken; 
+                    } else { 
+                        MGlobal::displayError( 
+                            TfStringPrintf("No shadingMode '%s' found. Setting shadingMode='none'", modeToken.GetText()).c_str()); 
+                        jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none; 
+                    }
+                } 
             }
             if (theOption[0] == MString("exportUVs")) {
                 jobArgs.exportMeshUVs = theOption[1].asInt();

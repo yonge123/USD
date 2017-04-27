@@ -25,6 +25,7 @@
 #define HD_TASK_H
 
 #include "pxr/pxr.h"
+#include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
 
 #include "pxr/imaging/hd/sceneDelegate.h"
@@ -41,8 +42,6 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-class HdRenderIndex;
-
 typedef boost::shared_ptr<class HdTask> HdTaskSharedPtr;
 typedef std::vector<HdTaskSharedPtr> HdTaskSharedPtrVector;
 
@@ -54,13 +53,17 @@ typedef std::unordered_map<TfToken, VtValue, TfToken::HashFunctor, TfToken::Toke
 
 class HdTask {
 public:
+    HD_API
     HdTask();
+    HD_API
     virtual ~HdTask();
 
     /// Sync the resources
+    HD_API
     void Sync(HdTaskContext* ctx);
 
     /// Execute the task
+    HD_API
     void Execute(HdTaskContext* ctx);
 
 protected:
@@ -77,12 +80,17 @@ protected:
 
     // Protected versions of Sync and Execute are provided for derived classes
     // to override.
+    HD_API
     virtual void _Sync( HdTaskContext* ctx) = 0;
+    HD_API
     virtual void _Execute(HdTaskContext* ctx) = 0;
+    HD_API
     virtual void _MarkClean();
 
     // Child tasks 
+    HD_API
     virtual void _SyncChildren(HdTaskContext* ctx, HdTaskSharedPtrVector* children);
+    HD_API
     virtual void _ExecuteChildren(HdTaskContext* ctx);
 
 private:
@@ -128,6 +136,7 @@ HdTask::_GetTaskContextData(HdTaskContext const* ctx,
 ///
 class HdSceneTask : public HdTask {
 public:
+    HD_API
     HdSceneTask(HdSceneDelegate* delegate, SdfPath const& id);
 
     SdfPath const&         GetId()       const { return _id; }
@@ -136,15 +145,18 @@ public:
 protected:
     struct _TaskDirtyState
     {
-        HdChangeTracker::DirtyBits bits;
-        int                        collectionVersion;
+        HdDirtyBits bits;
+        int         collectionVersion;
     };
 
+    HD_API
     virtual void _MarkClean();
+    HD_API
     virtual void _SyncChildren(HdTaskContext* ctx, HdTaskSharedPtrVector* children);
 
     /// Obtains the set of dirty bits for the task.
-    HdChangeTracker::DirtyBits _GetTaskDirtyBits();
+    HD_API
+    HdDirtyBits _GetTaskDirtyBits();
 
     /// Obtains the set of dirty bits of the task
     /// and also returns the current collection version number for the
@@ -152,6 +164,7 @@ protected:
     /// Both results are returned in the dirtyState parameter.
     ///
     /// dirtyState must not be null
+    HD_API
     void _GetTaskDirtyState(TfToken const& collectionId, _TaskDirtyState *dirtyState);
 
     /// Extracts a typed value out of the task context at the given id.

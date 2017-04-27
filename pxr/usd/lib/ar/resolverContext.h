@@ -24,6 +24,8 @@
 #ifndef AR_RESOLVER_CONTEXT_H
 #define AR_RESOLVER_CONTEXT_H
 
+/// \file ar/resolverContext.h
+
 #include "pxr/pxr.h"
 #include "pxr/usd/ar/api.h"
 #include "pxr/base/tf/safeTypeCompare.h"
@@ -84,7 +86,7 @@ std::string ArGetDebugString(const Context& context);
 /// \sa ArResolver::BindContext
 /// \sa ArResolver::UnbindContext
 /// \sa ArResolverContextBinder
-class AR_API ArResolverContext
+class ArResolverContext
 {
 public:
     /// Construct an empty asset resolver context.

@@ -25,6 +25,7 @@
 #define USD_SCHEMABASE_H
 
 #include "pxr/pxr.h"
+#include "pxr/usd/usd/api.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/attribute.h"
 #include "pxr/usd/usd/relationship.h"
@@ -63,22 +64,33 @@ public:
     static const bool IsConcrete = false;
 
     /// Construct and store \p prim as the held prim.
+    USD_API
     explicit UsdSchemaBase(const UsdPrim& prim = UsdPrim());
 
     /// Construct and store for the same prim held by \p otherSchema
+    USD_API
     explicit UsdSchemaBase(const UsdSchemaBase& otherSchema);
 
     /// Destructor.
+    USD_API
     virtual ~UsdSchemaBase();
 
     /// \name Held prim access.
     //@{
 
     /// Return this schema object's held prim.
-    UsdPrim GetPrim() const { return _primData; }
+    UsdPrim GetPrim() const { return UsdPrim(_primData, _proxyPrimPath); }
 
     /// Shorthand for GetPrim()->GetPath().
-    SdfPath GetPath() const { return _primData->GetPath(); }
+    SdfPath GetPath() const { 
+        if (!_proxyPrimPath.IsEmpty()) {
+            return _proxyPrimPath;
+        }
+        else if (Usd_PrimDataConstPtr p = get_pointer(_primData)) {
+            return p->GetPath();
+        }
+        return SdfPath::EmptyPath();
+    }
 
     //@}
 
@@ -89,6 +101,7 @@ public:
     /// exists, otherwise return null.  This does not use the held prim's type.
     /// To get the held prim instance's definition, use
     /// UsdPrim::GetPrimDefinition().  \sa UsdPrim::GetPrimDefinition()
+    USD_API
     SdfPrimSpecHandle GetSchemaClassPrimDefinition() const;
 
     //@}
@@ -112,7 +125,8 @@ public:
 #else
     operator _UnspecifiedBoolType() const {
         return (_primData &&
-                _IsCompatible(_primData)) ? &UsdSchemaBase::_primData : NULL;
+                _IsCompatible(UsdPrim(_primData, _proxyPrimPath)))
+                    ? &UsdSchemaBase::_primData : NULL;
     }
 #endif // doxygen
 
@@ -123,6 +137,7 @@ protected:
         return _GetTfType();
     }
 
+    USD_API
     UsdAttribute _CreateAttr(TfToken const &attrName,
                              SdfValueTypeName const & typeName,
                              bool custom, SdfVariability variability,
@@ -134,14 +149,17 @@ private:
     // checking with the given prim, such as type compatibility or value
     // compatibility.  This check is performed when clients invoke the
     // _UnspecifiedBoolType operator.
+    USD_API
     virtual bool _IsCompatible(const UsdPrim &prim) const;
 
     // Subclasses should not override _GetTfType.  It is implemented by the
     // schema class code generator.
+    USD_API
     virtual const TfType &_GetTfType() const;
 
-    // The held prim.
+    // The held prim and proxy prim path.
     Usd_PrimDataHandle _primData;
+    SdfPath _proxyPrimPath;
 };
 
 

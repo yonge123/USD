@@ -27,7 +27,8 @@
 /// \file usdShade/material.h
 
 #include "pxr/pxr.h"
-#include "pxr/usd/usdShade/subgraph.h"
+#include "pxr/usd/usdShade/api.h"
+#include "pxr/usd/usdShade/nodeGraph.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
 
@@ -98,7 +99,7 @@ class SdfAssetPath;
 /// 
 /// 
 ///
-class UsdShadeMaterial : public UsdShadeSubgraph
+class UsdShadeMaterial : public UsdShadeNodeGraph
 {
 public:
     /// Compile-time constant indicating whether or not this class corresponds
@@ -112,7 +113,7 @@ public:
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
     explicit UsdShadeMaterial(const UsdPrim& prim=UsdPrim())
-        : UsdShadeSubgraph(prim)
+        : UsdShadeNodeGraph(prim)
     {
     }
 
@@ -120,16 +121,18 @@ public:
     /// Should be preferred over UsdShadeMaterial(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
     explicit UsdShadeMaterial(const UsdSchemaBase& schemaObj)
-        : UsdShadeSubgraph(schemaObj)
+        : UsdShadeNodeGraph(schemaObj)
     {
     }
 
     /// Destructor.
+    USDSHADE_API
     virtual ~UsdShadeMaterial();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
+    USDSHADE_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
@@ -142,6 +145,7 @@ public:
     /// UsdShadeMaterial(stage->GetPrimAtPath(path));
     /// \endcode
     ///
+    USDSHADE_API
     static UsdShadeMaterial
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
@@ -167,17 +171,20 @@ public:
     /// specify this schema class, in case a stronger typeName opinion overrides
     /// the opinion at the current EditTarget.
     ///
+    USDSHADE_API
     static UsdShadeMaterial
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
+    USDSHADE_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
+    USDSHADE_API
     virtual const TfType &_GetTfType() const;
 
 public:
@@ -193,6 +200,16 @@ public:
     // --(BEGIN CUSTOM CODE)--
 
     // --------------------------------------------------------------------- //
+    /// \name Helpful Types
+    /// @{
+    // --------------------------------------------------------------------- //
+
+    /// A function type that takes a path and returns a bool.
+    typedef std::function<bool (const SdfPath &)> PathPredicate;
+
+    /// @}
+
+    // --------------------------------------------------------------------- //
     /// \name Binding Geometry Prims to Materials
     /// @{
     // --------------------------------------------------------------------- //
@@ -202,6 +219,7 @@ public:
     ///
     /// Any UsdPrim can have a binding to at most a \em single UsdShadeMaterial .
     /// \return true on success
+    USDSHADE_API
     bool Bind(UsdPrim& prim) const;
 
     /// Ensure that, when resolved up to and including the current UsdEditTarget
@@ -212,6 +230,7 @@ public:
     /// such that a weaker binding will "shine through".  For that behavior,
     /// use GetBindingRel().ClearTargets()
     /// \return true on success
+    USDSHADE_API
     static bool Unbind(UsdPrim& prim);
 
     /// Direct access to the binding relationship for \p prim, if it has
@@ -226,11 +245,13 @@ public:
     /// will then be the client's responsibility to ensure that only a
     /// single Material prim is targetted.  In general, use 
     /// UsdRelationship::SetTargets() rather than UsdRelationship::AddTarget()
+    USDSHADE_API
     static UsdRelationship GetBindingRel(const UsdPrim& prim);
 
     /// Follows the relationship returned by GetBindingRel and returns a
     /// valid UsdShadeMaterial if the relationship targets exactly one such prim.
     ///
+    USDSHADE_API
     static UsdShadeMaterial GetBoundMaterial(const UsdPrim &prim);
 
     /// @}
@@ -305,12 +326,14 @@ public:
     /// default selection, or possibly UsdVariantSet::ClearVariantSelection()
     /// on the UsdShadeMaterial::GetMaterialVariant() UsdVariantSet.
     /// \sa UsdVariantSet::GetVariantEditContext()
+    USDSHADE_API
     std::pair<UsdStagePtr, UsdEditTarget>
     GetEditContextForVariant(const TfToken &MaterialVariantName,
                              const SdfLayerHandle &layer = SdfLayerHandle()) const;
     
     /// Return a UsdVariantSet object for interacting with the Material variant
     /// variantSet
+    USDSHADE_API
     UsdVariantSet GetMaterialVariant() const;
 
     /// Create a variantSet on \p masterPrim that will set the MaterialVariant on
@@ -341,6 +364,7 @@ public:
     ///
     /// Return \c true on success. It is an error if any of \p Materials
     /// have a different set of variants for the MaterialVariant than the others.
+    USDSHADE_API
     static bool CreateMasterMaterialVariant(
         const UsdPrim &masterPrim,
         const std::vector<UsdPrim> &MaterialPrims,
@@ -351,35 +375,49 @@ public:
     // --------------------------------------------------------------------- //
     /// \anchor UsdShadeMaterial_BaseMaterial
     /// \name BaseMaterial
-    /// Relationship to describe child/parent inheritance.
-    /// A Material that derives from a BaseMaterial will curruntely only
-    /// present/compose the properties unique to the derived Material, and does
-    /// not retain a live composition relationship to its BaseMaterial
-    //
-    /// \todo We plan to add a "derives" Usd composition arc to replace this.
+    /// A specialize arc describes child/parent inheritance.
+    /// A Material that derives from a BaseMaterial will retain a live 
+    /// composition relationship to its BaseMaterial
+    ///
     /// @{
     // --------------------------------------------------------------------- //
 
     /// Get the path to the base Material of this Material.
     /// If there is no base Material, an empty Material is returned
+    USDSHADE_API
     UsdShadeMaterial GetBaseMaterial() const;
 
     /// Get the base Material of this Material.
     /// If there is no base Material, an empty path is returned
+    USDSHADE_API
     SdfPath GetBaseMaterialPath() const;
+
+    /// Given a PcpPrimIndex, searches it for an arc to a parent material.
+    ///
+    /// This is a public static function to support applications that use
+    /// Pcp but not Usd. Most clients should call \ref GetBaseMaterialPath,
+    /// which uses this function when appropriate.
+    USDSHADE_API
+    static SdfPath FindBaseMaterialPathInPrimIndex(
+        const PcpPrimIndex & primIndex,
+        const PathPredicate & pathIsMaterialPredicate);
 
     /// Set the base Material of this Material.
     /// An empty Material is equivalent to clearing the base Material.
+    USDSHADE_API
     void SetBaseMaterial(const UsdShadeMaterial& baseMaterial) const;
 
     /// Set the path to the base Material of this Material.
     /// An empty path is equivalent to clearing the base Material.
+    USDSHADE_API
     void SetBaseMaterialPath(const SdfPath& baseMaterialPath) const;
 
     /// Clear the base Material of this Material.
+    USDSHADE_API
     void ClearBaseMaterial() const;
 
     // Check if this Material has a base Material
+    USDSHADE_API
     bool HasBaseMaterial() const;
 
     /// @}
@@ -418,20 +456,22 @@ public:
     /// If a "Material" face-set already exists, it is returned. If not, it
     /// creates one and returns it.
     /// 
+    USDSHADE_API
     static UsdGeomFaceSetAPI CreateMaterialFaceSet(const UsdPrim &prim);
 
     /// Returns the "Material" face-set if it exists on the given prim. If not, 
     /// returns an invalid UsdGeomFaceSetAPI object.
     /// 
+    USDSHADE_API
     static UsdGeomFaceSetAPI GetMaterialFaceSet(const UsdPrim &prim);
 
     /// Returns true if the given prim has a "Material" face-set. A "Material" 
     /// face-set must be a partition for it to be considered valid.
     /// 
+    USDSHADE_API
     static bool HasMaterialFaceSet(const UsdPrim &prim);
 
     /// @}
-
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

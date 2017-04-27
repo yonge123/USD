@@ -83,7 +83,7 @@ MStatus usdTranslatorImport::reader(const MFileObject & file,
                     jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none;
                 } else if (theOption[1]=="GPrim Colors") {
                     jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
-                } else if (theOption[1]=="Look Colors") {
+                } else if (theOption[1]=="Material Colors") {
                     jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
                 } else if (theOption[1]=="RfM Shaders") {
                     TfToken shadingMode("pxrRis");
@@ -94,6 +94,15 @@ MStatus usdTranslatorImport::reader(const MFileObject & file,
                         TfStringPrintf("No shadingMode '%s' found.  Setting shadingMode='none'", 
                                         shadingMode.GetText()).c_str());
                         jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none;
+                    }
+                } else { 
+                    TfToken modeToken(theOption[1].asChar()); 
+                    if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(modeToken)) { 
+                        jobArgs.shadingMode = modeToken; 
+                    } else { 
+                        MGlobal::displayError( 
+                            TfStringPrintf("No shadingMode '%s' found. Setting shadingMode='none'", modeToken.GetText()).c_str()); 
+                        jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none; 
                     }
                 }
             } else if (theOption[0] == MString("readAnimData")) {
