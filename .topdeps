@@ -1,2 +1,4 @@
 dev
 tg/simple_features/ccache
+symlink_headers
+tg/customization/clion_workaround
