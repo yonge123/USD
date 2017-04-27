@@ -1,6 +1,4 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/maya_particle/initial
-
-<patch description>
+Subject: [usdMaya] Adding maya (n)particle prim writer.
 
 Signed-off-by: Pal Mezei <palm@lumapictures.com>
