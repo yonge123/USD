@@ -335,5 +335,9 @@ void wrapUsdGeomImagePlane()
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
+namespace {
+
 WRAP_CUSTOM {
 }
+
+} // anonymous namespace
