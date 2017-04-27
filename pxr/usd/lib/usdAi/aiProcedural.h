@@ -27,6 +27,7 @@
 /// \file usdAi/aiProcedural.h
 
 #include "pxr/pxr.h"
+#include "pxr/usd/usdAi/api.h"
 #include "pxr/usd/usdGeom/boundable.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
@@ -80,11 +81,13 @@ public:
     }
 
     /// Destructor.
+    USDAI_API
     virtual ~UsdAiProcedural();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
+    USDAI_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
@@ -97,6 +100,7 @@ public:
     /// UsdAiProcedural(stage->GetPrimAtPath(path));
     /// \endcode
     ///
+    USDAI_API
     static UsdAiProcedural
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
@@ -122,17 +126,20 @@ public:
     /// specify this schema class, in case a stronger typeName opinion overrides
     /// the opinion at the current EditTarget.
     ///
+    USDAI_API
     static UsdAiProcedural
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
+    USDAI_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
+    USDAI_API
     virtual const TfType &_GetTfType() const;
 
 public:
@@ -147,6 +154,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->String
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: No Fallback
+    USDAI_API
     UsdAttribute GetDsoAttr() const;
 
     /// See GetDsoAttr(), and also 
@@ -154,6 +162,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDAI_API
     UsdAttribute CreateDsoAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -173,6 +182,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->String
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: 
+    USDAI_API
     UsdAttribute GetDataAttr() const;
 
     /// See GetDataAttr(), and also 
@@ -180,6 +190,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDAI_API
     UsdAttribute CreateDataAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -193,6 +204,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Bool
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: False
+    USDAI_API
     UsdAttribute GetLoadAtInitAttr() const;
 
     /// See GetLoadAtInitAttr(), and also 
@@ -200,6 +212,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDAI_API
     UsdAttribute CreateLoadAtInitAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
