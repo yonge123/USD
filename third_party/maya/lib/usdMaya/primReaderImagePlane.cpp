@@ -9,6 +9,8 @@
 #include <maya/MFnDagNode.h>
 #include <maya/MDagPath.h>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 PXRUSDMAYA_DEFINE_READER(UsdGeomImagePlane, args, context)
 {
     const UsdPrim& usdPrim = args.GetUsdPrim();
@@ -57,3 +59,5 @@ PXRUSDMAYA_DEFINE_READER(UsdGeomImagePlane, args, context)
         );
     }
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
