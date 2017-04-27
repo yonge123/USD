@@ -27,6 +27,7 @@
 /// \file usdAi/aiNodeAPI.h
 
 #include "pxr/pxr.h"
+#include "pxr/usd/usdAi/api.h"
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
@@ -80,11 +81,13 @@ public:
     }
 
     /// Destructor.
+    USDAI_API
     virtual ~UsdAiNodeAPI();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
+    USDAI_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
@@ -97,6 +100,7 @@ public:
     /// UsdAiNodeAPI(stage->GetPrimAtPath(path));
     /// \endcode
     ///
+    USDAI_API
     static UsdAiNodeAPI
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
@@ -104,11 +108,13 @@ public:
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
+    USDAI_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
+    USDAI_API
     virtual const TfType &_GetTfType() const;
 
 public:
