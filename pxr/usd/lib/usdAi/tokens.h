@@ -34,6 +34,7 @@
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 #include "pxr/pxr.h"
+#include "pxr/usd/usdAi/api.h"
 #include "pxr/base/tf/staticTokens.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -87,7 +88,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \li <b>step_size</b> - UsdAiVolume
 /// \li <b>userPrefix</b> - The attribute prefix used to qualify user parameters on nodes using the AiNodeAPI.
 /// \li <b>visibility</b> - UsdAiShapeAPI
-TF_DECLARE_PUBLIC_TOKENS(UsdAiTokens, USDAI_TOKENS);
+TF_DECLARE_PUBLIC_TOKENS(UsdAiTokens, USDAI_API, USDAI_TOKENS);
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

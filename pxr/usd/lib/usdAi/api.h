@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Pixar
+// Copyright 2017 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -21,14 +21,27 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-// GENERATED FILE.  DO NOT EDIT.
-#include "pxr/usd/usdAi/tokens.h"
-#include "pxr/base/tf/pyStaticTokens.h"
+#ifndef USDAI_API_H
+#define USDAI_API_H
 
-PXR_NAMESPACE_USING_DIRECTIVE
+#include "pxr/base/arch/export.h"
 
-void wrapUsdAiTokens()
-{
-    TF_PY_WRAP_PUBLIC_TOKENS("Tokens", UsdAiTokens,
-                             USDAI_TOKENS);
-}
+#if defined(USDAI_STATIC)
+#   define USDAI_API
+#   define USDAI_API_TEMPLATE_CLASS(...)
+#   define USDAI_API_TEMPLATE_STRUCT(...)
+#   define USDAI_LOCAL
+#else
+#   if defined(USDAI_EXPORTS)
+#       define USDAI_API ARCH_EXPORT
+#       define USDAI_API_TEMPLATE_CLASS(...) ARCH_EXPORT_TEMPLATE(class, __VA_ARGS__)
+#       define USDAI_API_TEMPLATE_STRUCT(...) ARCH_EXPORT_TEMPLATE(struct, __VA_ARGS__)
+#   else
+#       define USDAI_API ARCH_IMPORT
+#       define USDAI_API_TEMPLATE_CLASS(...) ARCH_IMPORT_TEMPLATE(class, __VA_ARGS__)
+#       define USDAI_API_TEMPLATE_STRUCT(...) ARCH_IMPORT_TEMPLATE(struct, __VA_ARGS__)
+#   endif
+#   define USDAI_LOCAL ARCH_HIDDEN
+#endif
+
+#endif

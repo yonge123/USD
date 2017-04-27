@@ -21,6 +21,7 @@ pxr_shared_library(usdAi
 
     PUBLIC_HEADERS
         rayTypes.h
+        api.h
 
     CPPFILES
         moduleDeps.cpp
