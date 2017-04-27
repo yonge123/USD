@@ -103,9 +103,9 @@ PXR_NAMESPACE_CLOSE_SCOPE
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
-PXR_NAMESPACE_OPEN_SCOPE
-
 #include "pxr/usd/usdAi/tokens.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 UsdAttribute
 UsdAiNodeAPI::CreateUserAttribute(const TfToken &name,
