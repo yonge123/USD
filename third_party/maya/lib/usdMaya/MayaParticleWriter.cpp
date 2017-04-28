@@ -109,10 +109,10 @@ namespace {
     }
 
     template <typename T>
-    inline void _addPrimVar(UsdGeomPoints& points, const TfToken& name, const SdfValueTypeName& typeName,
-                            const VtArray<T>& a, const UsdTimeCode& usdTime) {
-        auto primVar = points.CreatePrimvar(name, typeName, UsdGeomTokens->vertex, a.size(), true);
-        primVar.Set(a, usdTime);
+    inline void _addAttr(UsdGeomPoints& points, const TfToken& name, const SdfValueTypeName& typeName,
+                         const VtArray<T>& a, const UsdTimeCode& usdTime) {
+        auto attr = points.GetPrim().CreateAttribute(name, typeName, false, SdfVariabilityVarying);
+        attr.Set(a, usdTime);
     }
 
     const TfToken _rgbName("rgb");
@@ -122,10 +122,10 @@ namespace {
     const TfToken _massName("mass");
 
     template <typename T>
-    void _addPrimVarVec(UsdGeomPoints& points, const SdfValueTypeName& typeName, const _strVecPairVec<T>& a,
-                        const UsdTimeCode& usdTime) {
+    void _addAttrVec(UsdGeomPoints& points, const SdfValueTypeName& typeName, const _strVecPairVec<T>& a,
+                     const UsdTimeCode& usdTime) {
         for (const auto& v : a) {
-            _addPrimVar(points, v.first, typeName, *v.second, usdTime);
+            _addAttr(points, v.first, typeName, *v.second, usdTime);
         }
     }
 }
@@ -240,13 +240,16 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
     points.GetPointsAttr().Set(*positions, usdTime);
     points.GetVelocitiesAttr().Set(*velocities, usdTime);
     points.GetIdsAttr().Set(*ids, usdTime);
+    // radius -> width conversion
+    for (auto& r : *radii) { r = r * 2.0f; }
     points.GetWidthsAttr().Set(*radii, usdTime);
 
-    _addPrimVar(points, _massName, SdfValueTypeNames->Float, *masses, usdTime);
+
+    _addAttr(points, _massName, SdfValueTypeNames->FloatArray, *masses, usdTime);
     // TODO: check if we need the array suffix!!
-    _addPrimVarVec(points, SdfValueTypeNames->Vector3f, vectors, usdTime);
-    _addPrimVarVec(points, SdfValueTypeNames->Float, floats, usdTime);
-    _addPrimVarVec(points, SdfValueTypeNames->Int, ints, usdTime);
+    _addAttrVec(points, SdfValueTypeNames->Vector3fArray, vectors, usdTime);
+    _addAttrVec(points, SdfValueTypeNames->FloatArray, floats, usdTime);
+    _addAttrVec(points, SdfValueTypeNames->IntArray, ints, usdTime);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
