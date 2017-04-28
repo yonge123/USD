@@ -24,3 +24,4 @@ readAnimByDefault
 tests_use_maya_base_dir
 unify_usdVariantSet_prefix_token
 usdview_camera_cmdline
+fix_testWrapper_env_var_with_equals
