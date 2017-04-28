@@ -1,0 +1,252 @@
+//
+// Copyright 2016 Pixar
+//
+// Licensed under the Apache License, Version 2.0 (the "Apache License")
+// with the following modification; you may not use this file except in
+// compliance with the Apache License and the following modification to it:
+// Section 6. Trademarks. is deleted and replaced with:
+//
+// 6. Trademarks. This License does not grant permission to use the trade
+//    names, trademarks, service marks, or product names of the Licensor
+//    and its affiliates, except as required to comply with Section 4(c) of
+//    the License and to reproduce the content of the NOTICE file.
+//
+// You may obtain a copy of the Apache License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the Apache License with the above modification is
+// distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied. See the Apache License for the specific
+// language governing permissions and limitations under the Apache License.
+//
+
+#include "usdMaya/MayaParticleWriter.h"
+
+#include "pxr/usd/usdGeom/points.h"
+#include "pxr/usd/usd/timeCode.h"
+#include "pxr/base/vt/array.h"
+#include "pxr/base/gf/vec3f.h"
+#include "pxr/usd/usdGeom/primvar.h"
+#include "pxr/usd/usdGeom/tokens.h"
+
+#include <maya/MFnParticleSystem.h>
+#include <maya/MVectorArray.h>
+#include <maya/MAnimControl.h>
+
+#include <type_traits>
+#include <memory>
+#include <limits>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+namespace {
+    template <typename T>
+    inline void _convertVector(T& t, const MVector& v) {
+        // I wish we had concepts
+        // We are guaranteed to have arithmetic types
+        using _t = decltype(+t[0]);
+        t[0] = static_cast<_t>(v.x);
+        t[1] = static_cast<_t>(v.y);
+        t[2] = static_cast<_t>(v.z);
+    }
+
+    template <typename T>
+    using _sharedVtArray = std::shared_ptr<VtArray<T>>;
+
+    template <typename T>
+    _sharedVtArray<T> _convertVectorArray(const MVectorArray& a) {
+        const auto count = a.length();
+        auto* ret = new VtArray<T>(count);
+        for (auto i = decltype(count){0}; i < count; ++i) {
+            _convertVector<T>(ret->operator[](i), a[i]);
+        }
+        return _sharedVtArray<T>(ret);
+    }
+
+    template <typename T>
+    _sharedVtArray<T> _convertArray(const MDoubleArray& a) {
+        const auto count = a.length();
+        auto* ret = new VtArray<T>(count);
+        for (auto i = decltype(count){0}; i < count; ++i) {
+            ret->operator[](i) = static_cast<T>(a[i]);
+        }
+        return _sharedVtArray<T>(ret);
+    }
+
+    template <typename T>
+    _sharedVtArray<T> _convertArray(const MIntArray& a) {
+        const auto count = a.length();
+        auto* ret = new VtArray<T>(count);
+        for (auto i = decltype(count){0}; i < count; ++i) {
+            ret->operator[](i) = static_cast<T>(a[i]);
+        }
+        return _sharedVtArray<T>(ret);
+    }
+
+    template <typename T>
+    using _strVecPair = std::pair<TfToken, _sharedVtArray<T>>;
+
+    template <typename T>
+    using _strVecPairVec = std::vector<_strVecPair<T>>;
+
+    template <typename T>
+    size_t _minCount(const _strVecPairVec<T>& a) {
+        auto mn = std::numeric_limits<size_t>::max();
+        for (const auto& v : a) {
+            mn = std::min(mn, v.second->size());
+        }
+
+        return mn;
+    }
+
+    template <typename T>
+    void _resizeVectors(_strVecPairVec<T>& a, size_t size) {
+        for (const auto& v : a) {
+            v.second->resize(size);
+        }
+    }
+
+    template <typename T>
+    inline void _addPrimVar(UsdGeomPoints& points, const TfToken& name, const SdfValueTypeName& typeName,
+                            const VtArray<T>& a, const UsdTimeCode& usdTime) {
+        auto primVar = points.CreatePrimvar(name, typeName, UsdGeomTokens->vertex, a.size(), true);
+        primVar.Set(a, usdTime);
+    }
+
+    const TfToken _rgbName("rgb");
+    const TfToken _emissionName("emission");
+    const TfToken _opacityName("opacity");
+    const TfToken _lifespanName("lifespan");
+    const TfToken _massName("mass");
+
+    template <typename T>
+    void _addPrimVarVec(UsdGeomPoints& points, const SdfValueTypeName& typeName, const _strVecPairVec<T>& a,
+                        const UsdTimeCode& usdTime) {
+        for (const auto& v : a) {
+            _addPrimVar(points, v.first, typeName, *v.second, usdTime);
+        }
+    }
+}
+
+MayaParticleWriter::MayaParticleWriter(
+    MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs)
+    : MayaTransformWriter(iDag, stage, iArgs) {
+}
+
+UsdPrim MayaParticleWriter::write(const UsdTimeCode &usdTime) {
+    auto primSchema = UsdGeomPoints::Define(getUsdStage(), getUsdPath());
+    TF_AXIOM(primSchema);
+    auto prim = primSchema.GetPrim();
+    TF_AXIOM(prim);
+
+    writeTransformAttrs(usdTime, primSchema);
+    writeParams(usdTime, primSchema);
+
+    return prim;
+}
+
+void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& points) {
+    if (usdTime.IsDefault() == isShapeAnimated()) {
+        return;
+    }
+
+    // using the code from partioExport
+    MFnParticleSystem PS(getDagPath().node());
+    MFnParticleSystem DPS(getDagPath().node());
+
+    if (PS.isDeformedParticleShape()) {
+        auto origObj = PS.originalParticleShape();
+        PS.setObject(origObj);
+    } else {
+        MObject defObj = PS.deformedParticleShape();
+        DPS.setObject(defObj);
+    }
+
+    // TODO: non nParticle systems
+
+    // In some cases, especially whenever particles are dying,
+    // the length of the attribute vector returned
+    // from Maya is smaller than the total number of particles.
+    // So we have to first read all the attributes, then
+    // determine the minimum amount of particles that all have valid data
+    // then write the data out for them in one go.
+
+    const auto particleCount = PS.count();
+    if (particleCount == 0) {
+        return;
+    }
+
+    _strVecPairVec<GfVec3f> vectors;
+    _strVecPairVec<float> floats;
+    _strVecPairVec<long> ints;
+
+    MVectorArray mayaVectors;
+    MDoubleArray mayaDoubles;
+    MIntArray mayaInts;
+
+    DPS.position(mayaVectors);
+    auto positions = _convertVectorArray<GfVec3f>(mayaVectors);
+    PS.velocity(mayaVectors);
+    auto velocities = _convertVectorArray<GfVec3f>(mayaVectors);
+    PS.particleIds(mayaInts);
+    auto ids = _convertArray<long>(mayaInts);
+    PS.radius(mayaDoubles);
+    auto radii = _convertArray<float>(mayaDoubles);
+    PS.mass(mayaDoubles);
+    auto masses = _convertArray<float>(mayaDoubles);
+
+    if (PS.hasRgb()) {
+        PS.rgb(mayaVectors);
+        vectors.emplace_back(_rgbName, _convertVectorArray<GfVec3f>(mayaVectors));
+    }
+
+    if (PS.hasEmission()) {
+        PS.rgb(mayaVectors);
+        vectors.emplace_back(_emissionName, _convertVectorArray<GfVec3f>(mayaVectors));
+    }
+
+    if (PS.hasOpacity()) {
+        PS.opacity(mayaDoubles);
+        floats.emplace_back(_opacityName, _convertArray<float>(mayaDoubles));
+    }
+
+    if (PS.hasLifespan()) {
+        PS.lifespan(mayaDoubles);
+        floats.emplace_back(_lifespanName, _convertArray<float>(mayaDoubles));
+    }
+
+    const auto minSize = std::min(
+        {
+            _minCount(vectors), _minCount(floats), _minCount(ints),
+            positions->size(), velocities->size(), ids->size(), radii->size(), masses->size()
+        }
+    );
+
+    if (minSize == 0) {
+        return;
+    }
+
+    _resizeVectors(vectors, minSize);
+    _resizeVectors(floats, minSize);
+    _resizeVectors(ints, minSize);
+    positions->resize(minSize);
+    velocities->resize(minSize);
+    ids->resize(minSize);
+    radii->resize(minSize);
+    masses->resize(minSize);
+
+    points.GetPointsAttr().Set(*positions, usdTime);
+    points.GetVelocitiesAttr().Set(*velocities, usdTime);
+    points.GetIdsAttr().Set(*ids, usdTime);
+    points.GetWidthsAttr().Set(*radii, usdTime);
+
+    _addPrimVar(points, _massName, SdfValueTypeNames->Float, *masses, usdTime);
+    // TODO: check if we need the array suffix!!
+    _addPrimVarVec(points, SdfValueTypeNames->Vector3f, vectors, usdTime);
+    _addPrimVarVec(points, SdfValueTypeNames->Float, floats, usdTime);
+    _addPrimVarVec(points, SdfValueTypeNames->Int, ints, usdTime);
+}
+
+PXR_NAMESPACE_CLOSE_SCOPE
