@@ -148,15 +148,15 @@ UsdPrim MayaParticleWriter::write(const UsdTimeCode &usdTime) {
 }
 
 void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& points) {
-    auto particleNode = getDagPath().node();
+    const auto particleNode = getDagPath().node();
     MFnParticleSystem PS(particleNode);
     MFnParticleSystem DPS(particleNode);
 
     if (PS.isDeformedParticleShape()) {
-        auto origObj = PS.originalParticleShape();
+        const auto origObj = PS.originalParticleShape();
         PS.setObject(origObj);
     } else {
-        MObject defObj = PS.deformedParticleShape();
+        const auto defObj = PS.deformedParticleShape();
         DPS.setObject(defObj);
     }
 
