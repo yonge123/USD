@@ -46,9 +46,6 @@ set(TBB_USE_DEBUG_BUILD OFF)
 find_package(TBB REQUIRED COMPONENTS tbb)
 add_definitions(${TBB_DEFINITIONS})
 
-# --OpenEXR
-find_package(OpenEXR REQUIRED)
-
 # --pthread
 find_package(Threads REQUIRED)
 
@@ -84,6 +81,8 @@ endif()
 # ----------------------------------------------
 
 if (PXR_BUILD_IMAGING)
+    # --OpenEXR
+    find_package(OpenEXR REQUIRED)
     # --OpenImageIO
     find_package(OpenImageIO REQUIRED)
     # --OpenGL
