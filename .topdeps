@@ -1,6 +1,5 @@
 tg/luma/pull_requests
 tg/image_plane/translatorImagePlane
 tg/aiUsd/shader_export
-tg/customization/clion_workaround
 tg/customization/disable_tbb_debug
 tg/customization/no_usd_abc_loading
