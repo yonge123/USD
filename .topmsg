@@ -1,2 +1,0 @@
-From: Pal Mezei <sirpalee@gmail.com>
-Subject: [cmake] Adding a self include in the maya build files, so intellisense works in CLion.
