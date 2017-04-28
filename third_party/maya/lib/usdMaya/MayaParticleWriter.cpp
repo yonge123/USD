@@ -148,13 +148,9 @@ UsdPrim MayaParticleWriter::write(const UsdTimeCode &usdTime) {
 }
 
 void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& points) {
-    if (usdTime.IsDefault() == isShapeAnimated()) {
-        return;
-    }
-
-    // using the code from partioExport
-    MFnParticleSystem PS(getDagPath().node());
-    MFnParticleSystem DPS(getDagPath().node());
+    auto particleNode = getDagPath().node();
+    MFnParticleSystem PS(particleNode);
+    MFnParticleSystem DPS(particleNode);
 
     if (PS.isDeformedParticleShape()) {
         auto origObj = PS.originalParticleShape();
@@ -164,7 +160,20 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
         DPS.setObject(defObj);
     }
 
-    // TODO: non nParticle systems
+    if (particleNode.apiType() != MFn::kNParticle) {
+        auto currentTime = MAnimControl::currentTime();
+        if (usdTime.IsDefault()) {
+            PS.evaluateDynamics(currentTime, true);
+            DPS.evaluateDynamics(currentTime, true);
+        } else {
+            PS.evaluateDynamics(currentTime, false);
+            DPS.evaluateDynamics(currentTime, false);
+        }
+    }
+
+    if (usdTime.IsDefault() == isShapeAnimated()) {
+        return;
+    }
 
     // In some cases, especially whenever particles are dying,
     // the length of the attribute vector returned
