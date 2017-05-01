@@ -22,7 +22,6 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/usd/usdGeom/imagePlane.h"
-
 #include "pxr/usd/usd/schemaBase.h"
 #include "pxr/usd/usd/conversions.h"
 
@@ -38,6 +37,10 @@
 #include <string>
 
 using namespace boost::python;
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+namespace {
 
 #define WRAP_CUSTOM                                                     \
     template <class Cls> static void _CustomWrapCode(Cls &_class)
@@ -101,6 +104,8 @@ _CreateCoverageOriginAttr(UsdGeomImagePlane &self,
     return self.CreateCoverageOriginAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Int2), writeSparsely);
 }
+
+} // anonymous namespace
 
 void wrapUsdGeomImagePlane()
 {
@@ -211,8 +216,17 @@ void wrapUsdGeomImagePlane()
 // }
 //
 // Of course any other ancillary or support code may be provided.
+// 
+// Just remember to wrap code in the appropriate delimiters:
+// 'namespace {', '}'.
+//
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
+namespace {
+
 WRAP_CUSTOM {
 }
+
+} // anonymous namespace
+
