@@ -35,6 +35,8 @@
 #include <FnAttribute/FnDataBuilder.h>
 #include <FnLogging/FnLogging.h>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 FnLogSetup("PxrUsdKatanaReadAiProcedural");
 
 void
@@ -128,3 +130,5 @@ PxrUsdKatanaReadAiProcedural(
 
     attrs.set("rendererProcedural.args", argsBuilder.build());
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE
