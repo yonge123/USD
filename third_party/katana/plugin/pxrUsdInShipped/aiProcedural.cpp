@@ -28,6 +28,8 @@
 
 #include "pxr/usd/usdAi/aiProcedural.h"
 
+PXR_NAMESPACE_USING_DIRECTIVE
+
 PXRUSDKATANA_USDIN_PLUGIN_DEFINE(PxrUsdInCore_AiProceduralOp, privateData, interface)
 {
     PxrUsdKatanaAttrMap attrs;
