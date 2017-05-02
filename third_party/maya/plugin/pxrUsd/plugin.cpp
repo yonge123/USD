@@ -223,6 +223,7 @@ MStatus uninitializePlugin(
     }
 
     status = plugin.deregisterCacheFormat("pxrUsdCacheFormat");
+    if (!status) {
         status.perror("pxrUsd: unable to deregister USD Cache format.");
     }
 
