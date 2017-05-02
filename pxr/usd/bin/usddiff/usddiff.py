@@ -114,7 +114,10 @@ def _getFileFormat(path):
 
     # Don't check if file exists - this should be handled by resolver (and
     # path may not exist / have been fetched yet)
-    return fileFormat.formatId
+    if fileFormat:
+        return fileFormat.formatId
+
+    return None
 
 def _convertTo(inPath, outPath, usdcatCmd, flatten=None, fmt=None):
     # Just copy empty files -- we want something to diff against but
