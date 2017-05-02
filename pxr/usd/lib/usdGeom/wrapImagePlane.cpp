@@ -104,7 +104,7 @@ _CreateCoverageOriginAttr(UsdGeomImagePlane &self,
     return self.CreateCoverageOriginAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Int2), writeSparsely);
 }
-
+        
 static UsdAttribute
 _CreateUseFrameExtensionAttr(UsdGeomImagePlane &self,
                                       object defaultVal, bool writeSparsely) {
@@ -249,7 +249,7 @@ void wrapUsdGeomImagePlane()
              &_CreateCoverageOriginAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
-
+        
         .def("GetUseFrameExtensionAttr",
              &This::GetUseFrameExtensionAttr)
         .def("CreateUseFrameExtensionAttr",
