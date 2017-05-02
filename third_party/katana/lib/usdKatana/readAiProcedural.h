@@ -24,6 +24,8 @@
 #ifndef PXRUSDKATANA_READAIPROCEDURAL_H
 #define PXRUSDKATANA_READAIPROCEDURAL_H
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 class PxrUsdKatanaAttrMap;
 class PxrUsdKatanaUsdInPrivateData;
 class UsdAiProcedural;
@@ -34,5 +36,7 @@ PxrUsdKatanaReadAiProcedural(
         const UsdAiProcedural& procedural,
         const PxrUsdKatanaUsdInPrivateData& data,
         PxrUsdKatanaAttrMap& attrs);
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXRUSDKATANA_READAIPROCEDURAL_H
