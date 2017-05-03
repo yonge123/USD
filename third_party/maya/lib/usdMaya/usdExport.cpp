@@ -59,6 +59,7 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-v"  , "-verbose", MSyntax::kNoArg);
 
     syntax.addFlag("-mt" , "-mergeTransformAndShape", MSyntax::kBoolean);
+    syntax.addFlag("-ein", "-exportInstances", MSyntax::kBoolean);
     syntax.addFlag("-eri", "-exportRefsAsInstanceable", MSyntax::kBoolean);
     syntax.addFlag("-dsp" , "-exportDisplayColor", MSyntax::kBoolean);
     syntax.addFlag("-shd" , "-shadingMode" , MSyntax::kString);
@@ -124,6 +125,10 @@ try
 
     if (argData.isFlagSet("mergeTransformAndShape")) {
         argData.getFlagArgument("mergeTransformAndShape", 0, jobArgs.mergeTransformAndShape);
+    }
+
+    if (argData.isFlagSet("exportInstances")) {
+        argData.getFlagArgument("exportInstances", 0, jobArgs.exportInstances);
     }
 
     if (argData.isFlagSet("exportRefsAsInstanceable")) {
@@ -380,13 +385,19 @@ try
     // Create WriteJob object
     usdWriteJob usdWriteJob(jobArgs);
 
+    const auto oldCurTime = MAnimControl::currentTime();
+    if (jobArgs.exportAnimation) {
+        MGlobal::viewFrame(startTime);
+    }
+
     MComputation computation;
     computation.beginComputation();
+
+    MStatus retStatus = MS::kFailure;
 
     // Create stage and process static data
     if (usdWriteJob.beginJob(fileName, append, startTime, endTime)) {
         if (jobArgs.exportAnimation) {
-            MTime oldCurTime = MAnimControl::currentTime();
             for (double i=startTime;i<(endTime+1);i++) {
                 for (double sampleTime : frameSamples) {
                     double actualTime = i + sampleTime;
@@ -403,20 +414,22 @@ try
                     }
                 }
             }
-            // set the time back
-            MGlobal::viewFrame(oldCurTime);
         }
 
         // Finalize the export, close the stage
         usdWriteJob.endJob();
-    } else {
-        computation.endComputation();
-        return MS::kFailure;
+
+        retStatus = MS::kSuccess;
     }
 
     computation.endComputation();
 
-    return MS::kSuccess;
+    if (jobArgs.exportAnimation) {
+        // set the time back
+        MGlobal::viewFrame(oldCurTime);
+    }
+
+    return retStatus;
 } // end of try block
 catch (std::exception & e)
 {

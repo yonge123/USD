@@ -25,11 +25,8 @@
 #include "usdMaya/usdWriteJob.h"
 
 #include "usdMaya/JobArgs.h"
-#include "usdMaya/MayaMeshWriter.h"
-#include "usdMaya/MayaNurbsCurveWriter.h"
-#include "usdMaya/MayaNurbsSurfaceWriter.h"
+#include "usdMaya/MayaPrimWriter.h"
 #include "usdMaya/MayaTransformWriter.h"
-#include "usdMaya/MayaCameraWriter.h"
 
 #include "usdMaya/translatorMaterial.h"
 #include "usdMaya/primWriterRegistry.h"
@@ -73,7 +70,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 usdWriteJob::usdWriteJob(const JobExportArgs & iArgs) :
-    mArgs(iArgs), mModelKindWriter(iArgs)
+    usdWriteJobCtx(iArgs), mModelKindWriter(iArgs)
 {
 }
 
@@ -120,19 +117,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
 
     MGlobal::displayInfo("usdWriteJob::beginJob: Create stage file "+MString(mFileName.c_str()));
 
-    ArResolverContext resolverCtx = ArGetResolver().GetCurrentContext();
-    if (append) {
-        mStage = UsdStage::Open(SdfLayer::FindOrOpen(mFileName), resolverCtx);
-        if (!mStage) {
-            MGlobal::displayError("Failed to open stage file "+MString(mFileName.c_str()));
-            return false;
-            }
-    } else {
-        mStage = UsdStage::CreateNew(mFileName, resolverCtx);
-        if (!mStage) {
-            MGlobal::displayError("Failed to create stage file "+MString(mFileName.c_str()));
-            return false;
-        }
+    if (!openFile(mFileName, append)) {
+        return false;
     }
 
     // Set time range for the USD file
@@ -221,36 +207,37 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
             continue;
         }
 
-        MayaPrimWriterPtr primWriter = nullptr;
-        if (!createPrimWriter(curDagPath, &primWriter) &&
-                curDagPath.length() > 0) {
+        if (!needToTraverse(curDagPath) &&
+            curDagPath.length() > 0) {
             // This dagPath and all of its children should be pruned.
             itDag.prune();
-            continue;
-        }
+        } else {
+            MayaPrimWriterPtr primWriter = createPrimWriter(curDagPath);
 
-        if (primWriter) {
-            mMayaPrimWriterList.push_back(primWriter);
+            if (primWriter) {
+                mMayaPrimWriterList.push_back(primWriter);
 
-            // Write out data (non-animated/default values).
-            if (UsdPrim usdPrim = primWriter->write(UsdTimeCode::Default())) {
-                MDagPath dag = primWriter->getDagPath();
-                mDagPathToUsdPathMap[dag] = usdPrim.GetPath();
+                // Write out data (non-animated/default values).
+                if (const auto& usdPrim = primWriter->getPrim()) {
+                    primWriter->write(UsdTimeCode::Default());
 
-                // If we are merging transforms and the object derives from
-                // MayaTransformWriter but isn't actually a transform node, we
-                // need to add its parent.
-                if (mArgs.mergeTransformAndShape) {
-                    MayaTransformWriterPtr xformWriter =
-                            boost::dynamic_pointer_cast<MayaTransformWriter>(
-                                    primWriter);
-                    if (xformWriter) {
-                        MDagPath xformDag = xformWriter->getTransformDagPath();
-                        mDagPathToUsdPathMap[xformDag] = usdPrim.GetPath();
+                    MDagPath dag = primWriter->getDagPath();
+                    mDagPathToUsdPathMap[dag] = usdPrim.GetPath();
+
+                    // If we are merging transforms and the object derives from
+                    // MayaTransformWriter but isn't actually a transform node, we
+                    // need to add its parent.
+                    if (mArgs.mergeTransformAndShape) {
+                        MayaTransformWriterPtr xformWriter =
+                            std::dynamic_pointer_cast<MayaTransformWriter>(primWriter);
+                        if (xformWriter) {
+                            MDagPath xformDag = xformWriter->getTransformDagPath();
+                            mDagPathToUsdPathMap[xformDag] = usdPrim.GetPath();
+                        }
                     }
-                }
 
-                mModelKindWriter.OnWritePrim(usdPrim, primWriter);
+                     mModelKindWriter.OnWritePrim(usdPrim, primWriter);
+                }
 
                 if (primWriter->shouldPruneChildren()) {
                     itDag.prune();
@@ -313,6 +300,7 @@ void usdWriteJob::evalJob(double iFrame)
 
 void usdWriteJob::endJob()
 {
+    processInstances();
     UsdPrimSiblingRange usdRootPrims = mStage->GetPseudoRoot().GetChildren();
     
     // Write Variants (to first root prim path)
@@ -479,100 +467,34 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
     return defaultPrim;
 }
 
-// This method returns false if the given dagPath should be ignored and
-// its subgraph should be pruned from the traversal. Otherwise, it returns true.
-bool usdWriteJob::createPrimWriter(
-        MDagPath &curDag, MayaPrimWriterPtr* primWriterOut)
+bool usdWriteJob::needToTraverse(const MDagPath& curDag)
 {
     MObject ob = curDag.node();
-
     // NOTE: Already skipping all intermediate objects
     // skip all intermediate nodes (and their children)
-    if (PxrUsdMayaUtil::isIntermediate(ob))
-    {
-        *primWriterOut = nullptr;
+    if (PxrUsdMayaUtil::isIntermediate(ob)) {
         return false;
     }
 
     // skip nodes that aren't renderable (and their children)
-    if (mArgs.excludeInvisible && !PxrUsdMayaUtil::isRenderable(ob))
-    {
-        *primWriterOut = nullptr;
+
+    if (mArgs.excludeInvisible && !PxrUsdMayaUtil::isRenderable(ob)) {
         return false;
     }
 
-    // Check whether a user prim writer exists for the node first, since plugin
-    // nodes may provide the same function sets as native Maya nodes. If a
-    // writer can't be found, we'll fall back on the standard writers below.
-    if (ob.hasFn(MFn::kPluginDependNode) && ob.hasFn(MFn::kDagNode) && ob.hasFn(MFn::kDependencyNode)) {
-        MFnDependencyNode depNodeFn(ob);
-        MPxNode *pxNode = depNodeFn.userNode();
-
-        std::string mayaTypeName(pxNode->typeName().asChar());
-
-        if (PxrUsdMayaPrimWriterRegistry::WriterFactoryFn primWriterFactory =
-                PxrUsdMayaPrimWriterRegistry::Find(mayaTypeName)) {
-            MayaPrimWriterPtr primPtr(primWriterFactory(curDag, mStage, mArgs));
-            if (primPtr && primPtr->isValid()) {
-                // We found a registered user prim writer that handles this node
-                // type, so return now.
-                *primWriterOut = primPtr;
-                return true;
-            }
+    if (!mArgs.exportDefaultCameras && ob.hasFn(MFn::kTransform)) {
+        // Ignore transforms of default cameras 
+        MString fullPathName = curDag.fullPathName();
+        if (fullPathName == "|persp" ||
+            fullPathName == "|top" ||
+            fullPathName == "|front" ||
+            fullPathName == "|side") {
+            return false;
         }
     }
 
-    if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator)) {
-        MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, mStage, mArgs));
-        if (primPtr->isValid() ) {
-            *primWriterOut = primPtr;
-            return true;
-        }
-    }
-    else if (ob.hasFn(MFn::kMesh)) {
-        MayaMeshWriterPtr primPtr(new MayaMeshWriter(curDag, mStage, mArgs));
-        if (primPtr->isValid() ) {
-            *primWriterOut = primPtr;
-            return true;
-        }
-    }
-    else if (ob.hasFn(MFn::kNurbsCurve)) {
-        MayaNurbsCurveWriterPtr primPtr(new MayaNurbsCurveWriter(curDag, mStage, mArgs));
-        if (primPtr->isValid() ) {
-            *primWriterOut = primPtr;
-            return true;
-        }
-    }
-    else if (ob.hasFn(MFn::kNurbsSurface)) {
-        MayaNurbsSurfaceWriterPtr primPtr(new MayaNurbsSurfaceWriter(curDag, mStage, mArgs));
-        if (primPtr->isValid() ) {
-            *primWriterOut = primPtr;
-            return true;
-        }
-    }
-    else if (ob.hasFn(MFn::kCamera)) {
-        if (!mArgs.exportDefaultCameras) {
-            // Ignore default cameras
-            MString fullPathName = curDag.fullPathName();
-            if (fullPathName == "|persp|perspShape" ||
-                fullPathName == "|top|topShape"     ||
-                fullPathName == "|front|frontShape" ||
-                fullPathName == "|side|sideShape") {
-                *primWriterOut = nullptr;
-                return false;
-            }
-        }
-        MayaCameraWriterPtr primPtr(new MayaCameraWriter(curDag, mStage, mArgs));
-        if (primPtr->isValid() ) {
-            *primWriterOut = primPtr;
-            return true;
-        }
-    }
-
-    *primWriterOut = nullptr;
     return true;
 }
-
 
 void usdWriteJob::perFrameCallback(double iFrame)
 {
