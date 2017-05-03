@@ -1,0 +1,4 @@
+From: nxkb <nxkbar@gmail.com>
+Subject: [usdMaya] add a root arg to usdExport
+
+The root arg enables exporting sub trees of the maya scene without also including all the parent nodes.

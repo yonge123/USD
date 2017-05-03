@@ -40,6 +40,7 @@
 #include <maya/MTime.h>
 
 #include "pxr/usd/usdGeom/tokens.h"
+#include "JobArgs.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -69,6 +70,7 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-cls" , "-exportColorSets", MSyntax::kBoolean);
     syntax.addFlag("-dms" , "-defaultMeshScheme", MSyntax::kString);
     syntax.addFlag("-vis" , "-exportVisibility", MSyntax::kBoolean);
+    syntax.addFlag("-rt" , "-root", MSyntax::kString);
 
     syntax.addFlag("-fr" , "-frameRange"   , MSyntax::kDouble, MSyntax::kDouble);
     syntax.addFlag("-pr" , "-preRoll"   , MSyntax::kDouble);
@@ -201,6 +203,27 @@ try
 
     if (argData.isFlagSet("exportVisibility")) {
         argData.getFlagArgument("exportVisibility", 0, jobArgs.exportVisibility);
+    }
+
+    if (argData.isFlagSet("root")) {
+        MString stringVal;
+        argData.getFlagArgument("root", 0, stringVal);
+        std::string rootPath = stringVal.asChar();
+
+        if (!rootPath.empty()) {
+            MDagPath rootDagPath;
+            PxrUsdMayaUtil::GetDagPathByName(rootPath, rootDagPath);
+            if (rootDagPath.isValid()){
+                SdfPath rootSdfPath;
+                PxrUsdMayaUtil::GetDagPathByName(rootPath, rootDagPath);
+                rootSdfPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false);
+                jobArgs.exportRootPath = rootPath;
+                jobArgs.exportRootSdfPath = rootSdfPath;
+            } else {
+                MGlobal::displayError(MString("Invalid dag path provided for root: ") + stringVal);
+                return MS::kFailure;
+            }
+        }
     }
 
     bool append = false;

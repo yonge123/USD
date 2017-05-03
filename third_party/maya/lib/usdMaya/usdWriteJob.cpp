@@ -201,7 +201,16 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
     // Now do a depth-first traversal of the Maya DAG from the world root.
     // We keep a reference to arg dagPaths as we encounter them.
     MDagPath curLeafDagPath;
-    for (MItDag itDag(MItDag::kDepthFirst, MFn::kInvalid); !itDag.isDone(); itDag.next()) {
+    MItDag itDag(MItDag::kDepthFirst, MFn::kInvalid);
+
+    if (!mArgs.exportRootPath.empty()){
+        // If a root is specified, start iteration there
+        MDagPath rootDagPath;
+        PxrUsdMayaUtil::GetDagPathByName(mArgs.exportRootPath, rootDagPath);
+        itDag.reset(rootDagPath, MItDag::kDepthFirst, MFn::kInvalid);
+    }
+
+    for (; !itDag.isDone(); itDag.next()) {
         MDagPath curDagPath;
         itDag.getPath(curDagPath);
         std::string curDagPathStr(curDagPath.partialPathName().asChar());
