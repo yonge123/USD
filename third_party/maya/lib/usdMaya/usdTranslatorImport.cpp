@@ -33,6 +33,7 @@
 #include "usdMaya/shadingModeRegistry.h"
 #include "usdMaya/usdReadJob.h"
 #include "usdMaya/usdWriteJob.h"
+#include "JobArgs.h"
 
 #include <maya/MFileObject.h>
 #include <maya/MPxFileTranslator.h>
@@ -115,6 +116,12 @@ MStatus usdTranslatorImport::reader(const MFileObject & file,
                 jobArgs.endTime = theOption[1].asDouble();
             } else if (theOption[0] == MString("useCustomFrameRange")) {
                 jobArgs.useCustomFrameRange = theOption[1].asInt();
+            } else if (theOption[0] == MString("defaultMeshScheme")) {
+                setDefaultMeshScheme(jobArgs, theOption[1]);
+            } else if (theOption[0] == MString("importWithProxyShapes")) {
+                jobArgs.importWithProxyShapes = theOption[1].asInt();
+            } else if (theOption[0] == MString("primPath")) {
+                primPath = theOption[1].asChar();
             }
         }
     }
