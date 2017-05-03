@@ -1,0 +1,8 @@
+From: Paul Molodowitch <pm@stanfordalumni.org>
+Subject: allow using unresolved asset paths with command-line tools
+    
+ie, can now do "usdview custom://asset_bigGuy/costume_red/version_0023" (assuming you have a custom ArResolver to handle "custom://" paths)
+    
+usdview, usdcat, usdcheck, and usddiff should now all work with unresolved paths; usdstitch already worked
+    
+usdstitchclips and usdGenSchema are untested, due to not having appropriate inputs on hand; usdrender is untested, due to not having a OpenGL.raw._GLX module
