@@ -34,10 +34,12 @@
 #include <maya/MFnParticleSystem.h>
 #include <maya/MVectorArray.h>
 #include <maya/MAnimControl.h>
+#include <maya/MFnAttribute.h>
 
 #include <type_traits>
 #include <memory>
 #include <limits>
+#include <set>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -127,6 +129,40 @@ namespace {
         for (const auto& v : a) {
             _addAttr(points, v.first, typeName, *v.second, usdTime);
         }
+    }
+
+    // We either don't want these or already export them using one of the builtin functions.
+    const std::set<std::string> _supressedAttrs = {
+        "emitterDataPosition", "emitterDataVelocity", "fieldDataMass",
+        "fieldDataPosition", "fieldDataVelocity", "inputGeometryPoints",
+        "lastCachedPosition", "lastPosition", "lastVelocity",
+        "lastWorldPosition", "lastWorldVelocity", "worldVelocityInObjectSpace",
+        "position", "velocity", "acceleration", "rgb", "rgbPP", "incandescencePP",
+        "radius", "radiusPP", "age", "opacity", "opacityPP", "lifespan", "lifespanPP",
+        "id", "particleId", "mass",
+    };
+
+    // All the initial state attributes end with 0
+    bool _isInitialAttribute(const std::string& attrName) {
+        return attrName.back() == '0';
+    }
+
+    bool _isCachedAttribute(const std::string& attrName) {
+        constexpr auto _cached = "cached";
+        constexpr auto _Cache = "Cache";
+        const auto attrNameSize = attrName.size();
+        if (attrNameSize > 5 && attrName.substr(attrNameSize - 6) == _Cache) {
+            return true;
+        } else {
+            return attrName.substr(0, 6) == _cached;
+        }
+    }
+
+    bool _isValidAttr(const std::string& attrName) {
+        if (attrName.size() == 0) { return false; }
+        if (_isInitialAttribute(attrName)) { return false; }
+        if (_isCachedAttribute(attrName)) { return false; }
+        return _supressedAttrs.find(attrName) == _supressedAttrs.end();
     }
 }
 
@@ -224,6 +260,42 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
     if (PS.hasLifespan()) {
         PS.lifespan(mayaDoubles);
         floats.emplace_back(_lifespanName, _convertArray<float>(mayaDoubles));
+    }
+
+    const auto attributeCount = PS.attributeCount();
+
+    for (auto i = decltype(attributeCount){0}; i < attributeCount; ++i) {
+        MObject attrObj = PS.attribute(i);
+        // we need custom attributes
+        if (PS.attributeClass(attrObj) == MFnDependencyNode::kNormalAttr) {
+            continue;
+        }
+        // only checking for parent attrs
+        MPlug attrPlug(particleNode, attrObj);
+        if (!attrPlug.parent().isNull()) { continue; }
+
+        MFnAttribute attr(attrObj);
+
+        const auto mayaAttrName = attr.name();
+        const std::string attrName = mayaAttrName.asChar();
+        if (!_isValidAttr(attrName)) { continue; }
+        MStatus status;
+        if (PS.isPerParticleIntAttribute(mayaAttrName)) {
+            PS.getPerParticleAttribute(mayaAttrName, mayaInts, &status);
+            if (status) {
+                ints.emplace_back(TfToken(attrName), _convertArray<long>(mayaInts));
+            }
+        } else if (PS.isPerParticleDoubleAttribute(mayaAttrName)) {
+            PS.getPerParticleAttribute(mayaAttrName, mayaDoubles, &status);
+            if (status) {
+                floats.emplace_back(TfToken(attrName), _convertArray<float>(mayaDoubles));
+            }
+        } else if (PS.isPerParticleVectorAttribute(mayaAttrName)) {
+            PS.getPerParticleAttribute(mayaAttrName, mayaVectors, &status);
+            if (status) {
+                vectors.emplace_back(TfToken(attrName), _convertVectorArray<GfVec3f>(mayaVectors));
+            }
+        }
     }
 
     const auto minSize = std::min(
