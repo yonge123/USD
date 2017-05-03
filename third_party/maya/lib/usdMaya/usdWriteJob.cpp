@@ -30,6 +30,7 @@
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
 #include "usdMaya/MayaTransformWriter.h"
 #include "usdMaya/MayaCameraWriter.h"
+#include "usdMaya/MayaParticleWriter.h"
 
 #include "usdMaya/translatorMaterial.h"
 #include "usdMaya/primWriterRegistry.h"
@@ -546,6 +547,13 @@ bool usdWriteJob::createPrimWriter(
     else if (ob.hasFn(MFn::kNurbsSurface)) {
         MayaNurbsSurfaceWriterPtr primPtr(new MayaNurbsSurfaceWriter(curDag, mStage, mArgs));
         if (primPtr->isValid() ) {
+            *primWriterOut = primPtr;
+            return true;
+        }
+    }
+    else if (ob.hasFn(MFn::kParticle) || ob.hasFn(MFn::kNParticle)) {
+        MayaParticleWriterPtr primPtr(new MayaParticleWriter(curDag, mStage, mArgs));
+        if (primPtr->isValid()) {
             *primWriterOut = primPtr;
             return true;
         }
