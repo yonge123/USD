@@ -1,0 +1,4 @@
+From: Paul Molodowitch <pm@stanfordalumni.org>
+Subject: [usdMaya] merge usdTranslatorImport/Export
+
+necessary because if there are two separate translators, when saving a reference, maya has a bug where it recorded the incorrect translator (ie, pxrUsdExport), even though pxrUsdImport was used to create the reference
