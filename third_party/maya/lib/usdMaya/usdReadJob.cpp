@@ -30,6 +30,7 @@
 #include "usdMaya/translatorMaterial.h"
 #include "usdMaya/translatorModelAssembly.h"
 #include "usdMaya/translatorXformable.h"
+#include "usdMaya/translatorUtil.h"
 
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/token.h"
@@ -52,10 +53,13 @@
 #include <maya/MObject.h>
 #include <maya/MTime.h>
 #include <maya/MSelectionList.h>
+#include <maya/MFileIO.h>
+#include <maya/MFnDependencyNode.h>
 
 #include <map>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -80,6 +84,61 @@ usdReadJob::usdReadJob(
     _assemblyTypeName(assemblyTypeName),
     _proxyShapeTypeName(proxyShapeTypeName)
 {
+    if (mArgs.parentNode.length())
+    {
+        // Get the value
+        MSelectionList selList;
+        selList.add(mArgs.parentNode.c_str());
+        MDagPath dagPath;
+        MStatus status = selList.getDagPath(0, dagPath);
+        if (status != MS::kSuccess) {
+            std::string errorStr = TfStringPrintf(
+                    "Invalid path \"%s\" for parent option.",
+                    mArgs.parentNode.c_str());
+            MGlobal::displayError(MString(errorStr.c_str()));
+        }
+        setMayaRootDagPath( dagPath );
+    }
+
+    // Add the current scene, and the currently loading file (if any) to the
+    // list of parent refs
+
+    std::vector<std::string> pathsToAdd;
+    pathsToAdd.emplace_back(MFileIO::currentFile().asChar());
+    pathsToAdd.emplace_back(MFileIO::fileCurrentlyLoading().asChar());
+    if (pathsToAdd.back() == pathsToAdd.front()) {
+        pathsToAdd.pop_back();
+    }
+
+    auto remove_empty_iterator = std::remove_if(pathsToAdd.begin(),
+                                                pathsToAdd.end(),
+                                                [](const std::string& str) {
+                                                    return str.empty();
+                                                });
+
+    pathsToAdd.erase(remove_empty_iterator, pathsToAdd.end());
+    // Now make sure that mArgs.parentRefPaths doesn't already contain the new
+    // paths...
+    if (pathsToAdd.size() > 0) {
+        for (const auto& oldPath : mArgs.parentRefPaths) {
+            auto remove_matching_iterator = std::remove_if(
+                    pathsToAdd.begin(), pathsToAdd.end(),
+                    [&](const std::string& str) {
+                        return str == oldPath;
+                    });
+            pathsToAdd.erase(remove_matching_iterator, pathsToAdd.end());
+            if (pathsToAdd.size() == 0) {
+                break;
+            }
+        }
+
+        if (pathsToAdd.size() > 0) {
+            mArgs.parentRefPaths.reserve(mArgs.parentRefPaths.size()
+                                         + pathsToAdd.size());
+            mArgs.parentRefPaths.insert(mArgs.parentRefPaths.end(),
+                                        pathsToAdd.begin(), pathsToAdd.end());
+        }
+    }
 }
 
 usdReadJob::~usdReadJob()
@@ -226,6 +285,46 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
         }
     }
 
+    if (MFileIO::isReferencingFile())
+    {
+        // TODO: figure out what to do with "byproduct" DG nodes
+        // For nodes for which there is a one-to-one mapping to a USD node, there
+        // should hopefully be entry in mNewNodeRegistry, which is it's usd path;
+        // these paths are guaranteed to be unique, so after replacing the "/"
+        // with ":", we can guarantee a namespaced name that is unique (within
+        // a USD reference tree, at least)
+
+        // However, for many maya nodes there is not a direct mapping to a USD
+        // node - examples include AnimCurves, CreaseSets, and GroupIds.  These
+        // nodes are created as "byproducts" of creating of a USD node - they
+        // may contain data which is an attribute in USD (ie, AnimCurves,
+        // CreaseSets), or may be a wholly maya concept (GroupId). They may not
+        // exist in mNewNodeRegistry at all... and even if they do, we have no
+        // guarantee that the name there is unique.
+
+        // Such nodes may eventually create problems, because the names might not
+        // be unique (within a top-level USD reference), and therfore, they may
+        // change depending on the order in which subreferences are loaded (ie, if
+        // we have two subrefs which try to create "myNode1", one will actually
+        // get named "myNode2").  If there is a reference edit on one of these
+        // nodes, this will create problems...
+
+        MFnDependencyNode depNode;
+        MString newName;
+        // Need to find all DG nodes created, and add the appropriate
+        // namespace
+        for (PathNodeMap::iterator it=mNewNodeRegistry.begin(); it!=mNewNodeRegistry.end(); ++it) {
+            DEBUG_PRINT(MString("made node: ") + it->first.c_str());
+            MObject& mobj = it->second;
+            if (! mobj.hasFn(MFn::kDagNode)) {
+                depNode.setObject(mobj);
+                newName = MString(PxrUsdMayaTranslatorUtil::GetNamespace(it->first).c_str()) + depNode.name();
+                depNode.setName(newName, true);
+            }
+
+        }
+    }
+
     return (status == MS::kSuccess);
 }
 
@@ -257,7 +356,7 @@ bool usdReadJob::_DoImport(UsdPrimRange& range,
                 &assetIdentifier,
                 &assetPrimPath)) {
             const bool isSceneAssembly = mMayaRootDagPath.node().hasFn(MFn::kAssembly);
-            if (isSceneAssembly) {
+            if (isSceneAssembly || MFileIO::isReferencingFile()) {
                 // If we ARE importing on behalf of an assembly, we use the
                 // file path of the top-level assembly and the path to the prim
                 // within that file when creating the reference assembly.
@@ -276,8 +375,10 @@ bool usdReadJob::_DoImport(UsdPrimRange& range,
                                                         parentNode,
                                                         args,
                                                         &ctx,
+                                                        mArgs.useAssemblies,
                                                         _assemblyTypeName,
-                                                        mArgs.assemblyRep)) {
+                                                        mArgs.assemblyRep,
+                                                        mArgs.parentRefPaths)) {
                 if (ctx.GetPruneChildren()) {
                     primIt.PruneChildren();
                 }
