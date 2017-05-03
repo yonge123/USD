@@ -21,26 +21,21 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef PXR_USDINSHIPPED_DECLARECOREOPS_H
-#define PXR_USDINSHIPPED_DECLARECOREOPS_H
+#include "pxrUsdInShipped/declareCoreOps.h"
 
-#include "usdKatana/usdInPluginRegistry.h"
+#include "usdKatana/attrMap.h"
+#include "usdKatana/readAiProcedural.h"
 
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_XformOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_ScopeOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_MeshOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_NurbsPatchOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_PointInstancerOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_PointsOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_BasisCurvesOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_LookOp)
+#include "pxr/usd/usdAi/aiProcedural.h"
 
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_ModelOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_CameraOp)
+PXR_NAMESPACE_USING_DIRECTIVE
 
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_ConstraintsOp)
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_LooksGroupOp)
+PXRUSDKATANA_USDIN_PLUGIN_DEFINE(PxrUsdInCore_AiProceduralOp, privateData, interface)
+{
+    PxrUsdKatanaAttrMap attrs;
 
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(PxrUsdInCore_AiProceduralOp)
+    PxrUsdKatanaReadAiProcedural(
+        UsdAiProcedural(privateData.GetUsdPrim()), privateData, attrs);
 
-#endif // PXR_USDINSHIPPED_DECLARECOREOPS_H
+    attrs.toInterface(interface);
+}
