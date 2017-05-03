@@ -233,6 +233,142 @@ UsdGeomImagePlane::CreateCoverageOriginAttr(VtValue const &defaultValue, bool wr
                        writeSparsely);
 }
 
+UsdAttribute
+UsdGeomImagePlane::GetUseFrameExtensionAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->useFrameExtension);
+}
+
+UsdAttribute
+UsdGeomImagePlane::CreateUseFrameExtensionAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->useFrameExtension,
+                       SdfValueTypeNames->Bool,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdGeomImagePlane::GetFrameOffsetAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->frameOffset);
+}
+
+UsdAttribute
+UsdGeomImagePlane::CreateFrameOffsetAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->frameOffset,
+                       SdfValueTypeNames->Int,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdGeomImagePlane::GetFrameCacheAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->frameCache);
+}
+
+UsdAttribute
+UsdGeomImagePlane::CreateFrameCacheAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->frameCache,
+                       SdfValueTypeNames->Int,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdGeomImagePlane::GetWidthAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->width);
+}
+
+UsdAttribute
+UsdGeomImagePlane::CreateWidthAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->width,
+                       SdfValueTypeNames->Float,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdGeomImagePlane::GetHeightAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->height);
+}
+
+UsdAttribute
+UsdGeomImagePlane::CreateHeightAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->height,
+                       SdfValueTypeNames->Float,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdGeomImagePlane::GetAlphaGainAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->alphaGain);
+}
+
+UsdAttribute
+UsdGeomImagePlane::CreateAlphaGainAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->alphaGain,
+                       SdfValueTypeNames->Float,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdGeomImagePlane::GetDepthAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->depth);
+}
+
+UsdAttribute
+UsdGeomImagePlane::CreateDepthAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->depth,
+                       SdfValueTypeNames->Float,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdGeomImagePlane::GetSqueezeCorrectionAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->squeezeCorrection);
+}
+
+UsdAttribute
+UsdGeomImagePlane::CreateSqueezeCorrectionAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->squeezeCorrection,
+                       SdfValueTypeNames->Float,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
 UsdRelationship
 UsdGeomImagePlane::GetCameraRel() const
 {
@@ -271,6 +407,14 @@ UsdGeomImagePlane::GetSchemaAttributeNames(bool includeInherited)
         UsdGeomTokens->rotate,
         UsdGeomTokens->coverage,
         UsdGeomTokens->coverageOrigin,
+        UsdGeomTokens->useFrameExtension,
+        UsdGeomTokens->frameOffset,
+        UsdGeomTokens->frameCache,
+        UsdGeomTokens->width,
+        UsdGeomTokens->height,
+        UsdGeomTokens->alphaGain,
+        UsdGeomTokens->depth,
+        UsdGeomTokens->squeezeCorrection,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
