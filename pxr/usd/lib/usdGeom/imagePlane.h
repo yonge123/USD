@@ -26,6 +26,8 @@
 
 /// \file usdGeom/imagePlane.h
 
+#include "pxr/pxr.h"
+#include "pxr/usd/usdGeom/api.h"
 #include "pxr/usd/usdGeom/imageable.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
@@ -39,6 +41,8 @@
 
 #include "pxr/base/tf/token.h"
 #include "pxr/base/tf/type.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 class SdfAssetPath;
 
@@ -84,11 +88,13 @@ public:
     }
 
     /// Destructor.
+    USDGEOM_API
     virtual ~UsdGeomImagePlane();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
+    USDGEOM_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
@@ -101,6 +107,7 @@ public:
     /// UsdGeomImagePlane(stage->GetPrimAtPath(path));
     /// \endcode
     ///
+    USDGEOM_API
     static UsdGeomImagePlane
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
@@ -126,17 +133,20 @@ public:
     /// specify this schema class, in case a stronger typeName opinion overrides
     /// the opinion at the current EditTarget.
     ///
+    USDGEOM_API
     static UsdGeomImagePlane
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
+    USDGEOM_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
+    USDGEOM_API
     virtual const TfType &_GetTfType() const;
 
 public:
@@ -149,6 +159,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Asset
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: @@
+    USDGEOM_API
     UsdAttribute GetFilenameAttr() const;
 
     /// See GetFilenameAttr(), and also 
@@ -156,6 +167,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateFilenameAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -168,6 +180,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Double
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: 0.0
+    USDGEOM_API
     UsdAttribute GetFrameAttr() const;
 
     /// See GetFrameAttr(), and also 
@@ -175,6 +188,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateFrameAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -188,6 +202,7 @@ public:
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: best
     /// \n  \ref UsdGeomTokens "Allowed Values": [fill, best, horizontal, vertical, to size]
+    USDGEOM_API
     UsdAttribute GetFitAttr() const;
 
     /// See GetFitAttr(), and also 
@@ -195,6 +210,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateFitAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -207,6 +223,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Float2
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: (0, 0)
+    USDGEOM_API
     UsdAttribute GetOffsetAttr() const;
 
     /// See GetOffsetAttr(), and also 
@@ -214,6 +231,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateOffsetAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -226,6 +244,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Float2
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: (-1, -1)
+    USDGEOM_API
     UsdAttribute GetSizeAttr() const;
 
     /// See GetSizeAttr(), and also 
@@ -233,6 +252,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateSizeAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -245,6 +265,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Float
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: 0.0
+    USDGEOM_API
     UsdAttribute GetRotateAttr() const;
 
     /// See GetRotateAttr(), and also 
@@ -252,6 +273,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateRotateAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -264,6 +286,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Int2
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: (0, 0)
+    USDGEOM_API
     UsdAttribute GetCoverageAttr() const;
 
     /// See GetCoverageAttr(), and also 
@@ -271,6 +294,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateCoverageAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -283,6 +307,7 @@ public:
     /// \n  Usd Type: SdfValueTypeNames->Int2
     /// \n  Variability: SdfVariabilityVarying
     /// \n  Fallback Value: (0, 0)
+    USDGEOM_API
     UsdAttribute GetCoverageOriginAttr() const;
 
     /// See GetCoverageOriginAttr(), and also 
@@ -290,6 +315,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
     UsdAttribute CreateCoverageOriginAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -298,10 +324,12 @@ public:
     // --------------------------------------------------------------------- //
     /// Link to the camera from where aperture sizes are queried.
     ///
+    USDGEOM_API
     UsdRelationship GetCameraRel() const;
 
     /// See GetCameraRel(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create
+    USDGEOM_API
     UsdRelationship CreateCameraRel() const;
 
 public:
@@ -309,10 +337,14 @@ public:
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 
     //
-    // Just remember to close the class delcaration with }; and complete the
-    // include guard with #endif
+    // Just remember to: 
+    //  - Close the class declaration with }; 
+    //  - Close the namespace with PXR_NAMESPACE_CLOSE_SCOPE
+    //  - Close the include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
 };
+
+PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif
