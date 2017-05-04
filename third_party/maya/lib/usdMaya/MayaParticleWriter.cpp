@@ -349,7 +349,6 @@ void MayaParticleWriter::initializeUserAttributes() {
         const auto mayaAttrName = attr.name();
         const std::string attrName = mayaAttrName.asChar();
         if (!_isValidAttr(attrName)) { continue; }
-        MStatus status;
         if (PS.isPerParticleIntAttribute(mayaAttrName)) {
             mUserAttributes.emplace_back(TfToken(attrName), mayaAttrName, PER_PARTICLE_INT);
         } else if (PS.isPerParticleDoubleAttribute(mayaAttrName)) {
