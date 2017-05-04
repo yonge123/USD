@@ -169,6 +169,8 @@ namespace {
 MayaParticleWriter::MayaParticleWriter(
     MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs)
     : MayaTransformWriter(iDag, stage, iArgs) {
+
+    initializeUserAttributes();
 }
 
 UsdPrim MayaParticleWriter::write(const UsdTimeCode &usdTime) {
@@ -262,39 +264,27 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
         floats.emplace_back(_lifespanName, _convertArray<float>(mayaDoubles));
     }
 
-    const auto attributeCount = PS.attributeCount();
-
-    for (auto i = decltype(attributeCount){0}; i < attributeCount; ++i) {
-        MObject attrObj = PS.attribute(i);
-        // we need custom attributes
-        if (PS.attributeClass(attrObj) == MFnDependencyNode::kNormalAttr) {
-            continue;
-        }
-        // only checking for parent attrs
-        MPlug attrPlug(particleNode, attrObj);
-        if (!attrPlug.parent().isNull()) { continue; }
-
-        MFnAttribute attr(attrObj);
-
-        const auto mayaAttrName = attr.name();
-        const std::string attrName = mayaAttrName.asChar();
-        if (!_isValidAttr(attrName)) { continue; }
+    for (const auto& attr : mUserAttributes) {
         MStatus status;
-        if (PS.isPerParticleIntAttribute(mayaAttrName)) {
-            PS.getPerParticleAttribute(mayaAttrName, mayaInts, &status);
+        switch (std::get<2>(attr)) {
+        case PER_PARTICLE_INT:
+            PS.getPerParticleAttribute(std::get<1>(attr), mayaInts, &status);
             if (status) {
-                ints.emplace_back(TfToken(attrName), _convertArray<long>(mayaInts));
+                ints.emplace_back(std::get<0>(attr), _convertArray<long>(mayaInts));
             }
-        } else if (PS.isPerParticleDoubleAttribute(mayaAttrName)) {
-            PS.getPerParticleAttribute(mayaAttrName, mayaDoubles, &status);
+            break;
+        case PER_PARTICLE_DOUBLE:
+            PS.getPerParticleAttribute(std::get<1>(attr), mayaDoubles, &status);
             if (status) {
-                floats.emplace_back(TfToken(attrName), _convertArray<float>(mayaDoubles));
+                floats.emplace_back(std::get<0>(attr), _convertArray<float>(mayaDoubles));
             }
-        } else if (PS.isPerParticleVectorAttribute(mayaAttrName)) {
-            PS.getPerParticleAttribute(mayaAttrName, mayaVectors, &status);
+            break;
+        case PER_PARTICLE_VECTOR:
+            PS.getPerParticleAttribute(std::get<1>(attr), mayaVectors, &status);
             if (status) {
-                vectors.emplace_back(TfToken(attrName), _convertVectorArray<GfVec3f>(mayaVectors));
+                vectors.emplace_back(std::get<0>(attr), _convertVectorArray<GfVec3f>(mayaVectors));
             }
+            break;
         }
     }
 
@@ -331,6 +321,38 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
     _addAttrVec(points, SdfValueTypeNames->Vector3fArray, vectors, usdTime);
     _addAttrVec(points, SdfValueTypeNames->FloatArray, floats, usdTime);
     _addAttrVec(points, SdfValueTypeNames->IntArray, ints, usdTime);
+}
+
+void MayaParticleWriter::initializeUserAttributes() {
+    const auto particleNode = getDagPath().node();
+    MFnParticleSystem PS(particleNode);
+
+    const auto attributeCount = PS.attributeCount();
+
+    for (auto i = decltype(attributeCount){0}; i < attributeCount; ++i) {
+        MObject attrObj = PS.attribute(i);
+        // we need custom attributes
+        if (PS.attributeClass(attrObj) == MFnDependencyNode::kNormalAttr) {
+            continue;
+        }
+        // only checking for parent attrs
+        MPlug attrPlug(particleNode, attrObj);
+        if (!attrPlug.parent().isNull()) { continue; }
+
+        MFnAttribute attr(attrObj);
+
+        const auto mayaAttrName = attr.name();
+        const std::string attrName = mayaAttrName.asChar();
+        if (!_isValidAttr(attrName)) { continue; }
+        MStatus status;
+        if (PS.isPerParticleIntAttribute(mayaAttrName)) {
+            mUserAttributes.emplace_back(TfToken(attrName), mayaAttrName, PER_PARTICLE_INT);
+        } else if (PS.isPerParticleDoubleAttribute(mayaAttrName)) {
+            mUserAttributes.emplace_back(TfToken(attrName), mayaAttrName, PER_PARTICLE_DOUBLE);
+        } else if (PS.isPerParticleVectorAttribute(mayaAttrName)) {
+            mUserAttributes.emplace_back(TfToken(attrName), mayaAttrName, PER_PARTICLE_VECTOR);
+        }
+    }
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
