@@ -35,18 +35,23 @@ class UsdGeomPointInstancer;
 class MayaInstancerWriter : public MayaTransformWriter
 {
 public:
-    MayaInstancerWriter(const MDagPath & iDag,
+    MayaInstancerWriter(const MDagPath& iDag,
                         const SdfPath& uPath,
                         bool instanceSource,
                         usdWriteJobCtx& jobCtx);
     virtual ~MayaInstancerWriter() {}
 
-    virtual void write(const UsdTimeCode &usdTime) override;
+    virtual void write(const UsdTimeCode& usdTime) override;
 
     // TODO: Check this properly, static particles are uncommon, but used.
     virtual bool isShapeAnimated() const override { return true; }
 private:
     void writeParams(const UsdTimeCode& usdTime, UsdGeomPointInstancer& instancer);
+
+    int getPathIndex(const MDagPath& path, UsdGeomPointInstancer& instancer);
+    // Also, note, we should replace this with a sorted vector.
+    // This is required to filter paths that doesn't have a valid usd prim.
+    PxrUsdMayaUtil::MDagPathMap<int>::Type mRelationships;
 };
 
 typedef std::shared_ptr<MayaInstancerWriter> MayaInstancerWriterPtr;

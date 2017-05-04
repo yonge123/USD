@@ -73,6 +73,12 @@ SdfPath usdWriteJobCtx::getMasterPath(const MDagPath& dg)
     }
 }
 
+SdfPath usdWriteJobCtx::getUsdPath(const MDagPath& dg)
+{
+    const auto it = mDagPathToUsdPathMap.find(dg);
+    return it == mDagPathToUsdPathMap.end() ? SdfPath() : it->second;
+}
+
 SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool instanceSource /* = false */)
 {
     SdfPath path;
@@ -167,18 +173,17 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         }
     }
 
-    if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator) ||
+    if (ob.hasFn(MFn::kInstancer)) {
+        MayaInstancerWriterPtr primPtr(new MayaInstancerWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
+        if (primPtr->isValid()) {
+            return primPtr;
+        }
+    }
+    else if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator) ||
         (mArgs.exportInstances && curDag.isInstanced() && !instanceSource)) {
-        if (ob.hasFn(MFn::kInstancer) && mArgs.exportInstances) {
-            MayaInstancerWriterPtr primPtr(new MayaInstancerWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
-            if (primPtr->isValid()) {
-                return primPtr;
-            }
-        } else {
-            MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
-            if (primPtr->isValid()) {
-                return primPtr;
-            }
+        MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
+        if (primPtr->isValid()) {
+            return primPtr;
         }
     } else if (ob.hasFn(MFn::kMesh)) {
         MayaMeshWriterPtr primPtr(new MayaMeshWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
