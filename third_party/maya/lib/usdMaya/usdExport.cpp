@@ -385,19 +385,13 @@ try
     // Create WriteJob object
     usdWriteJob usdWriteJob(jobArgs);
 
-    const auto oldCurTime = MAnimControl::currentTime();
-    if (jobArgs.exportAnimation) {
-        MGlobal::viewFrame(startTime);
-    }
-
     MComputation computation;
     computation.beginComputation();
-
-    MStatus retStatus = MS::kFailure;
 
     // Create stage and process static data
     if (usdWriteJob.beginJob(fileName, append, startTime, endTime)) {
         if (jobArgs.exportAnimation) {
+            MTime oldCurTime = MAnimControl::currentTime();
             for (double i=startTime;i<(endTime+1);i++) {
                 for (double sampleTime : frameSamples) {
                     double actualTime = i + sampleTime;
@@ -414,22 +408,20 @@ try
                     }
                 }
             }
+            // set the time back
+            MGlobal::viewFrame(oldCurTime);
         }
 
         // Finalize the export, close the stage
         usdWriteJob.endJob();
-
-        retStatus = MS::kSuccess;
+    } else {
+        computation.endComputation();
+        return MS::kFailure;
     }
 
     computation.endComputation();
 
-    if (jobArgs.exportAnimation) {
-        // set the time back
-        MGlobal::viewFrame(oldCurTime);
-    }
-
-    return retStatus;
+    return MS::kSuccess;
 } // end of try block
 catch (std::exception & e)
 {

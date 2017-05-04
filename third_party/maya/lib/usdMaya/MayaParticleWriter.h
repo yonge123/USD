@@ -56,6 +56,7 @@ private:
     };
 
     std::vector<std::tuple<TfToken, MString, ParticleType>> mUserAttributes;
+    bool mInitialFrameDone;
 
     void initializeUserAttributes();
 };

@@ -173,7 +173,8 @@ MayaParticleWriter::MayaParticleWriter(
     const SdfPath& uPath,
     bool instanceSource,
     usdWriteJobCtx& jobCtx)
-    : MayaTransformWriter(iDag, uPath, instanceSource, jobCtx) {
+    : MayaTransformWriter(iDag, uPath, instanceSource, jobCtx),
+      mInitialFrameDone(false) {
     auto primSchema = UsdGeomPoints::Define(getUsdStage(), getUsdPath());
     TF_AXIOM(primSchema);
     mUsdPrim = primSchema.GetPrim();
@@ -189,6 +190,10 @@ void MayaParticleWriter::write(const UsdTimeCode &usdTime) {
 }
 
 void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& points) {
+    if (usdTime.IsDefault() == isShapeAnimated()) {
+        return;
+    }
+
     const auto particleNode = getDagPath().node();
     MFnParticleSystem PS(particleNode);
     MFnParticleSystem DPS(particleNode);
@@ -203,17 +208,14 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
 
     if (particleNode.apiType() != MFn::kNParticle) {
         auto currentTime = MAnimControl::currentTime();
-        if (usdTime.IsDefault()) {
-            PS.evaluateDynamics(currentTime, true);
-            DPS.evaluateDynamics(currentTime, true);
-        } else {
+        if (mInitialFrameDone) {
             PS.evaluateDynamics(currentTime, false);
             DPS.evaluateDynamics(currentTime, false);
+        } else {
+            PS.evaluateDynamics(currentTime, true);
+            DPS.evaluateDynamics(currentTime, true);
+            mInitialFrameDone = true;
         }
-    }
-
-    if (usdTime.IsDefault() == isShapeAnimated()) {
-        return;
     }
 
     // In some cases, especially whenever particles are dying,
