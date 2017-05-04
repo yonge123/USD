@@ -172,11 +172,12 @@ MayaParticleWriter::MayaParticleWriter(
     bool instanceSource,
     usdWriteJobCtx& jobCtx)
     : MayaTransformWriter(iDag, uPath, instanceSource, jobCtx) {
-    initializeUserAttributes();
     auto primSchema = UsdGeomPoints::Define(getUsdStage(), getUsdPath());
     TF_AXIOM(primSchema);
     mUsdPrim = primSchema.GetPrim();
     TF_AXIOM(mUsdPrim);
+
+    initializeUserAttributes();
 }
 
 void MayaParticleWriter::write(const UsdTimeCode &usdTime) {
