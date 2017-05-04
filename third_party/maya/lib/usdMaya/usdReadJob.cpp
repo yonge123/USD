@@ -174,7 +174,8 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
     }
 
     // Use the primPath to get the root usdNode
-    UsdPrim usdRootPrim = stage->GetPrimAtPath(primSdfPath);
+    UsdPrim usdRootPrim = mPrimPath.empty() ? stage->GetDefaultPrim() :
+        stage->GetPrimAtPath(primSdfPath);
     if (!usdRootPrim && !(mPrimPath.empty() || mPrimPath == "/")) {
         usdRootPrim = stage->GetPseudoRoot();
     }
