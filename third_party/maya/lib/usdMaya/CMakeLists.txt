@@ -66,6 +66,7 @@ pxr_shared_library(${PXR_PACKAGE}
         JobArgs
         usdReadJob
         usdWriteJob
+        usdWriteJobCtx
 
         pluginStaticData
         proxyShape
@@ -91,6 +92,7 @@ pxr_shared_library(${PXR_PACKAGE}
         MayaMeshWriter
         MayaNurbsCurveWriter
         MayaNurbsSurfaceWriter
+        MayaParticleWriter
         ModelKindWriter
 
     PRIVATE_HEADERS
