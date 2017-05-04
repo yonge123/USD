@@ -1,6 +1,4 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/maya_instancer/initial
-
-<patch description>
+Subject: [usdMaya] Adding a prim writer for the instancer.
 
 Signed-off-by: Pal Mezei <palm@lumapictures.com>
