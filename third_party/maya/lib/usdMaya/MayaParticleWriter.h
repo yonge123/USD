@@ -21,39 +21,47 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef _usdExport_MayaNurbsSurfaceWriter_h_
-#define _usdExport_MayaNurbsSurfaceWriter_h_
+
+#ifndef PXRUSDMAYA_MAYAPARTICLE_WRITER_H
+#define PXRUSDMAYA_MAYAPARTICLE_WRITER_H
 
 #include "pxr/pxr.h"
 #include "usdMaya/MayaTransformWriter.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+class UsdGeomPoints;
 
-class UsdGeomNurbsPatch;
-
-// Writes an MFnMesh as a poly mesh OR a subd mesh
-class MayaNurbsSurfaceWriter : public MayaTransformWriter
+class MayaParticleWriter : public MayaTransformWriter
 {
-  public:
-    MayaNurbsSurfaceWriter(const MDagPath & iDag,
-            const SdfPath& uPath,
-            bool instanceSource,
-            usdWriteJobCtx& jobCtx);
-    virtual ~MayaNurbsSurfaceWriter() {};
-    
-    virtual void write(const UsdTimeCode &usdTime);
+public:
+    MayaParticleWriter(const MDagPath & iDag,
+                       const SdfPath& uPath,
+                       bool instanceSource,
+                       usdWriteJobCtx& jobCtx);
+    virtual ~MayaParticleWriter() {}
 
-    /// \override
-    virtual bool exportsGprims() const;
+    virtual void write(const UsdTimeCode &usdTime) override;
 
-  protected:
-    bool writeNurbsSurfaceAttrs(const UsdTimeCode &usdTime, UsdGeomNurbsPatch &primSchema);
+    // TODO: Check this properly, static particles are uncommon, but used.
+    virtual bool isShapeAnimated() const override { return true; }
+
+private:
+    void writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& points);
+
+    enum ParticleType {
+        PER_PARTICLE_INT,
+        PER_PARTICLE_DOUBLE,
+        PER_PARTICLE_VECTOR
+    };
+
+    std::vector<std::tuple<TfToken, MString, ParticleType>> mUserAttributes;
+
+    void initializeUserAttributes();
 };
 
-typedef std::shared_ptr<MayaNurbsSurfaceWriter> MayaNurbsSurfaceWriterPtr;
-
+typedef std::shared_ptr<MayaParticleWriter> MayaParticleWriterPtr;
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif  // _usdExport_MayaNurbsSurfaceWriter_h_
+#endif // PXRUSDMAYA_MAYAPARTICLE_WRITER_H
