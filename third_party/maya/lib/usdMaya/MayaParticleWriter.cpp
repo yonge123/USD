@@ -131,6 +131,8 @@ namespace {
         }
     }
 
+    // The logic of filtering the user attributes is based on partio4Maya/PartioExport.
+    // https://github.com/redpawfx/partio/blob/redpawfx-rez/contrib/partio4Maya/scripts/partioExportGui.mel
     // We either don't want these or already export them using one of the builtin functions.
     const std::set<std::string> _supressedAttrs = {
         "emitterDataPosition", "emitterDataVelocity", "fieldDataMass",
