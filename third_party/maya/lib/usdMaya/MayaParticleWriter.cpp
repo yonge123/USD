@@ -170,7 +170,8 @@ namespace {
 
 MayaParticleWriter::MayaParticleWriter(
     MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs)
-    : MayaTransformWriter(iDag, stage, iArgs) {
+    : MayaTransformWriter(iDag, stage, iArgs),
+      mInitialFrameDone(false) {
 
     initializeUserAttributes();
 }
@@ -188,6 +189,10 @@ UsdPrim MayaParticleWriter::write(const UsdTimeCode &usdTime) {
 }
 
 void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& points) {
+    if (usdTime.IsDefault() == isShapeAnimated()) {
+        return;
+    }
+
     const auto particleNode = getDagPath().node();
     MFnParticleSystem PS(particleNode);
     MFnParticleSystem DPS(particleNode);
@@ -202,17 +207,14 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
 
     if (particleNode.apiType() != MFn::kNParticle) {
         auto currentTime = MAnimControl::currentTime();
-        if (usdTime.IsDefault()) {
-            PS.evaluateDynamics(currentTime, true);
-            DPS.evaluateDynamics(currentTime, true);
-        } else {
+        if (mInitialFrameDone) {
             PS.evaluateDynamics(currentTime, false);
             DPS.evaluateDynamics(currentTime, false);
+        } else {
+            PS.evaluateDynamics(currentTime, true);
+            DPS.evaluateDynamics(currentTime, true);
+            mInitialFrameDone = true;
         }
-    }
-
-    if (usdTime.IsDefault() == isShapeAnimated()) {
-        return;
     }
 
     // In some cases, especially whenever particles are dying,

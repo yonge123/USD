@@ -193,24 +193,20 @@ usdTranslatorExport::writer(const MFileObject &file,
     
     if (jobArgs.dagPaths.size()) {
         MTime oldCurTime = MAnimControl::currentTime();
-        MGlobal::viewFrame(startTime);
-        MStatus retStatus = MS::kFailure;
         usdWriteJob writeJob(jobArgs);
         if (writeJob.beginJob(fileName, append, startTime, endTime)) {
             for (double i=startTime;i<(endTime+1);i++) {
                 for (double sampleTime : frameSamples) {
                     double actualTime = i + sampleTime;
-                    MTime mayaActualTime; mayaActualTime.setValue(actualTime);
                     MGlobal::viewFrame(actualTime);
                     writeJob.evalJob(actualTime);
                 }
             }
             writeJob.endJob();
-            retStatus = MS::kSuccess;
+            MGlobal::viewFrame(oldCurTime);
+        } else {
+            return MS::kFailure;
         }
-
-        MGlobal::viewFrame(oldCurTime);
-        return retStatus;
     } else {
         MGlobal::displayWarning("No DAG nodes to export. Skipping");
     }
