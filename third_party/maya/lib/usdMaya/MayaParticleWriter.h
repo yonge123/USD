@@ -47,8 +47,17 @@ public:
     virtual bool isShapeAnimated() const override { return true; }
 
 private:
-
     void writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& points);
+
+    enum ParticleType {
+        PER_PARTICLE_INT,
+        PER_PARTICLE_DOUBLE,
+        PER_PARTICLE_VECTOR
+    };
+
+    std::vector<std::tuple<TfToken, MString, ParticleType>> mUserAttributes;
+
+    void initializeUserAttributes();
 };
 
 typedef std::shared_ptr<MayaParticleWriter> MayaParticleWriterPtr;
