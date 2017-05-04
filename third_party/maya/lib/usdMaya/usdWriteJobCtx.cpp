@@ -9,6 +9,7 @@
 #include "usdMaya/MayaNurbsCurveWriter.h"
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
 #include "usdMaya/MayaParticleWriter.h"
+#include "usdMaya/MayaInstancerWriter.h"
 #include "usdMaya/MayaTransformWriter.h"
 #include "usdMaya/primWriterRegistry.h"
 
@@ -168,9 +169,16 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
 
     if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator) ||
         (mArgs.exportInstances && curDag.isInstanced() && !instanceSource)) {
-        MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
-        if (primPtr->isValid()) {
-            return primPtr;
+        if (ob.hasFn(MFn::kInstancer) && mArgs.exportInstances) {
+            MayaInstancerWriterPtr primPtr(new MayaInstancerWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
+            if (primPtr->isValid()) {
+                return primPtr;
+            }
+        } else {
+            MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
+            if (primPtr->isValid()) {
+                return primPtr;
+            }
         }
     } else if (ob.hasFn(MFn::kMesh)) {
         MayaMeshWriterPtr primPtr(new MayaMeshWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
