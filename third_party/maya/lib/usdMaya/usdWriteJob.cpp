@@ -118,9 +118,7 @@ bool usdWriteJob::beginJob(bool append)
     }  // for m
 
     // Make sure the file name is a valid one with a proper USD extension.
-    if (UsdStage::IsSupportedFile(mArgs.fileName)) {
-        mArgs.fileName = mArgs.fileName;
-    } else {
+    if (!UsdStage::IsSupportedFile(mArgs.fileName)) {
         mArgs.fileName = TfStringPrintf("%s.%s",
                                         mArgs.fileName.c_str(),
                                         PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault.GetText());
