@@ -313,6 +313,8 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
     masses->resize(minSize);
 
     points.GetPointsAttr().Set(*positions, usdTime);
+    const auto velMult = 1.0f / static_cast<float>(MTime(1.0, MTime::kSeconds).asUnits(MTime::uiUnit()));
+    for (auto& v : *velocities) { v = v * velMult; }
     points.GetVelocitiesAttr().Set(*velocities, usdTime);
     points.GetIdsAttr().Set(*ids, usdTime);
     // radius -> width conversion
