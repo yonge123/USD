@@ -33,6 +33,7 @@
 #include <maya/MQuaternion.h>
 #include <maya/MFnParticleSystem.h>
 #include <maya/MFnArrayAttrsData.h>
+#include <maya/MTime.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -169,7 +170,11 @@ void MayaInstancerWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPointIn
     instancer.GetPositionsAttr().Set(translations, usdTime);
     instancer.GetOrientationsAttr().Set(orientations, usdTime);
     instancer.GetScalesAttr().Set(scales, usdTime);
-    if (hasVelocity) { instancer.GetVelocitiesAttr().Set(velocities, usdTime); }
+    if (hasVelocity) {
+        const auto velMult = 1.0f / static_cast<float>(MTime(1.0, MTime::kSeconds).asUnits(MTime::uiUnit()));
+        for (auto& v : velocities) { v = v * velMult; }
+        instancer.GetVelocitiesAttr().Set(velocities, usdTime);
+    }
 }
 
 int MayaInstancerWriter::getPathIndex(const MDagPath& path, UsdGeomPointInstancer& instancer) {
