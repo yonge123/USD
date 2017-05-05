@@ -6,6 +6,7 @@ tg/bugfixes/ubuntu_katana_build_fix
 tg/instances/main
 tg/maya_particle_cache/initial
 tg/maya_particle/merge_instances
+tg/maya_instancer/initial
 tg/simple_features/GetSessionLayerForVariantSelections_SdfPath
 tg/simple_features/ccache
 tg/simple_features/dynamic_shading_mode_list
