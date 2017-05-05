@@ -74,8 +74,6 @@ class usdWriteJob : public usdWriteJobCtx
     // List of renderLayerObjects. Currently used for variants
     MObjectArray mRenderLayerObjs;
 
-    PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type mDagPathToUsdPathMap;
-
     PxrUsdMayaChaserRefPtrVector mChasers;
 
     PxrUsdMaya_ModelKindWriter mModelKindWriter;
