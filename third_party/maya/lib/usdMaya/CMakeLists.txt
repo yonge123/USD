@@ -93,6 +93,8 @@ pxr_shared_library(${PXR_PACKAGE}
         MayaMeshWriter
         MayaNurbsCurveWriter
         MayaNurbsSurfaceWriter
+        MayaParticleWriter
+        MayaInstancerWriter
         ModelKindWriter
 
     PRIVATE_HEADERS
