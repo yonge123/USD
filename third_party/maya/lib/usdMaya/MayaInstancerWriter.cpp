@@ -31,6 +31,8 @@
 #include <maya/MMatrixArray.h>
 #include <maya/MTransformationMatrix.h>
 #include <maya/MQuaternion.h>
+#include <maya/MFnParticleSystem.h>
+#include <maya/MFnArrayAttrsData.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -87,11 +89,45 @@ void MayaInstancerWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPointIn
         particleStartIndices.length() < 2 ||
         mayaIndices.length() == 0) { return; }
 
+    // Accessing extra data from the driver.
+    auto hasVelocity = false;
+    MVectorArray mayaVelocities;
+    const auto instancerObject = getDagPath().node();
+    MFnDependencyNode mayaInstancerNode(instancerObject, &status);
+    if (status) {
+        auto inputPointsPlug = mayaInstancerNode.findPlug("inputPoints");
+        MPlugArray conns;
+        inputPointsPlug.connectedTo(conns, true, false);
+        if (conns.length() > 0) {
+            const auto driverObject = conns[0].node();
+            if (driverObject.hasFn(MFn::kParticle) || driverObject.hasFn(MFn::kNParticle)) {
+                MFnParticleSystem PS(driverObject);
+                PS.velocity(mayaVelocities);
+                // TODO: check if the velocities are zero!
+                hasVelocity = mayaVelocities.length() == matrices.length();
+            } else {
+                MFnDependencyNode driverNode(driverObject);
+                // This is a known bug with Mash.
+                if (driverNode.typeName() != "MASH_Waiter"){
+                    MFnArrayAttrsData instancerData(inputPointsPlug.asMObject(), &status);
+                    if (status) {
+                        auto vectorType = MFnArrayAttrsData::kVectorArray;
+                        if (instancerData.checkArrayExist("velocity", vectorType)) {
+                            mayaVelocities = instancerData.getVectorData("velocity");
+                            hasVelocity = mayaVelocities.length() == matrices.length();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     const auto reserveCount = mayaIndices.length();
     VtArray<long> indices; indices.reserve(reserveCount);
     VtArray<GfVec3f> translations; translations.reserve(reserveCount);
     VtArray<GfQuath> orientations; orientations.reserve(reserveCount);
     VtArray<GfVec3f> scales; scales.reserve(reserveCount);
+    VtArray<GfVec3f> velocities; if (hasVelocity) { velocities.reserve(reserveCount); }
     const auto particleGroups = particleStartIndices.length() - 1;
     for (auto gid = decltype(particleGroups){0}; gid < particleGroups; ++gid) {
         MTransformationMatrix transformMatrix(matrices[gid]);
@@ -118,6 +154,13 @@ void MayaInstancerWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPointIn
                     static_cast<float>(scale.x),
                     static_cast<float>(scale.y),
                     static_cast<float>(scale.z)));
+                if (hasVelocity) {
+                    const auto velocity = mayaVelocities[gid];
+                    velocities.push_back(GfVec3f(
+                        static_cast<float>(velocity.x),
+                        static_cast<float>(velocity.y),
+                        static_cast<float>(velocity.z)));
+                }
             }
         }
     }
@@ -126,6 +169,7 @@ void MayaInstancerWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPointIn
     instancer.GetPositionsAttr().Set(translations, usdTime);
     instancer.GetOrientationsAttr().Set(orientations, usdTime);
     instancer.GetScalesAttr().Set(scales, usdTime);
+    if (hasVelocity) { instancer.GetVelocitiesAttr().Set(velocities, usdTime); }
 }
 
 int MayaInstancerWriter::getPathIndex(const MDagPath& path, UsdGeomPointInstancer& instancer) {
