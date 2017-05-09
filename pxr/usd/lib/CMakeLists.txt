@@ -6,6 +6,7 @@ set(DIRS
     usd
     usdAi
     usdGeom
+    usdLux
     usdShade
     usdHydra
     usdRi
