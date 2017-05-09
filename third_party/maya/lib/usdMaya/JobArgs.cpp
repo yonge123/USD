@@ -189,7 +189,7 @@ JobImportArgs::JobImportArgs()
     :
         primPath("/"),
         assemblyRep(PxUsdExportJobArgsTokens->Collapsed),
-        readAnimData(false),
+        readAnimData(true),
         useCustomFrameRange(false),
         importWithProxyShapes(false),
         useAssemblies(_useAssembliesDefault)
