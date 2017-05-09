@@ -40,6 +40,12 @@
 #include "pxr/usd/usdGeom/scope.h"
 #include "pxr/usd/usdGeom/xform.h"
 #include "pxr/usd/usdShade/look.h"
+#include "pxr/usd/usdLux/domeLight.h"
+#include "pxr/usd/usdLux/distantLight.h"
+#include "pxr/usd/usdLux/geometryLight.h"
+#include "pxr/usd/usdLux/diskLight.h"
+#include "pxr/usd/usdLux/sphereLight.h"
+#include "pxr/usd/usdLux/rectLight.h"
 
 #include "pxrUsdInShipped/attrfnc_materialReference.h"
 
@@ -56,6 +62,7 @@ DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_PointInstancerOp)
 DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_PointsOp)
 DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_BasisCurvesOp)
 DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_LookOp)
+DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_LightOp)
 
 DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_ModelOp)
 DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_CameraOp)
@@ -78,6 +85,7 @@ void registerPlugins()
     REGISTER_PLUGIN(PxrUsdInCore_PointsOp, "PxrUsdInCore_PointsOp", 0, 1);
     REGISTER_PLUGIN(PxrUsdInCore_BasisCurvesOp, "PxrUsdInCore_BasisCurvesOp", 0, 1);
     REGISTER_PLUGIN(PxrUsdInCore_LookOp, "PxrUsdInCore_LookOp", 0, 1);
+    REGISTER_PLUGIN(PxrUsdInCore_LightOp, "PxrUsdInCore_LightOp", 0, 1);
 
     REGISTER_PLUGIN(PxrUsdInCore_ModelOp, "PxrUsdInCore_ModelOp", 0, 1);
     REGISTER_PLUGIN(PxrUsdInCore_CameraOp, "PxrUsdInCore_CameraOp", 0, 1);
@@ -95,7 +103,14 @@ void registerPlugins()
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdGeomPoints>("PxrUsdInCore_PointsOp");
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdGeomBasisCurves>("PxrUsdInCore_BasisCurvesOp");
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdShadeLook>("PxrUsdInCore_LookOp");
-    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdShadeMaterial>("PxrUsdInCore_LookOp");
+
+    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdLuxDomeLight>("PxrUsdInCore_LightOp");
+    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdLuxGeometryLight>("PxrUsdInCore_LightOp");
+    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdLuxDistantLight>("PxrUsdInCore_LightOp");
+    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdLuxSphereLight>("PxrUsdInCore_LightOp");
+    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdLuxDiskLight>("PxrUsdInCore_LightOp");
+    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdLuxRectLight>("PxrUsdInCore_LightOp");
+
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdGeomCamera>("PxrUsdInCore_CameraOp");
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdAiProcedural>("PxrUsdInCore_AiProceduralOp");
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdAiVolume>("PxrUsdInCore_AiProceduralOp");
