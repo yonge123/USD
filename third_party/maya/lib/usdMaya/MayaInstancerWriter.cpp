@@ -171,8 +171,6 @@ void MayaInstancerWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPointIn
     instancer.GetOrientationsAttr().Set(orientations, usdTime);
     instancer.GetScalesAttr().Set(scales, usdTime);
     if (hasVelocity) {
-        const auto velMult = 1.0f / static_cast<float>(MTime(1.0, MTime::kSeconds).asUnits(MTime::uiUnit()));
-        for (auto& v : velocities) { v = v * velMult; }
         instancer.GetVelocitiesAttr().Set(velocities, usdTime);
     }
 }
