@@ -37,6 +37,7 @@ TF_WRAP_MODULE
         TF_WRAP(UsdRiRisOslPattern);
 
     TF_WRAP(UsdRiLookAPI);
+    TF_WRAP(UsdRiMaterialAPI);
 
     TF_WRAP(UsdRiRisIntegrator);
     TF_WRAP(UsdRiRslShader);
@@ -45,4 +46,10 @@ TF_WRAP_MODULE
     TF_WRAP(UsdRiTokens);
 
     TF_WRAP(UsdRiRmanUtilities);
+
+    TF_WRAP(UsdRiPxrBarnLightFilter);
+    TF_WRAP(UsdRiPxrIntMultLightFilter);
+    TF_WRAP(UsdRiPxrCookieLightFilter);
+    TF_WRAP(UsdRiPxrRampLightFilter);
+    TF_WRAP(UsdRiPxrRodLightFilter);
 }
