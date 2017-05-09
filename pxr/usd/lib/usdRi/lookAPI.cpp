@@ -25,8 +25,6 @@
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/typed.h"
 
-#include "pxr/usd/usdShade/connectableAPI.h"
-
 #include "pxr/usd/sdf/types.h"
 #include "pxr/usd/sdf/assetPath.h"
 
@@ -183,6 +181,7 @@ PXR_NAMESPACE_CLOSE_SCOPE
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
+#include "pxr/usd/usdShade/connectableAPI.h"
 #include "pxr/usd/usdShade/material.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -299,7 +298,7 @@ UsdRiLookAPI::ComputeInterfaceInputConsumersMap(
 std::vector<UsdShadeInput> 
 UsdRiLookAPI::GetInterfaceInputs() const
 {
-    return UsdShadeMaterial(GetPrim()).GetInterfaceInputs();
+    return UsdShadeMaterial(GetPrim())._GetInterfaceInputs(_tokens->ri);
 }
 
 bool
