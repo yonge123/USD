@@ -15,6 +15,7 @@ pxr_shared_library(${PXR_PACKAGE}
         usdImagingGL
         usdShade
         usdGeom
+        usdLux
         usdRi
         usdUI
         usdUtils
@@ -45,6 +46,7 @@ pxr_shared_library(${PXR_PACKAGE}
         readCamera
         readConstraintTarget
         readGprim
+        readLight
         readMaterial
         readMesh
         readModel
