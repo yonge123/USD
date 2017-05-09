@@ -124,7 +124,7 @@ void MayaInstancerWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPointIn
     }
 
     const auto reserveCount = mayaIndices.length();
-    VtArray<long> indices; indices.reserve(reserveCount);
+    VtArray<int> indices; indices.reserve(reserveCount);
     VtArray<GfVec3f> translations; translations.reserve(reserveCount);
     VtArray<GfQuath> orientations; orientations.reserve(reserveCount);
     VtArray<GfVec3f> scales; scales.reserve(reserveCount);
@@ -166,7 +166,7 @@ void MayaInstancerWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPointIn
         }
     }
 
-    instancer.GetIdsAttr().Set(indices, usdTime);
+    instancer.GetProtoIndicesAttr().Set(indices, usdTime);
     instancer.GetPositionsAttr().Set(translations, usdTime);
     instancer.GetOrientationsAttr().Set(orientations, usdTime);
     instancer.GetScalesAttr().Set(scales, usdTime);
