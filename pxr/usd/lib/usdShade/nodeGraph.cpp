@@ -242,6 +242,33 @@ UsdShadeNodeGraph::GetInterfaceInputs() const
     return GetInputs();
 }
 
+std::vector<UsdShadeInput> 
+UsdShadeNodeGraph::_GetInterfaceInputs(const TfToken &renderTarget) const
+{
+    if (renderTarget.IsEmpty() ||
+        !UsdShadeUtils::ReadOldEncoding()) {
+        return GetInterfaceInputs();
+    }
+
+    std::vector<UsdShadeInput> result;
+    const std::string relPrefix = 
+        UsdShadeInterfaceAttribute::_GetInterfaceAttributeRelPrefix(renderTarget);
+    std::vector<UsdRelationship> rels = GetPrim().GetRelationships();
+    TF_FOR_ALL(relIter, rels) {
+        UsdRelationship rel = *relIter;
+        std::string relName = rel.GetName().GetString();
+        if (TfStringStartsWith(relName, relPrefix)) {
+            TfToken interfaceAttrName(relName.substr(relPrefix.size()));
+            UsdShadeInput interfaceInput = GetInput(interfaceAttrName);
+            if (interfaceInput.GetAttr()) {
+                result.push_back(interfaceInput);
+            }
+        }
+    }
+
+    return result;
+}
+
 static bool 
 _IsValidInput(UsdShadeConnectableAPI const &source, 
               UsdShadeAttributeType const sourceType) 
@@ -255,10 +282,12 @@ _IsValidInput(UsdShadeConnectableAPI const &source,
               sourceType == UsdShadeAttributeType::Parameter)));
 }
 
-static 
+
+static
 UsdShadeNodeGraph::InterfaceInputConsumersMap 
-_ComputeNonTransitiveInputConsumersMap(const UsdShadeNodeGraph &nodeGraph,
-                                       const TfToken &renderTarget)
+_ComputeNonTransitiveInputConsumersMap(
+    const UsdShadeNodeGraph &nodeGraph,
+    const TfToken &renderTarget)
 {
     UsdShadeNodeGraph::InterfaceInputConsumersMap result;
 
