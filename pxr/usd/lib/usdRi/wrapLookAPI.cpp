@@ -172,7 +172,8 @@ WRAP_CUSTOM {
         .def("SetInterfaceInputConsumer", &This::SetInterfaceInputConsumer)
         .def("ComputeInterfaceInputConsumersMap", 
             &This::ComputeInterfaceInputConsumersMap, 
-            (arg("computeTransitiveConsumers")=false))
+            (arg("computeTransitiveConsumers")=false),
+            return_value_policy<TfPyMapToDictionary>())
         .def("GetInterfaceInputs", &This::GetInterfaceInputs,
              return_value_policy<TfPySequenceToList>())
 
