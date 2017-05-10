@@ -147,10 +147,10 @@ void MayaInstancerWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPointIn
                     static_cast<float>(translation.y),
                     static_cast<float>(translation.z)));
                 orientations.push_back(GfQuath(
+                    static_cast<float>(orientation.w),
                     static_cast<float>(orientation.x),
                     static_cast<float>(orientation.y),
-                    static_cast<float>(orientation.z),
-                    static_cast<float>(orientation.w)));
+                    static_cast<float>(orientation.z)));
                 scales.push_back(GfVec3f(
                     static_cast<float>(scale.x),
                     static_cast<float>(scale.y),
