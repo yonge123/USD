@@ -1,6 +1,4 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/pixar/katana_light_op_symbol
-
-<patch description>
+Subject: [usdKatana] Fixing missing symbol from the katana plugin.
 
 Signed-off-by: Pal Mezei <palm@lumapictures.com>
