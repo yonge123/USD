@@ -27,6 +27,7 @@
 #include <maya/MStatus.h>
 
 #include "pxr/pxr.h"
+#include "pxrUsd/api.h"
 #include "pxrUsdMayaGL/proxyDrawOverride.h"
 #include "pxrUsdMayaGL/proxyShapeUI.h"
 
@@ -40,6 +41,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 static PxrUsdMayaPluginStaticData& _data(PxrUsdMayaPluginStaticData::pxrUsd);
 
+PXRUSD_API
 MStatus initializePlugin(
     MObject obj) {
 
@@ -173,6 +175,7 @@ MStatus initializePlugin(
     return status;
 }
 
+PXRUSD_API
 MStatus uninitializePlugin(
     MObject obj) {
 
