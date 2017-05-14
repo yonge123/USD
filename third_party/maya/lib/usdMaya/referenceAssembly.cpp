@@ -74,7 +74,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaVariantSetTokens, PXRUSDMAYA_VARIANT_SET_TOKENS);
 
-
 TF_DEFINE_ENV_SETTING(PIXMAYA_USE_USD_REF_ASSEMBLIES, true,
                       "Uses USD scene assemblies for set dressing");
 
@@ -547,7 +546,8 @@ std::set<std::string> _GetVariantSetNamesForStageCache(
             continue;
         }
 
-        std::string variantSet = attrName.substr(PxrUsdMayaVariantSetTokens->PlugNamePrefix.GetString().size());
+        std::string variantSet = attrName.substr(
+            PxrUsdMayaVariantSetTokens->PlugNamePrefix.GetString().size());
         varSetNames.insert(variantSet);
     }
     return varSetNames;
@@ -613,7 +613,6 @@ MStatus UsdMayaReferenceAssembly::computeInStageDataCached(MDataBlock& dataBlock
                     if (varSetVal.length() > 0) {
                         varSelsVec.push_back(
                             std::make_pair(*variantSet, varSetVal.asChar()));
-
                     }
                 }
             }
