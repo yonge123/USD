@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Pixar
+// Copyright 2017 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -21,27 +21,27 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#ifndef PXRUSD_API_H
+#define PXRUSD_API_H
 
-#include "pxr/pxr.h"
-#include "pxr/base/arch/threads.h"
+#include "pxr/base/arch/export.h"
 
-#include <thread>
+#if defined(PXRUSD_STATIC)
+#   define PXRUSD_API
+#   define PXRUSD_API_TEMPLATE_CLASS(...)
+#   define PXRUSD_API_TEMPLATE_STRUCT(...)
+#   define PXRUSD_LOCAL
+#else
+#   if defined(PXRUSD_EXPORTS)
+#       define PXRUSD_API ARCH_EXPORT
+#       define PXRUSD_API_TEMPLATE_CLASS(...) ARCH_EXPORT_TEMPLATE(class, __VA_ARGS__)
+#       define PXRUSD_API_TEMPLATE_STRUCT(...) ARCH_EXPORT_TEMPLATE(struct, __VA_ARGS__)
+#   else
+#       define PXRUSD_API ARCH_IMPORT
+#       define PXRUSD_API_TEMPLATE_CLASS(...) ARCH_IMPORT_TEMPLATE(class, __VA_ARGS__)
+#       define PXRUSD_API_TEMPLATE_STRUCT(...) ARCH_IMPORT_TEMPLATE(struct, __VA_ARGS__)
+#   endif
+#   define PXRUSD_LOCAL ARCH_HIDDEN
+#endif
 
-PXR_NAMESPACE_OPEN_SCOPE
-
-// Static initializer to get the main thread id.  We want this to run as early
-// as possible, so we actually capture the main thread's id.  We assume that
-// we're not starting threads before main().
-
-namespace {
-
-const std::thread::id _mainThreadId = std::this_thread::get_id();
-
-} // anonymous namespace
-
-bool ArchIsMainThread()
-{
-    return std::this_thread::get_id() == _mainThreadId;
-}
-
-PXR_NAMESPACE_CLOSE_SCOPE
+#endif
