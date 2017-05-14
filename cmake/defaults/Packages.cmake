@@ -46,9 +46,6 @@ set(TBB_USE_DEBUG_BUILD OFF)
 find_package(TBB REQUIRED COMPONENTS tbb)
 add_definitions(${TBB_DEFINITIONS})
 
-# --pthread
-find_package(Threads REQUIRED)
-
 # --math
 if(WIN32)
     # Math functions are linked automatically by including math.h on Windows.
