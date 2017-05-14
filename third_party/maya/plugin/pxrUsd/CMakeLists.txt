@@ -18,6 +18,9 @@ pxr_plugin(${PXR_PACKAGE}
         plugin.cpp
         usdTranslator.cpp
 
+    PRIVATE_HEADERS
+        api.h
+
     PYTHON_FILES
         plugInfo.json
         testenv/testPxrUsdAlembicChaser.py
@@ -39,4 +42,5 @@ pxr_register_test(testPxrUsdAlembicChaser
     ENV
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+        MAYA_DISABLE_CIP=1
 )
