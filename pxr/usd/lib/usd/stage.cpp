@@ -1147,21 +1147,68 @@ UsdStage::_GetRelationshipDefinition(const UsdRelationship &rel) const
     return _GetPropertyDefinition<SdfRelationshipSpec>(rel);
 }
 
-SdfPrimSpecHandle
-UsdStage::_CreatePrimSpecForEditing(const SdfPath& path)
+bool
+UsdStage::_ValidateEditPrim(const UsdPrim &prim, const char* operation) const
 {
-    if (ARCH_UNLIKELY(Usd_InstanceCache::IsPathMasterOrInMaster(path))) {
-        TF_CODING_ERROR("Cannot create prim spec at path <%s>; "
-                        "authoring to a prim in an instancing master "
-                        "is not allowed.",
-                        path.GetText());
-        return TfNullPtr;
+    if (ARCH_UNLIKELY(prim.IsInMaster())) {
+        TF_CODING_ERROR("Cannot %s at path <%s>; "
+                        "authoring to an instancing master is not allowed.",
+                        operation, prim.GetPath().GetText());
+        return false;
     }
 
-    const UsdEditTarget &editTarget = GetEditTarget();
+    if (ARCH_UNLIKELY(prim.IsInstanceProxy())) {
+        TF_CODING_ERROR("Cannot %s at path <%s>; "
+                        "authoring to an instance proxy is not allowed.",
+                        operation, prim.GetPath().GetText());
+        return false;
+    }
+
+    return true;
+}
+
+bool
+UsdStage::_ValidateEditPrimAtPath(const SdfPath &primPath, 
+                                  const char* operation) const
+{
+    if (ARCH_UNLIKELY(Usd_InstanceCache::IsPathMasterOrInMaster(primPath))) {
+        TF_CODING_ERROR("Cannot %s at path <%s>; "
+                        "authoring to an instancing master is not allowed.",
+                        operation, primPath.GetText());
+        return false;
+    }
+
+    if (ARCH_UNLIKELY(_IsObjectDescendantOfInstance(primPath))) {
+        TF_CODING_ERROR("Cannot %s at path <%s>; "
+                        "authoring to an instance proxy is not allowed.",
+                        operation, primPath.GetText());
+        return false;
+    }
+
+    return true;
+}
+
+namespace {
+
+SdfPrimSpecHandle
+_CreatePrimSpecAtEditTarget(const UsdEditTarget &editTarget, 
+                            const SdfPath &path)
+{
     const SdfPath &targetPath = editTarget.MapToSpecPath(path);
     return targetPath.IsEmpty() ? SdfPrimSpecHandle() :
         SdfCreatePrimInLayer(editTarget.GetLayer(), targetPath);
+}
+
+}
+
+SdfPrimSpecHandle
+UsdStage::_CreatePrimSpecForEditing(const UsdPrim& prim)
+{
+    if (ARCH_UNLIKELY(!_ValidateEditPrim(prim, "create prim spec"))) {
+        return TfNullPtr;
+    }
+
+    return _CreatePrimSpecAtEditTarget(GetEditTarget(), prim.GetPath());
 }
 
 static SdfAttributeSpecHandle
@@ -1201,11 +1248,7 @@ SdfHandle<PropType>
 UsdStage::_CreatePropertySpecForEditing(const UsdProperty &prop)
 {
     UsdPrim prim = prop.GetPrim();
-    if (ARCH_UNLIKELY(prim.IsInMaster())) {
-        TF_CODING_ERROR("Cannot create property spec at path <%s>; "
-                        "authoring to a property in an instancing master "
-                        "is not allowed.",
-                        prop.GetPath().GetText());
+    if (ARCH_UNLIKELY(!_ValidateEditPrim(prim, "create property spec"))) {
         return TfNullPtr;
     }
 
@@ -1274,7 +1317,7 @@ UsdStage::_CreatePropertySpecForEditing(const UsdProperty &prop)
     // target.
     if (specToCopy) {
         SdfChangeBlock block;
-        SdfPrimSpecHandle primSpec = _CreatePrimSpecForEditing(prim.GetPath());
+        SdfPrimSpecHandle primSpec = _CreatePrimSpecForEditing(prim);
         if (TF_VERIFY(primSpec))
             return _StampNewPropertySpec(primSpec, specToCopy);
     }
@@ -1343,7 +1386,7 @@ UsdStage::_SetMetadataImpl(const UsdObject &obj,
     if (obj.Is<UsdProperty>()) {
         spec = _CreatePropertySpecForEditing(obj.As<UsdProperty>());
     } else if (obj.Is<UsdPrim>()) {
-        spec = _CreatePrimSpecForEditing(obj.GetPath());
+        spec = _CreatePrimSpecForEditing(obj.As<UsdPrim>());
     } else {
         TF_CODING_ERROR("Cannot set metadata at path <%s> in layer @%s@; "
                         "a prim or property is required",
@@ -1515,11 +1558,7 @@ UsdStage::_SetValueImpl(
 bool
 UsdStage::_ClearValue(UsdTimeCode time, const UsdAttribute &attr)
 {
-    if (ARCH_UNLIKELY(attr.GetPrim().IsInMaster())) {
-        TF_CODING_ERROR("Cannot clear attribute value at path <%s>; "
-                        "authoring to an attribute in an instancing master "
-                        "is not allowed.",
-                        attr.GetPath().GetText());
+    if (ARCH_UNLIKELY(!_ValidateEditPrim(attr.GetPrim(), "clear attribute value"))) {
         return false;
     }
 
@@ -1561,11 +1600,7 @@ bool
 UsdStage::_ClearMetadata(const UsdObject &obj, const TfToken& fieldName,
     const TfToken &keyPath)
 {
-    if (ARCH_UNLIKELY(obj.GetPrim().IsInMaster())) {
-        TF_CODING_ERROR("Cannot clear metadata at path <%s>; "
-                        "authoring to a prim in an instancing master "
-                        "is not allowed.",
-                        obj.GetPath().GetText());
+    if (ARCH_UNLIKELY(!_ValidateEditPrim(obj.GetPrim(), "clear metadata"))) {
         return false;
     }
 
@@ -1587,12 +1622,12 @@ UsdStage::_ClearMetadata(const UsdObject &obj, const TfToken& fieldName,
     if (obj.Is<UsdProperty>())
         spec = _CreatePropertySpecForEditing(obj.As<UsdProperty>());
     else
-        spec = _CreatePrimSpecForEditing(obj.GetPrimPath());
+        spec = _CreatePrimSpecForEditing(obj.As<UsdPrim>());
 
     if (!TF_VERIFY(spec, 
                       "No spec at <%s> in layer @%s@",
                       editTarget.MapToSpecPath(obj.GetPath()).GetText(),
-                      GetEditTarget().GetLayer()->GetIdentifier().c_str())) {
+                      editTarget.GetLayer()->GetIdentifier().c_str())) {
         return false;
     }
 
@@ -2223,7 +2258,7 @@ UsdStage::_GetMasterForInstance(Usd_PrimDataConstPtr prim) const
 }
 
 bool 
-UsdStage::_IsObjectElidedFromStage(const SdfPath& path) const
+UsdStage::_IsObjectDescendantOfInstance(const SdfPath& path) const
 {
     // If the given path is a descendant of an instanceable
     // prim index, it would not be computed during composition unless
@@ -2881,35 +2916,38 @@ UsdStage::SaveSessionLayers()
     }
 }
 
-static bool
-_IsValidPathForCreatingPrim(const SdfPath &path)
+std::pair<bool, UsdPrim>
+UsdStage::_IsValidPathForCreatingPrim(const SdfPath &path) const
 {
+    std::pair<bool, UsdPrim> status = { false, UsdPrim() };
+
     // Path must be absolute.
     if (ARCH_UNLIKELY(!path.IsAbsolutePath())) {
         TF_CODING_ERROR("Path must be an absolute path: <%s>", path.GetText());
-        return false;
+        return status;
     }
 
     // Path must be a prim path (or the absolute root path).
     if (ARCH_UNLIKELY(!path.IsAbsoluteRootOrPrimPath())) {
         TF_CODING_ERROR("Path must be a prim path: <%s>", path.GetText());
-        return false;
+        return status;
     }
 
     // Path must not contain variant selections.
     if (ARCH_UNLIKELY(path.ContainsPrimVariantSelection())) {
         TF_CODING_ERROR("Path must not contain variant selections: <%s>",
                         path.GetText());
-        return false;
+        return status;
     }
 
-    // Path must not be in a master.
-    if (ARCH_UNLIKELY(Usd_InstanceCache::IsPathMasterOrInMaster(path))) {
-        TF_CODING_ERROR("Path must not be in a master: <%s>", path.GetText());
-        return false;
+    const UsdPrim prim = GetPrimAtPath(path);
+    if (ARCH_UNLIKELY(prim ? !_ValidateEditPrim(prim, "create prim")
+                           : !_ValidateEditPrimAtPath(path, "create prim"))) {
+        return status;
     }
 
-    return true;
+    status = { true, prim };
+    return status;
 }
 
 UsdPrim
@@ -2921,18 +2959,18 @@ UsdStage::OverridePrim(const SdfPath &path)
         return GetPseudoRoot();
     
     // Validate path input.
-    if (!_IsValidPathForCreatingPrim(path))
+    std::pair<bool, UsdPrim> status = _IsValidPathForCreatingPrim(path);
+    if (!status.first) {
         return UsdPrim();
-
-    // If there is already a UsdPrim at the given path, grab it.
-    UsdPrim prim = GetPrimAtPath(path);
+    }
 
     // Do the authoring, if any to do.
-    if (!prim) {
+    if (!status.second) {
         {
             SdfChangeBlock block;
             TfErrorMark m;
-            SdfPrimSpecHandle primSpec = _CreatePrimSpecForEditing(path);
+            SdfPrimSpecHandle primSpec = 
+                _CreatePrimSpecAtEditTarget(GetEditTarget(), path);
             // If spec creation failed, return.  Issue an error if a more
             // specific error wasn't already issued.
             if (!primSpec) {
@@ -2944,27 +2982,33 @@ UsdStage::OverridePrim(const SdfPath &path)
         }
 
         // Attempt to fetch the prim we tried to create.
-        prim = GetPrimAtPath(path);
+        status.second = GetPrimAtPath(path);
     }
 
-    return prim;
+    return status.second;
 }
 
 UsdPrim
 UsdStage::DefinePrim(const SdfPath &path,
                      const TfToken &typeName)
 {
+    // Validate path input.
+    if (!_IsValidPathForCreatingPrim(path).first)
+        return UsdPrim();
+
+    return _DefinePrim(path, typeName);
+}
+
+UsdPrim 
+UsdStage::_DefinePrim(const SdfPath &path, const TfToken &typeName)
+{
     // Special-case requests for the root.  It always succeeds and never does
     // authoring since the root cannot have PrimSpecs.
     if (path == SdfPath::AbsoluteRootPath())
         return GetPseudoRoot();
 
-    // Validate path input.
-    if (!_IsValidPathForCreatingPrim(path))
-        return UsdPrim();
-
     // Define all ancestors.
-    if (!DefinePrim(path.GetParentPath()))
+    if (!_DefinePrim(path.GetParentPath(), TfToken()))
         return UsdPrim();
     
     // Now author scene description for this prim.
@@ -2974,7 +3018,8 @@ UsdStage::DefinePrim(const SdfPath &path,
         (!typeName.IsEmpty() && prim.GetTypeName() != typeName)) {
         {
             SdfChangeBlock block;
-            SdfPrimSpecHandle primSpec = _CreatePrimSpecForEditing(path);
+            SdfPrimSpecHandle primSpec = 
+                _CreatePrimSpecAtEditTarget(GetEditTarget(), path);
             // If spec creation failed, return.  Issue an error if a more
             // specific error wasn't already issued.
             if (!primSpec) {
@@ -3004,10 +3049,6 @@ UsdStage::DefinePrim(const SdfPath &path,
 UsdPrim
 UsdStage::CreateClassPrim(const SdfPath &path)
 {
-    // Validate path input.
-    if (!_IsValidPathForCreatingPrim(path))
-        return UsdPrim();
-
     // Classes must be root prims.
     if (!path.IsRootPrimPath()) {
         TF_CODING_ERROR("Classes must be root prims.  <%s> is not a root prim "
@@ -3022,8 +3063,15 @@ UsdStage::CreateClassPrim(const SdfPath &path)
         return UsdPrim();
     }
 
+    // Validate path input.
+    const std::pair<bool, UsdPrim> status = _IsValidPathForCreatingPrim(path);
+    if (!status.first) {
+        return UsdPrim();
+    }
+
+    UsdPrim prim = status.second;
+
     // It's an error to try to transform a defined non-class into a class.
-    UsdPrim prim = GetPrimAtPath(path);
     if (prim && prim.IsDefined() &&
         prim.GetSpecifier() != SdfSpecifierClass) {
         TF_RUNTIME_ERROR("Non-class prim already exists at <%s>",
@@ -3033,7 +3081,7 @@ UsdStage::CreateClassPrim(const SdfPath &path)
 
     // Stamp a class PrimSpec if need-be.
     if (!prim || !prim.IsAbstract()) {
-        prim = DefinePrim(path);
+        prim = _DefinePrim(path, TfToken());
         if (prim)
             prim.SetMetadata(SdfFieldKeys->Specifier, SdfSpecifierClass);
     }
@@ -3461,7 +3509,7 @@ UsdStage::_HandleLayersDidChange(
 
     pathsToRecomposeVec.erase(
         remove_if(pathsToRecomposeVec.begin(), pathsToRecomposeVec.end(),
-                  bind(&UsdStage::_IsObjectElidedFromStage, this, _1)),
+                  bind(&UsdStage::_IsObjectDescendantOfInstance, this, _1)),
         pathsToRecomposeVec.end());
 
     // Collect the paths in otherChangedPaths that aren't under paths that
@@ -3479,7 +3527,7 @@ UsdStage::_HandleLayersDidChange(
     otherChangedPathsVec.reserve(otherChangedPaths.size());
     remove_copy_if(otherChangedPaths.begin(), otherChangedPaths.end(),
                    back_inserter(otherChangedPathsVec),
-                   bind(&UsdStage::_IsObjectElidedFromStage, this, _1));
+                   bind(&UsdStage::_IsObjectDescendantOfInstance, this, _1));
 
     // Now we want to remove all elements of otherChangedPathsVec that are
     // prefixed by elements in pathsToRecompose.
