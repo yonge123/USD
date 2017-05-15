@@ -380,7 +380,6 @@ void usdWriteJob::endJob()
         mJobCtx.mStage->GetRootLayer()->Save();
     }
     mJobCtx.mStage->Close();
-    mJobCtx.mMayaPrimWriterList.clear(); // clear this so that no stage references are left around
     MGlobal::displayInfo("usdWriteJob::endJob Saving Stage");
 }
 
