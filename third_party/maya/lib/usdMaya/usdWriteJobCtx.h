@@ -39,8 +39,12 @@ PXR_NAMESPACE_OPEN_SCOPE
 class MayaPrimWriter;
 typedef std::shared_ptr<MayaPrimWriter> MayaPrimWriterPtr;
 
+class usdWriteJob;
+
 class usdWriteJobCtx {
 protected:
+    friend class usdWriteJob;
+
     PXRUSDMAYA_API
     usdWriteJobCtx(const JobExportArgs& args);
 public:
