@@ -41,6 +41,12 @@ typedef std::shared_ptr<MayaPrimWriter> MayaPrimWriterPtr;
 
 class usdWriteJob;
 
+/// \class usdWriteJobCtx
+/// \brief Provides basic functionality and access to shared data for MayaPrimWriters.
+///
+/// The main purpose of this class is to handle source prim creation for instancing,
+/// and to avoid storing the JobExportArgs and UsdStage on each prim writer.
+///
 class usdWriteJobCtx {
 protected:
     friend class usdWriteJob;
