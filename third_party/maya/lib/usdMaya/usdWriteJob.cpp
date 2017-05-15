@@ -118,21 +118,21 @@ bool usdWriteJob::beginJob(bool append)
     }  // for m
 
     // Make sure the file name is a valid one with a proper USD extension.
-    if (!UsdStage::IsSupportedFile(mArgs.fileName)) {
-        mArgs.fileName = TfStringPrintf("%s.%s",
-                                        mArgs.fileName.c_str(),
+    if (!UsdStage::IsSupportedFile(mJobCtx.mArgs.fileName)) {
+        mJobCtx.mArgs.fileName = TfStringPrintf("%s.%s",
+                                        mJobCtx.mArgs.fileName.c_str(),
                                         PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault.GetText());
     }
 
-    MGlobal::displayInfo("usdWriteJob::beginJob: Create stage file "+MString(mArgs.fileName.c_str()));
+    MGlobal::displayInfo("usdWriteJob::beginJob: Create stage file " + MString(mJobCtx.mArgs.fileName.c_str()));
 
-    if (!mJobCtx.openFile(mFileName, append)) {
+    if (!mJobCtx.openFile(mJobCtx.mArgs.fileName, append)) {
         return false;
     }
 
     // Set time range for the USD file
-    mJobCtx.mStage->SetStartTimeCode(startTime);
-    mJobCtx.mStage->SetEndTimeCode(endTime);
+    mJobCtx.mStage->SetStartTimeCode(mJobCtx.mArgs.startTime);
+    mJobCtx.mStage->SetEndTimeCode(mJobCtx.mArgs.endTime);
     
     mModelKindWriter.Reset();
 
