@@ -205,10 +205,10 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
 
     itDag.traverseUnderWorld(true);
 
-    if (!mArgs.exportRootPath.empty()){
+    if (!mJobCtx.mArgs.exportRootPath.empty()){
         // If a root is specified, start iteration there
         MDagPath rootDagPath;
-        PxrUsdMayaUtil::GetDagPathByName(mArgs.exportRootPath, rootDagPath);
+        PxrUsdMayaUtil::GetDagPathByName(mJobCtx.mArgs.exportRootPath, rootDagPath);
         itDag.reset(rootDagPath, MItDag::kDepthFirst, MFn::kInvalid);
     }
 
