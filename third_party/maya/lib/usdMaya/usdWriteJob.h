@@ -42,7 +42,7 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-class usdWriteJob : public usdWriteJobCtx
+class usdWriteJob
 {
   public:
 
@@ -83,6 +83,8 @@ class usdWriteJob : public usdWriteJobCtx
     PxrUsdMayaChaserRefPtrVector mChasers;
 
     PxrUsdMaya_ModelKindWriter mModelKindWriter;
+
+    usdWriteJobCtx mJobCtx;
 };
 
 typedef std::shared_ptr<usdWriteJob> usdWriteJobPtr;
