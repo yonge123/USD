@@ -7,10 +7,8 @@ tg/instances/main
 tg/maya_particle_cache/initial
 tg/maya_particle/merge_instances
 tg/maya_instancer/initial
-tg/pixar/katana_light_op_symbol
 tg/simple_features/GetSessionLayerForVariantSelections_SdfPath
 tg/simple_features/ccache
-tg/simple_features/dynamic_shading_mode_list
 tg/simple_features/export_root
 tg/simple_features/glsl_type_info
 tg/simple_features/iterating_maya_underworld
@@ -20,12 +18,8 @@ tg/simple_features/tx_hydra
 tg/simple_features/usdRender
 tg/simple_features/usdview_reload_shortcut
 tg/simple_features/vp2_maya_proxy
-assembly_cmd_import_maya_cmds
 fix_testWrapper_env_var_with_equals
 pseudo_root_warning
 ptex_prefer_static
-readAnimByDefault
 tests_set_maya_app_dir
-tests_use_maya_base_dir
-unify_usdVariantSet_prefix_token
 usdview_camera_cmdline
