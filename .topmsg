@@ -1,6 +1,4 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/simple_features/setup_clipmanifestassetpath
-
-<patch description>
+Subject: [UsdUtils] Setting up clipManifestAssetPath for templateMetada and stitchclips.
 
 Signed-off-by: Pal Mezei <palm@lumapictures.com>
