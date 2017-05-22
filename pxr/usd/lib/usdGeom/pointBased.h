@@ -265,7 +265,7 @@ public:
     /// \param baseTime  - UsdTimeCode from which we want to interpolate positions.
     USDGEOM_API
     bool ComputePositionsAtTime(
-                        VtArray<GfVec3f>* positions,
+                        VtVec3fArray* positions,
                         const UsdTimeCode time,
                         const UsdTimeCode baseTime,
                         float velocityScale = 1.0f) const;

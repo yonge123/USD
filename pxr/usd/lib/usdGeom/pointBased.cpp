@@ -254,10 +254,10 @@ TF_REGISTRY_FUNCTION(UsdGeomBoundable)
 
 bool
 UsdGeomPointBased::ComputePositionsAtTime(
-                        VtArray<GfVec3f>* positions,
-                        const UsdTimeCode time,
-                        const UsdTimeCode baseTime,
-                        float velocityScale) const
+    VtVec3fArray* positions,
+    const UsdTimeCode time,
+    const UsdTimeCode baseTime,
+    float velocityScale) const
 {
     constexpr double epsilonTest = 1e-5;
     if (positions == nullptr) {
@@ -296,7 +296,7 @@ UsdGeomPointBased::ComputePositionsAtTime(
     }
 
     // The time samples are not equal for velocity and points, fall back to interpolation.
-    if (velocitiesLowerTimeSample != pointsLowerTimeSample) {
+    if (!GfIsClose(velocitiesLowerTimeSample, pointsLowerTimeSample, epsilonTest)) {
         return pointsAttr.Get(positions, time);
     }
 
@@ -307,11 +307,13 @@ UsdGeomPointBased::ComputePositionsAtTime(
     }
 
     // We don't need to interpolate anything.
-    if (GfIsClose(velocityScale, 0.0, epsilonTest) || (pointsLowerTimeSample == time && time == baseTime)) {
+    if (GfIsClose(velocityScale, 0.0, epsilonTest) ||
+        (GfIsClose(pointsLowerTimeSample, time.GetValue(), epsilonTest) == time &&
+         GfIsClose(time.GetValue(), baseTime.GetValue(), epsilonTest))) {
         return true;
     }
 
-    VtArray<GfVec3f> velocities;
+    VtVec3fArray velocities;
     // If there is a problem querying the velocity, just try to interpolate.
     // This is not likely to happen.
     if (!velocitiesAttr.Get(&velocities, velocitiesLowerTimeSample) ||
