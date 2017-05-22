@@ -250,4 +250,83 @@ TF_REGISTRY_FUNCTION(UsdGeomBoundable)
         _ComputeExtentForPointBased);
 }
 
+bool
+UsdGeomPointBased::ComputePositionsAtTime(
+                        VtArray<GfVec3f>* positions,
+                        const UsdTimeCode time,
+                        const UsdTimeCode baseTime,
+                        float velocityScale) const
+{
+    if (positions == nullptr) {
+        TF_WARN("%s -- null container passed to ComputePositionsAtTime()",
+                GetPrim().GetPath().GetText());
+        return false;
+    }
+
+    const auto pointsAttr = GetPointsAttr();
+
+    if (time.IsDefault() || baseTime.IsDefault()) {
+        return pointsAttr.Get(positions);
+    }
+
+    const auto velocitiesAttr = GetVelocitiesAttr();
+    if (!velocitiesAttr.HasValue()) {
+        return pointsAttr.Get(positions, time);
+    }
+
+    bool hasSamples = false;
+    double pointsLowerTimeSample = 0.0;
+    double upperTimeSample = 1.0;
+    pointsAttr.GetBracketingTimeSamples(baseTime.GetValue(), &pointsLowerTimeSample, &upperTimeSample, &hasSamples);
+    if (!hasSamples) {
+        TF_WARN("%s -- no time samples exists for Points",
+                GetPrim().GetPath().GetText());
+        return false;
+    }
+
+    double velocitiesLowerTimeSample = 0.0;
+    velocitiesAttr.GetBracketingTimeSamples(baseTime.GetValue(), &velocitiesLowerTimeSample, &upperTimeSample, &hasSamples);
+    if (!hasSamples) {
+        TF_WARN("%s -- no time samples exists for Velocities",
+                GetPrim().GetPath().GetText());
+        return false;
+    }
+
+    // The time samples are not equal for velocity and points, fall back to interpolation.
+    if (velocitiesLowerTimeSample != pointsLowerTimeSample) {
+        return pointsAttr.Get(positions, time);
+    }
+
+    if (!pointsAttr.Get(positions, pointsLowerTimeSample)) {
+        TF_WARN("%s -- can't query points for position interpolation",
+                GetPrim().GetPath().GetText());
+        return false;
+    }
+
+    // We don't need to interpolate anything.
+    if (velocityScale == 0.0f || (pointsLowerTimeSample == time && time == baseTime)) {
+        return true;
+    }
+
+    VtArray<GfVec3f> velocities;
+    // If there is a problem querying the velocity, just try to interpolate.
+    // This is not likely to happen.
+    if (!velocitiesAttr.Get(&velocities, velocitiesLowerTimeSample) ||
+        positions->size() != velocities.size()) {
+        return pointsAttr.Get(positions, time);
+    }
+
+    const auto stage = GetPrim().GetStage();
+    const auto velocityMultiplier = static_cast<float>((time.GetValue() - pointsLowerTimeSample)
+                                                       / stage->GetTimeCodesPerSecond())
+                                    * velocityScale;
+    
+    const auto positionsCount = positions->size();
+    for (auto i = decltype(positionsCount){0}; i < positionsCount; ++i) {
+        positions->operator[](i) += velocities[i] * velocityMultiplier;
+    }
+
+    return true;
+}
+
 PXR_NAMESPACE_CLOSE_SCOPE
