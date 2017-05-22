@@ -255,8 +255,8 @@ TF_REGISTRY_FUNCTION(UsdGeomBoundable)
 bool
 UsdGeomPointBased::ComputePositionsAtTime(
     VtVec3fArray* positions,
-    const UsdTimeCode time,
-    const UsdTimeCode baseTime,
+    UsdTimeCode time,
+    UsdTimeCode baseTime,
     float velocityScale) const
 {
     constexpr double epsilonTest = 1e-5;
@@ -268,8 +268,12 @@ UsdGeomPointBased::ComputePositionsAtTime(
 
     const auto pointsAttr = GetPointsAttr();
 
-    if (time.IsDefault() || baseTime.IsDefault()) {
+    if (time.IsDefault()) {
         return pointsAttr.Get(positions);
+    }
+
+    if (baseTime.IsDefault()) {
+        baseTime = time;
     }
 
     const auto velocitiesAttr = GetVelocitiesAttr();
@@ -308,7 +312,7 @@ UsdGeomPointBased::ComputePositionsAtTime(
 
     // We don't need to interpolate anything.
     if (GfIsClose(velocityScale, 0.0, epsilonTest) ||
-        (GfIsClose(pointsLowerTimeSample, time.GetValue(), epsilonTest) == time &&
+        (GfIsClose(pointsLowerTimeSample, time.GetValue(), epsilonTest) &&
          GfIsClose(time.GetValue(), baseTime.GetValue(), epsilonTest))) {
         return true;
     }

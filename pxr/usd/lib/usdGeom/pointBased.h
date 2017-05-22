@@ -266,8 +266,8 @@ public:
     USDGEOM_API
     bool ComputePositionsAtTime(
                         VtVec3fArray* positions,
-                        const UsdTimeCode time,
-                        const UsdTimeCode baseTime,
+                        UsdTimeCode time,
+                        UsdTimeCode baseTime = UsdTimeCode::Default(),
                         float velocityScale = 1.0f) const;
 };
 
