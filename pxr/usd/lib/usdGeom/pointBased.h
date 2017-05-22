@@ -245,6 +245,30 @@ public:
     /// attribute based methods). 
     USDGEOM_API
     static bool ComputeExtent(const VtVec3fArray& points, VtVec3fArray* extent);
+
+    /// Compute the interpolated positions at \p time based on velocity and points.
+    ///
+    /// This will return true if the interpolation was successful, otherwise false
+    /// in case of
+    /// - Nullptr input positions.
+    /// - Missing positions.
+    /// - If any of the query functions fail.
+    ///
+    /// The function will fall back to traditional interpolation
+    /// - If velocities are not present.
+    /// - Velocities do not exists at the same sample as points.
+    /// - Array length is different for velocities and points.
+    ///
+    /// \param positions - out parameter for the positions. If it's a nullptr,
+    ///                    the function will return false.
+    /// \param time      - UsdTimeCode at which we want to evaluate the positions.
+    /// \param baseTime  - UsdTimeCode from which we want to interpolate positions.
+    USDGEOM_API
+    bool ComputePositionsAtTime(
+                        VtVec3fArray* positions,
+                        UsdTimeCode time,
+                        UsdTimeCode baseTime = UsdTimeCode::Default(),
+                        float velocityScale = 1.0f) const;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
