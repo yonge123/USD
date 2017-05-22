@@ -294,8 +294,6 @@ UsdGeomPointBased::ComputePositionsAtTime(
     double velocitiesLowerTimeSample = 0.0;
     velocitiesAttr.GetBracketingTimeSamples(baseTime.GetValue(), &velocitiesLowerTimeSample, &upperTimeSample, &hasSamples);
     if (!hasSamples) {
-        TF_WARN("%s -- no time samples exists for Velocities",
-                GetPrim().GetPath().GetText());
         return false;
     }
 
