@@ -171,6 +171,22 @@ _ComputeExtent(object points) {
     }
 }
 
+static
+VtVec3fArray
+_ComputePositionsAtTime(
+    const UsdGeomPointBased& self,
+    const UsdTimeCode time,
+    const UsdTimeCode baseTime,
+    const float velocityScale)
+{
+    VtVec3fArray positions;
+
+    // On error we'll be returning an empty array.
+    self.ComputePositionsAtTime(&positions, time, baseTime, velocityScale);
+
+    return positions;
+}
+
 WRAP_CUSTOM {
     _class
         .def("GetNormalsInterpolation",
@@ -184,6 +200,9 @@ WRAP_CUSTOM {
             (arg("points")))
         .staticmethod("ComputeExtent")
 
+        .def("ComputePositionsAtTime",
+            &_ComputePositionsAtTime,
+             (arg("time"), arg("baseTime"), arg("velocityScale")))
         ;
 }
 
