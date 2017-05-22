@@ -28,6 +28,8 @@
 #include "pxr/usd/sdf/types.h"
 #include "pxr/usd/sdf/assetPath.h"
 
+#include "pxr/base/gf/math.h"
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 // Register the schema with the TfType system.
@@ -257,6 +259,7 @@ UsdGeomPointBased::ComputePositionsAtTime(
                         const UsdTimeCode baseTime,
                         float velocityScale) const
 {
+    constexpr double epsilonTest = 1e-5;
     if (positions == nullptr) {
         TF_WARN("%s -- null container passed to ComputePositionsAtTime()",
                 GetPrim().GetPath().GetText());
@@ -304,7 +307,7 @@ UsdGeomPointBased::ComputePositionsAtTime(
     }
 
     // We don't need to interpolate anything.
-    if (velocityScale == 0.0f || (pointsLowerTimeSample == time && time == baseTime)) {
+    if (GfIsClose(velocityScale, 0.0, epsilonTest) || (pointsLowerTimeSample == time && time == baseTime)) {
         return true;
     }
 
@@ -320,10 +323,12 @@ UsdGeomPointBased::ComputePositionsAtTime(
     const auto velocityMultiplier = static_cast<float>((time.GetValue() - pointsLowerTimeSample)
                                                        / stage->GetTimeCodesPerSecond())
                                     * velocityScale;
-    
-    const auto positionsCount = positions->size();
-    for (auto i = decltype(positionsCount){0}; i < positionsCount; ++i) {
-        positions->operator[](i) += velocities[i] * velocityMultiplier;
+
+    if (!GfIsClose(velocityMultiplier, 0.0, epsilonTest)) {
+        const auto positionsCount = positions->size();
+        for (auto i = decltype(positionsCount){0}; i < positionsCount; ++i) {
+            positions->operator[](i) += velocities[i] * velocityMultiplier;
+        }
     }
 
     return true;
