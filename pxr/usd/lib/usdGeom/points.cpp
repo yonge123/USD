@@ -246,10 +246,7 @@ UsdGeomPoints::ComputePositionsAtTimes(
     float velocityScale) const {
     constexpr double epsilonTest = 1e-5;
     const auto sampleCount = sampleTimes.size();
-    assert(sampleCount > 0);
-    assert(positions.size() >= sampleCount);
-
-    if (baseTime.IsDefault()) {
+    if (sampleCount == 0 || positions.size() < sampleCount || baseTime.IsDefault()) {
         return 0;
     }
 
