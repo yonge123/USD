@@ -239,7 +239,7 @@ TF_REGISTRY_FUNCTION(UsdGeomBoundable)
 }
 
 size_t
-UsdGeomPoints::_ComputePositionsAtTime(
+UsdGeomPoints::_ComputePositionsAtTimes(
     VtVec3fArray* positions,
     UsdTimeCode* sampleTimes,
     size_t sampleCount,
