@@ -239,16 +239,15 @@ TF_REGISTRY_FUNCTION(UsdGeomBoundable)
 }
 
 size_t
-UsdGeomPoints::_ComputePositionsAtTimes(
-    VtVec3fArray* positions,
-    const UsdTimeCode* sampleTimes,
-    size_t sampleCount,
+UsdGeomPoints::ComputePositionsAtTimes(
+    std::vector<VtVec3fArray>& positions,
+    const std::vector<UsdTimeCode>& sampleTimes,
     UsdTimeCode baseTime,
     float velocityScale) const {
     constexpr double epsilonTest = 1e-5;
+    const auto sampleCount = sampleTimes.size();
     assert(sampleCount > 0);
-    assert(positions != nullptr);
-    assert(sampleTimes != nullptr);
+    assert(positions.size() >= sampleCount);
 
     if (baseTime.IsDefault()) {
         return 0;
