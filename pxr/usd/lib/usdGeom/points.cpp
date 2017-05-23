@@ -301,10 +301,11 @@ UsdGeomPoints::_ComputePositionsAtTimes(
         }
         return sampleCount;
     } else {
+        if (!pointsAttr.Get(&positions[0], sampleTimes[0])) { return 0; }
+
         const auto idsAttr = GetIdsAttr();
         VtArray<long> ids;
-        if (!idsAttr.Get(&ids, sampleTimes[0])) { return 0; }
-        if (!pointsAttr.Get(&positions[0], sampleTimes[0])) { return 0; }
+        if (!idsAttr.Get(&ids, sampleTimes[0])) { return 1; }
 
         size_t validSamples = 1;
         VtArray<long> idsNext;

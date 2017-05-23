@@ -119,7 +119,7 @@ void TestUsdGeomPointsComputePositions()
     // Testing empty positions on prim
     std::array<VtVec3fArray, 1> results1;
     std::array<UsdTimeCode, 1> samples1 = {frame14};
-    TF_VERIFY(!points.ComputePositionsAtTimes(results1, samples1, frame2, 1.0f));
+    TF_VERIFY(points.ComputePositionsAtTimes(results1, samples1, frame2, 1.0f) == 0);
 
     // Testing verify function
     TF_VERIFY(_verifyArrays(positions1, positions1));
@@ -132,46 +132,71 @@ void TestUsdGeomPointsComputePositions()
 
     // Fall back querying the positions using the built-in interpolation function
     samples1[0] = frame14;
-    TF_VERIFY(points.ComputePositionsAtTimes(results1, samples1, frame1, 1.0));
+    TF_VERIFY(points.ComputePositionsAtTimes(results1, samples1, frame1, 1.0) == 1);
     TF_VERIFY(_verifyArrays(results1[0], positions1));
     samples1[0] = frame28;
-    TF_VERIFY(points.ComputePositionsAtTimes(results1, samples1, frame2, 1.0));
+    TF_VERIFY(points.ComputePositionsAtTimes(results1, samples1, frame2, 1.0) == 1);
     TF_VERIFY(_verifyArrays(results1[0], positions2));
 
-    /*
+    // Setting up indices
+    points.GetIdsAttr().Set(indices1, frame1);
+    points.GetIdsAttr().Set(indices2, frame2);
+    points.GetIdsAttr().Set(indices3, frame3);
+
+    std::array<VtVec3fArray, 2> results2;
+    std::array<UsdTimeCode, 2> samples2 = {frame28, frame12};
+
+    // Indices are inconsistent, should fall back to 1 sample
+    TF_VERIFY(points.ComputePositionsAtTimes(results2, samples2, frame2, 1.0) == 1);
+    TF_VERIFY(_verifyArrays(results2[0], positions2));
+
+    // Indices are consistent at both sample
+    samples2[0] = frame12;
+    samples2[1] = frame14;
+    TF_VERIFY(points.ComputePositionsAtTimes(results2, samples2, frame2, 1.0) == 2);
+    TF_VERIFY(_verifyArrays(results2[0], positions1));
+    TF_VERIFY(_verifyArrays(results2[1], positions1));
+
     points.GetVelocitiesAttr().Set(velocities1, frame1);
 
     // Fall back to interpolation when there are not enough samples for velocity
-    TF_VERIFY(points.ComputePositionsAtTime(&results, frame28, frame2, 1.0));
-    TF_VERIFY(_verifyArrays(results, positions2));
-
-    // Test interpolation with default values
-    TF_VERIFY(points.ComputePositionsAtTime(&results, frame14));
-    TF_VERIFY(_verifyArrays(results, _addArrays(positions1, velocities1, d04 / framesPerSecond)));
+    samples1[0] = frame28;
+    TF_VERIFY(points.ComputePositionsAtTimes(results1, samples1, frame2, 1.0) == 1);
+    TF_VERIFY(_verifyArrays(results1[0], positions2));
 
     // Test interpolation with partial velocity values
-    TF_VERIFY(points.ComputePositionsAtTime(&results, frame14, frame1, 1.0));
-    TF_VERIFY(_verifyArrays(results, _addArrays(positions1, velocities1, d04 / framesPerSecond)));
+    samples1[0] = frame14;
+    TF_VERIFY(points.ComputePositionsAtTimes(results1, samples1, frame1, 1.0) == 1);
+    TF_VERIFY(_verifyArrays(results1[0], _addArrays(positions1, velocities1, d04 / framesPerSecond)));
 
     // Test interpolation with scale
-    TF_VERIFY(points.ComputePositionsAtTime(&results, frame14, frame1, d08));
-    TF_VERIFY(_verifyArrays(results, _addArrays(positions1, velocities1, d04 * d08 / framesPerSecond)));
+    TF_VERIFY(points.ComputePositionsAtTimes(results1, samples1, frame1, d08) == 1);
+    TF_VERIFY(_verifyArrays(results1[0], _addArrays(positions1, velocities1, d04 * d08 / framesPerSecond)));
 
     points.GetVelocitiesAttr().Set(velocities2, frame2);
     points.GetVelocitiesAttr().Set(velocities3, frame3);
 
     // Making sure still the right value is used
-    TF_VERIFY(points.ComputePositionsAtTime(&results, frame22, frame2, d08));
-    TF_VERIFY(_verifyArrays(results, _addArrays(positions2, velocities2, d02 * d08 / framesPerSecond)));
+    samples1[0] = frame22;
+    TF_VERIFY(points.ComputePositionsAtTimes(results1, samples1, frame2, d08) == 1);
+    TF_VERIFY(_verifyArrays(results1[0], _addArrays(positions2, velocities2, d02 * d08 / framesPerSecond)));
 
     // Reverse interpolation
-    TF_VERIFY(points.ComputePositionsAtTime(&results, frame12, frame2, 1.0));
-    TF_VERIFY(_verifyArrays(results, _addArrays(positions2, velocities2, (d10 + d02 - d20) / framesPerSecond)));
+    samples1[0] = frame12;
+    TF_VERIFY(points.ComputePositionsAtTimes(results1, samples1, frame2, 1.0) == 1);
+    TF_VERIFY(_verifyArrays(results1[0], _addArrays(positions2, velocities2, (d10 + d02 - d20) / framesPerSecond)));
 
     // Outside range
-    TF_VERIFY(points.ComputePositionsAtTime(&results, UsdTimeCode(d30 + d04), frame3, 1.0));
-    TF_VERIFY(_verifyArrays(results, _addArrays(positions3, velocities3, d04 / framesPerSecond)));
-     */
+    samples1[0] = UsdTimeCode(d30 + d04);
+    TF_VERIFY(points.ComputePositionsAtTimes(results1, samples1, frame3, 1.0) == 1);
+    TF_VERIFY(_verifyArrays(results1[0], _addArrays(positions3, velocities3, d04 / framesPerSecond)));
+
+    // Two samples
+    samples2[0] = frame12;
+    samples2[1] = frame28;
+    TF_VERIFY(points.ComputePositionsAtTimes(results2, samples2, frame2, 1.0) == 2);
+    TF_VERIFY(_verifyArrays(results2[0], _addArrays(positions2, velocities2, -d08 / framesPerSecond)));
+    TF_VERIFY(_verifyArrays(results2[1], _addArrays(positions2, velocities2, d08 / framesPerSecond)));
 }
 
 int main()
