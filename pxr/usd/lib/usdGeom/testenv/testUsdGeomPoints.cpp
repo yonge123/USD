@@ -117,8 +117,8 @@ void TestUsdGeomPointsComputePositions()
               pointsPath.GetText());
 
     // Testing empty positions on prim
-    std::array<VtVec3fArray, 1> results1;
-    std::array<UsdTimeCode, 1> samples1 = {frame14};
+    std::vector<VtVec3fArray> results1;
+    std::vector<UsdTimeCode> samples1 = {frame14};
     TF_VERIFY(points.ComputePositionsAtTimes(results1, samples1, frame2, 1.0f) == 0);
 
     // Testing verify function
@@ -143,8 +143,8 @@ void TestUsdGeomPointsComputePositions()
     points.GetIdsAttr().Set(indices2, frame2);
     points.GetIdsAttr().Set(indices3, frame3);
 
-    std::array<VtVec3fArray, 2> results2;
-    std::array<UsdTimeCode, 2> samples2 = {frame28, frame12};
+    std::vector<VtVec3fArray> results2(2);
+    std::vector<UsdTimeCode> samples2 = {frame28, frame12};
 
     // Indices are inconsistent, should fall back to 1 sample
     TF_VERIFY(points.ComputePositionsAtTimes(results2, samples2, frame2, 1.0) == 1);
