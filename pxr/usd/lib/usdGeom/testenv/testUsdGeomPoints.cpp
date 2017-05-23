@@ -117,7 +117,7 @@ void TestUsdGeomPointsComputePositions()
               pointsPath.GetText());
 
     // Testing empty positions on prim
-    std::vector<VtVec3fArray> results1;
+    std::vector<VtVec3fArray> results1(1);
     std::vector<UsdTimeCode> samples1 = {frame14};
     TF_VERIFY(points.ComputePositionsAtTimes(results1, samples1, frame2, 1.0f) == 0);
 
