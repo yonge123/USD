@@ -221,6 +221,24 @@ public:
     USDGEOM_API
     static bool ComputeExtent(const VtVec3fArray& points,
         const VtFloatArray& widths, VtVec3fArray* extent);
+
+    template <size_t N>
+    USDGEOM_API
+    size_t ComputePositionsAtTime(
+        std::array<VtVec3fArray, N>& positions,
+        std::array<UsdTimeCode, N>& sampleTimes,
+        UsdTimeCode baseTime,
+        float velocityScale = 1.0f) const {
+        return _ComputePositionsAtTime(positions.data(), sampleTimes.data(), N, baseTime, velocityScale);
+    }
+protected:
+    USDGEOM_API
+    size_t _ComputePositionsAtTime(
+        VtVec3fArray* positions,
+        UsdTimeCode* sampleTimes,
+        size_t sampleCount,
+        UsdTimeCode baseTime,
+        float velocityScale) const;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
