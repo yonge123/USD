@@ -17,6 +17,7 @@ over "World"
                 clipPrimPath = "/World/fx/Particles_Splash/points"
                 clipTemplateAssetPath = "p.#.usd"
                 clipTemplateEndTime = 104
+                clipManifestAssetPath = @./result.topology.usda@
                 clipTemplateStartTime = 101
                 clipTemplateStride = 1
             )
