@@ -34,6 +34,48 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 static FnKat::Attribute
+_GetPositionAttr(
+        const UsdGeomPoints& points,
+        const PxrUsdKatanaUsdInPrivateData& data)
+{
+    // Because of the logic used to gather these (in PxrUsdInOp::InitUsdInArgs),
+    // we can use the size of this vector as a simple test for whether motion
+    // blur is enabled, without needing access to the cook interface.
+    const std::vector<double>& motionSampleTimes =
+        data.GetUsdInArgs()->GetMotionSampleTimes();
+
+    if (motionSampleTimes.size() < 2)
+    {
+        return PxrUsdKatanaGeomGetPAttr(points, data);
+    }
+
+    const double currentTime = data.GetCurrentTime();
+    const double shutterOpen = data.GetShutterOpen();
+    const double shutterClose = data.GetShutterClose();
+
+    std::array<UsdTimeCode, 2> sampleTimes =
+        {UsdTimeCode(currentTime + shutterOpen),
+         UsdTimeCode(currentTime + shutterClose)};
+
+    std::array<VtVec3fArray, 2> positionSamples;
+
+    const size_t numPosSamples =
+        points.ComputePositionsAtTimes(positionSamples, sampleTimes, currentTime);
+
+    FnKat::FloatBuilder posBuilder(3);
+
+    std::vector<float>& first = posBuilder.get(numPosSamples == 2 ? shutterOpen : 0.0f);
+    PxrUsdKatanaUtils::ConvertArrayToVector(positionSamples[0], &first);
+    if (numPosSamples == 2)
+    {
+        std::vector<float>& second = posBuilder.get(shutterClose);
+        PxrUsdKatanaUtils::ConvertArrayToVector(positionSamples[1], &second);
+    }
+
+    return posBuilder.build();
+}
+
+static FnKat::Attribute
 _GetWidthAttr(const UsdGeomPoints& points, double currentTime)
 {
     VtFloatArray widths;
@@ -73,8 +115,8 @@ PxrUsdKatanaReadPoints(
     // Construct the 'geometry' attribute.
     //
 
-    // position
-    attrs.set("geometry.point.P", PxrUsdKatanaGeomGetPAttr(points, data));
+    // position (with velocity-based motion samples if applicable)
+    attrs.set("geometry.point.P", _GetPositionAttr(points, data));
 
     // velocity
     FnKat::Attribute velocitiesAttr =
