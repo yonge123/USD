@@ -244,23 +244,12 @@ public:
     /// \param baseTime      - UsdTimeCode from which we want to interpolate positions.
     /// \param velocityScale - Float to scale the velocities.
     /// \return              - The number of successfully calculated samples.
-    template <size_t N>
     USDGEOM_API
     size_t ComputePositionsAtTimes(
-        std::array<VtVec3fArray, N>& positions,
-        const std::array<UsdTimeCode, N>& sampleTimes,
+        std::vector<VtVec3fArray>& positions,
+        const std::vector<UsdTimeCode>& sampleTimes,
         UsdTimeCode baseTime,
-        float velocityScale = 1.0f) const {
-        return _ComputePositionsAtTimes(positions.data(), sampleTimes.data(), N, baseTime, velocityScale);
-    }
-protected:
-    USDGEOM_API
-    size_t _ComputePositionsAtTimes(
-        VtVec3fArray* positions,
-        const UsdTimeCode* sampleTimes,
-        size_t sampleCount,
-        UsdTimeCode baseTime,
-        float velocityScale) const;
+        float velocityScale = 1.0f) const;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
