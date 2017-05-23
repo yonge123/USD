@@ -53,11 +53,12 @@ _GetPositionAttr(
     const double shutterOpen = data.GetShutterOpen();
     const double shutterClose = data.GetShutterClose();
 
-    std::array<UsdTimeCode, 2> sampleTimes =
-        {UsdTimeCode(currentTime + shutterOpen),
-         UsdTimeCode(currentTime + shutterClose)};
+    std::vector<UsdTimeCode> sampleTimes {
+        UsdTimeCode(currentTime + shutterOpen),
+        UsdTimeCode(currentTime + shutterClose)
+    };
 
-    std::array<VtVec3fArray, 2> positionSamples;
+    std::vector<VtVec3fArray> positionSamples(2);
 
     const size_t numPosSamples =
         points.ComputePositionsAtTimes(positionSamples, sampleTimes, currentTime);
