@@ -310,7 +310,8 @@ UsdGeomPoints::_ComputePositionsAtTimes(
         VtArray<long> idsNext;
         for (auto a = decltype(sampleCount){1}; a < sampleCount; ++a) {
             if (!idsAttr.Get(&idsNext, sampleTimes[a]) || ids != idsNext) { break; }
-            if (!pointsAttr.Get(&positions[a], sampleTimes[a])) { break; }
+            if (!pointsAttr.Get(&positions[a], sampleTimes[a]) ||
+                positions[a].size() != positions[0].size()) { break; }
             ++validSamples;
         }
 
