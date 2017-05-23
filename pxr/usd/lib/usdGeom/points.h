@@ -224,16 +224,16 @@ public:
 
     template <size_t N>
     USDGEOM_API
-    size_t ComputePositionsAtTime(
+    size_t ComputePositionsAtTimes(
         std::array<VtVec3fArray, N>& positions,
         std::array<UsdTimeCode, N>& sampleTimes,
         UsdTimeCode baseTime,
         float velocityScale = 1.0f) const {
-        return _ComputePositionsAtTime(positions.data(), sampleTimes.data(), N, baseTime, velocityScale);
+        return _ComputePositionsAtTimes(positions.data(), sampleTimes.data(), N, baseTime, velocityScale);
     }
 protected:
     USDGEOM_API
-    size_t _ComputePositionsAtTime(
+    size_t _ComputePositionsAtTimes(
         VtVec3fArray* positions,
         UsdTimeCode* sampleTimes,
         size_t sampleCount,
