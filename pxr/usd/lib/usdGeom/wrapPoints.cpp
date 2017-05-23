@@ -168,6 +168,15 @@ _ComputeExtent(object points, object widths) {
     }
 }
 
+static std::vector<VtVec3fArray>
+_ComputePointsAtTimes(UsdGeomPoints& self,
+                      const std::vector<UsdTimeCode>& times,
+                      UsdTimeCode baseTime, float velocityScale) {
+    std::vector<VtVec3fArray> ret(times.size());
+    ret.resize(self.ComputePositionsAtTimes(ret, times, baseTime, velocityScale));
+    return ret;
+}
+
 WRAP_CUSTOM {
     _class
         .def("ComputeExtent",
@@ -175,6 +184,10 @@ WRAP_CUSTOM {
             (arg("points"), arg("widths")))
         .staticmethod("ComputeExtent")
 
+        .def("ComputePointsAtTimes",
+             &_ComputePointsAtTimes,
+             (arg("times"), arg("baseTime"), arg("velocityScale") = 1.0f,
+              return_value_policy<TfPySequenceToList>()))
         ;
 }
 
