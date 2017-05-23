@@ -28,8 +28,6 @@
 #include "pxr/usd/sdf/types.h"
 #include "pxr/usd/sdf/assetPath.h"
 
-#include "pxr/base/gf/math.h"
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 // Register the schema with the TfType system.
