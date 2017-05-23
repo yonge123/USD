@@ -241,7 +241,7 @@ TF_REGISTRY_FUNCTION(UsdGeomBoundable)
 size_t
 UsdGeomPoints::_ComputePositionsAtTimes(
     VtVec3fArray* positions,
-    UsdTimeCode* sampleTimes,
+    const UsdTimeCode* sampleTimes,
     size_t sampleCount,
     UsdTimeCode baseTime,
     float velocityScale) const {

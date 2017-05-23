@@ -33,9 +33,10 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 // No initializer list constructor! This is for making things more readable.
-VtVec3fArray _convertArray(const std::vector<GfVec3f>& v)
+template <typename T> VtArray<T>
+_convertArray(const std::vector<T>& v)
 {
-    VtVec3fArray ret;
+    VtArray<T> ret;
     ret.reserve(v.size());
     for (const auto& e: v) {
         ret.push_back(e);
@@ -43,7 +44,8 @@ VtVec3fArray _convertArray(const std::vector<GfVec3f>& v)
     return ret;
 }
 
-bool _verifyArrays(const VtVec3fArray& v1, const VtVec3fArray& v2, double epsilon = 1e-4)
+bool
+_verifyArrays(const VtVec3fArray& v1, const VtVec3fArray& v2, double epsilon = 1e-4)
 {
     const auto count = v1.size();
     if (count != v2.size()) { return false; }
@@ -59,13 +61,13 @@ bool _verifyArrays(const VtVec3fArray& v1, const VtVec3fArray& v2, double epsilo
     return true;
 }
 
-VtVec3fArray _addArrays(const VtVec3fArray& v1, const VtVec3fArray& v2, double value) {
-    const auto fvalue = static_cast<float>(value);
-    VtVec3fArray ret;
+template <typename T, typename H> VtArray<T>
+_addArrays(const VtArray<T>& v1, const VtArray<T>& v2, H value) {
+    VtArray<T> ret;
     const auto count = v1.size();
     ret.resize(count);
     for (auto i = decltype(count){0}; i < count; ++i) {
-        ret[i] = v1[i] + v2[i] * fvalue;
+        ret[i] = v1[i] + v2[i] * value;
     }
     return ret;
 }
@@ -89,15 +91,19 @@ UsdTimeCode frame22(d20 + d02);
 UsdTimeCode frame28(d20 + d08);
 UsdTimeCode frame3(d30);
 
-VtVec3fArray positions1 = _convertArray({GfVec3f(1.0f, 2.0f, 3.0f)});
-VtVec3fArray positions2 = _convertArray({GfVec3f(1.0f, 2.0f, 3.0f), GfVec3f(6.0f, 3.0f, 2.0f)});
-VtVec3fArray positions3 = _convertArray({GfVec3f(8.0f, 3.0f, 5.0f),
-                                         GfVec3f(-4.0f, -5.0f, 17.0f), GfVec3f(-4.0f, 23.0f, 12.0f)});
+const auto positions1 = _convertArray<GfVec3f>({GfVec3f(1.0f, 2.0f, 3.0f)});
+const auto positions2 = _convertArray<GfVec3f>({GfVec3f(1.0f, 2.0f, 3.0f), GfVec3f(6.0f, 3.0f, 2.0f)});
+const auto positions3 = _convertArray<GfVec3f>({GfVec3f(8.0f, 3.0f, 5.0f),
+                                                GfVec3f(-4.0f, -5.0f, 17.0f), GfVec3f(-4.0f, 23.0f, 12.0f)});
 
-VtVec3fArray velocities1 = _convertArray({GfVec3f(10.0f, 10.0f, 10.0f)});
-VtVec3fArray velocities2 = _convertArray({GfVec3f(4.0f, 12.0f, 75.0f), GfVec3f(-4.0f, -83.0f, 65.0f)});
-VtVec3fArray velocities3 = _convertArray({GfVec3f(-8.0f, 13.0f, -5.0f),
-                                          GfVec3f(-24.0f, -45.0f, 17.0f), GfVec3f(-44.0f, 23.0f, 112.0f)});
+const auto velocities1 = _convertArray<GfVec3f>({GfVec3f(10.0f, 10.0f, 10.0f)});
+const auto velocities2 = _convertArray<GfVec3f>({GfVec3f(4.0f, 12.0f, 75.0f), GfVec3f(-4.0f, -83.0f, 65.0f)});
+const auto velocities3 = _convertArray<GfVec3f>({GfVec3f(-8.0f, 13.0f, -5.0f),
+                                                 GfVec3f(-24.0f, -45.0f, 17.0f), GfVec3f(-44.0f, 23.0f, 112.0f)});
+
+const auto indices1 = _convertArray<long>({0});
+const auto indices2 = _convertArray<long>({0, 1});
+const auto indices3 = _convertArray<long>({0, 1, 2});
 
 void TestUsdGeomPointsComputePositions()
 {
@@ -109,6 +115,63 @@ void TestUsdGeomPointsComputePositions()
     TF_VERIFY(points,
               "Failed to create prim at %s",
               pointsPath.GetText());
+
+    // Testing empty positions on prim
+    std::array<VtVec3fArray, 1> results1;
+    std::array<UsdTimeCode, 1> samples1 = {frame14};
+    TF_VERIFY(!points.ComputePositionsAtTimes(results1, samples1, frame2, 1.0f));
+
+    // Testing verify function
+    TF_VERIFY(_verifyArrays(positions1, positions1));
+    TF_VERIFY(!_verifyArrays(positions1, positions2));
+    TF_VERIFY(!_verifyArrays(positions1, velocities1));
+
+    points.GetPointsAttr().Set(positions1, frame1);
+    points.GetPointsAttr().Set(positions2, frame2);
+    points.GetPointsAttr().Set(positions3, frame3);
+
+    // Fall back querying the positions using the built-in interpolation function
+    samples1[0] = frame14;
+    TF_VERIFY(points.ComputePositionsAtTimes(results1, samples1, frame1, 1.0));
+    TF_VERIFY(_verifyArrays(results1[0], positions1));
+    samples1[0] = frame28;
+    TF_VERIFY(points.ComputePositionsAtTimes(results1, samples1, frame2, 1.0));
+    TF_VERIFY(_verifyArrays(results1[0], positions2));
+
+    /*
+    points.GetVelocitiesAttr().Set(velocities1, frame1);
+
+    // Fall back to interpolation when there are not enough samples for velocity
+    TF_VERIFY(points.ComputePositionsAtTime(&results, frame28, frame2, 1.0));
+    TF_VERIFY(_verifyArrays(results, positions2));
+
+    // Test interpolation with default values
+    TF_VERIFY(points.ComputePositionsAtTime(&results, frame14));
+    TF_VERIFY(_verifyArrays(results, _addArrays(positions1, velocities1, d04 / framesPerSecond)));
+
+    // Test interpolation with partial velocity values
+    TF_VERIFY(points.ComputePositionsAtTime(&results, frame14, frame1, 1.0));
+    TF_VERIFY(_verifyArrays(results, _addArrays(positions1, velocities1, d04 / framesPerSecond)));
+
+    // Test interpolation with scale
+    TF_VERIFY(points.ComputePositionsAtTime(&results, frame14, frame1, d08));
+    TF_VERIFY(_verifyArrays(results, _addArrays(positions1, velocities1, d04 * d08 / framesPerSecond)));
+
+    points.GetVelocitiesAttr().Set(velocities2, frame2);
+    points.GetVelocitiesAttr().Set(velocities3, frame3);
+
+    // Making sure still the right value is used
+    TF_VERIFY(points.ComputePositionsAtTime(&results, frame22, frame2, d08));
+    TF_VERIFY(_verifyArrays(results, _addArrays(positions2, velocities2, d02 * d08 / framesPerSecond)));
+
+    // Reverse interpolation
+    TF_VERIFY(points.ComputePositionsAtTime(&results, frame12, frame2, 1.0));
+    TF_VERIFY(_verifyArrays(results, _addArrays(positions2, velocities2, (d10 + d02 - d20) / framesPerSecond)));
+
+    // Outside range
+    TF_VERIFY(points.ComputePositionsAtTime(&results, UsdTimeCode(d30 + d04), frame3, 1.0));
+    TF_VERIFY(_verifyArrays(results, _addArrays(positions3, velocities3, d04 / framesPerSecond)));
+     */
 }
 
 int main()

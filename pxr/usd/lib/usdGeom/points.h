@@ -222,11 +222,28 @@ public:
     static bool ComputeExtent(const VtVec3fArray& points,
         const VtFloatArray& widths, VtVec3fArray* extent);
 
+    /// Compute the interpolated positions at \p time based on velocity and points.
+    ///
+    /// This will return true if the interpolation was successful, otherwise false
+    /// in case of
+    /// - Nullptr input positions.
+    /// - Missing positions.
+    /// - If any of the query functions fail.
+    ///
+    /// The function will fall back to traditional interpolation
+    /// - If velocities are not present.
+    /// - Velocities do not exists at the same sample as points.
+    /// - Array length is different for velocities and points.
+    ///
+    /// \param positions - out parameter for the positions. If it's a nullptr,
+    ///                    the function will return false.
+    /// \param time      - UsdTimeCode at which we want to evaluate the positions.
+    /// \param baseTime  - UsdTimeCode from which we want to interpolate positions.
     template <size_t N>
     USDGEOM_API
     size_t ComputePositionsAtTimes(
         std::array<VtVec3fArray, N>& positions,
-        std::array<UsdTimeCode, N>& sampleTimes,
+        const std::array<UsdTimeCode, N>& sampleTimes,
         UsdTimeCode baseTime,
         float velocityScale = 1.0f) const {
         return _ComputePositionsAtTimes(positions.data(), sampleTimes.data(), N, baseTime, velocityScale);
@@ -235,7 +252,7 @@ protected:
     USDGEOM_API
     size_t _ComputePositionsAtTimes(
         VtVec3fArray* positions,
-        UsdTimeCode* sampleTimes,
+        const UsdTimeCode* sampleTimes,
         size_t sampleCount,
         UsdTimeCode baseTime,
         float velocityScale) const;
