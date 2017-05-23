@@ -150,6 +150,14 @@ pxr_build_test(testUsdGeomPointBased
        testenv/testUsdGeomPointBased.cpp
 )
 
+pxr_build_test(testUsdGeomPoints
+    LIBRARIES
+        usd
+        usdGeom
+    CPPFILES
+        testenv/testUsdGeomPoints.cpp
+)
+
 pxr_install_test_dir(
     SRC testenv/testUsdGeomBasisCurves
     DEST testUsdGeomBasisCurves
@@ -266,6 +274,11 @@ pxr_register_test(testUsdGeomPointInstancer
 
 pxr_register_test(testUsdGeomPointBased
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomPointBased"
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdGeomPoints
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomPoints"
     EXPECTED_RETURN_CODE 0
 )
 
