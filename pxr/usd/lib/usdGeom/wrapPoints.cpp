@@ -189,6 +189,10 @@ WRAP_CUSTOM {
              (arg("times"), arg("baseTime"), arg("velocityScale") = 1.0f,
               return_value_policy<TfPySequenceToList>()))
         ;
+
+    TfPyContainerConversions::from_python_sequence<
+        std::vector<UsdTimeCode>,
+        TfPyContainerConversions::variable_capacity_policy>();
 }
 
 } // anonymous namespace
