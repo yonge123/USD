@@ -34,6 +34,7 @@
 #include "pxr/usd/usdGeom/basisCurves.h"
 #include "pxr/usd/usdGeom/camera.h"
 #include "pxr/usd/usdGeom/mesh.h"
+#include "pxr/usd/usdGeom/nurbsCurves.h"
 #include "pxr/usd/usdGeom/nurbsPatch.h"
 #include "pxr/usd/usdGeom/pointInstancer.h"
 #include "pxr/usd/usdGeom/points.h"
@@ -103,6 +104,9 @@ void registerPlugins()
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdGeomPoints>("PxrUsdInCore_PointsOp");
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdGeomBasisCurves>("PxrUsdInCore_BasisCurvesOp");
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdShadeLook>("PxrUsdInCore_LookOp");
+    // TODO (LUMA): Implement full support for reading NurbsCurves prims.
+    // For now, this just ensures that we get their transforms.
+    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdGeomNurbsCurves>("PxrUsdInCore_XformOp");
 
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdLuxDomeLight>("PxrUsdInCore_LightOp");
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdLuxGeometryLight>("PxrUsdInCore_LightOp");
