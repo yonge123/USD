@@ -12,6 +12,7 @@ tg/simple_features/ccache
 tg/simple_features/export_root
 tg/simple_features/glsl_type_info
 tg/simple_features/iterating_maya_underworld
+tg/simple_features/katana_nurbs_curves
 tg/simple_features/maya_use_IsSupportedFile
 tg/simple_features/point_based_interpolation
 tg/simple_features/symlink_headers
