@@ -295,6 +295,9 @@ UsdImagingGLRefEngine::InvalidateBuffers()
     glDeleteBuffers(1, &_attribBuffer);
     glDeleteBuffers(1, &_indexBuffer);
 
+    for (auto& it : _imagePlanes)
+        it.release();
+
     _attribBuffer = 0;
     _indexBuffer = 0;
 }
@@ -356,6 +359,12 @@ UsdImagingGLRefEngine::_PopulateBuffers()
     offset = 0;
     _AppendSubData<GLuint>(GL_ELEMENT_ARRAY_BUFFER, &offset, _verts);
     _AppendSubData<GLuint>(GL_ELEMENT_ARRAY_BUFFER, &offset, _lineVerts);
+
+    if (_params.displayImagePlanes)
+    {
+        for (auto& it : _imagePlanes)
+            it.read_texture(_imageCache);
+    }
 }
 
 /*virtual*/ 
@@ -771,6 +780,7 @@ UsdImagingGLRefEngine::Render(const UsdPrim& root, RenderParams params)
         TfReset(_numLineVerts);
         TfReset(_vertIdxOffsets);
         TfReset(_lineVertIdxOffsets);
+        _imagePlanes.clear();
         _vertCount = 0;
         _lineVertCount = 0;
         _primIDCounter = 0;
@@ -1080,7 +1090,9 @@ UsdImagingGLRefEngine::_TraverseStage(const UsdPrim& root)
                 else if (iter->IsA<UsdGeomPoints>())
                     _HandlePoints(*iter);
                 else if (iter->IsA<UsdGeomNurbsPatch>())
-                    _HandleNurbsPatch(*iter);                    
+                    _HandleNurbsPatch(*iter);
+                else if (iter->IsA<UsdGeomImagePlane>())
+                    _imagePlanes.emplace_back(*iter, _params, _root);
             } else {
                 iter.PruneChildren();
             }
