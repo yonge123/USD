@@ -784,10 +784,6 @@ UsdImagingGLRefEngine::Render(const UsdPrim& root, RenderParams params)
         _TraverseStage(root);
     }
 
-    if (_params.displayImagePlanes) {
-        _DrawImagePlanes();
-    }
-
     TF_VERIFY(_xformStack.empty());
 
     if (!_attribBuffer) {
@@ -795,6 +791,10 @@ UsdImagingGLRefEngine::Render(const UsdPrim& root, RenderParams params)
     } else {
         glBindBuffer(GL_ARRAY_BUFFER, _attribBuffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _indexBuffer);
+    }
+
+    if (_params.displayImagePlanes) {
+        _DrawImagePlanes();
     }
 
     glEnableClientState(GL_VERTEX_ARRAY);
