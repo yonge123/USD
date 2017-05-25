@@ -711,10 +711,6 @@ UsdImagingGLRefEngine::Render(const UsdPrim& root, RenderParams params)
     glPushAttrib( GL_CURRENT_BIT );
     glPushAttrib( GL_ENABLE_BIT );
 
-    if (_params.displayImagePlanes) {
-        _DrawImagePlanes();
-    }
-
     if (params.cullStyle == CULL_STYLE_NOTHING) {
         glDisable( GL_CULL_FACE );
     } else {
@@ -795,6 +791,10 @@ UsdImagingGLRefEngine::Render(const UsdPrim& root, RenderParams params)
     } else {
         glBindBuffer(GL_ARRAY_BUFFER, _attribBuffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _indexBuffer);
+    }
+
+    if (_params.displayImagePlanes) {
+        _DrawImagePlanes();
     }
 
     glEnableClientState(GL_VERTEX_ARRAY);
