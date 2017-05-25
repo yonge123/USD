@@ -711,10 +711,6 @@ UsdImagingGLRefEngine::Render(const UsdPrim& root, RenderParams params)
     glPushAttrib( GL_CURRENT_BIT );
     glPushAttrib( GL_ENABLE_BIT );
 
-    if (_params.displayImagePlanes) {
-        _DrawImagePlanes();
-    }
-
     if (params.cullStyle == CULL_STYLE_NOTHING) {
         glDisable( GL_CULL_FACE );
     } else {
@@ -786,6 +782,10 @@ UsdImagingGLRefEngine::Render(const UsdPrim& root, RenderParams params)
         _primIDCounter = 0;
 
         _TraverseStage(root);
+    }
+
+    if (_params.displayImagePlanes) {
+        _DrawImagePlanes();
     }
 
     TF_VERIFY(_xformStack.empty());
