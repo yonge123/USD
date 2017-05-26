@@ -116,6 +116,7 @@ pxr_shared_library(${PXR_PACKAGE}
         translatorXformable_decompose.cpp
         usdReadJob_ImportWithProxies.cpp
         UsdMetadataAttributeConverters.cpp
+        UsdGeomAttributeConverters.cpp
 
     PYMODULE_CPPFILES
         module.cpp
