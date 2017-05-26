@@ -171,6 +171,15 @@ _ComputeExtent(object points) {
     }
 }
 
+static std::vector<VtVec3fArray>
+_ComputePointsAtTimes(UsdGeomPointBased& self,
+                      const std::vector<UsdTimeCode>& times,
+                      UsdTimeCode baseTime, float velocityScale) {
+    std::vector<VtVec3fArray> ret(times.size());
+    ret.resize(self.ComputePositionsAtTimes(&ret, times, baseTime, velocityScale));
+    return ret;
+}
+
 WRAP_CUSTOM {
     _class
         .def("GetNormalsInterpolation",
@@ -184,7 +193,16 @@ WRAP_CUSTOM {
             (arg("points")))
         .staticmethod("ComputeExtent")
 
+        .def("ComputePointsAtTimes",
+             &_ComputePointsAtTimes,
+             (arg("times"), arg("baseTime"), arg("velocityScale") = 1.0f,
+                 return_value_policy<TfPySequenceToList>()))
+
         ;
+
+    TfPyContainerConversions::from_python_sequence<
+        std::vector<UsdTimeCode>,
+        TfPyContainerConversions::variable_capacity_policy>();
 }
 
 } // anonymous namespace

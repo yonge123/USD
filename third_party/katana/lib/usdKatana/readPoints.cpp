@@ -61,7 +61,7 @@ _GetPositionAttr(
     std::vector<VtVec3fArray> positionSamples(2);
 
     const size_t numPosSamples =
-        points.ComputePositionsAtTimes(positionSamples, sampleTimes, currentTime);
+        points.ComputePositionsAtTimes(&positionSamples, sampleTimes, currentTime);
 
     FnKat::FloatBuilder posBuilder(3);
 
