@@ -45,7 +45,7 @@ _convertArray(const std::vector<T>& v)
 }
 
 bool
-_verifyArrays(const VtVec3fArray& v1, const VtVec3fArray& v2, double epsilon = 1e-4)
+_verifyArrays(const VtVec3fArray& v1, const VtVec3fArray& v2, double epsilon = 1e-3)
 {
     const auto count = v1.size();
     if (count != v2.size()) { return false; }
