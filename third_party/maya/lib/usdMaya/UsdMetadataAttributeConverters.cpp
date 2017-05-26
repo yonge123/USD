@@ -35,6 +35,7 @@
 #include "pxr/usd/usd/modelAPI.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/timeCode.h"
+#include "pxr/usd/usdGeom/imageable.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -44,6 +45,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     (USD_hidden)
     (USD_instanceable)
     (USD_kind)
+    (USD_purpose)
 );
 
 // USD_hidden <-> UsdPrim.IsHidden()
@@ -125,6 +127,44 @@ TF_REGISTRY_FUNCTION(AttributeConverterRegistry) {
                 MString kindString(kind.GetText());
                 PxrUsdMayaUtil::setPlugValue(destNode,
                         _tokens->USD_kind.GetText(), kindString);
+            }
+            return true;
+        }
+    );
+    AttributeConverterRegistry::Register(converter);
+}
+
+// USD_purpose <-> UsdGeomImageable.GetPurposeAttr()
+TF_REGISTRY_FUNCTION(AttributeConverterRegistry) {
+    FunctionalAttributeConverter* converter = new FunctionalAttributeConverter(
+        [](const MFnDependencyNode& srcNode, UsdPrim& destPrim,
+                const UsdTimeCode) {
+            if (!destPrim.IsA<UsdGeomImageable>()) { return true; }
+            MString purpose;
+            if (PxrUsdMayaUtil::getPlugValue(srcNode,
+                        _tokens->USD_purpose.GetText(), &purpose)) {
+                UsdGeomImageable imageable(destPrim);
+                if (imageable) {
+                    TfToken purposeToken(purpose.asChar());
+                    imageable.GetPurposeAttr().Set(purposeToken);
+                }
+            }
+            return true;
+        },
+        [](const UsdPrim& srcPrim, MFnDependencyNode& destNode,
+                const UsdTimeCode) {
+            if (!srcPrim.IsA<UsdGeomImageable>()) { return true; }
+            UsdGeomImageable imageable(srcPrim);
+            if (!imageable) { return true; }
+            const auto purposeAttr = imageable.GetPurposeAttr();
+            if (!purposeAttr.HasAuthoredValueOpinion()) { return true; }
+            TfToken purpose;
+            if (purposeAttr.Get(&purpose)) {
+                PxrUsdMayaUtil::createStringAttribute(destNode,
+                        _tokens->USD_purpose.GetText());
+                MString purposeString(purpose.GetText());
+                PxrUsdMayaUtil::setPlugValue(destNode,
+                        _tokens->USD_purpose.GetText(), purposeString);
             }
             return true;
         }
