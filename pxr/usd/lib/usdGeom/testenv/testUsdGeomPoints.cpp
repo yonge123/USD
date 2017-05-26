@@ -50,11 +50,7 @@ _verifyArrays(const VtVec3fArray& v1, const VtVec3fArray& v2, double epsilon = 1
     const auto count = v1.size();
     if (count != v2.size()) { return false; }
     for (auto i = decltype(count){0}; i < count; ++i) {
-        const auto e1 = v1[i];
-        const auto e2 = v2[i];
-        if (!GfIsClose(e1[0], e2[0], epsilon) ||
-            !GfIsClose(e1[1], e2[1], epsilon) ||
-            !GfIsClose(e1[2], e2[2], epsilon)) {
+        if (!GfIsClose(v1[i], v2[i], epsilon)) {
             return false;
         }
     }

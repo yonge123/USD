@@ -172,7 +172,7 @@ _ComputeExtent(object points) {
 }
 
 static std::vector<VtVec3fArray>
-_ComputePointsAtTimes(UsdGeomPoints& self,
+_ComputePointsAtTimes(UsdGeomPointBased& self,
                       const std::vector<UsdTimeCode>& times,
                       UsdTimeCode baseTime, float velocityScale) {
     std::vector<VtVec3fArray> ret(times.size());
