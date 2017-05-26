@@ -173,7 +173,7 @@ _ComputePointsAtTimes(UsdGeomPoints& self,
                       const std::vector<UsdTimeCode>& times,
                       UsdTimeCode baseTime, float velocityScale) {
     std::vector<VtVec3fArray> ret(times.size());
-    ret.resize(self.ComputePositionsAtTimes(ret, times, baseTime, velocityScale));
+    ret.resize(self.ComputePositionsAtTimes(&ret, times, baseTime, velocityScale));
     return ret;
 }
 
