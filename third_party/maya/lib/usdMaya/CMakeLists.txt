@@ -159,6 +159,7 @@ pxr_shared_library(${PXR_PACKAGE}
         testenv/testUsdMayaModelKindWriter.py
         testenv/testUsdMayaProxyShape.py
         testenv/testUsdMayaUserExportedAttributes.py
+        testenv/testUsdGeomAttributeConverters.py
         testenv/testUsdMetadataAttributeConverters.py
         testenv/testUsdReferenceAssemblyChangeRepresentations.py
         testenv/testUsdReferenceAssemblySelection.py
@@ -197,6 +198,7 @@ pxr_test_scripts(
         testenv/testUsdMayaModelKindWriter.py
         testenv/testUsdMayaProxyShape.py
         testenv/testUsdMayaUserExportedAttributes.py
+        testenv/testUsdGeomAttributeConverters.py
         testenv/testUsdMetadataAttributeConverters.py
         testenv/testUsdReferenceAssemblyChangeRepresentations.py
         testenv/testUsdReferenceAssemblySelection.py
@@ -482,6 +484,19 @@ pxr_install_test_dir(
 pxr_register_test(testUsdMayaUserExportedAttributes
     COMMAND "${MAYA_BASE_DIR}/bin/mayapy ${CMAKE_INSTALL_PREFIX}/tests/testUsdMayaUserExportedAttributes"
     TESTENV testUsdMayaUserExportedAttributes
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+        MAYA_DISABLE_CIP=1
+)
+
+pxr_install_test_dir(
+    SRC testenv/UsdGeomAttributeConvertersTest
+    DEST testUsdGeomAttributeConverters
+)
+pxr_register_test(testUsdGeomAttributeConverters
+    COMMAND "${MAYA_BASE_DIR}/bin/mayapy ${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomAttributeConverters"
+    TESTENV testUsdGeomAttributeConverters
     ENV
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
