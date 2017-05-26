@@ -270,9 +270,9 @@ UsdGeomPointBased::ComputePositionsAtTimes(
 
     bool hasValue = false;
     double pointsLowerTimeSample = 0.0;
-    double upperTimeSample = 0.0;
+    double pointsUpperTimeSample = 0.0;
     if (!pointsAttr.GetBracketingTimeSamples(baseTime.GetValue(), &pointsLowerTimeSample,
-                                             &upperTimeSample, &hasValue) || !hasValue) {
+                                             &pointsUpperTimeSample, &hasValue) || !hasValue) {
         return 0;
     }
 
@@ -280,14 +280,17 @@ UsdGeomPointBased::ComputePositionsAtTimes(
     VtVec3fArray velocities;
 
     // We need to check if there is a queriable velocity at the given point,
-    // if it has almost the same lower time sample and the array lengths are equal.
+    // To avoid handling hihger frequency velocity samples, and other corner cases
+    // we require both ends to match.
     bool velocityExists = false;
     const auto velocitiesAttr = GetVelocitiesAttr();
     double velocitiesLowerTimeSample = 0.0;
+    double velocitiesUpperTimeSample = 0.0;
     if (velocitiesAttr.HasValue() &&
         velocitiesAttr.GetBracketingTimeSamples(baseTime.GetValue(),
-                                                &velocitiesLowerTimeSample, &upperTimeSample, &hasValue)
-        && hasValue && GfIsClose(velocitiesLowerTimeSample, pointsLowerTimeSample, epsilonTest)) {
+                                                &velocitiesLowerTimeSample, &velocitiesUpperTimeSample, &hasValue)
+        && hasValue && GfIsClose(velocitiesLowerTimeSample, pointsLowerTimeSample, epsilonTest) &&
+        GfIsClose(velocitiesUpperTimeSample, pointsUpperTimeSample, epsilonTest)) {
         if (pointsAttr.Get(&points, pointsLowerTimeSample) &&
             velocitiesAttr.Get(&velocities, pointsLowerTimeSample) &&
             points.size() == velocities.size()) {
