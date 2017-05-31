@@ -23,6 +23,7 @@
 #
 from Katana import (
     Nodes3DAPI,
+    NodegraphAPI,
     FnAttribute,
     FnGeolibServices,
 )
@@ -88,7 +89,7 @@ nb.setHintsForParameter('instanceMode', {
     """,
 })
 
-gb.set('prePopulate', FnAttribute.IntAttribute(0))
+gb.set('prePopulate', FnAttribute.IntAttribute(1))
 nb.setHintsForParameter('prePopulate', {
     'widget' : 'boolean',
     'help' : """
@@ -173,6 +174,26 @@ def buildOpChain(self, interface):
 
 nb.setGetScenegraphLocationFnc(getScenegraphLocation)
 nb.setBuildOpChainFnc(buildOpChain)
+
+
+# XXX prePopulate exists in some production data with an incorrect default
+#     value. Assume all studio uses of it prior to this fix intend for
+#     it to be enabled.
+def pxrUsdInUpgradeToVersionTwo(nodeElement):
+    prePopulateElement = NodegraphAPI.Xio.Node_getParameter(
+            nodeElement, 'prePopulate')
+    if prePopulateElement:
+        NodegraphAPI.Xio.Parameter_setValue(prePopulateElement, 1)
+
+nb.setNodeTypeVersion(2)
+nb.setNodeTypeVersionUpdateFnc(2, pxrUsdInUpgradeToVersionTwo)
+
+
+
+
+
+
+
 nb.build()
 
 
