@@ -21,8 +21,22 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
+
+# Save the current value of BUILD_SHARED_LIBS and restore it at
+# the end of this file, since some of the Find* modules invoked
+# below may wind up stomping over this value.
+set(build_shared_libs "${BUILD_SHARED_LIBS}")
+
 # Core USD Package Requirements 
 # ----------------------------------------------
+
+# Threads.  Save the libraries needed in PXR_THREAD_LIBS;  we may modify
+# them later.  We need the threads package because some platforms require
+# it when using C++ functions from #include <thread>.
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+find_package(Threads REQUIRED)
+set(PXR_THREAD_LIBS "${CMAKE_THREAD_LIBS_INIT}")
+
 # --Python.  We are generally but not completely 2.6 compliant.
 find_package(PythonInterp 2.7 REQUIRED)
 find_package(PythonLibs 2.7 REQUIRED)
@@ -128,3 +142,7 @@ if (PXR_BUILD_ALEMBIC_PLUGIN)
         )
     endif()
 endif()
+
+# ----------------------------------------------
+
+set(BUILD_SHARED_LIBS "${build_shared_libs}")
