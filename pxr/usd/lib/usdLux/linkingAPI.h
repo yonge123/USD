@@ -44,6 +44,7 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 class SdfAssetPath;
+class UsdGeomFaceSetAPI;
 
 // -------------------------------------------------------------------------- //
 // LINKINGAPI                                                                 //
@@ -52,11 +53,22 @@ class SdfAssetPath;
 /// \class UsdLuxLinkingAPI
 ///
 /// API schema for linking a light or light filter to subsets
-/// of geometry for purposes of contributing illumination.
+/// of geometry for purposes of computing illumination.
 ///
-/// You probably don't want to construct these directly.  Instead,
-/// the typical pattern is to request a linking API for a particular
-/// purpose from a UsdLux object; ex: UsdLuxLight::GetLightLinkingAPI().
+/// The linkage is described by a set of USD attributes, however
+/// it can also be represented as a LinkMap, a sorted map
+/// representing the linkage of path namespace.
+///
+/// Facesets can be linked.  They are referred to via their
+/// faceIndices attribute path.  Note however that if the
+/// faceset contains more than one group of faces, all faces
+/// will be linked.
+///
+/// The linking API is used for multiple types of linking, such as
+/// light and shadow linking.  Accordingly, you probably don't want
+/// to construct these directly; instead, the typical pattern is to
+/// request a linking API for a particular purpose from a UsdLux
+/// object.  See UsdLuxLight::GetLightLinkingAPI(), for example.
 ///
 class UsdLuxLinkingAPI : public UsdSchemaBase
 {
@@ -136,6 +148,17 @@ public:
     /// It is a coding error to pass a non-absolute path.
     USDLUX_API
     static bool DoesLinkPath(const LinkMap &linkMap, const SdfPath &path);
+
+    /// Return true if the given UsdGeomFaceSetAPI (or ancestor) is linked
+    /// by the linkMap.  Linking to faceSets is expressed as a target
+    /// path to the faceSet's faceIndices property.
+    USDLUX_API
+    static bool DoesLinkFaceSet(const LinkMap &linkMap,
+                                const UsdGeomFaceSetAPI &faceSet );
+
+    /// Return the path used to refer to the given faceset in a LinkMap.
+    USDLUX_API
+    static SdfPath GetLinkPathForFaceSet(const UsdGeomFaceSetAPI &faceSet);
 
     /// Compute and return the link map, which can answer queries about
     /// linkage to particular paths.  Computing the link map once
