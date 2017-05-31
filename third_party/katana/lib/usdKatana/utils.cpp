@@ -943,19 +943,17 @@ PxrUsdKatanaUtils::FindCameraPaths(const UsdStageRefPtr& stage)
     return result;
 }
 
-SdfPathVector
+SdfPathSet
 PxrUsdKatanaUtils::FindLightPaths(const UsdStageRefPtr& stage)
 {
-    std::set<SdfPath> result;
-    TF_FOR_ALL(rootPrim, stage->GetPseudoRoot().GetChildren()) {
-        if (UsdLuxListAPI list = UsdLuxListAPI(*rootPrim)) {
-            SdfPathVector lights;
-            if (list.GetLightListRel().GetForwardedTargets(&lights)) {
-                result.insert(lights.begin(), lights.end());
-            }
-        }
+    std::set<SdfPath> allLights;
+    for (const auto &child: stage->GetPseudoRoot().GetChildren()) {
+        SdfPathSet lights =
+            UsdLuxListAPI(child)
+            .ComputeLightList(UsdLuxListAPI::StoredListConsult);
+        allLights.insert(lights.begin(), lights.end());
     }
-    return SdfPathVector(result.begin(), result.end());
+    return allLights;
 }
 
 std::string
@@ -1042,11 +1040,17 @@ PxrUsdKatanaUtils::ConvertUsdMaterialPathToKatLocation(
 
     // if displayGroup is found, use it
     UsdUISceneGraphPrimAPI sgp(prim);
-    std::string displayGroup = "";
+    std::string displayGroup;
     UsdAttribute displayGroupAttr = sgp.GetDisplayGroupAttr();
     if (displayGroupAttr.IsValid() && 
             !PxrUsdKatana_IsAttrValFromBaseMaterial(displayGroupAttr)) {
-        displayGroupAttr.Get(&displayGroup);
+        TfToken displayGroupToken;
+        if (displayGroupAttr.Get(&displayGroupToken)) {
+            displayGroup = displayGroupToken.GetString();
+        }
+        else {
+            displayGroupAttr.Get(&displayGroup);
+        }
         displayGroup = TfStringReplace(displayGroup, ":", "/");
     }
 
@@ -1096,7 +1100,7 @@ PxrUsdKatanaUtils::ConvertUsdMaterialPathToKatLocation(
                 return basePath;
             }
         }
-        // displaygroup coming from the parent includes the materialGroup
+        // displayGroup coming from the parent includes the materialGroup
         displayGroup = 
             ConvertUsdMaterialPathToKatLocation(parentPath, data);
         if (!displayGroup.empty()) {
@@ -1112,7 +1116,13 @@ PxrUsdKatanaUtils::ConvertUsdMaterialPathToKatLocation(
         if (displayNameAttr.IsValid() && 
                 !PxrUsdKatana_IsAttrValFromBaseMaterial(displayNameAttr)) {
             // override prim name
-            displayNameAttr.Get(&primName);
+            TfToken displayNameToken;
+            if (displayNameAttr.Get(&displayNameToken)) {
+                primName = displayNameToken.GetString();
+            }
+            else {
+                displayNameAttr.Get(&primName);
+            }
         }
         else {
             UsdAttribute primNameAttr = UsdKatanaLookAPI(prim).GetPrimNameAttr();
