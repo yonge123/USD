@@ -10,7 +10,7 @@ endif()
 
 add_definitions(-DPXR_PYTHON_EXECUTABLE_STR=\"${PYTHON_EXECUTABLE}\")
 
-pxr_shared_library(tf
+pxr_library(tf
     LIBRARIES
         arch
         ${WINLIBS}
@@ -532,6 +532,7 @@ pxr_register_test(TfRegistryManager
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfRegistryManager"
 )
 pxr_register_test(TfRegistryManagerUnload
+    REQUIRES_SHARED_LIBS
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfRegistryManagerUnload"
 )
 pxr_register_test(TfRegTest
@@ -609,6 +610,7 @@ pxr_register_test(testTfPython
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTfPython"
 )
 pxr_register_test(testTfPyFunction
+    REQUIRES_PYTHON_MODULES
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTfPyFunction"
 )
 pxr_register_test(testTfPyNotice
