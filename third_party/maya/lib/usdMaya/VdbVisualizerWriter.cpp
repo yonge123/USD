@@ -57,18 +57,17 @@ namespace {
     }
 }
 
-VdbVisualizerWriter::VdbVisualizerWriter(MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs) :
-    MayaTransformWriter(iDag, stage, iArgs), has_velocity_grids(false) {
-
-}
-
-VdbVisualizerWriter::~VdbVisualizerWriter() {
+VdbVisualizerWriter::VdbVisualizerWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx) :
+    MayaTransformWriter(iDag, uPath, instanceSource, jobCtx), has_velocity_grids(false) {
     UsdAiVolume primSchema =
         UsdAiVolume::Define(getUsdStage(), getUsdPath());
     TF_AXIOM(primSchema);
-    UsdPrim usdPrim = primSchema.GetPrim();
-    TF_AXIOM(usdPrim);
+    mUsdPrim = primSchema.GetPrim();
+    TF_AXIOM(mUsdPrim);
+}
 
+VdbVisualizerWriter::~VdbVisualizerWriter() {
+    UsdAiVolume primSchema(mUsdPrim);
     UsdAiNodeAPI nodeApi(primSchema);
     UsdAiShapeAPI shapeApi(primSchema);
     PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetStepSizeAttr());
@@ -83,11 +82,8 @@ VdbVisualizerWriter::~VdbVisualizerWriter() {
     PxrUsdMayaWriteUtil::CleanupAttributeKeys(nodeApi.GetUserAttribute(bounds_slack_token));
 }
 
-UsdPrim VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
-    UsdAiVolume primSchema =
-        UsdAiVolume::Define(getUsdStage(), getUsdPath());
-    TF_AXIOM(primSchema);
-    UsdPrim usdPrim = primSchema.GetPrim();
+void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
+    UsdAiVolume primSchema(mUsdPrim);
     UsdAiNodeAPI nodeApi(primSchema);
     UsdAiShapeAPI shapeApi(primSchema);
     writeTransformAttrs(usdTime, primSchema);
@@ -96,12 +92,12 @@ UsdPrim VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
 
     // some of the attributes that don't need to be animated has to be exported here
     if (usdTime.IsDefault()) {
-        has_velocity_grids = export_grids(usdPrim, nodeApi, volume_node, "velocity_grids", velocity_grids_token);
+        has_velocity_grids = export_grids(mUsdPrim, nodeApi, volume_node, "velocity_grids", velocity_grids_token);
         primSchema.GetDsoAttr().Set(std::string("volume_openvdb"));
     }
 
     if (usdTime.IsDefault() == getArgs().exportAnimation) {
-        return usdPrim;
+        return;
     }
 
     // The node regenerates all kinds of params, so we always need to write these out.
@@ -118,24 +114,22 @@ UsdPrim VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
     shapeApi.CreateMatteAttr().Set(volume_node.findPlug("matte").asBool(), usdTime);
     shapeApi.CreateReceiveShadowsAttr().Set(volume_node.findPlug("receiveShadows").asBool(), usdTime);
     shapeApi.CreateSelfShadowsAttr().Set(volume_node.findPlug("selfShadows").asBool(), usdTime);
-    get_attribute(usdPrim, nodeApi, filename_token, SdfValueTypeNames->String)
+    get_attribute(mUsdPrim, nodeApi, filename_token, SdfValueTypeNames->String)
         .Set(std::string(out_vdb_path.asChar()), usdTime);
 
     if (has_velocity_grids) {
-        get_attribute(usdPrim, nodeApi, velocity_scale_token, SdfValueTypeNames->Float)
+        get_attribute(mUsdPrim, nodeApi, velocity_scale_token, SdfValueTypeNames->Float)
             .Set(volume_node.findPlug("velocityScale").asFloat(), usdTime);
-        get_attribute(usdPrim, nodeApi, velocity_fps_token, SdfValueTypeNames->Float)
+        get_attribute(mUsdPrim, nodeApi, velocity_fps_token, SdfValueTypeNames->Float)
             .Set(volume_node.findPlug("velocityFps").asFloat(), usdTime);
-        get_attribute(usdPrim, nodeApi, velocity_shutter_start_token, SdfValueTypeNames->Float)
+        get_attribute(mUsdPrim, nodeApi, velocity_shutter_start_token, SdfValueTypeNames->Float)
             .Set(volume_node.findPlug("velocityShutterStart").asFloat(), usdTime);
-        get_attribute(usdPrim, nodeApi, velocity_shutter_end_token, SdfValueTypeNames->Float)
+        get_attribute(mUsdPrim, nodeApi, velocity_shutter_end_token, SdfValueTypeNames->Float)
             .Set(volume_node.findPlug("velocityShutterEnd").asFloat(), usdTime);
     }
 
-    get_attribute(usdPrim, nodeApi, bounds_slack_token, SdfValueTypeNames->Float)
+    get_attribute(mUsdPrim, nodeApi, bounds_slack_token, SdfValueTypeNames->Float)
         .Set(volume_node.findPlug("boundsSlack").asFloat());
-
-    return usdPrim;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

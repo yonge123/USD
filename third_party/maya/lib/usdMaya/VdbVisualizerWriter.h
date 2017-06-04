@@ -6,19 +6,17 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class usdWriteJob;
-
 class VdbVisualizerWriter : public MayaTransformWriter {
 public:
-    VdbVisualizerWriter(MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs);
+    VdbVisualizerWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx);
     virtual ~VdbVisualizerWriter();
 
-    virtual UsdPrim write(const UsdTimeCode& usdTime) override;
+    virtual void write(const UsdTimeCode& usdTime) override;
 private:
     bool has_velocity_grids;
 };
 
-typedef shared_ptr<VdbVisualizerWriter> VdbVisualizerWriterPtr;
+using VdbVisualizerWriterPtr = std::shared_ptr<VdbVisualizerWriter> ;
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
