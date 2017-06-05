@@ -23,14 +23,14 @@ namespace {
     const TfToken image_plane_to_size("to size");
 }
 
-MayaImagePlaneWriter::MayaImagePlaneWriter(MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs)
-    : MayaPrimWriter(iDag, stage, iArgs), mIsShapeAnimated(false) {
-    if (iArgs.exportAnimation) {
+MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx)
+    : MayaPrimWriter(iDag, uPath, jobCtx), mIsShapeAnimated(false) {
+    if (getArgs().exportAnimation) {
         MObject obj = getDagPath().node();
         mIsShapeAnimated = PxrUsdMayaUtil::isAnimated(obj);
     }
 
-    if (iArgs.mergeTransformAndShape) {
+    if (getArgs().mergeTransformAndShape) {
         // the path will always look like :
         // camera transform -> camera shape -> image plane transform -> image plane shape
         // So first we pop the image plane shape if possible,
@@ -73,18 +73,19 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(MDagPath& iDag, UsdStageRefPtr stage,
             setUsdPath(usdPath);
         }
     }
-}
 
-UsdPrim MayaImagePlaneWriter::write(const UsdTimeCode& usdTime) {
     UsdGeomImagePlane primSchema =
         UsdGeomImagePlane::Define(getUsdStage(), getUsdPath());
     TF_AXIOM(primSchema);
-    UsdPrim prim = primSchema.GetPrim();
-    TF_AXIOM(prim);
+    mUsdPrim = primSchema.GetPrim();
+    TF_AXIOM(mUsdPrim);
+}
+
+void MayaImagePlaneWriter::write(const UsdTimeCode& usdTime) {
+    UsdGeomImagePlane primSchema(mUsdPrim);
 
     // Write the attrs
     writeImagePlaneAttrs(usdTime, primSchema);
-    return prim;
 }
 
 bool MayaImagePlaneWriter::isShapeAnimated() const {

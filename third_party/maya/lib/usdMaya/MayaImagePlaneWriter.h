@@ -14,9 +14,9 @@ class UsdGeomImagePlane;
 
 class MayaImagePlaneWriter : public MayaPrimWriter {
 public:
-    MayaImagePlaneWriter(MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs);
+    MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx);
     virtual ~MayaImagePlaneWriter() {};
-    virtual UsdPrim write(const UsdTimeCode& usdTime) override;
+    virtual void write(const UsdTimeCode& usdTime) override;
     virtual bool isShapeAnimated() const override;
 protected:
     bool writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdGeomImagePlane& primSchema);
@@ -24,7 +24,7 @@ protected:
     bool mIsShapeAnimated;
 };
 
-typedef shared_ptr<MayaImagePlaneWriter> MayaImagePlaneWriterPtr;
+using MayaImagePlaneWriterPtr = std::shared_ptr<MayaImagePlaneWriter>;
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
