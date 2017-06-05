@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdRi/riLightPortalAPI.h"
+#include "pxr/usd/usdUI/backdrop.h"
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/typed.h"
 
@@ -33,39 +33,58 @@ PXR_NAMESPACE_OPEN_SCOPE
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
-    TfType::Define<UsdRiRiLightPortalAPI,
-        TfType::Bases< UsdSchemaBase > >();
+    TfType::Define<UsdUIBackdrop,
+        TfType::Bases< UsdTyped > >();
     
+    // Register the usd prim typename as an alias under UsdSchemaBase. This
+    // enables one to call
+    // TfType::Find<UsdSchemaBase>().FindDerivedByName("Backdrop")
+    // to find TfType<UsdUIBackdrop>, which is how IsA queries are
+    // answered.
+    TfType::AddAlias<UsdSchemaBase, UsdUIBackdrop>("Backdrop");
 }
 
 /* virtual */
-UsdRiRiLightPortalAPI::~UsdRiRiLightPortalAPI()
+UsdUIBackdrop::~UsdUIBackdrop()
 {
 }
 
 /* static */
-UsdRiRiLightPortalAPI
-UsdRiRiLightPortalAPI::Get(const UsdStagePtr &stage, const SdfPath &path)
+UsdUIBackdrop
+UsdUIBackdrop::Get(const UsdStagePtr &stage, const SdfPath &path)
 {
     if (!stage) {
         TF_CODING_ERROR("Invalid stage");
-        return UsdRiRiLightPortalAPI();
+        return UsdUIBackdrop();
     }
-    return UsdRiRiLightPortalAPI(stage->GetPrimAtPath(path));
+    return UsdUIBackdrop(stage->GetPrimAtPath(path));
 }
 
+/* static */
+UsdUIBackdrop
+UsdUIBackdrop::Define(
+    const UsdStagePtr &stage, const SdfPath &path)
+{
+    static TfToken usdPrimTypeName("Backdrop");
+    if (!stage) {
+        TF_CODING_ERROR("Invalid stage");
+        return UsdUIBackdrop();
+    }
+    return UsdUIBackdrop(
+        stage->DefinePrim(path, usdPrimTypeName));
+}
 
 /* static */
 const TfType &
-UsdRiRiLightPortalAPI::_GetStaticTfType()
+UsdUIBackdrop::_GetStaticTfType()
 {
-    static TfType tfType = TfType::Find<UsdRiRiLightPortalAPI>();
+    static TfType tfType = TfType::Find<UsdUIBackdrop>();
     return tfType;
 }
 
 /* static */
 bool 
-UsdRiRiLightPortalAPI::_IsTypedSchema()
+UsdUIBackdrop::_IsTypedSchema()
 {
     static bool isTyped = _GetStaticTfType().IsA<UsdTyped>();
     return isTyped;
@@ -73,41 +92,24 @@ UsdRiRiLightPortalAPI::_IsTypedSchema()
 
 /* virtual */
 const TfType &
-UsdRiRiLightPortalAPI::_GetTfType() const
+UsdUIBackdrop::_GetTfType() const
 {
     return _GetStaticTfType();
 }
 
 UsdAttribute
-UsdRiRiLightPortalAPI::GetRiPortalIntensityAttr() const
+UsdUIBackdrop::GetDescriptionAttr() const
 {
-    return GetPrim().GetAttribute(UsdRiTokens->riPortalIntensity);
+    return GetPrim().GetAttribute(UsdUITokens->uiDescription);
 }
 
 UsdAttribute
-UsdRiRiLightPortalAPI::CreateRiPortalIntensityAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdUIBackdrop::CreateDescriptionAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdRiTokens->riPortalIntensity,
-                       SdfValueTypeNames->Float,
+    return UsdSchemaBase::_CreateAttr(UsdUITokens->uiDescription,
+                       SdfValueTypeNames->Token,
                        /* custom = */ false,
-                       SdfVariabilityVarying,
-                       defaultValue,
-                       writeSparsely);
-}
-
-UsdAttribute
-UsdRiRiLightPortalAPI::GetRiPortalTintAttr() const
-{
-    return GetPrim().GetAttribute(UsdRiTokens->riPortalTint);
-}
-
-UsdAttribute
-UsdRiRiLightPortalAPI::CreateRiPortalTintAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdRiTokens->riPortalTint,
-                       SdfValueTypeNames->Color3f,
-                       /* custom = */ false,
-                       SdfVariabilityVarying,
+                       SdfVariabilityUniform,
                        defaultValue,
                        writeSparsely);
 }
@@ -126,15 +128,14 @@ _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
 
 /*static*/
 const TfTokenVector&
-UsdRiRiLightPortalAPI::GetSchemaAttributeNames(bool includeInherited)
+UsdUIBackdrop::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdRiTokens->riPortalIntensity,
-        UsdRiTokens->riPortalTint,
+        UsdUITokens->uiDescription,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
-            UsdSchemaBase::GetSchemaAttributeNames(true),
+            UsdTyped::GetSchemaAttributeNames(true),
             localNames);
 
     if (includeInherited)
