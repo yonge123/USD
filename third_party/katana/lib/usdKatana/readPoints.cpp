@@ -41,36 +41,34 @@ _GetPositionAttr(
     // Because of the logic used to gather these (in PxrUsdInOp::InitUsdInArgs),
     // we can use the size of this vector as a simple test for whether motion
     // blur is enabled, without needing access to the cook interface.
-    const std::vector<double>& motionSampleTimes =
+    const auto& motionSampleTimes =
         data.GetUsdInArgs()->GetMotionSampleTimes();
 
-    if (motionSampleTimes.size() < 2)
+    const auto numMotionSampleTimes = motionSampleTimes.size();
+    if (numMotionSampleTimes < 2)
     {
         return PxrUsdKatanaGeomGetPAttr(points, data);
     }
 
-    const double currentTime = data.GetCurrentTime();
-    const double shutterOpen = data.GetShutterOpen();
-    const double shutterClose = data.GetShutterClose();
+    const auto currentTime = data.GetCurrentTime();
+    
+    std::vector<UsdTimeCode> sampleTimes; sampleTimes.reserve(numMotionSampleTimes);
+    for (const auto& it : motionSampleTimes)
+    {
+        sampleTimes.push_back(currentTime + it);
+    }
 
-    std::vector<UsdTimeCode> sampleTimes {
-        UsdTimeCode(currentTime + shutterOpen),
-        UsdTimeCode(currentTime + shutterClose)
-    };
+    std::vector<VtVec3fArray> positionSamples(numMotionSampleTimes);
 
-    std::vector<VtVec3fArray> positionSamples(2);
-
-    const size_t numPosSamples =
+    const auto numPosSamples =
         points.ComputePositionsAtTimes(&positionSamples, sampleTimes, currentTime);
 
     FnKat::FloatBuilder posBuilder(3);
 
-    std::vector<float>& first = posBuilder.get(numPosSamples == 2 ? shutterOpen : 0.0f);
-    PxrUsdKatanaUtils::ConvertArrayToVector(positionSamples[0], &first);
-    if (numPosSamples == 2)
+    for (auto i = decltype(numMotionSampleTimes){0}; i < numPosSamples; ++i)
     {
-        std::vector<float>& second = posBuilder.get(shutterClose);
-        PxrUsdKatanaUtils::ConvertArrayToVector(positionSamples[1], &second);
+        auto& sample = posBuilder.get(motionSampleTimes[i]);
+        PxrUsdKatanaUtils::ConvertArrayToVector(positionSamples[i], &sample);
     }
 
     return posBuilder.build();
