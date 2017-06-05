@@ -41,8 +41,7 @@ _GetPositionAttr(
     // Because of the logic used to gather these (in PxrUsdInOp::InitUsdInArgs),
     // we can use the size of this vector as a simple test for whether motion
     // blur is enabled, without needing access to the cook interface.
-    const auto& motionSampleTimes =
-        data.GetUsdInArgs()->GetMotionSampleTimes();
+    const auto& motionSampleTimes = data.GetMotionSampleTimes(points.GetPointsAttr());
 
     const auto numMotionSampleTimes = motionSampleTimes.size();
     if (numMotionSampleTimes < 2)
