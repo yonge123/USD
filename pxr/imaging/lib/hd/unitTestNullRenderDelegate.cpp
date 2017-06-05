@@ -28,6 +28,7 @@
 #include "pxr/imaging/hd/shader.h"
 #include "pxr/imaging/hd/texture.h"
 #include "pxr/imaging/hd/repr.h"
+#include "pxr/imaging/hd/unitTestNullRenderPass.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -59,6 +60,15 @@ public:
         // Set all bits except the varying flag
         return  (HdChangeTracker::AllSceneDirtyBits) &
                (~HdChangeTracker::Varying);
+    }
+
+    virtual HdDirtyBits _PropagateDirtyBits(HdDirtyBits bits) const override
+    {
+        return bits;
+    }
+    virtual void _InitRepr(TfToken const &reprName,
+                           HdDirtyBits *dirtyBits) override
+    {
     }
 
 protected:
@@ -148,6 +158,21 @@ HdRenderParam *
 Hd_UnitTestNullRenderDelegate::GetRenderParam() const
 {
     return nullptr;
+}
+
+HdRenderPassSharedPtr
+Hd_UnitTestNullRenderDelegate::CreateRenderPass(HdRenderIndex *index)
+{
+    return HdRenderPassSharedPtr(
+        new Hd_UnitTestNullRenderPass(index));
+}
+
+HdRenderPassSharedPtr
+Hd_UnitTestNullRenderDelegate::CreateRenderPass(HdRenderIndex *index,
+                                HdRprimCollection const& collection)
+{
+    return HdRenderPassSharedPtr(
+        new Hd_UnitTestNullRenderPass(index, collection));
 }
 
 HdRprim *
