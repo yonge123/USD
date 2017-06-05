@@ -83,6 +83,13 @@ _CreateExpansionStateAttr(UsdUINodeGraphNodeAPI &self,
     return self.CreateExpansionStateAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
 }
+        
+static UsdAttribute
+_CreateSizeAttr(UsdUINodeGraphNodeAPI &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateSizeAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float2), writeSparsely);
+}
 
 } // anonymous namespace
 
@@ -147,6 +154,13 @@ void wrapUsdUINodeGraphNodeAPI()
              &This::GetExpansionStateAttr)
         .def("CreateExpansionStateAttr",
              &_CreateExpansionStateAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetSizeAttr",
+             &This::GetSizeAttr)
+        .def("CreateSizeAttr",
+             &_CreateSizeAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 
