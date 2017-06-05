@@ -78,6 +78,13 @@ _CreateRiIntensityAttr(UsdRiRiLightFilterAPI &self,
 }
         
 static UsdAttribute
+_CreateRiExposureAttr(UsdRiRiLightFilterAPI &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateRiExposureAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
+}
+        
+static UsdAttribute
 _CreateRiDiffuseAttr(UsdRiRiLightFilterAPI &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateRiDiffuseAttr(
@@ -147,6 +154,13 @@ void wrapUsdRiRiLightFilterAPI()
              &This::GetRiIntensityAttr)
         .def("CreateRiIntensityAttr",
              &_CreateRiIntensityAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetRiExposureAttr",
+             &This::GetRiExposureAttr)
+        .def("CreateRiExposureAttr",
+             &_CreateRiExposureAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
