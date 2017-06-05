@@ -74,6 +74,7 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
 
 void MayaImagePlaneWriter::write(const UsdTimeCode& usdTime) {
     UsdGeomImagePlane primSchema(mUsdPrim);
+
     // Write the attrs
     writeImagePlaneAttrs(usdTime, primSchema);
 }

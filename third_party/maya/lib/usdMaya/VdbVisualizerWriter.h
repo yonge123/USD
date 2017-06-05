@@ -6,8 +6,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class usdWriteJob;
-
 class VdbVisualizerWriter : public MayaTransformWriter {
 public:
     VdbVisualizerWriter(const MDagPath & iDag,
@@ -21,7 +19,7 @@ private:
     bool has_velocity_grids;
 };
 
-typedef std::shared_ptr<VdbVisualizerWriter> VdbVisualizerWriterPtr;
+using VdbVisualizerWriterPtr = std::shared_ptr<VdbVisualizerWriter> ;
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
