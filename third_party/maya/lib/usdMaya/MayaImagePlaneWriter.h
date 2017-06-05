@@ -38,7 +38,7 @@ protected:
     bool mIsShapeAnimated;
 };
 
-typedef std::shared_ptr<MayaImagePlaneWriter> MayaImagePlaneWriterPtr;
+using MayaImagePlaneWriterPtr = std::shared_ptr<MayaImagePlaneWriter>;
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
