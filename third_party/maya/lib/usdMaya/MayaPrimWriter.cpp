@@ -61,11 +61,6 @@ MayaPrimWriter::MayaPrimWriter(const MDagPath& iDag,
     mUsdPath(uPath),
     mIsValid(true)
 {
-
-    if (!jobCtx.getArgs().exportRootPath.empty() ) {
-        // trim the prim path to start at export root
-        mUsdPath = mUsdPath.ReplacePrefix(jobCtx.getArgs().exportRootSdfPath.GetParentPath(), SdfPath("/"));
-    }
 }
 
 bool
