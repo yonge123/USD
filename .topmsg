@@ -1,6 +1,4 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/pixar/katana_libs_dir_fix
-
-<patch description>
+Subject: [usdKatan] Fixing installation directory for katana libs.
 
 Signed-off-by: Pal Mezei <palm@lumapictures.com>
