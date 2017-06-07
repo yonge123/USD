@@ -47,6 +47,7 @@ pxr_shared_library(${PXR_PACKAGE}
         readConstraintTarget
         readGprim
         readLight
+        readLightFilter
         readMaterial
         readMesh
         readModel
