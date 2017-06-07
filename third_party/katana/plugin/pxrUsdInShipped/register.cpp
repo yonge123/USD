@@ -47,6 +47,8 @@
 #include "pxr/usd/usdLux/diskLight.h"
 #include "pxr/usd/usdLux/sphereLight.h"
 #include "pxr/usd/usdLux/rectLight.h"
+#include "pxr/usd/usdLux/lightFilter.h"
+#include "pxr/usd/usdRi/pxrIntMultLightFilter.h"
 
 #include "pxrUsdInShipped/attrfnc_materialReference.h"
 
@@ -64,6 +66,7 @@ DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_PointsOp)
 DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_BasisCurvesOp)
 DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_LookOp)
 DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_LightOp)
+DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_LightFilterOp)
 
 DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_ModelOp)
 DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_CameraOp)
@@ -87,6 +90,7 @@ void registerPlugins()
     REGISTER_PLUGIN(PxrUsdInCore_BasisCurvesOp, "PxrUsdInCore_BasisCurvesOp", 0, 1);
     REGISTER_PLUGIN(PxrUsdInCore_LookOp, "PxrUsdInCore_LookOp", 0, 1);
     REGISTER_PLUGIN(PxrUsdInCore_LightOp, "PxrUsdInCore_LightOp", 0, 1);
+    REGISTER_PLUGIN(PxrUsdInCore_LightFilterOp, "PxrUsdInCore_LightFilterOp", 0, 1);
 
     REGISTER_PLUGIN(PxrUsdInCore_ModelOp, "PxrUsdInCore_ModelOp", 0, 1);
     REGISTER_PLUGIN(PxrUsdInCore_CameraOp, "PxrUsdInCore_CameraOp", 0, 1);
@@ -114,6 +118,8 @@ void registerPlugins()
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdLuxSphereLight>("PxrUsdInCore_LightOp");
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdLuxDiskLight>("PxrUsdInCore_LightOp");
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdLuxRectLight>("PxrUsdInCore_LightOp");
+
+    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdRiPxrIntMultLightFilter>("PxrUsdInCore_LightFilterOp");
 
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdGeomCamera>("PxrUsdInCore_CameraOp");
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdAiProcedural>("PxrUsdInCore_AiProceduralOp");
