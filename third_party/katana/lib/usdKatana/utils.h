@@ -113,6 +113,11 @@ struct PxrUsdKatanaUtils {
     /// USD Looks can have Katana child-parent relationships, which means that
     /// we'll have to do some extra processing to find the correct path that
     /// these resolve to
+    static std::string _GetDisplayGroup(
+            const UsdPrim &prim, 
+            bool isLibrary,
+            const SdfPath& path);
+    static std::string _GetDisplayName(const UsdPrim &prim);
     static std::string ConvertUsdMaterialPathToKatLocation(
             const SdfPath &path,
             const PxrUsdKatanaUsdInPrivateData& data);
@@ -135,6 +140,10 @@ struct PxrUsdKatanaUtils {
     /// having to do with number of children and how many are components (non-group
     /// models).
     static bool ModelGroupNeedsProxy(const UsdPrim &prim);
+
+    /// Creates the 'proxies' group attribute for consumption by the viewer.
+    static FnKat::GroupAttribute GetViewerProxyAttr(
+            const PxrUsdKatanaUsdInPrivateData& data);
 
     /// Returns the asset name for the given prim.  It should be a model.  This
     /// will fallback to the name of the prim.
