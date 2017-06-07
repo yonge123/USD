@@ -969,11 +969,8 @@ PxrUsdKatanaUtils::ConvertUsdPathToKatLocation(
     // off the leading rootPath and prepending rootLocation.
     std::string isolatePathString = usdInArgs->GetIsolatePath();
     
-    // this expected to be an absolute path
-    std::string result = usdInArgs->GetRootLocationPath();
-    result += "/";
-
-    std::string pathString = path.GetString();
+    // absolute path: starts with '/'
+    std::string pathString = path.GetString(); 
     if (!isolatePathString.empty()) {
         if (pathString.find(isolatePathString) == 0) {
             pathString = pathString.substr(isolatePathString.size());
@@ -985,13 +982,19 @@ PxrUsdKatanaUtils::ConvertUsdPathToKatLocation(
                 isolatePathString << std::endl;
             return std::string();
         }
-    }
-    if (pathString[0] == '/') {
-        pathString = pathString.substr(1);
-    }
-    result += pathString;
+    } 
 
-    return result;
+    // this expected to be an absolute path or empty string
+    std::string rootKatanaLocation = usdInArgs->GetRootLocationPath();
+    // minimum expected path is "/"
+    if (rootKatanaLocation.empty() && pathString.empty()) { 
+        return "/";
+    }
+
+    std::string resultKatanaLocation = rootKatanaLocation;
+    resultKatanaLocation += pathString;
+   
+    return resultKatanaLocation;
 }
 
 std::string
@@ -1017,44 +1020,59 @@ PxrUsdKatanaUtils::ConvertUsdPathToKatLocation(
 }
 
 std::string
-PxrUsdKatanaUtils::ConvertUsdMaterialPathToKatLocation(
-        const SdfPath& path,
-        const PxrUsdKatanaUsdInPrivateData& data)
+PxrUsdKatanaUtils::_GetDisplayName(const UsdPrim &prim) 
 {
-    // precondition: the parent of this material is a material group
-    std::string materialGroupPath = 
-        ConvertUsdPathToKatLocation(path.GetParentPath(), data);
-    std::string basePath = materialGroupPath;
-    if (!basePath.empty()) {
-        basePath += "/";
-    }
-    basePath += path.GetName();
-
-    UsdPrim prim = 
-        UsdUtilsGetPrimAtPathWithForwarding(
-            data.GetUsdInArgs()->GetStage(), path);
-
-    if (!prim.IsValid()) {
-        return basePath;
-    }
-
-    // if displayGroup is found, use it
+    std::string primName = prim.GetName();
     UsdUISceneGraphPrimAPI sgp(prim);
-    std::string displayGroup;
-    UsdAttribute displayGroupAttr = sgp.GetDisplayGroupAttr();
-    if (displayGroupAttr.IsValid() && 
-            !PxrUsdKatana_IsAttrValFromBaseMaterial(displayGroupAttr)) {
-        TfToken displayGroupToken;
-        if (displayGroupAttr.Get(&displayGroupToken)) {
-            displayGroup = displayGroupToken.GetString();
+    UsdAttribute displayNameAttr = sgp.GetDisplayNameAttr();
+    if (displayNameAttr.IsValid() && 
+            !PxrUsdKatana_IsAttrValFromBaseMaterial(displayNameAttr)) {
+        // override prim name
+        TfToken displayNameToken;
+        if (displayNameAttr.Get(&displayNameToken)) {
+            primName = displayNameToken.GetString();
         }
         else {
-            displayGroupAttr.Get(&displayGroup);
+            displayNameAttr.Get(&primName);
         }
-        displayGroup = TfStringReplace(displayGroup, ":", "/");
+    }
+    else
+    {
+        UsdAttribute primNameAttr = UsdKatanaLookAPI(prim).GetPrimNameAttr();
+        if (primNameAttr.IsValid() && 
+                !PxrUsdKatana_IsAttrValFromBaseMaterial(primNameAttr)) {
+            primNameAttr.Get(&primName);
+        }
+    }
+    return primName;
+}
+
+std::string 
+PxrUsdKatanaUtils::_GetDisplayGroup(
+        const UsdPrim &prim, 
+        bool isLibrary, 
+        const SdfPath& path) 
+{
+    std::string displayGroup;
+    UsdUISceneGraphPrimAPI sgp(prim);
+
+    if (isLibrary) {
+        UsdAttribute displayGroupAttr = sgp.GetDisplayGroupAttr();
+        if (displayGroupAttr.IsValid() && 
+                !PxrUsdKatana_IsAttrValFromBaseMaterial(displayGroupAttr)) {
+            TfToken displayGroupToken;
+            if (displayGroupAttr.Get(&displayGroupToken)) {
+                displayGroup = displayGroupToken.GetString();
+            }
+            else {
+                displayGroupAttr.Get(&displayGroup);
+            }
+            displayGroup = TfStringReplace(displayGroup, ":", "/");
+        }
     }
 
-    else {
+    if (displayGroup.empty())
+    {
         // calculate from basematerial
         SdfPath parentPath;
 
@@ -1065,14 +1083,14 @@ PxrUsdKatanaUtils::ConvertUsdMaterialPathToKatLocation(
         }
 
         UsdPrim parentPrim = 
-            data.GetUsdInArgs()->GetStage()->GetPrimAtPath(parentPath);
+            prim.GetStage()->GetPrimAtPath(parentPath);
 
         // Asset sanity check. It is possible the derivesFrom relationship
         // for a Look exists but references a non-existent location. If so,
         // simply return the base path.
         if (!parentPrim)
         {
-            return basePath;
+            return "";
         }
 
         if (parentPrim.IsInMaster())
@@ -1097,54 +1115,82 @@ PxrUsdKatanaUtils::ConvertUsdMaterialPathToKatLocation(
                     path.GetString() <<
                     "> to katana location: could not map parent path <" <<
                     parentPath.GetString() << "> to uninstanced location.");
-                return basePath;
+                return "";
             }
         }
         // displayGroup coming from the parent includes the materialGroup
-        displayGroup = 
-            ConvertUsdMaterialPathToKatLocation(parentPath, data);
-        if (!displayGroup.empty()) {
-            displayGroup = displayGroup.substr(materialGroupPath.length()+1);
-        }
-    }
-
-    if (!displayGroup.empty()) {
-        // only use primName if available and a parent path was found
-        std::string primName = prim.GetName();
-
-        UsdAttribute displayNameAttr = sgp.GetDisplayNameAttr();
-        if (displayNameAttr.IsValid() && 
-                !PxrUsdKatana_IsAttrValFromBaseMaterial(displayNameAttr)) {
-            // override prim name
-            TfToken displayNameToken;
-            if (displayNameAttr.Get(&displayNameToken)) {
-                primName = displayNameToken.GetString();
-            }
-            else {
-                displayNameAttr.Get(&primName);
-            }
+        std::string parentDisplayName = _GetDisplayName(parentPrim);
+        std::string parentDisplayGroup = _GetDisplayGroup(
+            parentPrim, isLibrary, parentPath);
+        
+        if (parentDisplayGroup.empty()) {
+            displayGroup = parentDisplayName;
         }
         else {
-            UsdAttribute primNameAttr = UsdKatanaLookAPI(prim).GetPrimNameAttr();
-            if (primNameAttr.IsValid() && 
-                    !PxrUsdKatana_IsAttrValFromBaseMaterial(primNameAttr)) {
-                primNameAttr.Get(&primName);
-            }
+            displayGroup = parentDisplayGroup;
+            displayGroup += '/';
+            displayGroup += parentDisplayName;
         }
+    }
 
-        std::string returnValue = materialGroupPath;
-        if (!returnValue.empty()) {
-            returnValue += '/';
+    return displayGroup;
+}
+
+std::string
+PxrUsdKatanaUtils::ConvertUsdMaterialPathToKatLocation(
+        const SdfPath& path,
+        const PxrUsdKatanaUsdInPrivateData& data)
+{    
+    std::string returnValue = "/" + path.GetName();
+
+    // calculate the material group. It can be either "/" or an absolute
+    // path (no trailing '/')
+    std::string materialGroupKatanaPath = 
+        ConvertUsdPathToKatLocation(path.GetParentPath(), data);
+
+    UsdPrim prim = 
+        UsdUtilsGetPrimAtPathWithForwarding(
+            data.GetUsdInArgs()->GetStage(), path);
+
+    // LooksDerivedStructure is legacy
+    bool isLibrary = (materialGroupKatanaPath == "/" || 
+        materialGroupKatanaPath == "/LooksDerivedStructure");
+
+    if (isLibrary) {
+        // materials are at the root: we are in a library
+        if (!prim.IsValid()) {
+            // failed
+            return returnValue;
         }
-        returnValue += displayGroup;
-        returnValue += '/';
-        returnValue += primName;
-        return returnValue;
     }
     else {
-        // parent path could not be computed correctly
-        return basePath;
+        // the parent of this material is a material group
+        // apply prim name only if 
+        returnValue = materialGroupKatanaPath;
+        if (returnValue != "/") {
+            returnValue += '/';
+        }
+        returnValue += path.GetName();
+
+        if (!prim.IsValid()) {
+            return returnValue;
+        }
     }
+
+    returnValue = materialGroupKatanaPath;
+    if (returnValue != "/") {
+        returnValue += '/';
+    }
+
+    std::string displayGroup = _GetDisplayGroup(prim, isLibrary, path);
+    if (!displayGroup.empty()) {
+        returnValue += displayGroup;
+        returnValue += '/';
+    }
+
+    std::string primName = _GetDisplayName(prim);
+    returnValue += primName;
+    return returnValue;
 }
 
 bool 
@@ -1164,6 +1210,43 @@ PxrUsdKatanaUtils::ModelGroupIsAssembly(const UsdPrim &prim)
 
     return KindRegistry::IsA(kind, KindTokens->assembly) 
         || PxrUsdKatanaUtils::ModelGroupNeedsProxy(prim);
+}
+
+FnKat::GroupAttribute
+PxrUsdKatanaUtils::GetViewerProxyAttr(const PxrUsdKatanaUsdInPrivateData& data)
+{
+    FnKat::GroupBuilder proxiesBuilder;
+
+    proxiesBuilder.set("viewer.load.opType",
+        FnKat::StringAttribute("StaticSceneCreate"));
+
+    proxiesBuilder.set("viewer.load.opArgs.a.type",
+        FnKat::StringAttribute("usd"));
+
+    proxiesBuilder.set("viewer.load.opArgs.a.currentTime", 
+        FnKat::DoubleAttribute(data.GetCurrentTime()));
+
+    proxiesBuilder.set("viewer.load.opArgs.a.fileName", 
+        FnKat::StringAttribute(data.GetUsdInArgs()->GetFileName()));
+
+    proxiesBuilder.set("viewer.load.opArgs.a.forcePopulateUsdStage", 
+        FnKat::FloatAttribute(1));
+
+    // XXX: Once everyone has switched to the op, change referencePath
+    // to isolatePath here and in the USD VMP (2/25/2016).
+    proxiesBuilder.set("viewer.load.opArgs.a.referencePath", 
+        FnKat::StringAttribute(data.GetUsdPrim().GetPath().GetString()));
+
+    proxiesBuilder.set("viewer.load.opArgs.a.rootLocation", 
+        FnKat::StringAttribute(data.GetUsdInArgs()->GetRootLocationPath()));
+
+    proxiesBuilder.set("viewer.load.opArgs.a.session",
+            data.GetUsdInArgs()->GetSessionAttr());
+
+    proxiesBuilder.set("viewer.load.opArgs.a.ignoreLayerRegex",
+       FnKat::StringAttribute(data.GetUsdInArgs()->GetIgnoreLayerRegex()));
+
+    return proxiesBuilder.build();
 }
 
 bool 
