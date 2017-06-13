@@ -153,9 +153,11 @@ PXR_NAMESPACE_OPEN_SCOPE
     ((shutterOpen, "shutter:open")) \
     (size) \
     (squeezeCorrection) \
+    (smooth) \
     (stereoRole) \
     (subdivisionScheme) \
     ((toSize, "to size")) \
+    (triangleSubdivisionRule) \
     ((trimCurveCounts, "trimCurve:counts")) \
     ((trimCurveKnots, "trimCurve:knots")) \
     ((trimCurveOrders, "trimCurve:orders")) \
@@ -225,7 +227,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \li <b>bspline</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr()
 /// \li <b>camera</b> - UsdGeomImagePlane
 /// \li <b>card</b> - Possible value for UsdGeomPointInstancer::GetPrototypeDrawModeAttr()
-/// \li <b>catmullClark</b> - Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr(), Default value for UsdGeomMesh::GetSubdivisionSchemeAttr()
+/// \li <b>catmullClark</b> - Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr(), Default value for UsdGeomMesh::GetSubdivisionSchemeAttr(), Possible value for UsdGeomMesh::GetTriangleSubdivisionRuleAttr(), Default value for UsdGeomMesh::GetTriangleSubdivisionRuleAttr()
 /// \li <b>catmullRom</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr()
 /// \li <b>clippingPlanes</b> - UsdGeomCamera
 /// \li <b>clippingRange</b> - UsdGeomCamera
@@ -324,9 +326,11 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \li <b>shutterOpen</b> - UsdGeomCamera
 /// \li <b>size</b> - UsdGeomCube, UsdGeomImagePlane
 /// \li <b>squeezeCorrection</b> - UsdGeomImagePlane
+/// \li <b>smooth</b> - Possible value for UsdGeomMesh::GetTriangleSubdivisionRuleAttr()
 /// \li <b>stereoRole</b> - UsdGeomCamera
 /// \li <b>subdivisionScheme</b> - UsdGeomMesh
 /// \li <b>toSize</b> - Possible value for UsdGeomImagePlane::GetFitAttr()
+/// \li <b>triangleSubdivisionRule</b> - UsdGeomMesh
 /// \li <b>trimCurveCounts</b> - UsdGeomNurbsPatch
 /// \li <b>trimCurveKnots</b> - UsdGeomNurbsPatch
 /// \li <b>trimCurveOrders</b> - UsdGeomNurbsPatch
