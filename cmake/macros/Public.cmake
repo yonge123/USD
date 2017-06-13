@@ -262,6 +262,10 @@ function(pxr_library NAME)
         set(pch "OFF")
     endif()
 
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/schema.usda")
+        set(args_PUBLIC_HEADERS "${args_PUBLIC_HEADERS};schema.usda")
+    endif ()
+
     _pxr_library(${NAME}
         TYPE "${args_TYPE}"
         PREFIX "${prefix}"
