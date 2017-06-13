@@ -51,7 +51,7 @@ component.
 ## Third Party Plugins
 
 USD provides several plugins for integration with third-party software packages,
-including Maya, Katana, and Alembic. There is additional documentation on each plugin 
+including Maya, Katana, Houdini, and Alembic. There is additional documentation on each plugin 
 [here](http://openusd.org/docs/USD-3rd-Party-Plugins.html).
 These plugins are not built by default and must be enabled via the instructions below.
 
@@ -64,6 +64,14 @@ This plugin is compatible with Alembic 1.5.2. The additional dependencies that m
 | Dependency Name    | Description                                                             | Version |
 | ------------------ |-----------------------------------------------------------------------  | ------- |
 | ALEMBIC_LOCATION   | The location of [Alembic](https://https://github.com/alembic/alembic)   | 1.5.2   |
+| OPENEXR_LOCATION   | The location of [OpenEXR](http://www.openexr.com)                       | 2.2.0   |
+
+Support for Alembic files using the HDF5 backend is enabled by default but can be
+disabled by specifying the cmake flag ```PXR_ENABLE_HDF5_SUPPORT=FALSE```. HDF5
+support requires the following dependencies:
+
+| Dependency Name    | Description                                                             | Version |
+| ------------------ |-----------------------------------------------------------------------  | ------- |
 | HDF5_LOCATION      | The location of [HDF5](https://www.hdfgroup.org/HDF5/)                  | 1.8.11  |
 
 For further information see the documentation on the Alembic plugin [here](http://openusd.org/docs/Alembic-USD-Plugin.html).
@@ -90,6 +98,17 @@ when invoking cmake. This plugin is compatible with Katana 2.0v5. The additional
 | KATANA_API_LOCATION   | The root path to a Katana SDK install.| 2.0v5     |
 
 For further information see our additional documentation on the Katana plugins [here](http://openusd.org/docs/Katana-USD-Plugins.html).
+
+##### Houdini Plugin
+
+Enable the Houdini plugin in the build by specifying the cmake flag ```PXR_BUILD_HOUDINI_PLUGIN=TRUE``` 
+when invoking cmake. This plugin is compatible with Houdini 16.0. The additional dependencies that must be supplied when invoking cmake are:
+
+| Dependency Name       | Description                            | Version   |
+| --------------        | -----------------------------------    | -------   |
+| HOUDINI_ROOT          | The root path to a Houdini SDK install.| 16.0      |
+
+For further information see our additional documentation on the Houdini plugins [here](http://openusd.org/docs/Houdini-USD-Plugins.html).
 
 ## Tests
 

@@ -53,6 +53,13 @@ public:
     virtual const TfTokenVector &GetSupportedBprimTypes() const override;
 
     HDST_API
+    virtual HdRenderPassSharedPtr CreateRenderPass(
+                HdRenderIndex *index) override;
+    HDST_API
+    virtual HdRenderPassSharedPtr CreateRenderPass(HdRenderIndex *index,
+                HdRprimCollection const& collection) override;
+
+    HDST_API
     virtual HdRprim *CreateRprim(TfToken const& typeId,
                                  SdfPath const& rprimId,
                                  SdfPath const& instancerId) override;
@@ -83,7 +90,6 @@ private:
     static const TfTokenVector SUPPORTED_SPRIM_TYPES;
     static const TfTokenVector SUPPORTED_BPRIM_TYPES;
 
-    static void _ConfigureReprs();
     HdSprim *_CreateFallbackShaderPrim();
 
     HdStRenderDelegate(const HdStRenderDelegate &)             = delete;
