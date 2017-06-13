@@ -54,7 +54,6 @@ if not os.path.isdir(dstDir):
 # Copy source file to destination, prepending '#line' directive.
 with open(srcFile, 'r') as s:
     with open(dstFile, 'w') as d:
-        if not srcFile.endswith('.usda'):
-            d.write('#line 1 "{0}"\n'.format(srcFile))
+        d.write('#line 1 "{0}"\n'.format(srcFile))
         for line in s:
             d.write(line)
