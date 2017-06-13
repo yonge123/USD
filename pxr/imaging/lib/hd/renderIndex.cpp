@@ -79,6 +79,10 @@ HdRenderIndex::HdRenderIndex(HdRenderDelegate *renderDelegate)
 {
     // Note: HdRenderIndex::New(...) guarantees renderDelegate is non-null.
 
+    // Register well-known reprs (to be deprecated).
+    static std::once_flag reprsOnce;
+    std::call_once(reprsOnce, _ConfigureReprs);
+
     // Register well-known collection types (to be deprecated)
     // XXX: for compatibility and smooth transition,
     //      leave geometry collection for a while.
@@ -348,25 +352,13 @@ HdRenderIndex::GetSprimSubtree(TfToken const& typeId,
                                SdfPath const& rootPath) const
 {
     SdfPathVector result;
-
-    if (_renderDelegate == nullptr) {
-        TF_CODING_ERROR("Render delegate not initalized on render index");
-        return SdfPathVector();
-    }
-
     _sprimIndex.GetPrimSubtree(typeId, rootPath, &result);
-
     return result;
 }
 
 HdSprim *
 HdRenderIndex::GetFallbackSprim(TfToken const& typeId) const
 {
-    if (_renderDelegate == nullptr) {
-        TF_CODING_ERROR("Render delegate not initalized on render index");
-        return nullptr;
-    }
-
     return _sprimIndex.GetFallbackPrim(typeId);
 }
 
@@ -404,25 +396,13 @@ HdRenderIndex::GetBprimSubtree(TfToken const& typeId,
                                SdfPath const& rootPath) const
 {
     SdfPathVector result;
-
-    if (_renderDelegate == nullptr) {
-        TF_CODING_ERROR("Render delegate not initalized on render index");
-        return SdfPathVector();
-    }
-
     _bprimIndex.GetPrimSubtree(typeId, rootPath, &result);
-
     return result;
 }
 
 HdBprim *
 HdRenderIndex::GetFallbackBprim(TfToken const& typeId) const
 {
-    if (_renderDelegate == nullptr) {
-        TF_CODING_ERROR("Render delegate not initalized on render index");
-        return nullptr;
-    }
-
     return _bprimIndex.GetFallbackPrim(typeId);
 }
 
@@ -434,12 +414,7 @@ HdRenderDelegate *HdRenderIndex::GetRenderDelegate() const
 TfToken
 HdRenderIndex::GetRenderDelegateType() const
 {
-    if (_renderDelegate == nullptr) {
-        return TfToken();
-    }
-
     TfType const &type = TfType::Find(_renderDelegate);
-
     const std::string &typeName  = type.GetTypeName();
     return TfToken(typeName);
 }
@@ -448,11 +423,6 @@ bool
 HdRenderIndex::_CreateFallbackPrims()
 {
     bool success = true;
-
-    if (_renderDelegate == nullptr) {
-        TF_CODING_ERROR("Render Delegate Uninitalized");
-        return false;
-    }
 
     success &= _sprimIndex.CreateFallbackPrims(_renderDelegate);
     success &= _bprimIndex.CreateFallbackPrims(_renderDelegate);
@@ -463,14 +433,88 @@ HdRenderIndex::_CreateFallbackPrims()
 void
 HdRenderIndex::_DestroyFallbackPrims()
 {
-    // If the render delegate never got assigned, or already removed we can't
-    // free the fallback prims.
-    if (_renderDelegate == nullptr) {
-        return;
-    }
-
     _sprimIndex.DestroyFallbackPrims(_renderDelegate);
     _bprimIndex.DestroyFallbackPrims(_renderDelegate);
+}
+
+/* static */
+void
+HdRenderIndex::_ConfigureReprs()
+{
+    // pre-defined reprs (to be deprecated or minimalized)
+    HdMesh::ConfigureRepr(HdTokens->hull,
+                          HdMeshReprDesc(HdMeshGeomStyleHull,
+                                         HdCullStyleDontCare,
+                                         /*lit=*/true,
+                                         /*smoothNormals=*/false,
+                                         /*blendWireframeColor=*/false));
+    HdMesh::ConfigureRepr(HdTokens->smoothHull,
+                          HdMeshReprDesc(HdMeshGeomStyleHull,
+                                         HdCullStyleDontCare,
+                                         /*lit=*/true,
+                                         /*smoothNormals=*/true,
+                                         /*blendWireframeColor=*/false));
+    HdMesh::ConfigureRepr(HdTokens->wire,
+                          HdMeshReprDesc(HdMeshGeomStyleHullEdgeOnly,
+                                         HdCullStyleDontCare,
+                                         /*lit=*/true,
+                                         /*smoothNormals=*/true,
+                                         /*blendWireframeColor=*/true));
+    HdMesh::ConfigureRepr(HdTokens->wireOnSurf,
+                          HdMeshReprDesc(HdMeshGeomStyleHullEdgeOnSurf,
+                                         HdCullStyleDontCare,
+                                         /*lit=*/true,
+                                         /*smoothNormals=*/true,
+                                         /*blendWireframeColor=*/true));
+    HdMesh::ConfigureRepr(HdTokens->refined,
+                          HdMeshReprDesc(HdMeshGeomStyleSurf,
+                                         HdCullStyleDontCare,
+                                         /*lit=*/true,
+                                         /*smoothNormals=*/true,
+                                         /*blendWireframeColor=*/false));
+    HdMesh::ConfigureRepr(HdTokens->refinedWire,
+                          HdMeshReprDesc(HdMeshGeomStyleEdgeOnly,
+                                         HdCullStyleDontCare,
+                                         /*lit=*/true,
+                                         /*smoothNormals=*/true,
+                                         /*blendWireframeColor=*/true));
+    HdMesh::ConfigureRepr(HdTokens->refinedWireOnSurf,
+                          HdMeshReprDesc(HdMeshGeomStyleEdgeOnSurf,
+                                         HdCullStyleDontCare,
+                                         /*lit=*/true,
+                                         /*smoothNormals=*/true,
+                                         /*blendWireframeColor=*/true));
+
+    HdBasisCurves::ConfigureRepr(HdTokens->hull,
+                                 HdBasisCurvesGeomStyleLine);
+    HdBasisCurves::ConfigureRepr(HdTokens->smoothHull,
+                                 HdBasisCurvesGeomStyleLine);
+    HdBasisCurves::ConfigureRepr(HdTokens->wire,
+                                 HdBasisCurvesGeomStyleLine);
+    HdBasisCurves::ConfigureRepr(HdTokens->wireOnSurf,
+                                 HdBasisCurvesGeomStyleLine);
+    HdBasisCurves::ConfigureRepr(HdTokens->refined,
+                                 HdBasisCurvesGeomStyleRefined);
+    // XXX: draw coarse line for refinedWire (filed as bug 129550)
+    HdBasisCurves::ConfigureRepr(HdTokens->refinedWire,
+                                  HdBasisCurvesGeomStyleLine);
+    HdBasisCurves::ConfigureRepr(HdTokens->refinedWireOnSurf,
+                                 HdBasisCurvesGeomStyleRefined);
+
+    HdPoints::ConfigureRepr(HdTokens->hull,
+                            HdPointsGeomStylePoints);
+    HdPoints::ConfigureRepr(HdTokens->smoothHull,
+                            HdPointsGeomStylePoints);
+    HdPoints::ConfigureRepr(HdTokens->wire,
+                            HdPointsGeomStylePoints);
+    HdPoints::ConfigureRepr(HdTokens->wireOnSurf,
+                            HdPointsGeomStylePoints);
+    HdPoints::ConfigureRepr(HdTokens->refined,
+                            HdPointsGeomStylePoints);
+    HdPoints::ConfigureRepr(HdTokens->refinedWire,
+                            HdPointsGeomStylePoints);
+    HdPoints::ConfigureRepr(HdTokens->refinedWireOnSurf,
+                            HdPointsGeomStylePoints);
 }
 // -------------------------------------------------------------------------- //
 /// \name Draw Item Handling 
@@ -497,8 +541,10 @@ _AppendDrawItem(HdSceneDelegate* delegate,
     std::vector<HdDrawItem> *drawItems =
             rprim->GetDrawItems(delegate, reprName, forcedRepr);
 
-    TF_FOR_ALL(drawItemIt, *drawItems) {
-        (*result)[rprimTag].push_back(&(*drawItemIt));
+    if (drawItems != nullptr) {
+        TF_FOR_ALL(drawItemIt, *drawItems) {
+            (*result)[rprimTag].push_back(&(*drawItemIt));
+        }
     }
 }
 
@@ -813,6 +859,66 @@ namespace {
             }
         }
     };
+
+    static void
+    _PreSyncRPrims(_RprimSyncRequestVector *syncReq,
+                             _ReprList reprs,
+                             size_t begin,
+                             size_t end)
+    {
+        for (size_t i = begin; i < end; ++i)
+        {
+            HdSceneDelegate *sceneDelegate = syncReq->sceneDelegates[i];
+            HdRprim         *rprim         = syncReq->rprims[i];
+            HdDirtyBits     &dirtyBits     = syncReq->request.dirtyBits[i];
+            size_t          reprsMask      = syncReq->reprsMasks[i];
+
+            // Initialize all utilized repr's for the rprim.
+            //
+            // The request vector is built by combining multiple rprim
+            // collections and each collection can have it's own
+            // repr.  The reprs param is a list of all the unique reprs used
+            // by these collections.
+            //
+            // As such each Rprim can be included in multiple collections,
+            // each Rprim can have multiple repr's in the same sync.
+            // Thus the reprs mask, specifies which subset of reprs from the
+            // repr list is used by collections the prim belongs to.
+            //
+            // An Rprim may require additional data to perform a sync of a repr
+            // for the first time.  Therefore, inform the Rprim of the new repr
+            // and give it the opportunity to modify the dirty bits in the
+            // request before providing them to the scene delegate.
+            TF_FOR_ALL(it, reprs) {
+                if (reprsMask & 1) {
+                    rprim->InitRepr(sceneDelegate,
+                                    it->reprName,
+                                    it->forcedRepr,
+                                    &dirtyBits);
+                }
+                reprsMask >>= 1;
+            }
+
+            // A render delegate may require additional information
+            // from the scene delegate to process a change.
+            //
+            // Calling PropagateRprimDirtyBits gives the Rprim an opportunity
+            // to update the dirty bits in order to request the information
+            // before passing the request to the scene deleate.
+            dirtyBits = rprim->PropagateRprimDirtyBits(dirtyBits);
+        }
+    }
+
+    static void
+    _PreSyncRequestVector(_RprimSyncRequestVector *syncReq,
+                                    _ReprList reprs)
+    {
+        WorkParallelForN(syncReq->rprims.size(),
+                     boost::bind(&_PreSyncRPrims,
+                                 syncReq, reprs, _1, _2));
+
+    }
+
 };
 
 void
@@ -950,6 +1056,32 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector const &tasks,
 
     // Drop the GIL before we spawn parallel tasks.
     TF_PY_ALLOW_THREADS_IN_SCOPE();
+
+
+    // Give the render delegates the chance to modify the sync request
+    // before passing it to the scene delegates.
+    //
+    // This allows the render delegate to request more data that it needs
+    // to process the changes that are marked in the change tracker.
+    //
+    // So that the entity marking the changes does not need to be aware of
+    // render delegate specific data dependencies.
+    {
+        TRACE_SCOPE("Pre-Sync Rprims");
+
+        // Dispatch synchronization work to each delegate.
+        WorkArenaDispatcher dirtyBitDispatcher;
+
+        TF_FOR_ALL(dlgIt, syncMap) {
+            _RprimSyncRequestVector *r = &dlgIt->second;
+            dirtyBitDispatcher.Run(
+                                   boost::bind(&_PreSyncRequestVector,
+                                               r, reprs));
+
+        }
+        dirtyBitDispatcher.Wait();
+    }
+
 
     {
         TRACE_SCOPE("Delegate Sync");
@@ -1157,11 +1289,6 @@ HdRenderIndex::GetSceneDelegateAndInstancerIds(SdfPath const &id,
 void
 HdRenderIndex::_InitPrimTypes()
 {
-    if (_renderDelegate == nullptr) {
-        TF_CODING_ERROR("Render Delegate Uninitalized");
-        return;
-    }
-
     _sprimIndex.InitPrimTypes(_renderDelegate->GetSupportedSprimTypes());
     _bprimIndex.InitPrimTypes(_renderDelegate->GetSupportedBprimTypes());
 }

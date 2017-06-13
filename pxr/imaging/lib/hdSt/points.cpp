@@ -42,10 +42,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-
-// static repr configuration
-HdStPoints::_PointsReprConfig HdStPoints::_reprDescConfig;
-
 HdStPoints::HdStPoints(SdfPath const& id,
                        SdfPath const& instancerId)
   : HdPoints(id, instancerId)
@@ -112,16 +108,6 @@ HdStPoints::_UpdateDrawItem(HdSceneDelegate *sceneDelegate,
     TF_VERIFY(drawItem->GetConstantPrimVarRange());
 }
 
-/* static */
-void
-HdStPoints::ConfigureRepr(TfToken const &reprName,
-                          const HdStPointsReprDesc &desc)
-{
-    HD_TRACE_FUNCTION();
-
-    _reprDescConfig.Append(reprName, _PointsReprConfig::DescArray{desc});
-}
-
 HdReprSharedPtr const &
 HdStPoints::_GetRepr(HdSceneDelegate *sceneDelegate,
                      TfToken const &reprName,
@@ -130,34 +116,29 @@ HdStPoints::_GetRepr(HdSceneDelegate *sceneDelegate,
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    _PointsReprConfig::DescArray descs = _reprDescConfig.Find(reprName);
+    _PointsReprConfig::DescArray descs = _GetReprDesc(reprName);
 
     _ReprVector::iterator it = _reprs.begin();
-    bool isNew = it == _reprs.end();
-    if (isNew) {
-        it = _reprs.insert(_reprs.end(),
-                           std::make_pair(reprName,
-                                          HdReprSharedPtr(new HdRepr())));
+    if (_reprs.empty()) {
+        // Hydra should have called _InitRepr earlier in sync when
+        // before sending dirty bits to the delegate.
+        TF_CODING_ERROR("_InitRepr() should be called for repr %s.",
+                        reprName.GetText());
 
-        // allocate all draw items
-        for (auto desc : descs) {
-            if (desc.geomStyle == HdPointsGeomStyleInvalid) {
-                continue;
-            }
-            it->second->AddDrawItem(&_sharedData);
-        }
+        static const HdReprSharedPtr ERROR_RETURN;
+
+        return ERROR_RETURN;
     }
 
-    *dirtyBits = _PropagateRprimDirtyBits(*dirtyBits);
-
-
     // points don't have multiple draw items (for now)
-    if (isNew || HdChangeTracker::IsDirty(*dirtyBits)) {
+    if (HdChangeTracker::IsDirty(*dirtyBits)) {
         if (descs[0].geomStyle != HdPointsGeomStyleInvalid) {
             _UpdateDrawItem(sceneDelegate,
-                            it->second->GetDrawItem(0),
+                            _reprs[0].second->GetDrawItem(0),
                             dirtyBits);
         }
+
+        *dirtyBits &= ~DirtyNewRepr;
     }
 
     return it->second;
@@ -262,6 +243,38 @@ HdStPoints::_GetInitialDirtyBits() const
 
     return mask;
 }
+
+HdDirtyBits
+HdStPoints::_PropagateDirtyBits(HdDirtyBits bits) const
+{
+    return bits;
+}
+
+void
+HdStPoints::_InitRepr(TfToken const &reprName,
+                      HdDirtyBits *dirtyBits)
+{
+    _PointsReprConfig::DescArray const &descs = _GetReprDesc(reprName);
+
+    if (_reprs.empty()) {
+        _reprs.emplace_back(reprName, boost::make_shared<HdRepr>());
+
+        HdReprSharedPtr &repr = _reprs.back().second;
+
+        // allocate all draw items
+        for (size_t descIdx = 0; descIdx < descs.size(); ++descIdx) {
+            const HdPointsReprDesc &desc = descs[descIdx];
+
+            if (desc.geomStyle != HdPointsGeomStyleInvalid) {
+                repr->AddDrawItem(&_sharedData);
+            }
+        }
+
+        *dirtyBits |= DirtyNewRepr;
+    }
+
+}
+
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

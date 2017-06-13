@@ -39,20 +39,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-
-/// \class HdStPointsReprDesc
-///
-/// Descriptor to configure a drawItem for a repr.
-///
-struct HdStPointsReprDesc {
-    HdStPointsReprDesc(
-        HdPointsGeomStyle geomStyle = HdPointsGeomStyleInvalid)
-        : geomStyle(geomStyle)
-        {}
-
-    HdPointsGeomStyle geomStyle:1;
-};
-
 /// \class HdStPoints
 ///
 /// Points.
@@ -74,12 +60,6 @@ public:
                       TfToken const&   reprName,
                       bool             forcedRepr) override;
 
-    /// Configure geometric style of drawItems for \p reprName
-    HDST_API
-    static void ConfigureRepr(TfToken const &reprName,
-                              const HdStPointsReprDesc &desc);
-
-
 protected:
     virtual HdReprSharedPtr const &
         _GetRepr(HdSceneDelegate *sceneDelegate,
@@ -91,18 +71,24 @@ protected:
                                  HdDirtyBits *dirtyBitsState);
 
     virtual HdDirtyBits _GetInitialDirtyBits() const override;
+    virtual HdDirtyBits _PropagateDirtyBits(HdDirtyBits bits) const override;
+    virtual void _InitRepr(TfToken const &reprName,
+                           HdDirtyBits *dirtyBits) override;
+
 
 private:
     enum DrawingCoord {
         InstancePrimVar = HdDrawingCoord::CustomSlotsBegin
     };
 
+    enum DirtyBits {
+        DirtyNewRepr    = HdChangeTracker::CustomBitsBegin
+    };
+
+
     void _UpdateDrawItem(HdSceneDelegate *sceneDelegate,
                          HdDrawItem *drawItem,
                          HdDirtyBits *dirtyBits);
-
-    typedef _ReprDescConfigs<HdStPointsReprDesc> _PointsReprConfig;
-    static _PointsReprConfig _reprDescConfig;
 };
 
 

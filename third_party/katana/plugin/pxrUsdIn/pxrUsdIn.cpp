@@ -34,6 +34,9 @@
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usd/variantSets.h"
+#include "pxr/usd/usdLux/light.h"
+#include "pxr/usd/usdLux/lightFilter.h"
+#include "pxr/usd/usdLux/linkingAPI.h"
 
 #include <FnGeolib/op/FnGeolibOp.h>
 #include <FnLogging/FnLogging.h>
@@ -61,6 +64,42 @@ namespace FnKat = Foundry::Katana;
     interface.setAttr("type", Foundry::Katana::StringAttribute("error"));\
     interface.setAttr("errorMessage", Foundry::Katana::StringAttribute(\
         TfStringPrintf(__VA_ARGS__)));
+
+// Set attributes under lightList to establish linking.
+static bool
+_SetLinks( const std::string &lightKey,
+           const UsdLuxLinkingAPI &linkAPI,
+           const std::string &linkName,
+           const PxrUsdKatanaUsdInArgsRefPtr &usdInArgs,
+           FnKat::GroupBuilder *lightListBuilder)
+{
+    UsdLuxLinkingAPI::LinkMap linkMap = linkAPI.ComputeLinkMap();
+    FnKat::GroupBuilder onBuilder, offBuilder;
+    for (const auto &entry: linkMap) {
+        // By convention, entries are "link.TYPE.{on,off}.HASH" where
+        // HASH is getHash() of the CEL and TYPE is the type of linking
+        // (light, shadow, etc). In this case we can just hash the
+        // string attribute form of the location.
+        const std::string link_loc =
+            PxrUsdKatanaUtils::ConvertUsdPathToKatLocation(entry.first,
+                                                           usdInArgs);
+        const FnKat::StringAttribute link_loc_attr(link_loc);
+        const std::string link_hash = link_loc_attr.getHash().str();
+        (entry.second ? onBuilder : offBuilder).set(link_hash, link_loc_attr);
+    }
+    // Set off and then on attributes, in order, to ensure
+    // stable override semantics when katana applies these.
+    // (This matches what the Gaffer node does.)
+    FnKat::GroupAttribute offAttr = offBuilder.build();
+    if (offAttr.getNumberOfChildren()) {
+        lightListBuilder->set(lightKey+".link."+linkName+".off", offAttr);
+    }
+    FnKat::GroupAttribute onAttr = onBuilder.build();
+    if (onAttr.getNumberOfChildren()) {
+        lightListBuilder->set(lightKey+".link."+linkName+".on", onAttr);
+    }
+    return UsdLuxLinkingAPI::DoesLinkPath(linkMap, linkAPI.GetPath());
+}
 
 // see overview.dox for more documentation.
 class PxrUsdInOp : public FnKat::GeolibOp
@@ -114,6 +153,8 @@ public:
             return;
         }
 
+        UsdStagePtr stage = usdInArgs->GetStage();
+
         // Get usd prim.
         UsdPrim prim = interface.atRoot()
             ? usdInArgs->GetRootPrim()
@@ -133,15 +174,13 @@ public:
             // recorded until we have no more USD z-Up assets and the katana
             // assets have no more prerotate camera nodes.
             interface.setAttr("info.usd.stageIsZup",
-                    FnKat::IntAttribute(UsdUtilsGetCamerasAreZup(
-                        usdInArgs->GetStage())));
+                    FnKat::IntAttribute(UsdUtilsGetCamerasAreZup(stage)));
 
             // Construct the global camera list at the USD scene root.
             //
             FnKat::StringBuilder cameraListBuilder;
 
-            SdfPathVector cameraPaths = PxrUsdKatanaUtils::FindCameraPaths(
-                prim.GetStage());
+            SdfPathVector cameraPaths = PxrUsdKatanaUtils::FindCameraPaths(stage);
 
             TF_FOR_ALL(cameraPathIt, cameraPaths)
             {
@@ -163,6 +202,53 @@ public:
             {
                 interface.setAttr("cameraList", cameraListAttr);
             }
+
+            // lightList
+            FnKat::GroupBuilder lightListBuilder;
+            SdfPathSet lightPaths = PxrUsdKatanaUtils::FindLightPaths(stage);
+            stage->LoadAndUnload(lightPaths, SdfPathSet());
+            for (const SdfPath &p: lightPaths) {
+                // Establish entry, links, and initial enabled status.
+                // (The linking resolver does not necessarily run at
+                // this location, so we need to establish the initial
+                // enabled status correctly.)
+
+                // The convention for lightList is for /path/to/light
+                // to be represented as path_to_light.
+                std::string loc = PxrUsdKatanaUtils::
+                    ConvertUsdPathToKatLocation(p, usdInArgs);
+                std::string key = TfStringReplace(loc.substr(1), "/", "_");
+
+                UsdPrim prim = stage->GetPrimAtPath(p);
+
+                if (prim.IsA<UsdLuxLight>()) {
+                    UsdLuxLight light(prim);
+                    lightListBuilder.set(key+".path",
+                                         FnKat::StringAttribute(loc));
+                    bool enabled =
+                        _SetLinks(key, light.GetLightLinkingAPI(),
+                                  "light", usdInArgs, &lightListBuilder);
+                    lightListBuilder.set(key+".enable",
+                                         FnKat::IntAttribute(enabled));
+                    _SetLinks(key, light.GetShadowLinkingAPI(), "shadow",
+                              usdInArgs, &lightListBuilder);
+                } else if (prim.IsA<UsdLuxLightFilter>()) {
+                    UsdLuxLightFilter filter(prim);
+                    lightListBuilder.set(key+".path",
+                                         FnKat::StringAttribute(loc));
+                    lightListBuilder.set(key+".type",
+                                     FnKat::StringAttribute("light filter"));
+                    bool enabled =
+                        _SetLinks(key, filter.GetFilterLinkingAPI(),
+                                  "lightfilter", usdInArgs, &lightListBuilder);
+                    lightListBuilder.set(key+".enable",
+                                         FnKat::IntAttribute(enabled));
+                }
+            }
+            FnKat::GroupAttribute lightListAttr = lightListBuilder.build();
+            if (lightListAttr.getNumberOfChildren() > 0) {
+                interface.setAttr("lightList", lightListAttr);
+            }
             
             interface.setAttr("info.usdOpArgs", opArgs);
         }
@@ -171,7 +257,6 @@ public:
 
         if (!prim.IsLoaded()) {
             SdfPath pathToLoad = prim.GetPath();
-            UsdStageRefPtr stage = prim.GetStage();
             readerLock.unlock();
             prim = _LoadPrim(stage, pathToLoad, verbose);
             if (!prim) {

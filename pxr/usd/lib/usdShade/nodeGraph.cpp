@@ -242,6 +242,33 @@ UsdShadeNodeGraph::GetInterfaceInputs() const
     return GetInputs();
 }
 
+std::vector<UsdShadeInput> 
+UsdShadeNodeGraph::_GetInterfaceInputs(const TfToken &renderTarget) const
+{
+    if (renderTarget.IsEmpty() ||
+        !UsdShadeUtils::ReadOldEncoding()) {
+        return GetInterfaceInputs();
+    }
+
+    std::vector<UsdShadeInput> result;
+    const std::string relPrefix = 
+        UsdShadeInterfaceAttribute::_GetInterfaceAttributeRelPrefix(renderTarget);
+    std::vector<UsdRelationship> rels = GetPrim().GetRelationships();
+    TF_FOR_ALL(relIter, rels) {
+        UsdRelationship rel = *relIter;
+        std::string relName = rel.GetName().GetString();
+        if (TfStringStartsWith(relName, relPrefix)) {
+            TfToken interfaceAttrName(relName.substr(relPrefix.size()));
+            UsdShadeInput interfaceInput = GetInput(interfaceAttrName);
+            if (interfaceInput.GetAttr()) {
+                result.push_back(interfaceInput);
+            }
+        }
+    }
+
+    return result;
+}
+
 static bool 
 _IsValidInput(UsdShadeConnectableAPI const &source, 
               UsdShadeAttributeType const sourceType) 
@@ -255,13 +282,16 @@ _IsValidInput(UsdShadeConnectableAPI const &source,
               sourceType == UsdShadeAttributeType::Parameter)));
 }
 
-static 
+
+static
 UsdShadeNodeGraph::InterfaceInputConsumersMap 
-_ComputeNonTransitiveInputConsumersMap(const UsdShadeNodeGraph &nodeGraph,
-                                       const TfToken &renderTarget)
+_ComputeNonTransitiveInputConsumersMap(
+    const UsdShadeNodeGraph &nodeGraph,
+    const TfToken &renderTarget)
 {
     UsdShadeNodeGraph::InterfaceInputConsumersMap result;
 
+    bool foundOldStyleInterfaceInputs = false;
     std::vector<UsdShadeInput> inputs = nodeGraph.GetInputs();
     for (const auto &input : inputs) {
         std::vector<UsdShadeInput> consumers;
@@ -275,11 +305,24 @@ _ComputeNonTransitiveInputConsumersMap(const UsdShadeNodeGraph &nodeGraph,
                 std::vector<UsdShadeParameter> consumerParams = 
                     interfaceAttr.GetRecipientParameters(renderTarget);
                 for (const auto &param: consumerParams) {
+                    foundOldStyleInterfaceInputs = true;
                     consumers.push_back(UsdShadeInput(param.GetAttr()));
                 }
             }
         }
         result[input] = consumers;
+    }
+
+    // If we find old-style interface inputs on the material, then it's likely 
+    // that the material and all its descendants have old-style encoding of 
+    // shading networks. Hence, skip the downward traversal.
+    // 
+    // If authoring of bidirectional connections on old-style interface 
+    // attributes (which is a feature we only use for testing) is enabled, 
+    // then we can't skip the downward traversal.
+    if (foundOldStyleInterfaceInputs && 
+        !UsdShadeConnectableAPI::AreBidirectionalInterfaceConnectionsEnabled()) {
+        return result;
     }
 
     // XXX: This traversal isn't instancing aware. We must update this 
