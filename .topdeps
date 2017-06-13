@@ -25,9 +25,6 @@ tg/simple_features/setup_clipmanifestassetpath
 tg/simple_features/maya_call_once_deadlock
 tg/simple_features/install_schemas
 tg/pixar/katana_libs_dir_fix
-assembly_cmd_import_maya_cmds
-fix_testWrapper_env_var_with_equals
 pseudo_root_warning
 ptex_prefer_static
 tests_set_maya_app_dir
-usdview_camera_cmdline
