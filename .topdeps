@@ -27,4 +27,5 @@ tg/simple_features/install_schemas
 tg/pixar/katana_libs_dir_fix
 pseudo_root_warning
 ptex_prefer_static
+pxrConfig_separator_fix
 tests_set_maya_app_dir
