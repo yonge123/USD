@@ -168,6 +168,14 @@ pxr_test_scripts(
         testenv/testUsdReferenceAssemblySelection.py
 )
 
+# Note - we set up a maya profile directory ($MAYA_APP_DIR) that's empty, so we
+# can ensure we test with a default profile - had some crashes with 2017 when
+# using an existing user profile (due to some problems with color management
+# settings)
+# Also, maya creates the $MAYA_APP_DIR on demand, so we don't need to bother
+# making the directory ourselves... and it respects ".", which will be set
+# to the testEnv dir by the time maya itself is launched
+
 pxr_install_test_dir(
     SRC testenv/UsdExportAssemblyTest
     DEST testUsdExportAssembly
@@ -180,6 +188,7 @@ pxr_register_test(testUsdExportAssembly
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -194,6 +203,7 @@ pxr_register_test(testUsdExportCamera
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -208,6 +218,7 @@ pxr_register_test(testUsdExportColorSets
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -222,6 +233,7 @@ pxr_register_test(testUsdExportDisplayColor
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -236,6 +248,7 @@ pxr_register_test(testUsdExportFrameOffset
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -250,6 +263,7 @@ pxr_register_test(testUsdExportMesh
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -264,6 +278,7 @@ pxr_register_test(testUsdExportNurbsCurve
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -278,6 +293,7 @@ pxr_register_test(testUsdExportRenderLayerMode
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -292,6 +308,7 @@ pxr_register_test(testUsdExportSelection
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -306,6 +323,7 @@ pxr_register_test(testUsdExportUVSets
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -320,6 +338,7 @@ pxr_register_test(testUsdImportAsAssemblies
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -334,6 +353,7 @@ pxr_register_test(testUsdImportCamera
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -348,6 +368,7 @@ pxr_register_test(testUsdImportColorSets
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -362,6 +383,7 @@ pxr_register_test(testUsdImportFrameRange
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -376,6 +398,7 @@ pxr_register_test(testUsdImportNestedAssemblyAnimation
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -390,6 +413,7 @@ pxr_register_test(testUsdImportSessionLayer
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -404,6 +428,7 @@ pxr_register_test(testUsdImportUVSets
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -418,6 +443,7 @@ pxr_register_test(testUsdImportXforms
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -432,6 +458,7 @@ pxr_register_test(testUsdMayaGetVariantSetSelections
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -446,6 +473,7 @@ pxr_register_test(testUsdMayaModelKindWriter
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -460,6 +488,7 @@ pxr_register_test(testUsdMayaProxyShape
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -474,6 +503,7 @@ pxr_register_test(testUsdMayaReferenceAssemblyEdits
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -488,6 +518,7 @@ pxr_register_test(testUsdMayaUserExportedAttributes
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -502,6 +533,7 @@ pxr_register_test(testUsdMetadataAttributeConverters
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -516,6 +548,7 @@ pxr_register_test(testUsdReferenceAssemblyChangeRepresentations
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
 pxr_install_test_dir(
@@ -530,5 +563,6 @@ pxr_register_test(testUsdReferenceAssemblySelection
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=./maya_profile
 )
 
