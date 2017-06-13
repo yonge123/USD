@@ -45,9 +45,6 @@ function(_install_headers LIBRARY_NAME)
     if( NOT "${_install_headers_FILES}" STREQUAL "")
         set(files_copied "")
         foreach (f ${_install_headers_FILES})
-            if ("${f}" MATCHES ".*\\.usda$")
-                continue()
-            endif ()
             set(infile "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
             set(outfile "${header_dest_dir}/${f}")
             list(APPEND files_copied ${outfile})
@@ -1150,6 +1147,10 @@ function(_pxr_library NAME)
         RUNTIME DESTINATION ${libInstallPrefix}
         PUBLIC_HEADER DESTINATION ${headerInstallPrefix}
     )
+    if (${PXR_INSTALL_BUILTIN_SCHEMAS} AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/schema.usda")
+        install(FILES schema.usda
+                DESTINATION ${headerInstallPrefix})
+    endif ()
     _install_headers(${NAME}
         FILES
             ${args_PUBLIC_HEADERS}
