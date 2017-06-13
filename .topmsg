@@ -1,6 +1,4 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/simple_features/install_schemas
-
-<patch description>
+Subject: Installing schemas next to API headers.
 
 Signed-off-by: Pal Mezei <palm@lumapictures.com>
