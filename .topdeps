@@ -24,8 +24,8 @@ tg/simple_features/vp2_maya_proxy
 tg/simple_features/setup_clipmanifestassetpath
 tg/simple_features/maya_call_once_deadlock
 tg/simple_features/install_schemas
+tg/simple_features/tests_set_maya_app_dir
 tg/pixar/katana_libs_dir_fix
 pseudo_root_warning
 ptex_prefer_static
 pxrConfig_separator_fix
-tests_set_maya_app_dir
