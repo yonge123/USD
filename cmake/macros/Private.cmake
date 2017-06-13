@@ -1131,6 +1131,10 @@ function(_pxr_library NAME)
         RUNTIME DESTINATION ${libInstallPrefix}
         PUBLIC_HEADER DESTINATION ${headerInstallPrefix}
     )
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/schema.usda")
+        install(FILES schema.usda
+                DESTINATION ${headerInstallPrefix})
+    endif ()
     _install_headers(${NAME}
         FILES
             ${args_PUBLIC_HEADERS}
