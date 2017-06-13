@@ -121,9 +121,6 @@ pxr_library(usd
         generatedSchema.usda
 )
 
-install(DIRECTORY codegenTemplates
-        DESTINATION include/pxr/usd/usd)
-
 if (NOT JINJA2_FOUND)
     message(WARNING "Skipping building usdGenSchema due to missing dependency: Jinja2")
 else()
