@@ -1,6 +1,4 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/simple_features/extend_usda_path_parsing
-
-<patch description>
+Subject: [USD] Extending the special character support when parsing usda asset paths.
 
 Signed-off-by: Pal Mezei <palm@lumapictures.com>
