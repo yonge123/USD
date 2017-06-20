@@ -1,6 +1,4 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/simple_features/loading_shading_mode_plugs
-
-<patch description>
+Subject: [usdMaya] Loading the shading mode plugins.
 
 Signed-off-by: Pal Mezei <palm@lumapictures.com>
