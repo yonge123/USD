@@ -1,6 +1,7 @@
 #include "usdMaya/usdListShadingModes.h"
 
 #include "usdMaya/shadingModeRegistry.h"
+#include "usdMaya/registryHelper.h"
 
 #include <maya/MSyntax.h>
 #include <maya/MStatus.h>
@@ -10,6 +11,10 @@
 #include <maya/MString.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+namespace {
+    auto _shadingModesLoaded = false;
+}
 
 usdListShadingModes::usdListShadingModes() {
 
@@ -21,6 +26,10 @@ usdListShadingModes::~usdListShadingModes() {
 
 MStatus
 usdListShadingModes::doIt(const MArgList& args) {
+    if (!_shadingModesLoaded) {
+        PxrUsdMaya_RegistryHelper::LoadShadingModePlugins();
+        _shadingModesLoaded = true;
+    }
     MStatus status;
     MArgDatabase argData(syntax(), args, &status);
 

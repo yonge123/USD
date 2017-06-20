@@ -40,6 +40,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DEFINE_PRIVATE_TOKENS(_tokens, 
     (mayaPlugin)
     (providesTranslator)
+    (UsdMaya)
+    (ShadingModePlugin)
 );
 
 template <typename T>
@@ -127,6 +129,26 @@ _ProvidesForType(
     return provides;
 }
 
+static bool
+_HasShadingModePlugin(
+    const PlugPluginPtr& plug,
+    const std::vector<TfToken>& scope,
+    std::string* mayaPluginName)
+{
+    JsObject metadata = plug->GetMetadata();
+    JsObject mayaTranslatorMetadata;
+    if (!_ReadNestedDict(metadata, scope, &mayaTranslatorMetadata)) {
+        return false;
+    }
+
+    JsValue any;
+    if (TfMapLookup(mayaTranslatorMetadata, _tokens->mayaPlugin, &any)) {
+        return _GetData(any, mayaPluginName);
+    }
+
+    return false;
+}
+
 /* static */
 std::string
 _PluginDictScopeToDebugString(
@@ -178,6 +200,34 @@ PxrUsdMaya_RegistryHelper::FindAndLoadMayaPlug(
                         value.c_str());
             }
             break;
+        }
+    }
+}
+
+/* static */
+void
+PxrUsdMaya_RegistryHelper::LoadShadingModePlugins() {
+    static std::vector<TfToken> scope = {_tokens->UsdMaya, _tokens->ShadingModePlugin};
+    PlugPluginPtrVector plugins = PlugRegistry::GetInstance().GetAllPlugins();
+    std::string mayaPlugin;
+    TF_FOR_ALL(plugIter, plugins) {
+        PlugPluginPtr plug = *plugIter;
+        if (_HasShadingModePlugin(plug, scope, &mayaPlugin) && !mayaPlugin.empty()) {
+            TF_DEBUG(PXRUSDMAYA_REGISTRY).Msg(
+                        "Found usdMaya plugin %s: Loading maya plugin %s.\n", 
+                        plug->GetName().c_str(),
+                        mayaPlugin.c_str());
+            std::string loadPluginCmd = TfStringPrintf(
+                    "loadPlugin -quiet %s", mayaPlugin.c_str());
+            if (MGlobal::executeCommand(loadPluginCmd.c_str())) {
+                // Need to ensure Python script modules are loaded
+                // properly for this library (Maya's loadPlugin will not
+                // load script modules like TfDlopen would).
+                TfScriptModuleLoader::GetInstance().LoadModules();
+            } else {
+                TF_CODING_ERROR("Unable to load mayaplugin %s\n",
+                        mayaPlugin.c_str());
+            }
         }
     }
 }

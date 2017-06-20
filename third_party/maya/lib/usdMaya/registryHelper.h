@@ -57,6 +57,19 @@ struct PxrUsdMaya_RegistryHelper
                 const std::vector<TfToken>& scope,
                 const std::string& value);
 
+    /// Searches the plugInfos and looks for ShadingModePlugin.
+    /// 
+    /// "UsdMaya" : {
+    ///     "ShadingModeExport" : {
+    ///         "mayaPlugin" : "arnoldShaderExporter"
+    ///     }
+    /// }
+    ///
+    /// At that scope, it expects a dictionary with one key: "mayaPlugin".
+    /// usdMaya will try to load the "mayaPlugin" when the shading modes
+    /// are listed the first time.
+    static void
+        LoadShadingModePlugins();
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
