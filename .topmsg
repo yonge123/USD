@@ -1,6 +1,4 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/simple_features/passing_primdag_map_to_shading_exporter
-
-<patch description>
+Subject: [usdMaya] Passing dagPathToUsdPathMap to the material translator.
 
 Signed-off-by: Pal Mezei <palm@lumapictures.com>
