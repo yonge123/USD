@@ -66,8 +66,7 @@ struct PxrUsdMaya_RegistryHelper
     /// }
     ///
     /// At that scope, it expects a dictionary with one key: "mayaPlugin".
-    /// usdMaya will try to load the "mayaPlugin" when the shading modes
-    /// are listed the first time.
+    /// usdMaya will try to load the "mayaPlugin" when shading modes are first accessed.
     static void
         LoadShadingModePlugins();
 };

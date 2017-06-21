@@ -14,10 +14,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-namespace {
-    std::once_flag _shadingModesLoaded;
-}
-
 usdListShadingModes::usdListShadingModes() {
 
 }
@@ -27,10 +23,7 @@ usdListShadingModes::~usdListShadingModes() {
 }
 
 MStatus
-usdListShadingModes::doIt(const MArgList& args) {
-    std::call_once(_shadingModesLoaded, [](){
-        PxrUsdMaya_RegistryHelper::LoadShadingModePlugins();
-    });
+usdListShadingModes::doIt(const MArgList& args) {    
     MStatus status;
     MArgDatabase argData(syntax(), args, &status);
 
