@@ -70,13 +70,7 @@ static inline HANDLE _FileToWinHANDLE(FILE *file)
 
 FILE* ArchOpenFile(char const* fileName, char const* mode)
 {
-    FILE* stream = nullptr;
-#if defined(ARCH_OS_WINDOWS)
-    fopen_s(&stream, fileName, mode);
-#else
-    stream = fopen(fileName, mode);
-#endif
-    return stream;
+    return fopen(fileName, mode);
 }
 
 #if defined(ARCH_OS_WINDOWS)
@@ -262,7 +256,7 @@ MakeUnique(
     // Copy template to a writable buffer.
     const auto length = sTemplate.size();
     char* cTemplate = reinterpret_cast<char*>(alloca(length + 1));
-    strcpy_s(cTemplate, length + 1, sTemplate.c_str());
+    strcpy(cTemplate, sTemplate.c_str());
 
     // Fill template with random characters from table.
     const char* table = "abcdefghijklmnopqrstuvwxyz123456";
@@ -791,7 +785,7 @@ std::string ArchReadLink(const char* path)
                 reparse->SymbolicLinkReparseBuffer.PrintNameLength /
                                                                 sizeof(WCHAR);
             std::unique_ptr<WCHAR[]> reparsePath(new WCHAR[length + 1]);
-            wcsncpy_s(reparsePath.get(), length + 1,
+            wcsncpy(reparsePath.get(),
               &reparse->SymbolicLinkReparseBuffer.PathBuffer[
               reparse->SymbolicLinkReparseBuffer.PrintNameOffset / sizeof(WCHAR)
               ], length);
