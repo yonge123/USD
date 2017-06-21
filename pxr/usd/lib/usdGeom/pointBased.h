@@ -268,11 +268,12 @@ public:
     /// \param velocityScale - Float to scale the velocities.
     /// \return              - The number of successfully calculated samples.
     USDGEOM_API
-        size_t ComputePositionsAtTimes(
+    size_t ComputePositionsAtTimes(
         std::vector<VtVec3fArray>* positions,
-    const std::vector<UsdTimeCode>& sampleTimes,
+        const std::vector<UsdTimeCode>& sampleTimes,
         UsdTimeCode baseTime,
-    float velocityScale = 1.0f) const;
+        float velocityScale = 1.0f,
+        VtVec3fArray* velocities = nullptr) const;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
