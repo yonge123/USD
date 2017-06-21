@@ -10,10 +10,12 @@
 #include <maya/MGlobal.h>
 #include <maya/MString.h>
 
+#include <mutex>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
-    auto _shadingModesLoaded = false;
+    std::once_flag _shadingModesLoaded;
 }
 
 usdListShadingModes::usdListShadingModes() {
@@ -26,10 +28,9 @@ usdListShadingModes::~usdListShadingModes() {
 
 MStatus
 usdListShadingModes::doIt(const MArgList& args) {
-    if (!_shadingModesLoaded) {
+    std::call_once(_shadingModesLoaded, [](){
         PxrUsdMaya_RegistryHelper::LoadShadingModePlugins();
-        _shadingModesLoaded = true;
-    }
+    });
     MStatus status;
     MArgDatabase argData(syntax(), args, &status);
 
