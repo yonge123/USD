@@ -25,7 +25,6 @@ pxr_library(usd
         clipsAPI
         attributeQuery
         common
-        conversions
         crateInfo
         debugCodes
         editContext
@@ -41,6 +40,8 @@ pxr_library(usd
         primFlags
         primRange
         property
+        pyEditContext
+        pyConversions
         references
         relationship
         resolveInfo
