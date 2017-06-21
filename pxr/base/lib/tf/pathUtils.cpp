@@ -138,16 +138,13 @@ TfRealPath(string const& path, bool allowInaccessibleSuffix, string* error)
         return TfAbsPath(suffix);
     }
 
-    char resolved[ARCH_PATH_MAX];
 #if defined(ARCH_OS_WINDOWS)
     // Expand all symbolic links.
-    if (TfPathExists(prefix)) {
-        strcpy_s(resolved, ARCH_PATH_MAX, _ExpandSymlinks(prefix).c_str());
-    }
-    else {
+    if (!TfPathExists(prefix)) {
         *error = "the named file does not exist";
         return string();
     }
+    std::string resolved = _ExpandSymlinks(prefix);
 
     // Make sure drive letters are always lower-case out of TfRealPath on
     // Windows -- this is so that we can be sure we can reliably use the
@@ -155,13 +152,15 @@ TfRealPath(string const& path, bool allowInaccessibleSuffix, string* error)
     if (resolved[0] && resolved[1] == ':') {
         resolved[0] = tolower(resolved[0]);
     }
+    return TfAbsPath(resolved + suffix);
 #else
+    char resolved[ARCH_PATH_MAX];
     if (!realpath(prefix.c_str(), resolved)) {
         *error = ArchStrerror(errno);
         return string();
     }
-#endif
     return TfAbsPath(resolved + suffix);
+#endif
 }
 
 string::size_type
@@ -209,8 +208,13 @@ TfFindLongestAccessiblePrefix(string const &path, string* error)
 
     // Build a vector of split point indexes.
     vector<size_type> splitPoints;
+#if defined(ARCH_OS_WINDOWS)
+    for (size_type p = path.find_first_of("/\\", path.find_first_not_of("/\\"));
+         p != npos; p = path.find_first_of("/\\", p+1))
+#else
     for (size_type p = path.find('/', path.find_first_not_of('/'));
          p != npos; p = path.find('/', p+1))
+#endif
         splitPoints.push_back(p);
     splitPoints.push_back(path.size());
 
