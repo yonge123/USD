@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Pixar
+// Copyright 2017 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -21,47 +21,48 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#ifndef HD_RESOURCE_GL_H
+#define HD_RESOURCE_GL_H
 
 #include "pxr/pxr.h"
-#include "pxr/base/tf/callContext.h"
-#include "pxr/base/tf/stringUtils.h"
+#include "pxr/imaging/hd/api.h"
+#include "pxr/imaging/hd/version.h"
+#include "pxr/imaging/garch/gl.h"
+#include "pxr/imaging/hd/resource.h"
+#include "pxr/base/tf/token.h"
 
-#include <tbb/spin_mutex.h>
+#include <boost/shared_ptr.hpp>
 
-#include <set>
-#include <string>
-
-using namespace std;
-
-namespace {
-    struct _Cache {
-        tbb::spin_mutex lock;
-        set<string> data;
-    };
-}
-
+#include <cstddef>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-/*
- * TfCallContext's contain const char*'s which are assumed to be program literals.
- * That assumption fails badly when it comes to python.
- */
-TfCallContext
-Tf_PythonCallContext(char const *fileName,
-                     char const *moduleName,
-                     char const *functionName,
-                     size_t line)
-{
-    static _Cache cache;
 
-    string const& fullName = TfStringPrintf("%s.%s", moduleName, functionName);
+typedef boost::shared_ptr<class HdResourceGL> HdResourceGLSharedPtr;
 
-    tbb::spin_mutex::scoped_lock lock(cache.lock);
-    char const* prettyFunctionPtr = cache.data.insert(fullName).first->c_str();
-    char const* fileNamePtr = cache.data.insert(fileName).first->c_str();
+/// \class HdResourceGL
+///
+/// Base class for simple OpenGL resource objects.
+///
+class HdResourceGL : public HdResource {
+public:
+    HD_API
+    HdResourceGL(TfToken const & role);
+    HD_API
+    virtual ~HdResourceGL();
 
-    return TfCallContext(fileNamePtr, prettyFunctionPtr, line, prettyFunctionPtr);
-}
+    /// The OpenGL name/identifier for this resource and its size
+    HD_API
+    virtual void SetAllocation(GLuint id, size_t size);
 
-PXR_NAMESPACE_CLOSE_SCOPE 
+    /// Returns the id of the GPU resource
+    GLuint GetId() const { return _id; }
+
+private:
+    GLuint _id;
+};
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif //HD_RESOURCE_GL_H
