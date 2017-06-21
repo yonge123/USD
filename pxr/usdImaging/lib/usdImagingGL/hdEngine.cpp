@@ -675,7 +675,7 @@ UsdImagingGLHdEngine::Render(RenderParams params)
     glBindVertexArray(vao);
     glBindVertexArray(0);
 
-    glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
+    glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT | GL_DEPTH_BUFFER_BIT);
 
     // hydra orients all geometry during topological processing so that
     // front faces have ccw winding. We disable culling because culling
@@ -733,7 +733,7 @@ UsdImagingGLHdEngine::Render(RenderParams params)
 
     glBindVertexArray(0);
 
-    glPopAttrib(); // GL_ENABLE_BIT | GL_POLYGON_BIT
+    glPopAttrib(); // GL_ENABLE_BIT | GL_POLYGON_BIT | GL_DEPTH_BUFFER_BIT
 
     // XXX: We should not delete the VAO on every draw call, but we currently
     // must because it is GL Context state and we do not control the context.
@@ -972,9 +972,9 @@ UsdImagingGLHdEngine::SetRendererPlugin(TfType const &type)
 
     // Create the new delegate & task controller.
     _delegate = new UsdImagingDelegate(_renderIndex, _delegateID);
-
     _isPopulated = false;
-    _taskController = _renderPlugin->CreateTaskController(_renderIndex,
+
+    _taskController = new HdxTaskController(_renderIndex,
         _delegateID.AppendChild(TfToken(TfStringPrintf(
             "_UsdImaging_%s_%p",
             TfMakeValidIdentifier(actualType.GetTypeName()).c_str(),
@@ -992,32 +992,30 @@ UsdImagingGLHdEngine::SetRendererPlugin(TfType const &type)
 void
 UsdImagingGLHdEngine::_DeleteHydraResources()
 {
-    // The unwinding order is a little complicated; it's the same as
-    // initialization order, but we need to be null-safe and track all
-    // the pointers down.
-    //
-    // 1. Task Controller
-    // 2. USD delegate
-    // 3. Render Index
-    // 4. Render Delegate (from the RI)
-    // 5. Render plugin
+    // Unwinding order: remove data sources first (task controller, scene
+    // delegate); then render index; then render delegate; finally the
+    // renderer plugin used to manage the render delegate.
     
-    if (_renderPlugin != nullptr && _taskController != nullptr) {
-        _renderPlugin->DeleteTaskController(_taskController);
+    if (_taskController != nullptr) {
+        delete _taskController;
+        _taskController = nullptr;
     }
     if (_delegate != nullptr) {
         delete _delegate;
+        _delegate = nullptr;
     }
     HdRenderDelegate *renderDelegate = nullptr;
     if (_renderIndex != nullptr) {
         renderDelegate = _renderIndex->GetRenderDelegate();
         delete _renderIndex;
+        _renderIndex = nullptr;
     }
     if (_renderPlugin != nullptr) {
         if (renderDelegate != nullptr) {
             _renderPlugin->DeleteRenderDelegate(renderDelegate);
         }
         HdxRendererPluginRegistry::GetInstance().ReleasePlugin(_renderPlugin);
+        _renderPlugin = nullptr;
     }
 }
 
