@@ -153,16 +153,22 @@ try
         else {
             if (shadingMode == "arnold") {
                 jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->arnold;
-            }
-            else if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode)) {
-                jobArgs.shadingMode = shadingMode;
-            }
-            else {
-                if (shadingMode != PxrUsdMayaShadingModeTokens->none) {
-                    MGlobal::displayError(TfStringPrintf("No shadingMode '%s' found.  Setting shadingMode='none'", 
-                                shadingMode.GetText()).c_str());
+            } else {
+                if (shadingMode == "Material Colors" || shadingMode == "GPrim Colors") {
+                    shadingMode = TfToken("displayColor");
+                } else if (shadingMode == "RfM Shaders") {
+                    shadingMode = TfToken("pxrRis");
                 }
-                jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none;
+                if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode)) {
+                    jobArgs.shadingMode = shadingMode;
+                }
+                else {
+                    if (shadingMode != PxrUsdMayaShadingModeTokens->none) {
+                        MGlobal::displayError(TfStringPrintf("No shadingMode '%s' found.  Setting shadingMode='none'", 
+                                    shadingMode.GetText()).c_str());
+                    }
+                    jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none;
+                }
             }
         }
     }
