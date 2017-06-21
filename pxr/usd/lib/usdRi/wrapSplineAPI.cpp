@@ -21,12 +21,12 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdRi/lookAPI.h"
+#include "pxr/usd/usdRi/splineAPI.h"
 #include "pxr/usd/usd/schemaBase.h"
-#include "pxr/usd/usd/conversions.h"
 
 #include "pxr/usd/sdf/primSpec.h"
 
+#include "pxr/usd/usd/pyConversions.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include "pxr/base/tf/pyUtils.h"
@@ -51,12 +51,12 @@ WRAP_CUSTOM;
 
 } // anonymous namespace
 
-void wrapUsdRiLookAPI()
+void wrapUsdRiSplineAPI()
 {
-    typedef UsdRiLookAPI This;
+    typedef UsdRiSplineAPI This;
 
     class_<This, bases<UsdSchemaBase> >
-        cls("LookAPI");
+        cls("SplineAPI");
 
     cls
         .def(init<UsdPrim>(arg("prim")))
@@ -80,36 +80,6 @@ void wrapUsdRiLookAPI()
         .def(!self)
 
 
-        
-        .def("GetSurfaceRel",
-             &This::GetSurfaceRel)
-        .def("CreateSurfaceRel",
-             &This::CreateSurfaceRel)
-        
-        .def("GetDisplacementRel",
-             &This::GetDisplacementRel)
-        .def("CreateDisplacementRel",
-             &This::CreateDisplacementRel)
-        
-        .def("GetVolumeRel",
-             &This::GetVolumeRel)
-        .def("CreateVolumeRel",
-             &This::CreateVolumeRel)
-        
-        .def("GetCoshadersRel",
-             &This::GetCoshadersRel)
-        .def("CreateCoshadersRel",
-             &This::CreateCoshadersRel)
-        
-        .def("GetBxdfRel",
-             &This::GetBxdfRel)
-        .def("CreateBxdfRel",
-             &This::CreateBxdfRel)
-        
-        .def("GetPatternsRel",
-             &This::GetPatternsRel)
-        .def("CreatePatternsRel",
-             &This::CreatePatternsRel)
     ;
 
     _CustomWrapCode(cls);
@@ -136,53 +106,66 @@ void wrapUsdRiLookAPI()
 
 namespace {
 
-bool
-_SetInterfaceRecipient0(
-        UsdRiLookAPI& self,
-        UsdShadeInterfaceAttribute& interfaceAttr,
-        const SdfPath& receiverPath)
-{
-    return self.SetInterfaceRecipient(interfaceAttr, receiverPath);
+static UsdAttribute
+_CreateInterpolationAttr(UsdRiSplineAPI &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateInterpolationAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
 }
 
-bool
-_SetInterfaceRecipient1(
-        UsdRiLookAPI& self,
-        UsdShadeInterfaceAttribute& interfaceAttr,
-        const UsdShadeParameter& receiver)
-{
-    return self.SetInterfaceRecipient(interfaceAttr, receiver);
+static UsdAttribute
+_CreatePositionsAttr(UsdRiSplineAPI &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreatePositionsAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->FloatArray), writeSparsely);
 }
+        
+static UsdAttribute
+_CreateValuesAttr(UsdRiSplineAPI &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateValuesAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->FloatArray), writeSparsely);
+}
+
+static boost::python::tuple 
+_Validate(const UsdRiSplineAPI &self) {
+    std::string reason;
+    bool result = self.Validate(&reason);
+    return boost::python::make_tuple(result, reason);
+}
+
 
 WRAP_CUSTOM {
-    typedef UsdRiLookAPI This;
+    typedef UsdRiSplineAPI This;
     _class
-        .def(init<UsdShadeMaterial>(arg("material")))
+        .def(init<const UsdPrim &, const TfToken &,
+             const SdfValueTypeName &, bool>())
+        .def(init<const UsdSchemaBase &, const TfToken &,
+             const SdfValueTypeName &, bool>())
 
-        .def("GetSurface", &This::GetSurface)
-        .def("GetDisplacement", &This::GetDisplacement)
-        .def("GetVolume", &This::GetVolume)
-        .def("GetCoshaders", &This::GetCoshaders,
-             return_value_policy<TfPySequenceToList>())
+        .def("GetValuesTypeName", &This::GetValuesTypeName)
 
-        .def("GetBxdf", &This::GetBxdf)
-        .def("GetPatterns", &This::GetPatterns,
-             return_value_policy<TfPySequenceToList>())
+        .def("GetInterpolationAttr",
+             &This::GetInterpolationAttr)
+        .def("CreateInterpolationAttr",
+             &_CreateInterpolationAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        .def("GetPositionsAttr",
+             &This::GetPositionsAttr)
+        .def("CreatePositionsAttr",
+             &_CreatePositionsAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        .def("GetValuesAttr",
+             &This::GetValuesAttr)
+        .def("CreateValuesAttr",
+             &_CreateValuesAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
 
-        .def("SetInterfaceInputConsumer", &This::SetInterfaceInputConsumer)
-        .def("ComputeInterfaceInputConsumersMap", 
-            &This::ComputeInterfaceInputConsumersMap, 
-            (arg("computeTransitiveConsumers")=false),
-            return_value_policy<TfPyMapToDictionary>())
-        .def("GetInterfaceInputs", &This::GetInterfaceInputs,
-             return_value_policy<TfPySequenceToList>())
-
-        // These are deprecated.
-        .def("SetInterfaceRecipient", &_SetInterfaceRecipient0)
-        .def("SetInterfaceRecipient", &_SetInterfaceRecipient1)
-        .def("GetInterfaceRecipientParameters", &This::GetInterfaceRecipientParameters)
-
-    ;
+        .def("Validate", &_Validate)
+        ;
 }
 
-} // anonymous namespace
+}
