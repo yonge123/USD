@@ -37,7 +37,6 @@
 #include "pxr/usd/usdShade/utils.h"
 
 #include "pxr/usd/usdAi/aiMaterialAPI.h"
-#include "pxr/usd/usdRi/lookAPI.h"
 #include "pxr/usd/usdRi/materialAPI.h"
 #include "pxr/usd/usdRi/risObject.h"
 #include "pxr/usd/usdRi/risOslPattern.h"
@@ -147,7 +146,7 @@ _GatherShadingParameters(
     std::vector<UsdShadeInput> shaderInputs = shaderSchema.GetInputs();
     TF_FOR_ALL(shaderInputIter, shaderInputs) {
         UsdShadeInput shaderInput = *shaderInputIter;
-        std::string inputId = shaderInput.GetFullName();
+        std::string inputId = shaderInput.GetBaseName();
 
         // We do not try to extract presentation metadata from parameters -
         // only material interface attributes should bother recording such.
@@ -158,26 +157,28 @@ _GatherShadingParameters(
         if (UsdShadeConnectableAPI::GetConnectedSource(shaderInput, 
                 &source, &outputName, &sourceType))
         {
-            std::string targetHandle = _CreateShadingNode(
-                    source.GetPrim(), 
-                    currentTime,
-                    nodesBuilder, 
-                    interfaceBuilder,
-                    targetName,
-                    flatten);
+            if (sourceType == UsdShadeAttributeType::Output) {
+                std::string targetHandle = _CreateShadingNode(
+                        source.GetPrim(), 
+                        currentTime,
+                        nodesBuilder, 
+                        interfaceBuilder,
+                        targetName,
+                        flatten);
 
-            // Check the relationship representing this connection
-            // to see if the targets come from a base material.
-            // Ignore them if so.
-            
+                // Check the relationship representing this connection
+                // to see if the targets come from a base material.
+                // Ignore them if so.
+                
 
-            if (flatten || 
-                !UsdShadeConnectableAPI::IsSourceFromBaseMaterial(shaderInput)) {
-                // These targets are local, so include them.
-                connectionsBuilder.set(
-                    inputId, 
-                    FnKat::StringAttribute(
-                        outputName.GetString() + "@" + targetHandle));
+                if (flatten || 
+                    !UsdShadeConnectableAPI::IsSourceFromBaseMaterial(shaderInput)) {
+                    // These targets are local, so include them.
+                    connectionsBuilder.set(
+                        inputId, 
+                        FnKat::StringAttribute(
+                            outputName.GetString() + "@" + targetHandle));
+                }
             }
         }
 
@@ -777,8 +778,17 @@ _UnrollInterfaceFromPrim(const UsdPrim& prim,
     UsdShadeMaterial materialSchema(prim);
     std::vector<UsdShadeInput> interfaceInputs = 
         materialSchema.GetInterfaceInputs();
+    UsdShadeNodeGraph::InterfaceInputConsumersMap interfaceInputConsumers =
+        materialSchema.ComputeInterfaceInputConsumersMap(
+            /*computeTransitiveMapping*/ true);
+
     TF_FOR_ALL(interfaceInputIter, interfaceInputs) {
         UsdShadeInput interfaceInput = *interfaceInputIter;
+
+        // Skip invalid interface inputs.
+        if (!interfaceInput.GetAttr()) { 
+            continue;
+        }
 
         const TfToken& paramName = interfaceInput.GetBaseName();
         const std::string renamedParam = paramPrefix + paramName.GetString();
@@ -791,26 +801,6 @@ _UnrollInterfaceFromPrim(const UsdPrim& prim,
                     PxrUsdKatanaUtils::ConvertVtValueToKatAttr(attrVal, true));
         }
 
-    }
-
-    UsdRiMaterialAPI materialAPI(prim);
-    UsdShadeNodeGraph::InterfaceInputConsumersMap interfaceInputConsumers =
-        materialAPI.ComputeInterfaceInputConsumersMap(
-            /*computeTransitiveMapping*/ true);
-
-    std::vector<UsdShadeInput> riInterfaceInputs = 
-        materialAPI.GetInterfaceInputs();
-
-    for (const auto &interfaceInput : riInterfaceInputs) {
-        
-        // Skip invalid interface inputs.
-        if (!interfaceInput.GetAttr()) { 
-            continue;
-        }
-
-        const TfToken& paramName = interfaceInput.GetBaseName();
-        const std::string renamedParam = paramPrefix + paramName.GetString();
-
         if (interfaceInputConsumers.count(interfaceInput) == 0) {
             continue;
         }
@@ -821,7 +811,7 @@ _UnrollInterfaceFromPrim(const UsdPrim& prim,
         for (const UsdShadeInput &consumer : consumers) {
             UsdPrim consumerPrim = consumer.GetPrim();
             
-            TfToken inputName = consumer.GetFullName();
+            TfToken inputName = consumer.GetBaseName();
 
             std::string handle = PxrUsdKatanaUtils::GenerateShadingNodeHandle(
                 consumerPrim);
