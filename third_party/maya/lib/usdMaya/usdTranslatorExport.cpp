@@ -82,11 +82,11 @@ usdTranslatorExport::writer(const MFileObject &file,
                 jobArgs.exportDisplayColor = true;
                 jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none;
                 
-                if (theOption[1] == "None") {
+                if (theOption[1] == MString("None")) {
                     jobArgs.exportDisplayColor = false;
-                } else if (theOption[1] == "Material Colors" || theOption[1] == "GPrim Colors") {
+                } else if (theOption[1] == MString("Material Colors") || theOption[1] == MString("GPrim Colors")) {
                     jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
-                } else if (theOption[1] == "RfM Shaders") {
+                } else if (theOption[1] == MString("RfM Shaders")) {
                     TfToken shadingMode("pxrRis");
                     if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode)) {
                         jobArgs.shadingMode = shadingMode;
