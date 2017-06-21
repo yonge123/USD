@@ -68,8 +68,7 @@ PxrUsdMayaShadingModeImporter
 PxrUsdMayaShadingModeRegistry::_GetImporter(const TfToken& name)
 {
     TfRegistryManager::GetInstance().SubscribeTo<PxrUsdMayaShadingModeImportContext>();
-    const auto it = _importReg.find(name);
-    return it == _importReg.end() ? nullptr : it->second;
+    return _importReg[name];
 }
 
 TfTokenVector
