@@ -48,7 +48,8 @@ PxrUsdMayaShadingModeExporterCreator
 PxrUsdMayaShadingModeRegistry::_GetExporter(const TfToken& name)
 {
     TfRegistryManager::GetInstance().SubscribeTo<PxrUsdMayaShadingModeExportContext>();
-    return _exportReg[name];
+    const auto it = _exportReg.find(name);
+    return it == _exportReg.end() ? nullptr : it->second;
 }
 
 typedef std::map<TfToken, PxrUsdMayaShadingModeImporter> _ImportRegistry;
@@ -67,7 +68,8 @@ PxrUsdMayaShadingModeImporter
 PxrUsdMayaShadingModeRegistry::_GetImporter(const TfToken& name)
 {
     TfRegistryManager::GetInstance().SubscribeTo<PxrUsdMayaShadingModeImportContext>();
-    return _importReg[name];
+    const auto it = _importReg.find(name);
+    return it == _importReg.end() ? nullptr : it->second;
 }
 
 TfTokenVector
