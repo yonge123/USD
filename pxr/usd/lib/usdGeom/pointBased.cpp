@@ -255,7 +255,8 @@ UsdGeomPointBased::ComputePositionsAtTimes(
     std::vector<VtVec3fArray>* positions,
     const std::vector<UsdTimeCode>& sampleTimes,
     UsdTimeCode baseTime,
-    float velocityScale) const {
+    float velocityScale,
+    VtVec3fArray* velocities) const {
     if (positions == nullptr) { return 0; }
     constexpr double epsilonTest = 1e-5;
     const auto sampleCount = sampleTimes.size();
@@ -268,16 +269,31 @@ UsdGeomPointBased::ComputePositionsAtTimes(
         return 0;
     }
 
+    auto sampleWithoutVelocity = [&]() -> size_t {
+        auto& first = positions->operator[](0);
+        if (!pointsAttr.Get(&first, sampleTimes[0])) { return 0; }
+        size_t validSamples = 1;
+        for (auto a = decltype(sampleCount){1}; a < sampleCount; ++a) {
+            auto& curr = positions->operator[](a);
+            if (!pointsAttr.Get(&curr, sampleTimes[a]) ||
+                curr.size() != first.size()) { break; }
+            ++validSamples;
+        }
+
+        return validSamples;
+    };
+
     bool hasValue = false;
     double pointsLowerTimeSample = 0.0;
     double pointsUpperTimeSample = 0.0;
     if (!pointsAttr.GetBracketingTimeSamples(baseTime.GetValue(), &pointsLowerTimeSample,
                                              &pointsUpperTimeSample, &hasValue) || !hasValue) {
-        return 0;
+        return sampleWithoutVelocity();
     }
 
     VtVec3fArray points;
-    VtVec3fArray velocities;
+    VtVec3fArray _velocities;
+    auto& velocity = velocities == nullptr ? _velocities : *velocities;
 
     // We need to check if there is a queriable velocity at the given point,
     // To avoid handling hihger frequency velocity samples, and other corner cases
@@ -292,8 +308,8 @@ UsdGeomPointBased::ComputePositionsAtTimes(
         && hasValue && GfIsClose(velocitiesLowerTimeSample, pointsLowerTimeSample, epsilonTest) &&
         GfIsClose(velocitiesUpperTimeSample, pointsUpperTimeSample, epsilonTest)) {
         if (pointsAttr.Get(&points, pointsLowerTimeSample) &&
-            velocitiesAttr.Get(&velocities, pointsLowerTimeSample) &&
-            points.size() == velocities.size()) {
+            velocitiesAttr.Get(&velocity, pointsLowerTimeSample) &&
+            points.size() == velocity.size()) {
             velocityExists = true;
         }
     }
@@ -308,22 +324,12 @@ UsdGeomPointBased::ComputePositionsAtTimes(
             const auto currentMultiplier = static_cast<float>((sampleTimes[a].GetValue() - pointsLowerTimeSample)
                                                               / timeCodesPerSecond) * velocityScale;
             for (auto i = decltype(pointCount){0}; i < pointCount; ++i) {
-                curr[i] = points[i] + velocities[i] * currentMultiplier;
+                curr[i] = points[i] + velocity[i] * currentMultiplier;
             }
         }
         return sampleCount;
     } else {
-        auto& first = positions->operator[](0);
-        if (!pointsAttr.Get(&first, sampleTimes[0])) { return 0; }
-        size_t validSamples = 1;
-        for (auto a = decltype(sampleCount){1}; a < sampleCount; ++a) {
-            auto& curr = positions->operator[](a);
-            if (!pointsAttr.Get(&curr, sampleTimes[a]) ||
-                curr.size() != first.size()) { break; }
-            ++validSamples;
-        }
-
-        return validSamples;
+        return sampleWithoutVelocity();
     }
 }
 
