@@ -269,12 +269,26 @@ UsdGeomPointBased::ComputePositionsAtTimes(
         return 0;
     }
 
+    auto sampleWithoutVelocity = [&]() -> size_t {
+        auto& first = positions->operator[](0);
+        if (!pointsAttr.Get(&first, sampleTimes[0])) { return 0; }
+        size_t validSamples = 1;
+        for (auto a = decltype(sampleCount){1}; a < sampleCount; ++a) {
+            auto& curr = positions->operator[](a);
+            if (!pointsAttr.Get(&curr, sampleTimes[a]) ||
+                curr.size() != first.size()) { break; }
+            ++validSamples;
+        }
+
+        return validSamples;
+    };
+
     bool hasValue = false;
     double pointsLowerTimeSample = 0.0;
     double pointsUpperTimeSample = 0.0;
     if (!pointsAttr.GetBracketingTimeSamples(baseTime.GetValue(), &pointsLowerTimeSample,
                                              &pointsUpperTimeSample, &hasValue) || !hasValue) {
-        return 0;
+        return sampleWithoutVelocity();
     }
 
     VtVec3fArray points;
@@ -315,17 +329,7 @@ UsdGeomPointBased::ComputePositionsAtTimes(
         }
         return sampleCount;
     } else {
-        auto& first = positions->operator[](0);
-        if (!pointsAttr.Get(&first, sampleTimes[0])) { return 0; }
-        size_t validSamples = 1;
-        for (auto a = decltype(sampleCount){1}; a < sampleCount; ++a) {
-            auto& curr = positions->operator[](a);
-            if (!pointsAttr.Get(&curr, sampleTimes[a]) ||
-                curr.size() != first.size()) { break; }
-            ++validSamples;
-        }
-
-        return validSamples;
+        return sampleWithoutVelocity();
     }
 }
 
