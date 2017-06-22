@@ -91,8 +91,6 @@ usdTranslatorExport::writer(const MFileObject &file,
                     if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode)) {
                         jobArgs.shadingMode = shadingMode;
                     }
-                } else if (theOption[1]=="arnold") {
-                    jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->arnold;
                 } else { 
                     TfToken modeToken(theOption[1].asChar());
                     if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(modeToken)) { 
