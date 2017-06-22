@@ -376,10 +376,13 @@ void usdWriteJob::endJob()
         // prim for the export... usdVariantRootPrimPath
         mJobCtx.mStage->GetRootLayer()->SetDefaultPrim(defaultPrim);
     }
+    // clear this so that no stage references are left around
+    // and running code in destructors
+    mJobCtx.mMayaPrimWriterList.clear();
     if (mJobCtx.mStage->GetRootLayer()->PermissionToSave()) {
         mJobCtx.mStage->GetRootLayer()->Save();
     }
-    mJobCtx.mStage->Close();
+    mJobCtx.mStage->Close();    
     MGlobal::displayInfo("usdWriteJob::endJob Saving Stage");
 }
 
