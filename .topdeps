@@ -26,6 +26,7 @@ tg/simple_features/maya_call_once_deadlock
 tg/simple_features/install_schemas
 tg/simple_features/tests_set_maya_app_dir
 tg/simple_features/loading_shading_mode_plugs
+tg/simple_features/clear_writers_before_save
 tg/pixar/katana_libs_dir_fix
 pseudo_root_warning
 ptex_prefer_static
