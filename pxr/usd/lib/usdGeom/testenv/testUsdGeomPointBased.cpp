@@ -127,23 +127,23 @@ void TestUsdGeomPointsComputePositions()
 
     // Fall back querying the positions using the built-in interpolation function
     samples1[0] = frame14;
-    TF_VERIFY(points.ComputePositionsAtTimes(&results1, samples1, frame1, 1.0) == 1);
+    TF_VERIFY(points.ComputePositionsAtTimes(&results1, samples1, frame1, 1.0f) == 1);
     TF_VERIFY(_verifyArrays(results1[0], positions1));
     samples1[0] = frame28;
-    TF_VERIFY(points.ComputePositionsAtTimes(&results1, samples1, frame2, 1.0) == 1);
+    TF_VERIFY(points.ComputePositionsAtTimes(&results1, samples1, frame2, 1.0f) == 1);
     TF_VERIFY(_verifyArrays(results1[0], positions2));
 
     std::vector<VtVec3fArray> results2(2);
     std::vector<UsdTimeCode> samples2 = {frame28, frame12};
 
     // Inconsistent vector lengths, we should only get one sample.
-    TF_VERIFY(points.ComputePositionsAtTimes(&results2, samples2, frame2, 1.0) == 1);
+    TF_VERIFY(points.ComputePositionsAtTimes(&results2, samples2, frame2, 1.0f) == 1);
     TF_VERIFY(_verifyArrays(results2[0], positions2));
 
     // Points count are consistent
     samples2[0] = frame12;
     samples2[1] = frame14;
-    TF_VERIFY(points.ComputePositionsAtTimes(&results2, samples2, frame2, 1.0) == 2);
+    TF_VERIFY(points.ComputePositionsAtTimes(&results2, samples2, frame2, 1.0f) == 2);
     TF_VERIFY(_verifyArrays(results2[0], positions1));
     TF_VERIFY(_verifyArrays(results2[1], positions1));
 
@@ -151,13 +151,15 @@ void TestUsdGeomPointsComputePositions()
 
     // Fall back to interpolation when there are not enough samples for velocity
     samples1[0] = frame28;
-    TF_VERIFY(points.ComputePositionsAtTimes(&results1, samples1, frame2, 1.0) == 1);
+    TF_VERIFY(points.ComputePositionsAtTimes(&results1, samples1, frame2, 1.0f) == 1);
     TF_VERIFY(_verifyArrays(results1[0], positions2));
 
-    // Test interpolation with partial velocity values
+    VtVec3fArray velocity;
+    // Test interpolation with partial velocity values and velocity output
     samples1[0] = frame14;
-    TF_VERIFY(points.ComputePositionsAtTimes(&results1, samples1, frame1, 1.0) == 1);
+    TF_VERIFY(points.ComputePositionsAtTimes(&results1, samples1, frame1, 1.0f, &velocity) == 1);
     TF_VERIFY(_verifyArrays(results1[0], _addArrays(positions1, velocities1, d04 / framesPerSecond)));
+    TF_VERIFY(_verifyArrays(velocity, velocities1));
 
     // Test interpolation with scale
     TF_VERIFY(points.ComputePositionsAtTimes(&results1, samples1, frame1, d08) == 1);
@@ -173,18 +175,18 @@ void TestUsdGeomPointsComputePositions()
 
     // Reverse interpolation
     samples1[0] = frame12;
-    TF_VERIFY(points.ComputePositionsAtTimes(&results1, samples1, frame2, 1.0) == 1);
+    TF_VERIFY(points.ComputePositionsAtTimes(&results1, samples1, frame2, 1.0f) == 1);
     TF_VERIFY(_verifyArrays(results1[0], _addArrays(positions2, velocities2, (d10 + d02 - d20) / framesPerSecond)));
 
     // Outside range
     samples1[0] = UsdTimeCode(d30 + d04);
-    TF_VERIFY(points.ComputePositionsAtTimes(&results1, samples1, frame3, 1.0) == 1);
+    TF_VERIFY(points.ComputePositionsAtTimes(&results1, samples1, frame3, 1.0f) == 1);
     TF_VERIFY(_verifyArrays(results1[0], _addArrays(positions3, velocities3, d04 / framesPerSecond)));
 
     // Two samples
     samples2[0] = frame12;
     samples2[1] = frame28;
-    TF_VERIFY(points.ComputePositionsAtTimes(&results2, samples2, frame2, 1.0) == 2);
+    TF_VERIFY(points.ComputePositionsAtTimes(&results2, samples2, frame2, 1.0f) == 2);
     TF_VERIFY(_verifyArrays(results2[0], _addArrays(positions2, velocities2, -d08 / framesPerSecond)));
     TF_VERIFY(_verifyArrays(results2[1], _addArrays(positions2, velocities2, d08 / framesPerSecond)));
 }
