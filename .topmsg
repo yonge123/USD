@@ -1,6 +1,4 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/simple_features/bake_codegen_templates
-
-<patch description>
+Subject: [USD] Including codegenTemplates in usdGenSchema.
 
 Signed-off-by: Pal Mezei <palm@lumapictures.com>
