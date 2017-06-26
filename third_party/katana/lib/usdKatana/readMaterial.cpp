@@ -115,6 +115,7 @@ PxrUsdKatanaReadMaterial(
     }
 
     attrs.set("material.katanaPath", FnKat::StringAttribute(katanaPath));
+    attrs.set("material.usdPrimName", FnKat::StringAttribute(prim.GetName()));
 
     PxrUsdKatanaReadPrim(material.GetPrim(), data, attrs);
 

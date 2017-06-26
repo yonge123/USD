@@ -316,9 +316,9 @@ PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
         const PxrUsdMayaUtil::ShapeSet& bindableRoots,
         const TfToken& shadingMode,
         bool mergeTransformAndShape,
-        SdfPath overrideRootPath,
-        const std::string& parentScope,
-        PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap)
+        SdfPath overrideRootPath,        
+        PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap,
+        const std::string& parentScope)
 {
     if (shadingMode == PxrUsdMayaShadingModeTokens->none) {
         return;
@@ -338,7 +338,7 @@ PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
     } else if (auto exporterCreator =
             PxrUsdMayaShadingModeRegistry::GetExporter(shadingMode)) {
         if (auto exporter = exporterCreator()) {
-            exporter->DoExport(stage, bindableRoots, mergeTransformAndShape, overrideRootPath);
+            exporter->DoExport(stage, bindableRoots, mergeTransformAndShape, overrideRootPath, dagPathToUsdMap);
         }
     }
     else {
