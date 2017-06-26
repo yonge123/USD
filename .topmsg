@@ -1,4 +1,0 @@
-From: nxkb <nxkbar@gmail.com>
-Subject: [usdMaya] prevent pxrUsd from being chosen to load abc files in maya
-
-Although we want alembics to be supported for loading within usd files, if the top level file is an abc, abcImport should be the one loading it.

@@ -234,12 +234,6 @@ usdTranslatorExport::identifyFile(
     if (fileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault.GetText() || 
         fileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionASCII.GetText()   || 
         fileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionCrate.GetText()) {
-
-        // leave directly exported/referenced alembic files to the alembic translator
-        // plus, this prevents the EXPORTER from being used when creating REFERENCES...
-        if (fileExtension == "abc") {
-            return kNotMyFileType;
-        }
         retValue = kIsMyFileType;
     }
 
