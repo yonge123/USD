@@ -121,7 +121,15 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
     }  // for m
 
     // Make sure the file name is a valid one with a proper USD extension.
+<<<<<<< tg/luma/pull_requests base
     if (UsdStage::IsSupportedFile(iFileName)) {
+=======
+    const std::string iFileExtension = TfStringGetSuffix(iFileName, '.');
+    if (SdfLayer::IsAnonymousLayerIdentifier(iFileName) ||
+            iFileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault || 
+            iFileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionASCII || 
+            iFileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionCrate) {
+>>>>>>> tg/ar_resolver_fixes/maya_usdImport
         mFileName = iFileName;
     } else {
         mFileName = TfStringPrintf("%s.%s",
