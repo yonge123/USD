@@ -50,14 +50,14 @@ from pxr import Sdf, Usd, Tf
 #------------------------------------------------------------------------------#
 
 _codegenTemplates = {
-    'api.h': """${TEMPLATE_API_H}""",
-    'plugInfo.json': """${TEMPLATE_PLUGINFO_JSON}""",
-    'schemaClass.cpp': """${TEMPLATE_SCHEMA_CLASS_CPP}""",
-    'schemaClass.h': """${TEMPLATE_SCHEMA_CLASS_H}""",
-    'tokens.cpp': """${TEMPLATE_TOKENS_CPP}""",
-    'tokens.h': """${TEMPLATE_TOKENS_H}""",
-    'wrapSchemaClass.cpp': """${TEMPLATE_WRAP_SCHEMA_CLASS_CPP}""",
-    'wrapTokens.cpp': """${TEMPLATE_WRAP_TOKENS_CPP}""",
+    'api.h': r"""${TEMPLATE_API_H}""",
+    'plugInfo.json': r"""${TEMPLATE_PLUGINFO_JSON}""",
+    'schemaClass.cpp': r"""${TEMPLATE_SCHEMA_CLASS_CPP}""",
+    'schemaClass.h': r"""${TEMPLATE_SCHEMA_CLASS_H}""",
+    'tokens.cpp': r"""${TEMPLATE_TOKENS_CPP}""",
+    'tokens.h': r"""${TEMPLATE_TOKENS_H}""",
+    'wrapSchemaClass.cpp': r"""${TEMPLATE_WRAP_SCHEMA_CLASS_CPP}""",
+    'wrapTokens.cpp': r"""${TEMPLATE_WRAP_TOKENS_CPP}""",
 }
 
 #------------------------------------------------------------------------------#
