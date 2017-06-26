@@ -146,10 +146,6 @@ usdTranslatorImport::identifyFile(
     if (fileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault.GetText() || 
         fileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionASCII.GetText() || 
         fileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionCrate.GetText()) {
-        // leave directly imported/referenced alembic files to the alembic translator
-        if (fileExtension == "abc") {
-            return kNotMyFileType;
-        }
         retValue = kIsMyFileType;
     }
 
