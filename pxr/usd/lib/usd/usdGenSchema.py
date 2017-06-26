@@ -57,7 +57,7 @@ _codegenTemplates = {
     'tokens.cpp': """${TEMPLATE_TOKENS_CPP}""",
     'tokens.h': """${TEMPLATE_TOKENS_H}""",
     'wrapSchemaClass.cpp': """${TEMPLATE_WRAP_SCHEMA_CLASS_CPP}""",
-    'wrapTokens.cpp': """${TEMPLATE_WRAP_SCHEMA_CLASS_CPP}""",
+    'wrapTokens.cpp': """${TEMPLATE_WRAP_TOKENS_CPP}""",
 }
 
 #------------------------------------------------------------------------------#
