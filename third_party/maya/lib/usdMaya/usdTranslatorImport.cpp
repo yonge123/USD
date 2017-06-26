@@ -132,12 +132,24 @@ usdTranslatorImport::identifyFile(
         const char* buffer,
         short size) const
 {
-    std::string fileName(file.fullName().asChar());
-    if(UsdStage::IsSupportedFile(fileName))
-    {
-        return kIsMyFileType;
+    MFileKind retValue = kNotMyFileType;
+    const MString fileName = file.fullName();
+    const int lastIndex = fileName.length() - 1;
+
+    const int periodIndex = fileName.rindex('.');
+    if (periodIndex < 0 || periodIndex >= lastIndex) {
+        return retValue;
     }
-    return kNotMyFileType;
+
+    const MString fileExtension = fileName.substring(periodIndex + 1, lastIndex);
+
+    if (fileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault.GetText() || 
+        fileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionASCII.GetText() || 
+        fileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionCrate.GetText()) {
+        retValue = kIsMyFileType;
+    }
+
+    return retValue;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
