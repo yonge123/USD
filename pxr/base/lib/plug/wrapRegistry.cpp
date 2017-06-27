@@ -214,7 +214,7 @@ void wrapRegistry()
         .def("GetPluginForType", &_GetPluginForType)
         .def("GetAllPlugins", &This::GetAllPlugins,
              return_value_policy<TfPySequenceToList>())
-        .def("GetRegisteredPluginPaths", &This::GetRegisteredPluginPaths,
+        .def("GetAllRegisteredPluginPaths", &This::GetAllRegisteredPluginPaths,
              return_value_policy<TfPySequenceToList>())
 
         .def("FindTypeByName", This::FindTypeByName,

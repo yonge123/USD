@@ -251,7 +251,7 @@ Plug_GetPaths()
 }
 
 std::vector<std::string>
-PlugRegistry::GetRegisteredPluginPaths() const {
+PlugRegistry::GetAllRegisteredPluginPaths() const {
     PlugPlugin::_RegisterAllPlugins();
     return Plug_GetPaths();
 }
