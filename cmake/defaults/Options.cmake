@@ -36,9 +36,12 @@ option(PXR_ENABLE_HDF5_SUPPORT "Enable HDF5 backend in the Alembic plugin for US
 option(PXR_ENABLE_PTEX_SUPPORT "Enable Ptex support" ON)
 option(PXR_MAYA_TBB_BUG_WORKAROUND "Turn on linker flag (-Wl,-Bsymbolic) to work around a Maya TBB bug" OFF)
 option(PXR_ENABLE_NAMESPACES "Enable C++ namespaces." ON)
+<<<<<<< tg/luma/pull_requests base
 option(PXR_SYMLINK_HEADER_FILES "Symlink the header files from, ie, pxr/base/lib/tf to CMAKE_DIR/pxr/base/tf, instead of copying; ensures that you may edit the header file in either location, and improves experience in IDEs which find normally the \"copied\" header, ie, CLion; has no effect on windows" OFF)
 option(PXR_USE_CCACHE "Use ccache. (gcc only)" OFF)
 option(PXR_INSTALL_BUILTIN_SCHEMAS "Install the built-in schemas next to the header files." ON)
+=======
+>>>>>>> tg/simple_features/install_schemas
 
 # Precompiled headers are a win on Windows, not on gcc.
 set(pxr_enable_pch "OFF")
