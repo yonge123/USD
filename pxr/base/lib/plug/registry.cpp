@@ -202,6 +202,16 @@ PlugRegistry::GetDataFromPluginMetaData(TfType type, const string &key) const
     return result;
 }
 
+std::vector<std::string>
+PlugRegistry::GetRegisteredPluginPaths() const {
+    std::vector<std::string> ret;
+    ret.reserve(_registeredPluginPaths.size());
+    for (const auto& it: _registeredPluginPaths) {
+        ret.push_back(it);
+    }
+    return ret;
+}
+
 string
 PlugRegistry::GetStringFromPluginMetaData(TfType type, const string &key) const
 {
