@@ -43,7 +43,7 @@ from collections import namedtuple
 from jinja2 import Environment, FileSystemLoader, DictLoader
 from jinja2.exceptions import TemplateSyntaxError
 
-from pxr import Sdf, Usd, Tf
+from pxr import Sdf, Usd, Tf, Plug, Ar
 
 #------------------------------------------------------------------------------#
 # Codegen Templates                                                            #
@@ -715,7 +715,7 @@ def _MakeFlattenedRegistryLayer(filePath):
     
 
 def GenerateRegistry(codeGenPath, filePath, classes, validate, env):
-
+    
     # Get the flattened layer to work with.
     flatLayer = _MakeFlattenedRegistryLayer(filePath)
 
@@ -824,6 +824,9 @@ if __name__ == '__main__':
         sys.exit(1)
 
     try:
+        # Setting up the default search path for plugins
+        os.environ['PXR_AR_DEFAULT_SEARCH_PATH'] = os.pathsep.join(
+            Plug.Registry().GetAllRegisteredPluginPaths() + [os.getenv('PXR_AR_DEFAULT_SEARCH_PATH', '')])
         
         #
         # Gather Schema Class information
