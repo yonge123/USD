@@ -196,6 +196,10 @@ function(_install_resource_files NAME pluginInstallPrefix pluginToLibraryPath)
         if (${resourceFile} STREQUAL "plugInfo.json")
             _plugInfo_subst(${NAME} "${pluginToLibraryPath}" ${resourceFile})
             list(APPEND resourceFiles "${CMAKE_CURRENT_BINARY_DIR}/${resourceFile}")
+        # Schema files from the source tree need their sublayers substituted
+        # so 3rd party plugins will have an easier time working with the installed schemas.
+        elseif (${resourceFile} STREQUAL "schema.usda")
+            list(APPEND resourceFiles ${resourceFile})
         else()
             list(APPEND resourceFiles ${resourceFile})
         endif()
