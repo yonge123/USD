@@ -1294,10 +1294,6 @@ function(_pxr_library NAME)
     # Set up the install.
     #
 
-    if (${PXR_INSTALL_BUILTIN_SCHEMAS} AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/schema.usda")
-        install(FILES schema.usda
-                DESTINATION ${headerInstallPrefix})
-    endif ()
     if(NOT isObject)
         install(
             TARGETS ${NAME}
