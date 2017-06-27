@@ -36,8 +36,15 @@ import sys
 
 if len(sys.argv) != 3:
     print "Usage: %s {source.py dest.py}" % sys.argv[0]
+    sys.exit(1)
 
 with open(sys.argv[1], 'r') as s:
     with open(sys.argv[2], 'w') as d:
+        import re
+        pattern = re.compile(r"@\.\./(.*)/schema.usda@")
         for line in s:
-            d.write(line)
+            m = pattern.search(line)
+            if m:
+                d.write(line.replace(m.group(0), "@%s/resources/schema.usda@" % m.group(1)))
+            else:
+                d.write(line)
