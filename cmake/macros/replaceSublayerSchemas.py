@@ -41,7 +41,7 @@ if len(sys.argv) != 3:
 with open(sys.argv[1], 'r') as s:
     with open(sys.argv[2], 'w') as d:
         import re
-        pattern = re.compile(r"@\.\./(.*)/schema.usda@")
+        pattern = re.compile(r"@.*\/([^\/]*)\/schema.usda@")
         for line in s:
             m = pattern.search(line)
             if m:
