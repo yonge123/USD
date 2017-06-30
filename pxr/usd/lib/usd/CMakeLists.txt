@@ -365,6 +365,11 @@ pxr_install_test_dir(
 )
 
 pxr_install_test_dir(
+    SRC testenv/testUsdValueClips_Legacy
+    DEST testUsdValueClips_Legacy
+)
+
+pxr_install_test_dir(
     SRC testenv/testUsdVariants
     DEST testUsdVariants
 )
@@ -390,6 +395,17 @@ pxr_register_test(testUsdValueClips
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdValueClips"
     EXPECTED_RETURN_CODE 0
+)
+
+# This test runs the same test script as testUsdValueClips
+# but uses a different set of test assets that are installed above.
+pxr_register_test(testUsdValueClips_Legacy
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdValueClips"
+    EXPECTED_RETURN_CODE 0
+    ENV
+        USD_AUTHOR_LEGACY_CLIPS=1
+        USD_READ_LEGACY_CLIPS=1
 )
 
 pxr_register_test(testUsdVariantEditing
