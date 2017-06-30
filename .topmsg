@@ -1,6 +1,4 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/simple_features/vec4_primvar_katana
-
-<patch description>
+Subject: [Katana] Support vec4 primvars.
 
 Signed-off-by: Pal Mezei <palm@lumapictures.com>
