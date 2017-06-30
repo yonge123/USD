@@ -148,7 +148,7 @@ try
             jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
         }
         else {
-            if (shadingMode == "Material Colors" || shadingMode == "GPrim Colors") {
+            if (shadingMode == "Material Colors") {
                 shadingMode = TfToken("displayColor");
             } else if (shadingMode == "RfM Shaders") {
                 shadingMode = TfToken("pxrRis");
