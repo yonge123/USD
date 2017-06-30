@@ -32,7 +32,6 @@
 #include "pxr/imaging/hd/bufferArrayRangeGL.h"
 #include "pxr/imaging/hd/bufferSpec.h"
 #include "pxr/imaging/hd/bufferSource.h"
-#include "pxr/base/tf/singleton.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -61,11 +60,6 @@ public:
     virtual HdAggregationStrategy::AggregationId ComputeAggregationId(
         HdBufferSpecVector const &bufferSpecs) const;
 
-    /// Returns an instance of resource registry
-    static HdVBOSimpleMemoryManager& GetInstance() {
-        return TfSingleton<HdVBOSimpleMemoryManager>::GetInstance();
-    }
-
     /// Returns the buffer specs from a given buffer array
     virtual HdBufferSpecVector GetBufferSpecs(
         HdBufferArraySharedPtr const &bufferArray) const;
@@ -76,7 +70,6 @@ public:
         VtDictionary &result) const;
 
 protected:
-    friend class TfSingleton<HdVBOSimpleMemoryManager>;
     class _SimpleBufferArray;
 
     /// \class _SimpleBufferArrayRange
@@ -99,6 +92,9 @@ protected:
         /// Returns true is the range has been assigned to a buffer
         HD_API
         virtual bool IsAssigned() const;
+
+        /// Returns true if this range is marked as immutable.
+        virtual bool IsImmutable() const;
 
         /// Resize memory area for this range. Returns true if it causes container
         /// buffer reallocation.
@@ -293,9 +289,6 @@ protected:
         }
     };
 };
-
-HD_API_TEMPLATE_CLASS(TfSingleton<HdVBOSimpleMemoryManager>);
-
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
