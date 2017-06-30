@@ -30,7 +30,6 @@
 
 #include "pxr/base/arch/hash.h"
 #include "pxr/base/tf/diagnostic.h"
-#include "pxr/base/tf/instantiateSingleton.h"
 #include "pxr/base/tf/iterator.h"
 
 #include "pxr/imaging/hd/bufferResourceGL.h"
@@ -43,10 +42,6 @@
 #include "pxr/imaging/hf/perfLog.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
-
-
-TF_INSTANTIATE_SINGLETON(HdInterleavedUBOMemoryManager);
-TF_INSTANTIATE_SINGLETON(HdInterleavedSSBOMemoryManager);
 
 // ---------------------------------------------------------------------------
 //  HdInterleavedMemoryManager
@@ -607,12 +602,18 @@ HdInterleavedMemoryManager::_StripedInterleavedBufferRange::~_StripedInterleaved
 }
 
 
-bool HdInterleavedMemoryManager::_StripedInterleavedBufferRange::IsAssigned() const
+bool
+HdInterleavedMemoryManager::_StripedInterleavedBufferRange::IsAssigned() const
 {
     return (_stripedBuffer != nullptr);
 }
 
-
+bool
+HdInterleavedMemoryManager::_StripedInterleavedBufferRange::IsImmutable() const
+{
+    return (_stripedBuffer != nullptr)
+         && _stripedBuffer->IsImmutable();
+}
 
 
 bool
