@@ -33,7 +33,6 @@
 #include "pxr/imaging/hd/bufferSource.h"
 #include "pxr/imaging/hd/strategyBase.h"
 
-#include "pxr/base/tf/singleton.h"
 #include "pxr/base/tf/mallocTag.h"
 #include "pxr/base/tf/token.h"
 
@@ -49,6 +48,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///
 class HdVBOMemoryManager : public HdAggregationStrategy {
 public:
+    HdVBOMemoryManager(bool isImmutable) : _isImmutable(isImmutable) {}
+
     /// Factory for creating HdBufferArray managed by
     /// HdVBOMemoryManager aggregation.
     HD_API
@@ -66,11 +67,6 @@ public:
     virtual AggregationId ComputeAggregationId(
         HdBufferSpecVector const &bufferSpecs) const;
 
-    /// Returns an instance of memory manager
-    static HdVBOMemoryManager& GetInstance() {
-        return TfSingleton<HdVBOMemoryManager>::GetInstance();
-    }
-
     /// Returns the buffer specs from a given buffer array
     virtual HdBufferSpecVector GetBufferSpecs(
         HdBufferArraySharedPtr const &bufferArray) const;
@@ -80,8 +76,10 @@ public:
         HdBufferArraySharedPtr const &bufferArray, 
         VtDictionary &result) const;
 
+private:
+    bool _isImmutable;
+
 protected:
-    friend class TfSingleton<HdVBOMemoryManager>;
     class _StripedBufferArray;
 
     /// specialized buffer array range
@@ -109,6 +107,8 @@ protected:
         HD_API
         virtual bool IsAssigned() const;
 
+        /// Returns true if this bar is marked as immutable.
+        virtual bool IsImmutable() const;
 
         /// Resize memory area for this range. Returns true if it causes container
         /// buffer reallocation.
@@ -229,7 +229,9 @@ protected:
     public:
         /// Constructor.
         HD_API
-        _StripedBufferArray(TfToken const &role, HdBufferSpecVector const &bufferSpecs);
+        _StripedBufferArray(TfToken const &role,
+                            HdBufferSpecVector const &bufferSpecs,
+                            bool isImmutable);
 
         /// Destructor. It invalidates _rangeList
         HD_API
@@ -317,9 +319,6 @@ protected:
         }
     };
 };
-
-HD_API_TEMPLATE_CLASS(TfSingleton<HdVBOMemoryManager>);
-
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
