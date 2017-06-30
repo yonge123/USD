@@ -269,7 +269,35 @@ PxrUsdKatanaReadMesh(
     mesh.GetSubdivisionSchemeAttr().Get(&scheme);
     bool isSubd = (scheme != UsdGeomTokens->none);
 
-    attrs.set("type", FnKat::StringAttribute(isSubd ? "subdmesh" : "polymesh"));
+    attrs.set("geometry.point.P", [&] () -> FnKat::Attribute {
+        const auto& motionSampleTimes = data.GetMotionSampleTimes(mesh.GetPointsAttr());
+
+        const auto numMotionSampleTimes = motionSampleTimes.size();
+        if (numMotionSampleTimes < 2) {
+            return PxrUsdKatanaGeomGetPAttr(mesh, data);
+        }
+
+        const auto currentTime = data.GetCurrentTime();
+        
+        std::vector<UsdTimeCode> sampleTimes; sampleTimes.reserve(numMotionSampleTimes);
+        for (const auto& it : motionSampleTimes) {
+            sampleTimes.push_back(currentTime + it);
+        }
+
+        std::vector<VtVec3fArray> positionSamples(numMotionSampleTimes);
+
+        const auto numPosSamples =
+            mesh.ComputePositionsAtTimes(&positionSamples, sampleTimes, currentTime);
+
+        FnKat::FloatBuilder posBuilder(3);
+
+        for (auto i = decltype(numMotionSampleTimes){0}; i < numPosSamples; ++i) {
+            auto& sample = posBuilder.get(motionSampleTimes[i]);
+            PxrUsdKatanaUtils::ConvertArrayToVector(positionSamples[i], &sample);
+        }
+
+        return posBuilder.build();
+    } ());
 
     //
     // Construct the 'geometry' attribute.
