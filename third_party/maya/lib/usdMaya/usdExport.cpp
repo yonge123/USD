@@ -150,8 +150,8 @@ try
         if (shadingMode.IsEmpty()) {
             jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
         }
-        else {            
-            if (shadingMode == "Material Colors" || shadingMode == "GPrim Colors") {
+        else {
+            if (shadingMode == "Material Colors") {
                 shadingMode = TfToken("displayColor");
             } else if (shadingMode == "RfM Shaders") {
                 shadingMode = TfToken("pxrRis");
@@ -164,7 +164,7 @@ try
                     MGlobal::displayError(TfStringPrintf("No shadingMode '%s' found.  Setting shadingMode='none'", 
                                 shadingMode.GetText()).c_str());
                 }
-                jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none;
+                shadingMode = PxrUsdMayaShadingModeTokens->none;
             }
         }
     }
