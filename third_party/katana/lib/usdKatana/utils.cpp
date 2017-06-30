@@ -639,12 +639,8 @@ _KTypeAndSizeFromUsdVec4(TfToken const &roleName,
     } else if (roleName == SdfValueRoleNames->Color) {
         *inputTypeAttr = FnKat::StringAttribute("color4");
     } else if (roleName.IsEmpty()) {
-        // Deserves explanation: there is no type in prman
-        // (or apparently, katana) that represents 
-        // "a 3-vector with no additional behavior/meaning.
-        // P-refs fall into this category.  In our pipeline,
-        // we have chosen to represent this as float[3] to
-        // renderers.
+        // We are mimicking the behavior of
+        // _KTypeAndSizeFromUsdVec3 here.
         *inputTypeAttr = FnKat::StringAttribute(typeStr);
         *elementSizeAttr = FnKat::IntAttribute(4);
     } else {
