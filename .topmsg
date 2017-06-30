@@ -1,6 +1,4 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/simple_features/katana_improved_deformation_blur
-
-<patch description>
+Subject: [Katana] Improving polymesh deformation blur for varying topology.
 
 Signed-off-by: Pal Mezei <palm@lumapictures.com>
