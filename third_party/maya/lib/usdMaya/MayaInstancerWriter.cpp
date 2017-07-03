@@ -42,10 +42,14 @@ MayaInstancerWriter::MayaInstancerWriter(const MDagPath& iDag,
                     bool instanceSource,
                     usdWriteJobCtx& jobCtx)
     : MayaTransformWriter(iDag, uPath, instanceSource, jobCtx) {
-    auto primSchema = UsdGeomPointInstancer::Define(getUsdStage(), getUsdPath());
-    TF_AXIOM(primSchema);
-    mUsdPrim = primSchema.GetPrim();
-    TF_AXIOM(mUsdPrim);
+    if (jobCtx.getArgs().exportInstances) {
+        auto primSchema = UsdGeomPointInstancer::Define(getUsdStage(), getUsdPath());
+        TF_AXIOM(primSchema);
+        mUsdPrim = primSchema.GetPrim();
+        TF_AXIOM(mUsdPrim);
+    } else {
+        setValid(false);
+    }
 }
 
 void MayaInstancerWriter::write(const UsdTimeCode& usdTime) {
@@ -176,17 +180,27 @@ void MayaInstancerWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPointIn
 }
 
 int MayaInstancerWriter::getPathIndex(const MDagPath& path, UsdGeomPointInstancer& instancer) {
+    auto handlePath = [&] (const SdfPath& usdPath) -> int {
+        const int id = static_cast<int>(mRelationships.size());
+        mRelationships.emplace(path, id);
+        instancer.GetPrototypesRel().AppendTarget(usdPath);
+        return id;
+    };
     const auto it = mRelationships.find(path);
     if (it == mRelationships.end()) {
         const auto usdPath = mWriteJobCtx.getUsdPath(path);
         if (usdPath.IsEmpty()) {
-            mRelationships.emplace(path, -1);
-            return -1;
+            // If usdPath is empty, that means the object is not exported
+            // so we are trying to trigger an export via querying the getMasterPath.
+            const auto masterPath = mWriteJobCtx.getMasterPath(path);
+            if (masterPath.IsEmpty()) {
+                mRelationships.emplace(path, -1);
+                return -1;
+            } else {
+                return handlePath(masterPath);
+            }
         } else {
-            const int id = static_cast<int>(mRelationships.size());
-            mRelationships.emplace(path, id);
-            instancer.GetPrototypesRel().AppendTarget(usdPath);
-            return id;
+            return handlePath(usdPath);
         }
     } else {
         return it->second;
