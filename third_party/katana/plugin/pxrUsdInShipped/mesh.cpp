@@ -89,9 +89,14 @@ _CreateFaceSets(
         FnKat::GroupBuilder faceSetAttrs;
 
         faceSetAttrs.set("type", FnKat::StringAttribute("faceset"));
-        faceSetAttrs.set("materialAssign", FnKat::StringAttribute(
-            PxrUsdKatanaUtils::ConvertUsdMaterialPathToKatLocation(
-                bindingTargets[faceSetIdx], data)));
+        // faceCounts and bindingTargets SHOULD always be the same size, but
+        // in case there was an error writing out, don't want to crash...
+        // perhaps should print a warning message though?
+        if (faceSetIdx < bindingTargets.size()) {
+            faceSetAttrs.set("materialAssign", FnKat::StringAttribute(
+                    PxrUsdKatanaUtils::ConvertUsdMaterialPathToKatLocation(
+                            bindingTargets[faceSetIdx], data)));
+        }
 
         FnKat::IntBuilder facesBuilder;
         {
