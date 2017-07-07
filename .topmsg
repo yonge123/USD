@@ -1,0 +1,2 @@
+From: Paul Molodowitch <pm@stanfordalumni.org>
+Subject: [katana] fix crash if num of material bindings doesn't match num of facesets
