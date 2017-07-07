@@ -26,6 +26,7 @@
 
 #include "pxr/imaging/hdSt/points.h"
 #include "pxr/imaging/hdSt/pointsShaderKey.h"
+#include "pxr/imaging/hdSt/instancer.h"
 
 #include "pxr/base/gf/vec2i.h"
 #include "pxr/base/tf/getenv.h"
@@ -92,8 +93,14 @@ HdStPoints::_UpdateDrawItem(HdSceneDelegate *sceneDelegate,
     _PopulateConstantPrimVars(sceneDelegate, drawItem, dirtyBits);
 
     /* INSTANCE PRIMVARS */
-    _PopulateInstancePrimVars(sceneDelegate, drawItem, dirtyBits,
-                              InstancePrimVar);
+    if (!GetInstancerId().IsEmpty()) {
+        HdStInstancer *instancer = static_cast<HdStInstancer*>(
+            sceneDelegate->GetRenderIndex().GetInstancer(GetInstancerId()));
+        if (TF_VERIFY(instancer)) {
+            instancer->PopulateDrawItem(drawItem, &_sharedData,
+                dirtyBits, InstancePrimVar);
+        }
+    }
 
     HdSt_PointsShaderKey shaderKey;
     drawItem->SetGeometricShader(Hd_GeometricShader::Create(shaderKey));
@@ -119,26 +126,31 @@ HdStPoints::_GetRepr(HdSceneDelegate *sceneDelegate,
     _PointsReprConfig::DescArray descs = _GetReprDesc(reprName);
 
     _ReprVector::iterator it = _reprs.begin();
-    if (_reprs.empty()) {
-        // Hydra should have called _InitRepr earlier in sync when
-        // before sending dirty bits to the delegate.
-        TF_CODING_ERROR("_InitRepr() should be called for repr %s.",
-                        reprName.GetText());
+    bool isNew = it == _reprs.end();
+    if (isNew) {
+        it = _reprs.insert(_reprs.end(),
+                           std::make_pair(reprName,
+                                          HdReprSharedPtr(new HdRepr())));
 
-        static const HdReprSharedPtr ERROR_RETURN;
-
-        return ERROR_RETURN;
+        // allocate all draw items
+        for (auto desc : descs) {
+            if (desc.geomStyle == HdPointsGeomStyleInvalid) {
+                continue;
+            }
+            it->second->AddDrawItem(&_sharedData);
+        }
     }
 
+    *dirtyBits = _PropagateRprimDirtyBits(*dirtyBits);
+
+
     // points don't have multiple draw items (for now)
-    if (HdChangeTracker::IsDirty(*dirtyBits)) {
+    if (isNew || HdChangeTracker::IsDirty(*dirtyBits)) {
         if (descs[0].geomStyle != HdPointsGeomStyleInvalid) {
             _UpdateDrawItem(sceneDelegate,
-                            _reprs[0].second->GetDrawItem(0),
+                            it->second->GetDrawItem(0),
                             dirtyBits);
         }
-
-        *dirtyBits &= ~DirtyNewRepr;
     }
 
     return it->second;
@@ -243,38 +255,6 @@ HdStPoints::_GetInitialDirtyBits() const
 
     return mask;
 }
-
-HdDirtyBits
-HdStPoints::_PropagateDirtyBits(HdDirtyBits bits) const
-{
-    return bits;
-}
-
-void
-HdStPoints::_InitRepr(TfToken const &reprName,
-                      HdDirtyBits *dirtyBits)
-{
-    _PointsReprConfig::DescArray const &descs = _GetReprDesc(reprName);
-
-    if (_reprs.empty()) {
-        _reprs.emplace_back(reprName, boost::make_shared<HdRepr>());
-
-        HdReprSharedPtr &repr = _reprs.back().second;
-
-        // allocate all draw items
-        for (size_t descIdx = 0; descIdx < descs.size(); ++descIdx) {
-            const HdPointsReprDesc &desc = descs[descIdx];
-
-            if (desc.geomStyle != HdPointsGeomStyleInvalid) {
-                repr->AddDrawItem(&_sharedData);
-            }
-        }
-
-        *dirtyBits |= DirtyNewRepr;
-    }
-
-}
-
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

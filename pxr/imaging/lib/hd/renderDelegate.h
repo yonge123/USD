@@ -41,6 +41,7 @@ class HdSprim;
 class HdBprim;
 class HdSceneDelegate;
 class HdRenderPass;
+class HdInstancer;
 
 typedef boost::shared_ptr<class HdRenderPass> HdRenderPassSharedPtr;
 
@@ -111,18 +112,30 @@ public:
     ///
     /// Request to create a new renderpass.
     /// \param index the render index to bind to the new renderpass.
-    /// \return A shared pointer to the new renderpass or empty on error.
-    ///
-    virtual HdRenderPassSharedPtr CreateRenderPass(HdRenderIndex *index) = 0;
-
-    ///
-    /// Request to create a new renderpass.
-    /// \param index the render index to bind to the new renderpass.
     /// \param collection the rprim collection to bind to the new renderpass.
     /// \return A shared pointer to the new renderpass or empty on error.
     ///
     virtual HdRenderPassSharedPtr CreateRenderPass(HdRenderIndex *index,
                                       HdRprimCollection const& collection) = 0;
+
+    ////////////////////////////////////////////////////////////////////////////
+    ///
+    /// Instancer Factory
+    ///
+    ////////////////////////////////////////////////////////////////////////////
+
+    ///
+    /// Request to create a new instancer.
+    /// \param id The unique identifier of this instancer.
+    /// \param instancerId The unique identifier for the parent instancer that
+    ///                    uses this instancer as a prototype (may be empty).
+    /// \return A pointer to the new instancer or nullptr on error.
+    ///
+    virtual HdInstancer *CreateInstancer(HdSceneDelegate *delegate,
+                                         SdfPath const& id,
+                                         SdfPath const& instancerId) = 0;
+
+    virtual void DestroyInstancer(HdInstancer *instancer) = 0;
 
     ////////////////////////////////////////////////////////////////////////////
     ///

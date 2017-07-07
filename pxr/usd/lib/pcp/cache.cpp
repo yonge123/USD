@@ -47,7 +47,6 @@
 #include "pxr/usd/sdf/schema.h"
 #include "pxr/base/tracelite/trace.h"
 #include "pxr/base/work/arenaDispatcher.h"
-#include "pxr/base/work/dispatcher.h"
 #include "pxr/base/work/loops.h"
 #include "pxr/base/work/singularTask.h"
 #include "pxr/base/work/utils.h"
@@ -1418,7 +1417,7 @@ struct Pcp_ParallelIndexer
     PcpErrorVector *_allErrors;
     ChildrenPredicate _childrenPredicate;
     vector<pair<const PcpPrimIndex *, SdfPath> > _toCompute;
-    const PcpLayerStackPtr &_layerStack;
+    PcpLayerStackPtr _layerStack;
     PcpPrimIndexInputs _baseInputs;
     tbb::concurrent_vector<PcpPrimIndexOutputs> _results;
     tbb::spin_rw_mutex _primIndexCacheMutex;
@@ -1427,7 +1426,7 @@ struct Pcp_ParallelIndexer
     vector<PcpPrimIndex> _consumerScratch;
     vector<SdfPath> _consumerScratchPayloads;
     ArResolver& _resolver;
-    WorkDispatcher _dispatcher;
+    WorkArenaDispatcher _dispatcher;
     WorkSingularTask _consumer;
     const ArResolverScopedCache* _parentCache;
     char const * const _mallocTag1;

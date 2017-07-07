@@ -27,12 +27,12 @@
 #include "pxr/usd/usd/attribute.h"
 #include "pxr/usd/usd/clip.h"
 #include "pxr/usd/usd/clipCache.h"
-#include "pxr/usd/usd/conversions.h"
 #include "pxr/usd/usd/debugCodes.h"
 #include "pxr/usd/usd/instanceCache.h"
 #include "pxr/usd/usd/interpolators.h"
 #include "pxr/usd/usd/notice.h"
 #include "pxr/usd/usd/prim.h"
+#include "pxr/usd/usd/pyConversions.h"
 #include "pxr/usd/usd/relationship.h"
 #include "pxr/usd/usd/resolver.h"
 #include "pxr/usd/usd/resolveInfo.h"
@@ -5348,8 +5348,8 @@ _ClipAppliesToLayerStackSite(
     const Usd_ClipRefPtr& clip,
     const PcpLayerStackPtr& layerStack, const SdfPath& primPathInLayerStack)
 {
-    return (layerStack == clip->sourceNode.GetLayerStack()
-        && primPathInLayerStack.HasPrefix(clip->sourceNode.GetPath()));
+    return (layerStack == clip->sourceLayerStack
+        && primPathInLayerStack.HasPrefix(clip->sourcePrimPath));
 }
 
 static bool
@@ -5357,17 +5357,19 @@ _ClipsApplyToNode(
     const Usd_ClipCache::Clips& clips, 
     const PcpNodeRef& node)
 {
-    return (node.GetLayerStack() == clips.sourceNode.GetLayerStack()
-            && node.GetPath().HasPrefix(clips.sourceNode.GetPath()));
+    return (node.GetLayerStack() == clips.sourceLayerStack
+            && node.GetPath().HasPrefix(clips.sourcePrimPath));
 }
 
 static
-const Usd_ClipCache::Clips*
+const std::vector<const Usd_ClipCache::Clips*>
 _GetClipsThatApplyToNode(
     const std::vector<Usd_ClipCache::Clips>& clipsAffectingPrim,
     const PcpNodeRef& node,
     const SdfAbstractDataSpecId& specId)
 {
+    std::vector<const Usd_ClipCache::Clips*> relevantClips;
+
     for (const auto& localClips : clipsAffectingPrim) {
         if (_ClipsApplyToNode(localClips, node)) {
             // Only look for samples in clips for attributes that are
@@ -5387,15 +5389,15 @@ _GetClipsThatApplyToNode(
                 if (!localClips.manifestClip->HasField(
                         specId, SdfFieldKeys->Variability, &attrVariability)
                     || attrVariability != SdfVariabilityVarying) {
-                    return nullptr;
+                    continue;
                 }
             }
 
-            return &localClips;
+            relevantClips.push_back(&localClips);
         }
     }
 
-    return nullptr;
+    return relevantClips;
 }
 
 
@@ -5912,7 +5914,7 @@ UsdStage::_GetResolvedValueImpl(const UsdProperty &prop,
         const SdfAbstractDataSpecId specId(&node.GetPath(), &prop.GetName());
         const SdfLayerRefPtrVector& layerStack 
             = node.GetLayerStack()->GetLayers();
-        boost::optional<const Usd_ClipCache::Clips*> clips;
+        boost::optional<std::vector<const Usd_ClipCache::Clips*>> clips;
         for (size_t i = 0, e = layerStack.size(); i < e; ++i) {
             if (nodeHasSpecs) { 
                 if (resolver->ProcessLayer(i, specId, node, 
@@ -5927,7 +5929,7 @@ UsdStage::_GetResolvedValueImpl(const UsdProperty &prop,
                                                      node, specId);
                     // If we don't have specs on this node and clips don't
                     // apply we can mode onto the next node.
-                    if (!nodeHasSpecs && !clips.get()) { 
+                    if (!nodeHasSpecs && clips->empty()) { 
                         break; 
                     }
                 }
@@ -5937,19 +5939,21 @@ UsdStage::_GetResolvedValueImpl(const UsdProperty &prop,
                 ARCH_PRAGMA_PUSH
                 ARCH_PRAGMA_MAYBE_UNINITIALIZED
 
-                // We only care about clips that were introduced at this
-                // position within the LayerStack.
-                if (!clips.get() || clips.get()->sourceLayerIndex != i) {
-                    continue;
-                }
+                for (const Usd_ClipCache::Clips* clipSet : *clips) {
+                    // We only care about clips that were introduced at this
+                    // position within the LayerStack.
+                    if (clipSet->sourceLayerIndex != i) {
+                        continue;
+                    }
 
-                // Look through clips to see if they have a time sample for
-                // this attribute. If a time is given, examine just the clips
-                // that are active at that time.
-                for (const auto& clip : clips.get()->valueClips) {
-                    if (resolver->ProcessClip(clip, specId, node,
-                                              localTime.get_ptr())) {
-                        return;
+                    // Look through clips to see if they have a time sample for
+                    // this attribute. If a time is given, examine just the clips
+                    // that are active at that time.
+                    for (const Usd_ClipRefPtr& clip : clipSet->valueClips) {
+                        if (resolver->ProcessClip(clip, specId, node,
+                                                  localTime.get_ptr())) {
+                            return;
+                        }
                     }
                 }
 

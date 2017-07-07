@@ -22,7 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "primWrapper.h"
-#include "Context.h"
+#include "context.h"
 
 #include "UT_Gf.h"
 #include "GT_VtArray.h"
@@ -291,12 +291,15 @@ GusdPrimWrapper::redefine(
 
 bool 
 GusdPrimWrapper::updateFromGTPrim(
-    const GT_PrimitiveHandle&,
+    const GT_PrimitiveHandle&  sourcePrim,
     const UT_Matrix4D&         houXform,
     const GusdContext&         ctxt,
     GusdSimpleXformCache&      xformCache)
-{ 
-    return false; 
+{
+    // Set the active state of the UsdPrim if any "usdactive" attributes exist
+    updateActiveFromGTPrim(sourcePrim, ctxt.time);
+
+    return true;
 }
 
 void
@@ -341,6 +344,24 @@ GusdPrimWrapper::updateVisibilityFromGTPrim(
             setVisibility(UsdGeomTokens->inherited, time);
         } else {
             setVisibility(UsdGeomTokens->invisible, time);
+        }
+    }
+}
+
+void
+GusdPrimWrapper::updateActiveFromGTPrim(
+        const GT_PrimitiveHandle& sourcePrim,
+        UsdTimeCode time)
+{
+    UsdPrim prim = getUsdPrimForWrite().GetPrim();
+
+    GT_Owner attrOwner;
+    GT_DataArrayHandle houAttr
+        = sourcePrim->findAttribute("usdactive", attrOwner, 0);
+    if (houAttr) {
+        int active = houAttr->getI32(0);
+        if ((bool)active != prim.IsActive()) {
+            prim.SetActive((bool)active);            
         }
     }
 }
@@ -1043,10 +1064,8 @@ GusdPrimWrapper::computeTransform(
         const UT_Matrix4D&          houXform,
         const GusdSimpleXformCache& xformCache ) {
 
-    UsdPrim parent = prim.GetParent();
-
-    // We need the transform into the prims parent space.
-    // If our parent is a group that we have written on this frame, 
+    // We need the transform into the prims space.
+    // If the prim is in a hierarchy that we have written on this frame, 
     // its transform will be in the xformCache. Otherwise, we can read it 
     // from the global cache. 
     //
@@ -1054,19 +1073,19 @@ GusdPrimWrapper::computeTransform(
     // will only contain transform that we read from the stage and 
     // not anything that we have modified. 
 
-    UT_Matrix4D parentToWorldXform;
-    auto it = xformCache.find( parent.GetPath() );
+    UT_Matrix4D primXform;
+    auto it = xformCache.find( prim.GetPath() );
     if( it != xformCache.end() ) {
-        parentToWorldXform = it->second;
+        primXform = it->second;
     }
     else if( !GusdUSD_XformCache::GetInstance().GetLocalToWorldTransform( 
-                        parent,
+                        prim,
                         time,
-                        parentToWorldXform )) {
-        TF_WARN( "Failed to get transform for %s.", parent.GetPath().GetText() );
-        parentToWorldXform.identity();
+                        primXform )) {
+        TF_WARN( "Failed to get transform for %s.", prim.GetPath().GetText() );
+        primXform.identity();
     }
-    return GusdUT_Gf::Cast( houXform ) / GusdUT_Gf::Cast( parentToWorldXform );
+    return GusdUT_Gf::Cast( houXform ) / GusdUT_Gf::Cast( primXform );
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

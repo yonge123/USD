@@ -37,11 +37,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-HdRenderPass::HdRenderPass(HdRenderIndex *index)
-    : _renderIndex(index)
-{
-}
-
 HdRenderPass::HdRenderPass(HdRenderIndex *index,
                            HdRprimCollection const& collection)
     : _renderIndex(index)
@@ -130,6 +125,9 @@ HdRenderPass::Sync()
 
     // Sync the dirty list of prims
     _renderIndex->Sync(_dirtyList);
+
+    // Give derived classes a chance to sync.
+    _Sync();
 }
 
 TfTokenVector const &

@@ -859,66 +859,6 @@ namespace {
             }
         }
     };
-
-    static void
-    _PreSyncRPrims(_RprimSyncRequestVector *syncReq,
-                             _ReprList reprs,
-                             size_t begin,
-                             size_t end)
-    {
-        for (size_t i = begin; i < end; ++i)
-        {
-            HdSceneDelegate *sceneDelegate = syncReq->sceneDelegates[i];
-            HdRprim         *rprim         = syncReq->rprims[i];
-            HdDirtyBits     &dirtyBits     = syncReq->request.dirtyBits[i];
-            size_t          reprsMask      = syncReq->reprsMasks[i];
-
-            // Initialize all utilized repr's for the rprim.
-            //
-            // The request vector is built by combining multiple rprim
-            // collections and each collection can have it's own
-            // repr.  The reprs param is a list of all the unique reprs used
-            // by these collections.
-            //
-            // As such each Rprim can be included in multiple collections,
-            // each Rprim can have multiple repr's in the same sync.
-            // Thus the reprs mask, specifies which subset of reprs from the
-            // repr list is used by collections the prim belongs to.
-            //
-            // An Rprim may require additional data to perform a sync of a repr
-            // for the first time.  Therefore, inform the Rprim of the new repr
-            // and give it the opportunity to modify the dirty bits in the
-            // request before providing them to the scene delegate.
-            TF_FOR_ALL(it, reprs) {
-                if (reprsMask & 1) {
-                    rprim->InitRepr(sceneDelegate,
-                                    it->reprName,
-                                    it->forcedRepr,
-                                    &dirtyBits);
-                }
-                reprsMask >>= 1;
-            }
-
-            // A render delegate may require additional information
-            // from the scene delegate to process a change.
-            //
-            // Calling PropagateRprimDirtyBits gives the Rprim an opportunity
-            // to update the dirty bits in order to request the information
-            // before passing the request to the scene deleate.
-            dirtyBits = rprim->PropagateRprimDirtyBits(dirtyBits);
-        }
-    }
-
-    static void
-    _PreSyncRequestVector(_RprimSyncRequestVector *syncReq,
-                                    _ReprList reprs)
-    {
-        WorkParallelForN(syncReq->rprims.size(),
-                     boost::bind(&_PreSyncRPrims,
-                                 syncReq, reprs, _1, _2));
-
-    }
-
 };
 
 void
@@ -1057,32 +997,6 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector const &tasks,
     // Drop the GIL before we spawn parallel tasks.
     TF_PY_ALLOW_THREADS_IN_SCOPE();
 
-
-    // Give the render delegates the chance to modify the sync request
-    // before passing it to the scene delegates.
-    //
-    // This allows the render delegate to request more data that it needs
-    // to process the changes that are marked in the change tracker.
-    //
-    // So that the entity marking the changes does not need to be aware of
-    // render delegate specific data dependencies.
-    {
-        TRACE_SCOPE("Pre-Sync Rprims");
-
-        // Dispatch synchronization work to each delegate.
-        WorkArenaDispatcher dirtyBitDispatcher;
-
-        TF_FOR_ALL(dlgIt, syncMap) {
-            _RprimSyncRequestVector *r = &dlgIt->second;
-            dirtyBitDispatcher.Run(
-                                   boost::bind(&_PreSyncRequestVector,
-                                               r, reprs));
-
-        }
-        dirtyBitDispatcher.Wait();
-    }
-
-
     {
         TRACE_SCOPE("Delegate Sync");
         // Dispatch synchronization work to each delegate.
@@ -1202,8 +1116,8 @@ HdRenderIndex::InsertInstancer(HdSceneDelegate* delegate,
     }
 #endif
 
-    HdInstancerSharedPtr instancer =
-        HdInstancerSharedPtr(new HdInstancer(delegate, id, parentId));
+    HdInstancer *instancer =
+        _renderDelegate->CreateInstancer(delegate, id, parentId);
 
     _instancerMap[id] = instancer;
     _tracker.InstancerInserted(id);
@@ -1219,17 +1133,19 @@ HdRenderIndex::RemoveInstancer(SdfPath const& id)
     if (it == _instancerMap.end())
         return;
 
+    _renderDelegate->DestroyInstancer(it->second);
+
     _tracker.InstancerRemoved(id);
     _instancerMap.erase(it);
 }
 
-HdInstancerSharedPtr
+HdInstancer *
 HdRenderIndex::GetInstancer(SdfPath const &id) const
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    HdInstancerSharedPtr instancer;
+    HdInstancer *instancer = nullptr;
     TfMapLookup(_instancerMap, id, &instancer);
 
     return instancer;

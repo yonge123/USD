@@ -53,11 +53,16 @@ public:
     virtual const TfTokenVector &GetSupportedBprimTypes() const override;
 
     HDST_API
-    virtual HdRenderPassSharedPtr CreateRenderPass(
-                HdRenderIndex *index) override;
-    HDST_API
     virtual HdRenderPassSharedPtr CreateRenderPass(HdRenderIndex *index,
                 HdRprimCollection const& collection) override;
+
+    HDST_API
+    virtual HdInstancer *CreateInstancer(HdSceneDelegate *delegate,
+                                         SdfPath const& id,
+                                         SdfPath const& instancerId);
+
+    HDST_API
+    virtual void DestroyInstancer(HdInstancer *instancer);
 
     HDST_API
     virtual HdRprim *CreateRprim(TfToken const& typeId,
