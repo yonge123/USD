@@ -984,7 +984,6 @@ PxrUsdMayaWriteUtil::CleanupAttributeKeys(UsdAttribute attribute,
     if (!attribute) {
         return;
     }
-    // without the thread_local it'll get reallocated all the time
     static thread_local std::vector<double> time_samples;
     time_samples.clear();
     attribute.GetTimeSamples(&time_samples);
@@ -1018,7 +1017,10 @@ PxrUsdMayaWriteUtil::CleanupAttributeKeys(UsdAttribute attribute,
             const auto middle_time = time_samples[i];
             attribute.Get(&middle, middle_time);
             attribute.Get(&last, time_samples[i + 1]);
+<<<<<<< tg/luma/luma base
             // not the best one, we could do bigger jumps, but this is cleaner code wise
+=======
+>>>>>>> tg/luma/pull_requests
             if (first.operator==(middle) && first.operator==(last)) {
                 attribute.ClearAtTime(middle_time);
             } else {

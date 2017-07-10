@@ -176,8 +176,11 @@ struct PxrUsdMayaWriteUtil
             VtVec3fArray* val);
     /// \}
 
-    /// Cleaning up attribute animation keys.
-    static void CleanupAttributeKeys(UsdAttribute attribute, UsdInterpolationType parameterInterpolation = UsdInterpolationTypeLinear);
+    /// \brief Cleans up duplicate keys on \p attribute based on \p parameterInterpolation.
+    PXRUSDMAYA_API
+    static void CleanupAttributeKeys(
+        UsdAttribute attribute,
+        UsdInterpolationType parameterInterpolation = UsdInterpolationTypeLinear);
 };
 
 
