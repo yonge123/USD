@@ -369,7 +369,7 @@ bool MayaMeshWriter::_createAlphaPrimVar(
 
     if (!assignmentIndices.empty()) {
         primVar.SetIndices(assignmentIndices, usdTime);
-        if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
+        if (unassignedValueIndex == 0 && unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
            primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
         }
     }
@@ -410,7 +410,7 @@ bool MayaMeshWriter::_createRGBPrimVar(
 
     if (!assignmentIndices.empty()) {
         primVar.SetIndices(assignmentIndices, usdTime);
-        if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
+        if (unassignedValueIndex == 0 && unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
            primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
         }
     }
@@ -458,7 +458,7 @@ bool MayaMeshWriter::_createRGBAPrimVar(
 
     if (!assignmentIndices.empty()) {
         primVar.SetIndices(assignmentIndices, usdTime);
-        if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
+        if (unassignedValueIndex == 0 && unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
            primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
         }
     }
@@ -542,7 +542,7 @@ bool MayaMeshWriter::_createUVPrimVar(
 
     if (!assignmentIndices.empty()) {
         primVar.SetIndices(assignmentIndices, usdTime);
-        if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
+        if (unassignedValueIndex == 0 && unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
            primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
         }
     }
@@ -571,7 +571,7 @@ bool MayaMeshWriter::_addDisplayPrimvars(
         displayColor.Set(RGBData);
         if (!assignmentIndices.empty()) {
             displayColor.SetIndices(assignmentIndices);
-            if (unassignedValueIndex != displayColor.GetUnauthoredValuesIndex()) {
+            if (unassignedValueIndex == 0 && unassignedValueIndex != displayColor.GetUnauthoredValuesIndex()) {
                displayColor.SetUnauthoredValuesIndex(unassignedValueIndex);
             }
         }
@@ -602,7 +602,7 @@ bool MayaMeshWriter::_addDisplayPrimvars(
             displayOpacity.Set(AlphaData);
             if (!assignmentIndices.empty()) {
                 displayOpacity.SetIndices(assignmentIndices);
-                if (unassignedValueIndex != displayOpacity.GetUnauthoredValuesIndex()) {
+                if (unassignedValueIndex == 0 && unassignedValueIndex != displayOpacity.GetUnauthoredValuesIndex()) {
                    displayOpacity.SetUnauthoredValuesIndex(unassignedValueIndex);
                 }
             }
