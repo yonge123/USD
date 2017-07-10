@@ -999,11 +999,9 @@ PxrUsdMayaUtil::AddUnassignedUVIfNeeded(
     if (*unassignedValueIndex == 0) {
         // No push front! blah
         VtArray<GfVec2f> tempUvData;
-        tempUvData.reserve(uvData->size() + 1);
-        tempUvData.push_back(defaultUV);
-        for (const auto& uv : *uvData) {
-            tempUvData.push_back(uv);
-        }
+        tempUvData.resize(uvData->size() + 1);
+        tempUvData[0];
+        memcpy(&tempUvData[1], &uvData->operator[](0), sizeof(GfVec2f) * uvData->size());
         *uvData = tempUvData;
 
         for (auto& i: *assignmentIndices) {
@@ -1049,21 +1047,17 @@ PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
     if (*unassignedValueIndex == 0) {
         if (RGBData) {
             VtArray<GfVec3f> tempRGBData;
-            tempRGBData.reserve(RGBData->size() + 1);
-            tempRGBData.push_back(defaultRGB);
-            for (const auto& rgb: *RGBData) {
-                tempRGBData.push_back(rgb);
-            }
+            tempRGBData.resize(RGBData->size() + 1);
+            tempRGBData[0] = defaultRGB;
+            memcpy(&tempRGBData[1], &RGBData->operator[](0), sizeof(GfVec3f) * RGBData->size());
             *RGBData = tempRGBData;
         }
 
         if (AlphaData) {
             VtArray<float> tempAlphaData;
-            tempAlphaData.reserve(AlphaData->size() + 1);
-            tempAlphaData.push_back(defaultAlpha);
-            for (const auto& alpha: *AlphaData) {
-                tempAlphaData.push_back(alpha);
-            }
+            tempAlphaData.resize(AlphaData->size() + 1);
+            tempAlphaData[0] = defaultAlpha;
+            memcpy(&tempAlphaData[1], &AlphaData->operator[](0), sizeof(float) * AlphaData->size());
             *AlphaData = tempAlphaData;
         }
 
