@@ -976,5 +976,55 @@ PxrUsdMayaWriteUtil::ReadMayaAttribute(
     return false;
 }
 
+
+void
+PxrUsdMayaWriteUtil::CleanupAttributeKeys(UsdAttribute attribute,
+                                          UsdInterpolationType parameterInterpolation)
+{
+    if (!attribute) {
+        return;
+    }
+    static thread_local std::vector<double> time_samples;
+    time_samples.clear();
+    attribute.GetTimeSamples(&time_samples);
+    const auto num_time_samples = time_samples.size();
+    if (parameterInterpolation == UsdInterpolationTypeHeld) {
+        if (num_time_samples < 2) {
+            return;
+        }
+        const auto max_num_time_samples = num_time_samples - 1;
+        VtValue first;
+        attribute.Get(&first, time_samples[0]);
+        for (size_t i = 1; i < max_num_time_samples; ++i) {
+            VtValue next;
+            const auto next_time = time_samples[i];
+            attribute.Get(&next, next_time);
+            if (first.operator==(next)) {
+                attribute.ClearAtTime(next_time);
+            } else {
+                first = next;
+            }
+        }
+    } else {
+        if (num_time_samples < 3) {
+            return;
+        }
+        const auto max_num_time_samples = num_time_samples - 1;
+        VtValue first;
+        attribute.Get(&first, time_samples[0]);
+        for (size_t i = 1; i < max_num_time_samples; ++i) {
+            VtValue middle, last;
+            const auto middle_time = time_samples[i];
+            attribute.Get(&middle, middle_time);
+            attribute.Get(&last, time_samples[i + 1]);
+            if (first.operator==(middle) && first.operator==(last)) {
+                attribute.ClearAtTime(middle_time);
+            } else {
+                first = middle;
+            }
+        }
+    }
+}
+
 PXR_NAMESPACE_CLOSE_SCOPE
 
