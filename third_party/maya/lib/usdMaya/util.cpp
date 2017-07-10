@@ -990,17 +990,25 @@ PxrUsdMayaUtil::AddUnassignedUVIfNeeded(
             continue;
         }
 
-        // We found an unassigned index. Add the unassigned value to uvData
-        // if we haven't already.
-        if (*unassignedValueIndex < 0) {
-            if (uvData) {
-                uvData->push_back(defaultUV);
-            }
-            *unassignedValueIndex = uvData->size() - 1;
-        }
-
+        *unassignedValueIndex = 0;
         // Assign the component the unassigned value index.
-        (*assignmentIndices)[i] = *unassignedValueIndex;
+        // But we are adding +1 to it later, so -1 here.
+        (*assignmentIndices)[i] = -1;
+    }
+
+    if (*unassignedValueIndex == 0) {
+        // No push front! blah
+        VtArray<GfVec2f> tempUvData;
+        tempUvData.reserve(uvData->size() + 1);
+        tempUvData.push_back(defaultUV);
+        for (const auto& uv : *uvData) {
+            tempUvData.push_back(uv);
+        }
+        *uvData = tempUvData;
+
+        for (auto& i: *assignmentIndices) {
+            i += 1;
+        }
     }
 
     return true;
@@ -1032,20 +1040,36 @@ PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
             continue;
         }
 
-        // We found an unassigned index. Add unassigned values to RGBData and
-        // AlphaData if we haven't already.
-        if (*unassignedValueIndex < 0) {
-            if (RGBData) {
-                RGBData->push_back(defaultRGB);
+        *unassignedValueIndex = 0;
+        // Assign the component the unassigned value index.
+        // But we are adding +1 to it later, so -1 here.
+        (*assignmentIndices)[i] = -1;
+    }
+
+    if (*unassignedValueIndex == 0) {
+        if (RGBData) {
+            VtArray<GfVec3f> tempRGBData;
+            tempRGBData.reserve(RGBData->size() + 1);
+            tempRGBData.push_back(defaultRGB);
+            for (const auto& rgb: *RGBData) {
+                tempRGBData.push_back(rgb);
             }
-            if (AlphaData) {
-                AlphaData->push_back(defaultAlpha);
-            }
-            *unassignedValueIndex = RGBData->size() - 1;
+            *RGBData = tempRGBData;
         }
 
-        // Assign the component the unassigned value index.
-        (*assignmentIndices)[i] = *unassignedValueIndex;
+        if (AlphaData) {
+            VtArray<float> tempAlphaData;
+            tempAlphaData.reserve(AlphaData->size() + 1);
+            tempAlphaData.push_back(defaultAlpha);
+            for (const auto& alpha: *AlphaData) {
+                tempAlphaData.push_back(alpha);
+            }
+            *AlphaData = tempAlphaData;
+        }
+
+        for (auto& i: *assignmentIndices) {
+            i += 1;
+        }
     }
 
     return true;
