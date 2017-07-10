@@ -13,6 +13,7 @@ pxr_shared_library(${PXR_PACKAGE}
         usdGeom
         usdShade
         usdUtils
+        ${HOUDINI_LIBRARIES}
 
     INCLUDE_DIRS
         ${HOUDINI_INCLUDE_DIRS}
