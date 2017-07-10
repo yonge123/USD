@@ -46,7 +46,7 @@ class MayaMeshWriter : public MayaTransformWriter
                    const SdfPath& uPath,
                    bool instanceSource,
                    usdWriteJobCtx& jobCtx);
-    virtual ~MayaMeshWriter() {};
+    virtual ~MayaMeshWriter();
 
     virtual void write(const UsdTimeCode &usdTime);
     
@@ -82,6 +82,7 @@ class MayaMeshWriter : public MayaTransformWriter
         bool* clamped);
 
     bool _createAlphaPrimVar(UsdGeomGprim &primSchema,
+                             const UsdTimeCode& usdTime,
                              const TfToken& name,
                              const VtArray<float>& data,
                              const TfToken& interpolation,
@@ -90,6 +91,7 @@ class MayaMeshWriter : public MayaTransformWriter
                              bool clamped);
 
     bool _createRGBPrimVar(UsdGeomGprim &primSchema,
+                           const UsdTimeCode& usdTime,
                            const TfToken& name,
                            const VtArray<GfVec3f>& data,
                            const TfToken& interpolation,
@@ -98,6 +100,7 @@ class MayaMeshWriter : public MayaTransformWriter
                            bool clamped);
 
     bool _createRGBAPrimVar(UsdGeomGprim &primSchema,
+                            const UsdTimeCode& usdTime,
                             const TfToken& name,
                             const VtArray<GfVec3f>& rgbData,
                             const VtArray<float>& alphaData,
@@ -106,7 +109,13 @@ class MayaMeshWriter : public MayaTransformWriter
                             const int unassignedValueIndex,
                             bool clamped);
 
+    void _writeMotionVector(UsdGeomMesh& primSchema,
+                            const UsdTimeCode& usdTime,
+                            MFnMesh& mesh,
+                            const MString& colorSetName);
+
     bool _createUVPrimVar(UsdGeomGprim &primSchema,
+                          const UsdTimeCode& usdTime,
                           const TfToken& name,
                           const VtArray<GfVec2f>& data,
                           const TfToken& interpolation,
