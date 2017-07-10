@@ -257,13 +257,13 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
         }
 
         // It seems that -1 can cause errors all around the place.
-        int unassignedValueIndex = 0;
+        int unassignedValueIndex = -1;
         // The unassigned value can't be animated! Which is a big problem
         // when you are working with varying meshes.
-        // PxrUsdMayaUtil::AddUnassignedUVIfNeeded(&uvValues,
-        //                                         &assignmentIndices,
-        //                                         &unassignedValueIndex,
-        //                                         _DefaultUV);
+        PxrUsdMayaUtil::AddUnassignedUVIfNeeded(&uvValues,
+                                                 &assignmentIndices,
+                                                 &unassignedValueIndex,
+                                                 _DefaultUV);
 
         // XXX:bug 118447
         // We should be able to configure the UV map name that triggers this
@@ -341,7 +341,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
         VtArray<float> AlphaData;
         TfToken interpolation;
         VtArray<int> assignmentIndices;
-        int unassignedValueIndex = 0;
+        int unassignedValueIndex = -1;
         MFnMesh::MColorRepresentation colorSetRep;
         bool clamped = false;
 
@@ -363,13 +363,13 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             continue;
         }
 
-        //PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
-        //    &RGBData,
-        //    &AlphaData,
-        //    &assignmentIndices,
-        //    &unassignedValueIndex,
-        //    _ColorSetDefaultRGB,
-        //    _ColorSetDefaultAlpha);
+        PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
+            &RGBData,
+            &AlphaData,
+            &assignmentIndices,
+            &unassignedValueIndex,
+            _ColorSetDefaultRGB,
+            _ColorSetDefaultAlpha);
 
         if (isDisplayColor) {
             // We tag the resulting displayColor/displayOpacity primvar as
@@ -426,14 +426,14 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
         // Using the shader default values (an alpha of zero, in particular)
         // results in Gprims rendering the same way in usdview as they do in
         // Maya (i.e. unassigned components are invisible).
-        int unassignedValueIndex = 0;
-        //PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
-        //        &shadersRGBData,
-        //        &shadersAlphaData,
-        //        &shadersAssignmentIndices,
-        //        &unassignedValueIndex,
-        //        _ShaderDefaultRGB,
-        //        _ShaderDefaultAlpha);
+        int unassignedValueIndex = -1;
+        PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
+                &shadersRGBData,
+                &shadersAlphaData,
+                &shadersAssignmentIndices,
+                &unassignedValueIndex,
+                _ShaderDefaultRGB,
+                _ShaderDefaultAlpha);
 
         // Since these colors come from the shaders and not a colorset, we are
         // not adding the clamp attribute as custom data. We also don't need to
