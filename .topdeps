@@ -30,6 +30,8 @@ tg/simple_features/passing_primdag_map_to_shading_exporter
 tg/simple_features/bake_codegen_templates
 tg/simple_features/extend_usda_path_parsing
 tg/simple_features/vec4_primvar_katana
+tg/simple_features/linking_against_houdini_libs
+tg/simple_features/maya_primvar_export
 tg/pixar/katana_libs_dir_fix
 pseudo_root_warning
 ptex_prefer_static
