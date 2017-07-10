@@ -78,6 +78,35 @@ find_path(HOUDINI_LIB_DIRS
         "Houdini Development Kit Library Path"
 )
 
+foreach(HOUDINI_LIB
+    APPS1
+    APPS2
+    APPS3
+    DEVICE
+    GEO
+    OP1
+    OP2
+    OP3
+    OPZ
+    PRM
+    RAY
+    SIM
+    UI
+    UT)
+    find_library(HOUDINI_${HOUDINI_LIB}_LIBRARY
+            Houdini${HOUDINI_LIB}
+        HINTS
+            "${HOUDINI_LIB_DIRS}"
+        DOC
+            "Houdini's ${HOUDINI_LIB} library path"
+        NO_CMAKE_SYSTEM_PATH
+    )
+
+    if (HOUDINI_${HOUDINI_LIB}_LIBRARY)
+        list(APPEND HOUDINI_LIBRARIES ${HOUDINI_${HOUDINI_LIB}_LIBRARY})
+    endif ()
+endforeach()
+
 if(HOUDINI_INCLUDE_DIRS AND EXISTS "${HOUDINI_INCLUDE_DIRS}/SYS/SYS_Version.h")
     foreach(comp FULL MAJOR MINOR BUILD)
         file(STRINGS
