@@ -1,6 +1,4 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/simple_features/linking_against_houdini_libs
-
-<patch description>
+Subject: [usdHoudini] Linking against the houdini libs to avoid issues in mplay.
 
 Signed-off-by: Pal Mezei <palm@lumapictures.com>
