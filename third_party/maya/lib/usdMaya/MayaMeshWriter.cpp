@@ -256,13 +256,10 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             continue;
         }
 
-        // It seems that -1 can cause errors all around the place.
-        int unassignedValueIndex = -1;
         // The unassigned value can't be animated! Which is a big problem
         // when you are working with varying meshes.
         PxrUsdMayaUtil::AddUnassignedUVIfNeeded(&uvValues,
                                                  &assignmentIndices,
-                                                 &unassignedValueIndex,
                                                  _DefaultUV);
 
         // XXX:bug 118447
@@ -281,8 +278,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
                          setName,
                          uvValues,
                          interpolation,
-                         assignmentIndices,
-                         unassignedValueIndex);
+                         assignmentIndices);
     }
 
     // == Gather ColorSets
@@ -341,7 +337,6 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
         VtArray<float> AlphaData;
         TfToken interpolation;
         VtArray<int> assignmentIndices;
-        int unassignedValueIndex = -1;
         MFnMesh::MColorRepresentation colorSetRep;
         bool clamped = false;
 
@@ -367,7 +362,6 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             &RGBData,
             &AlphaData,
             &assignmentIndices,
-            &unassignedValueIndex,
             _ColorSetDefaultRGB,
             _ColorSetDefaultAlpha);
 
@@ -380,7 +374,6 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
                                 AlphaData,
                                 interpolation,
                                 assignmentIndices,
-                                unassignedValueIndex,
                                 clamped,
                                 true);
         } else {
@@ -394,7 +387,6 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
                                     AlphaData,
                                     interpolation,
                                     assignmentIndices,
-                                    unassignedValueIndex,
                                     clamped);
             } else if (colorSetRep == MFnMesh::kRGB) {
                 _createRGBPrimVar(primSchema,
@@ -403,7 +395,6 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
                                   RGBData,
                                   interpolation,
                                   assignmentIndices,
-                                  unassignedValueIndex,
                                   clamped);
             } else if (colorSetRep == MFnMesh::kRGBA) {
                 _createRGBAPrimVar(primSchema,
@@ -413,7 +404,6 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
                                    AlphaData,
                                    interpolation,
                                    assignmentIndices,
-                                   unassignedValueIndex,
                                    clamped);
             }
         }
@@ -426,12 +416,10 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
         // Using the shader default values (an alpha of zero, in particular)
         // results in Gprims rendering the same way in usdview as they do in
         // Maya (i.e. unassigned components are invisible).
-        int unassignedValueIndex = -1;
         PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
                 &shadersRGBData,
                 &shadersAlphaData,
                 &shadersAssignmentIndices,
-                &unassignedValueIndex,
                 _ShaderDefaultRGB,
                 _ShaderDefaultAlpha);
 
@@ -445,7 +433,6 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
                             shadersAlphaData,
                             shadersInterpolation,
                             shadersAssignmentIndices,
-                            unassignedValueIndex,
                             false,
                             false);
     }
