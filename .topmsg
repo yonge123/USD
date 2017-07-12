@@ -1,0 +1,2 @@
+From: Paul Molodowitch <pm@stanfordalumni.org>
+Subject: [usdGeom] Fix PrimVar::IsIndexed() for time-sampled attrs
