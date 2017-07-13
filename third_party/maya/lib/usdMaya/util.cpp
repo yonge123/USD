@@ -990,8 +990,10 @@ PxrUsdMayaUtil::AddUnassignedUVIfNeeded(
         }
 
         if (unassignedValueIndex < 0) {
-            unassignedValueIndex = uvData->size();
-            uvData->push_back(defaultUV);
+            if (uvData->size()) {
+                unassignedValueIndex = uvData->size();
+                uvData->push_back(defaultUV);
+            }
         }
 
         // Assign the component the unassigned value index.
