@@ -1027,13 +1027,13 @@ PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
         }
 
         if (unassignedValueIndex < 0) {
-            unassignedValueIndex = RGBData->size();
-
             if (RGBData) {
+                unassignedValueIndex = RGBData->size();
                 RGBData->push_back(defaultRGB);
             }
 
             if (AlphaData) {
+                unassignedValueIndex = AlphaData->size();
                 AlphaData->push_back(defaultAlpha);
             }
         }
