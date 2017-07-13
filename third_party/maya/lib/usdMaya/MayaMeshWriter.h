@@ -87,7 +87,6 @@ class MayaMeshWriter : public MayaTransformWriter
                              const VtArray<float>& data,
                              const TfToken& interpolation,
                              const VtArray<int>& assignmentIndices,
-                             const int unassignedValueIndex,
                              bool clamped);
 
     bool _createRGBPrimVar(UsdGeomGprim &primSchema,
@@ -96,7 +95,6 @@ class MayaMeshWriter : public MayaTransformWriter
                            const VtArray<GfVec3f>& data,
                            const TfToken& interpolation,
                            const VtArray<int>& assignmentIndices,
-                           const int unassignedValueIndex,
                            bool clamped);
 
     bool _createRGBAPrimVar(UsdGeomGprim &primSchema,
@@ -106,7 +104,6 @@ class MayaMeshWriter : public MayaTransformWriter
                             const VtArray<float>& alphaData,
                             const TfToken& interpolation,
                             const VtArray<int>& assignmentIndices,
-                            const int unassignedValueIndex,
                             bool clamped);
 
     void _writeMotionVector(UsdGeomMesh& primSchema,
@@ -119,8 +116,7 @@ class MayaMeshWriter : public MayaTransformWriter
                           const TfToken& name,
                           const VtArray<GfVec2f>& data,
                           const TfToken& interpolation,
-                          const VtArray<int>& assignmentIndices,
-                          const int unassignedValueIndex);
+                          const VtArray<int>& assignmentIndices);
 
     /// Adds displayColor and displayOpacity primvars using the given color,
     /// alpha, and assignment data if the \p primSchema does not already have
@@ -132,7 +128,6 @@ class MayaMeshWriter : public MayaTransformWriter
         const VtArray<float>& AlphaData,
         const TfToken& interpolation,
         const VtArray<int>& assignmentIndices,
-        const int unassignedValueIndex,
         const bool clamped,
         const bool authored);
 

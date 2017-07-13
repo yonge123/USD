@@ -181,6 +181,12 @@ struct PxrUsdMayaWriteUtil
     static void CleanupAttributeKeys(
         UsdAttribute attribute,
         UsdInterpolationType parameterInterpolation = UsdInterpolationTypeLinear);
+
+    /// \brief Cleans up duplicate keys on \p primvar based on \p parameterInterpolation.
+    PXRUSDMAYA_API
+    static void CleanupPrimvarKeys(
+        UsdGeomPrimvar primvar,
+        UsdInterpolationType parameterInterpolation = UsdInterpolationTypeLinear);
 };
 
 
