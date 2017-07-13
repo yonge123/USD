@@ -975,14 +975,13 @@ bool
 PxrUsdMayaUtil::AddUnassignedUVIfNeeded(
         VtArray<GfVec2f>* uvData,
         VtArray<int>* assignmentIndices,
-        int* unassignedValueIndex,
         const GfVec2f& defaultUV)
 {
     if (!assignmentIndices || assignmentIndices->empty()) {
         return false;
     }
 
-    *unassignedValueIndex = -1;
+    int unassignedValueIndex = -1;
 
     for (size_t i = 0; i < assignmentIndices->size(); ++i) {
         if ((*assignmentIndices)[i] >= 0) {
@@ -990,23 +989,15 @@ PxrUsdMayaUtil::AddUnassignedUVIfNeeded(
             continue;
         }
 
-        *unassignedValueIndex = 0;
-        // Assign the component the unassigned value index.
-        // But we are adding +1 to it later, so -1 here.
-        (*assignmentIndices)[i] = -1;
-    }
-
-    if (*unassignedValueIndex == 0) {
-        // No push front! blah
-        VtArray<GfVec2f> tempUvData;
-        tempUvData.resize(uvData->size() + 1);
-        tempUvData[0];
-        memcpy(&tempUvData[1], &uvData->operator[](0), sizeof(GfVec2f) * uvData->size());
-        *uvData = tempUvData;
-
-        for (auto& i: *assignmentIndices) {
-            i += 1;
+        if (unassignedValueIndex < 0) {
+            if (uvData->size()) {
+                unassignedValueIndex = uvData->size();
+                uvData->push_back(defaultUV);
+            }
         }
+
+        // Assign the component the unassigned value index.
+        (*assignmentIndices)[i] = unassignedValueIndex;
     }
 
     return true;
@@ -1017,7 +1008,6 @@ PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
         VtArray<GfVec3f>* RGBData,
         VtArray<float>* AlphaData,
         VtArray<int>* assignmentIndices,
-        int* unassignedValueIndex,
         const GfVec3f& defaultRGB,
         const float defaultAlpha)
 {
@@ -1030,7 +1020,7 @@ PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
                         RGBData->size(), AlphaData->size());
     }
 
-    *unassignedValueIndex = -1;
+    int unassignedValueIndex = -1;
 
     for (size_t i=0; i < assignmentIndices->size(); ++i) {
         if ((*assignmentIndices)[i] >= 0) {
@@ -1038,32 +1028,20 @@ PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
             continue;
         }
 
-        *unassignedValueIndex = 0;
+        if (unassignedValueIndex < 0) {
+            if (RGBData) {
+                unassignedValueIndex = RGBData->size();
+                RGBData->push_back(defaultRGB);
+            }
+
+            if (AlphaData) {
+                unassignedValueIndex = AlphaData->size();
+                AlphaData->push_back(defaultAlpha);
+            }
+        }
+
         // Assign the component the unassigned value index.
-        // But we are adding +1 to it later, so -1 here.
-        (*assignmentIndices)[i] = -1;
-    }
-
-    if (*unassignedValueIndex == 0) {
-        if (RGBData) {
-            VtArray<GfVec3f> tempRGBData;
-            tempRGBData.resize(RGBData->size() + 1);
-            tempRGBData[0] = defaultRGB;
-            memcpy(&tempRGBData[1], &RGBData->operator[](0), sizeof(GfVec3f) * RGBData->size());
-            *RGBData = tempRGBData;
-        }
-
-        if (AlphaData) {
-            VtArray<float> tempAlphaData;
-            tempAlphaData.resize(AlphaData->size() + 1);
-            tempAlphaData[0] = defaultAlpha;
-            memcpy(&tempAlphaData[1], &AlphaData->operator[](0), sizeof(float) * AlphaData->size());
-            *AlphaData = tempAlphaData;
-        }
-
-        for (auto& i: *assignmentIndices) {
-            i += 1;
-        }
+        (*assignmentIndices)[i] = unassignedValueIndex;
     }
 
     return true;
