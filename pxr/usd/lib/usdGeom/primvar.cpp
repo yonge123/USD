@@ -253,7 +253,9 @@ UsdGeomPrimvar::IsIndexed() const
 {
     // XXX update this to api that can directly see if an attribute is blocked.
     VtIntArray dummy;
-    return _GetIndicesAttr(/*create*/ false).Get(&dummy);
+    // Use non-default time so that time-sampled index attrs can still return
+    // True
+    return _GetIndicesAttr(/*create*/ false).Get(&dummy, 0);
 }
 
 bool 
