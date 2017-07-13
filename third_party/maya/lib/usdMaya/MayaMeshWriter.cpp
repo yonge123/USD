@@ -71,9 +71,21 @@ MayaMeshWriter::MayaMeshWriter(
 MayaMeshWriter::~MayaMeshWriter() {
     UsdGeomMesh primSchema(mUsdPrim);
     // TODO: Use TBB to run these tasks in parallel
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetVelocitiesAttr());
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexCountsAttr(), UsdInterpolationTypeHeld);
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexIndicesAttr(), UsdInterpolationTypeHeld);
+    if (primSchema) {
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetPointsAttr());
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetNormalsAttr());
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetVelocitiesAttr());
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexCountsAttr(), UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexIndicesAttr(), UsdInterpolationTypeHeld);
+    }
+
+    UsdGeomGprim gprimSchema(mUsdPrim);
+    if (gprimSchema) {
+        // All created primvars are authored at this point
+        for (const auto& primvar : gprimSchema.GetPrimvars()) {
+            PxrUsdMayaWriteUtil::CleanupPrimvarKeys(primvar);
+        }
+    }
 }
 
 //virtual 

@@ -988,6 +988,10 @@ PxrUsdMayaWriteUtil::CleanupAttributeKeys(UsdAttribute attribute,
     time_samples.clear();
     attribute.GetTimeSamples(&time_samples);
     const auto num_time_samples = time_samples.size();
+    if (num_time_samples <= 1) {
+        return; // Either default or one time sample which we want to keep
+    }
+
     if (parameterInterpolation == UsdInterpolationTypeHeld) {
         if (num_time_samples < 2) {
             return;
@@ -1024,6 +1028,31 @@ PxrUsdMayaWriteUtil::CleanupAttributeKeys(UsdAttribute attribute,
             }
         }
     }
+
+    if (attribute.GetNumTimeSamples() == 2) {
+        time_samples.clear();
+        attribute.GetTimeSamples(&time_samples);
+        VtValue first, last;
+        attribute.Get(&first, time_samples[0]);
+        attribute.Get(&last, time_samples[1]);
+        if (first == last) {
+            attribute.Set(first);
+            attribute.ClearAtTime(time_samples[0]);
+            attribute.ClearAtTime(time_samples[1]);
+        }
+    }
+}
+
+void
+PxrUsdMayaWriteUtil::CleanupPrimvarKeys(
+    UsdGeomPrimvar primvar,
+    UsdInterpolationType parameterInterpolation) {
+    if (!primvar) {
+        return;
+    }
+
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primvar.GetAttr(), parameterInterpolation);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primvar._GetIndicesAttr(false), UsdInterpolationTypeHeld);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
