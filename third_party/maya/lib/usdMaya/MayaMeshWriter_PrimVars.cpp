@@ -89,9 +89,13 @@ MayaMeshWriter::_GetMeshUVSetData(
 
     PxrUsdMayaUtil::MergeEquivalentIndexedValues(uvArray,
                                                  assignmentIndices);
-    PxrUsdMayaUtil::CompressFaceVaryingPrimvarIndices(mesh,
-                                                      interpolation,
-                                                      assignmentIndices);
+    // Luma: disable this, as it caused problems with ktoa... as far as I could
+    // tell, this was doing the right thing... ie, comparing results in the
+    // usd file itself with this on and off gave the same thing... so the
+    // error must be in the katana reader, or ktoa?
+//    PxrUsdMayaUtil::CompressFaceVaryingPrimvarIndices(mesh,
+//                                                      interpolation,
+//                                                      assignmentIndices);
     return true;
 }
 
