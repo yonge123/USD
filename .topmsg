@@ -1,0 +1,4 @@
+From: Paul Molodowitch <pm@stanfordalumni.org>
+Subject: [maya] disable trying to convert uvs from per-face-vertex to per-vertex
+
+...as it was causing problems with ktoa
