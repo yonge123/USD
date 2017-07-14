@@ -1,5 +1,6 @@
 tg/luma/pull_requests
 tg/image_plane/translatorImagePlane
 tg/customization/disable_tbb_debug
+tg/customization/no_face_varying_uv_compression
 tg/simple_features/remove_gnu_hash_map
 tg/simple_features/katana_improved_deformation_blur
