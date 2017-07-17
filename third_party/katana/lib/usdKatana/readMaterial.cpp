@@ -602,10 +602,9 @@ _GetMaterialAttr(
     // ARNOLD SECTION
     /////////////////
 
-    UsdAiMaterialAPI aiMaterialAPI(materialPrim);
-
+    static const TfToken _aiSurface("ai:surface");
     // look for surface
-    if (UsdRelationship surfaceRel = aiMaterialAPI.GetSurfaceRel()) {
+    if (UsdRelationship surfaceRel = materialPrim.GetRelationship(_aiSurface)) {
         if (!PxrUsdKatana_AreRelTargetsFromBaseMaterial(surfaceRel)) {
             SdfPathVector targetPaths;
             surfaceRel.GetForwardedTargets(&targetPaths);
@@ -633,8 +632,9 @@ _GetMaterialAttr(
         }
     }
 
+    static const TfToken _aiDisplacement("ai:displacement");
     // look for displacement
-    if (UsdRelationship displacementRel = aiMaterialAPI.GetDisplacementRel()) {
+    if (UsdRelationship displacementRel = materialPrim.GetRelationship(_aiDisplacement)) {
         if (!PxrUsdKatana_AreRelTargetsFromBaseMaterial(displacementRel)) {
             SdfPathVector targetPaths;
             displacementRel.GetForwardedTargets(&targetPaths);
@@ -662,7 +662,6 @@ _GetMaterialAttr(
             }
         }
     }
-
 
     // with the current implementation of ris, there are
     // no patterns that are unbound or not connected directly
