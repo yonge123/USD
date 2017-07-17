@@ -17,6 +17,7 @@ pxr_plugin(${PXR_PACKAGE}
 
     PRIVATE_CLASSES
         attrfnc_materialReference
+        pointInstancerUtils
 
     PRIVATE_HEADERS
         declareCoreOps.h
