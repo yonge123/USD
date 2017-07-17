@@ -878,19 +878,18 @@ openStage(fpreal tstart, int startTimeCode, int endTimeCode)
                 return abort("Unable to create temporary file in: " + dir);
             }
             // Copy file permissions from fileName to tmpFileName.
-            mode_t mode = 0664; // Use 0664 (-rw-rw-r--) if copy fails.
-            struct stat st;
-            if (stat(fileName.c_str(), &st) == 0) {
-                mode = st.st_mode;
+            int mode;
+            if (!ArchGetStatMode(fileName.c_str(), &mode)) {
+                mode = 0664; // Use 0664 (-rw-rw-r--) if stat of fileName fails.
             }
-            fchmod(m_fdTmpFile, mode);
+            ArchChmod(tmpFileName.c_str(), mode);
 
             // Create a rootLayer and stage with tmpFileName.
             SdfLayerRefPtr tmpLayer = SdfLayer::CreateNew(format, tmpFileName);
             m_usdStage = UsdStage::Open(tmpLayer);
 
             if (!m_usdStage) {
-                unlink(tmpFileName.c_str());
+                ArchUnlinkFile(tmpFileName.c_str());
                 return abort("Unable to create new stage: " + tmpFileName);
             }
 
@@ -1655,7 +1654,7 @@ bindAndWriteShaders(UsdRefShaderMap& usdRefShaderMap,
     }
 
     // If there are no shaders, exit now before defining a "Looks" scope.
-    if (usdRefShaderMap.empty() and houMaterialMap.empty()) {
+    if (usdRefShaderMap.empty() && houMaterialMap.empty()) {
         return ROP_CONTINUE_RENDER;
     }
 
@@ -1831,14 +1830,14 @@ getStringUniformOrDetailAttribute(
 bool 
 setCamerasAreZup(UsdStageWeakPtr const &stage, bool isZup)
 {
-    if (not stage){
+    if (!stage){
         return false;
     }
     bool anySet = false;
     
     TF_FOR_ALL(prim, stage->GetPseudoRoot().
-                            GetFilteredChildren(UsdPrimIsDefined and
-                                                not UsdPrimIsAbstract)){
+                            GetFilteredChildren(UsdPrimIsDefined && 
+                                                !UsdPrimIsAbstract)){
         prim->SetCustomDataByKey(TfToken("zUp"), VtValue(isZup));
         anySet = true;
     }
