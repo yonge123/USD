@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdShade/pShader.h"
+#include "pxr/usd/usdSkel/packedJointAnimation.h"
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/typed.h"
 
@@ -33,58 +33,58 @@ PXR_NAMESPACE_OPEN_SCOPE
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
-    TfType::Define<UsdShadePShader,
-        TfType::Bases< UsdTyped > >();
+    TfType::Define<UsdSkelPackedJointAnimation,
+        TfType::Bases< UsdGeomXformable > >();
     
     // Register the usd prim typename as an alias under UsdSchemaBase. This
     // enables one to call
-    // TfType::Find<UsdSchemaBase>().FindDerivedByName("PShader")
-    // to find TfType<UsdShadePShader>, which is how IsA queries are
+    // TfType::Find<UsdSchemaBase>().FindDerivedByName("PackedJointAnimation")
+    // to find TfType<UsdSkelPackedJointAnimation>, which is how IsA queries are
     // answered.
-    TfType::AddAlias<UsdSchemaBase, UsdShadePShader>("PShader");
+    TfType::AddAlias<UsdSchemaBase, UsdSkelPackedJointAnimation>("PackedJointAnimation");
 }
 
 /* virtual */
-UsdShadePShader::~UsdShadePShader()
+UsdSkelPackedJointAnimation::~UsdSkelPackedJointAnimation()
 {
 }
 
 /* static */
-UsdShadePShader
-UsdShadePShader::Get(const UsdStagePtr &stage, const SdfPath &path)
+UsdSkelPackedJointAnimation
+UsdSkelPackedJointAnimation::Get(const UsdStagePtr &stage, const SdfPath &path)
 {
     if (!stage) {
         TF_CODING_ERROR("Invalid stage");
-        return UsdShadePShader();
+        return UsdSkelPackedJointAnimation();
     }
-    return UsdShadePShader(stage->GetPrimAtPath(path));
+    return UsdSkelPackedJointAnimation(stage->GetPrimAtPath(path));
 }
 
 /* static */
-UsdShadePShader
-UsdShadePShader::Define(
+UsdSkelPackedJointAnimation
+UsdSkelPackedJointAnimation::Define(
     const UsdStagePtr &stage, const SdfPath &path)
 {
-    static TfToken usdPrimTypeName("PShader");
+    static TfToken usdPrimTypeName("PackedJointAnimation");
     if (!stage) {
         TF_CODING_ERROR("Invalid stage");
-        return UsdShadePShader();
+        return UsdSkelPackedJointAnimation();
     }
-    return UsdShadePShader(
+    return UsdSkelPackedJointAnimation(
         stage->DefinePrim(path, usdPrimTypeName));
 }
 
 /* static */
 const TfType &
-UsdShadePShader::_GetStaticTfType()
+UsdSkelPackedJointAnimation::_GetStaticTfType()
 {
-    static TfType tfType = TfType::Find<UsdShadePShader>();
+    static TfType tfType = TfType::Find<UsdSkelPackedJointAnimation>();
     return tfType;
 }
 
 /* static */
 bool 
-UsdShadePShader::_IsTypedSchema()
+UsdSkelPackedJointAnimation::_IsTypedSchema()
 {
     static bool isTyped = _GetStaticTfType().IsA<UsdTyped>();
     return isTyped;
@@ -92,22 +92,22 @@ UsdShadePShader::_IsTypedSchema()
 
 /* virtual */
 const TfType &
-UsdShadePShader::_GetTfType() const
+UsdSkelPackedJointAnimation::_GetTfType() const
 {
     return _GetStaticTfType();
 }
 
 UsdAttribute
-UsdShadePShader::GetSloPathAttr() const
+UsdSkelPackedJointAnimation::GetTranslationsAttr() const
 {
-    return GetPrim().GetAttribute(UsdShadeTokens->sloPath);
+    return GetPrim().GetAttribute(UsdSkelTokens->translations);
 }
 
 UsdAttribute
-UsdShadePShader::CreateSloPathAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdSkelPackedJointAnimation::CreateTranslationsAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdShadeTokens->sloPath,
-                       SdfValueTypeNames->Asset,
+    return UsdSchemaBase::_CreateAttr(UsdSkelTokens->translations,
+                       SdfValueTypeNames->Float3Array,
                        /* custom = */ false,
                        SdfVariabilityVarying,
                        defaultValue,
@@ -115,50 +115,16 @@ UsdShadePShader::CreateSloPathAttr(VtValue const &defaultValue, bool writeSparse
 }
 
 UsdAttribute
-UsdShadePShader::GetShaderProtocolAttr() const
+UsdSkelPackedJointAnimation::GetRotationsAttr() const
 {
-    return GetPrim().GetAttribute(UsdShadeTokens->shaderProtocol);
+    return GetPrim().GetAttribute(UsdSkelTokens->rotations);
 }
 
 UsdAttribute
-UsdShadePShader::CreateShaderProtocolAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdSkelPackedJointAnimation::CreateRotationsAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdShadeTokens->shaderProtocol,
-                       SdfValueTypeNames->String,
-                       /* custom = */ false,
-                       SdfVariabilityUniform,
-                       defaultValue,
-                       writeSparsely);
-}
-
-UsdAttribute
-UsdShadePShader::GetShaderTypeAttr() const
-{
-    return GetPrim().GetAttribute(UsdShadeTokens->shaderType);
-}
-
-UsdAttribute
-UsdShadePShader::CreateShaderTypeAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdShadeTokens->shaderType,
-                       SdfValueTypeNames->String,
-                       /* custom = */ false,
-                       SdfVariabilityUniform,
-                       defaultValue,
-                       writeSparsely);
-}
-
-UsdAttribute
-UsdShadePShader::GetDisplayColorAttr() const
-{
-    return GetPrim().GetAttribute(UsdShadeTokens->displayColor);
-}
-
-UsdAttribute
-UsdShadePShader::CreateDisplayColorAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdShadeTokens->displayColor,
-                       SdfValueTypeNames->Color3f,
+    return UsdSchemaBase::_CreateAttr(UsdSkelTokens->rotations,
+                       SdfValueTypeNames->QuathArray,
                        /* custom = */ false,
                        SdfVariabilityVarying,
                        defaultValue,
@@ -166,20 +132,33 @@ UsdShadePShader::CreateDisplayColorAttr(VtValue const &defaultValue, bool writeS
 }
 
 UsdAttribute
-UsdShadePShader::GetDisplayOpacityAttr() const
+UsdSkelPackedJointAnimation::GetScalesAttr() const
 {
-    return GetPrim().GetAttribute(UsdShadeTokens->displayOpacity);
+    return GetPrim().GetAttribute(UsdSkelTokens->scales);
 }
 
 UsdAttribute
-UsdShadePShader::CreateDisplayOpacityAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdSkelPackedJointAnimation::CreateScalesAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdShadeTokens->displayOpacity,
-                       SdfValueTypeNames->Float,
+    return UsdSchemaBase::_CreateAttr(UsdSkelTokens->scales,
+                       SdfValueTypeNames->Half3Array,
                        /* custom = */ false,
                        SdfVariabilityVarying,
                        defaultValue,
                        writeSparsely);
+}
+
+UsdRelationship
+UsdSkelPackedJointAnimation::GetJointsRel() const
+{
+    return GetPrim().GetRelationship(UsdSkelTokens->joints);
+}
+
+UsdRelationship
+UsdSkelPackedJointAnimation::CreateJointsRel() const
+{
+    return GetPrim().CreateRelationship(UsdSkelTokens->joints,
+                       /* custom = */ false);
 }
 
 namespace {
@@ -196,18 +175,16 @@ _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
 
 /*static*/
 const TfTokenVector&
-UsdShadePShader::GetSchemaAttributeNames(bool includeInherited)
+UsdSkelPackedJointAnimation::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdShadeTokens->sloPath,
-        UsdShadeTokens->shaderProtocol,
-        UsdShadeTokens->shaderType,
-        UsdShadeTokens->displayColor,
-        UsdShadeTokens->displayOpacity,
+        UsdSkelTokens->translations,
+        UsdSkelTokens->rotations,
+        UsdSkelTokens->scales,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
-            UsdTyped::GetSchemaAttributeNames(true),
+            UsdGeomXformable::GetSchemaAttributeNames(true),
             localNames);
 
     if (includeInherited)
