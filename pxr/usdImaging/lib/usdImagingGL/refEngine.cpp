@@ -55,9 +55,6 @@
 #include "pxr/usd/usdGeom/camera.h"
 #include "pxr/usd/usdGeom/imagePlane.h"
 
-// Shader Schema
-#include "pxr/usd/usdShade/pShader.h"
-
 #include "pxr/usd/sdf/path.h"
 
 #include "pxr/base/tracelite/trace.h"
