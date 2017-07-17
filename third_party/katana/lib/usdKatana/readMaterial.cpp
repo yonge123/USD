@@ -598,8 +598,6 @@ _GetMaterialAttr(
         }
     }
     
-<<<<<<< tg/luma/luma
-=======
     /////////////////
     // ARNOLD SECTION
     /////////////////
@@ -664,7 +662,6 @@ _GetMaterialAttr(
             }
         }
     }
->>>>>>> top-bases/tg/luma/luma
 
     // with the current implementation of ris, there are
     // no patterns that are unbound or not connected directly
