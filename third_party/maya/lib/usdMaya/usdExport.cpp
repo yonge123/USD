@@ -164,7 +164,7 @@ try
                     MGlobal::displayError(TfStringPrintf("No shadingMode '%s' found.  Setting shadingMode='none'", 
                                 shadingMode.GetText()).c_str());
                 }
-                shadingMode = PxrUsdMayaShadingModeTokens->non
+                shadingMode = PxrUsdMayaShadingModeTokens->none;
             }
         }
     }
