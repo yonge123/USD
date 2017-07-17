@@ -25,9 +25,10 @@
 #include "pxr/imaging/hd/bprim.h"
 #include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/imaging/hd/perfLog.h"
+#include "pxr/imaging/hd/primGather.h"
 #include "pxr/imaging/hd/renderDelegate.h"
+#include "pxr/imaging/hd/sceneDelegate.h"
 #include "pxr/imaging/hd/sprim.h"
-#include "pxr/imaging/hd/tokens.h" // XXX: To be removed, so workaround below.
 
 #include "pxr/imaging/hf/perfLog.h"
 
@@ -94,15 +95,19 @@ Hd_PrimTypeIndex<PrimType>::InsertPrim(const TfToken    &typeId,
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    if (primId.IsEmpty()) {
-        return;
-    }
-
     typename _TypeIndex::iterator typeIt = _index.find(typeId);
     if (typeIt ==_index.end()) {
         TF_CODING_ERROR("Unsupported prim type: %s", typeId.GetText());
         return;
     }
+
+    SdfPath const &sceneDelegateId = sceneDelegate->GetDelegateID();
+    if (!primId.HasPrefix(sceneDelegateId)) {
+        TF_CODING_ERROR("Scene Delegate Id (%s) must prefix prim Id (%s)",
+                        sceneDelegateId.GetText(), primId.GetText());
+        return;
+    }
+
 
     PrimType *prim = _RenderDelegateCreatePrim(renderDelegate, typeId, primId);
 
@@ -119,7 +124,14 @@ Hd_PrimTypeIndex<PrimType>::InsertPrim(const TfToken    &typeId,
     _PrimTypeEntry &typeEntry = _entries[typeIt->second];
 
     typeEntry.primMap.emplace(primId, _PrimInfo{sceneDelegate, prim});
-    typeEntry.primIds.emplace(primId);
+
+    SdfPathVector &primIds = typeEntry.primIds;
+
+    // Do Insertion sort to insert prim into list of id.
+    SdfPathVector::iterator it = std::lower_bound(primIds.begin(),
+                                                  primIds.end(),
+                                                  primId);
+    primIds.insert(it, primId);
 }
 
 
@@ -152,7 +164,17 @@ Hd_PrimTypeIndex<PrimType>::RemovePrim(const TfToken    &typeId,
     primInfo.prim = nullptr;
 
     typeEntry.primMap.erase(primIt);
-    typeEntry.primIds.erase(primId);
+
+    SdfPathVector &primIds = typeEntry.primIds;
+
+    SdfPathVector::iterator it = std::lower_bound(primIds.begin(),
+                                                  primIds.end(),
+                                                  primId);
+    if (it != primIds.end()) {
+        if (*it == primId) {
+            primIds.erase(it);
+        }
+    }
 }
 
 
@@ -214,17 +236,8 @@ Hd_PrimTypeIndex<PrimType>::GetPrimSubtree(const TfToken &typeId,
 
     const _PrimTypeEntry &typeEntry = _entries[typeIt->second];
 
-    // Over-allocate paths, assuming worse-case all paths are going to be
-    // returned.
-    outPaths->reserve(typeEntry.primIds.size());
-
-    typename _PrimIDSet::const_iterator pathIt =
-                                        typeEntry.primIds.lower_bound(rootPath);
-     while ((pathIt != typeEntry.primIds.end()) &&
-            (pathIt->HasPrefix(rootPath))) {
-         outPaths->push_back(*pathIt);
-         ++pathIt;
-    }
+    HdPrimGather gather;
+    gather.Subtree(typeEntry.primIds, rootPath, outPaths);
 }
 
 template <class PrimType>

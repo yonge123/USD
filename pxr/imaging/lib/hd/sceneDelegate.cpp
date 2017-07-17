@@ -37,6 +37,13 @@ HdSceneDelegate::HdSceneDelegate(HdRenderIndex *parentIndex,
     : _index(parentIndex)
     , _delegateID(delegateID)
 {
+    if (!_delegateID.IsAbsolutePath()) {
+        TF_CODING_ERROR("Scene Delegate Id must be an absolute path: %s",
+                        delegateID.GetText());
+
+
+        _delegateID.MakeAbsolutePath(SdfPath::AbsoluteRootPath());
+    }
 }
 
 HdSceneDelegate::~HdSceneDelegate()
@@ -261,6 +268,40 @@ HdSceneDelegate::GetClipPlanes(SdfPath const& cameraId)
     return std::vector<GfVec4d>();
 }
 
+// -----------------------------------------------------------------------//
+/// \name ExtComputation Aspects
+// -----------------------------------------------------------------------//
+
+/*virtual*/
+void
+HdSceneDelegate::InvokeExtComputation(SdfPath const& computationId,
+                                      HdExtComputationContext *context)
+{
+}
+
+/*virtual*/
+TfTokenVector
+HdSceneDelegate::GetExtComputationInputNames(SdfPath const& id,
+                                             HdExtComputationInputType type)
+{
+    return TfTokenVector();
+}
+
+/*virtual*/
+HdExtComputationInputParams
+HdSceneDelegate::GetExtComputationInputParams(SdfPath const& id,
+                                              TfToken const &inputName)
+{
+    return HdExtComputationInputParams();
+}
+
+/*virtual*/
+TfTokenVector
+HdSceneDelegate::GetExtComputationOutputNames(SdfPath const& id)
+{
+    return TfTokenVector();
+}
+
 
 
 // -----------------------------------------------------------------------//
@@ -307,6 +348,24 @@ TfTokenVector
 HdSceneDelegate::GetPrimVarInstanceNames(SdfPath const& id)
 {
     return TfTokenVector();
+}
+
+
+/*virtual*/
+TfTokenVector
+HdSceneDelegate::GetExtComputationPrimVarNames(
+                                              SdfPath const& id,
+                                              HdInterpolation interpolationMode)
+{
+    return TfTokenVector();
+}
+
+/*virtual*/
+HdExtComputationPrimVarDesc
+HdSceneDelegate::GetExtComputationPrimVarDesc(SdfPath const& id,
+                                              TfToken const& varName)
+{
+    return HdExtComputationPrimVarDesc();
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
