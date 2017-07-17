@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdShade/pShader.h"
+#include "pxr/usd/usdSkel/bindingAPI.h"
 #include "pxr/usd/usd/schemaBase.h"
 
 #include "pxr/usd/sdf/primSpec.h"
@@ -50,48 +50,34 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
-_CreateSloPathAttr(UsdShadePShader &self,
+_CreateGeomBindTransformAttr(UsdSkelBindingAPI &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreateSloPathAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Asset), writeSparsely);
+    return self.CreateGeomBindTransformAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Matrix4d), writeSparsely);
 }
         
 static UsdAttribute
-_CreateShaderProtocolAttr(UsdShadePShader &self,
+_CreateJointIndicesAttr(UsdSkelBindingAPI &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreateShaderProtocolAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->String), writeSparsely);
+    return self.CreateJointIndicesAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->IntArray), writeSparsely);
 }
         
 static UsdAttribute
-_CreateShaderTypeAttr(UsdShadePShader &self,
+_CreateJointWeightsAttr(UsdSkelBindingAPI &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreateShaderTypeAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->String), writeSparsely);
-}
-        
-static UsdAttribute
-_CreateDisplayColorAttr(UsdShadePShader &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateDisplayColorAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Color3f), writeSparsely);
-}
-        
-static UsdAttribute
-_CreateDisplayOpacityAttr(UsdShadePShader &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateDisplayOpacityAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
+    return self.CreateJointWeightsAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->FloatArray), writeSparsely);
 }
 
 } // anonymous namespace
 
-void wrapUsdShadePShader()
+void wrapUsdSkelBindingAPI()
 {
-    typedef UsdShadePShader This;
+    typedef UsdSkelBindingAPI This;
 
-    class_<This, bases<UsdTyped> >
-        cls("PShader");
+    class_<This, bases<UsdSchemaBase> >
+        cls("BindingAPI");
 
     cls
         .def(init<UsdPrim>(arg("prim")))
@@ -101,8 +87,6 @@ void wrapUsdShadePShader()
         .def("Get", &This::Get, (arg("stage"), arg("path")))
         .staticmethod("Get")
 
-        .def("Define", &This::Define, (arg("stage"), arg("path")))
-        .staticmethod("Define")
 
         .def("GetSchemaAttributeNames",
              &This::GetSchemaAttributeNames,
@@ -117,41 +101,37 @@ void wrapUsdShadePShader()
         .def(!self)
 
         
-        .def("GetSloPathAttr",
-             &This::GetSloPathAttr)
-        .def("CreateSloPathAttr",
-             &_CreateSloPathAttr,
+        .def("GetGeomBindTransformAttr",
+             &This::GetGeomBindTransformAttr)
+        .def("CreateGeomBindTransformAttr",
+             &_CreateGeomBindTransformAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
-        .def("GetShaderProtocolAttr",
-             &This::GetShaderProtocolAttr)
-        .def("CreateShaderProtocolAttr",
-             &_CreateShaderProtocolAttr,
+        .def("GetJointIndicesAttr",
+             &This::GetJointIndicesAttr)
+        .def("CreateJointIndicesAttr",
+             &_CreateJointIndicesAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
-        .def("GetShaderTypeAttr",
-             &This::GetShaderTypeAttr)
-        .def("CreateShaderTypeAttr",
-             &_CreateShaderTypeAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
-        .def("GetDisplayColorAttr",
-             &This::GetDisplayColorAttr)
-        .def("CreateDisplayColorAttr",
-             &_CreateDisplayColorAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
-        .def("GetDisplayOpacityAttr",
-             &This::GetDisplayOpacityAttr)
-        .def("CreateDisplayOpacityAttr",
-             &_CreateDisplayOpacityAttr,
+        .def("GetJointWeightsAttr",
+             &This::GetJointWeightsAttr)
+        .def("CreateJointWeightsAttr",
+             &_CreateJointWeightsAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 
+        
+        .def("GetAnimationSourceRel",
+             &This::GetAnimationSourceRel)
+        .def("CreateAnimationSourceRel",
+             &This::CreateAnimationSourceRel)
+        
+        .def("GetSkeletonRel",
+             &This::GetSkeletonRel)
+        .def("CreateSkeletonRel",
+             &This::CreateSkeletonRel)
     ;
 
     _CustomWrapCode(cls);
@@ -181,4 +161,4 @@ namespace {
 WRAP_CUSTOM {
 }
 
-} // anonymous namespace
+}
