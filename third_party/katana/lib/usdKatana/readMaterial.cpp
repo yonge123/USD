@@ -36,7 +36,6 @@
 #include "pxr/usd/usdShade/material.h"
 #include "pxr/usd/usdShade/utils.h"
 
-#include "pxr/usd/usdAi/aiMaterialAPI.h"
 #include "pxr/usd/usdRi/materialAPI.h"
 #include "pxr/usd/usdRi/risObject.h"
 #include "pxr/usd/usdRi/risOslPattern.h"
@@ -320,6 +319,7 @@ _CreateShadingNode(
             }
         } 
         else {
+            
             // only use the fallback OSL test if the targetName is "prman" as
             // it will issue benign but confusing errors to the shell for
             // display shaders
@@ -598,70 +598,6 @@ _GetMaterialAttr(
         }
     }
     
-    /////////////////
-    // ARNOLD SECTION
-    /////////////////
-
-    UsdAiMaterialAPI aiMaterialAPI(materialPrim);
-
-    // look for surface
-    if (UsdRelationship surfaceRel = aiMaterialAPI.GetSurfaceRel()) {
-        if (!PxrUsdKatana_AreRelTargetsFromBaseMaterial(surfaceRel)) {
-            SdfPathVector targetPaths;
-            surfaceRel.GetForwardedTargets(&targetPaths);
-            if (targetPaths.size() > 1) {
-                FnLogWarn("Multiple surface sources detected on "
-                          "material:" << materialPrim.GetPath());
-            }
-            if (targetPaths.size() > 0) {
-                const SdfPath targetPath = targetPaths[0];
-                if (UsdPrim surfacePrim =
-                    stage->GetPrimAtPath(targetPath)) {
-
-                    std::string handle = _CreateShadingNode(
-                        surfacePrim, currentTime,
-                        nodesBuilder, interfaceBuilder, "arnold", flatten);
-                    terminalsBuilder.set("arnoldSurface",
-                                         FnKat::StringAttribute(handle));
-                    terminalsBuilder.set("arnoldSurfacePort",
-                                         FnKat::StringAttribute("out"));
-                } else {
-                    FnLogWarn("Surface shader does not exist at:" << 
-                              targetPath.GetString());
-                }
-            }
-        }
-    }
-
-    // look for displacement
-    if (UsdRelationship displacementRel = aiMaterialAPI.GetDisplacementRel()) {
-        if (!PxrUsdKatana_AreRelTargetsFromBaseMaterial(displacementRel)) {
-            SdfPathVector targetPaths;
-            displacementRel.GetForwardedTargets(&targetPaths);
-        
-            if (targetPaths.size() > 1) {
-                FnLogWarn("Multiple displacement sources detected on "
-                          "material:" << materialPrim.GetPath());
-            }
-            if (targetPaths.size() > 0) {
-                const SdfPath targetPath = targetPaths[0];
-                if (UsdPrim displacementPrim =
-                    stage->GetPrimAtPath(targetPath)) {
-
-                    std::string handle = _CreateShadingNode(
-                        displacementPrim, currentTime,
-                        nodesBuilder, interfaceBuilder, "arnold", flatten);
-                    terminalsBuilder.set("arnoldDisplacement",
-                                         FnKat::StringAttribute(handle));
-                    terminalsBuilder.set("arnoldDisplacementPort",
-                                         FnKat::StringAttribute("out"));
-                } else {
-                    FnLogWarn("Displacement shader does not exist at:" << 
-                              targetPath.GetString());
-                }
-            }
-        }
-    }
 
 
     // with the current implementation of ris, there are

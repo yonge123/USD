@@ -26,13 +26,10 @@
 
 #include "usdMaya/shadingModeRegistry.h"
 #include "usdMaya/util.h"
-#include "usdMaya/ArnoldShaderExport.h"
 
 #include "pxr/base/tf/staticTokens.h"
 #include "pxr/usd/sdf/assetPath.h"
 #include "pxr/usd/usdGeom/mesh.h"
-
-#include "pxr/base/vt/array.h"
 
 #include <maya/MFnMeshData.h>
 #include <maya/MFnSet.h>
@@ -44,8 +41,6 @@
 #include <maya/MStatus.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
-
-#define AI_NODE_SHADER      0x0010
 
 
 TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaTranslatorMaterialTokens,
@@ -316,7 +311,7 @@ PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
         const PxrUsdMayaUtil::ShapeSet& bindableRoots,
         const TfToken& shadingMode,
         bool mergeTransformAndShape,
-        SdfPath overrideRootPath,        
+        SdfPath overrideRootPath,
         PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap,
         const std::string& parentScope)
 {
@@ -324,18 +319,7 @@ PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
         return;
     }
 
-    if (shadingMode == PxrUsdMayaShadingModeTokens->arnold && ArnoldShaderExport::is_valid()) {
-        // traditional registry doesn't work here, as it's only a simple function pointer
-        // which doesn't play well with starting up and shutting down the mtoa exporter
-        ArnoldShaderExport ai(stage, UsdTimeCode::Default(), parentScope, dagPathToUsdMap);
-        if (bindableRoots.empty()) {
-            for (MItDependencyNodes iter(MFn::kShadingEngine); !iter.isDone(); iter.next()) {
-                MObject obj = iter.thisNode();
-                const auto exportedShader = ai.export_shader(obj);
-            }
-        }
-        ai.setup_shaders();
-    } else if (auto exporterCreator =
+    if (auto exporterCreator =
             PxrUsdMayaShadingModeRegistry::GetExporter(shadingMode)) {
         if (auto exporter = exporterCreator()) {
             exporter->DoExport(stage, bindableRoots, mergeTransformAndShape, overrideRootPath, dagPathToUsdMap);
