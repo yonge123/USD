@@ -11,6 +11,7 @@ pxr_shared_library(${PXR_PACKAGE}
         tf
         usd
         usdGeom
+        usdRi
         usdShade
         usdUtils
         ${HOUDINI_LIBRARIES}
@@ -49,6 +50,7 @@ pxr_shared_library(${PXR_PACKAGE}
         xformWrapper
 
     PUBLIC_HEADERS
+        api.h
         gusd.h
         purpose.h
         USD_Holder.h

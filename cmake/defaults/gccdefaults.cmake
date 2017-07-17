@@ -24,4 +24,4 @@
 
 include(gccclangshareddefaults)
 
-set(_PXR_CXX_FLAGS "${_PXR_GCC_CLANG_SHARED_CXX_FLAGS}")
+set(_PXR_CXX_FLAGS "${_PXR_GCC_CLANG_SHARED_CXX_FLAGS} -DTF_NO_GNU_EXT")
