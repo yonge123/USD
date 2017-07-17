@@ -37,7 +37,7 @@ void
 PxrUsdKatanaReadPointInstancer(
         const UsdGeomPointInstancer& instancer,
         const PxrUsdKatanaUsdInPrivateData& data,
-        PxrUsdKatanaAttrMap& outputAttrMap,
+        PxrUsdKatanaAttrMap& instancerAttrMap,
         PxrUsdKatanaAttrMap& sourcesAttrMap,
         PxrUsdKatanaAttrMap& instancesAttrMap,
         PxrUsdKatanaAttrMap& inputAttrMap);

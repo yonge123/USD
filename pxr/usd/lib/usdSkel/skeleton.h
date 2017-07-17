@@ -21,17 +21,17 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef USDSHADE_GENERATED_PSHADER_H
-#define USDSHADE_GENERATED_PSHADER_H
+#ifndef USDSKEL_GENERATED_SKELETON_H
+#define USDSKEL_GENERATED_SKELETON_H
 
-/// \file usdShade/pShader.h
+/// \file usdSkel/skeleton.h
 
 #include "pxr/pxr.h"
-#include "pxr/usd/usdShade/api.h"
+#include "pxr/usd/usdSkel/api.h"
 #include "pxr/usd/usd/typed.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
-#include "pxr/usd/usdShade/tokens.h"
+#include "pxr/usd/usdSkel/tokens.h"
 
 #include "pxr/base/vt/value.h"
 
@@ -47,13 +47,14 @@ PXR_NAMESPACE_OPEN_SCOPE
 class SdfAssetPath;
 
 // -------------------------------------------------------------------------- //
-// PSHADER                                                                    //
+// SKELETON                                                                   //
 // -------------------------------------------------------------------------- //
 
-/// \class UsdShadePShader
+/// \class UsdSkelSkeleton
 ///
+/// Describes a skeleton.
 ///
-class UsdShadePShader : public UsdTyped
+class UsdSkelSkeleton : public UsdTyped
 {
 public:
     /// Compile-time constant indicating whether or not this class corresponds
@@ -62,45 +63,45 @@ public:
     /// a non-empty typeName.
     static const bool IsConcrete = true;
 
-    /// Construct a UsdShadePShader on UsdPrim \p prim .
-    /// Equivalent to UsdShadePShader::Get(prim.GetStage(), prim.GetPath())
+    /// Construct a UsdSkelSkeleton on UsdPrim \p prim .
+    /// Equivalent to UsdSkelSkeleton::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
-    explicit UsdShadePShader(const UsdPrim& prim=UsdPrim())
+    explicit UsdSkelSkeleton(const UsdPrim& prim=UsdPrim())
         : UsdTyped(prim)
     {
     }
 
-    /// Construct a UsdShadePShader on the prim held by \p schemaObj .
-    /// Should be preferred over UsdShadePShader(schemaObj.GetPrim()),
+    /// Construct a UsdSkelSkeleton on the prim held by \p schemaObj .
+    /// Should be preferred over UsdSkelSkeleton(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
-    explicit UsdShadePShader(const UsdSchemaBase& schemaObj)
+    explicit UsdSkelSkeleton(const UsdSchemaBase& schemaObj)
         : UsdTyped(schemaObj)
     {
     }
 
     /// Destructor.
-    USDSHADE_API
-    virtual ~UsdShadePShader();
+    USDSKEL_API
+    virtual ~UsdSkelSkeleton();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
-    USDSHADE_API
+    USDSKEL_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
-    /// Return a UsdShadePShader holding the prim adhering to this
+    /// Return a UsdSkelSkeleton holding the prim adhering to this
     /// schema at \p path on \p stage.  If no prim exists at \p path on
     /// \p stage, or if the prim at that path does not adhere to this schema,
     /// return an invalid schema object.  This is shorthand for the following:
     ///
     /// \code
-    /// UsdShadePShader(stage->GetPrimAtPath(path));
+    /// UsdSkelSkeleton(stage->GetPrimAtPath(path));
     /// \endcode
     ///
-    USDSHADE_API
-    static UsdShadePShader
+    USDSKEL_API
+    static UsdSkelSkeleton
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
     /// Attempt to ensure a \a UsdPrim adhering to this schema at \p path
@@ -125,126 +126,60 @@ public:
     /// specify this schema class, in case a stronger typeName opinion overrides
     /// the opinion at the current EditTarget.
     ///
-    USDSHADE_API
-    static UsdShadePShader
+    USDSKEL_API
+    static UsdSkelSkeleton
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
-    USDSHADE_API
+    USDSKEL_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
-    USDSHADE_API
+    USDSKEL_API
     virtual const TfType &_GetTfType() const;
 
 public:
     // --------------------------------------------------------------------- //
-    // SLOPATH 
+    // RESTTRANSFORMS 
     // --------------------------------------------------------------------- //
-    /// 
+    /// specifies rest transforms of each joint in 
+    /// **joint-local space**, in the ordering imposed by *joints*.
     ///
-    /// \n  C++ Type: SdfAssetPath
-    /// \n  Usd Type: SdfValueTypeNames->Asset
-    /// \n  Variability: SdfVariabilityVarying
-    /// \n  Fallback Value: No Fallback
-    USDSHADE_API
-    UsdAttribute GetSloPathAttr() const;
-
-    /// See GetSloPathAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    USDSHADE_API
-    UsdAttribute CreateSloPathAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
-
-public:
-    // --------------------------------------------------------------------- //
-    // SHADERPROTOCOL 
-    // --------------------------------------------------------------------- //
-    /// 
-    ///
-    /// \n  C++ Type: std::string
-    /// \n  Usd Type: SdfValueTypeNames->String
+    /// \n  C++ Type: VtArray<GfMatrix4d>
+    /// \n  Usd Type: SdfValueTypeNames->Matrix4dArray
     /// \n  Variability: SdfVariabilityUniform
     /// \n  Fallback Value: No Fallback
-    USDSHADE_API
-    UsdAttribute GetShaderProtocolAttr() const;
+    USDSKEL_API
+    UsdAttribute GetRestTransformsAttr() const;
 
-    /// See GetShaderProtocolAttr(), and also 
+    /// See GetRestTransformsAttr(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
-    USDSHADE_API
-    UsdAttribute CreateShaderProtocolAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+    USDSKEL_API
+    UsdAttribute CreateRestTransformsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // --------------------------------------------------------------------- //
-    // SHADERTYPE 
+    // JOINTS 
     // --------------------------------------------------------------------- //
-    /// 
+    /// A relationship that defines the order of all Skeleton joints 
+    /// for pose evaluation, for a "primary" Skeleton, or provides re-indexing 
+    /// of joints into an ancestor Skeleton's joints for a nested (in namespace)
+    /// Skeleton.
     ///
-    /// \n  C++ Type: std::string
-    /// \n  Usd Type: SdfValueTypeNames->String
-    /// \n  Variability: SdfVariabilityUniform
-    /// \n  Fallback Value: No Fallback
-    USDSHADE_API
-    UsdAttribute GetShaderTypeAttr() const;
+    USDSKEL_API
+    UsdRelationship GetJointsRel() const;
 
-    /// See GetShaderTypeAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    USDSHADE_API
-    UsdAttribute CreateShaderTypeAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
-
-public:
-    // --------------------------------------------------------------------- //
-    // DISPLAYCOLOR 
-    // --------------------------------------------------------------------- //
-    /// 
-    ///
-    /// \n  C++ Type: GfVec3f
-    /// \n  Usd Type: SdfValueTypeNames->Color3f
-    /// \n  Variability: SdfVariabilityVarying
-    /// \n  Fallback Value: No Fallback
-    USDSHADE_API
-    UsdAttribute GetDisplayColorAttr() const;
-
-    /// See GetDisplayColorAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    USDSHADE_API
-    UsdAttribute CreateDisplayColorAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
-
-public:
-    // --------------------------------------------------------------------- //
-    // DISPLAYOPACITY 
-    // --------------------------------------------------------------------- //
-    /// 
-    ///
-    /// \n  C++ Type: float
-    /// \n  Usd Type: SdfValueTypeNames->Float
-    /// \n  Variability: SdfVariabilityVarying
-    /// \n  Fallback Value: No Fallback
-    USDSHADE_API
-    UsdAttribute GetDisplayOpacityAttr() const;
-
-    /// See GetDisplayOpacityAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    USDSHADE_API
-    UsdAttribute CreateDisplayOpacityAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+    /// See GetJointsRel(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create
+    USDSKEL_API
+    UsdRelationship CreateJointsRel() const;
 
 public:
     // ===================================================================== //
