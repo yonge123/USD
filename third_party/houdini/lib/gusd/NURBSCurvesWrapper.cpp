@@ -38,6 +38,8 @@
 #include <GT/GT_DAIndirect.h>
 #include <GT/GT_GEOPrimPacked.h>
 
+#include <numeric>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 using std::cerr;
@@ -767,7 +769,7 @@ GusdNURBSCurvesWrapper::updateFromGTPrim(
     }
 
     // -------------------------------------------------------------------------
-    return true;
+    return GusdPrimWrapper::updateFromGTPrim(sourcePrim, houXform, ctxt, xformCache);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
