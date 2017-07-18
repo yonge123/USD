@@ -4,4 +4,5 @@ tg/customization/disable_tbb_debug
 tg/customization/non_crazy_default_uv
 tg/simple_features/remove_gnu_hash_map
 tg/simple_features/katana_improved_deformation_blur
+tg/simple_features/maya_error_unknown_shadingMode
 tg/aiUsd/katana_shader_import
