@@ -97,8 +97,8 @@ usdTranslatorExport::writer(const MFileObject &file,
                         jobArgs.shadingMode = modeToken; 
                     } else { 
                         MGlobal::displayError( 
-                            TfStringPrintf("No shadingMode '%s' found. Setting shadingMode='none'", modeToken.GetText()).c_str()); 
-                        jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none; 
+                            TfStringPrintf("No shadingMode '%s' found. Setting shadingMode='none'", modeToken.GetText()).c_str());
+                        return MS::kFailure;
                     }
                 } 
             }
