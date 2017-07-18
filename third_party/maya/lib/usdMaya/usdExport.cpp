@@ -158,6 +158,7 @@ try
                 if (shadingMode != PxrUsdMayaShadingModeTokens->none) {
                     MGlobal::displayError(TfStringPrintf("No shadingMode '%s' found.  Setting shadingMode='none'", 
                                 shadingMode.GetText()).c_str());
+                    return MS::kFailure;
                 }
                 jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none;
             }
