@@ -289,6 +289,13 @@ PxrUsdKatanaReadMesh(
     mesh.GetSubdivisionSchemeAttr().Get(&scheme);
     bool isSubd = (scheme != UsdGeomTokens->none);
 
+    attrs.set("type", FnKat::StringAttribute(isSubd ? "subdmesh" : "polymesh"));
+
+    //
+    // Construct the 'geometry' attribute.
+    //
+
+    // position
     attrs.set("geometry.point.P", [&] () -> FnKat::Attribute {
         const auto& motionSampleTimes = data.GetMotionSampleTimes(mesh.GetPointsAttr());
 
@@ -298,7 +305,7 @@ PxrUsdKatanaReadMesh(
         }
 
         const auto currentTime = data.GetCurrentTime();
-        
+
         std::vector<UsdTimeCode> sampleTimes; sampleTimes.reserve(numMotionSampleTimes);
         for (const auto& it : motionSampleTimes) {
             sampleTimes.push_back(currentTime + it);
@@ -307,7 +314,7 @@ PxrUsdKatanaReadMesh(
         std::vector<VtVec3fArray> positionSamples(numMotionSampleTimes);
 
         const auto numPosSamples =
-            mesh.ComputePositionsAtTimes(&positionSamples, sampleTimes, currentTime);
+                mesh.ComputePositionsAtTimes(&positionSamples, sampleTimes, currentTime);
 
         FnKat::FloatBuilder posBuilder(3);
 
@@ -318,13 +325,6 @@ PxrUsdKatanaReadMesh(
 
         return posBuilder.build();
     } ());
-
-    //
-    // Construct the 'geometry' attribute.
-    //
-
-    // position
-    attrs.set("geometry.point.P", PxrUsdKatanaGeomGetPAttr(mesh, data));
 
     /// Only use custom normals if the object is a polymesh.
     if (!isSubd){
