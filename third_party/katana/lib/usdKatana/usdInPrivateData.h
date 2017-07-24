@@ -85,6 +85,14 @@ public:
         return _shutterClose;
     }
 
+    const double GetVelocityScale() const {
+        return _velocityScale;
+    }
+
+    const bool GetEnableVelocityBlur() const {
+        return _enableVelocityBlur;
+    }
+
     /// \brief Return true if motion blur is backward.
     ///
     /// PxrUsdIn supports both forward and backward motion blur. Motion
@@ -107,10 +115,12 @@ private:
     double _currentTime;
     double _shutterOpen;
     double _shutterClose;
+    double _velocityScale;
 
     std::vector<double> _motionSampleTimesOverride;
     std::vector<double> _motionSampleTimesFallback;
 
+    bool _enableVelocityBlur;
 };
 
 
