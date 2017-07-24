@@ -388,8 +388,18 @@ nb.setParametersTemplateAttr(FnAttribute.GroupBuilder()
     .set('overrides.currentTime', '')
     .set('overrides.shutterOpen', '')
     .set('overrides.shutterClose', '')
+    .set('overrides.velocityScale', '')
+    .set('overrides.enableVelocityBlur', FnAttribute.IntAttribute(1))
     .build(),
         forceArrayNames=('locations',))
+
+nb.setHintsForParameter('overrides.enableVelocityBlur', {
+    'widget' : 'boolean',
+    'help' : """
+      Enables velocity based blur instead of interpolating positions directly.
+    """,
+})
+
 
 nb.setHintsForParameter('locations', {
     'widget': 'scenegraphLocationArray',
@@ -419,6 +429,8 @@ def buildOpChain(self, interface):
         currentTime = overrides.getChild('currentTime').getValue(frameTime)
         shutterOpen = overrides.getChild('shutterOpen').getValue(frameTime)
         shutterClose = overrides.getChild('shutterClose').getValue(frameTime)
+        velocityScale = overrides.getChild('velocityScale').getValue(frameTime)
+        enableVelocityBlur = overrides.getChild('enableVelocityBlur').getValue(frameTime)
 
         if motionSampleTimes:
             floatTimes = [float(t) for t in motionSampleTimes.split(' ')]
@@ -432,6 +444,12 @@ def buildOpChain(self, interface):
 
         if shutterClose:
             gb1.set('shutterClose', FnAttribute.FloatAttribute(float(shutterClose)))
+
+        if velocityScale:
+            gb1.set('velocityScale', FnAttribute.FloatAttribute(float(velocityScale)))
+
+        if enableVelocityBlur:
+            gb1.set('enableVelocityBlur', FnAttribute.IntAttribute(int(enableVelocityBlur)))
 
         overridesAttr = gb1.build()
 

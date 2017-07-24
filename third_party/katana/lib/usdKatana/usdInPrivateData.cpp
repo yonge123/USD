@@ -252,6 +252,60 @@ PxrUsdKatanaUsdInPrivateData::PxrUsdKatanaUsdInPrivateData(
     {
         _motionSampleTimesFallback = usdInArgs->GetMotionSampleTimes();
     }
+
+    // Velocity scale.
+    //
+    overrideFound = false;
+    for (size_t i = 0; i < pathsToCheck.size(); ++i)
+    {
+        FnKat::FloatAttribute velocityScaleAttr =
+                sessionAttr.getChildByName(
+                    "overrides."+pathsToCheck[i]+".velocityScale");
+        if (velocityScaleAttr.isValid())
+        {
+            _velocityScale = velocityScaleAttr.getValue();
+            overrideFound = true;
+            break;
+        }
+    }
+    if (!overrideFound)
+    {
+        if (parentData)
+        {
+            _velocityScale = parentData->GetVelocityScale();
+        }
+        else
+        {
+            _velocityScale = 1.0;
+        }
+    }
+
+    // Enable velocity blur.
+    //
+    overrideFound = false;
+    for (size_t i = 0; i < pathsToCheck.size(); ++i)
+    {
+        FnKat::IntAttribute enableVelocityBlurAttr =
+                sessionAttr.getChildByName(
+                    "overrides."+pathsToCheck[i]+".enableVelocityBlur");
+        if (enableVelocityBlurAttr.isValid())
+        {
+            _enableVelocityBlur = enableVelocityBlurAttr.getValue() == 1;
+            overrideFound = true;
+            break;
+        }
+    }
+    if (!overrideFound)
+    {
+        if (parentData)
+        {
+            _enableVelocityBlur = parentData->GetEnableVelocityBlur();
+        }
+        else
+        {
+            _enableVelocityBlur = true;
+        }
+    }
 }
 
 const bool
