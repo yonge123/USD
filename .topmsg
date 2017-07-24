@@ -1,6 +1,4 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/maya_particle/merge_instances
-
-<patch description>
+Subject: [usdMaya] Adding a Maya Particle writer.
 
 Signed-off-by: Pal Mezei <palm@lumapictures.com>
