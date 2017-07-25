@@ -592,15 +592,18 @@ PxrUsdKatanaGeomGetPrimvarGroup(
         // off prefixes
         std::string gdName = name;
 
+        bool isFaceVarying = false;
         // Convert interpolation -> scope
         FnKat::StringAttribute scopeAttr;
         const bool isCurve = imageable.GetPrim().IsA<UsdGeomCurves>();
         if (isCurve && interpolation == UsdGeomTokens->vertex) {
             // it's a curve, so "vertex" == "vertex"
             scopeAttr = FnKat::StringAttribute("vertex");
+        } else if (interpolation == UsdGeomTokens->faceVarying) {
+            scopeAttr = FnKat::StringAttribute("vertex");
+            isFaceVarying = true;
         } else {
             scopeAttr = FnKat::StringAttribute(
-                (interpolation == UsdGeomTokens->faceVarying)? "vertex" :
                 (interpolation == UsdGeomTokens->varying)    ? "point" :
                 (interpolation == UsdGeomTokens->vertex)     ? "point" /*see below*/ :
                 (interpolation == UsdGeomTokens->uniform)    ? "face" :
@@ -609,7 +612,9 @@ PxrUsdKatanaGeomGetPrimvarGroup(
 
         // Resolve the value
         VtValue vtValue;
-        if (!primvar->ComputeFlattened(
+        if (isFaceVarying) {
+            if (!primvar->GetAttr().Get(&vtValue, data.GetCurrentTime())) { continue; }
+        } else if (!primvar->ComputeFlattened(
                 &vtValue, data.GetCurrentTime()))
         {
             continue;
@@ -619,7 +624,7 @@ PxrUsdKatanaGeomGetPrimvarGroup(
         FnKat::Attribute valueAttr, inputTypeAttr, elementSizeAttr;
         PxrUsdKatanaUtils::ConvertVtValueToKatCustomGeomAttr(
             vtValue, elementSize, typeName.GetRole(),
-            &valueAttr, &inputTypeAttr, &elementSizeAttr);
+            &valueAttr, &inputTypeAttr, &elementSizeAttr);        
 
         // Bundle them into a group attribute
         FnKat::GroupBuilder attrBuilder;
@@ -628,17 +633,27 @@ PxrUsdKatanaGeomGetPrimvarGroup(
         if (elementSizeAttr.isValid()) {
             attrBuilder.set("elementSize", elementSizeAttr);
         }
-        attrBuilder.set("value", valueAttr);
-        // Note that 'varying' vs 'vertex' require special handling, as in
-        // Katana they are both expressed as 'point' scope above. To get
-        // 'vertex' interpolation we must set an additional
-        // 'interpolationType' attribute.  So we will flag that here.
-        const bool vertexInterpolationType = 
-            (interpolation == UsdGeomTokens->vertex);
-        if (vertexInterpolationType) {
-            attrBuilder.set("interpolationType",
-                FnKat::StringAttribute("subdiv"));
+
+        if (isFaceVarying) {
+            VtIntArray indices;
+            if (primvar->GetIndices(&indices, data.GetCurrentTime())) {
+                attrBuilder.set("indexedValue", valueAttr);
+                attrBuilder.set("index", FnAttribute::IntAttribute(indices.data(), indices.size(), 1));
+            } else {
+                attrBuilder.set("value", valueAttr);
+            }            
+        } else {
+            attrBuilder.set("value", valueAttr);
+            // Note that 'varying' vs 'vertex' require special handling, as in
+            // Katana they are both expressed as 'point' scope above. To get
+            // 'vertex' interpolation we must set an additional
+            // 'interpolationType' attribute.  So we will flag that here.
+            if (interpolation == UsdGeomTokens->vertex) {
+                attrBuilder.set("interpolationType",
+                                FnKat::StringAttribute("subdiv"));
+            }
         }
+
         gdBuilder.set(gdName, attrBuilder.build());
     }
 
