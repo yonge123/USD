@@ -1,2 +1,2 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/simple_features/face_varying_in_katana
+Subject: [usdKatana] Setting up face-varying data in katana, instead of flattening it.
