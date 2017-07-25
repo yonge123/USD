@@ -285,12 +285,12 @@ PxrUsdKatanaUsdInPrivateData::PxrUsdKatanaUsdInPrivateData(
     overrideFound = false;
     for (size_t i = 0; i < pathsToCheck.size(); ++i)
     {
-        FnKat::IntAttribute enableVelocityBlurAttr =
+        FnKat::IntAttribute disableVelocityBlurAttr =
                 sessionAttr.getChildByName(
-                    "overrides."+pathsToCheck[i]+".enableVelocityBlur");
-        if (enableVelocityBlurAttr.isValid())
+                    "overrides."+pathsToCheck[i]+".disableVelocityBlur");
+        if (disableVelocityBlurAttr.isValid())
         {
-            _enableVelocityBlur = enableVelocityBlurAttr.getValue() == 1;
+            _disableVelocityBlur = disableVelocityBlurAttr.getValue() == 1;
             overrideFound = true;
             break;
         }
@@ -299,11 +299,11 @@ PxrUsdKatanaUsdInPrivateData::PxrUsdKatanaUsdInPrivateData(
     {
         if (parentData)
         {
-            _enableVelocityBlur = parentData->GetEnableVelocityBlur();
+            _disableVelocityBlur = parentData->GetDisableVelocityBlur();
         }
         else
         {
-            _enableVelocityBlur = true;
+            _disableVelocityBlur = false;
         }
     }
 }
