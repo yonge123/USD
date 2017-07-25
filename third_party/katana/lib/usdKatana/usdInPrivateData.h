@@ -89,8 +89,8 @@ public:
         return _velocityScale;
     }
 
-    const bool GetEnableVelocityBlur() const {
-        return _enableVelocityBlur;
+    const bool GetDisableVelocityBlur() const {
+        return _disableVelocityBlur;
     }
 
     /// \brief Return true if motion blur is backward.
@@ -120,7 +120,7 @@ private:
     std::vector<double> _motionSampleTimesOverride;
     std::vector<double> _motionSampleTimesFallback;
 
-    bool _enableVelocityBlur;
+    bool _disableVelocityBlur;
 };
 
 
