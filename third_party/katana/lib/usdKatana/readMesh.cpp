@@ -300,7 +300,7 @@ PxrUsdKatanaReadMesh(
         const auto& motionSampleTimes = data.GetMotionSampleTimes(mesh.GetPointsAttr());
 
         const auto numMotionSampleTimes = motionSampleTimes.size();
-        if (numMotionSampleTimes < 2 || !data.GetEnableVelocityBlur()) {
+        if (numMotionSampleTimes < 2 || !data.GetDisableVelocityBlur()) {
             return PxrUsdKatanaGeomGetPAttr(mesh, data);
         }
 

@@ -84,7 +84,7 @@ PxrUsdKatanaReadPoints(
         const auto& motionSampleTimes = data.GetMotionSampleTimes(points.GetPointsAttr());
 
         const auto numMotionSampleTimes = motionSampleTimes.size();
-        if (numMotionSampleTimes < 2 || !data.GetEnableVelocityBlur())
+        if (numMotionSampleTimes < 2 || data.GetDisableVelocityBlur())
         {
             return std::make_tuple(
                 PxrUsdKatanaGeomGetPAttr(points, data),
