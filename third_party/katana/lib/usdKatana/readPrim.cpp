@@ -592,6 +592,8 @@ PxrUsdKatanaGeomGetPrimvarGroup(
         // off prefixes
         std::string gdName = name;
 
+        VtValue vtValue;
+        VtIntArray indices;
         bool isFaceVarying = false;
         // Convert interpolation -> scope
         FnKat::StringAttribute scopeAttr;
@@ -601,7 +603,10 @@ PxrUsdKatanaGeomGetPrimvarGroup(
             scopeAttr = FnKat::StringAttribute("vertex");
         } else if (interpolation == UsdGeomTokens->faceVarying) {
             scopeAttr = FnKat::StringAttribute("vertex");
-            isFaceVarying = true;
+            if (primvar->GetAttr().Get(&vtValue, data.GetCurrentTime()) &&
+                primvar->GetIndices(&indices, data.GetCurrentTime())) {
+                isFaceVarying = true;
+            }
         } else {
             scopeAttr = FnKat::StringAttribute(
                 (interpolation == UsdGeomTokens->varying)    ? "point" :
@@ -610,12 +615,9 @@ PxrUsdKatanaGeomGetPrimvarGroup(
                 "primitive" );
         }
 
-        // Resolve the value
-        VtValue vtValue;
-        if (isFaceVarying) {
-            if (!primvar->GetAttr().Get(&vtValue, data.GetCurrentTime())) { continue; }
-        } else if (!primvar->ComputeFlattened(
-                &vtValue, data.GetCurrentTime()))
+        // Resolve the value if not face-varying        
+        if (!isFaceVarying && !primvar->ComputeFlattened(
+            &vtValue, data.GetCurrentTime()))
         {
             continue;
         }
@@ -635,13 +637,8 @@ PxrUsdKatanaGeomGetPrimvarGroup(
         }
 
         if (isFaceVarying) {
-            VtIntArray indices;
-            if (primvar->GetIndices(&indices, data.GetCurrentTime())) {
-                attrBuilder.set("indexedValue", valueAttr);
-                attrBuilder.set("index", FnAttribute::IntAttribute(indices.data(), indices.size(), 1));
-            } else {
-                attrBuilder.set("value", valueAttr);
-            }            
+            attrBuilder.set("indexedValue", valueAttr);
+            attrBuilder.set("index", FnAttribute::IntAttribute(indices.data(), indices.size(), 1));
         } else {
             attrBuilder.set("value", valueAttr);
             // Note that 'varying' vs 'vertex' require special handling, as in
