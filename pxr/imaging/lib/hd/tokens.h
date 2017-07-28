@@ -206,9 +206,13 @@ PXR_NAMESPACE_OPEN_SCOPE
                                                 \
     /* Sprims */                                \
     (camera)                                    \
-    (light)                                     \
     (drawTarget)                                \
     (shader)                                    \
+    /* Sprims Lights */                         \
+    (light)                                     \
+    (domeLight)                                 \
+    (rectLight)                                 \
+    (sphereLight)                               \
                                                 \
     /* Bprims */                                \
     (texture)
