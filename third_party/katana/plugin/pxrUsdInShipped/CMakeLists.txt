@@ -8,7 +8,6 @@ pxr_plugin(${PXR_PACKAGE}
         katanaPluginApi
         kind
         usd
-        usdAi
         usdGeom
         usdKatana
         usdShade
@@ -25,7 +24,6 @@ pxr_plugin(${PXR_PACKAGE}
     CPPFILES
         register.cpp
 
-        aiProcedural.cpp
         basisCurves.cpp
         camera.cpp
         constraints.cpp
