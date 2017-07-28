@@ -35,7 +35,6 @@ from pxr import Usd, UsdGeom, UsdUtils, UsdImagingGL
 from pxr import Glf
 from pxr import Sdf
 from pxr import Tf
-from pxr import Plug
 
 from ._usdviewq import Utils
 
@@ -1421,8 +1420,7 @@ class MainWindow(QtGui.QMainWindow):
 
             pluginTypes = self._stageView.GetRendererPlugins()
             for pluginType in pluginTypes:
-                name = Plug.Registry().GetStringFromPluginMetaData(
-                    pluginType, 'displayName')
+                name = self._stageView.GetRendererPluginDisplayName(pluginType)
                 action = self._ui.menuRendererPlugin.addAction(name)
                 action.setCheckable(True)
                 action.pluginType = pluginType
@@ -1437,6 +1435,7 @@ class MainWindow(QtGui.QMainWindow):
             # If any plugins exist, the first render plugin is the default one.
             if len(self._ui.rendererPluginActionGroup.actions()) > 0:
                 self._ui.rendererPluginActionGroup.actions()[0].setChecked(True)
+                self._stageView.SetRendererPlugin(pluginTypes[0])
 
             # Otherwise, put a no-op placeholder in.
             else:
