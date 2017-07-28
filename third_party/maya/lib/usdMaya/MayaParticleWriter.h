@@ -35,10 +35,13 @@ class UsdGeomPoints;
 class MayaParticleWriter : public MayaTransformWriter
 {
 public:
-    MayaParticleWriter(MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs);
+    MayaParticleWriter(const MDagPath & iDag,
+                       const SdfPath& uPath,
+                       bool instanceSource,
+                       usdWriteJobCtx& jobCtx);
     virtual ~MayaParticleWriter() {}
 
-    virtual UsdPrim write(const UsdTimeCode &usdTime) override;
+    virtual void write(const UsdTimeCode &usdTime) override;
 
     // TODO: Check this properly, static particles are uncommon, but used.
     virtual bool isShapeAnimated() const override { return true; }
@@ -58,7 +61,7 @@ private:
     void initializeUserAttributes();
 };
 
-typedef shared_ptr<MayaParticleWriter> MayaParticleWriterPtr;
+typedef std::shared_ptr<MayaParticleWriter> MayaParticleWriterPtr;
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

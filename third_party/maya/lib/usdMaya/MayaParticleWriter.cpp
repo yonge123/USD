@@ -169,23 +169,24 @@ namespace {
 }
 
 MayaParticleWriter::MayaParticleWriter(
-    MDagPath& iDag, UsdStageRefPtr stage, const JobExportArgs& iArgs)
-    : MayaTransformWriter(iDag, stage, iArgs),
+    const MDagPath & iDag,
+    const SdfPath& uPath,
+    bool instanceSource,
+    usdWriteJobCtx& jobCtx)
+    : MayaTransformWriter(iDag, uPath, instanceSource, jobCtx),
       mInitialFrameDone(false) {
+    auto primSchema = UsdGeomPoints::Define(getUsdStage(), getUsdPath());
+    TF_AXIOM(primSchema);
+    mUsdPrim = primSchema.GetPrim();
+    TF_AXIOM(mUsdPrim);
 
     initializeUserAttributes();
 }
 
-UsdPrim MayaParticleWriter::write(const UsdTimeCode &usdTime) {
-    auto primSchema = UsdGeomPoints::Define(getUsdStage(), getUsdPath());
-    TF_AXIOM(primSchema);
-    auto prim = primSchema.GetPrim();
-    TF_AXIOM(prim);
-
+void MayaParticleWriter::write(const UsdTimeCode &usdTime) {
+    UsdGeomPoints primSchema(mUsdPrim);
     writeTransformAttrs(usdTime, primSchema);
     writeParams(usdTime, primSchema);
-
-    return prim;
 }
 
 void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& points) {
