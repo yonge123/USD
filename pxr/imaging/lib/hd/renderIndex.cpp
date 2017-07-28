@@ -129,11 +129,8 @@ HdRenderIndex::InsertRprim(TfToken const& typeId,
         return;
     }
 
-    // Do Insertion sort to insert id into list of paths.
-    SdfPathVector::iterator it = std::lower_bound(_rprimIds.begin(),
-                                                  _rprimIds.end(),
-                                                  rprimId);
-    _rprimIds.insert(it, rprimId);
+    _rprimIds.Insert(rprimId);
+
 
     _tracker.RprimInserted(rprimId, rprim->GetInitialDirtyBitsMask());
     _AllocatePrimId(rprim);
@@ -165,14 +162,7 @@ HdRenderIndex::RemoveRprim(SdfPath const& id)
 
     SdfPath instancerId = rprimInfo.rprim->GetInstancerId();
 
-    SdfPathVector::iterator it = std::lower_bound(_rprimIds.begin(),
-                                                  _rprimIds.end(),
-                                                  id);
-    if (it != _rprimIds.end()) {
-        if (*it == id) {
-            _rprimIds.erase(it);
-        }
-    }
+    _rprimIds.Remove(id);
 
     if (!instancerId.IsEmpty()) {
         _tracker.InstancerRPrimRemoved(instancerId, id);
@@ -200,7 +190,7 @@ HdRenderIndex::Clear()
     }
     // Clear Rprims, Rprim IDs, and delegate mappings.
     _rprimMap.clear();
-    _rprimIds.clear();
+    _rprimIds.Clear();
     _CompactPrimIds();
 
     // Clear S & B prims
@@ -299,7 +289,7 @@ HdRenderIndex::GetSprim(TfToken const& typeId, SdfPath const& id) const
 
 SdfPathVector
 HdRenderIndex::GetSprimSubtree(TfToken const& typeId,
-                               SdfPath const& rootPath) const
+                               SdfPath const& rootPath)
 {
     SdfPathVector result;
     _sprimIndex.GetPrimSubtree(typeId, rootPath, &result);
@@ -343,7 +333,7 @@ HdRenderIndex::GetBprim(TfToken const& typeId, SdfPath const& id) const
 
 SdfPathVector
 HdRenderIndex::GetBprimSubtree(TfToken const& typeId,
-                               SdfPath const& rootPath) const
+                               SdfPath const& rootPath)
 {
     SdfPathVector result;
     _bprimIndex.GetPrimSubtree(typeId, rootPath, &result);
@@ -441,14 +431,6 @@ HdRenderIndex::GetExtComputationInfo(SdfPath const &id,
 HdRenderDelegate *HdRenderIndex::GetRenderDelegate() const
 {
     return _renderDelegate;
-}
-
-TfToken
-HdRenderIndex::GetRenderDelegateType() const
-{
-    TfType const &type = TfType::Find(_renderDelegate);
-    const std::string &typeName  = type.GetTypeName();
-    return TfToken(typeName);
 }
 
 HdResourceRegistrySharedPtr 
@@ -651,12 +633,12 @@ HdRenderIndex::GetRenderTag(SdfPath const& id, TfToken const& reprName) const
 }
 
 SdfPathVector
-HdRenderIndex::GetRprimSubtree(SdfPath const& rootPath) const
+HdRenderIndex::GetRprimSubtree(SdfPath const& rootPath)
 {
     SdfPathVector paths;
 
     HdPrimGather gather;
-    gather.Subtree(_rprimIds, rootPath, &paths);
+    gather.Subtree(_rprimIds.GetIds(), rootPath, &paths);
 
     return paths;
 }
@@ -769,6 +751,66 @@ namespace {
             }
         }
     };
+
+    static void
+    _PreSyncRPrims(_RprimSyncRequestVector *syncReq,
+                             _ReprList reprs,
+                             size_t begin,
+                             size_t end)
+    {
+        for (size_t i = begin; i < end; ++i)
+        {
+            HdSceneDelegate *sceneDelegate = syncReq->sceneDelegates[i];
+            HdRprim         *rprim         = syncReq->rprims[i];
+            HdDirtyBits     &dirtyBits     = syncReq->request.dirtyBits[i];
+            size_t          reprsMask      = syncReq->reprsMasks[i];
+
+            // Initialize all utilized repr's for the rprim.
+            //
+            // The request vector is built by combining multiple rprim
+            // collections and each collection can have it's own
+            // repr.  The reprs param is a list of all the unique reprs used
+            // by these collections.
+            //
+            // As such each Rprim can be included in multiple collections,
+            // each Rprim can have multiple repr's in the same sync.
+            // Thus the reprs mask, specifies which subset of reprs from the
+            // repr list is used by collections the prim belongs to.
+            //
+            // An Rprim may require additional data to perform a sync of a repr
+            // for the first time.  Therefore, inform the Rprim of the new repr
+            // and give it the opportunity to modify the dirty bits in the
+            // request before providing them to the scene delegate.
+            TF_FOR_ALL(it, reprs) {
+                if (reprsMask & 1) {
+                    rprim->InitRepr(sceneDelegate,
+                                    it->reprName,
+                                    it->forcedRepr,
+                                    &dirtyBits);
+                }
+                reprsMask >>= 1;
+            }
+
+            // A render delegate may require additional information
+            // from the scene delegate to process a change.
+            //
+            // Calling PropagateRprimDirtyBits gives the Rprim an opportunity
+            // to update the dirty bits in order to request the information
+            // before passing the request to the scene deleate.
+            dirtyBits = rprim->PropagateRprimDirtyBits(dirtyBits);
+        }
+    }
+
+    static void
+    _PreSyncRequestVector(_RprimSyncRequestVector *syncReq,
+                                    _ReprList reprs)
+    {
+        WorkParallelForN(syncReq->rprims.size(),
+                     boost::bind(&_PreSyncRPrims,
+                                 syncReq, reprs, _1, _2));
+
+    }
+
 };
 
 void
@@ -785,24 +827,22 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector const &tasks,
 
     HdRenderParam *renderParam = _renderDelegate->GetRenderParam();
 
-
     _bprimIndex.SyncPrims(_tracker, _renderDelegate->GetRenderParam());
     _sprimIndex.SyncPrims(_tracker, _renderDelegate->GetRenderParam());
 
-    TRACE_SCOPE("Sync Ext Computations");
-    TF_FOR_ALL(it, _extComputationMap) {
-        const SdfPath &compId = it->first;
-        _ExtComputationInfo &compInfo = it->second;
+    {
+        HF_TRACE_FUNCTION_SCOPE("Sync Ext Computations");
+        TF_FOR_ALL(it, _extComputationMap) {
+            const SdfPath &compId = it->first;
+            _ExtComputationInfo &compInfo = it->second;
 
-        HdDirtyBits dirtyBits = _tracker.GetExtComputationDirtyBits(compId);
-        if (HdChangeTracker::IsDirty(dirtyBits)) {
-            compInfo.extComputation->Sync(compInfo.sceneDelegate, &dirtyBits);
-            _tracker.MarkExtComputationClean(compId, dirtyBits);
+            HdDirtyBits dirtyBits = _tracker.GetExtComputationDirtyBits(compId);
+            if (HdChangeTracker::IsDirty(dirtyBits)) {
+                compInfo.extComputation->Sync(compInfo.sceneDelegate, &dirtyBits);
+                _tracker.MarkExtComputationClean(compId, dirtyBits);
+            }
         }
     }
-
-
-
 
     // could be in parallel... but how?
     // may be just gathering dirtyLists at first, and then index->sync()?
@@ -823,7 +863,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector const &tasks,
     std::map<SdfPath, /*reprMask=*/size_t, SdfPath::FastLessThan> dirtyIds;
     _ReprList reprs;
     {
-        TRACE_SCOPE("Merge Dirty Lists");
+        HF_TRACE_FUNCTION_SCOPE("Merge Dirty Lists");
         // If dirty list prims are all sorted, we could do something more
         // efficient here.
         for (auto const& hdDirtyList : _syncQueue) {
@@ -865,7 +905,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector const &tasks,
     _RprimSyncRequestMap syncMap;
     bool resetVaryingState = false;
     {
-        TRACE_SCOPE("Build Sync Map: Rprims");
+        HF_TRACE_FUNCTION_SCOPE("Build Sync Map: Rprims");
         // Collect dirty Rprim IDs.
         HdSceneDelegate* curdel = nullptr;
         _RprimSyncRequestVector* curvec = nullptr;
@@ -922,8 +962,34 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector const &tasks,
     // Drop the GIL before we spawn parallel tasks.
     TF_PY_ALLOW_THREADS_IN_SCOPE();
 
+
+    // Give the render delegates the chance to modify the sync request
+    // before passing it to the scene delegates.
+    //
+    // This allows the render delegate to request more data that it needs
+    // to process the changes that are marked in the change tracker.
+    //
+    // So that the entity marking the changes does not need to be aware of
+    // render delegate specific data dependencies.
     {
-        TRACE_SCOPE("Delegate Sync");
+        HF_TRACE_FUNCTION_SCOPE("Pre-Sync Rprims");
+
+        // Dispatch synchronization work to each delegate.
+        WorkArenaDispatcher dirtyBitDispatcher;
+
+        TF_FOR_ALL(dlgIt, syncMap) {
+            _RprimSyncRequestVector *r = &dlgIt->second;
+            dirtyBitDispatcher.Run(
+                                   boost::bind(&_PreSyncRequestVector,
+                                               r, reprs));
+
+        }
+        dirtyBitDispatcher.Wait();
+    }
+
+
+    {
+        HF_TRACE_FUNCTION_SCOPE("Delegate Sync");
         // Dispatch synchronization work to each delegate.
         _Worker worker(&syncMap);
         WorkParallelForN(syncMap.size(), 
@@ -956,7 +1022,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector const &tasks,
     dispatcher.Wait();
 
     {
-        TRACE_SCOPE("Clean Up");
+        HF_TRACE_FUNCTION_SCOPE("Clean Up");
         // Give Delegate's to do any post-parrellel work,
         // such as garbage collection.
         TF_FOR_ALL(dlgIt, syncMap) {
