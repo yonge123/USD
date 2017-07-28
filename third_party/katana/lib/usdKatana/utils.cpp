@@ -1035,9 +1035,8 @@ PxrUsdKatanaUtils::FindLightPaths(const UsdStageRefPtr& stage)
 {
     std::set<SdfPath> allLights;
     for (const auto &child: stage->GetPseudoRoot().GetChildren()) {
-        SdfPathSet lights =
-            UsdLuxListAPI(child)
-            .ComputeLightList(UsdLuxListAPI::StoredListConsult);
+        SdfPathSet lights = UsdLuxListAPI(child).ComputeLightList(
+            UsdLuxListAPI::ComputeModeConsultModelHierarchyCache);
         allLights.insert(lights.begin(), lights.end());
     }
     return allLights;
