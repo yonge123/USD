@@ -300,7 +300,7 @@ PxrUsdKatanaReadMesh(
         const auto& motionSampleTimes = data.GetMotionSampleTimes(mesh.GetPointsAttr());
 
         const auto numMotionSampleTimes = motionSampleTimes.size();
-        if (numMotionSampleTimes < 2) {
+        if (numMotionSampleTimes < 2 || !data.GetDisableVelocityBlur()) {
             return PxrUsdKatanaGeomGetPAttr(mesh, data);
         }
 
@@ -314,7 +314,9 @@ PxrUsdKatanaReadMesh(
         std::vector<VtVec3fArray> positionSamples(numMotionSampleTimes);
 
         const auto numPosSamples =
-                mesh.ComputePositionsAtTimes(&positionSamples, sampleTimes, currentTime);
+                mesh.ComputePositionsAtTimes(
+                    &positionSamples, sampleTimes, currentTime,
+                    static_cast<float>(data.GetVelocityScale()));
 
         FnKat::FloatBuilder posBuilder(3);
 
