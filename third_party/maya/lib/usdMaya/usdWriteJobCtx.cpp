@@ -32,6 +32,7 @@
 #include "usdMaya/MayaNurbsCurveWriter.h"
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
 #include "usdMaya/MayaParticleWriter.h"
+#include "usdMaya/MayaInstancerWriter.h"
 #include "usdMaya/MayaTransformWriter.h"
 #include "usdMaya/primWriterRegistry.h"
 
@@ -93,6 +94,12 @@ SdfPath usdWriteJobCtx::getMasterPath(const MDagPath& dg)
             return SdfPath();
         }
     }
+}
+
+SdfPath usdWriteJobCtx::getUsdPath(const MDagPath& dg)
+{
+    const auto it = mDagPathToUsdPathMap.find(dg);
+    return it == mDagPathToUsdPathMap.end() ? SdfPath() : it->second;
 }
 
 SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool instanceSource /* = false */)
@@ -189,7 +196,13 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         }
     }
 
-    if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator) ||
+    if (ob.hasFn(MFn::kInstancer)) {
+        MayaInstancerWriterPtr primPtr(new MayaInstancerWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
+        if (primPtr->isValid()) {
+            return primPtr;
+        }
+    }
+    else if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator) ||
         (mArgs.exportInstances && curDag.isInstanced() && !instanceSource)) {
         MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
         if (primPtr->isValid()) {

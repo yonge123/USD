@@ -59,6 +59,8 @@ public:
     // Querying the master path for instancing. This also creates the shape if it doesn't exists.
     PXRUSDMAYA_API
     SdfPath getMasterPath(const MDagPath& dg);
+    PXRUSDMAYA_API
+    SdfPath getUsdPath(const MDagPath& dg);
 protected:
     PXRUSDMAYA_API
     bool openFile(const std::string& filename, bool append);
@@ -70,6 +72,10 @@ protected:
     JobExportArgs mArgs;
     // List of the primitive writers to iterate over
     std::vector<MayaPrimWriterPtr> mMayaPrimWriterList;
+    // Storing the dagpath to the usd path map, this is required for any type
+    // of writers that use other nodes from the scenegraph.
+    // For example, the instancer writer is one of them.
+    PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type mDagPathToUsdPathMap;
     // Stage used to write out USD file
     UsdStageRefPtr mStage;
 private:

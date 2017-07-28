@@ -223,7 +223,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
                     primWriter->write(UsdTimeCode::Default());
 
                     MDagPath dag = primWriter->getDagPath();
-                    mDagPathToUsdPathMap[dag] = usdPrim.GetPath();
+                    mJobCtx.mDagPathToUsdPathMap[dag] = usdPrim.GetPath();
 
                     // If we are merging transforms and the object derives from
                     // MayaTransformWriter but isn't actually a transform node, we
@@ -233,7 +233,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
                             std::dynamic_pointer_cast<MayaTransformWriter>(primWriter);
                         if (xformWriter) {
                             MDagPath xformDag = xformWriter->getTransformDagPath();
-                            mDagPathToUsdPathMap[xformDag] = usdPrim.GetPath();
+                            mJobCtx.mDagPathToUsdPathMap[xformDag] = usdPrim.GetPath();
                         }
                     }
 
@@ -261,7 +261,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
 
     // now we populate the chasers and run export default
     mChasers.clear();
-    PxrUsdMayaChaserRegistry::FactoryContext ctx(mJobCtx.mStage, mDagPathToUsdPathMap, mJobCtx.mArgs);
+    PxrUsdMayaChaserRegistry::FactoryContext ctx(mJobCtx.mStage, mJobCtx.mDagPathToUsdPathMap, mJobCtx.mArgs);
     for (const std::string& chaserName : mJobCtx.mArgs.chaserNames) {
         if (PxrUsdMayaChaserRefPtr fn = 
                 PxrUsdMayaChaserRegistry::GetInstance().Create(chaserName, ctx)) {
@@ -411,7 +411,7 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
             dagFn.getPath(dagPath);
             dagPath.extendToShape();
             SdfPath usdPrimPath; 
-            if (!TfMapLookup(mDagPathToUsdPathMap, dagPath, &usdPrimPath)) {
+            if (!TfMapLookup(mJobCtx.mDagPathToUsdPathMap, dagPath, &usdPrimPath)) {
                 continue;
             }
             usdPrimPath = usdPrimPath.ReplacePrefix(usdPrimPath.GetPrefixes()[0], usdVariantRootPrimPath); // Convert base to variant usdPrimPath
