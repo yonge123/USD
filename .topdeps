@@ -33,7 +33,6 @@ tg/simple_features/vec4_primvar_katana
 tg/simple_features/linking_against_houdini_libs
 tg/simple_features/maya_primvar_export
 tg/simple_features/face_varying_in_katana
-tg/bugfixes/primvar_isindexed_timesampled
 tg/pixar/katana_libs_dir_fix
 pseudo_root_warning
 ptex_prefer_static
