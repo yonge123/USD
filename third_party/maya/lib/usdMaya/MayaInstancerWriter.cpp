@@ -137,8 +137,8 @@ void MayaInstancerWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPointIn
     for (auto gid = decltype(particleGroups){0}; gid < particleGroups; ++gid) {
         MTransformationMatrix transformMatrix(matrices[gid]);
         const auto translation = transformMatrix.getTranslation(MSpace::kTransform);
-        const auto orientation = transformMatrix.rotationOrientation();
-        MVector scale(0.0, 0.0, 0.0);
+        const auto orientation = transformMatrix.rotation();
+        MVector scale(0.0, 0.0, 0.0); 
         transformMatrix.getScale(&scale.x, MSpace::kTransform);
         const auto end = particleStartIndices[gid + 1];
         for (auto pid = particleStartIndices[gid]; pid < end; ++pid) {
