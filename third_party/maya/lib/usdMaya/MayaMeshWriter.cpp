@@ -181,7 +181,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
                       mayaRawPoints[floatIndex+1],
                       mayaRawPoints[floatIndex+2]);
     }
-    primSchema.GetPointsAttr().Set(points, usdTime); // ANIMATED
+    PxrUsdMayaWriteUtil::SetAttributeKey(primSchema.GetPointsAttr(), VtValue(points), usdTime); // ANIMATED
 
     // Compute the extent using the raw points
     VtArray<GfVec3f> extent(2);
@@ -202,8 +202,8 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             curFaceVertexIndex++;
         }
     }
-    primSchema.GetFaceVertexCountsAttr().Set(faceVertexCounts, usdTime); // ANIMATED
-    primSchema.GetFaceVertexIndicesAttr().Set(faceVertexIndices, usdTime); // ANIMATED
+    PxrUsdMayaWriteUtil::SetAttributeKey(primSchema.GetFaceVertexCountsAttr(), VtValue(faceVertexCounts), usdTime); // ANIMATED
+    PxrUsdMayaWriteUtil::SetAttributeKey(primSchema.GetFaceVertexIndicesAttr(), VtValue(faceVertexIndices), usdTime); // ANIMATED
 
     // Read usdSdScheme attribute. If not set, we default to defaultMeshScheme
     // flag that can be user defined and initialized to catmullClark
@@ -218,7 +218,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             TfToken normalInterp;
 
             if (_GetMeshNormals(lMesh, &meshNormals, &normalInterp)) {
-                primSchema.GetNormalsAttr().Set(meshNormals, usdTime);
+                PxrUsdMayaWriteUtil::SetAttributeKey(primSchema.GetNormalsAttr(), VtValue(meshNormals), usdTime);
                 primSchema.SetNormalsInterpolation(normalInterp);
             }
         }
