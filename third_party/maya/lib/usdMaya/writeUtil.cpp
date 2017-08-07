@@ -1120,5 +1120,63 @@ PxrUsdMayaWriteUtil::CleanupPrimvarKeys(
     PxrUsdMayaWriteUtil::CleanupAttributeKeys(primvar._GetIndicesAttr(false), UsdInterpolationTypeHeld);
 }
 
+// We are making a big assumption here, that set attribute keys are called in order.
+void
+PxrUsdMayaWriteUtil::SetAttributeKey(
+    UsdAttribute attribute,
+    const VtValue& value,
+    const UsdTimeCode& usdTime,
+    UsdInterpolationType parameterInterpolation) {
+    if (!attribute || value.IsEmpty()) { return; }
+
+    if (usdTime.IsDefault()) { attribute.Set(value); }
+
+    static thread_local std::vector<double> time_samples;
+    time_samples.clear();
+    attribute.GetTimeSamples(&time_samples);
+    const auto num_time_samples = time_samples.size();
+    if (num_time_samples <= 1) {
+        attribute.Set(value, usdTime);
+        return; // We need to set the value anyway, to keep the time ranges.
+    }
+
+    const auto prev_time = time_samples.back();
+    if (usdTime.GetValue() <= prev_time) {
+        attribute.Set(value, usdTime);
+        return; // Just set the sample.
+    }
+
+    VtValue prev;
+    attribute.Get(&prev, prev_time);
+
+    if (prev.operator==(value)) {
+        if (parameterInterpolation == UsdInterpolationTypeHeld) {        
+            attribute.ClearAtTime(prev_time);
+        } else {
+            // We already made sure that there are at least 2 elements.
+            const auto prev_prev_time = time_samples[time_samples.size() - 2];
+            attribute.Get(&prev, prev_prev_time);
+            if (prev.operator==(value)) {
+                attribute.ClearAtTime(prev_prev_time);
+            }
+        }
+    }
+
+    attribute.Set(value, usdTime);
+}
+
+void
+PxrUsdMayaWriteUtil::SetPrimvarKey(
+            UsdGeomPrimvar primvar,
+            const VtValue& value,
+            const VtValue& indices,
+            const UsdTimeCode& usdTime,
+            UsdInterpolationType parameterInterpolation) {
+    if (!primvar) { return; }
+
+    PxrUsdMayaWriteUtil::SetAttributeKey(primvar.GetAttr(), value, usdTime, parameterInterpolation);
+    PxrUsdMayaWriteUtil::SetAttributeKey(primvar._GetIndicesAttr(false), indices, usdTime, UsdInterpolationTypeHeld);
+}
+
 PXR_NAMESPACE_CLOSE_SCOPE
 
