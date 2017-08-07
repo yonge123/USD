@@ -26,6 +26,7 @@
 
 #include "usdMaya/roundTripUtil.h"
 #include "usdMaya/util.h"
+#include "usdMaya/writeUtil.h"
 
 #include "pxr/base/gf/gamma.h"
 #include "pxr/base/gf/math.h"
@@ -400,12 +401,9 @@ bool MayaMeshWriter::_createRGBPrimVar(
         primSchema.CreatePrimvar(name,
                                  SdfValueTypeNames->Color3fArray,
                                  interp);
-
-    primVar.Set(data, usdTime);
-
-    if (!assignmentIndices.empty()) {
-        primVar.SetIndices(assignmentIndices, usdTime);
-    }
+    PxrUsdMayaWriteUtil::SetPrimvarKey(
+        primVar, VtValue(data),
+        assignmentIndices.empty() ? VtValue() : VtValue(assignmentIndices), usdTime);
 
     if (clamped) {
         PxrUsdMayaRoundTripUtil::MarkPrimvarAsClamped(primVar);
@@ -445,11 +443,9 @@ bool MayaMeshWriter::_createRGBAPrimVar(
                               alphaData[i]);
     }
 
-    primVar.Set(rgbaData, usdTime);
-
-    if (!assignmentIndices.empty()) {
-        primVar.SetIndices(assignmentIndices, usdTime);
-    }
+    PxrUsdMayaWriteUtil::SetPrimvarKey(
+        primVar, VtValue(rgbaData),
+        assignmentIndices.empty() ? VtValue() : VtValue(assignmentIndices), usdTime);
 
     if (clamped) {
         PxrUsdMayaRoundTripUtil::MarkPrimvarAsClamped(primVar);
@@ -499,7 +495,7 @@ void MayaMeshWriter::_writeMotionVector(
         }
     }
 
-    primSchema.GetVelocitiesAttr().Set(motionVectors, usdTime);
+    PxrUsdMayaWriteUtil::SetAttributeKey(primSchema.GetVelocitiesAttr(), VtValue(motionVectors), usdTime);
 }
 
 bool MayaMeshWriter::_createUVPrimVar(
@@ -525,11 +521,9 @@ bool MayaMeshWriter::_createUVPrimVar(
                                  SdfValueTypeNames->Float2Array,
                                  interp);
 
-    primVar.Set(data, usdTime);
-
-    if (!assignmentIndices.empty()) {
-        primVar.SetIndices(assignmentIndices, usdTime);
-    }
+    PxrUsdMayaWriteUtil::SetPrimvarKey(
+        primVar, VtValue(data),
+        assignmentIndices.empty() ? VtValue() : VtValue(assignmentIndices), usdTime);
 
     return true;
 }
