@@ -23,7 +23,7 @@
 //
 #include "instancerWrapper.h"
 
-#include "gusd/Context.h"
+#include "gusd/context.h"
 #include "gusd/GU_PackedUSD.h"
 #include "gusd/UT_Gf.h"
 #include "gusd/refiner.h"
@@ -395,9 +395,9 @@ defineForWrite(
         const GusdContext& ctxt)
 {
     GusdInstancerWrapper* instancePrim =
-        new GusdInstancerWrapper( stage, path, ctxt, ctxt.overlayGeo );
+        new GusdInstancerWrapper( stage, path, ctxt, ctxt.writeOverlay );
 
-    if((!ctxt.overlayGeo || ctxt.overlayAll)) {
+    if(!ctxt.writeOverlay || ctxt.overlayAll) {
         
         // Set empty defaults for positions, scale, and indices. 
         // This prevents katana errors when expanding per-frame exports
@@ -416,7 +416,7 @@ defineForWrite(
     // relationships.
     instancePrim->writePrototypes( ctxt, stage, sourcePrim );
 
-    if( ctxt.overlayGeo ) {
+    if( ctxt.writeOverlay ) {
 
         // If we are writing an overlay, turn off pruning for this point instancer.
         // We may have shuffled the instance index order. 
@@ -451,9 +451,9 @@ redefine( const UsdStagePtr& stage,
           const GusdContext& ctxt,
           const GT_PrimitiveHandle& sourcePrim )
 {
-    initUsdPrim( stage, path, ctxt.overlayGeo );
+    initUsdPrim( stage, path, ctxt.writeOverlay );
 
-    if((!ctxt.overlayGeo || ctxt.overlayAll)) {
+    if(!ctxt.writeOverlay || ctxt.overlayAll) {
         
         // Set empty defaults for positions, scale, and indices. 
         // This prevents katana errors when expanding per-frame exports
@@ -569,7 +569,7 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
     if(!sourcePrim->findAttribute("__instancetransform", owner, 0)) {
         writePrototypeTransforms = true;
     }
-    if (usdPrototypesPath.empty() && !ctxt.overlayGeo) {
+    if (usdPrototypesPath.empty() && !ctxt.writeOverlay) {
         TF_WARN("No usdprototypespath attribute found. Specify where all the packed prototypes are to build a point instancer.");
         return;
     }
@@ -605,7 +605,7 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
             objNode = CAST_OBJNODE(protoNode->getCreator());
         }
 
-        if( (protoNodes.empty() || !objNode) && !ctxt.overlayGeo ) {
+        if( (protoNodes.empty() || !objNode) && !ctxt.writeOverlay ) {
             TF_WARN("No node found at usdPrototypesPath '%s'", usdPrototypesPath.c_str());
             return;
         }
@@ -697,7 +697,7 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
         // We don't want to force overlays of prototypes. If it has the same
         // scope in an overlay all it will still overlay, but this way new
         // prototypes won't be pure overs.
-        newContext.overlayGeo = false;
+        newContext.writeOverlay = false;
 
         // If a prototype is selecting a variant, make sure to set it
         newContext.authorVariantSelections = true;
@@ -775,7 +775,7 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
         protoPathsMap[pair.first] = protoUsdPath;
     }
 
-    if(ctxt.overlayGeo && (!ctxt.overlayAll || usdPrototypesPath.empty())) {
+    if(ctxt.writeOverlay && (!ctxt.overlayAll || usdPrototypesPath.empty())) {
 
         // If we are doing an overlay, build the map from the existing relationships
         UsdRelationship prototypesRel = m_usdPointInstancerForWrite.GetPrototypesRel();
@@ -790,7 +790,7 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
     // When overlaying all we are writing a new prototypes array so we want
     // the index to start at 0.
     SdfPathVector previousTargets;
-    if (ctxt.overlayGeo && ctxt.overlayAll) {
+    if (ctxt.overlayAll) {
         prototypesRel.ClearTargets(true);
     } else {
         prototypesRel.GetForwardedTargets(&previousTargets);
@@ -820,14 +820,14 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
                 relationshipPath = protoPrim.GetPath().AppendPath(SdfPath(subPath));
             }
         }
-        if(ctxt.overlayGeo && ctxt.overlayAll) {
+        if(ctxt.overlayAll) {
             relationshipPaths.push_back(relationshipPath);
         } else {
             prototypesRel.AppendTarget(relationshipPath);
         }
         m_relationshipIndexMap[TfToken(mapKey)] = relIdx++;
     }
-    if (ctxt.overlayGeo && ctxt.overlayAll) {
+    if (ctxt.overlayAll) {
         // Set the targets as this forces the point instancer to explicitly
         // only uses the new prototypes and not the ones from the file
         // we are overlaying.
@@ -850,13 +850,13 @@ updateFromGTPrim(const GT_PrimitiveHandle& sourcePrim,
     DBG(cerr << "GusdInstanceWrapper::updateFromGTPrim, " << 
             m_usdPointInstancerForWrite.GetPath().GetString() << endl);
 
-    bool writeTransforms = !ctxt.overlayGeo || ctxt.overlayAll || 
-                                ctxt.overlayPoints || ctxt.overlayTransforms;
+    bool writeTransforms = !ctxt.writeOverlay || ctxt.overlayAll || 
+                                    ctxt.overlayPoints || ctxt.overlayTransforms;
 
     //--------------------------------------------------------------------------
 
     GfMatrix4d xform = computeTransform (
-                            m_usdPointInstancerForWrite.GetPrim(),
+                            m_usdPointInstancerForWrite.GetPrim().GetParent(),
                             ctxt.time,
                             houXform,
                             xformCache);
@@ -871,7 +871,7 @@ updateFromGTPrim(const GT_PrimitiveHandle& sourcePrim,
     // If this is not an overlay, write out the transform.
     // (If it is an overlay, the instances themselves will be
     // set to correct locations via their position attribute.)
-    if( !ctxt.overlayGeo ) {
+    if( !ctxt.writeOverlay ) {
         
         // transform
         updateTransformFromGTPrim( xform, ctxt.time, 
@@ -893,9 +893,8 @@ updateFromGTPrim(const GT_PrimitiveHandle& sourcePrim,
         worldToLocal.invert();
  
         // visibility
-        if( ctxt.granularity == GusdContext::PER_FRAME ) { 
-            updateVisibilityFromGTPrim(sourcePrim, ctxt.time);
-        }        
+        updateVisibilityFromGTPrim(sourcePrim, ctxt.time, 
+                               ctxt.granularity == GusdContext::PER_FRAME );
 
         // P
         houAttr = sourcePrim->findAttribute("P", attrOwner, 0);
@@ -969,7 +968,7 @@ updateFromGTPrim(const GT_PrimitiveHandle& sourcePrim,
                 }
             }
             gotValidIndices = true;
-        } else if (!ctxt.overlayGeo || ctxt.overlayAll) {
+        } else if (!ctxt.writeOverlay || ctxt.overlayAll) {
             TF_WARN( "Instance prototypes not specified as instance path or packed prim" );
         }
 
@@ -981,6 +980,13 @@ updateFromGTPrim(const GT_PrimitiveHandle& sourcePrim,
         // v
         houAttr = sourcePrim->findAttribute("v", attrOwner, 0);
         usdAttr = m_usdPointInstancerForWrite.GetVelocitiesAttr();
+        if(houAttr && usdAttr) {
+            GusdGT_Utils::setUsdAttribute(usdAttr, houAttr, ctxt.time);
+        }
+
+        // w
+        houAttr = sourcePrim->findAttribute("w", attrOwner, 0);
+        usdAttr = m_usdPointInstancerForWrite.GetAngularVelocitiesAttr();
         if(houAttr && usdAttr) {
             GusdGT_Utils::setUsdAttribute(usdAttr, houAttr, ctxt.time);
         }
@@ -1024,17 +1030,18 @@ updateFromGTPrim(const GT_PrimitiveHandle& sourcePrim,
 
     // primvars ----------------------------------------------------------------
     
-    if( !ctxt.overlayGeo || ctxt.overlayAll || ctxt.overlayPrimvars ) {
+    if( !ctxt.writeOverlay || ctxt.overlayAll || ctxt.overlayPrimvars ) {
 
         GusdGT_AttrFilter filter = ctxt.attributeFilter;
         // Filter attributes which were used to construct the instance transform
         // and prototype relationships.
         filter.appendPattern(GT_OWNER_POINT,
                 "^__* ^orient ^rot ^scale ^instancepath ^usdinstancepath \
-                 ^usdprototypespath ^trans ^up");
-        filter.appendPattern(GT_OWNER_POINT, "^P ^N ^v ^visible");
-        filter.appendPattern(GT_OWNER_CONSTANT, "^visible ^usdprimpath \
-                 ^instancepath ^usdinstancepath ^usdprototypespath");
+                 ^usdprototypespath ^trans ^up ^usdactive");
+        filter.appendPattern(GT_OWNER_POINT, "^P ^N ^v ^usdvisible ^usdactive");
+        filter.appendPattern(GT_OWNER_CONSTANT, "^usdvisible ^usdprimpath \
+                 ^instancepath ^usdinstancepath ^usdprototypespath \
+                 ^usdactive");
         if(const GT_AttributeListHandle pointAttrs = sourcePrim->getPointAttributes()) {
 
             GusdGT_AttrFilter::OwnerArgs owners;
@@ -1053,7 +1060,7 @@ updateFromGTPrim(const GT_PrimitiveHandle& sourcePrim,
     
     // -------------------------------------------------------------------------
 
-    return true;
+    return GusdPrimWrapper::updateFromGTPrim(sourcePrim, houXform, ctxt, xformCache);
 }
 
 const UsdGeomImageable 

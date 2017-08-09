@@ -23,11 +23,12 @@
 //
 #include "groupBaseWrapper.h"
 
-#include "Context.h"
+#include "context.h"
 #include "UT_Gf.h"
 #include "USD_Proxy.h"
 #include "GU_PackedUSD.h"
 #include "USD_XformCache.h"
+#include "GU_USD.h"
 
 #include "pxr/usd/usdGeom/boundable.h"
 
@@ -207,17 +208,18 @@ GusdGroupBaseWrapper::updateGroupFromGTPrim(
     if( !destPrim )
         return false;
 
-    if( !ctxt.overlayGeo && ctxt.purpose != UsdGeomTokens->default_ ) {
+    if( !ctxt.writeOverlay && ctxt.purpose != UsdGeomTokens->default_ ) {
         destPrim.GetPurposeAttr().Set( ctxt.purpose );
     }
 
-    if( !ctxt.overlayGeo || ctxt.overlayAll || ctxt.overlayTransforms )
+    if( !ctxt.writeOverlay || ctxt.overlayTransforms || ctxt.overlayAll )
     {
         GfMatrix4d xform = computeTransform( 
-                        destPrim.GetPrim(),
+                        destPrim.GetPrim().GetParent(),
                         ctxt.time,
                         houXform,
                         xformCache );
+
 
         updateTransformFromGTPrim( xform, ctxt.time, 
                                    ctxt.granularity == GusdContext::PER_FRAME );
@@ -227,7 +229,7 @@ GusdGroupBaseWrapper::updateGroupFromGTPrim(
         xformCache[destPrim.GetPrim().GetPath()] = houXform;
     }
 
-    if( !ctxt.overlayGeo || ctxt.overlayAll || ctxt.overlayPrimvars )
+    if( !ctxt.writeOverlay || ctxt.overlayPrimvars || ctxt.overlayAll )
     {
         GusdGT_AttrFilter filter = ctxt.attributeFilter;
         filter.appendPattern(GT_OWNER_UNIFORM, "^P");
@@ -239,7 +241,29 @@ GusdGroupBaseWrapper::updateGroupFromGTPrim(
             updatePrimvarFromGTPrim( uniformAttrs, filter, UsdGeomTokens->uniform, ctxt.time );
         }
     }
+
+    // Set active state
+    updateGroupActiveFromGTPrim(destPrim, sourcePrim, ctxt.time);
+
     return true;
 }
+
+void
+GusdGroupBaseWrapper::updateGroupActiveFromGTPrim(
+        const UsdGeomImageable& destPrim,
+        const GT_PrimitiveHandle& sourcePrim,
+        UsdTimeCode time)
+{
+    UsdPrim prim = destPrim.GetPrim();
+
+    GT_Owner attrOwner;
+    GT_DataArrayHandle houAttr
+        = sourcePrim->findAttribute(GUSD_ACTIVE_ATTR, attrOwner, 0);
+    if (houAttr) {
+        int active = houAttr->getI32(0);
+        prim.SetActive((bool)active);            
+    }
+}
+
 
 PXR_NAMESPACE_CLOSE_SCOPE

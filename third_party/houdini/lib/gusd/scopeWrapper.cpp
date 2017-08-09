@@ -23,7 +23,7 @@
 //
 #include "scopeWrapper.h"
 
-#include "Context.h"
+#include "context.h"
 #include "UT_Gf.h"
 #include "USD_Proxy.h"
 
@@ -118,7 +118,7 @@ defineForWrite(
         const SdfPath& path,
         const GusdContext& ctxt)
 {
-    return new GusdScopeWrapper( stage, path, ctxt.overlayGeo );
+    return new GusdScopeWrapper( stage, path, ctxt.writeOverlay );
 }
 
 GT_PrimitiveHandle GusdScopeWrapper::
@@ -141,7 +141,7 @@ redefine( const UsdStagePtr& stage,
           const GusdContext& ctxt,
           const GT_PrimitiveHandle& sourcePrim )
 {
-    initUsdPrim( stage, path, ctxt.overlayGeo );
+    initUsdPrim( stage, path, ctxt.writeOverlay );
     clearCaches();
     return true;
 }

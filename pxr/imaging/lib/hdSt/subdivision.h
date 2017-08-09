@@ -166,6 +166,7 @@ public:
                             HdBufferSourceSharedPtr const &osdTopology);
     virtual ~HdSt_OsdRefineComputation();
     virtual TfToken const &GetName() const;
+    virtual size_t ComputeHash() const;
     virtual void const* GetData() const;
     virtual int GetGLComponentDataType() const;
     virtual int GetGLElementDataType() const;
@@ -173,6 +174,8 @@ public:
     virtual short GetNumComponents() const;
     virtual void AddBufferSpecs(HdBufferSpecVector *specs) const;
     virtual bool Resolve();
+    virtual bool HasPreChainedBuffer() const;
+    virtual HdBufferSourceSharedPtr GetPreChainedBuffer() const;
 
 protected:
     virtual bool _CheckValid() const;
@@ -197,7 +200,8 @@ public:
                                GLenum dataType,
                                int numComponents);
 
-    virtual void Execute(HdBufferArrayRangeSharedPtr const &range);
+    virtual void Execute(HdBufferArrayRangeSharedPtr const &range,
+                         HdResourceRegistry *resourceRegistry);
     virtual void AddBufferSpecs(HdBufferSpecVector *specs) const;
     virtual int GetNumOutputElements() const;
 
@@ -253,6 +257,13 @@ TfToken const &
 HdSt_OsdRefineComputation<VERTEX_BUFFER>::GetName() const
 {
     return _source->GetName();
+}
+
+template <typename VERTEX_BUFFER>
+size_t
+HdSt_OsdRefineComputation<VERTEX_BUFFER>::ComputeHash() const
+{
+    return 0;
 }
 
 template <typename VERTEX_BUFFER>
@@ -339,6 +350,20 @@ HdSt_OsdRefineComputation<VERTEX_BUFFER>::AddBufferSpecs(HdBufferSpecVector *spe
 {
     // produces same spec buffer as source
     _source->AddBufferSpecs(specs);
+}
+
+template <typename VERTEX_BUFFER>
+bool
+HdSt_OsdRefineComputation<VERTEX_BUFFER>::HasPreChainedBuffer() const
+{
+    return true;
+}
+
+template <typename VERTEX_BUFFER>
+HdBufferSourceSharedPtr
+HdSt_OsdRefineComputation<VERTEX_BUFFER>::GetPreChainedBuffer() const
+{
+    return _source;
 }
 
 

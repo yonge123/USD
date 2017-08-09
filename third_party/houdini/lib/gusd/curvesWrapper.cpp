@@ -24,7 +24,7 @@
 #include "curvesWrapper.h"
 #include "NURBSCurvesWrapper.h"
 
-#include "Context.h"
+#include "context.h"
 #include "UT_Gf.h"
 #include "USD_Proxy.h"
 #include "GT_VtArray.h"
@@ -84,6 +84,7 @@ GusdCurvesWrapper(
         const UsdStagePtr& stage,
         const SdfPath& path,
         bool isOverride )
+    : m_forceCreateNewGeo( false )
 {
     initUsdPrim( stage, path, isOverride );
 }
@@ -96,6 +97,7 @@ GusdCurvesWrapper(
         const GusdPurposeSet&           purposes )
     : GusdPrimWrapper( time, purposes )
     , m_usdCurvesForRead( usdCurves, stage->GetLock() )
+    , m_forceCreateNewGeo( false )
 {
 }
 
@@ -109,6 +111,7 @@ initUsdPrim(const UsdStagePtr& stage,
             bool asOverride)
 {
     bool newPrim = true;
+    m_forceCreateNewGeo = false;
     if( asOverride ) {
         UsdPrim existing = stage->GetPrimAtPath( path );
         if( existing ) {
@@ -120,6 +123,7 @@ initUsdPrim(const UsdStagePtr& stage,
             // new inside surfaces in one export. So if we don't find an existing prim
             // with the given path, create a new one.
             m_usdCurvesForWrite = UsdGeomBasisCurves::Define( stage, path );
+            m_forceCreateNewGeo = true;
         }
     }
     else {
@@ -154,7 +158,7 @@ defineForWrite(
     if( sourceCurves->getBasis() == GT_BASIS_BSPLINE && sourceCurves->knots() ) {
 
         bool validNURB = true;
-        if( ctxt.overlayGeo ) {
+        if( ctxt.writeOverlay ) {
             UsdPrim existing = stage->GetPrimAtPath( path );
             if( existing && existing.IsA<UsdGeomBasisCurves>() ) {
                 validNURB = false;
@@ -166,14 +170,14 @@ defineForWrite(
                             sourcePrim, 
                             stage, 
                             path, 
-                            ctxt.overlayGeo );
+                            ctxt.writeOverlay );
         }
     }
     return new GusdCurvesWrapper( 
                     sourcePrim,
                     stage, 
                     path, 
-                    ctxt.overlayGeo );
+                    ctxt.writeOverlay );
 }
 
 GT_PrimitiveHandle GusdCurvesWrapper::
@@ -196,7 +200,7 @@ redefine( const UsdStagePtr& stage,
           const GusdContext& ctxt,
           const GT_PrimitiveHandle& sourcePrim )
 {
-    initUsdPrim( stage, path, ctxt.overlayGeo );
+    initUsdPrim( stage, path, ctxt.writeOverlay );
     clearCaches();
     return true;
 }
@@ -469,6 +473,69 @@ GusdCurvesWrapper::refine(
                 }
             }
         }
+
+        UsdGeomPrimvar alphaPrimvar = usdCurves.GetPrimvar(TfToken("Alpha"));
+        if( !alphaPrimvar || !alphaPrimvar.GetAttr().HasAuthoredValueOpinion() ) {
+            alphaPrimvar = usdCurves.GetPrimvar(TfToken("displayOpacity"));
+        }
+
+        if( alphaPrimvar && alphaPrimvar.GetAttr().HasAuthoredValueOpinion()) {
+
+            // cerr << "curve color primvar " << alphaPrimvar.GetBaseName() << "\t" << alphaPrimvar.GetTypeName() << "\t" << alphaPrimvar.GetInterpolation() << endl;
+
+            GT_DataArrayHandle gtData = convertPrimvarData( alphaPrimvar, m_time );
+            if( gtData ) {
+                if( alphaPrimvar.GetInterpolation() == UsdGeomTokens->constant ) {
+
+                    gtDetailAttrs = gtDetailAttrs->addAttribute( "Alpha", gtData, true );
+                }
+                else if( alphaPrimvar.GetInterpolation() == UsdGeomTokens->uniform ) {
+
+                    gtUniformAttrs = gtUniformAttrs->addAttribute( "Alpha", gtData, true );
+                }
+                else if( alphaPrimvar.GetInterpolation() == UsdGeomTokens->vertex ||
+                       ( alphaPrimvar.GetInterpolation() == UsdGeomTokens->varying && 
+                            basis == GT_BASIS_LINEAR )) {
+
+                    gtVertexAttrs = gtVertexAttrs->addAttribute( "Alpha", gtData, true );
+                }
+                else {
+
+                    // In this case there is one value per segment end point
+
+                    auto segEndPointIndicies = new GT_Int32Array( usdPoints.size(), 1 );  
+
+                    GT_Offset srcIdx = 0;
+                    GT_Offset dstIdx = 0;
+                    if( basis == GT_BASIS_BEZIER ) { 
+                        for( const auto& c : usdCounts ) {
+                            for( int i = 0, segs = c / 3; i < segs; ++i ) {
+                                segEndPointIndicies->set( srcIdx, dstIdx++ );
+                                segEndPointIndicies->set( srcIdx, dstIdx++ );
+                                segEndPointIndicies->set( srcIdx, dstIdx++ );
+                                ++srcIdx;
+                            }
+                            if( !wrap ) {
+                                segEndPointIndicies->set( srcIdx++, dstIdx++ );
+                            }
+                        }
+                    }
+                    else if ( basis == GT_BASIS_BSPLINE || basis == GT_BASIS_CATMULLROM ) {
+                        for( const auto& c : usdCounts ) {
+                            segEndPointIndicies->set( srcIdx, dstIdx++ );
+                            for( int i = 0; i < c; ++i ) {
+                                segEndPointIndicies->set( srcIdx++, dstIdx++ );
+                            }
+                            if( !wrap ) {
+                                segEndPointIndicies->set( srcIdx, dstIdx++ );
+                            }
+                        }
+                    }
+                    gtData = new GT_DAIndirect( segEndPointIndicies, gtData );
+                    gtVertexAttrs = gtVertexAttrs->addAttribute( "Alpha", gtData, true );
+                }
+            }
+        }
     }
 
     auto prim = new GT_PrimCurveMesh( 
@@ -629,6 +696,12 @@ updateFromGTPrim(const GT_PrimitiveHandle&  sourcePrim,
         return false;
     }
 
+    bool writeOverlay = ctxt.writeOverlay && !m_forceCreateNewGeo;
+
+    // While I suppose we could write both points and transforms, it gets confusing,
+    // and I don't thik its necessary so lets not.
+    bool overlayTransforms = ctxt.overlayTransforms && !ctxt.overlayPoints;
+
     // USD only supports linear and cubic curves. Houdini supports higher order
     // curves but we just issue a warning when we see them.
 
@@ -653,7 +726,7 @@ updateFromGTPrim(const GT_PrimitiveHandle&  sourcePrim,
 
     bool closed = gtCurves->getWrap();
 
-    if( !ctxt.overlayGeo || ctxt.overlayAll ) {
+    if( !writeOverlay || ctxt.overlayAll ) {
 
         m_usdCurvesForWrite.CreateTypeAttr().Set( 
             order == 2 ? UsdGeomTokens->linear : UsdGeomTokens->cubic );
@@ -672,66 +745,79 @@ updateFromGTPrim(const GT_PrimitiveHandle&  sourcePrim,
             closed ? UsdGeomTokens->periodic : UsdGeomTokens->nonperiodic );
     }
 
+    UsdTimeCode geoTime = ctxt.time;
+    if( ctxt.writeStaticGeo ) {
+        geoTime = UsdTimeCode::Default();
+    }
+
     GfMatrix4d xform = computeTransform( 
+                            m_usdCurvesForWrite.GetPrim().GetParent(),
+                            geoTime,
+                            houXform,
+                            xformCache );
+
+    GfMatrix4d loc_xform = computeTransform( 
                             m_usdCurvesForWrite.GetPrim(),
-                            ctxt.time,
+                            geoTime,
                             houXform,
                             xformCache );
 
     // If we are writing points for an overlay but not writing transforms, 
     // then we have to transform the points into the proper space.
     bool transformPoints = 
-        ctxt.overlayGeo && ctxt.overlayPoints && 
-        !(ctxt.overlayAll || ctxt.overlayTransforms) &&
-        !GusdUT_Gf::Cast(xform).isIdentity();
+        writeOverlay && ctxt.overlayPoints && 
+        !GusdUT_Gf::Cast(loc_xform).isIdentity();
 
     GT_Owner attrOwner = GT_OWNER_INVALID;
     GT_DataArrayHandle houAttr;
     UsdAttribute usdAttr;
     
-    if( !ctxt.overlayGeo && ctxt.purpose != UsdGeomTokens->default_ ) {
+    if( !writeOverlay && ctxt.purpose != UsdGeomTokens->default_ ) {
         m_usdCurvesForWrite.GetPurposeAttr().Set( ctxt.purpose );
     }
 
     // intrinsic attributes ----------------------------------------------------
 
-    if( !ctxt.overlayGeo || ctxt.overlayAll || 
-            ctxt.overlayTransforms || ctxt.overlayPoints) {
+    if( !writeOverlay || ctxt.overlayAll || overlayTransforms || ctxt.overlayPoints) {
 
         // extent ------------------------------------------------------------------
         houAttr = GusdGT_Utils::getExtentsArray(sourcePrim);
         usdAttr = m_usdCurvesForWrite.GetExtentAttr();
         if(houAttr && usdAttr && transformPoints ) {
-             houAttr = GusdGT_Utils::transformPoints( houAttr, xform );
+             houAttr = GusdGT_Utils::transformPoints( houAttr, loc_xform );
         }
-        updateAttributeFromGTPrim( GT_OWNER_INVALID, "extents", houAttr, usdAttr, ctxt.time );
+        updateAttributeFromGTPrim( GT_OWNER_INVALID, "extents", houAttr, usdAttr, geoTime );
     }
 
     // transform ---------------------------------------------------------------
-    if( !ctxt.overlayGeo || ctxt.overlayAll || ctxt.overlayTransforms) {
-        updateTransformFromGTPrim( xform, ctxt.time, 
+    if( !writeOverlay || ctxt.overlayAll || overlayTransforms) {
+        updateTransformFromGTPrim( xform, geoTime, 
                                    ctxt.granularity == GusdContext::PER_FRAME );
     }
 
     // visibility ---------------------------------------------------------------
-    if( !ctxt.overlayGeo || ctxt.overlayAll ) {
-        if( ctxt.granularity == GusdContext::PER_FRAME ) { 
-            updateVisibilityFromGTPrim(sourcePrim, ctxt.time);
-        }
-    }
+    updateVisibilityFromGTPrim(sourcePrim, geoTime, 
+                               (!ctxt.writeOverlay || ctxt.overlayAll) && 
+                                ctxt.granularity == GusdContext::PER_FRAME );
 
-    if( !ctxt.overlayGeo || ctxt.overlayAll || ctxt.overlayPoints ) {
+    if( !writeOverlay || ctxt.overlayAll || ctxt.overlayPoints ) {
         
         // P
         houAttr = sourcePrim->findAttribute("P", attrOwner, 0);
         usdAttr = m_usdCurvesForWrite.GetPointsAttr();
         if(houAttr && usdAttr && transformPoints ) {
-            houAttr = GusdGT_Utils::transformPoints( houAttr, xform );
+            houAttr = GusdGT_Utils::transformPoints( houAttr, loc_xform );
         }
-        updateAttributeFromGTPrim( attrOwner, "P", houAttr, usdAttr, ctxt.time );
+        updateAttributeFromGTPrim( attrOwner, "P", houAttr, usdAttr, geoTime );
     }
     
-    if( !ctxt.overlayGeo || ctxt.overlayAll ) {
+    if( !writeOverlay || ctxt.overlayAll ) {
+
+        UsdTimeCode topologyTime = ctxt.time;
+        if( ctxt.writeStaticTopology ) {
+            topologyTime = UsdTimeCode::Default();
+        }
+
         // Vertex counts
         houAttr = gtCurves->getCurveCounts();
         usdAttr = m_usdCurvesForWrite.GetCurveVertexCountsAttr();
@@ -745,19 +831,19 @@ updateFromGTPrim(const GT_PrimitiveHandle&  sourcePrim,
             houAttr = modCounts;
         }
         updateAttributeFromGTPrim( GT_OWNER_INVALID, "vertexcounts",
-                                   houAttr, usdAttr, ctxt.time );
+                                   houAttr, usdAttr, topologyTime );
     }
 
-    if( !ctxt.overlayGeo || ctxt.overlayAll || ctxt.overlayPoints ) {
+    if( !writeOverlay || ctxt.overlayAll || ctxt.overlayPoints ) {
         // N
         houAttr = sourcePrim->findAttribute("N", attrOwner, 0);
         usdAttr = m_usdCurvesForWrite.GetNormalsAttr();
-        updateAttributeFromGTPrim( attrOwner, "N", houAttr, usdAttr, ctxt.time );
+        updateAttributeFromGTPrim( attrOwner, "N", houAttr, usdAttr, geoTime );
 
         // v
         houAttr = sourcePrim->findAttribute("v", attrOwner, 0);
         usdAttr = m_usdCurvesForWrite.GetVelocitiesAttr();
-        updateAttributeFromGTPrim( attrOwner, "v", houAttr, usdAttr, ctxt.time );
+        updateAttributeFromGTPrim( attrOwner, "v", houAttr, usdAttr, geoTime );
         
         // pscale & width
         houAttr = sourcePrim->findAttribute("width", attrOwner, 0);
@@ -766,7 +852,7 @@ updateFromGTPrim(const GT_PrimitiveHandle&  sourcePrim,
         }
 
         usdAttr = m_usdCurvesForWrite.GetWidthsAttr();
-        updateAttributeFromGTPrim( attrOwner, "width", houAttr, usdAttr, ctxt.time );
+        updateAttributeFromGTPrim( attrOwner, "width", houAttr, usdAttr, geoTime );
         m_usdCurvesForWrite.SetWidthsInterpolation( UsdGeomTokens->vertex );
     }
 
@@ -774,32 +860,37 @@ updateFromGTPrim(const GT_PrimitiveHandle&  sourcePrim,
     
     // primvars ----------------------------------------------------------------
     
-    if( !ctxt.overlayGeo || ctxt.overlayAll || ctxt.overlayPrimvars ) {
+    if( !writeOverlay || ctxt.overlayAll || ctxt.overlayPrimvars ) {
 
+        UsdTimeCode primvarTime = ctxt.time;
+        if( ctxt.writeStaticPrimvars ) {
+            primvarTime = UsdTimeCode::Default();
+        }
+        
         // TODO check that varying & facevarying working -- houdini might not support
         // facevarying through GT
         GusdGT_AttrFilter filter = ctxt.attributeFilter;
 
-        filter.appendPattern(GT_OWNER_VERTEX, "^P ^N ^v ^width ^pscale ^visible");
+        filter.appendPattern(GT_OWNER_VERTEX, "^P ^N ^v ^width ^pscale ^visible ^usdactive");
         if(const GT_AttributeListHandle vtxAttrs = sourcePrim->getVertexAttributes()) {
             GusdGT_AttrFilter::OwnerArgs owners;
             owners << GT_OWNER_VERTEX;
             filter.setActiveOwners(owners);
-            updatePrimvarFromGTPrim( vtxAttrs, filter, UsdGeomTokens->vertex, ctxt.time );
+            updatePrimvarFromGTPrim( vtxAttrs, filter, UsdGeomTokens->vertex, primvarTime );
         }
-        filter.appendPattern(GT_OWNER_CONSTANT, "^visible");
+        filter.appendPattern(GT_OWNER_CONSTANT, "^visible ^usdactive");
         if(const GT_AttributeListHandle constAttrs = sourcePrim->getDetailAttributes()) {
             GusdGT_AttrFilter::OwnerArgs owners;
             owners << GT_OWNER_CONSTANT;
             filter.setActiveOwners(owners);
-            updatePrimvarFromGTPrim( constAttrs, filter, UsdGeomTokens->constant, ctxt.time );
+            updatePrimvarFromGTPrim( constAttrs, filter, UsdGeomTokens->constant, primvarTime );
         }
-        filter.appendPattern(GT_OWNER_UNIFORM, "^visible");
+        filter.appendPattern(GT_OWNER_UNIFORM, "^visible ^usdactive");
         if(const GT_AttributeListHandle uniformAttrs = sourcePrim->getUniformAttributes()) {
             GusdGT_AttrFilter::OwnerArgs owners;
             owners << GT_OWNER_UNIFORM;
             filter.setActiveOwners(owners);
-            updatePrimvarFromGTPrim( uniformAttrs, filter, UsdGeomTokens->uniform, ctxt.time );
+            updatePrimvarFromGTPrim( uniformAttrs, filter, UsdGeomTokens->uniform, primvarTime );
         }
 
         // If we have a "Cd" attribute, write it as both "Cd" and "displayColor".
@@ -815,12 +906,24 @@ updateFromGTPrim(const GT_PrimitiveHandle&  sourcePrim,
             GusdGT_AttrFilter::OwnerArgs owners;
             owners << own;
             filter.setActiveOwners(owners);
-            updatePrimvarFromGTPrim( attrList, filter, s_ownerToUsdInterpCurve[own], ctxt.time );
+            updatePrimvarFromGTPrim( attrList, filter, s_ownerToUsdInterpCurve[own], primvarTime );
+        }
+        // If we have a "Alpha" attribute, write it as both "Alpha" and "displayAlpha".
+        if(GT_DataArrayHandle Alpha = sourcePrim->findAttribute( "Alpha", own, 0 )) {
+
+            GT_AttributeMapHandle attrMap = new GT_AttributeMap();
+            GT_AttributeListHandle attrList = new GT_AttributeList( attrMap );
+            attrList = attrList->addAttribute( "displayOpacity", Alpha, true );
+            GusdGT_AttrFilter filter( "*" );
+            GusdGT_AttrFilter::OwnerArgs owners;
+            owners << own;
+            filter.setActiveOwners(owners);
+            updatePrimvarFromGTPrim( attrList, filter, s_ownerToUsdInterpCurve[own], primvarTime );
         }
     }
 
     // -------------------------------------------------------------------------
-    return true;
+    return GusdPrimWrapper::updateFromGTPrim(sourcePrim, houXform, ctxt, xformCache);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

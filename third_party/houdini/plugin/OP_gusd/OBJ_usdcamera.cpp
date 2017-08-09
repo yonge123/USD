@@ -114,9 +114,6 @@ GusdOBJ_usdcamera::GetTemplates()
     /* Our common camera params come from the same initialization script
        as the standard camera.*/
 
-    static PRM_Default fileDef( 
-            0, "pxh_mwhich(\"${SHOT}_sconvert/${SHOT}_sconvert_presto.usd\")",
-            CH_OLD_EXPRESSION);
     static PRM_Default primPathDef(0, "/World/main_cam");
     static PRM_Name frameName("frame", "Frame");
     static PRM_Default frameDef(0, "$FF");
@@ -134,7 +131,7 @@ GusdOBJ_usdcamera::GetTemplates()
     GusdPRM_Shared prmShared;
 
     static PRM_Template camTemplates[] = {
-        PRM_Template(PRM_FILE, 1, &prmShared->filePathName, &fileDef,
+        PRM_Template(PRM_FILE, 1, &prmShared->filePathName, 0,
                      /*choicelist*/ 0, /*range*/ 0,
                      /*callback*/ 0, &prmShared->usdFileROData),
         PRM_Template(PRM_STRING, 1, &prmShared->primPathName,
@@ -365,6 +362,7 @@ GusdOBJ_usdcamera::runCreateScript()
             }
         }
         
+#if 0
         // Replace the choices for the resolution menu with ones that 
         // we read from our configuration script.
         if(PRM_Parm *parm = parms->getParmPtr("resMenu"))
@@ -381,6 +379,7 @@ GusdOBJ_usdcamera::runCreateScript()
             }
 
         }
+#endif
         return true;
     }
     return false;
@@ -456,7 +455,7 @@ GusdOBJ_usdcamera::_EvalCamVariable(fpreal& val, int idx, int thread)
         {
         case VAR_SCREENASPECT:
             {
-                val = cam.GetCamera(frame, _isZUp).GetAspectRatio();
+                val = cam.GetCamera(frame).GetAspectRatio();
                 return true;
             }
         case VAR_YRES:
@@ -466,7 +465,7 @@ GusdOBJ_usdcamera::_EvalCamVariable(fpreal& val, int idx, int thread)
                 //     however it's needed to get around a Houdini bug
                 //     (see bug 94389)
                 const float screenAspect =
-                    cam.GetCamera(frame, _isZUp).GetAspectRatio();
+                    cam.GetCamera(frame).GetAspectRatio();
                 float xRes = evalFloatT("res", 0, t, thread);
                 val = xRes / screenAspect;
                 return true;
@@ -643,10 +642,6 @@ GusdOBJ_usdcamera::applyInputIndependentTransform(OP_Context& ctx, UT_DMatrix4& 
         }
 
         mx = GusdUT_Gf::Cast(ctm);
-
-        // Houdini is Y-up cameras, so we may need to correct
-        if(_isZUp)
-            mx.prerotate(UT_Axis3::XAXIS, M_PI/2);
     }
     return OBJ_Camera::applyInputIndependentTransform(ctx, mx);
 }
@@ -745,15 +740,11 @@ GusdOBJ_usdcamera::_LoadCamera(_CamHolder::ScopedLock& lock,
                 _cam = accessor.GetPrimSchemaHolderAtPath<UsdGeomCamera>(
                     *primIdentifier, &err);
                 if(_cam) {
-                    _isZUp = UsdUtilsGetCamerasAreZup(accessor.GetStage());
-
                     /* Acquire a read-lock on the lock passed in as input.
                        This ensures the caller maintains a lock beyond  
                        the scope of the load.*/
                     lock.Acquire(_cam, /*write*/ false);
                     return *lock;
-                } else {
-                    _isZUp = false;
                 }
             }
         }

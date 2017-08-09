@@ -132,6 +132,12 @@ ARCH_API FILE*
 ArchOpenFile(char const* fileName, char const* mode);
 
 #if defined(ARCH_OS_WINDOWS)
+#   define ArchChmod(path, mode)        _chmod(path, mode)
+#else
+#   define ArchChmod(path, mode)        chmod(path, mode)
+#endif
+
+#if defined(ARCH_OS_WINDOWS)
 #   define ArchCloseFile(fd)            _close(fd)
 #else
 #   define ArchCloseFile(fd)            close(fd)
@@ -199,6 +205,13 @@ ARCH_API bool ArchGetModificationTime(const char* pathname, double* time);
 /// This function returns the modification time with as much precision as is
 /// available in the stat structure for the current platform.
 ARCH_API double ArchGetModificationTime(const ArchStatType& st);
+
+/// Returns the permissions mode (mode_t) for the given pathname.
+///
+/// This function stats the given pathname and returns the permissions flags
+/// for it and returns true.  If the stat fails, returns false.
+///
+ARCH_API bool ArchGetStatMode(const char *pathname, int *mode);
 
 /// Return the path to a temporary directory for this platform.
 ///
@@ -301,8 +314,10 @@ ARCH_API
 ArchMutableFileMapping ArchMapFileReadWrite(FILE *file);
 
 enum ArchMemAdvice {
-    ArchMemAdviceWillNeed, // OS may prefetch this range.
-    ArchMemAdviceDontNeed  // OS may free resources related to this range.
+    ArchMemAdviceNormal,       // Treat range with default behavior.
+    ArchMemAdviceWillNeed,     // OS may prefetch this range.
+    ArchMemAdviceDontNeed,     // OS may free resources related to this range.
+    ArchMemAdviceRandomAccess, // Prefetching may not be beneficial.
 };
 
 /// Advise the OS regarding how the application intends to access a range of
@@ -332,8 +347,10 @@ ARCH_API
 std::string ArchReadLink(const char* path);
 
 enum ArchFileAdvice {
-    ArchFileAdviceWillNeed, // OS may prefetch this range.
-    ArchFileAdviceDontNeed  // OS may free resources related to this range.
+    ArchFileAdviceNormal,       // Treat range with default behavior.
+    ArchFileAdviceWillNeed,     // OS may prefetch this range.
+    ArchFileAdviceDontNeed,     // OS may free resources related to this range.
+    ArchFileAdviceRandomAccess, // Prefetching may not be beneficial.
 };
 
 /// Advise the OS regarding how the application intends to access a range of

@@ -40,7 +40,9 @@ class HdStRenderDelegate final : public HdRenderDelegate {
 public:
     HDST_API
     HdStRenderDelegate();
-    virtual ~HdStRenderDelegate() = default;
+
+    HDST_API
+    virtual ~HdStRenderDelegate();
 
     HDST_API
     virtual HdRenderParam *GetRenderParam() const override;
@@ -51,10 +53,20 @@ public:
     virtual const TfTokenVector &GetSupportedSprimTypes() const override;
     HDST_API
     virtual const TfTokenVector &GetSupportedBprimTypes() const override;
+    HDST_API
+    virtual HdResourceRegistrySharedPtr GetResourceRegistry() const override;
 
     HDST_API
     virtual HdRenderPassSharedPtr CreateRenderPass(HdRenderIndex *index,
                 HdRprimCollection const& collection) override;
+
+    HDST_API
+    virtual HdInstancer *CreateInstancer(HdSceneDelegate *delegate,
+                                         SdfPath const& id,
+                                         SdfPath const& instancerId);
+
+    HDST_API
+    virtual void DestroyInstancer(HdInstancer *instancer);
 
     HDST_API
     virtual HdRprim *CreateRprim(TfToken const& typeId,
@@ -86,6 +98,10 @@ private:
     static const TfTokenVector SUPPORTED_RPRIM_TYPES;
     static const TfTokenVector SUPPORTED_SPRIM_TYPES;
     static const TfTokenVector SUPPORTED_BPRIM_TYPES;
+
+    /// Resource registry used in this render delegate
+    static std::atomic_int _counterResourceRegistry;
+    static HdResourceRegistrySharedPtr _resourceRegistry;
 
     HdSprim *_CreateFallbackShaderPrim();
 

@@ -24,11 +24,20 @@
 #include "pxr/imaging/hd/bufferSource.h"
 #include "pxr/imaging/hd/conversions.h"
 
+#include "pxr/base/arch/hash.h"
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 
 HdBufferSource::~HdBufferSource()
 {
+}
+
+size_t
+HdBufferSource::ComputeHash() const
+{
+    size_t hash = 0;
+    return ArchHash64((const char*)GetData(), GetSize(), hash);
 }
 
 size_t
@@ -47,6 +56,18 @@ size_t
 HdBufferSource::GetSize() const
 {
     return GetNumElements() * GetElementSize();
+}
+
+bool
+HdBufferSource::HasPreChainedBuffer() const
+{
+    return false;
+}
+
+HdBufferSourceSharedPtr
+HdBufferSource::GetPreChainedBuffer() const
+{
+    return HdBufferSourceSharedPtr();
 }
 
 bool
@@ -69,6 +90,12 @@ HdBufferSource::IsValid() const
 
 // ---------------------------------------------------------------------------
 
+size_t
+HdComputedBufferSource::ComputeHash() const
+{
+    return 0;
+}
+
 TfToken const &
 HdComputedBufferSource::GetName() const
 {
@@ -85,7 +112,7 @@ HdComputedBufferSource::GetData() const
     if (!_result) {
         TF_CODING_ERROR("HdComputedBufferSource::GetData() called without "
                         "setting the result.");
-        return NULL;
+        return nullptr;
     }
     return _result->GetData();
 }
@@ -128,6 +155,12 @@ HdComputedBufferSource::GetNumComponents() const
 
 // ---------------------------------------------------------------------------
 
+size_t
+HdNullBufferSource::ComputeHash() const
+{
+    return 0;
+}
+
 TfToken const &
 HdNullBufferSource::GetName() const
 {
@@ -140,7 +173,7 @@ void const*
 HdNullBufferSource::GetData() const
 {
     TF_CODING_ERROR("HdNullBufferSource can't be scheduled with a buffer range");
-    return NULL;
+    return nullptr;
 }
 
 int

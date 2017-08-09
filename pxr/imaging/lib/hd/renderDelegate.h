@@ -26,7 +26,6 @@
 
 #include "pxr/pxr.h"
 #include "pxr/imaging/hd/api.h"
-#include "pxr/imaging/hf/pluginBase.h"
 #include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/base/tf/token.h"
 
@@ -41,8 +40,10 @@ class HdSprim;
 class HdBprim;
 class HdSceneDelegate;
 class HdRenderPass;
+class HdInstancer;
 
 typedef boost::shared_ptr<class HdRenderPass> HdRenderPassSharedPtr;
+typedef boost::shared_ptr<class HdResourceRegistry> HdResourceRegistrySharedPtr;
 
 ///
 /// The HdRenderParam is an opaque (to core Hydra) handle, to an object
@@ -63,7 +64,7 @@ private:
 
 /// \class HdRenderDelegate
 ///
-class HdRenderDelegate : public HfPluginBase
+class HdRenderDelegate
 {
 public:
     HD_API
@@ -102,6 +103,12 @@ public:
     ///
     virtual HdRenderParam *GetRenderParam() const = 0;
 
+    ///
+    /// Returns a shared ptr to the resource registry of the current render
+    /// delegate.
+    ///
+    virtual HdResourceRegistrySharedPtr GetResourceRegistry() const = 0;
+
     ////////////////////////////////////////////////////////////////////////////
     ///
     /// Renderpass Factory
@@ -116,6 +123,25 @@ public:
     ///
     virtual HdRenderPassSharedPtr CreateRenderPass(HdRenderIndex *index,
                                       HdRprimCollection const& collection) = 0;
+
+    ////////////////////////////////////////////////////////////////////////////
+    ///
+    /// Instancer Factory
+    ///
+    ////////////////////////////////////////////////////////////////////////////
+
+    ///
+    /// Request to create a new instancer.
+    /// \param id The unique identifier of this instancer.
+    /// \param instancerId The unique identifier for the parent instancer that
+    ///                    uses this instancer as a prototype (may be empty).
+    /// \return A pointer to the new instancer or nullptr on error.
+    ///
+    virtual HdInstancer *CreateInstancer(HdSceneDelegate *delegate,
+                                         SdfPath const& id,
+                                         SdfPath const& instancerId) = 0;
+
+    virtual void DestroyInstancer(HdInstancer *instancer) = 0;
 
     ////////////////////////////////////////////////////////////////////////////
     ///

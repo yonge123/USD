@@ -76,6 +76,7 @@ pxr_library(usd
     PRIVATE_HEADERS
         crateDataTypes.h
         crateValueInliners.h
+        valueUtils.h
         wrapUtils.h
 
     CPPFILES
@@ -268,12 +269,10 @@ pxr_install_test_dir(
     DEST testUsdFlatten
 )
 
-
 pxr_install_test_dir(
     SRC testenv/testUsdFlatten2
     DEST testUsdFlatten2
 )
-
 
 pxr_install_test_dir(
     SRC testenv/testUsdFlatten2
@@ -361,6 +360,16 @@ pxr_install_test_dir(
 )
 
 pxr_install_test_dir(
+    SRC testenv/testUsdValueClips
+    DEST testUsdValueClips
+)
+
+pxr_install_test_dir(
+    SRC testenv/testUsdValueClips_Legacy
+    DEST testUsdValueClips_Legacy
+)
+
+pxr_install_test_dir(
     SRC testenv/testUsdVariants
     DEST testUsdVariants
 )
@@ -380,6 +389,23 @@ pxr_register_test(testUsdAttributeConnections
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdAttributeConnections"
     EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdValueClips
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdValueClips"
+    EXPECTED_RETURN_CODE 0
+)
+
+# This test runs the same test script as testUsdValueClips
+# but uses a different set of test assets that are installed above.
+pxr_register_test(testUsdValueClips_Legacy
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdValueClips"
+    EXPECTED_RETURN_CODE 0
+    ENV
+        USD_AUTHOR_LEGACY_CLIPS=1
+        USD_READ_LEGACY_CLIPS=1
 )
 
 pxr_register_test(testUsdVariantEditing
