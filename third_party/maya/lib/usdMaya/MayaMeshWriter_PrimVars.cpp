@@ -365,11 +365,9 @@ bool MayaMeshWriter::_createAlphaPrimVar(
                                  SdfValueTypeNames->FloatArray,
                                  interp);
 
-    primVar.Set(data, usdTime);
-
-    if (!assignmentIndices.empty()) {
-        primVar.SetIndices(assignmentIndices, usdTime);
-    }
+    PxrUsdMayaWriteUtil::SetPrimvarKey(
+        primVar, VtValue(data),
+        assignmentIndices.empty() ? VtValue() : VtValue(assignmentIndices), usdTime);
 
     if (clamped) {
         PxrUsdMayaRoundTripUtil::MarkPrimvarAsClamped(primVar);

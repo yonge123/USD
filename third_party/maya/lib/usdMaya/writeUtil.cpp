@@ -1171,7 +1171,9 @@ PxrUsdMayaWriteUtil::SetPrimvarKey(
     if (!primvar) { return; }
 
     PxrUsdMayaWriteUtil::SetAttributeKey(primvar.GetAttr(), value, usdTime, parameterInterpolation);
-    PxrUsdMayaWriteUtil::SetAttributeKey(primvar._GetIndicesAttr(false), indices, usdTime, UsdInterpolationTypeHeld);
+    if (!indices.IsEmpty()) {
+        PxrUsdMayaWriteUtil::SetAttributeKey(primvar._GetIndicesAttr(true), indices, usdTime, UsdInterpolationTypeHeld);
+    }
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
