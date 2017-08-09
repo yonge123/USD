@@ -72,6 +72,7 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-dms" , "-defaultMeshScheme", MSyntax::kString);
     syntax.addFlag("-vis" , "-exportVisibility", MSyntax::kBoolean);
     syntax.addFlag("-rt" , "-root", MSyntax::kString);
+    syntax.addFlag("-psc", "-parentScope", MSyntax::kString);
 
     syntax.addFlag("-fr" , "-frameRange"   , MSyntax::kDouble, MSyntax::kDouble);
     syntax.addFlag("-pr" , "-preRoll"   , MSyntax::kDouble);
@@ -218,6 +219,7 @@ try
         argData.getFlagArgument("exportVisibility", 0, jobArgs.exportVisibility);
     }
 
+<<<<<<< tg/luma/pull_requests base
     if (argData.isFlagSet("root")) {
         MString stringVal;
         argData.getFlagArgument("root", 0, stringVal);
@@ -237,6 +239,13 @@ try
                 return MS::kFailure;
             }
         }
+=======
+    if (argData.isFlagSet("parentScope")) {
+        MString stringVal;
+        argData.getFlagArgument("parentScope", 0,
+                                stringVal);
+        jobArgs.parentScope = stringVal.asChar();
+>>>>>>> tg/simple_features/export_parent_scope
     }
 
     bool append = false;
