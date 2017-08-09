@@ -91,6 +91,7 @@ private:
     PXRUSDMAYA_API
     MayaPrimWriterPtr _createPrimWriter(const MDagPath& curDag, bool instanceSource);
     UsdPrim mInstancesPrim;
+    SdfPath mParentScopePath;
     bool mNoInstances;
 };
 
