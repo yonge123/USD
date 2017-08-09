@@ -220,13 +220,6 @@ try
         argData.getFlagArgument("exportVisibility", 0, jobArgs.exportVisibility);
     }
 
-    if (argData.isFlagSet("parentScope")) {
-        MString stringVal;
-        argData.getFlagArgument("parentScope", 0,
-                                stringVal);
-        jobArgs.parentScope = stringVal.asChar();
-    }
-
     if (argData.isFlagSet("root")) {
         MString stringVal;
         argData.getFlagArgument("root", 0, stringVal);
@@ -246,6 +239,12 @@ try
                 return MS::kFailure;
             }
         }
+    }
+    if (argData.isFlagSet("parentScope")) {
+        MString stringVal;
+        argData.getFlagArgument("parentScope", 0,
+                                stringVal);
+        jobArgs.parentScope = stringVal.asChar();
     }
 
     bool append = false;

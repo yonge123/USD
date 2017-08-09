@@ -47,6 +47,7 @@ public:
                           const PxrUsdMayaUtil::ShapeSet& bindableRoots,
                           bool mergeTransformAndShape,
                           const SdfPath& overrideRootPath,
+                          const std::string& parentScope,
                           PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap);
 
     PXRUSDMAYA_API
