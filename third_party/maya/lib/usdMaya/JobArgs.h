@@ -91,6 +91,7 @@ struct JobExportArgs
     std::string melPostCallback;
     std::string pythonPerFrameCallback;
     std::string pythonPostCallback;
+    std::string parentScope;
 
     PxrUsdMayaUtil::ShapeSet dagPaths;
 
