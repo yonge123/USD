@@ -41,6 +41,7 @@ PxrUsdMayaShadingModeExporter::DoExport(
     const PxrUsdMayaUtil::ShapeSet& bindableRoots,
     bool mergeTransformAndShape,
     const SdfPath& overrideRootPath,
+    const std::string& parentScope,
     PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type&) {
     MItDependencyNodes shadingEngineIter(MFn::kShadingEngine);
     for (; !shadingEngineIter.isDone(); shadingEngineIter.next()) {
