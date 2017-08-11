@@ -48,7 +48,7 @@ public:
                           bool mergeTransformAndShape,
                           const SdfPath& overrideRootPath,
                           const std::string& parentScope,
-                          PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap);
+                          const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap);
 
     PXRUSDMAYA_API
     virtual void Export(const PxrUsdMayaShadingModeExportContext& context);
