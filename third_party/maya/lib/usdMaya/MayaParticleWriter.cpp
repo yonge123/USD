@@ -30,6 +30,7 @@
 #include "pxr/base/gf/vec3f.h"
 #include "pxr/usd/usdGeom/primvar.h"
 #include "pxr/usd/usdGeom/tokens.h"
+#include "pxr/base/tf/stringUtils.h"
 
 #include <maya/MFnParticleSystem.h>
 #include <maya/MVectorArray.h>
@@ -152,12 +153,7 @@ namespace {
     bool _isCachedAttribute(const std::string& attrName) {
         constexpr auto _cached = "cached";
         constexpr auto _Cache = "Cache";
-        const auto attrNameSize = attrName.size();
-        if (attrNameSize > 5 && attrName.substr(attrNameSize - 6) == _Cache) {
-            return true;
-        } else {
-            return attrName.substr(0, 6) == _cached;
-        }
+        return TfStringEndsWith(attrName, _Cache) || TfStringStartsWith(attrName, _cached);
     }
 
     bool _isValidAttr(const std::string& attrName) {
