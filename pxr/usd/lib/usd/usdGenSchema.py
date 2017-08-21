@@ -43,7 +43,7 @@ from collections import namedtuple
 from jinja2 import Environment, FileSystemLoader
 from jinja2.exceptions import TemplateNotFound, TemplateSyntaxError
 
-from pxr import Plug, Sdf, Usd, Tf
+from pxr import Sdf, Usd, Tf, Plug, Ar
 
 #------------------------------------------------------------------------------#
 # Parsed Objects                                                               #
