@@ -41,9 +41,9 @@ from argparse import ArgumentParser
 from collections import namedtuple
 
 from jinja2 import Environment, FileSystemLoader
-from jinja2.exceptions import TemplateSyntaxError
+from jinja2.exceptions import TemplateNotFound, TemplateSyntaxError
 
-from pxr import Sdf, Usd, Tf
+from pxr import Plug, Sdf, Usd, Tf
 
 #------------------------------------------------------------------------------#
 # Parsed Objects                                                               #
@@ -412,6 +412,18 @@ def _WriteFile(filePath, content, validate):
         if existingContent == content:
             print '\tunchanged %s' % filePath
             return
+
+        # In validation mode, we just want to see if the code being generated
+        # would differ from the code that currently exists without writing
+        # anything out. So just generate a diff and bail out immediately.
+        if validate:
+            print 'Diff: '
+            print '\n'.join(difflib.unified_diff(existingContent.split('\n'),
+                                                 content.split('\n')))
+            print ('Error: validation failed, diffs found. '
+                   'Please rerun usdGenSchema.')
+            sys.exit(1)
+
     # Otherwise attempt to write to file.
     try:
         with open(filePath, 'w') as curfile:
@@ -419,13 +431,6 @@ def _WriteFile(filePath, content, validate):
             print '\t    wrote %s' % filePath
     except IOError as ioe:
         print '\t', ioe
-        print 'Diff: '
-        print '\n'.join(difflib.unified_diff(existingContent.split('\n'),
-                                             content.split('\n')))
-        if validate:
-            print ('Error: validation failed, diffs found. '
-                   'Please rerun usdGenSchema.')
-            sys.exit(1)
 
 def _ExtractCustomCode(filePath, default=None):
     defaultTxt = default if default else ''
@@ -514,13 +519,13 @@ def GatherTokens(classes, libName, libTokens):
     return sorted(tokenDict.values(), key=lambda token: token.id.lower())
 
 
-def GenerateCode(codeGenPath, tokenData, classes, validate,
+def GenerateCode(templatePath, codeGenPath, tokenData, classes, validate,
                  namespaceOpen, namespaceClose, namespaceUsing,
                  useExportAPI, env):
     #
     # Load Templates
     #
-    print 'Loading Templates'
+    print 'Loading Templates from {0}'.format(templatePath)
     try:
         apiTemplate = env.get_template('api.h')
         headerTemplate = env.get_template('schemaClass.h')
@@ -530,11 +535,11 @@ def GenerateCode(codeGenPath, tokenData, classes, validate,
         tokensCppTemplate = env.get_template('tokens.cpp')
         tokensWrapTemplate = env.get_template('wrapTokens.cpp')
         plugInfoTemplate = env.get_template('plugInfo.json')
-    
+    except TemplateNotFound as tnf:
+        raise RuntimeError("Template not found: {0}".format(str(tnf)))
     except TemplateSyntaxError as tse:
-        print '\t', tse,
-        print 'Aborting GenerateCode...'
-        return
+        raise RuntimeError("Syntax error in template {0} at line {1}: {2}"
+                           .format(tse.filename, tse.lineno, tse.message))
 
     if useExportAPI:
         print 'Writing API:'
@@ -771,20 +776,32 @@ if __name__ == '__main__':
              'the rightmost argument as the innermost.')
 
     defaultTemplateDir = os.path.join(
-        os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))),
+        os.path.dirname(
+            os.path.abspath(inspect.getfile(inspect.currentframe()))),
+        'codegenTemplates')
+
+    instTemplateDir = os.path.join(
+        os.path.abspath(Plug.Registry().GetPluginWithName('usd').resourcePath),
         'codegenTemplates')
 
     parser.add_argument('-t', '--templates',
         dest='templatePath',
         type=str,
-        default=defaultTemplateDir,
-        help='The directory of the schema class templates. '
-        '[Default: %(default)s')
+        help=('Directory containing schema class templates. '
+              '[Default: first directory that exists from this list: {0}]'
+              .format(os.pathsep.join([defaultTemplateDir, instTemplateDir]))))
 
     args = parser.parse_args()
     codeGenPath = os.path.abspath(args.codeGenPath)
     schemaPath = os.path.abspath(args.schemaPath)
-    templatePath = os.path.abspath(args.templatePath)
+
+    if args.templatePath:
+        templatePath = os.path.abspath(args.templatePath)
+    else:
+        if os.path.isdir(defaultTemplateDir):
+            templatePath = defaultTemplateDir
+        else:
+            templatePath = instTemplateDir
 
     if args.namespace:
         namespaceOpen  = ' '.join('namespace %s {' % n for n in args.namespace)
@@ -807,8 +824,8 @@ if __name__ == '__main__':
         print 'Usage Error: Second positional argument must be a directory to contain generated code.'
         parser.print_help()
         sys.exit(1)
-    if not os.path.isdir(templatePath):
-        print 'Usage Error: templatePath argument must be the path to the codgenTemplates.'
+    if args.templatePath and not os.path.isdir(templatePath):
+        print 'Usage Error: templatePath argument must be the path to the codegenTemplates.'
         parser.print_help()
         sys.exit(1)
 
@@ -849,11 +866,12 @@ if __name__ == '__main__':
                               libraryPrefix=libPrefix,
                               tokensPrefix=tokensPrefix,
                               useExportAPI=useExportAPI)
-        GenerateCode(codeGenPath, tokenData, classes, args.validate,
+        GenerateCode(templatePath, codeGenPath, tokenData, classes, 
+                     args.validate,
                      namespaceOpen, namespaceClose, namespaceUsing,
                      useExportAPI, j2_env)
         GenerateRegistry(codeGenPath, schemaPath, classes, args.validate, j2_env)
     
     except Exception as e:
-        print "ERROR: ", str(e)
+        print "ERROR:", str(e)
         sys.exit(1)
