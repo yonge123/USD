@@ -207,8 +207,11 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
     MDagPath curLeafDagPath;
     MItDag itDag(MItDag::kDepthFirst, MFn::kInvalid);
 
+<<<<<<< tg/luma/pull_requests base
     itDag.traverseUnderWorld(true);
 
+=======
+>>>>>>> tg/simple_features/export_root
     if (!mJobCtx.mArgs.exportRootPath.empty()){
         // If a root is specified, start iteration there
         MDagPath rootDagPath;
