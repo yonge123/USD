@@ -381,7 +381,7 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
     std::string defaultModelingVariant;
 
     // Get the usdVariantRootPrimPath (optionally filter by renderLayer prefix)
-    MayaPrimWriterPtr firstPrimWriterPtr = *mMayaPrimWriterList.begin();
+    MayaPrimWriterPtr firstPrimWriterPtr = *mJobCtx.mMayaPrimWriterList.begin();
     std::string firstPrimWriterPathStr(PxrUsdMayaUtil::MDagPathToUsdPathString(
         firstPrimWriterPtr->getDagPath()));
     SdfPath usdVariantRootPrimPath(firstPrimWriterPathStr);
