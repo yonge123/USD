@@ -40,13 +40,8 @@ import sys, os, re, inspect
 from argparse import ArgumentParser
 from collections import namedtuple
 
-<<<<<<< tg/simple_features/bake_codegen_templates
-from jinja2 import Environment, FileSystemLoader, DictLoader
-from jinja2.exceptions import TemplateSyntaxError
-=======
 from jinja2 import Environment, FileSystemLoader
 from jinja2.exceptions import TemplateNotFound, TemplateSyntaxError
->>>>>>> top-bases/tg/simple_features/bake_codegen_templates
 
 from pxr import Plug, Sdf, Usd, Tf
 
@@ -844,13 +839,10 @@ if __name__ == '__main__':
         print 'Usage Error: Second positional argument must be a directory to contain generated code.'
         parser.print_help()
         sys.exit(1)
-<<<<<<< tg/simple_features/bake_codegen_templates
-=======
     if args.templatePath and not os.path.isdir(templatePath):
         print 'Usage Error: templatePath argument must be the path to the codegenTemplates.'
         parser.print_help()
         sys.exit(1)
->>>>>>> top-bases/tg/simple_features/bake_codegen_templates
 
     try:
         
