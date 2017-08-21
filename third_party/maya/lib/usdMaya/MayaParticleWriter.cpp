@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Pixar
+// Copyright 2017 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -30,6 +30,7 @@
 #include "pxr/base/gf/vec3f.h"
 #include "pxr/usd/usdGeom/primvar.h"
 #include "pxr/usd/usdGeom/tokens.h"
+#include "pxr/base/tf/stringUtils.h"
 
 #include <maya/MFnParticleSystem.h>
 #include <maya/MVectorArray.h>
@@ -152,12 +153,7 @@ namespace {
     bool _isCachedAttribute(const std::string& attrName) {
         constexpr auto _cached = "cached";
         constexpr auto _Cache = "Cache";
-        const auto attrNameSize = attrName.size();
-        if (attrNameSize > 5 && attrName.substr(attrNameSize - 6) == _Cache) {
-            return true;
-        } else {
-            return attrName.substr(0, 6) == _cached;
-        }
+        return TfStringEndsWith(attrName, _Cache) || TfStringStartsWith(attrName, _cached);
     }
 
     bool _isValidAttr(const std::string& attrName) {
@@ -195,25 +191,25 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
     }
 
     const auto particleNode = getDagPath().node();
-    MFnParticleSystem PS(particleNode);
-    MFnParticleSystem DPS(particleNode);
+    MFnParticleSystem particleSys(particleNode);
+    MFnParticleSystem deformedParticleSys(particleNode);
 
-    if (PS.isDeformedParticleShape()) {
-        const auto origObj = PS.originalParticleShape();
-        PS.setObject(origObj);
+    if (particleSys.isDeformedParticleShape()) {
+        const auto origObj = particleSys.originalParticleShape();
+        particleSys.setObject(origObj);
     } else {
-        const auto defObj = PS.deformedParticleShape();
-        DPS.setObject(defObj);
+        const auto defObj = particleSys.deformedParticleShape();
+        deformedParticleSys.setObject(defObj);
     }
 
     if (particleNode.apiType() != MFn::kNParticle) {
         auto currentTime = MAnimControl::currentTime();
         if (mInitialFrameDone) {
-            PS.evaluateDynamics(currentTime, false);
-            DPS.evaluateDynamics(currentTime, false);
+            particleSys.evaluateDynamics(currentTime, false);
+            deformedParticleSys.evaluateDynamics(currentTime, false);
         } else {
-            PS.evaluateDynamics(currentTime, true);
-            DPS.evaluateDynamics(currentTime, true);
+            particleSys.evaluateDynamics(currentTime, true);
+            deformedParticleSys.evaluateDynamics(currentTime, true);
             mInitialFrameDone = true;
         }
     }
@@ -225,7 +221,7 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
     // determine the minimum amount of particles that all have valid data
     // then write the data out for them in one go.
 
-    const auto particleCount = PS.count();
+    const auto particleCount = particleSys.count();
     if (particleCount == 0) {
         return;
     }
@@ -238,34 +234,34 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
     MDoubleArray mayaDoubles;
     MIntArray mayaInts;
 
-    DPS.position(mayaVectors);
+    deformedParticleSys.position(mayaVectors);
     auto positions = _convertVectorArray<GfVec3f>(mayaVectors);
-    PS.velocity(mayaVectors);
+    particleSys.velocity(mayaVectors);
     auto velocities = _convertVectorArray<GfVec3f>(mayaVectors);
-    PS.particleIds(mayaInts);
+    particleSys.particleIds(mayaInts);
     auto ids = _convertArray<long>(mayaInts);
-    PS.radius(mayaDoubles);
+    particleSys.radius(mayaDoubles);
     auto radii = _convertArray<float>(mayaDoubles);
-    PS.mass(mayaDoubles);
+    particleSys.mass(mayaDoubles);
     auto masses = _convertArray<float>(mayaDoubles);
 
-    if (PS.hasRgb()) {
-        PS.rgb(mayaVectors);
+    if (particleSys.hasRgb()) {
+        particleSys.rgb(mayaVectors);
         vectors.emplace_back(_rgbName, _convertVectorArray<GfVec3f>(mayaVectors));
     }
 
-    if (PS.hasEmission()) {
-        PS.rgb(mayaVectors);
+    if (particleSys.hasEmission()) {
+        particleSys.rgb(mayaVectors);
         vectors.emplace_back(_emissionName, _convertVectorArray<GfVec3f>(mayaVectors));
     }
 
-    if (PS.hasOpacity()) {
-        PS.opacity(mayaDoubles);
+    if (particleSys.hasOpacity()) {
+        particleSys.opacity(mayaDoubles);
         floats.emplace_back(_opacityName, _convertArray<float>(mayaDoubles));
     }
 
-    if (PS.hasLifespan()) {
-        PS.lifespan(mayaDoubles);
+    if (particleSys.hasLifespan()) {
+        particleSys.lifespan(mayaDoubles);
         floats.emplace_back(_lifespanName, _convertArray<float>(mayaDoubles));
     }
 
@@ -273,19 +269,19 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
         MStatus status;
         switch (std::get<2>(attr)) {
         case PER_PARTICLE_INT:
-            PS.getPerParticleAttribute(std::get<1>(attr), mayaInts, &status);
+            particleSys.getPerParticleAttribute(std::get<1>(attr), mayaInts, &status);
             if (status) {
                 ints.emplace_back(std::get<0>(attr), _convertArray<long>(mayaInts));
             }
             break;
         case PER_PARTICLE_DOUBLE:
-            PS.getPerParticleAttribute(std::get<1>(attr), mayaDoubles, &status);
+            particleSys.getPerParticleAttribute(std::get<1>(attr), mayaDoubles, &status);
             if (status) {
                 floats.emplace_back(std::get<0>(attr), _convertArray<float>(mayaDoubles));
             }
             break;
         case PER_PARTICLE_VECTOR:
-            PS.getPerParticleAttribute(std::get<1>(attr), mayaVectors, &status);
+            particleSys.getPerParticleAttribute(std::get<1>(attr), mayaVectors, &status);
             if (status) {
                 vectors.emplace_back(std::get<0>(attr), _convertVectorArray<GfVec3f>(mayaVectors));
             }
@@ -330,14 +326,14 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
 
 void MayaParticleWriter::initializeUserAttributes() {
     const auto particleNode = getDagPath().node();
-    MFnParticleSystem PS(particleNode);
+    MFnParticleSystem particleSys(particleNode);
 
-    const auto attributeCount = PS.attributeCount();
+    const auto attributeCount = particleSys.attributeCount();
 
     for (auto i = decltype(attributeCount){0}; i < attributeCount; ++i) {
-        MObject attrObj = PS.attribute(i);
+        MObject attrObj = particleSys.attribute(i);
         // we need custom attributes
-        if (PS.attributeClass(attrObj) == MFnDependencyNode::kNormalAttr) {
+        if (particleSys.attributeClass(attrObj) == MFnDependencyNode::kNormalAttr) {
             continue;
         }
         // only checking for parent attrs
@@ -349,11 +345,11 @@ void MayaParticleWriter::initializeUserAttributes() {
         const auto mayaAttrName = attr.name();
         const std::string attrName = mayaAttrName.asChar();
         if (!_isValidAttr(attrName)) { continue; }
-        if (PS.isPerParticleIntAttribute(mayaAttrName)) {
+        if (particleSys.isPerParticleIntAttribute(mayaAttrName)) {
             mUserAttributes.emplace_back(TfToken(attrName), mayaAttrName, PER_PARTICLE_INT);
-        } else if (PS.isPerParticleDoubleAttribute(mayaAttrName)) {
+        } else if (particleSys.isPerParticleDoubleAttribute(mayaAttrName)) {
             mUserAttributes.emplace_back(TfToken(attrName), mayaAttrName, PER_PARTICLE_DOUBLE);
-        } else if (PS.isPerParticleVectorAttribute(mayaAttrName)) {
+        } else if (particleSys.isPerParticleVectorAttribute(mayaAttrName)) {
             mUserAttributes.emplace_back(TfToken(attrName), mayaAttrName, PER_PARTICLE_VECTOR);
         }
     }
