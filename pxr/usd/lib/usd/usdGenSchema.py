@@ -46,21 +46,6 @@ from jinja2.exceptions import TemplateNotFound, TemplateSyntaxError
 from pxr import Plug, Sdf, Usd, Tf
 
 #------------------------------------------------------------------------------#
-# Codegen Templates                                                            #
-#------------------------------------------------------------------------------#
-
-_codegenTemplates = {
-    'api.h': r"""${TEMPLATE_API_H}""",
-    'plugInfo.json': r"""${TEMPLATE_PLUGINFO_JSON}""",
-    'schemaClass.cpp': r"""${TEMPLATE_SCHEMA_CLASS_CPP}""",
-    'schemaClass.h': r"""${TEMPLATE_SCHEMA_CLASS_H}""",
-    'tokens.cpp': r"""${TEMPLATE_TOKENS_CPP}""",
-    'tokens.h': r"""${TEMPLATE_TOKENS_H}""",
-    'wrapSchemaClass.cpp': r"""${TEMPLATE_WRAP_SCHEMA_CLASS_CPP}""",
-    'wrapTokens.cpp': r"""${TEMPLATE_WRAP_TOKENS_CPP}""",
-}
-
-#------------------------------------------------------------------------------#
 # Parsed Objects                                                               #
 #------------------------------------------------------------------------------#
 
@@ -867,10 +852,8 @@ if __name__ == '__main__':
         #
         # Generate Code from Templates
         #
-        if os.path.isdir(templatePath):
-            j2_env = Environment(loader=FileSystemLoader(templatePath), trim_blocks=True)
-        else:
-            j2_env = Environment(loader=DictLoader(_codegenTemplates), trim_blocks=True)
+        j2_env = Environment(loader=FileSystemLoader(templatePath),
+                             trim_blocks=True)
         j2_env.globals.update(Camel=_CamelCase,
                               Proper=_ProperCase,
                               Upper=_UpperCase,
