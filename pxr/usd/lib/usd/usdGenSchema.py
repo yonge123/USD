@@ -855,10 +855,8 @@ if __name__ == '__main__':
         #
         # Generate Code from Templates
         #
-        if os.path.isdir(templatePath):
-            j2_env = Environment(loader=FileSystemLoader(templatePath), trim_blocks=True)
-        else:
-            j2_env = Environment(loader=DictLoader(_codegenTemplates), trim_blocks=True)
+        j2_env = Environment(loader=FileSystemLoader(templatePath),
+                             trim_blocks=True)
         j2_env.globals.update(Camel=_CamelCase,
                               Proper=_ProperCase,
                               Upper=_UpperCase,
