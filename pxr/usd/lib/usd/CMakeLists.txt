@@ -122,6 +122,14 @@ pxr_library(usd
         plugInfo.json
         generatedSchema.usda
         schema.usda
+        codegenTemplates/api.h
+        codegenTemplates/plugInfo.json
+        codegenTemplates/schemaClass.cpp
+        codegenTemplates/schemaClass.h
+        codegenTemplates/tokens.cpp
+        codegenTemplates/tokens.h
+        codegenTemplates/wrapSchemaClass.cpp
+        codegenTemplates/wrapTokens.cpp
 )
 
 if (NOT JINJA2_FOUND)
