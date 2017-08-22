@@ -115,27 +115,6 @@ UsdImagingNurbsPatchAdapter::TrackVariability(UsdPrim const& prim,
     }
 }
 
-void 
-UsdImagingNurbsPatchAdapter::UpdateForTimePrep(UsdPrim const& prim,
-                                   SdfPath const& cachePath, 
-                                   UsdTimeCode time,
-                                   HdDirtyBits requestedBits,
-                                   UsdImagingInstancerContext const* 
-                                       instancerContext)
-{
-    BaseAdapter::UpdateForTimePrep(
-        prim, cachePath, time, requestedBits, instancerContext);
-    // This adapter will never mark these as dirty, however the client may
-    // explicitly ask for them, after the initial cached value is gone.
-    
-    UsdImagingValueCache* valueCache = _GetValueCache();
-    if (requestedBits & HdChangeTracker::DirtyTopology)
-        valueCache->GetTopology(cachePath);
-
-    if (requestedBits & HdChangeTracker::DirtyPoints)
-        valueCache->GetPoints(cachePath);
-}
-
 // Thread safe.
 //  * Populate dirty bits for the given \p time.
 void 
@@ -143,12 +122,11 @@ UsdImagingNurbsPatchAdapter::UpdateForTime(UsdPrim const& prim,
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
                                HdDirtyBits requestedBits,
-                               HdDirtyBits* resultBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext)
 {
     BaseAdapter::UpdateForTime(
-        prim, cachePath, time, requestedBits, resultBits, instancerContext);
+        prim, cachePath, time, requestedBits, instancerContext);
     UsdImagingValueCache* valueCache = _GetValueCache();
 
     if (requestedBits & HdChangeTracker::DirtyTopology) {
