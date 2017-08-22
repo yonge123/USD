@@ -37,8 +37,8 @@ pxr_library(usdHydra
         __init__.py
 
     RESOURCE_FILES
-        plugInfo.json
         generatedSchema.usda
-        schema.usda
+        plugInfo.json
+        schema.usda:usdHydra/schema.usda
 )
 
