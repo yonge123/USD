@@ -111,7 +111,7 @@ public:
                                    UsdTimeCode time,
                                    HdDirtyBits requestedBits,
                                    UsdImagingInstancerContext const* 
-                                       instancerContext = NULL) = 0;
+                                       instancerContext = NULL) {};
 
     /// Populates the \p cache for the given \p prim, \p time and \p
     /// requestedBits.
@@ -121,7 +121,6 @@ public:
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
                                HdDirtyBits requestedBits,
-                               HdDirtyBits* resultBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext = NULL) = 0;
 
