@@ -21,24 +21,26 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef PXRUSDINSHIPPED_POINTINSTANCERUTILS_H
-#define PXRUSDINSHIPPED_POINTINSTANCERUTILS_H
+
+#include <boost/python/class.hpp>
 
 #include "pxr/pxr.h"
-#include "pxr/usd/usdGeom/pointInstancer.h"
+#include "pxr/usd/ar/defaultResolver.h"
 
-PXR_NAMESPACE_OPEN_SCOPE
+using namespace boost::python;
 
-struct PxrUsdInShipped_PointInstancerUtils
+PXR_NAMESPACE_USING_DIRECTIVE
+
+void
+wrapDefaultResolver()
 {
-    static void ComputeInstanceTransformsAtTime(
-            std::vector<std::vector<GfMatrix4d>> &xforms,
-            size_t &numXformSamples,
-            const UsdGeomPointInstancer &instancer,
-            const std::vector<UsdTimeCode> &sampleTimes,
-            const UsdTimeCode baseTime);
-};
+    using This = ArDefaultResolver;
 
-PXR_NAMESPACE_CLOSE_SCOPE
+    class_<This, bases<ArResolver>, boost::noncopyable>
+        ("DefaultResolver", no_init)
 
-#endif // PXRUSDINSHIPPED_POINTINSTANCERUTILS_H
+        .def("SetDefaultSearchPath", &This::SetDefaultSearchPath,
+             args("searchPath"))
+        .staticmethod("SetDefaultSearchPath")
+        ;
+}
