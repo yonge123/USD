@@ -256,7 +256,7 @@ public:
     /// Sets display guides rendering
     USDIMAGING_API
     void SetDisplayGuides(bool displayGuides);
-
+    bool GetDisplayGuides() const { return _displayGuides; }
 
     // ---------------------------------------------------------------------- //
     // See HdSceneDelegate for documentation of the following virtual methods.
@@ -543,8 +543,7 @@ private:
     void _PrepareWorkerForTimeUpdate(_Worker* worker);
 
     // Execute all time update tasks that have been added to the given worker.
-    static void _ExecuteWorkForTimeUpdate(_Worker* worker, 
-                                          bool updateDelegates = true);
+    static void _ExecuteWorkForTimeUpdate(_Worker* worker);
 
     // ---------------------------------------------------------------------- //
     // Core Delegate state
