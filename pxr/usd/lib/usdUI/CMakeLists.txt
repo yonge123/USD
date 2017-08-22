@@ -33,7 +33,7 @@ pxr_library(usdUI
     RESOURCE_FILES
         plugInfo.json
         generatedSchema.usda
-        schema.usda
+        schema.usda:usdUI/schema.usda
 )
 
 pxr_test_scripts(
