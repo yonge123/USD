@@ -39,6 +39,7 @@ pxr_library(usdGeom
         mesh
         metrics
         modelAPI
+        motionAPI
         nurbsCurves
         nurbsPatch
         pointBased
@@ -76,6 +77,7 @@ pxr_library(usdGeom
         wrapMesh.cpp
         wrapMetrics.cpp
         wrapModelAPI.cpp
+        wrapMotionAPI.cpp
         wrapNurbsCurves.cpp
         wrapNurbsPatch.cpp
         wrapPointBased.cpp
@@ -97,7 +99,7 @@ pxr_library(usdGeom
     RESOURCE_FILES
         plugInfo.json
         generatedSchema.usda
-        schema.usda
+        schema.usda:usdGeom/schema.usda
 )
 
 pxr_test_scripts(
@@ -109,6 +111,7 @@ pxr_test_scripts(
     testenv/testUsdGeomConsts.py
     testenv/test_UsdGeomCurves.py
     testenv/testUsdGeomFaceSetAPI.py
+    testenv/testUsdGeomMotionAPI.py
     testenv/testUsdGeomNoPlugLoad.py
     testenv/testUsdGeomPointInstancer.py
     testenv/testUsdGeomPrimvar.py

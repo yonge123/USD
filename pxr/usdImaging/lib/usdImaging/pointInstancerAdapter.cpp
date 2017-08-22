@@ -632,14 +632,6 @@ UsdImagingPointInstancerAdapter::TrackVariability(UsdPrim const& prim,
     }
 }
 
-static
-bool
-_ShouldFetchAttr(UsdAttribute attr, UsdTimeCode time)
-{
-    return (!time.IsDefault() && attr.HasValue())
-            || (time.IsDefault() && attr.HasMetadata(SdfFieldKeys->Default));
-}
- 
 void
 UsdImagingPointInstancerAdapter::UpdateForTimePrep(UsdPrim const& prim,
                                    SdfPath const& cachePath,
@@ -648,7 +640,24 @@ UsdImagingPointInstancerAdapter::UpdateForTimePrep(UsdPrim const& prim,
                                    UsdImagingInstancerContext const*
                                        instancerContext)
 {
-    UsdImagingValueCache* valueCache = _GetValueCache();
+    // XXX: There is some prim/adapter dependancy here when the instancer
+    // is a nested instancer.
+    //
+    // _UpdateInstanceMap() updates the instance indexes an instancer.
+    //
+    // In the case of nested instancer, the parent instancer manages the
+    // instance indexes on the child instancer behalf.  Therefore,
+    // _UpdateInstanceMap() must be called on the parent before the child.
+    //
+    // However, this leads to some challenges:
+    // Making sure _UpdateInstanceMap() is called on the parent at all.
+    // Ideally _UpdateInstanceMap() is only called once for the parent.
+    // Don't read the instance indexes while _UpdateInstanceMap() is updating.
+    //
+    // Therefore, currently _UpdateInstanceMap() is updated in a single
+    // threaded pass (this UpdateForTimePrep()) before the multi-threaded
+    // pass is run.  However, it does mean _UpdateInstanceMap() could be called
+    // multiple times for the same prim.
     if (IsChildPath(cachePath)) {
         // extract instancerPath from cachePath.
         //
@@ -657,16 +666,7 @@ UsdImagingPointInstancerAdapter::UpdateForTimePrep(UsdPrim const& prim,
         //
         _UpdateInstanceMap(cachePath.GetParentPath(), time);
 
-        // All Update code paths will update visibility.
-        valueCache->GetVisible(cachePath);
         _ProtoRprim const& rproto = _GetProtoRprim(prim.GetPath(), cachePath);
-
-        if (requestedBits & HdChangeTracker::DirtyInstanceIndex) {
-            valueCache->GetInstanceIndices(cachePath);
-        }
-        if (requestedBits & HdChangeTracker::DirtyTransform) {
-            valueCache->GetInstancerTransform(cachePath);
-        }
 
         if (!TF_VERIFY(rproto.adapter, "%s", cachePath.GetText())) {
             return;
@@ -707,51 +707,10 @@ UsdImagingPointInstancerAdapter::UpdateForTimePrep(UsdPrim const& prim,
                                         cachePath.GetText());
                     }
                 }
-                // Update instancer data, prepare an entry in valueCache
-                valueCache->GetInstanceIndices(cachePath);
                 _UpdateInstanceMap(cachePath, time);
             } else {
                 TF_CODING_ERROR("PI: %s is not found in _instancerData\n",
                                 cachePath.GetText());
-            }
-        }
-
-        if (requestedBits & HdChangeTracker::DirtyTransform) {
-            valueCache->GetInstancerTransform(cachePath);
-        }
-
-        if (requestedBits & HdChangeTracker::DirtyPrimVar) {
-            // TODO: Stop querying existance here.
-            // 
-            // The problem is all primvars are specified as a single dirty bit,
-            // so the render index can only ask for all or nothing. If any one
-            // primvar varies over time, we end up paying the cost to fetch all
-            // of them on every frame.
-            //
-            // Worse, if we stop reading these values on during track
-            // variability, the render index will never get any values for
-            // non-time-varying primvars, since we won't fetch them on the first
-            // pass and we wont fetch them here since _ShouldFetchAttr is
-            // designed to filter out all non-time-varying attributes.
-            //
-            // Solution: introduce named dirty bits for primvars (and shader
-            // parameters). Then we don't need to filter here and everything
-            // works as expected.
-            //
-            // Until then, we must filter here and fetch initial values in track
-            // variability.
-            UsdGeomPointInstancer instancer(prim);
-            if (_ShouldFetchAttr(instancer.GetPositionsAttr(), time)) {
-                valueCache->GetPrimvar(cachePath, _tokens->translate);
-                valueCache->GetPrimvars(cachePath);
-            }
-            if (_ShouldFetchAttr(instancer.GetOrientationsAttr(), time)) {
-                valueCache->GetPrimvar(cachePath, _tokens->rotate);
-                valueCache->GetPrimvars(cachePath);
-            }
-            if (_ShouldFetchAttr(instancer.GetScalesAttr(), time)) {
-                valueCache->GetPrimvar(cachePath, _tokens->scale);
-                valueCache->GetPrimvars(cachePath);
             }
         }
     }
@@ -762,7 +721,6 @@ UsdImagingPointInstancerAdapter::UpdateForTime(UsdPrim const& prim,
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
                                HdDirtyBits requestedBits,
-                               HdDirtyBits* resultBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext)
 {
@@ -789,9 +747,6 @@ UsdImagingPointInstancerAdapter::UpdateForTime(UsdPrim const& prim,
             rprotoRW.initialized = true;
         }
 
-        // Uphold the original precondition: result == requested bits.
-        *resultBits = requestedBits;
-
         if (requestedBits & HdChangeTracker::DirtyInstanceIndex) {
             valueCache->GetInstanceIndices(cachePath) = 
                 rproto.prototype->indices;
@@ -807,46 +762,42 @@ UsdImagingPointInstancerAdapter::UpdateForTime(UsdPrim const& prim,
         // Allow the prototype's adapter to update, if there's anything left
         // to do.
         if (protoReqBits != HdChangeTracker::Clean)
-            rproto.adapter->UpdateForTime(_GetPrim(rproto.paths.front()), cachePath,
-                                          time, protoReqBits, resultBits);
+            rproto.adapter->UpdateForTime(_GetPrim(rproto.paths.front()),
+                                          cachePath, time, protoReqBits);
 
         // Make sure we always query and return visibility. This is done
         // after the adapter update to ensure we get our specialized view of
         // visibility.
-        requestedBits |= HdChangeTracker::DirtyVisibility;
-        *resultBits |= HdChangeTracker::DirtyVisibility;
 
         // Apply the instancer visibility at the current time to the
         // instance. Notice that the instance will also pickup the instancer
         // visibility at the time offset.
-        if (requestedBits & HdChangeTracker::DirtyVisibility) {
-            bool& vis = valueCache->GetVisible(cachePath);
-            bool protoHasFixedVis = !(rproto.variabilityBits 
-                                      & HdChangeTracker::DirtyVisibility);
+        bool& vis = valueCache->GetVisible(cachePath);
+        bool protoHasFixedVis = !(rproto.variabilityBits
+                                  & HdChangeTracker::DirtyVisibility);
 
-            _InstancerDataMap::const_iterator it 
-                = _instancerData.find(instancerPath);
-            if (TF_VERIFY(it != _instancerData.end())) {
-                vis = it->second.visible;
-            }
-            if (protoHasFixedVis) { 
-                // The instancer is visible and the proto prim has fixed
-                // visibility (it does not vary over time), we can use the
-                // pre-cached visibility.
-                vis = vis && rproto.visible;
-            } else if (vis) {
-                // The instancer is visible and the prototype has varying
-                // visibility, we must compute visibility from the proto
-                // prim to the model instance root.
-                _ComputeProtoVisibility(
-                    _GetPrim(rproto.prototype->protoRootPath), 
-                    _GetPrim(rproto.paths.front()), 
-                    time,
-                    &vis); 
-            }
+        _InstancerDataMap::const_iterator it
+            = _instancerData.find(instancerPath);
+        if (TF_VERIFY(it != _instancerData.end())) {
+            vis = it->second.visible;
+        }
+        if (protoHasFixedVis) {
+            // The instancer is visible and the proto prim has fixed
+            // visibility (it does not vary over time), we can use the
+            // pre-cached visibility.
+            vis = vis && rproto.visible;
+        } else if (vis) {
+            // The instancer is visible and the prototype has varying
+            // visibility, we must compute visibility from the proto
+            // prim to the model instance root.
+            _ComputeProtoVisibility(
+                _GetPrim(rproto.prototype->protoRootPath),
+                _GetPrim(rproto.paths.front()),
+                time,
+                &vis);
         }
 
-        if (*resultBits & HdChangeTracker::DirtyTransform) {
+        if (requestedBits & HdChangeTracker::DirtyTransform) {
             _CorrectTransform(prim, _GetPrim(rproto.prototype->protoRootPath),
                               cachePath, rproto.paths, time);
         }
