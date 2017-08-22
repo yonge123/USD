@@ -423,6 +423,11 @@ def _WriteFile(filePath, content, validate):
             print ('Error: validation failed, diffs found. '
                    'Please rerun usdGenSchema.')
             sys.exit(1)
+    else:
+        if validate:
+            print ('Error: validation failed, file %s does not exist. '
+                   'Please rerun usdGenSchema.' % os.path.basename(filePath))
+            sys.exit(1)
 
     # Otherwise attempt to write to file.
     try:
@@ -587,10 +592,15 @@ def GenerateCode(templatePath, codeGenPath, tokenData, classes, validate,
         
         # wrap file
         clsWrapFilePath = os.path.join(codeGenPath, cls.GetWrapFile())
-        customCode = _ExtractCustomCode(clsWrapFilePath, default=(
-                                        '\nnamespace {\n'
-                                        '\nWRAP_CUSTOM {\n}\n'
-                                        '\n}'))
+
+        if useExportAPI:
+            customCode = _ExtractCustomCode(clsWrapFilePath, default=(
+                                            '\nnamespace {\n'
+                                            '\nWRAP_CUSTOM {\n}\n'
+                                            '\n}'))
+        else:
+            customCode = _ExtractCustomCode(clsWrapFilePath, default='\nWRAP_CUSTOM {\n}\n')
+
         _WriteFile(clsWrapFilePath,
                    wrapTemplate.render(cls=cls) + customCode, validate)
 
@@ -746,6 +756,29 @@ def GenerateRegistry(codeGenPath, filePath, classes, validate, env):
     _WriteFile(os.path.join(codeGenPath, 'generatedSchema.usda'), layerSource,
                validate)
 
+def InitializeResolver():
+    """Initialize the resolver so that search paths pointing to schema.usda
+    files are resolved to the directories where those files are installed"""
+    
+    from pxr import Ar, Plug
+
+    # Force the use of the ArDefaultResolver so we can take advantage
+    # of its search path functionality.
+    Ar.SetPreferredResolver('ArDefaultResolver')
+
+    # Figure out where all the plugins that provide schemas are located
+    # and add their resource directories to the search path prefix list.
+    resourcePaths = set()
+    pr = Plug.Registry()
+    for t in pr.GetAllDerivedTypes('UsdSchemaBase'):
+        plugin = pr.GetPluginForType(t)
+        if plugin:
+            resourcePaths.add(plugin.resourcePath)
+    
+    # The sorting shouldn't matter here, but we do it for consistency
+    # across runs.
+    Ar.DefaultResolver.SetDefaultSearchPath(sorted(list(resourcePaths)))
+
 if __name__ == '__main__':
     #
     # Parse Command-line
@@ -830,6 +863,10 @@ if __name__ == '__main__':
         sys.exit(1)
 
     try:
+        #
+        # Initialize the asset resolver to resolve search paths
+        #
+        InitializeResolver()
         
         #
         # Gather Schema Class information

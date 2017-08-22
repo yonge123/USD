@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdSkel/packedJointAnimation.h"
+#include "pxr/usd/usdGeom/motionAPI.h"
 #include "pxr/usd/usd/schemaBase.h"
 
 #include "pxr/usd/sdf/primSpec.h"
@@ -50,34 +50,20 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
-_CreateTranslationsAttr(UsdSkelPackedJointAnimation &self,
+_CreateVelocityScaleAttr(UsdGeomMotionAPI &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreateTranslationsAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float3Array), writeSparsely);
-}
-        
-static UsdAttribute
-_CreateRotationsAttr(UsdSkelPackedJointAnimation &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateRotationsAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->QuatfArray), writeSparsely);
-}
-        
-static UsdAttribute
-_CreateScalesAttr(UsdSkelPackedJointAnimation &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateScalesAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Half3Array), writeSparsely);
+    return self.CreateVelocityScaleAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
 }
 
 } // anonymous namespace
 
-void wrapUsdSkelPackedJointAnimation()
+void wrapUsdGeomMotionAPI()
 {
-    typedef UsdSkelPackedJointAnimation This;
+    typedef UsdGeomMotionAPI This;
 
-    class_<This, bases<UsdGeomXformable> >
-        cls("PackedJointAnimation");
+    class_<This, bases<UsdSchemaBase> >
+        cls("MotionAPI");
 
     cls
         .def(init<UsdPrim>(arg("prim")))
@@ -87,8 +73,6 @@ void wrapUsdSkelPackedJointAnimation()
         .def("Get", &This::Get, (arg("stage"), arg("path")))
         .staticmethod("Get")
 
-        .def("Define", &This::Define, (arg("stage"), arg("path")))
-        .staticmethod("Define")
 
         .def("GetSchemaAttributeNames",
              &This::GetSchemaAttributeNames,
@@ -103,32 +87,13 @@ void wrapUsdSkelPackedJointAnimation()
         .def(!self)
 
         
-        .def("GetTranslationsAttr",
-             &This::GetTranslationsAttr)
-        .def("CreateTranslationsAttr",
-             &_CreateTranslationsAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
-        .def("GetRotationsAttr",
-             &This::GetRotationsAttr)
-        .def("CreateRotationsAttr",
-             &_CreateRotationsAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
-        .def("GetScalesAttr",
-             &This::GetScalesAttr)
-        .def("CreateScalesAttr",
-             &_CreateScalesAttr,
+        .def("GetVelocityScaleAttr",
+             &This::GetVelocityScaleAttr)
+        .def("CreateVelocityScaleAttr",
+             &_CreateVelocityScaleAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 
-        
-        .def("GetJointsRel",
-             &This::GetJointsRel)
-        .def("CreateJointsRel",
-             &This::CreateJointsRel)
     ;
 
     _CustomWrapCode(cls);
@@ -156,6 +121,10 @@ void wrapUsdSkelPackedJointAnimation()
 namespace {
 
 WRAP_CUSTOM {
+    _class
+        .def("ComputeVelocityScale", &UsdGeomMotionAPI::ComputeVelocityScale,
+                (arg("time")=UsdTimeCode::Default()))
+     ;
 }
 
-}
+} // anonymous namespace 
