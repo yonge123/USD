@@ -1,11 +1,9 @@
 tg/ar_resolver_fixes/maya_usdImport
 tg/bugfixes/fix_py_setprogramname
-tg/bugfixes/gcc_warnings
 tg/bugfixes/katana_material_binding_crash_fix
 tg/bugfixes/maya_opposite_attr_fix
 tg/bugfixes/oiio_read_with_asserts
 tg/bugfixes/ubuntu_katana_build_fix
-tg/instances/main
 tg/maya_particle_cache/initial
 tg/maya_particle/merge_instances
 tg/maya_instancer/initial
@@ -28,13 +26,10 @@ tg/simple_features/tests_set_maya_app_dir
 tg/simple_features/loading_shading_mode_plugs
 tg/simple_features/clear_writers_before_save
 tg/simple_features/passing_primdag_map_to_shading_exporter
-tg/simple_features/bake_codegen_templates
 tg/simple_features/vec4_primvar_katana
 tg/simple_features/linking_against_houdini_libs
 tg/simple_features/maya_primvar_export
 tg/simple_features/face_varying_in_katana
 tg/simple_features/export_parent_scope
-tg/pixar/katana_libs_dir_fix
 pseudo_root_warning
 ptex_prefer_static
-pxrConfig_separator_fix
