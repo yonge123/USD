@@ -3763,6 +3763,7 @@ class MainWindow(QtGui.QMainWindow):
             # attributes for selection:
             item.layer = layer
             item.spec = spec
+            item.identifier = layer.identifier
 
             # attributes for LayerStackContextMenu:
             if layer.realPath:
