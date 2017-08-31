@@ -32,4 +32,5 @@ tg/simple_features/face_varying_in_katana
 tg/simple_features/export_parent_scope
 pseudo_root_warning
 ptex_prefer_static
+pr/usdMaya_translatorXformable_use_TfToken
 pr/usdview_copy_layer_identifier
