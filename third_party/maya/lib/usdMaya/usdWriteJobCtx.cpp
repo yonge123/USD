@@ -49,6 +49,10 @@ namespace {
         if (!args.usdModelRootOverridePath.IsEmpty() ) {
             path = path.ReplacePrefix(path.GetPrefixes()[0], args.usdModelRootOverridePath);
         }
+        if (!args.exportRootPath.empty()) {
+            static const SdfPath _emptySdfPath("/");
+            path = path.ReplacePrefix(args.exportRootSdfPath.GetParentPath(), _emptySdfPath);
+        }
         return path;
     }
 
