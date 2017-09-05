@@ -47,11 +47,16 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
     inline
-    SdfPath& rootOverridePath(const JobExportArgs& args, SdfPath& path) {
+    SdfPath rootOverridePath(const JobExportArgs& args, const SdfPath& path) {
+        auto ret = path;
         if (!args.usdModelRootOverridePath.IsEmpty() ) {
-            path = path.ReplacePrefix(path.GetPrefixes()[0], args.usdModelRootOverridePath);
+            ret = ret.ReplacePrefix(ret.GetPrefixes()[0], args.usdModelRootOverridePath);
         }
-        return path;
+        if (!args.exportRootPath.empty()) {
+            static const SdfPath _emptySdfPath("/");
+            ret = ret.ReplacePrefix(args.exportRootSdfPath.GetParentPath(), _emptySdfPath);
+        }
+        return ret;
     }
 
     constexpr auto instancesScopeName = "/InstanceSources";
@@ -104,7 +109,6 @@ SdfPath usdWriteJobCtx::getUsdPath(const MDagPath& dg)
 
 SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool instanceSource /* = false */)
 {
-    SdfPath path;
     if (instanceSource) {
         if (mInstancesPrim) {
             mNoInstances = false;
@@ -118,18 +122,18 @@ SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool inst
             auto pathName = ss.str();
             std::replace(pathName.begin(), pathName.end(), '|', '_');
             std::replace(pathName.begin(), pathName.end(), ':', '_');
-            path = SdfPath(pathName);
+            return rootOverridePath(mArgs, SdfPath(pathName));
         } else {
             return SdfPath();
         }
     } else {
-        path = mParentScopePath.IsEmpty() ?
-               PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false) :
-               SdfPath(mParentScopePath.GetString() +
-                       PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false).GetString());
-
+        const auto path = rootOverridePath(mArgs, PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false));
+        if (mParentScopePath.IsEmpty()) {
+            return path;
+        } else {
+            return SdfPath(mParentScopePath.GetString() + path.GetString());
+        }
     }
-    return rootOverridePath(mArgs, path);
 }
 
 bool usdWriteJobCtx::openFile(const std::string& filename, bool append)
