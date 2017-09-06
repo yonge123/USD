@@ -207,6 +207,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
     MDagPath curLeafDagPath;
     MItDag itDag(MItDag::kDepthFirst, MFn::kInvalid);
 
+    itDag.traverseUnderWorld(true);
+
     if (!mJobCtx.mArgs.exportRootPath.empty()) {
         // If a root is specified, start iteration there
         MDagPath rootDagPath;
