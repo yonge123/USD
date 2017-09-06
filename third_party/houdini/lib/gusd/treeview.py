@@ -37,7 +37,7 @@ from treemodel import *
 #
 # Global variables
 #
-nodeTypeLowerCase = 'usdimport'
+NodeTypeLowerCase = 'usdimport'
 
 #
 # Return a list of hou.NodeType that are considered the only
@@ -48,7 +48,7 @@ def CompatibleNodeTypes():
 
     for category in [hou.objNodeTypeCategory, hou.sopNodeTypeCategory]:
         for key,value in category().nodeTypes().items():
-            if nodeTypeLowerCase not in key.lower():
+            if NodeTypeLowerCase not in key.lower():
                 continue
 
             parms = value.parmTemplateGroup()
@@ -76,30 +76,12 @@ def CompatibleNodeTypes():
 def ExtractColorsFromStyleSheet():
     qtStyleSheet = hou.ui.qtStyleSheet()
 
-    grpQTreeView = '(QTreeView\n\{[\s\S]*?)'
     grpBG = '([\s]+background(-color)?: )'
-    grpAltBG = '([\s]+alternate-background(-color)?: )'
     grpRgb = '(?P<rgb>rgb(a)?\(\d{1,3}(, \d{1,3}){2,3}\))'
 
-    matchBG = re.search(grpQTreeView + grpBG + grpRgb, qtStyleSheet)
-    matchAltBG = re.search(grpQTreeView + grpAltBG + grpRgb, qtStyleSheet)
-
-    # Update TreeView.rgbRows colors.
-    if matchBG and matchAltBG:
-        TreeView.rgbRows = (matchBG.groupdict()['rgb'],\
-                            matchAltBG.groupdict()['rgb'])
-
-    # For the checkbox 'window' color (the color around the box), use
-    # TreeView's alt bg color. Convert it from a string to a QColor.
-    windowColor = TreeView.rgbRows[1].strip('rgba()')
-    c = [int(channel) for channel in windowColor.split(',')]
-    if len(c) == 3:
-        CheckBoxStyled.windowColor = QColor(c[0], c[1], c[2])
-    elif len(c) == 4:
-        CheckBoxStyled.windowColor = QColor(c[0], c[1], c[2], c[3])
-
-    # For the checkbox 'base' color (the color inside the box), extract
-    # the background color of the QTextEdit widget.
+    # For the TreeView's "editing" base color (the color inside
+    # checkboxes, inside text editing fields, etc) extract the
+    # background color of the QTextEdit widget.
     grpQTextEdit = '(QTextEdit\n\{[\s\S]*?)'
     matchBG = re.search(grpQTextEdit + grpBG + grpRgb, qtStyleSheet)
     if matchBG:
@@ -107,16 +89,11 @@ def ExtractColorsFromStyleSheet():
         baseColor = matchBG.groupdict()['rgb'].strip('rgba()')
         c = [int(channel) for channel in baseColor.split(',')]
         if len(c) == 3:
-            CheckBoxStyled.baseColor = QColor(c[0], c[1], c[2])
+            TreeView.editingBaseColor = QColor(c[0], c[1], c[2])
         elif len(c) == 4:
-            CheckBoxStyled.baseColor = QColor(c[0], c[1], c[2], c[3])
+            TreeView.editingBaseColor = QColor(c[0], c[1], c[2], c[3])
 
 class CheckBoxStyled(QCheckBox):
-    # Custom colors for checkbox widgets. These colors will be
-    # updated by the ExtractColorsFromStyleSheet method above.
-    windowColor = QColor(45, 45, 45)
-    baseColor = QColor(19, 19, 19)
-
     def paintEvent(self, event):
         opt = QStyleOptionButton()
         self.initStyleOption(opt)
@@ -124,10 +101,8 @@ class CheckBoxStyled(QCheckBox):
         style = self.style()
         opt.rect = style.subElementRect(QStyle.SE_CheckBoxClickRect, opt, self)
 
-        # Set 'window' color (the color around the box).
-        opt.palette.setColor(QPalette.Window, CheckBoxStyled.windowColor)
         # Set 'base' color (the color inside the box).
-        opt.palette.setColor(QPalette.Base, CheckBoxStyled.baseColor)
+        opt.palette.setColor(QPalette.Base, TreeView.editingBaseColor)
 
         painter = QStylePainter(self)
         painter.drawControl(QStyle.CE_CheckBox, opt)
@@ -149,6 +124,42 @@ class ComboBoxStyled(QComboBox):
         listview.setStyleSheet('QListView::item { padding: 2px; }\
                                 QListView::item::selected { border: 0; }')
         self.setView(listview)
+
+class FilterMenu(ComboBoxStyled):
+    # Signals
+    textEntered = Signal('QString')
+
+    def __init__(self, parent):
+        super(FilterMenu, self).__init__(parent)
+
+        self.setEditable(True)
+
+        self.addItem("Clear Filter")
+        self.clearEditText()
+        self.text = self.currentText()
+
+        self.activated[int].connect(self.OnActivated)
+        self.lineEdit().returnPressed.connect(self.EnterText)
+
+    def EnterText(self):
+        if self.text != self.currentText():
+            self.text = self.currentText()
+            self.textEntered.emit(self.text)
+
+    def OnActivated(self, index):
+        if index == 0:
+            self.clearEditText()
+        self.EnterText()
+
+    def OnStyleChanged(self):
+        styleSheet = 'QComboBox { padding: 2px;'
+        channels = [str(c) for c in TreeView.editingBaseColor.getRgb()]
+        if len(channels) == 3:
+            styleSheet += ' background: rgb(%s);' % ','.join(channels)
+        elif len(channels) == 4:
+            styleSheet += ' background: rgba(%s);' % ','.join(channels)
+        styleSheet += '}'
+        self.setStyleSheet(styleSheet)
 
 class ActiveNodeMenu(ComboBoxStyled):
     # Signals
@@ -308,6 +319,7 @@ class TreeItemEditor(QFrame):
                 checkBox.stateChanged.connect(self.DataChanged)
 
                 label = QLabel(item._name, self)
+                label.setStyleSheet("background: transparent;")
                 label.setEnabled(item._enabled)
                 checkBox.stateChanged.connect(label.setEnabled)
 
@@ -374,6 +386,11 @@ class TreeItemDelegate(QStyledItemDelegate):
     def __init__(self):
         QStyledItemDelegate.__init__(self)
 
+    def displayText(self, value, locale):
+        if not isinstance(value, basestring):
+            return ''
+        return super(TreeItemDelegate, self).displayText(value, locale)
+
     def createEditor(self, parent, option, index):
         editor = TreeItemEditor(parent, index)
         editor.edited.connect(self.commitAndCloseEditor)
@@ -383,6 +400,23 @@ class TreeItemDelegate(QStyledItemDelegate):
         editor.SetData(index)
 
     def setModelData(self, editor, model, index):
+        # When an 'Import' checkbox is being toggled, find out if it is part
+        # of the current selection, and apply the same operation to all other
+        # selected rows.
+        if index.column() == COL_IMPORT:
+            # Get all selected indexes that are in the 'Import' column.
+            selected = [i for i in model.GetSelectionModel().selectedIndexes()\
+                        if i.column() == COL_IMPORT]
+
+            # If the provided index is one of the selected indexes, set the
+            # 'Import' value of all selected indexes to match this one, thus
+            # applying the same operation to all of them.
+            if index in selected:
+                value = editor.GetData(index)
+                for i in selected:
+                    model.setData(i, value)
+                return
+        # Get data from the editor and set it in the model.
         model.setData(index, editor.GetData(index))
 
     def sizeHint(self, option, index):
@@ -394,15 +428,17 @@ class TreeItemDelegate(QStyledItemDelegate):
         self.closeEditor.emit(editor, QAbstractItemDelegate.NoHint)
 
 class TreeView(QFrame):
+    # Signals
+    styleChanged = Signal()
+
     # Declare nodeTypes as a static member of TreeView.
     nodeTypes = CompatibleNodeTypes()
 
     # Static model to use for views with no "Active Node".
     emptyModel = TreeModel(COL_HEADERS)
 
-    # Background row colors for custom widgets. These initial default
-    # colors will be updated by the OnStyleChanged method below.
-    rgbRows = ('rgb(45, 45, 45)', 'rgb(58, 58, 58)')
+    # This initial default will be updated by ExtractColorsFromStyleSheet()
+    editingBaseColor = QColor(19, 19, 19)
 
     def __init__(self):
         QFrame.__init__(self)
@@ -412,6 +448,10 @@ class TreeView(QFrame):
         # so it matches the style of other houdini widgets.
         self.setProperty("houdiniStyle", True)
 
+        self.filterMenu = FilterMenu(self)
+        self.filterMenu.textEntered['QString'].connect(self.OnFilterApplied)
+        self.styleChanged.connect(self.filterMenu.OnStyleChanged)
+
         self.switchShowVariants = CheckBoxStyled()
         self.switchShowVariants.stateChanged.connect(self.ShowVariants)
 
@@ -420,8 +460,11 @@ class TreeView(QFrame):
             self.OnActiveNodeChanged)
 
         toolbarLayout = QHBoxLayout()
-        toolbarLayout.setSpacing(2)
-        toolbarLayout.addWidget(self.switchShowVariants, 1, Qt.AlignRight)
+        toolbarLayout.setSpacing(4)
+        toolbarLayout.addWidget(QLabel("Filter"))
+        toolbarLayout.addWidget(self.filterMenu, 1)
+        toolbarLayout.addSpacing(20)
+        toolbarLayout.addWidget(self.switchShowVariants)
         toolbarLayout.addWidget(QLabel("Show Variants"))
         toolbarLayout.addSpacing(20)
         toolbarLayout.addWidget(QLabel("Active Node"))
@@ -438,14 +481,18 @@ class TreeView(QFrame):
         self.view.setColumnWidth(COL_VARIANT, 340)
         self.view.resizeColumnToContents(COL_END)
 
+        self.view.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.view.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.view.customContextMenuRequested.connect(self.PopupRightClickMenu)
+        self.view.installEventFilter(self)
+
         self.view.setAlternatingRowColors(True)
         self.view.verticalScrollBar().valueChanged.connect(\
             self.view.updateGeometries)
         self.view.horizontalScrollBar().valueChanged.connect(\
             self.view.updateGeometries)
 
-        self.view.expanded.connect(self.BecameVisible)
-        self.view.collapsed.connect(self.ResetBackgroundColors)
+        self.view.expanded.connect(self.OpenPersistentEditors)
 
         mainLayout = QVBoxLayout()
         mainLayout.setSpacing(0)
@@ -461,7 +508,8 @@ class TreeView(QFrame):
 
     def changeEvent(self, event):
         if event.type() == QEvent.StyleChange:
-            self.OnStyleChanged()
+            ExtractColorsFromStyleSheet()
+            self.styleChanged.emit()
         super(TreeView, self).changeEvent(event)
 
     def closeEvent(self, event):
@@ -471,6 +519,19 @@ class TreeView(QFrame):
             pass
         self.UnsyncViewWithModel()
         event.accept()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape and\
+            self.view.selectionModel() is not None:
+            self.view.selectionModel().clearSelection()
+        super(TreeView, self).keyPressEvent(event)
+
+    def eventFilter(self, source, event):
+        if event.type() == QEvent.KeyPress and\
+            event.matches(QKeySequence.Copy):
+            self.OnSelectionCopied()
+            return True
+        return super(TreeView, self).eventFilter(source, event)
 
     @staticmethod
     def IsNodeCompatible(node, ignoreNodeType = True):
@@ -520,7 +581,7 @@ class TreeView(QFrame):
         else:
             model = TreeModel(COL_HEADERS, node)
             self.SyncViewWithModel(model)
-            self.view.expandToDepth( 2 )
+            self.view.expandToDepth(2)
 
             hou.session.UsdImportDict[key] = model
 
@@ -558,6 +619,7 @@ class TreeView(QFrame):
 
         # Now actually set the new model as the view's model.
         self.view.setModel(model)
+        self.view.setSelectionModel(model.GetSelectionModel())
 
         # Get the index of each item that should be expanded in
         # this view and expand it.
@@ -584,15 +646,11 @@ class TreeView(QFrame):
         # Update the new model's items as they're just becoming visible.
         topIndex = model.index(0, 0, QModelIndex())
         if topIndex.isValid():
-            self.BecameVisible(topIndex)
-
-    def BecameVisible(self, index):
-        self.OpenPersistentEditors(index)
-        self.ResetBackgroundColors(index)
+            self.OpenPersistentEditors(topIndex)
 
     def OnTreeTopologyChanged(self, index):
         if self.view.isExpanded(index):
-            self.BecameVisible(index)
+            self.OpenPersistentEditors(index)
 
     def OnNodeDeleted(self, **kwargs):
         node = kwargs['node']
@@ -637,50 +695,7 @@ class TreeView(QFrame):
             rowCount = self.view.model().rowCount(index)
             for row in range(rowCount):
                 self.OpenPersistentEditors(index.child(row, 0))
-
-    #
-    # This method is needed for setting the background color on widgets
-    # whose display is governed by the custom delegate.
-    #
-    # The native (non-delegate) widgets have their background colors
-    # applied by calling setAlternatingRowColors(True) on the view.
-    # This method mimics that behavior so that all widgets in a row
-    # are displayed with matching color.
-    #
-    def ResetBackgroundColors(self, firstIndex):
-        if not firstIndex.isValid():
-            return
-
-        # Local method def for recursively selecting color.
-        def SelectBackgroundColor(item, select):
-            index = self.view.model().indexFromItem(item)
-            item.setRowAlternator(select)
-            rgb = TreeView.rgbRows[select]
-
-            row = index.row()
-            widget = self.view.indexWidget(index.sibling(row, COL_IMPORT))
-            if widget:
-                widget.setStyleSheet('QFrame{background-color: %s;}' % rgb)
-            widget = self.view.indexWidget(index.sibling(row, COL_VARIANT))
-            if widget:
-                widget.setStyleSheet('QFrame{background-color: %s;}' % rgb)
-            select = 1 - select
-
-            if self.view.isExpanded(index):
-                for i in range(item.childCount()):
-                    select = SelectBackgroundColor(item.child(i), select)
-
-            return select
-
-        firstItem = firstIndex.internalPointer()
-        select = firstItem.rowAlternator()
-        row = firstItem.row()
-        parentItem = firstItem.parent()
-        while parentItem:
-            for i in range(row, parentItem.childCount()):
-                select = SelectBackgroundColor(parentItem.child(i), select)
-            row = parentItem.row() + 1
-            parentItem = parentItem.parent()
+        
 
     def ShowVariants(self, state):
         if state == Qt.Checked:
@@ -705,10 +720,129 @@ class TreeView(QFrame):
             for row in range(rowCount):
                 self.UpdateSizeHints(index.child(row, 0))
 
-    def OnStyleChanged(self):
-        ExtractColorsFromStyleSheet()
+    def PopupRightClickMenu(self, pos):
+        if self.focusWidget() == self.view:
+            menu = QMenu(self)
+            importAction = menu.addAction("Import")
+            unimportAction = menu.addAction("Unimport")
+            action = menu.exec_(self.view.mapToGlobal(pos))
+            if action is not None:
+                state = Qt.Checked if action == importAction else Qt.Unchecked
+                for index in self.view.selectedIndexes():
+                    # Skip items from every column except the import column.
+                    if index.column() == COL_IMPORT:
+                        self.view.model().setData(index, state, Qt.EditRole)
 
-        # Update the custom widgets in each row of the view.
+    def OnSelectionCopied(self):
+        indexes = self.view.selectionModel().selectedRows()
+        if len(indexes) == 0:
+            return
+
+        # If there is more than one selected index, sort them.
+        if len(indexes) > 1:
+            profiles = []
+            for index in indexes:
+                profile = ''
+                while index.isValid():
+                    profile = str(index.row()) + profile
+                    index = index.parent()
+                profiles.append(profile)
+            zipped = zip(profiles, indexes)
+            zipped.sort()
+            profiles, indexes = zip(*zipped)
+
+        selection = ''
+        for i, index in enumerate(indexes):
+            item = index.internalPointer()
+            if i > 0:
+                selection += '\n'
+            selection += self.view.model().VariantPrimPathFromItem(item)
+
+        qApp.clipboard().setText(selection)
+
+    def OnFilterApplied(self, filterString):
+        filterString = filterString.lower()
+
+        # If filterString is only 1 char, do nothing. (A single char would
+        # match far too many paths to be useful and it could get pretty slow.)
+        if len(filterString) == 1:
+            return
+
+        # Helper method to test if an item matches filterString.
+        def MatchesFilter(item):
+            primPath = item.primPath().pathString.lower()
+            #
+            # In order for primPath to be considered a match with filterString,
+            # filterString has to match at least part of the actual name shown
+            # on the row of the treeview. In other words, the match cant't be
+            # completely from the ancestor part of primPath; it has to overlap
+            # the piece that follows the final '/'.
+            #
+            lastMatch = primPath.rfind(filterString)
+            if lastMatch >= 0:
+                if primPath.rfind('/') < lastMatch + len(filterString):
+                    return True
+            return False
+
+        # Helper method to traverse the tree and expand all items (and the
+        # ancestors of those items) that match filterString, and collapse all
+        # other non-matching items.
+        def ExpandOrCollapse(item):
+            childMatch = False
+            for i in range(item.childCount()):
+                childMatch |= ExpandOrCollapse(item.child(i))
+
+            if childMatch:
+                # This item has a child (or deeper descendant) that matches
+                # filterString, so this item needs to be expanded.
+                self.view.expand(self.view.model().indexFromItem(item))
+                return True
+            else:
+                # No descendants of this item match filterString, so go ahead
+                # and collapse it. However, check if this item itself matches
+                # so the parent can be notified whether to expand or collapse.
+                self.view.collapse(self.view.model().indexFromItem(item))
+                return MatchesFilter(item)
+
+        # Helper method to traverse the tree and unhide all items.
+        def Unhide(item):
+            index = self.view.model().indexFromItem(item)
+            self.view.setRowHidden(item.row(), index.parent(), False)
+            for i in range(item.childCount()):
+                Unhide(item.child(i))
+
+        # Helper method to traverse the tree and hide every item that is
+        # collapsed (or a leaf) which also doesn't match filterString.
+        def HideOrUnhide(item):
+            index = self.view.model().indexFromItem(item)
+            # If item is either collapsed or is a leaf (no children), only
+            # keep it visible if it matches filterString.
+            if not self.view.isExpanded(index) or item.childCount() == 0:
+                hidden = not MatchesFilter(item)
+                self.view.setRowHidden(item.row(), index.parent(), hidden)
+            else:
+                # Unhide this item, then recurse on its children.
+                self.view.setRowHidden(item.row(), index.parent(), False)
+
+                for i in range(item.childCount()):
+                    HideOrUnhide(item.child(i))
+
         topIndex = self.view.model().index(0, 0, QModelIndex())
-        if topIndex.isValid():
-            self.ResetBackgroundColors(topIndex)
+        topItem = topIndex.internalPointer()
+
+        # If filterString is empty, unhide all items.
+        if filterString == '':
+            Unhide(topItem)
+            return
+
+        # Make a 1st pass through the tree, expanding all items with a child
+        # (or deeper descendant) that matches filterString, and collapsing all
+        # items that don't match.
+        ExpandOrCollapse(topItem)
+
+        # The actual hiding of items is done in a 2nd pass. If it had been done
+        # in the ExpandOrCollapse pass, then all descendants of collapsed items
+        # would be hidden, or essentially removed. This way, items that are
+        # under a matching item are collapsed (thus technically not "visible"),
+        # and only items that aren't under a matching item get removed.
+        HideOrUnhide(topItem)
