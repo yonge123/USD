@@ -20,6 +20,7 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
         mIsShapeAnimated = PxrUsdMayaUtil::isAnimated(obj);
     }
 
+    // TODO inherit from the TransformWriter and handle it like the other shapes
     if (getArgs().mergeTransformAndShape) {
         // the path will always look like :
         // camera transform -> camera shape -> image plane transform -> image plane shape

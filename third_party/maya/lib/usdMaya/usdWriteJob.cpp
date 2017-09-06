@@ -372,9 +372,7 @@ void usdWriteJob::endJob()
     }
 
     postCallback();
-    // clear this so that no stage references are left around
-    // also, we are triggering a before save cleanup here
-    mJobCtx.mMayaPrimWriterList.clear();
+    
     // Unfortunately, MGlobal::isZAxisUp() is merely session state that does
     // not get recorded in Maya files, so we cannot rely on it being set
     // properly.  Since "Y" is the more common upAxis, we'll just use

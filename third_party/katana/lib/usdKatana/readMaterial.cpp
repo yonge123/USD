@@ -36,7 +36,6 @@
 #include "pxr/usd/usdShade/material.h"
 #include "pxr/usd/usdShade/utils.h"
 
-#include "pxr/usd/usdAi/aiMaterialAPI.h"
 #include "pxr/usd/usdRi/materialAPI.h"
 #include "pxr/usd/usdRi/risObject.h"
 #include "pxr/usd/usdRi/risOslPattern.h"
@@ -320,6 +319,7 @@ _CreateShadingNode(
             }
         } 
         else {
+            
             // only use the fallback OSL test if the targetName is "prman" as
             // it will issue benign but confusing errors to the shell for
             // display shaders
