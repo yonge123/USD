@@ -1,0 +1,5 @@
+From: Paul Molodowitch <pm@stanfordalumni.org>
+Subject: [Usdview] add "Copy Layer identifier" menu item
+
+useful when using Assest Resolvers, where the "real path" may be less useful
+than the unresolved identifier
