@@ -521,12 +521,14 @@ public:
 
 private:
     explicit CrateFile(bool useMmap);
-    CrateFile(string const &fileName,
-              ArchConstFileMapping mapStart, int64_t fileSize);
-    CrateFile(string const &fileName, _UniqueFILE inputFile, int64_t fileSize);
+    CrateFile(string const &fileName, ArchConstFileMapping mapStart);
+    CrateFile(string const &fileName, _UniqueFILE inputFile);
 
     CrateFile(CrateFile const &) = delete;
     CrateFile &operator=(CrateFile const &) = delete;
+
+    void _InitMMap();
+    void _InitPread();
 
     static ArchConstFileMapping _MmapFile(char const *fileName, FILE *file);
 
@@ -577,8 +579,7 @@ private:
     template <class Reader> void _ReadPaths(Reader src);
     template <class Reader, class Header>
     void _ReadPathsRecursively(
-        Reader src, const SdfPath &parentPath,
-        const Header &h,
+        Reader src, SdfPath parentPath, Header h,
         WorkArenaDispatcher &dispatcher);
 
     void _ReadRawBytes(int64_t start, int64_t size, char *buf) const;
@@ -708,6 +709,9 @@ private:
     _UniqueFILE _inputFile; // NULL if this wasn't populated from file.
 
     std::string _fileName; // Empty if this file data is in-memory only.
+
+    std::unique_ptr<char []> _debugPageMap; // Debug page access map, see
+                                            // USDC_DUMP_PAGE_MAPS.
 
     const bool _useMmap; // If true, use mmap for reads, otherwise use pread.
 };
