@@ -121,23 +121,6 @@ function(_plugInfo_subst libTarget pluginToLibraryPath plugInfoPath)
     )
 endfunction() # _plugInfo_subst
 
-function(_replaceSublayer_schema NAME schemaSource)
-    set(infile "${CMAKE_CURRENT_SOURCE_DIR}/${schemaSource}")
-    set(outfile "${CMAKE_CURRENT_BINARY_DIR}/${schemaSource}")
-    add_custom_target(${NAME}_replaceSublayerSchema
-        COMMAND
-        "${PYTHON_EXECUTABLE}"
-        "${PROJECT_SOURCE_DIR}/cmake/macros/replaceSublayerSchemas.py"
-        "${infile}"
-        "${outfile}"
-        SOURCES "${infile}"
-        COMMENT "Replacing sublayer schemas ${f} ..."
-    )
-
-    # Make sure the sublayers are generated before the library.
-    add_dependencies(${NAME} ${NAME}_replaceSublayerSchema)
-endfunction()
-
 # Generate a doxygen config file
 function(_pxrDoxyConfig_subst)
     configure_file(${CMAKE_SOURCE_DIR}/pxr/usd/lib/usd/Doxyfile.in
