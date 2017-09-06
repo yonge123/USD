@@ -124,7 +124,7 @@ pxr_shared_library(${PXR_PACKAGE}
         wrapStageCache.cpp
         wrapUserTaggedAttribute.cpp
 
-    PYTHON_FILES
+    PYMODULE_FILES
         __init__.py
         AEpxrUsdReferenceAssemblyTemplate.py
         userExportedAttributesUI.py
