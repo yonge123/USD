@@ -51,14 +51,14 @@ pxr_library(usdImagingGL
     PRIVATE_HEADERS
         unitTestGLDrawing.h
 
-    CPPFILES
+    PYTHON_CPPFILES
         moduleDeps.cpp
 
     PYMODULE_CPPFILES
         module.cpp
         wrapGL.cpp
 
-    PYTHON_FILES
+    PYMODULE_FILES
         __init__.py
 )
 
