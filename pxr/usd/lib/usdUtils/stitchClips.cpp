@@ -911,7 +911,6 @@ UsdUtilsStitchClipsTemplate(const SdfLayerHandle& resultLayer,
         = _GetRelativePathIfPossible(topologyLayer->GetIdentifier(),
                                      topologyLayer->GetRealPath(),
                                      resultLayer->GetRealPath());
-    prim->SetInfo(UsdTokens->clipManifestAssetPath, VtValue(topologyId));
 
     // set root layer metadata
     _StitchClipsTopologySubLayerPath(resultLayer, topologyId);
