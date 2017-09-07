@@ -25,7 +25,11 @@
 #include "pxr/base/tf/dl.h"
 #include "pxr/base/tf/debugCodes.h"
 #include "pxr/base/tf/registryManager.h"
+
+#ifdef PXR_PYTHON_SUPPORT_ENABLED
 #include "pxr/base/tf/scriptModuleLoader.h"
+#endif // PXR_PYTHON_SUPPORT_ENABLED
+
 #include "pxr/base/tf/getenv.h"
 #include <string>
 #include <stdlib.h>
@@ -82,10 +86,13 @@ TfDlopen(
         }
     }
 
+#ifdef PXR_PYTHON_SUPPORT_ENABLED
     // If we successfully opened the shared library, load any script bindings if
     // scripting is initialized.
-    if (handle && loadScriptBindings)
+    if (handle && loadScriptBindings) {
         TfScriptModuleLoader::GetInstance().LoadModules();
+    }
+#endif // PXR_PYTHON_SUPPORT_ENABLED
     
     return handle;
 }

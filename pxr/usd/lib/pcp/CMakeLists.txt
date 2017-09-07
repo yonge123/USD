@@ -40,11 +40,13 @@ pxr_library(pcp
         payloadDecorator
         primIndex
         propertyIndex
-        pyUtils
         site
         strengthOrdering
         targetIndex
         types
+
+    PYTHON_PUBLIC_CLASSES
+        pyUtils
 
     PRIVATE_CLASSES
         debugCodes
@@ -58,7 +60,7 @@ pxr_library(pcp
         statistics
         utils
 
-    CPPFILES
+    PYTHON_CPPFILES
         moduleDeps.cpp
 
     PYMODULE_CPPFILES
@@ -81,7 +83,7 @@ pxr_library(pcp
         wrapTestChangeProcessor.cpp
         wrapTypes.cpp
 
-    PYTHON_FILES
+    PYMODULE_FILES
         __init__.py
 )
 
@@ -885,8 +887,8 @@ pxr_register_test(testPcpMuseum_TypicalReferenceToRiggedModel
 pxr_register_test(testPcpMuseum_TypicalReferenceToChargroup
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testPcpCompositionResults TypicalReferenceToChargroup/root.sdf" 
-    STDOUT_REDIRECT compositionResults_TypicalReferenceToChargroup.txt
-    DIFF_COMPARE compositionResults_TypicalReferenceToChargroup.txt 
+    STDOUT_REDIRECT compositionResults_TypicalReferenceToChargroup_pcp.txt
+    DIFF_COMPARE compositionResults_TypicalReferenceToChargroup_pcp.txt 
 )
 
 pxr_register_test(testPcpMuseum_TypicalReferenceToChargroupWithRename

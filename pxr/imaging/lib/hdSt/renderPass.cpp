@@ -21,31 +21,19 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/imaging/glf/glew.h"
-
 #include "pxr/imaging/hdSt/renderPass.h"
 #include "pxr/imaging/hd/drawItem.h"
-#include "pxr/imaging/hd/glslProgram.h"
 #include "pxr/imaging/hd/indirectDrawBatch.h"
 #include "pxr/imaging/hd/renderContextCaps.h"
 #include "pxr/imaging/hd/renderPassShader.h"
 #include "pxr/imaging/hd/renderPassState.h"
 #include "pxr/imaging/hd/resourceRegistry.h"
 #include "pxr/imaging/hd/shaderCode.h"
-#include "pxr/imaging/hd/surfaceShader.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
 #include "pxr/base/gf/frustum.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
-
-HdSt_RenderPass::HdSt_RenderPass(HdRenderIndex *index)
-    : HdRenderPass(index)
-    , _lastCullingDisabledState(false)
-    , _collectionVersion(0)
-    , _collectionChanged(false)
-{
-}
 
 HdSt_RenderPass::HdSt_RenderPass(HdRenderIndex *index,
                                  HdRprimCollection const &collection)
@@ -71,12 +59,16 @@ HdSt_RenderPass::_Execute(HdRenderPassStateSharedPtr const &renderPassState,
     // CPU frustum culling (if chosen)
     _PrepareCommandBuffer(renderPassState);
 
+    // Get the resource registry
+    HdResourceRegistrySharedPtr const& resourceRegistry =
+        GetRenderIndex()->GetResourceRegistry();
+
     // renderTags.empty() means draw everything in the collection.
     if (renderTags.empty()) {
         for (_HdCommandBufferMap::iterator it  = _cmdBuffers.begin();
                                            it != _cmdBuffers.end(); it++) {
-            it->second.PrepareDraw(renderPassState);
-            it->second.ExecuteDraw(renderPassState);
+            it->second.PrepareDraw(renderPassState, resourceRegistry);
+            it->second.ExecuteDraw(renderPassState, resourceRegistry);
         }
     } else {
         TF_FOR_ALL(tag, renderTags) {
@@ -86,8 +78,8 @@ HdSt_RenderPass::_Execute(HdRenderPassStateSharedPtr const &renderPassState,
             }
 
             // GPU frustum culling (if chosen)
-            _cmdBuffers[*tag].PrepareDraw(renderPassState);
-            _cmdBuffers[*tag].ExecuteDraw(renderPassState);
+            _cmdBuffers[*tag].PrepareDraw(renderPassState, resourceRegistry);
+            _cmdBuffers[*tag].ExecuteDraw(renderPassState, resourceRegistry);
         }
     }
 }
@@ -111,7 +103,7 @@ HdSt_RenderPass::_PrepareCommandBuffer(
     // We know what must be drawn and that the stream needs to be updated, 
     // so iterate over each prim, cull it and schedule it to be drawn.
 
-    HdChangeTracker& tracker = GetRenderIndex()->GetChangeTracker();
+    HdChangeTracker const &tracker = GetRenderIndex()->GetChangeTracker();
     HdRenderContextCaps const &caps = HdRenderContextCaps::GetInstance();
     HdRprimCollection const &collection = GetRprimCollection();
 

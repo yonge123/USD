@@ -37,6 +37,7 @@
 #include "pxr/usd/usdGeom/points.h"
 #include "pxr/usd/usdGeom/scope.h"
 #include "pxr/usd/usdGeom/xform.h"
+#include "pxr/usd/usdShade/material.h"
 #include "pxr/usd/usdShade/look.h"
 #include "pxr/usd/usdLux/domeLight.h"
 #include "pxr/usd/usdLux/distantLight.h"
@@ -46,6 +47,10 @@
 #include "pxr/usd/usdLux/rectLight.h"
 #include "pxr/usd/usdLux/lightFilter.h"
 #include "pxr/usd/usdRi/pxrIntMultLightFilter.h"
+#include "pxr/usd/usdRi/pxrBarnLightFilter.h"
+#include "pxr/usd/usdRi/pxrCookieLightFilter.h"
+#include "pxr/usd/usdRi/pxrRodLightFilter.h"
+#include "pxr/usd/usdRi/pxrRampLightFilter.h"
 
 #include "pxrUsdInShipped/attrfnc_materialReference.h"
 
@@ -101,6 +106,7 @@ void registerPlugins()
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdGeomPoints>("PxrUsdInCore_PointsOp");
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdGeomBasisCurves>("PxrUsdInCore_BasisCurvesOp");
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdShadeLook>("PxrUsdInCore_LookOp");
+    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdShadeMaterial>("PxrUsdInCore_LookOp");
 
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdLuxDomeLight>("PxrUsdInCore_LightOp");
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdLuxGeometryLight>("PxrUsdInCore_LightOp");
@@ -110,6 +116,10 @@ void registerPlugins()
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdLuxRectLight>("PxrUsdInCore_LightOp");
 
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdRiPxrIntMultLightFilter>("PxrUsdInCore_LightFilterOp");
+    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdRiPxrBarnLightFilter>("PxrUsdInCore_LightFilterOp");
+    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdRiPxrCookieLightFilter>("PxrUsdInCore_LightFilterOp");
+    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdRiPxrRampLightFilter>("PxrUsdInCore_LightFilterOp");
+    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdRiPxrRodLightFilter>("PxrUsdInCore_LightFilterOp");
 
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdGeomCamera>("PxrUsdInCore_CameraOp");
 

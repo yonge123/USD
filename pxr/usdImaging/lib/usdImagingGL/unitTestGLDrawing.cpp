@@ -311,6 +311,7 @@ static void Usage(int argc, char *argv[])
 "%s [-stage filePath] [-write filePath]\n"
 "                           [-offscreen] [-lighting] [-idRender]\n"
 "                           [-complexity complexity]\n"
+"                           [-renderer rendererName]\n"
 "                           [-shading [flat|smooth|wire|wireOnSurface]]\n"
 "                           [-frameAll]\n"
 "                           [-clipPlane clipPlane1 ... clipPlane4]\n"
@@ -328,6 +329,8 @@ static void Usage(int argc, char *argv[])
 "  -idRender           ID rendering\n"
 "  -complexity complexity\n"
 "                      Set the fallback complexity [1]\n"
+"  -renderer rendererName\n"
+"                      use the specified renderer plugin []\n"
 "  -shading [flat|smooth|wire|wireOnSurface]\n"
 "                      force specific type of shading\n"
 "                      [flat|smooth|wire|wireOnSurface] []\n"
@@ -441,6 +444,10 @@ UsdImagingGL_UnitTestGLDrawing::_Parse(int argc, char *argv[], _Args* args)
             CheckForMissingArguments(i, 1, argc, argv);
             _complexity = ParseDouble(i, argc, argv);
         }
+        else if (strcmp(argv[i], "-renderer") == 0) {
+            CheckForMissingArguments(i, 1, argc, argv);
+            _renderer = TfToken(argv[++i]);
+        }
         else if (strcmp(argv[i], "-clipPlane") == 0) {
             CheckForMissingArguments(i, 4, argc, argv);
             args->clipPlaneCoords.push_back(ParseDouble(i, argc, argv));
@@ -512,12 +519,13 @@ UsdImagingGL_UnitTestGLDrawing::RunTest(int argc, char *argv[])
 
     _drawMode = UsdImagingGLEngine::DRAW_SHADED_SMOOTH;
 
-    // Only wireOnSurface/flat are supported
     if (args.shading.compare("wireOnSurface") == 0) {
         _drawMode = UsdImagingGLEngine::DRAW_WIREFRAME_ON_SURFACE;
     } else if (args.shading.compare("flat") == 0 ) {
         _drawMode = UsdImagingGLEngine::DRAW_SHADED_FLAT;
-    }
+    }else if (args.shading.compare("wire") == 0 ) {
+        _drawMode = UsdImagingGLEngine::DRAW_WIREFRAME;
+    } 
 
     if (!args.unresolvedStageFilePath.empty()) {
         _stageFilePath = args.unresolvedStageFilePath;

@@ -24,8 +24,7 @@
 #include "pxr/pxr.h"
 #include "pxr/usd/usdGeom/primvar.h"
 
-#include "pxr/usd/usd/conversions.h"
-
+#include "pxr/usd/usd/pyConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 
 #include <boost/python/class.hpp>
@@ -132,6 +131,8 @@ void wrapUsdGeomPrimvar()
         .def("IsDefined", &Primvar::IsDefined)
         .def("GetName", &Primvar::GetName,
              return_value_policy<return_by_value>())
+        .def("GetPrimvarName", &Primvar::GetPrimvarName)
+        .def("NameContainsNamespaces", &Primvar::NameContainsNamespaces)
         .def("GetBaseName", &Primvar::GetBaseName)
         .def("GetNamespace", &Primvar::GetNamespace)
         .def("SplitName", &Primvar::SplitName,

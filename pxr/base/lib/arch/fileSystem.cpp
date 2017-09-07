@@ -70,13 +70,7 @@ static inline HANDLE _FileToWinHANDLE(FILE *file)
 
 FILE* ArchOpenFile(char const* fileName, char const* mode)
 {
-    FILE* stream = nullptr;
-#if defined(ARCH_OS_WINDOWS)
-    fopen_s(&stream, fileName, mode);
-#else
-    stream = fopen(fileName, mode);
-#endif
-    return stream;
+    return fopen(fileName, mode);
 }
 
 #if defined(ARCH_OS_WINDOWS)
@@ -136,6 +130,21 @@ ArchGetModificationTime(const ArchStatType& st)
 #else
 #error Unknown system architecture
 #endif
+}
+
+bool 
+ArchGetStatMode(const char *pathname, int *mode)
+{
+    ArchStatType st;
+#if defined(ARCH_OS_WINDOWS)
+    if (__stat64(pathname, &st) == 0) {
+#else
+    if (stat(pathname, &st) == 0) {
+#endif
+        *mode = st.st_mode;
+        return true;
+    }
+    return false;
 }
 
 double
@@ -262,7 +271,7 @@ MakeUnique(
     // Copy template to a writable buffer.
     const auto length = sTemplate.size();
     char* cTemplate = reinterpret_cast<char*>(alloca(length + 1));
-    strcpy_s(cTemplate, length + 1, sTemplate.c_str());
+    strcpy(cTemplate, sTemplate.c_str());
 
     // Fill template with random characters from table.
     const char* table = "abcdefghijklmnopqrstuvwxyz123456";
@@ -430,7 +439,7 @@ Arch_Unmapper::operator()(char *mapStart) const
 
 template <class Mapping>
 static inline Mapping
-Arch_MapFileImpl(FILE *file)
+Arch_MapFileImpl(FILE *file, std::string *errMsg)
 {
     using PtrType = typename Mapping::pointer;
     constexpr bool isConst =
@@ -455,25 +464,38 @@ Arch_MapFileImpl(FILE *file)
                       /*offsetHigh=*/ 0, /*offsetLow=*/0, unsignedLength));
     // Close the mapping handle, and return the view pointer.
     CloseHandle(hFileMap);
-    return Mapping(ptr, Arch_Unmapper());
+    return Mapping(ptr, Arch_Unmapper(length));
 #else // Assume POSIX
-    return Mapping(
-        static_cast<PtrType>(
-            mmap(nullptr, length, isConst ? PROT_READ : PROT_READ | PROT_WRITE,
-                 MAP_PRIVATE, fileno(file), 0)), Arch_Unmapper(length));
+    auto m = mmap(nullptr, length,
+                  isConst ? PROT_READ : PROT_READ | PROT_WRITE,
+                  MAP_PRIVATE, fileno(file), 0);
+    Mapping ret(m == MAP_FAILED ? nullptr : static_cast<PtrType>(m),
+                Arch_Unmapper(length));
+    if (!ret && errMsg) {
+        int err = errno;
+        if (err == EINVAL) {
+            *errMsg = "bad arguments to mmap()";
+        } else if (err == EMFILE || err == ENOMEM) {
+            *errMsg = "system limit on mapped regions exceeded, "
+                "or out of memory";
+        } else {
+            *errMsg = ArchStrerror();
+        }
+    }
+    return ret;
 #endif
 }
 
 ArchConstFileMapping
-ArchMapFileReadOnly(FILE *file)
+ArchMapFileReadOnly(FILE *file, std::string *errMsg)
 {
-    return Arch_MapFileImpl<ArchConstFileMapping>(file);
+    return Arch_MapFileImpl<ArchConstFileMapping>(file, errMsg);
 }
 
 ArchMutableFileMapping
-ArchMapFileReadWrite(FILE *file)
+ArchMapFileReadWrite(FILE *file, std::string *errMsg)
 {
-    return Arch_MapFileImpl<ArchMutableFileMapping>(file);
+    return Arch_MapFileImpl<ArchMutableFileMapping>(file, errMsg);
 }
 
 ARCH_API
@@ -483,10 +505,46 @@ void ArchMemAdvise(void const *addr, size_t len, ArchMemAdvice adv)
     // No windows implementation yet.  Look at
     // PrefetchVirtualMemory()/OfferVirtualMemory() in future.
 #else // assume POSIX
-    posix_madvise(const_cast<void *>(addr), len,
-                  adv == ArchMemAdviceWillNeed ?
-                  POSIX_MADV_WILLNEED : POSIX_MADV_DONTNEED);
+    // Have to adjust addr to be page-size aligned.
+    static size_t mask = ~(static_cast<size_t>(sysconf(_SC_PAGESIZE)) - 1);
+    uintptr_t addrInt = reinterpret_cast<uintptr_t>(addr);
+    uintptr_t alignedAddrInt = addrInt & mask;
+
+    // This must follow ArchMemAdvice exactly.
+    int adviceMap[] = {
+        /* ArchMemAdviceNormal       = */ POSIX_MADV_NORMAL,
+        /* ArchMemAdviceWillNeed     = */ POSIX_MADV_WILLNEED,
+        /* ArchMemAdviceDontNeed     = */ POSIX_MADV_DONTNEED,
+        /* ArchMemAdviceRandomAccess = */ POSIX_MADV_RANDOM
+    };
+
+    int rval = posix_madvise(reinterpret_cast<void *>(alignedAddrInt),
+                             len + (addrInt - alignedAddrInt), adviceMap[adv]);
+    if (rval != 0) {
+        fprintf(stderr, "failed call to posix_madvise(%zd, %zd)"
+                "ret=%d, errno=%d '%s'\n",
+                alignedAddrInt, len + (addrInt-alignedAddrInt),
+                rval, errno, ArchStrerror().c_str());
+    }
 #endif
+}
+
+bool
+ArchQueryMappedMemoryResidency(
+    void const *addr, size_t len, unsigned char *pageMap)
+{
+#if defined(ARCH_OS_LINUX)
+    int ret = mincore(const_cast<void *>(addr), len, pageMap);
+    return ret == 0;
+#elif defined (ARCH_OS_DARWIN)
+    // On darwin the addr param is 'caddr_t' and the vec param is 'char *'.
+    int ret = mincore(
+        reinterpret_cast<caddr_t>(const_cast<void *>(addr)), len,
+        reinterpret_cast<char *>(pageMap));
+    return ret == 0;
+#endif
+    // XXX: Not implemented for other platforms yet.
+    return false;
 }
 
 int64_t
@@ -791,7 +849,7 @@ std::string ArchReadLink(const char* path)
                 reparse->SymbolicLinkReparseBuffer.PrintNameLength /
                                                                 sizeof(WCHAR);
             std::unique_ptr<WCHAR[]> reparsePath(new WCHAR[length + 1]);
-            wcsncpy_s(reparsePath.get(), length + 1,
+            wcsncpy(reparsePath.get(),
               &reparse->SymbolicLinkReparseBuffer.PathBuffer[
               reparse->SymbolicLinkReparseBuffer.PrintNameOffset / sizeof(WCHAR)
               ], length);
@@ -868,9 +926,21 @@ void ArchFileAdvise(
 #elif defined(ARCH_OS_DARWIN)
     // No OSX implementation; posix_fadvise does not exist on that platform.
 #else // assume POSIX
-    posix_fadvise(fileno(file), offset, static_cast<off_t>(count),
-                  adv == ArchFileAdviceWillNeed ?
-                  POSIX_FADV_WILLNEED : POSIX_FADV_DONTNEED);
+    // This must follow ArchFileAdvice exactly.
+    int adviceMap[] = {
+        /* ArchFileAdviceNormal       = */ POSIX_FADV_NORMAL,
+        /* ArchFileAdviceWillNeed     = */ POSIX_FADV_WILLNEED,
+        /* ArchFileAdviceDontNeed     = */ POSIX_FADV_DONTNEED,
+        /* ArchFileAdviceRandomAccess = */ POSIX_FADV_RANDOM
+    };
+    int rval = posix_fadvise(fileno(file), offset, static_cast<off_t>(count),
+                             adviceMap[adv]);
+    if (rval != 0) {
+        fprintf(stderr, "failed call to posix_fadvise(%d, %zd, %zd)"
+                "ret=%d, errno=%d '%s'\n",
+                fileno(file), offset, static_cast<off_t>(count),
+                rval, errno, ArchStrerror().c_str());
+    }
 #endif
 }
 

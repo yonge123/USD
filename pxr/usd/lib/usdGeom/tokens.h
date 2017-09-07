@@ -104,6 +104,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (linear) \
     (loop) \
     (mono) \
+    ((motionVelocityScale, "motion:velocityScale")) \
     (none) \
     (nonperiodic) \
     (normals) \
@@ -137,8 +138,10 @@ PXR_NAMESPACE_OPEN_SCOPE
     ((shutterClose, "shutter:close")) \
     ((shutterOpen, "shutter:open")) \
     (size) \
+    (smooth) \
     (stereoRole) \
     (subdivisionScheme) \
+    (triangleSubdivisionRule) \
     ((trimCurveCounts, "trimCurve:counts")) \
     ((trimCurveKnots, "trimCurve:knots")) \
     ((trimCurveOrders, "trimCurve:orders")) \
@@ -202,7 +205,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \li <b>boundaries</b> - Possible value for UsdGeomMesh::GetFaceVaryingLinearInterpolationAttr()
 /// \li <b>bspline</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr()
 /// \li <b>card</b> - Possible value for UsdGeomPointInstancer::GetPrototypeDrawModeAttr()
-/// \li <b>catmullClark</b> - Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr(), Default value for UsdGeomMesh::GetSubdivisionSchemeAttr()
+/// \li <b>catmullClark</b> - Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr(), Default value for UsdGeomMesh::GetSubdivisionSchemeAttr(), Possible value for UsdGeomMesh::GetTriangleSubdivisionRuleAttr(), Default value for UsdGeomMesh::GetTriangleSubdivisionRuleAttr()
 /// \li <b>catmullRom</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr()
 /// \li <b>clippingPlanes</b> - UsdGeomCamera
 /// \li <b>clippingRange</b> - UsdGeomCamera
@@ -255,6 +258,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \li <b>linear</b> - Possible value for UsdGeomBasisCurves::GetTypeAttr()
 /// \li <b>loop</b> - Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr()
 /// \li <b>mono</b> - Possible value for UsdGeomCamera::GetStereoRoleAttr(), Default value for UsdGeomCamera::GetStereoRoleAttr()
+/// \li <b>motionVelocityScale</b> - UsdGeomMotionAPI
 /// \li <b>none</b> - Possible value for UsdGeomMesh::GetInterpolateBoundaryAttr(), Possible value for UsdGeomMesh::GetFaceVaryingLinearInterpolationAttr(), Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr()
 /// \li <b>nonperiodic</b> - Possible value for UsdGeomBasisCurves::GetWrapAttr(), Default value for UsdGeomBasisCurves::GetWrapAttr()
 /// \li <b>normals</b> - UsdGeomPointBased
@@ -288,8 +292,10 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \li <b>shutterClose</b> - UsdGeomCamera
 /// \li <b>shutterOpen</b> - UsdGeomCamera
 /// \li <b>size</b> - UsdGeomCube
+/// \li <b>smooth</b> - Possible value for UsdGeomMesh::GetTriangleSubdivisionRuleAttr()
 /// \li <b>stereoRole</b> - UsdGeomCamera
 /// \li <b>subdivisionScheme</b> - UsdGeomMesh
+/// \li <b>triangleSubdivisionRule</b> - UsdGeomMesh
 /// \li <b>trimCurveCounts</b> - UsdGeomNurbsPatch
 /// \li <b>trimCurveKnots</b> - UsdGeomNurbsPatch
 /// \li <b>trimCurveOrders</b> - UsdGeomNurbsPatch

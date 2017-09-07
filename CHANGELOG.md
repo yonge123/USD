@@ -1,5 +1,143 @@
 # Change Log
 
+## [0.8.0] - 2017-07-29
+
+### Added
+- Added option to build_usd.py for building monolithic shared library
+  and for building new sample Embree plugin.
+- Added --mask option to usdcat, matching the --mask option in usdview.
+- Added CPU-side external computation support to Hydra.
+- Added Embree backend to serve as an example of how to add renderer 
+  plugins to Hydra.
+- Added camera gates to usdview.
+- Added ability to Houdini plugin to set active state via usdactive 
+  attribute and to write static data to default time via usdwritestatictopology,
+  usdwritestaticprimvars, and usdwritestaticgeo attributes.
+- Added UsdExportAttributes hda to Houdini plugin for setting primitive and 
+  detail attributes which control various USD attributes or metadata.
+
+### Changed
+- Restored export of CMake targets from shared library builds.
+- Asset paths in .usda files may now contain any printable character.
+  (Issue #73)
+- Legacy special behavior for variant sets named "standin" has been disabled
+  by default.
+- Interpolation is now applied to time samples from clips when no sample
+  exists at a specified clip time.
+- Removed deprecated UsdShadePShader schema.
+- Enabled vertex primvar sharing in Hydra. Hydra can now use significantly 
+  less GPU memory.
+- Many internal performance improvements to Hydra.
+- usdview HUD now shows the backend renderer plugin used by Hydra
+- Wireframe drawing now ignores opacity.
+- Katana plugin properly interprets schema-supported triangle subdivision rule 
+  when meshes are read in and rendered.
+
+### Fixed
+- Fixed several issues in build_usd.py related to building dependencies.
+  (Issue #225, #230, #234)
+- Fixed bug where UsdGeomPrimvar::IsIndexed() would not work for attributes
+  with only authored time samples. (Issue #238)
+- Fixed small platform inconsistencies for Windows in Hydra.
+- Fixed crash in Katana plugin when using point instancers that did not have
+  scales or orientations specified. (Issue #239)
+- Fixed issue in Houdini plugin where the "w" attribute was not converted
+  to the "angularVelocities" attribute for point instancer prims.
+	
+## [0.7.6] - 2017-06-30
+
+### Added
+- Added `build_scripts/build_usd.py` for building USD and its dependencies.
+- Added support for building static libraries or a single monolithic
+  shared library. See [BUILDING.md](BUILDING.md#linker-options) for more
+  details.
+- Added support for color spaces to Usd. Color configuration and management 
+  system can be specified on a UsdStage (via the stage's root layer), and 
+  colorSpace metadata is available on any UsdAttribute.
+- Added clip set functionality to Usd. This provides the ability to specify 
+  multiple sets of value clips on the same prim, which allows users to compose 
+  different sets of clips together. See UsdClipsAPI for more details.
+- Added initial UsdLux schemas for representing interchangeable lights and 
+  related concepts, and UsdRi schemas for Renderman-specific extensions. 
+  UsdImaging/Hydra support will be coming in a future release.
+- Added ability to specify smooth triangle subdivision scheme for catmullClark
+  surfaces in UsdGeomMesh and imaging support in Hydra.
+- Added backdrops for node layout description in UsdUI.
+- Added support for sharing immutable primvar buffers to Hydra.
+  This can greatly reduce the memory required on the GPU when displaying
+  typical scenes. It is currently experimental and disabled by default. It
+  can be enabled for testing with the environment variable
+  `HD_ENABLE_SHARED_VERTEX_PRIMVAR`.
+- Added support for uniform primvars for basis curves in Hydra.
+- Added ability to Alembic plugin to control number of Ogawa streams used for 
+  each opened archive via the environment variable `USD_ABC_NUM_OGAWA_STREAMS`,
+  which defaults to 4.
+- Added Katana plugin support for reading UsdLux lights.
+- Added `--camera` command line argument to usdview to specify the initial 
+  camera to use for viewing.
+- Added display of instance index and (if authored) instance ID to rollover
+  prim info in usdview. 
+- Added initial version of Houdini plugin.
+
+### Changed
+
+- Removed unnecessary dependency on OpenImageIO binaries.
+- Removed unnecessary dependency on boost::iostreams.
+- Made HDF5 backend for Alembic plugin optional. HDF5 support is enabled by 
+  default but may be disabled by specifying `PXR_ENABLE_HDF5_SUPPORT=FALSE`
+  to CMake.
+- Metadata fields for value clips feature in UsdStage (e.g. clipAssetPaths,
+  clipTimes, etc.) have been deprecated in favor of the new clips metadata
+  dictionary. Authoring APIs on UsdClipsAPI still write out the deprecated
+  metadata unless the environment variable `USD_AUTHOR_LEGACY_CLIPS` is set 
+  to 0. This will be disabled in a future release.
+- When using value clips, Usd will now report time samples at each time 
+  authored in the clip times metadata.
+- Completed support for encoding UsdShade data using UsdAttribute connections.
+  Authoring APIs still write out the old encoding, unless the environment 
+  variable `USD_SHADE_WRITE_NEW_ENCODING` is set to 1. This will be enabled
+  in a future release.
+- Removed support for deprecated UsdShade schemas UsdShadeParameter and
+  UsdShadeInterfaceAttribute, which have been superseded by UsdShadeInput.
+- Removed deprecated UsdRiLookAPI, which has been replaced by UsdRiMaterialAPI.
+- Removed deprecated Hydra scene delegate APIs.
+- Significant refactoring and refinements to allow multiple backends to be
+  plugged in to Hydra.
+- UsdImaging now pushes GL_DEPTH_BUFFER_BIT to avoid any potential state
+  pollution issues when integrating it with other renderers. 
+- Improved error handling in Hydra for:
+  - Invalid point instancer input
+  - Inconsistent displayColor and displayOpacity primvars
+  - Direct instances of imageable prims
+- usdview more gracefully handles the situation where it doesn't get a
+  valid GL context (e.g., due to limited resources on the GPU).
+- Improved how edits are handled on assembly nodes in the Maya plugin.
+- Improved UsdGeomPointInstancer support in the Katana plugin:
+  - Overhauled methods for computing instance transforms and aggregate bounds. 
+  - Backward motion and multi-sampled point instancer positions, orientations, 
+    and scales are now supported.
+  - Removed opArgs attributes that were used for configuring the reader's 
+    behavior.
+  - More robust primvar transfer to point instancer's Katana locations.
+  - Restructured prototype building logic to preserve material bindings
+    when creating prototype prims.
+- Numerous changes and fixes for Mac and Windows ports.
+
+### Fixed
+
+- Fixed issue that caused IDEs and other tools to find headers in the build
+  directories rather than the source directories.
+- Fixed race condition in TfType.
+- Fixed long-standing memory corruption bug in Pcp that surfaced when 
+  building on MacOS with XCode 8.3.2.
+- Fixed potential deadlocks in Usd and Pcp due to issues with TBB task group 
+  isolation.
+- Fixed bug where UsdStage::Flatten was not preserving attribute connections.
+- Fixed infinite loop on glGetError in the presence of an invalid GL context.
+  (Issue #198)
+- Fixed build issues that caused the Maya plugin to be unusable after building
+  on MacOS.
+
 ## [0.7.5] - 2017-05-01
 
 C++ namespaces are now enabled by default. The `PXR_ENABLE_NAMESPACES` CMake

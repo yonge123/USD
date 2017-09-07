@@ -164,6 +164,7 @@ enum HdComplexity
 ///     <li>\b HdWrapClamp               Clamp coordinate to range [1/(2N),1-1/(2N)] where N is the size of the texture in the direction of clamping</li>
 ///     <li>\b HdWrapRepeat              Creates a repeating pattern</li>
 ///     <li>\b HdWrapBlack</c></b>       Clamp coordinate to range [-1/(2N),1+1/(2N)] where N is the size of the texture in the direction of clamping</li>
+///     <li>\b HdWrapUseMetaDict</c></b> Texture can define its own wrap mode, if not defined by the texture it will use HdWrapRepeat</li>
 /// </ul>
 ///
 enum HdWrap 
@@ -171,6 +172,7 @@ enum HdWrap
     HdWrapClamp,
     HdWrapRepeat,
     HdWrapBlack,
+    HdWrapUseMetaDict,
 };
 
 /// \enum HdMinFilter
@@ -248,6 +250,55 @@ enum HdFormat
     HdFormatUnknown = -1
 };
 
+///
+/// \enum HdInterpolation
+///
+/// Enumerates Hydra's primVar interpolation modes.
+///
+/// Constant:    One value remains constant over the entire surface primitive.
+///
+/// Uniform:     One value remains constant for each uv patch segment of the
+///              surface primitive.
+///
+/// Varying:     Four values are interpolated over each uv patch segment of
+///              the surface. Bilinear interpolation is used for interpolation
+///              between the four values.
+///
+/// Vertex:      Values are interpolated between each vertex in the surface
+///              primitive. The basis function of the surface is used for
+///              interpolation between vertices.
+///
+/// Facevarying: For polygons and subdivision surfaces, four values are
+///              interpolated over each face of the mesh. Bilinear interpolation
+///              is used for interpolation between the four values.
+///
+enum HdInterpolation
+{
+    HdInterpolationConstant = 0,
+    HdInterpolationUniform,
+    HdInterpolationVarying,
+    HdInterpolationVertex,
+    HdInterpolationFaceVarying,
+
+    HdInterpolationCount
+};
+
+///
+/// \enum HdExtComputationInputType
+///
+/// Identifies the type of the source of an input to an ExtComputation.
+///
+/// Scene:       The input should be sourced from the Scene Delegate
+///
+/// Computation: The input should be sourced from another ExtComputation.
+///
+enum HdExtComputationInputType
+{
+    HdExtComputationInputTypeScene   = 0,
+    HdExtComputationInputTypeComputation,
+
+    HdExtComputationInputTypeCount
+};
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

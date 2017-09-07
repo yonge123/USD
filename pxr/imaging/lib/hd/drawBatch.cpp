@@ -177,7 +177,8 @@ Hd_DrawBatch::Rebuild()
 
 Hd_DrawBatch::_DrawingProgram &
 Hd_DrawBatch::_GetDrawingProgram(HdRenderPassStateSharedPtr const &state,
-                                 bool indirect)
+                                 bool indirect,
+                                 HdResourceRegistrySharedPtr const &resourceRegistry)
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -211,7 +212,7 @@ Hd_DrawBatch::_GetDrawingProgram(HdRenderPassStateSharedPtr const &state,
 
         // Try to compile the shader and if it fails to compile we go back
         // to use the specified fallback surface shader.
-        if (!_program.CompileShader(firstDrawItem, indirect)) {
+        if (!_program.CompileShader(firstDrawItem, indirect, resourceRegistry)){
 
             // If we failed to compile the surface shader, replace it with the
             // fallback surface shader and try again.
@@ -233,7 +234,9 @@ Hd_DrawBatch::_GetDrawingProgram(HdRenderPassStateSharedPtr const &state,
 
             _program.SetSurfaceShader(fallbackSurface);
 
-            bool res = _program.CompileShader(firstDrawItem, indirect);
+            bool res = _program.CompileShader(firstDrawItem, 
+                                              indirect, 
+                                              resourceRegistry);
             // We expect the fallback shader to always compile.
             TF_VERIFY(res);
         }
@@ -247,7 +250,8 @@ Hd_DrawBatch::_GetDrawingProgram(HdRenderPassStateSharedPtr const &state,
 bool
 Hd_DrawBatch::_DrawingProgram::CompileShader(
         HdDrawItem const *drawItem,
-        bool indirect)
+        bool indirect,
+        HdResourceRegistrySharedPtr const &resourceRegistry)
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -287,8 +291,6 @@ Hd_DrawBatch::_DrawingProgram::CompileShader(
 
     HdGLSLProgram::ID hash = codeGen.ComputeHash();
 
-    HdResourceRegistry *resourceRegistry = &HdResourceRegistry::GetInstance();
-
     {
         HdInstance<HdGLSLProgram::ID, HdGLSLProgramSharedPtr> programInstance;
 
@@ -298,7 +300,7 @@ Hd_DrawBatch::_DrawingProgram::CompileShader(
 
         if (programInstance.IsFirstInstance()) {
             HdGLSLProgramSharedPtr glslProgram = codeGen.Compile();
-            if (_Link(glslProgram)) {
+            if (glslProgram && _Link(glslProgram)) {
                 // store the program into the program registry.
                 programInstance.SetValue(glslProgram);
             }
@@ -307,7 +309,7 @@ Hd_DrawBatch::_DrawingProgram::CompileShader(
         _glslProgram = programInstance.GetValue();
 
         if (_glslProgram) {
-            _resourceBinder.IntrospectBindings(_glslProgram->GetProgram().GetId());
+            _resourceBinder.IntrospectBindings(_glslProgram->GetProgram());
         } else {
             // Failed to compile and link a valid glsl program.
             return false;

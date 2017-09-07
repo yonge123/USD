@@ -39,6 +39,7 @@ pxr_library(usdGeom
         mesh
         metrics
         modelAPI
+        motionAPI
         nurbsCurves
         nurbsPatch
         pointBased
@@ -54,7 +55,7 @@ pxr_library(usdGeom
     PUBLIC_HEADERS
         api.h
 
-    CPPFILES
+    PYTHON_CPPFILES
         moduleDeps.cpp
 
     PYMODULE_CPPFILES
@@ -76,6 +77,7 @@ pxr_library(usdGeom
         wrapMesh.cpp
         wrapMetrics.cpp
         wrapModelAPI.cpp
+        wrapMotionAPI.cpp
         wrapNurbsCurves.cpp
         wrapNurbsPatch.cpp
         wrapPointBased.cpp
@@ -91,12 +93,13 @@ pxr_library(usdGeom
         wrapXformOp.cpp
         wrapXformCommonAPI.cpp
 
-    PYTHON_FILES
+    PYMODULE_FILES
         __init__.py
 
     RESOURCE_FILES
         plugInfo.json
         generatedSchema.usda
+        schema.usda:usdGeom/schema.usda
 )
 
 pxr_test_scripts(
@@ -108,6 +111,7 @@ pxr_test_scripts(
     testenv/testUsdGeomConsts.py
     testenv/test_UsdGeomCurves.py
     testenv/testUsdGeomFaceSetAPI.py
+    testenv/testUsdGeomMotionAPI.py
     testenv/testUsdGeomNoPlugLoad.py
     testenv/testUsdGeomPointInstancer.py
     testenv/testUsdGeomPrimvar.py
@@ -238,11 +242,15 @@ pxr_register_test(testUsdGeomIsA
     EXPECTED_RETURN_CODE 0
 )
 
+# This tests functionality when usdGeom has not been loaded.  That isn't
+# possible with a monolithic library.
+if(NOT PXR_BUILD_MONOLITHIC)
 pxr_register_test(testUsdGeomNoPlugLoad
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomNoPlugLoad"
     EXPECTED_RETURN_CODE 0
 )
+endif()
 
 pxr_register_test(testUsdGeomPrimvar
     PYTHON

@@ -593,27 +593,48 @@ Hd_CodeGen::Compile()
         hasTCS = hasTES = false;
     };
 
+    bool shaderCompiled = false;
     // compile shaders
     // note: _vsSource, _fsSource etc are used for diagnostics (see header)
     if (hasVS) {
         _vsSource = _genCommon.str() + _genVS.str();
-        glslProgram->CompileShader(GL_VERTEX_SHADER, _vsSource);
+        if (!glslProgram->CompileShader(GL_VERTEX_SHADER, _vsSource)) {
+            return HdGLSLProgramSharedPtr();
+        }
+        shaderCompiled = true;
     }
     if (hasFS) {
         _fsSource = _genCommon.str() + _genFS.str();
-        glslProgram->CompileShader(GL_FRAGMENT_SHADER, _fsSource);
+        if (!glslProgram->CompileShader(GL_FRAGMENT_SHADER, _fsSource)) {
+            return HdGLSLProgramSharedPtr();
+        }
+        shaderCompiled = true;
     }
     if (hasTCS) {
         _tcsSource = _genCommon.str() + _genTCS.str();
-        glslProgram->CompileShader(GL_TESS_CONTROL_SHADER, _tcsSource);
+        if (!glslProgram->CompileShader(GL_TESS_CONTROL_SHADER, _tcsSource)) {
+            return HdGLSLProgramSharedPtr();
+        }
+        shaderCompiled = true;
     }
     if (hasTES) {
         _tesSource = _genCommon.str() + _genTES.str();
-        glslProgram->CompileShader(GL_TESS_EVALUATION_SHADER, _tesSource);
+        if (!glslProgram->CompileShader(
+                    GL_TESS_EVALUATION_SHADER, _tesSource)) {
+            return HdGLSLProgramSharedPtr();
+        }
+        shaderCompiled = true;
     }
     if (hasGS) {
         _gsSource = _genCommon.str() + _genGS.str();
-        glslProgram->CompileShader(GL_GEOMETRY_SHADER, _gsSource);
+        if (!glslProgram->CompileShader(GL_GEOMETRY_SHADER, _gsSource)) {
+            return HdGLSLProgramSharedPtr();
+        }
+        shaderCompiled = true;
+    }
+
+    if (!shaderCompiled) {
+        return HdGLSLProgramSharedPtr();
     }
 
     return glslProgram;
@@ -1245,8 +1266,7 @@ Hd_CodeGen::_GenerateElementPrimVar()
           PrimtiveData primitiveData[];
       };
       int GetElementID() {
-          return primitiveData[GetPrimitiveCoord()].elementID
-              + GetElementCoord();
+          return primitiveData[GetPrimitiveCoord()].elementID;
       }
 
       struct ElementData0 {
@@ -1258,7 +1278,7 @@ Hd_CodeGen::_GenerateElementPrimVar()
 
       // --------- uniform data accessors ----------
       vec4 HdGet_color(int localIndex) {
-          return elementData0[GetElementID()].color;
+          return elementData0[GetAggregatedElementID()].color;
       }
 
     */
@@ -1333,7 +1353,11 @@ Hd_CodeGen::_GenerateElementPrimVar()
             // straight-forward indexing to get the segment's curve id
             accessors
                 << "int GetElementID() {\n"
-                << "  return (hd_int_get(HdGet_primitiveParam()))\n"
+                << "  return (hd_int_get(HdGet_primitiveParam()));\n"
+                << "}\n";
+            accessors
+                << "int GetAggregatedElementID() {\n"
+                << "  return GetElementID()\n"
                 << "  + GetDrawingCoord().elementCoord;\n"
                 << "}\n";
         }
@@ -1436,13 +1460,17 @@ Hd_CodeGen::_GenerateElementPrimVar()
                     << "}\n";
             }
 
-            // GetElementID
+            // ElementID getters
             accessors
                 << "int GetElementID() {\n"
-                << "  return (hd_int_get(HdGet_primitiveParam()) >> 2)\n"
-                << "  + GetDrawingCoord().elementCoord;\n"
+                << "  return (hd_int_get(HdGet_primitiveParam()) >> 2);\n"
                 << "}\n";
 
+            accessors
+                << "int GetAggregatedElementID() {\n"
+                << "  return GetElementID()\n"
+                << "  + GetDrawingCoord().elementCoord;\n"
+                << "}\n";
         }
         else {
             TF_CODING_ERROR("Hd_GeometricShader::PrimitiveType %d is "
@@ -1461,6 +1489,10 @@ Hd_CodeGen::_GenerateElementPrimVar()
             << "  return 0;\n"
             << "}\n";
         accessors
+            << "int GetAggregatedElementID() {\n"
+            << "  return GetElementID();\n"
+            << "}\n";
+        accessors
             << "int GetEdgeFlag(int localIndex) {\n"
             << "  return 0;\n"
             << "}\n";
@@ -1474,7 +1506,9 @@ Hd_CodeGen::_GenerateElementPrimVar()
             << "}\n";
     }
     declarations
-        << "int GetElementID();\n";
+        << "int GetElementID();\n"
+        << "int GetAggregatedElementID();\n";
+
 
     TF_FOR_ALL (it, _metaData.elementData) {
         HdBinding binding = it->first;
@@ -1482,7 +1516,9 @@ Hd_CodeGen::_GenerateElementPrimVar()
         TfToken const &dataType = it->second.dataType;
 
         _EmitDeclaration(declarations, name, dataType, binding);
-        _EmitAccessor(accessors, name, dataType, binding, "GetElementID()");
+        // AggregatedElementID gives us the buffer index post batching, which
+        // is what we need for accessing element primvar data.
+        _EmitAccessor(accessors, name, dataType, binding,"GetAggregatedElementID()");
     }
 
     // Emit primvar declarations and accessors.

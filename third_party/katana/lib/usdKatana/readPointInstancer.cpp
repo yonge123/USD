@@ -28,8 +28,14 @@
 #include "usdKatana/utils.h"
 
 #include "pxr/usd/usdGeom/pointInstancer.h"
+#include "pxr/usd/usd/modelAPI.h"
+#include "pxr/usd/usdShade/material.h"
+
+#include "pxr/base/gf/transform.h"
+#include "pxr/base/gf/matrix4d.h"
 
 #include <FnGeolibServices/FnBuiltInOpArgsUtil.h>
+#include <FnGeolib/util/Path.h>
 #include <FnLogging/FnLogging.h>
 
 #include <boost/unordered_set.hpp>
@@ -43,6 +49,10 @@ FnLogSetup("PxrUsdKatanaReadPointInstancer");
 
 namespace
 {
+    typedef std::map<SdfPath, UsdPrim> _PathToPrimMap;
+    typedef std::map<SdfPath, GfRange3d> _PathToRangeMap;
+    typedef std::map<TfToken, GfRange3d, TfTokenFastArbitraryLessThan>
+        _PurposeToRangeMap;
 
     // Log an error and set attrs to create a Katana error location.
     //
@@ -53,370 +63,256 @@ namespace
     {
         FnLogError(message);
         attrs.set("type", FnKat::StringAttribute("error"));
-        attrs.set("errorMessage", FnKat::StringAttribute(message));
+        attrs.set("errorMessage",
+                  FnKat::StringAttribute(
+                      "[ERROR PxrUsdKatanaReadPointInstancer]: " + message));
     }
 
-    // Convert the given relationship's targets into a vector of strings.
+    // XXX This is based on
+    // UsdGeomPointInstancer::ComputeInstanceTransformsAtTime. Ideally, we would
+    // just use UsdGeomPointInstancer, but it does not currently support
+    // multi-sampled transforms or velocity.
     //
-    std::vector<std::string>
-    _ConvertRelationshipTargets(UsdRelationship rel)
+    size_t
+    _ComputeInstanceTransformsAtTime(
+        std::vector<std::vector<GfMatrix4d>>& xforms,
+        const UsdGeomPointInstancer& instancer,
+        const std::vector<UsdTimeCode>& sampleTimes,
+        const UsdTimeCode baseTime,
+        const double timeCodesPerSecond,
+        const size_t numInstances,
+        const UsdAttribute& positionsAttr,
+        const float velocityScale = 1.0f)
     {
-        SdfPathVector targets;
-        rel.GetForwardedTargets(&targets);
-        std::vector<std::string> paths;
-        paths.reserve(targets.size());
-        TF_FOR_ALL(it, targets) {
-            paths.push_back(it->GetString());
-        }
-        return paths;
-    }
-
-    // XXX _FillBoundFromExtent is based on UsdGeomBBoxCache::ComputeLocalBound
-    //     (specifically UsdGeomBBoxCache::_GetBBoxFromExtentsHint and
-    //     UsdGeomBBoxCache::_GetCombinedBBoxForIncludedPurposes).
-    // Ideally we would just use UsdGeomBBoxCache, however it will compute the 
-    // bound if it can't use the extentsHint which is an expensive operation we
-    // want to avoid here.
-    //
-    const TfTokenVector& _purposeTokens =
-            UsdGeomImageable::GetOrderedPurposeTokens();
-
-    const TfTokenVector _includedPurposes { UsdGeomTokens->default_,
-                                            UsdGeomTokens->render };
-
-    typedef std::map<TfToken, GfRange3d, TfTokenFastArbitraryLessThan>
-            _PurposeToRangeMap;
-
-    bool
-    _FillBoundFromExtent(
-            const UsdAttribute& extentsAttribute,
-            std::vector<GfRange3d>& output,
-            double timeValue)
-    {
-        VtVec3fArray extents;
-        if (!extentsAttribute or 
-            !extentsAttribute.Get(&extents, timeValue))
-        {
-            return false;
+        constexpr double epsilonTest = 1e-5;
+        const auto sampleCount = sampleTimes.size();
+        if (sampleCount == 0 || xforms.size() < sampleCount ||
+            baseTime.IsDefault()) {
+            return 0;
         }
 
-        _PurposeToRangeMap ranges;
-        for (size_t i = 0; i < _purposeTokens.size(); ++i)
-        {
-            size_t idx = i*2;
+        double upperTimeSample = 0.0;
 
-            // If extents are not available for the value of purpose, it implies
-            // that the rest of the bounds are empty. Hence, we can break.
+        bool positionsHasSamples = false;
+        double positionsLowerTimeSample = 0.0;
+        if (!positionsAttr.GetBracketingTimeSamples(
+                baseTime.GetValue(), &positionsLowerTimeSample,
+                &upperTimeSample, &positionsHasSamples)) {
+            return 0;
+        }
+
+        const auto velocitiesAttr = instancer.GetVelocitiesAttr();
+        const auto scalesAttr = instancer.GetScalesAttr();
+        const auto orientationsAttr = instancer.GetOrientationsAttr();
+        const auto angularVelocitiesAttr = instancer.GetAngularVelocitiesAttr();
+
+        VtVec3fArray positions;
+        VtVec3fArray velocities;
+        VtVec3fArray scales;
+        VtQuathArray orientations;
+        VtVec3fArray angularVelocities;
+
+        // Use velocity if it has almost the same lower time sample as positions
+        // and the array lengths are equal to the number of instances.
+        //
+        bool useVelocity = false;
+
+        if (positionsHasSamples and
+            positionsAttr.Get(&positions, positionsLowerTimeSample)) {
+            bool velocitiesHasSamples = false;
+            double velocitiesLowerTimeSample = 0.0;
+            if (velocitiesAttr.HasValue() and
+                velocitiesAttr.GetBracketingTimeSamples(
+                    baseTime.GetValue(), &velocitiesLowerTimeSample,
+                    &upperTimeSample, &velocitiesHasSamples) and
+                velocitiesHasSamples and
+                GfIsClose(velocitiesLowerTimeSample, positionsLowerTimeSample,
+                          epsilonTest)) {
+                if (velocitiesAttr.Get(&velocities,
+                                       positionsLowerTimeSample) and
+                    positions.size() == numInstances and
+                    velocities.size() == numInstances) {
+                    useVelocity = true;
+                }
+            }
+        }
+
+        // Use angular velocity if it has almost the same lower time sample as
+        // orientations and the array lengths are equal to the number of
+        // instances.
+        //
+        bool useAngularVelocity = false;
+
+        bool orientationsHasSamples = false;
+        double orientationsLowerTimeSample = 0.0;
+        if (orientationsAttr.GetBracketingTimeSamples(
+                baseTime.GetValue(), &orientationsLowerTimeSample,
+                &upperTimeSample, &orientationsHasSamples)) {
+
+            if (orientationsHasSamples and
+                orientationsAttr.Get(&orientations,
+                                     orientationsLowerTimeSample)) {
+                bool angularVelocitiesHasSamples = false;
+                double angularVelocitiesLowerTimeSample = 0.0;
+                if (angularVelocitiesAttr.HasValue() and
+                    angularVelocitiesAttr.GetBracketingTimeSamples(
+                        baseTime.GetValue(), &angularVelocitiesLowerTimeSample,
+                        &upperTimeSample, &angularVelocitiesHasSamples) and
+                    angularVelocitiesHasSamples and
+                    GfIsClose(angularVelocitiesLowerTimeSample,
+                              orientationsLowerTimeSample, epsilonTest)) {
+                    if (angularVelocitiesAttr.Get(
+                            &angularVelocities, orientationsLowerTimeSample) and
+                        orientations.size() == numInstances and
+                        angularVelocities.size() == numInstances) {
+                        useAngularVelocity = true;
+                    }
+                }
+            }
+        }
+
+        size_t validSamples = 0;
+
+        for (auto a = decltype(sampleCount){0}; a < sampleCount; ++a) {
+            std::vector<GfMatrix4d> &curr = xforms[a];
+            curr.reserve(numInstances);
+
+            float velocityMultiplier = 1.0f;
+            if (useVelocity) {
+                velocityMultiplier =
+                    static_cast<float>(
+                        (sampleTimes[a].GetValue() - positionsLowerTimeSample) /
+                        timeCodesPerSecond) *
+                    velocityScale;
+            } else {
+                positionsAttr.Get(&positions, sampleTimes[a]);
+            }
+
+            float angularVelocityMultiplier = 1.0f;
+            if (useAngularVelocity) {
+                angularVelocityMultiplier =
+                    static_cast<float>((sampleTimes[a].GetValue() -
+                                        orientationsLowerTimeSample) /
+                                       timeCodesPerSecond) *
+                    velocityScale;
+            } else {
+                orientationsAttr.Get(&orientations, sampleTimes[a]);
+            }
+
+            if (useVelocity or useAngularVelocity) {
+                scalesAttr.Get(&scales, baseTime);
+            } else {
+                scalesAttr.Get(&scales, sampleTimes[a]);
+            }
+
+            // Abort if toplogy differs across samples. Note that we permit
+            // unspecified scales and orientations.
             //
-            if ((idx + 2) > extents.size())
-            {
+            if (positions.size() != numInstances) {
+                break;
+            }
+            if (scales.size() > 0 and scales.size() != numInstances) {
+                break;
+            }
+            if (orientations.size() > 0 and
+                orientations.size() != numInstances) {
                 break;
             }
 
-            ranges[_purposeTokens[i]] = GfRange3d(extents[idx], extents[idx+1]);
-        }
-
-        GfRange3d combinedRange;
-        TF_FOR_ALL(purposeIt, _includedPurposes)
-        {
-            _PurposeToRangeMap::const_iterator it = ranges.find(*purposeIt);
-            if (it != ranges.end())
-            {
-                const GfRange3d& rangeForPurpose = it->second;
-                if (!rangeForPurpose.IsEmpty())
-                {
-                    combinedRange = GfRange3d::GetUnion(
-                            combinedRange, rangeForPurpose);
+            for (auto i = decltype(numInstances){0}; i < numInstances; ++i) {
+                GfTransform transform;
+                if (useVelocity) {
+                    transform.SetTranslation(
+                        positions[i] + velocities[i] * velocityMultiplier);
+                } else {
+                    transform.SetTranslation(positions[i]);
                 }
+                if (scales.size() > 0) {
+                    transform.SetScale(scales[i]);
+                }
+                if (orientations.size() > 0) {
+                    if (useAngularVelocity) {
+                        transform.SetRotation(
+                            GfRotation(orientations[i]) *
+                            GfRotation(angularVelocities[i],
+                                       (angularVelocityMultiplier *
+                                        angularVelocities[i].GetLength())));
+                    } else {
+                        transform.SetRotation(GfRotation(orientations[i]));
+                    }
+                }
+                curr.push_back(transform.GetMatrix());
             }
+
+            ++validSamples;
         }
 
-        const GfVec3d& min = combinedRange.GetMin();
-        const GfVec3d& max = combinedRange.GetMax();
-        output.push_back(GfRange3d(min, max));
-
-        return true;
+        return validSamples;
     }
 
-    // Compute bounds for the given instancer's prototypes using their extents
-    // at the current time.
-    //
-    void
-    _ComputePrototypeBoundsUsingExtents(
-        const UsdGeomPointInstancer& instancer,
-        const PxrUsdKatanaUsdInPrivateData& data,
-        VtIntArray& outputIndices,
-        std::vector<GfRange3d>& outputBounds)
-    {
-        const double currentTime = data.GetCurrentTime();
-
-        std::vector<std::string> prototypePaths =
-                _ConvertRelationshipTargets(instancer.GetPrototypesRel());
-
-        VtIntArray protoIndices;
-        instancer.GetProtoIndicesAttr().Get(&protoIndices, currentTime);
-
-        // Gather prototype extents.
-        //
-        TfToken extentsHintToken("extentsHint");
-
-        std::vector<UsdAttribute> prototypeExtents;
-        prototypeExtents.resize(prototypePaths.size());
-
-        for (size_t i = 0; i < prototypePaths.size(); ++i)
-        {
-            const UsdPrim& prototypePrim =
-                    data.GetUsdInArgs()->GetStage()->GetPrimAtPath(
-                            SdfPath(prototypePaths[i]));
-            if (prototypePrim)
-            {
-                prototypeExtents[i] = 
-                        prototypePrim.GetAttribute(extentsHintToken);
-            }
-        }
-
-        // Fill as many bounds as we can using the extents gathered above.
-        //
-        bool allFound = true;
-        bool noneFound = false;
-
-        std::vector<int> prototypeToBoundIndices;
-        prototypeToBoundIndices.reserve(prototypeExtents.size());
-
-        outputBounds.reserve(prototypeExtents.size());
-
-        for (size_t i = 0; i < prototypeExtents.size(); ++i)
-        {
-            UsdAttribute& extentsAttribute = prototypeExtents[i];
-            if (_FillBoundFromExtent(extentsAttribute, outputBounds,
-                    currentTime))
-            {
-                prototypeToBoundIndices.push_back(i);
-                noneFound = false;
-            }
-            else
-            {
-                prototypeToBoundIndices.push_back(-1);
-                allFound = false;
-            }
-        }
-
-        if (noneFound)
-        {
-            return;
-        }
-
-        // If bounds can be computed for all prototypes, the bound indices will
-        // be the same as the prototype indices. If only some bounds could be
-        // computed, the bound indices will be a subset of the prototype
-        // indices.
-        //
-        if (allFound)
-        {
-            outputIndices = protoIndices;
-        }
-        else if (!noneFound)
-        {
-            outputIndices.reserve(protoIndices.size());
-
-            for (size_t i = 0; i < protoIndices.size(); ++i)
-            {
-                int index = protoIndices[i];
-                if (index < 0 
-                    || static_cast<size_t>(index) >= prototypePaths.size())
-                {
-                    outputIndices.push_back(-1);
-                }
-                else
-                {
-                    outputIndices.push_back(prototypeToBoundIndices[index]);
-                }
-            }
-        }
-    }
-
-    // Use previously computed instance matrix sample stored in outputMatrices
-    // to create an additional sample with the translation components displaced
-    // by the given velocities. Return true if successful.
+    // XXX This is based on UsdGeomPointInstancer::ComputeExtentAtTime. Ideally,
+    // we would just use UsdGeomPointInstancer, however it does not account for
+    // multi-sampled transforms (see bug 147526).
     //
     bool
-    _GenerateIntegratedMatricesUsingVelocity(
-            const VtVec3fArray &velocities,
-            const float velocityScale,
-            const float fps,
-            std::vector<GfMatrix4d>& outputMatrices,
-            std::vector<float>& outputSampleTimes)
+    _ComputeExtentAtTime(
+        VtVec3fArray& extent,
+        PxrUsdKatanaUsdInArgsRefPtr usdInArgs,
+        const std::vector<std::vector<GfMatrix4d>>& xforms,
+        const std::vector<double>& motionSampleTimes,
+        const VtIntArray& protoIndices,
+        const SdfPathVector& protoPaths,
+        const _PathToPrimMap& primCache,
+        const std::vector<bool> mask)
     {
-        // NOTE We assume that velocities have already been validated.
+        GfRange3d extentRange;
 
-        const size_t numInstances = velocities.size();
+        const size_t numSampleTimes = motionSampleTimes.size();
 
-        // outputMatrics should contain a single matrix for each instance.
-        //
-        if (outputMatrices.size() != numInstances)
-        {
+        for (size_t i = 0; i < protoIndices.size(); ++i) {
+            if (!mask.empty() && !mask[i]) {
+                continue;
+            }
+
+            const int protoIndex = protoIndices[i];
+            const SdfPath &protoPath = protoPaths[protoIndex];
+
+            _PathToPrimMap::const_iterator pcIt = primCache.find(protoPath);
+            const UsdPrim &protoPrim = pcIt->second;
+            if (!protoPrim) {
+                continue;
+            }
+
+            // Leverage usdInArgs for calculating the proto prim's bound. Note
+            // that we apply the prototype's local transform to account for any
+            // offsets.
+            //
+            std::vector<GfBBox3d> sampledBounds = usdInArgs->ComputeBounds(
+                protoPrim, motionSampleTimes, /* applyLocalTransform */ true);
+
+            for (size_t a = 0; a < numSampleTimes; ++a) {
+                // Apply the instance transform to the bounding box for this
+                // time sample. We don't apply the parent transform here, as the
+                // bounds need to be in parent-local space.
+                //
+                GfBBox3d thisBounds(sampledBounds[a]);
+                thisBounds.Transform(xforms[a][i]);
+                extentRange.UnionWith(thisBounds.ComputeAlignedRange());
+            }
+        }
+
+        if (extentRange.IsEmpty()) {
             return false;
         }
 
-        outputMatrices.reserve(numInstances * 2);
+        const GfVec3d extentMin = extentRange.GetMin();
+        const GfVec3d extentMax = extentRange.GetMax();
 
-        const float frameDt = 1.0 / fps;
-
-        // Loop over each instance, offsetting its previously computed transform
-        // matrix by velocity.
-        //
-        for (size_t i = 0; i < numInstances; ++i)
-        {
-            GfMatrix4d mat = outputMatrices.at(i);
-            mat *= GfMatrix4d(1).SetTranslate(GfVec3f(
-                velocities[i][0] * velocityScale * frameDt,
-                velocities[i][1] * velocityScale * frameDt,
-                velocities[i][2] * velocityScale * frameDt));
-            outputMatrices.push_back(mat);
-        }
-
-        outputSampleTimes.push_back(1.0);
+        extent = VtVec3fArray(2);
+        extent[0] = GfVec3f(extentMin[0], extentMin[1], extentMin[2]);
+        extent[1] = GfVec3f(extentMax[0], extentMax[1], extentMax[2]);
 
         return true;
-    }
-
-    // Generate instance transform matrices for each motion sample. Return true
-    // if successful.
-    //
-    bool
-    _GenerateInstanceTransformMatrices(
-            const UsdGeomPointInstancer& instancer,
-            const PxrUsdKatanaUsdInPrivateData& data,
-            bool useVelocity,
-            const float velocityScale,
-            const float fps,
-            std::vector<GfMatrix4d>& outputMatrices,
-            std::vector<float>& outputSampleTimes)
-    {
-        // NOTE We assume that the instancer's positions and velocities have
-        // already been validated.
-
-        const double currentTime = data.GetCurrentTime();
-        const std::vector<double> motionSampleTimes = data.GetMotionSampleTimes();
-
-        VtIntArray protoIndices;
-        instancer.GetProtoIndicesAttr().Get(&protoIndices, currentTime);
-        const size_t numInstances = protoIndices.size();
-
-        UsdAttribute positionsAttr = instancer.GetPositionsAttr();
-        const std::vector<double> positionTimes =
-                data.GetMotionSampleTimes(positionsAttr);
-
-        VtVec3fArray velocities;
-        instancer.GetVelocitiesAttr().Get(&velocities, currentTime);
-
-        bool velocitiesValid = (useVelocity and !velocities.empty());
-
-        // Determine number and value of motion samples.
-        //
-        size_t numXformSamples = 0;
-        std::vector<double> xformSamples;
-
-        if (motionSampleTimes.size() > 1 and positionTimes.size() > 1)
-        {
-            xformSamples = positionTimes;
-
-            // If using velocities, we create one sample. An additional sample
-            // will be created with the translation components offset by
-            // velocity.
-            //
-            if (velocitiesValid)
-            {
-                numXformSamples = 1;
-            }
-            else
-            {
-                numXformSamples = positionTimes.size();
-            }
-        }
-        else
-        {
-            xformSamples.push_back(currentTime);
-            numXformSamples = 1;
-        }
-
-        outputMatrices.reserve(numInstances * numXformSamples);
-        outputSampleTimes.reserve(numXformSamples);
-
-        // Compute for each motion sample, across all instances.
-        //
-        for (size_t i = 0; i < numXformSamples; ++i)
-        {
-            double sampleTime = xformSamples[i];
-            VtArray<GfMatrix4d> xforms;
-
-            bool success = instancer.ComputeInstanceTransformsAtTime(
-                    &xforms,
-                    /*time*/ sampleTime,
-                    /*baseTime*/ sampleTime,
-                    /*doProtoXforms*/ UsdGeomPointInstancer::ExcludeProtoXform,
-                    /*applyMask*/ UsdGeomPointInstancer::IgnoreMask);
-            if (success and xforms.size() == numInstances)
-            {
-                for (size_t j = 0; j < xforms.size(); ++j)
-                {
-                    outputMatrices.push_back(xforms[j]);
-                }
-                outputSampleTimes.push_back(sampleTime);
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        if (velocitiesValid)
-        {
-            return _GenerateIntegratedMatricesUsingVelocity(
-                velocities, velocityScale, fps, outputMatrices,
-                outputSampleTimes);
-        }
-
-        return true;
-    }
-
-    // XXX Copy of PxrUsdKatanaReadModel::_GetViewerProxyAttr.
-    //
-    FnKat::GroupAttribute
-    _GetViewerProxyAttr(const PxrUsdKatanaUsdInPrivateData& data)
-    {
-        FnKat::GroupBuilder proxiesBuilder;
-
-        proxiesBuilder.set("viewer.load.opType",
-            FnKat::StringAttribute("StaticSceneCreate"));
-
-        proxiesBuilder.set("viewer.load.opArgs.a.type",
-            FnKat::StringAttribute("usd"));
-
-        proxiesBuilder.set("viewer.load.opArgs.a.currentTime", 
-            FnKat::DoubleAttribute(data.GetCurrentTime()));
-
-        proxiesBuilder.set("viewer.load.opArgs.a.fileName", 
-            FnKat::StringAttribute(data.GetUsdInArgs()->GetFileName()));
-
-        proxiesBuilder.set("viewer.load.opArgs.a.forcePopulateUsdStage", 
-            FnKat::FloatAttribute(1));
-
-        // XXX: Once everyone has switched to the op, change referencePath
-        // to isolatePath here and in the USD VMP (2/25/2016).
-        proxiesBuilder.set("viewer.load.opArgs.a.referencePath", 
-            FnKat::StringAttribute(data.GetUsdPrim().GetPath().GetString()));
-
-        proxiesBuilder.set("viewer.load.opArgs.a.rootLocation", 
-            FnKat::StringAttribute(data.GetUsdInArgs()->GetRootLocationPath()));
-
-        proxiesBuilder.set("viewer.load.opArgs.a.session",
-                data.GetUsdInArgs()->GetSessionAttr());
-
-        proxiesBuilder.set("viewer.load.opArgs.a.ignoreLayerRegex",
-           FnKat::StringAttribute(data.GetUsdInArgs()->GetIgnoreLayerRegex()));
-
-        return proxiesBuilder.build();
     }
 
 } // anon namespace
@@ -425,45 +321,65 @@ void
 PxrUsdKatanaReadPointInstancer(
         const UsdGeomPointInstancer& instancer,
         const PxrUsdKatanaUsdInPrivateData& data,
-        PxrUsdKatanaAttrMap& attrs,
+        PxrUsdKatanaAttrMap& instancerAttrMap,
         PxrUsdKatanaAttrMap& sourcesAttrMap,
         PxrUsdKatanaAttrMap& instancesAttrMap,
-        PxrUsdKatanaAttrMap& instancerOpArgsAttrMap)
+        PxrUsdKatanaAttrMap& inputAttrMap)
 {
     const double currentTime = data.GetCurrentTime();
 
-    PxrUsdKatanaReadXformable(instancer, data, attrs);
+    PxrUsdKatanaReadXformable(instancer, data, instancerAttrMap);
 
-    attrs.set("type", FnKat::StringAttribute("usd point instancer"));
+    // Get primvars for setting later. Unfortunatley, the only way to get them
+    // out of the attr map is to build it, which will cause its contents to be
+    // cleared. We'll need to restore its contents before continuing.
+    //
+    FnKat::GroupAttribute instancerAttrs = instancerAttrMap.build();
+    FnKat::GroupAttribute primvarAttrs =
+            instancerAttrs.getChildByName("geometry.arbitrary");
+    for (int64_t i = 0; i < instancerAttrs.getNumberOfChildren(); ++i)
+    {
+        instancerAttrMap.set(instancerAttrs.getChildName(i),
+                instancerAttrs.getChildByIndex(i));
+    }
+
+    instancerAttrMap.set("type", FnKat::StringAttribute("usd point instancer"));
 
     const std::string fileName = data.GetUsdInArgs()->GetFileName();
-    attrs.set("info.usd.fileName", FnKat::StringAttribute(fileName));
+    instancerAttrMap.set("info.usd.fileName", FnKat::StringAttribute(fileName));
 
-    FnKat::GroupAttribute instancerOpArgs = instancerOpArgsAttrMap.build();
+    FnKat::GroupAttribute inputAttrs = inputAttrMap.build();
 
     const std::string katOutputPath = FnKat::StringAttribute(
-            instancerOpArgs.getChildByName("outputLocationPath")).getValue("", false);
+            inputAttrs.getChildByName("outputLocationPath")).getValue("", false);
     if (katOutputPath.empty())
     {
-        _LogAndSetError(attrs, "ERROR: No output location path specified");
+        _LogAndSetError(instancerAttrMap, "No output location path specified");
         return;
     }
 
     //
-    // Validate instance data.
+    // Validate instancer data.
     //
-    // XXX Multi-sampled data is only validated for the current time.
 
     const std::string instancerPath = instancer.GetPath().GetString();
 
+    UsdStageWeakPtr stage = instancer.GetPrim().GetStage();
+
     // Prototypes (required)
     //
-    std::vector<std::string> prototypePaths =
-            _ConvertRelationshipTargets(instancer.GetPrototypesRel());
-    if (prototypePaths.empty())
+    SdfPathVector protoPaths;
+    instancer.GetPrototypesRel().GetTargets(&protoPaths);
+    if (protoPaths.empty())
     {
-        _LogAndSetError(attrs, "ERROR: Instancer has no prototypes");
+        _LogAndSetError(instancerAttrMap, "Instancer has no prototypes");
         return;
+    }
+
+    _PathToPrimMap primCache;
+    for (auto protoPath : protoPaths) {
+        const UsdPrim &protoPrim = stage->GetPrimAtPath(protoPath);
+        primCache[protoPath] = protoPrim;
     }
 
     // Indices (required)
@@ -471,20 +387,21 @@ PxrUsdKatanaReadPointInstancer(
     VtIntArray protoIndices;
     if (!instancer.GetProtoIndicesAttr().Get(&protoIndices, currentTime))
     {
-        _LogAndSetError(attrs, "ERROR: Instancer has no prototype indices");
+        _LogAndSetError(instancerAttrMap, "Instancer has no prototype indices");
         return;
     }
     const size_t numInstances = protoIndices.size();
-
-    // Ids (optional)
-    //
-    VtInt64Array ids;
-    if (instancer.GetIdsAttr().Get(&ids, currentTime))
+    if (numInstances == 0)
     {
-        if (!ids.empty() and ids.size() != numInstances)
+        _LogAndSetError(instancerAttrMap, "Instancer has no prototype indices");
+        return;
+    }
+    for (auto protoIndex : protoIndices)
+    {
+        if (protoIndex < 0 || static_cast<size_t>(protoIndex) >= protoPaths.size())
         {
-            _LogAndSetError(attrs,
-                    "ERROR: Mismatch in length of indices and ids");
+            _LogAndSetError(instancerAttrMap, TfStringPrintf(
+                    "Out of range prototype index %d", protoIndex));
             return;
         }
     }
@@ -495,150 +412,103 @@ PxrUsdKatanaReadPointInstancer(
             instancer.ComputeMaskAtTime(currentTime);
     if (!pruneMaskValues.empty() and pruneMaskValues.size() != numInstances)
     {
-        _LogAndSetError(attrs,
-                "ERROR: Mismatch in length of indices and mask");
+        _LogAndSetError(instancerAttrMap,
+                "Mismatch in length of indices and mask");
         return;
     }
 
     // Positions (required)
     //
-    VtVec3fArray positions;
-    if (instancer.GetPositionsAttr().Get(&positions, currentTime))
+    UsdAttribute positionsAttr = instancer.GetPositionsAttr();
+    if (!positionsAttr.HasValue())
     {
-        if (positions.size() != numInstances)
-        {
-            _LogAndSetError(attrs,
-                    "ERROR: Mismatch in length of indices and positions");
-            return;
-        }
-    }
-    else
-    {
-        _LogAndSetError(attrs, "ERROR: Instancer has no positions");
+        _LogAndSetError(instancerAttrMap, "Instancer has no positions");
         return;
     }
 
-    // Velocities (optional)
     //
-    VtVec3fArray velocities;
-    if (instancer.GetVelocitiesAttr().Get(&velocities, currentTime))
+    // Compute instance transform matrices.
+    //
+
+    const double timeCodesPerSecond = stage->GetTimeCodesPerSecond();
+
+    // Gather frame-relative sample times and add them to the current time to
+    // generate absolute sample times.
+    //
+    const std::vector<double> &motionSampleTimes =
+        data.GetMotionSampleTimes(positionsAttr);
+    const size_t sampleCount = motionSampleTimes.size();
+    std::vector<UsdTimeCode> sampleTimes(sampleCount);
+    for (size_t a = 0; a < sampleCount; ++a)
     {
-        if (!velocities.empty() and velocities.size() != numInstances)
-        {
-            _LogAndSetError(attrs,
-                    "ERROR: Mismatch in length of indices and velocities");
-            return;
-        }
+        sampleTimes[a] = UsdTimeCode(currentTime + motionSampleTimes[a]);
+    }
+
+    // Get velocityScale from the opArgs.
+    //
+    float velocityScale = FnKat::FloatAttribute(
+        inputAttrs.getChildByName("opArgs.velocityScale")).getValue(1.0f, false);
+
+    // XXX Replace with UsdGeomPointInstancer::ComputeInstanceTransformsAtTime.
+    //
+    std::vector<std::vector<GfMatrix4d>> xformSamples(sampleCount);
+    const size_t numXformSamples =
+        _ComputeInstanceTransformsAtTime(xformSamples, instancer, sampleTimes,
+            UsdTimeCode(currentTime), timeCodesPerSecond, numInstances,
+            positionsAttr, velocityScale);
+    if (numXformSamples == 0) {
+        _LogAndSetError(instancerAttrMap, "Could not compute "
+                                          "sample/topology-invarying instance "
+                                          "transform matrix");
+        return;
     }
 
     //
     // Compute prototype bounds.
     //
 
-    VtIntArray prototypeBoundIndices;
-    std::vector<GfRange3d> prototypeBounds;
-    _ComputePrototypeBoundsUsingExtents(
-            instancer, data, prototypeBoundIndices, prototypeBounds);
+    bool aggregateBoundsValid = false;
+    std::vector<double> aggregateBounds;
 
+    // XXX Replace with UsdGeomPointInstancer::ComputeExtentAtTime.
     //
-    // Compute instance transform matrices.
-    //
-
-    bool useVelocity = (bool)FnKat::FloatAttribute(
-            instancerOpArgs.getChildByName("useVelocity")).getValue(0, false);
-
-    float velocityScale = FnKat::FloatAttribute(
-            instancerOpArgs.getChildByName("velocityScale")).getValue(-1, false);
-
-    float fps = std::max(0.001f, FnKat::FloatAttribute(
-            instancerOpArgs.getChildByName("fps")).getValue(24, false));
-
-    std::vector<GfMatrix4d> xformSamples;
-    std::vector<float> xformSampleTimes;
-
-    if (!_GenerateInstanceTransformMatrices(
-            instancer, data, useVelocity, velocityScale, fps,
-            xformSamples, xformSampleTimes))
-    {
-        _LogAndSetError(attrs,
-                "ERROR: Could not compute instance transform matrices");
-        return;
+    VtVec3fArray aggregateExtent;
+    if (_ComputeExtentAtTime(
+            aggregateExtent, data.GetUsdInArgs(), xformSamples,
+            motionSampleTimes, protoIndices, protoPaths, primCache,
+            pruneMaskValues)) {
+        aggregateBoundsValid = true;
+        aggregateBounds.resize(6);
+        aggregateBounds[0] = aggregateExtent[0][0]; // min x
+        aggregateBounds[1] = aggregateExtent[1][0]; // max x
+        aggregateBounds[2] = aggregateExtent[0][1]; // min y
+        aggregateBounds[3] = aggregateExtent[1][1]; // max y
+        aggregateBounds[4] = aggregateExtent[0][2]; // min z
+        aggregateBounds[5] = aggregateExtent[1][2]; // max z
     }
 
     //
-    // Build sources. Keep track of which instances use them and aggregate their
-    // bounds.
+    // Build sources. Keep track of which instances use them.
     //
 
     FnGeolibServices::StaticSceneCreateOpArgsBuilder sourcesBldr(false);
-
-    // If sourceParentScope is a valid scope in the source's USD path
-    // the source will be imported from under this scope. This is useful
-    // when a source has Look bindings which point to Looks above the source
-    // location. With this option the source can be imported from a path
-    // which contains both the Looks scope and the source.
-    //
-    std::string sourceParentScope = FnKat::StringAttribute(
-            instancerOpArgs.getChildByName("sourceParentScope")
-            ).getValue("", false);
-    sourceParentScope = pystring::lstrip(
-                        pystring::rstrip(sourceParentScope, "/"), "/");
-    bool useSourceParentScope = !sourceParentScope.empty();
-
-    typedef std::map<std::string, std::pair<std::string, std::string> >
-            SourceRescopeMap;
-    SourceRescopeMap sourceRescopeMap;
-
-    // Init aggregate bounds.
-    //
-    bool aggregateBoundsValid = false;
-    std::vector<double> aggregateBounds;
-    aggregateBounds.reserve(6);
-    aggregateBounds[0] = std::numeric_limits<double>::max();
-    aggregateBounds[2] = std::numeric_limits<double>::max();
-    aggregateBounds[4] = std::numeric_limits<double>::max();
-    aggregateBounds[1] = - std::numeric_limits<double>::max();
-    aggregateBounds[3] = - std::numeric_limits<double>::max();
-    aggregateBounds[5] = - std::numeric_limits<double>::max();
 
     std::vector<int> instanceIndices;
     instanceIndices.reserve(numInstances);
 
     std::vector<std::string> instanceSources;
-    instanceSources.reserve(prototypePaths.size());
+    instanceSources.reserve(protoPaths.size());
 
     std::map<std::string, int> instanceSourceIndexMap;
 
     std::vector<int> omitList;
     omitList.reserve(numInstances);
 
-    boost::unordered_set<size_t> usedIds;
-    boost::unordered_set<std::string> builtPrototypes;
+    std::map<SdfPath, std::string> protoPathsToKatPaths;
 
-    for (size_t i = 0, e = numInstances; i != e; ++i)
+    for (size_t i = 0; i < numInstances; ++i)
     {
         int index = protoIndices[i];
-
-        if (index < 0 
-            || static_cast<size_t>(index) >= prototypePaths.size())
-        {
-            _LogAndSetError(attrs, TfStringPrintf(
-                    "ERROR: prototype index %i out of range", index));
-            return;
-        }
-
-        size_t id = i;
-        if (ids.size() > i)
-        {
-            id = ids[i];
-            if (usedIds.find(id) != usedIds.end())
-            {
-                _LogAndSetError(attrs, TfStringPrintf(
-                        "ERROR: duplicate instance id '%lu", id));
-                return;
-            }
-            usedIds.insert(id);
-        }
 
         // Check to see if we are pruned.
         //
@@ -649,180 +519,142 @@ PxrUsdKatanaReadPointInstancer(
             omitList.push_back(i);
         }
 
-        std::string prototypePath = prototypePaths[index];
+        const SdfPath &protoPath = protoPaths[index];
 
-        // If the sourceParentScope option is set, the instance source
-        // will be imported from the sourceParentScope path instead of the
-        // prototype path. This way we can import Looks scopes above the
-        // source and preserve material bindings. prototypePath becomes a
-        // child path of sourceParentScope. prototypeChildPath will contain
-        // the remaining path to the instance source.
+        // Compute the full (Katana) path to this prototype.
         //
-        std::string prototypeChildPath;
-        if (useSourceParentScope)
+        std::string fullProtoPath;
+        std::map<SdfPath, std::string>::const_iterator pptkpIt =
+                protoPathsToKatPaths.find(protoPath);
+        if (pptkpIt != protoPathsToKatPaths.end())
         {
-            auto rescopeIt = sourceRescopeMap.find(prototypePath);
-            if (rescopeIt == sourceRescopeMap.end())
-            {
-                int parentScopeStrIdx = pystring::rfind(
-                        prototypePath, sourceParentScope);
-                if (parentScopeStrIdx > 0)
-                {
-                    int protoScopeStrIdx = pystring::find(
-                            prototypePath, "/",
-                            parentScopeStrIdx + sourceParentScope.size() + 1);
-                    if (protoScopeStrIdx > 0)
-                    {
-                        std::pair<std::string, std::string> rescopePaths(
-                                prototypePath.substr(0, protoScopeStrIdx),
-                                prototypePath.substr(protoScopeStrIdx));
-                        sourceRescopeMap.insert(std::make_pair(
-                                    prototypePath, rescopePaths));
-                        prototypePath = rescopePaths.first;
-                        prototypeChildPath = rescopePaths.second;
-                    }
-                }
-            }
-            else
-            {
-                prototypePath = rescopeIt->second.first;
-                prototypeChildPath = rescopeIt->second.second;
-            }
-        }
-
-        bool sourceBuilt = (builtPrototypes.find(prototypePath) !=
-                            builtPrototypes.end());
-
-        // Determine both the relative and full path to this source.
-        //
-        // See if the source prim is a child of the point instancer, If so,
-        // we'll match its hierarchy. If not, put the source under a
-        // 'prototypes' group and author a 'sourceUsdPath' attribute for
-        // tracking.
-        //
-        std::string relativeSourcePath;
-        if (pystring::startswith(prototypePath, instancerPath + "/"))
-        {
-            relativeSourcePath = pystring::replace(
-                    prototypePath, instancerPath + "/", "");
+            fullProtoPath = pptkpIt->second;
         }
         else
         {
-            relativeSourcePath = "prototypes/" +
-                    pystring::os::path::basename(prototypePath);
-            sourcesBldr.setAttrAtLocation(relativeSourcePath,
-                    "info.usd.sourceUsdPath",
-                    FnKat::StringAttribute(prototypePath));
-        }
-        std::string fullSourcePath = katOutputPath + "/" + relativeSourcePath;
+            _PathToPrimMap::const_iterator pcIt = primCache.find(protoPath);
+            const UsdPrim &protoPrim = pcIt->second;
+            if (!protoPrim) {
+                continue;
+            }
 
-        if (!sourceBuilt)
-        {
-            sourcesBldr.setAttrAtLocation(relativeSourcePath,
-                    "type", FnKat::StringAttribute("instance source"));
-            sourcesBldr.setAttrAtLocation(relativeSourcePath,
-                    "usdPrimPath", FnKat::StringAttribute(prototypePath));
-            sourcesBldr.setAttrAtLocation(relativeSourcePath,
-                    "usdPrimName", FnKat::StringAttribute("geo"));
-        }
-
-        // If the sourceParentScope option is set, modify the full path to be a
-        // child of prototypePath.
-        //
-        if (useSourceParentScope and !prototypeChildPath.empty())
-        {
-            std::ostringstream pathBufferMod;
-            pathBufferMod << fullSourcePath << "/geo" << prototypeChildPath;
-            fullSourcePath = pathBufferMod.str();
-
-            // The instance transform will be wrong if there's a non-identity
-            // transform at the source's location. This deferred AttributeSet
-            // will remove the transform attr.
+            // Determine where (what path) to start building the prototype prim
+            // such that its material bindings will be preserved. This could be
+            // the prototype path itself or an ancestor path.
             //
-            FnGeolibServices::AttributeSetOpArgsBuilder attrSetBldr;
-            attrSetBldr.setLocationPaths(
-                    FnKat::StringAttribute(fullSourcePath));
-            attrSetBldr.deleteAttr("xform");
-            FnKat::GroupBuilder deferredOpArgs;
-            deferredOpArgs.set("opType",
-                    FnKat::StringAttribute("AttributeSet"));
-            deferredOpArgs.set("resolveIds",
-                    FnKat::StringAttribute("prefinalize"));
-            deferredOpArgs.set("opArgs", attrSetBldr.build());
-            sourcesBldr.setAttrAtLocation(relativeSourcePath,
-                    "recursiveOps.RemoveInstanceSourceXform",
-                    deferredOpArgs.build());
-        }
+            SdfPathVector commonPrefixes;
 
-        if (!prototypeBoundIndices.empty())
-        {
-            int boundIndex = prototypeBoundIndices[i];
+            UsdRelationship materialBindingsRel =
+                    UsdShadeMaterial::GetBindingRel(protoPrim);
 
-            if (boundIndex >= 0 
-                && static_cast<size_t>(boundIndex) < prototypeBounds.size())
+            auto assetAPI = UsdModelAPI(protoPrim);
+            std::string assetName;
+            bool isReferencedModelPrim =
+                    assetAPI.IsModel() and assetAPI.GetAssetName(&assetName);
+
+            if (!materialBindingsRel or isReferencedModelPrim)
             {
-                // Get this instance's bounds in parent-local coords
+                // The prim has no material bindings or is a referenced model
+                // prim (meaning that materials are defined below it); start
+                // building at the prototype path.
                 //
-                const GfRange3d range = prototypeBounds[boundIndex];
-
-                // Transform bounds into parent-local coords (at all time
-                // samples).
-                //
-                for (size_t timeSample = 0; timeSample < xformSampleTimes.size();
-                        ++timeSample)
+                commonPrefixes.push_back(protoPath);
+            }
+            else
+            {
+                SdfPathVector materialPaths;
+                materialBindingsRel.GetForwardedTargets(&materialPaths);
+                for (auto materialPath : materialPaths)
                 {
-                    GfMatrix4d matrix =
-                            xformSamples[(timeSample * numInstances) + i];
-
-                    // N.B. We don't apply the parent xform here as the
-                    // aggregate bounds need to be in parent-local space.
-                    //
-                    GfBBox3d parentSpaceBBox(range, matrix);
-                    GfRange3d parentRange = parentSpaceBBox.ComputeAlignedRange();
-                    GfVec3d minRange(parentRange.GetMin());
-                    GfVec3d maxRange(parentRange.GetMax());
-
-                    // Update the aggregate bounds with the transformed bounds.
-                    //
-                    if (minRange[0] < aggregateBounds[0])
+                    const SdfPath &commonPrefix =
+                            protoPath.GetCommonPrefix(materialPath);
+                    if (commonPrefix.GetString() == "/")
                     {
-                        aggregateBounds[0] = minRange[0];
+                        // XXX Unhandled case.
+                        // The prototype prim and its material are not under the
+                        // same parent; start building at the prototype path
+                        // (although it is likely that bindings will be broken).
+                        //
+                        commonPrefixes.push_back(protoPath);
                     }
-                    if (maxRange[0] > aggregateBounds[1])
+                    else
                     {
-                        aggregateBounds[1] = maxRange[0];
-                    }
-
-                    if (minRange[1] < aggregateBounds[2])
-                    {
-                        aggregateBounds[2] = minRange[1];
-                    }
-                    if (maxRange[1] > aggregateBounds[3])
-                    {
-                        aggregateBounds[3] = maxRange[1];
-                    }
-
-                    if (minRange[2] < aggregateBounds[4])
-                    {
-                        aggregateBounds[4] = minRange[2];
-                    }
-                    if (maxRange[2] > aggregateBounds[5])
-                    {
-                        aggregateBounds[5] = maxRange[2];
+                        // Start building at the common ancestor between the
+                        // prototype prim and its material.
+                        //
+                        commonPrefixes.push_back(commonPrefix);
                     }
                 }
-
-                aggregateBoundsValid = true;
             }
+
+            // XXX Unhandled case.
+            // We'll use the first common ancestor even if there is more than
+            // one (which shouldn't appen if the prototype prim and its bindings
+            // are under the same parent).
+            //
+            SdfPath::RemoveDescendentPaths(&commonPrefixes);
+            const std::string buildPath = commonPrefixes[0].GetString();
+
+            // See if the path is a child of the point instancer. If so, we'll
+            // match its hierarchy. If not, we'll put it under a 'prototypes'
+            // group.
+            //
+            std::string relBuildPath;
+            if (pystring::startswith(buildPath, instancerPath + "/"))
+            {
+                relBuildPath = pystring::replace(
+                        buildPath, instancerPath + "/", "");
+            }
+            else
+            {
+                relBuildPath = "prototypes/" +
+                        FnGeolibUtil::Path::GetLeafName(buildPath);
+            }
+
+            // Start generating the full path to the prototype.
+            //
+            fullProtoPath = katOutputPath + "/" + relBuildPath;
+
+            // Make the common ancestor our instance source.
+            //
+            sourcesBldr.setAttrAtLocation(relBuildPath,
+                    "type", FnKat::StringAttribute("instance source"));
+
+            // Author a tracking attr.
+            //
+            sourcesBldr.setAttrAtLocation(relBuildPath,
+                    "info.usd.sourceUsdPath",
+                    FnKat::StringAttribute(buildPath));
+
+            // Tell the BuildIntermediate op to start building at the common
+            // ancestor.
+            //
+            sourcesBldr.setAttrAtLocation(relBuildPath,
+                    "usdPrimPath", FnKat::StringAttribute(buildPath));
+            sourcesBldr.setAttrAtLocation(relBuildPath,
+                    "usdPrimName", FnKat::StringAttribute("geo"));
+
+            if (protoPath.GetString() != buildPath)
+            {
+                // Finish generating the full path to the prototype.
+                //
+                fullProtoPath = fullProtoPath + "/geo" + pystring::replace(
+                        protoPath.GetString(), buildPath, "");
+            }
+
+            // Create a mapping that will link the instance's index to its
+            // prototype's full path.
+            //
+            instanceSourceIndexMap[fullProtoPath] = instanceSources.size();
+            instanceSources.push_back(fullProtoPath);
+
+            // Finally, store the full path in the map so we won't have to do
+            // this work again.
+            //
+            protoPathsToKatPaths[protoPath] = fullProtoPath;
         }
 
-        if (!sourceBuilt)
-        {
-            instanceSourceIndexMap[fullSourcePath] = instanceSources.size();
-            instanceSources.push_back(fullSourcePath);
-            builtPrototypes.insert(prototypePath);
-        }
-        instanceIndices.push_back(instanceSourceIndexMap[fullSourcePath]);
+        instanceIndices.push_back(instanceSourceIndexMap[fullProtoPath]);
     }
 
     //
@@ -830,19 +662,6 @@ PxrUsdKatanaReadPointInstancer(
     //
 
     FnGeolibServices::StaticSceneCreateOpArgsBuilder instancesBldr(false);
-
-    std::vector<double *> xformValueSamples;
-    xformValueSamples.reserve(xformSampleTimes.size());
-
-    for (size_t i = 0; i < xformSampleTimes.size(); ++i)
-    {
-        xformValueSamples.push_back(xformSamples[numInstances * i][0]);
-    }
-
-    FnKat::DoubleAttribute instanceMatrixAttr(
-            &xformSampleTimes[0], xformSampleTimes.size(),
-                    const_cast<const double **>(&xformValueSamples[0]),
-                            numInstances * 16, 16);
 
     instancesBldr.createEmptyLocation("instances", "instance array");
 
@@ -855,17 +674,31 @@ PxrUsdKatanaReadPointInstancer(
                     FnKat::IntAttribute(&instanceIndices[0],
                             instanceIndices.size(), 1));
 
-    instancesBldr.setAttrAtLocation("instances",
-            "geometry.instanceMatrix", instanceMatrixAttr);
+    FnKat::DoubleBuilder instanceMatrixBldr(16);
+    for (size_t a = 0; a < numXformSamples; ++a) {
 
-    if (!velocities.empty())
-    {
-        const VtValue& wrappedVels = VtValue(velocities);
-        FnKat::FloatAttribute velocitiesAttr =
-                PxrUsdKatanaUtils::ConvertVtValueToKatAttr(wrappedVels, true);
-        instancesBldr.setAttrAtLocation("instances",
-                "geometry.instanceVelocity", velocitiesAttr);
+        double relSampleTime = motionSampleTimes[a];
+
+        // Shove samples into the builder at the frame-relative sample time. If
+        // motion is backwards, make sure to reverse time samples.
+        std::vector<double> &matVec = instanceMatrixBldr.get(
+            data.IsMotionBackward()
+                ? PxrUsdKatanaUtils::ReverseTimeSample(relSampleTime)
+                : relSampleTime);
+
+        matVec.reserve(16 * numInstances);
+        for (size_t i = 0; i < numInstances; ++i) {
+
+            GfMatrix4d instanceXform = xformSamples[a][i];
+            const double *matArray = instanceXform.GetArray();
+
+            for (int j = 0; j < 16; ++j) {
+                matVec.push_back(matArray[j]);
+            }
+        }
     }
+    instancesBldr.setAttrAtLocation("instances",
+            "geometry.instanceMatrix", instanceMatrixBldr.build());
 
     if (!omitList.empty())
     {
@@ -874,60 +707,33 @@ PxrUsdKatanaReadPointInstancer(
                         FnKat::IntAttribute(&omitList[0], omitList.size(), 1));
     }
 
+    instancesBldr.setAttrAtLocation("instances",
+            "geometry.pointInstancerId",
+                    FnKat::StringAttribute(katOutputPath));
+
+    //
     // Transfer primvars.
     //
-    const std::vector<UsdGeomPrimvar> primvars =
-            instancer.GetAuthoredPrimvars();
-    for (size_t i = 0; i < primvars.size(); ++i)
+
+    FnKat::GroupBuilder instancerPrimvarsBldr;
+    FnKat::GroupBuilder instancesPrimvarsBldr;
+    for (int64_t i = 0; i < primvarAttrs.getNumberOfChildren(); ++i)
     {
-        UsdGeomPrimvar primvar = primvars[i];
+        const std::string primvarName = primvarAttrs.getChildName(i);
 
-        TfToken name;
-        SdfValueTypeName typeName;
-        TfToken interpolation;
-        int elementSize;
+        // Use "point" scope for the instancer.
+        instancerPrimvarsBldr.set(primvarName, primvarAttrs.getChildByIndex(i));
+        instancerPrimvarsBldr.set(primvarName + ".scope",
+                FnKat::StringAttribute("point"));
 
-        primvar.GetDeclarationInfo(
-                &name, &typeName, &interpolation, &elementSize);
-
-        std::string katAttrName =
-                "geometry.arbitrary." + name.GetString();
-
-        instancesBldr.setAttrAtLocation("instances",
-                katAttrName + ".scope", FnKat::StringAttribute(
-                        interpolation.GetString()));
-        instancesBldr.setAttrAtLocation("instances",
-                katAttrName + ".inputType", FnKat::StringAttribute(
-                        typeName.GetScalarType().GetAsToken().GetString()));
-        if (elementSize != 1)
-        {
-            instancesBldr.setAttrAtLocation("instances",
-                    katAttrName + ".elementSize",
-                            FnKat::IntAttribute(elementSize));
-        }
-
-        // XXX Indexed primvars get flattened out.
-        //
-        VtValue primvarValue;
-        primvar.ComputeFlattened(&primvarValue, currentTime);
-        instancesBldr.setAttrAtLocation("instances",
-                katAttrName + ".value",
-                    PxrUsdKatanaUtils::ConvertVtValueToKatAttr(
-                        primvarValue, true));
+        // User "primitive" scope for the instances.
+        instancesPrimvarsBldr.set(primvarName, primvarAttrs.getChildByIndex(i));
+        instancesPrimvarsBldr.set(primvarName + ".scope",
+                FnKat::StringAttribute("primitive"));
     }
-
-    // Set attrs for pruning.
-    //
-    const bool spruneEnabled =
-            FnAttribute::IntAttribute(
-                instancerOpArgs.getChildByName("spruneEnabled")
-                        ).getValue(0, false) != 0;
-    if (spruneEnabled)
-    {
-        instancesBldr.setAttrAtLocation("instances",
-                "geometry.pointInstancerId",
-                        FnKat::StringAttribute(katOutputPath));
-    }
+    instancerAttrMap.set("geometry.arbitrary", instancerPrimvarsBldr.build());
+    instancesBldr.setAttrAtLocation("instances",
+            "geometry.arbitrary", instancesPrimvarsBldr.build());
 
     //
     // Set the final aggregate bounds.
@@ -935,14 +741,14 @@ PxrUsdKatanaReadPointInstancer(
 
     if (aggregateBoundsValid)
     {
-        attrs.set("bound", FnKat::DoubleAttribute(&aggregateBounds[0], 6, 2));
+        instancerAttrMap.set("bound", FnKat::DoubleAttribute(&aggregateBounds[0], 6, 2));
     }
 
     //
     // Set proxy attrs.
     //
 
-    attrs.set("proxies", _GetViewerProxyAttr(data));
+    instancerAttrMap.set("proxies", PxrUsdKatanaUtils::GetViewerProxyAttr(data));
 
     //
     // Transfer builder results to our attr maps.

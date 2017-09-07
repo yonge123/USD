@@ -27,7 +27,7 @@ pxr_library(usdUtils
     PUBLIC_HEADERS
         api.h
         
-    CPPFILES
+    PYTHON_CPPFILES
         moduleDeps.cpp
 
     PYMODULE_CPPFILES
@@ -41,7 +41,7 @@ pxr_library(usdUtils
         wrapStitch.cpp
         wrapStitchClips.cpp
 
-    PYTHON_FILES
+    PYMODULE_FILES
         __init__.py
 )
 
@@ -99,6 +99,11 @@ pxr_install_test_dir(
 pxr_install_test_dir(
     SRC testenv/testUsdUtilsStitchClips.testenv
     DEST testUsdUtilsStitchClips
+)
+
+pxr_install_test_dir(
+    SRC testenv/testUsdUtilsStitchClips.testenv
+    DEST testUsdUtilsStitchClips_Legacy
 )
 
 pxr_register_test(testUsdUtilsAuthoring
@@ -169,4 +174,14 @@ pxr_register_test(testUsdUtilsStitchClips
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsStitchClips"
     EXPECTED_RETURN_CODE 0
+    ENV
+        USD_AUTHOR_LEGACY_CLIPS=0
+)
+
+pxr_register_test(testUsdUtilsStitchClips_Legacy
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsStitchClips"
+    EXPECTED_RETURN_CODE 0
+    ENV
+        USD_AUTHOR_LEGACY_CLIPS=1
 )

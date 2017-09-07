@@ -27,6 +27,8 @@
 #include "pxr/base/arch/demangle.h"
 #include "pxr/base/arch/errno.h"
 #include "pxr/base/arch/fileSystem.h"
+#include "pxr/base/arch/regex.h"
+#include "pxr/base/arch/systemInfo.h"
 #include "pxr/base/gf/half.h"
 #include "pxr/base/gf/matrix2d.h"
 #include "pxr/base/gf/matrix3d.h"
@@ -78,14 +80,9 @@
 #include <tuple>
 #include <type_traits>
 
-#if defined(ARCH_OS_WINDOWS)
-// Avoid deprecation warning on Windows.  We only scan unsigned ints so
-// the behavior is identical for valid arguments.
-#define sscanf sscanf_s
-#define strcpy strcpy_s
-#endif
-
 PXR_NAMESPACE_OPEN_SCOPE
+
+static int PAGESIZE = ArchGetPageSize();
 
 TF_REGISTRY_FUNCTION(TfType) {
     TfType::Define<Usd_CrateFile::TimeSamples>();
@@ -99,8 +96,31 @@ TF_DEFINE_ENV_SETTING(
     "equal minor and patch versions.  This is only for new files; saving "
     "edits to an existing file preserves its version.");
 
+TF_DEFINE_ENV_SETTING(
+    USDC_MMAP_PREFETCH_KB, 0,
+    "If set to a nonzero value, attempt to disable the OS's prefetching "
+    "behavior for memory-mapped files and instead do simple aligned block "
+    "fetches of the given size instead.  If necessary the setting value is "
+    "rounded up to the next whole multiple of the system's page size "
+    "(typically 4 KB).");
+
+static int _GetMMapPrefetchKB()
+{
+    auto getKB = []() {
+        int setting = TfGetEnvSetting(USDC_MMAP_PREFETCH_KB);
+        int kb = ((setting * 1024 + PAGESIZE - 1) & ~(PAGESIZE - 1)) / 1024;
+        if (setting != kb) {
+            fprintf(stderr, "Rounded USDC_MMAP_PREFETCH_KB value %d to %d",
+                    setting, kb);
+        }
+        return kb;
+    };
+    static int kb = getKB();
+    return kb;
+}
+
 // Write nbytes bytes to fd at pos.
-static inline ssize_t
+static inline int64_t
 WriteToFd(FILE *file, void const *bytes, int64_t nbytes, int64_t pos) {
     int64_t nwritten = ArchPWrite(file, bytes, nbytes, pos);
     if (ARCH_UNLIKELY(nwritten < 0)) {
@@ -216,8 +236,13 @@ using std::unique_ptr;
 using std::unordered_map;
 using std::vector;
 
+// Version history:
+// 0.2.0: Added support for prepend and append fields of SdfListOp.
+// 0.1.0: Fixed structure layout issue encountered in Windows port.
+//        See _PathItemHeader_0_0_1.
+// 0.0.1: Initial release.
 constexpr uint8_t USDC_MAJOR = 0;
-constexpr uint8_t USDC_MINOR = 1;
+constexpr uint8_t USDC_MINOR = 2;
 constexpr uint8_t USDC_PATCH = 0;
 
 struct CrateFile::Version
@@ -347,7 +372,9 @@ struct _ListOpHeader {
                  HasExplicitItemsBit = 1 << 1,
                  HasAddedItemsBit = 1 << 2,
                  HasDeletedItemsBit = 1 << 3,
-                 HasOrderedItemsBit = 1 << 4 };
+                 HasOrderedItemsBit = 1 << 4,
+                 HasPrependedItemsBit = 1 << 5,
+                 HasAppendedItemsBit = 1 << 6 };
 
     _ListOpHeader() : bits(0) {}
 
@@ -356,6 +383,8 @@ struct _ListOpHeader {
         bits |= op.IsExplicit() ? IsExplicitBit : 0;
         bits |= op.GetExplicitItems().size() ? HasExplicitItemsBit : 0;
         bits |= op.GetAddedItems().size() ? HasAddedItemsBit : 0;
+        bits |= op.GetPrependedItems().size() ? HasPrependedItemsBit : 0;
+        bits |= op.GetAppendedItems().size() ? HasAppendedItemsBit : 0;
         bits |= op.GetDeletedItems().size() ? HasDeletedItemsBit : 0;
         bits |= op.GetOrderedItems().size() ? HasOrderedItemsBit : 0;
     }
@@ -364,6 +393,8 @@ struct _ListOpHeader {
 
     bool HasExplicitItems() const { return bits & HasExplicitItemsBit; }
     bool HasAddedItems() const { return bits & HasAddedItemsBit; }
+    bool HasPrependedItems() const { return bits & HasPrependedItemsBit; }
+    bool HasAppendedItems() const { return bits & HasAppendedItemsBit; }
     bool HasDeletedItems() const { return bits & HasDeletedItemsBit; }
     bool HasOrderedItems() const { return bits & HasOrderedItemsBit; }
 
@@ -372,11 +403,44 @@ struct _ListOpHeader {
 template <> struct _IsBitwiseReadWrite<_ListOpHeader> : std::true_type {};
 
 struct _MmapStream {
-    explicit _MmapStream(char const *mapStart)
-        : _cur(mapStart), _mapStart(mapStart) {}
+    
+    explicit _MmapStream(ArchConstFileMapping const &mapStart,
+                         char *debugPageMap)
+        : _cur(mapStart.get())
+        , _mapStart(mapStart.get())
+        , _length(ArchGetFileMappingLength(mapStart))
+        , _debugPageMap(debugPageMap)
+        , _prefetchKB(_GetMMapPrefetchKB()) {}
 
+    _MmapStream &DisablePrefetch() {
+        _prefetchKB = 0;
+        return *this;
+    }
+    
     inline void Read(void *dest, size_t nBytes) {
+        if (ARCH_UNLIKELY(_debugPageMap)) {
+            int64_t pageStart = (_cur - _mapStart) / PAGESIZE;
+            int64_t pageEnd = ((_cur + nBytes - 1 - _mapStart) / PAGESIZE) + 1;
+            memset(_debugPageMap + pageStart, 1, pageEnd-pageStart);
+        }
+
+        if (_prefetchKB) {
+            // Custom aligned chunk "prefetch".
+            const auto chunkBytes = _prefetchKB * 1024;
+            auto firstChunk = (_cur-_mapStart) / chunkBytes;
+            auto lastChunk = ((_cur-_mapStart) + nBytes) / chunkBytes;
+            
+            char const *beginAddr = _mapStart + firstChunk * chunkBytes;
+            char const *endAddr =
+                _mapStart + std::min(_length, (lastChunk + 1) * chunkBytes);
+            
+            ArchMemAdvise(reinterpret_cast<void *>(
+                              const_cast<char *>(beginAddr)),
+                          endAddr-beginAddr, ArchMemAdviceWillNeed);
+        }
+
         memcpy(dest, _cur, nBytes);
+        
         _cur += nBytes;
     }
     inline int64_t Tell() const { return _cur - _mapStart; }
@@ -388,6 +452,9 @@ struct _MmapStream {
 private:
     char const *_cur;
     char const *_mapStart;
+    size_t _length;
+    char *_debugPageMap;
+    int _prefetchKB;
 };
 
 struct _PreadStream {
@@ -652,6 +719,23 @@ struct CrateFile::_PackingContext
 
     inline FILE *GetFile() const { return bufferedOutput.GetFile(); }
 
+    // Inform the writer that the output stream requires the given version
+    // (or newer) to be read back.  This allows the writer to start with
+    // a conservative version assumption and promote to newer versions
+    // only as required by the data stream contents.
+    bool _RequestWriteVersionUpgrade(Version ver, std::string reason) {
+        if (!writeVersion.CanRead(ver)) {
+            TF_WARN("Upgrading crate file from version %s to %s because: %s",
+                    writeVersion.AsString().c_str(), ver.AsString().c_str(),
+                    reason.c_str());
+            writeVersion = ver;
+        }
+        // For now, this always returns true, indicating success.  In
+        // the future, we anticipate a mechanism to confirm the upgrade
+        // is desired -- in which case this could return true or false.
+        return true;
+    }
+
     // Read the bytes of some unknown section into memory so we can rewrite them
     // out later (to preserve it).
     RawDataPtr
@@ -723,6 +807,13 @@ class CrateFile::_Reader : public _ReaderBase
     void _RecursiveRead() {
         auto start = src.Tell();
         auto offset = Read<int64_t>();
+        src.Seek(start + offset);
+    }
+
+    void _RecursiveReadAndPrefetch() {
+        auto start = src.Tell();
+        auto offset = Read<int64_t>();
+        src.Prefetch(start, offset);
         src.Seek(start + offset);
     }
 
@@ -833,12 +924,16 @@ public:
         if (h.HasExplicitItems()) {
             listOp.SetExplicitItems(Read<vector<T>>()); }
         if (h.HasAddedItems()) { listOp.SetAddedItems(Read<vector<T>>()); }
+        if (h.HasPrependedItems()) {
+            listOp.SetPrependedItems(Read<vector<T>>()); }
+        if (h.HasAppendedItems()) {
+            listOp.SetAppendedItems(Read<vector<T>>()); }
         if (h.HasDeletedItems()) { listOp.SetDeletedItems(Read<vector<T>>()); }
         if (h.HasOrderedItems()) { listOp.SetOrderedItems(Read<vector<T>>()); }
         return listOp;
     }
     VtValue Read(VtValue *) {
-        _RecursiveRead();
+        _RecursiveReadAndPrefetch();
         auto rep = Read<ValueRep>();
         return crate->UnpackValue(rep);
     }
@@ -1027,9 +1122,17 @@ public:
     template <class T>
     void Write(SdfListOp<T> const &listOp) {
         _ListOpHeader h(listOp);
+        if (h.HasPrependedItems() || h.HasAppendedItems()) {
+            crate->_packCtx->_RequestWriteVersionUpgrade(
+                Version(0, 2, 0),
+                "A SdfListOp value using a prepended or appended value "
+                "was detected, which requires crate version 0.2.0.");
+        }
         Write(h);
         if (h.HasExplicitItems()) { Write(listOp.GetExplicitItems()); }
         if (h.HasAddedItems()) { Write(listOp.GetAddedItems()); }
+        if (h.HasPrependedItems()) { Write(listOp.GetPrependedItems()); }
+        if (h.HasAppendedItems()) { Write(listOp.GetAppendedItems()); }
         if (h.HasDeletedItems()) { Write(listOp.GetDeletedItems()); }
         if (h.HasOrderedItems()) { Write(listOp.GetOrderedItems()); }
     }
@@ -1270,8 +1373,12 @@ CrateFile::CanRead(string const &fileName) {
     if (!in)
         return false;
 
+    // Mark the entire file as random access to avoid prefetch.
+    int64_t fileLength = ArchGetFileLength(in.get());
+    ArchFileAdvise(in.get(), 0, fileLength, ArchFileAdviceRandomAccess);
+
     TfErrorMark m;
-    _ReadBootStrap(_PreadStream(in.get()), ArchGetFileLength(in.get()));
+    _ReadBootStrap(_PreadStream(in.get()), fileLength);
 
     // Clear any issued errors again to avoid propagation, and return true if
     // there were no errors issued.
@@ -1312,13 +1419,12 @@ CrateFile::Open(string const &fileName)
         return result;
     }
 
-    auto fileSize = ArchGetFileLength(inputFile.get());
     if (!TfGetenvBool("USDC_USE_PREAD", false)) {
         // Map the file.
         auto mapStart = _MmapFile(fileName.c_str(), inputFile.get());
-        result.reset(new CrateFile(fileName, std::move(mapStart), fileSize));
+        result.reset(new CrateFile(fileName, std::move(mapStart)));
     } else {
-        result.reset(new CrateFile(fileName, std::move(inputFile), fileSize));
+        result.reset(new CrateFile(fileName, std::move(inputFile)));
     }
 
     // If the resulting CrateFile has no filename, reading failed.
@@ -1351,42 +1457,140 @@ CrateFile::CrateFile(bool useMmap)
     _DoAllTypeRegistrations();
 }
 
-CrateFile::CrateFile(
-    string const &fileName, ArchConstFileMapping mapStart, int64_t fileSize)
+CrateFile::CrateFile(string const &fileName, ArchConstFileMapping mapStart)
     : _mapStart(std::move(mapStart))
     , _fileName(fileName)
     , _useMmap(true)
 {
     _DoAllTypeRegistrations();
+    _InitMMap();
+}
 
+void
+CrateFile::_InitMMap() {
     if (_mapStart) {
-        auto reader = _MakeReader(_MmapStream(_mapStart.get()));
+        int64_t fileSize = ArchGetFileMappingLength(_mapStart);
+        
+        // Mark the whole file as random access to start to avoid large NFS
+        // prefetch.  We explicitly prefetch the structural sections later.
+        ArchMemAdvise(_mapStart.get(), fileSize, ArchMemAdviceRandomAccess);
+
+        // If we're debugging access, allocate a debug page map. 
+        static string debugPageMapPattern = TfGetenv("USDC_DUMP_PAGE_MAPS");
+        // If it's just '1' or '*' do everything, otherwise match.
+        if (!debugPageMapPattern.empty() &&
+            (debugPageMapPattern == "*" || debugPageMapPattern == "1" ||
+             ArchRegex(debugPageMapPattern, ArchRegex::GLOB).Match(_fileName))) {
+            int64_t npages = (fileSize + PAGESIZE-1) / PAGESIZE;
+            _debugPageMap.reset(new char[npages]);
+            memset(_debugPageMap.get(), 0, npages);
+        } 
+
+        // Make an mmap stream but disable auto prefetching -- the
+        // _ReadStructuralSections() call manages prefetching itself using
+        // higher-level knowledge.
+        auto reader = _MakeReader(
+            _MmapStream(_mapStart, _debugPageMap.get()).DisablePrefetch());
         TfErrorMark m;
         _ReadStructuralSections(reader, fileSize);
         if (!m.IsClean())
             _fileName.clear();
+
+        // Restore default prefetch behavior if we're not doing custom prefetch.
+        if (!_GetMMapPrefetchKB())
+            ArchMemAdvise(_mapStart.get(), fileSize, ArchMemAdviceNormal);
     } else {
         _fileName.clear();
     }
 }
 
-CrateFile::CrateFile(
-    string const &fileName, _UniqueFILE inputFile, int64_t fileSize)
+CrateFile::CrateFile(string const &fileName, _UniqueFILE inputFile)
     : _inputFile(std::move(inputFile))
     , _fileName(fileName)
     , _useMmap(false)
 {
     _DoAllTypeRegistrations();
+}
 
+void
+CrateFile::_InitPread()
+{
+    // Mark the whole file as random access to start to avoid large NFS
+    // prefetch.  We explicitly prefetch the structural sections later.
+    int64_t fileSize = ArchGetFileLength(_inputFile.get());
+    ArchFileAdvise(_inputFile.get(), 0, fileSize, ArchFileAdviceRandomAccess);
     auto reader = _MakeReader(_PreadStream(_inputFile.get()));
     TfErrorMark m;
     _ReadStructuralSections(reader, fileSize);
     if (!m.IsClean())
         _fileName.clear();
+    // Restore default prefetch behavior.
+    ArchFileAdvise(_inputFile.get(), 0, fileSize, ArchFileAdviceNormal);
 }
 
 CrateFile::~CrateFile()
 {
+    static std::mutex outputMutex;
+
+    // Dump a debug page map if requested.
+    if (_useMmap && _mapStart && _debugPageMap) {
+        int64_t length = ArchGetFileMappingLength(_mapStart);
+        int64_t npages = (length + PAGESIZE-1) / PAGESIZE;
+        std::unique_ptr<unsigned char []> mincoreMap(new unsigned char[npages]);
+        void const *p = static_cast<void const *>(_mapStart.get());
+        if (!ArchQueryMappedMemoryResidency(p, length, mincoreMap.get())) {
+            TF_WARN("failed to obtain memory residency information");
+            return;
+        }
+        // Count the pages in core & accessed.
+        int64_t pagesInCore = 0;
+        int64_t pagesAccessed = 0;
+        for (int64_t i = 0; i != npages; ++i) {
+            bool inCore = mincoreMap[i] & 1;
+            bool accessed = _debugPageMap[i] & 1;
+            pagesInCore += (int)inCore;
+            pagesAccessed += (int)accessed;
+            if (accessed && inCore) {
+                mincoreMap.get()[i] = '+';
+            } else if (accessed) {
+                mincoreMap.get()[i] = '!';
+            } else if (inCore) {
+                mincoreMap.get()[i] = '-';
+            } else {
+                mincoreMap.get()[i] = ' ';
+            }
+        }
+
+        std::lock_guard<std::mutex> lock(outputMutex);
+
+        printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+               ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"
+               "page map for %s\n"
+               "%zd pages, %zd used (%.1f%%), %zd in mem (%.1f%%)\n"
+               "used %.1f%% of pages in mem\n"
+               "legend: '+': in mem & used,     '-': in mem & unused\n"
+               "        '!': not in mem & used, ' ': not in mem & unused\n"
+               ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+               ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n",
+               _fileName.c_str(),
+               npages,
+               pagesAccessed, 100.0*pagesAccessed/(double)npages,
+               pagesInCore, 100.0*pagesInCore/(double)npages,
+               100.0*pagesAccessed / (double)pagesInCore);
+               
+        constexpr int wrapCol = 80;
+        int col = 0;
+        for (int64_t i = 0; i != npages; ++i, ++col) {
+            putchar(mincoreMap.get()[i]);
+            if (col == wrapCol) {
+                putchar('\n');
+                col = -1;
+            }
+        }
+        printf("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+               "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+    }
+
     _DeleteValueHandlers();
 }
 
@@ -1424,7 +1628,7 @@ CrateFile::Packer::Close()
         // Write contents.
         bool writeResult = _crate->_Write();
 
-        // If we wrote successfully, store the fileName.
+        // If we wrote successfully, store the fileName and size.
         if (writeResult)
             _crate->_fileName = _crate->_packCtx->fileName;
 
@@ -1443,10 +1647,13 @@ CrateFile::Packer::Close()
                 _MmapFile(_crate->_fileName.c_str(), file.get());
             if (!_crate->_mapStart)
                 return false;
+            _crate->_InitMMap();
         } else {
             // Must adopt the file handle if we don't already have one.
             _crate->_inputFile = std::move(file);
+            _crate->_InitPread();
         }
+
         return true;
     }
     return false;
@@ -1710,7 +1917,7 @@ CrateFile::_GetTimeSampleValueImpl(TimeSamples const &ts, size_t i) const
     // Need to read the rep from the file for index i.
     auto offset = ts.valuesFileOffset + i * sizeof(ValueRep);
     if (_useMmap) {
-        auto reader = _MakeReader(_MmapStream(_mapStart.get()));
+        auto reader = _MakeReader(_MmapStream(_mapStart, _debugPageMap.get()));
         reader.Seek(offset);
         return VtValue(reader.Read<ValueRep>());
     } else {
@@ -1726,7 +1933,7 @@ CrateFile::_MakeTimeSampleValuesMutableImpl(TimeSamples &ts) const
     // Read out the reps into the vector.
     ts.values.resize(ts.times.Get().size());
     if (_useMmap) {
-        auto reader = _MakeReader(_MmapStream(_mapStart.get()));
+        auto reader = _MakeReader(_MmapStream(_mapStart, _debugPageMap.get()));
         reader.Seek(ts.valuesFileOffset);
         for (size_t i = 0, n = ts.times.Get().size(); i != n; ++i)
             ts.values[i] = reader.Read<ValueRep>();
@@ -2098,60 +2305,56 @@ CrateFile::_ReadPaths(Reader reader)
 template <class Reader, class Header>
 void
 CrateFile::_ReadPathsRecursively(Reader reader,
-                                const SdfPath &parentPath,
-                                const Header &h,
-                                WorkArenaDispatcher &dispatcher)
+                                 SdfPath parentPath,
+                                 Header h,
+                                 WorkArenaDispatcher &dispatcher)
 {
     // XXX Won't need ANY of these tags when bug #132031 is addressed
     TfAutoMallocTag2 tag("Usd", "Usd_CrateDataImpl::Open");
     TfAutoMallocTag2 tag2("Usd_CrateFile::CrateFile::Open", "_ReadPaths");
 
-    bool hasChild = h.bits & _PathItemHeader::HasChildBit;
-    bool hasSibling = h.bits & _PathItemHeader::HasSiblingBit;
-    bool isPrimPropertyPath = h.bits & _PathItemHeader::IsPrimPropertyPathBit;
+    while (true) {
+        bool hasChild = h.bits & _PathItemHeader::HasChildBit;
+        bool hasSibling = h.bits & _PathItemHeader::HasSiblingBit;
+        bool isPrimPropertyPath =
+            h.bits & _PathItemHeader::IsPrimPropertyPathBit;
+        
+        auto const &elemToken = _tokens[h.elementTokenIndex.value];
 
-    auto const &elemToken = _tokens[h.elementTokenIndex.value];
+        // Create this path.
+        _paths[h.index.value] = isPrimPropertyPath ?
+            parentPath.AppendProperty(elemToken) :
+            parentPath.AppendElementToken(elemToken);
 
-    // Create this path.
-    _paths[h.index.value] = isPrimPropertyPath ?
-        parentPath.AppendProperty(elemToken) :
-        parentPath.AppendElementToken(elemToken);
+        // If we have either a child or a sibling but not both, then just
+        // continue to the neighbor.  If we have both then spawn a task for the
+        // sibling and do the child ourself.  We think that our path trees tend
+        // to be broader more often than deep.
 
-    // If this one has a sibling, read out the pointer.
-    auto siblingOffset =
-        (hasSibling && hasChild) ? reader.template Read<int64_t>() : 0;
-
-    // If we have either a child or a sibling but not both, then just continue
-    // to the neighbor.  If we have both then spawn a task for the sibling and
-    // do the child ourself.  We think that our path trees tend to be broader
-    // than deep.
-
-    // If this header item has a child, recurse to it.
-    auto childHeader = hasChild ? reader.template Read<Header>() : Header();
-    auto childReader = reader;
-    auto siblingHeader = Header();
-
-    if (hasSibling) {
-        if (hasChild)
-            reader.Seek(siblingOffset);
-        siblingHeader = reader.template Read<Header>();
-    }
-
-    if (hasSibling) {
-        if (hasChild) {
+        if (hasSibling && hasChild) {
+            // branch off a parallel task for the sibling subtree.
+            auto siblingOffset = reader.template Read<int64_t>();
+            auto siblingReader = reader;
+            siblingReader.Seek(siblingOffset);
             dispatcher.Run(
-                [this, reader, parentPath, siblingHeader, &dispatcher]() {
+                [this, siblingReader, parentPath, &dispatcher]() mutable {
+                    auto siblingHeader = siblingReader.template Read<Header>();
                     _ReadPathsRecursively(
-                        reader, parentPath, siblingHeader, dispatcher);
+                        siblingReader, parentPath, siblingHeader, dispatcher);
                 });
-        } else {
-            _ReadPathsRecursively(
-                reader, parentPath, siblingHeader, dispatcher);
+        } else if (hasSibling) {
+            // only a sibling -- read its header and continue.
+            h = reader.template Read<Header>();
+            continue;
         }
-    }
-    if (hasChild) {
-        _ReadPathsRecursively(
-            childReader, _paths[h.index.value], childHeader, dispatcher);
+        if (hasChild) {
+            // have a child (may have also had a sibling) -- reset the parent
+            // path, read the child's header, and continue.
+            parentPath = _paths[h.index.value];
+            h = reader.template Read<Header>();
+            continue;
+        }
+        break;
     }
 }
 
@@ -2159,7 +2362,7 @@ void
 CrateFile::_ReadRawBytes(int64_t start, int64_t size, char *buf) const
 {
     if (_useMmap) {
-        auto reader = _MakeReader(_MmapStream(_mapStart.get()));
+        auto reader = _MakeReader(_MmapStream(_mapStart, _debugPageMap.get()));
         reader.Seek(start);
         reader.template ReadContiguous<char>(buf, size);
     } else {
@@ -2321,7 +2524,8 @@ CrateFile::_UnpackValue(ValueRep rep, T *out) const
 {
     auto const &h = _GetValueHandler<T>();
     if (_useMmap) {
-        h.Unpack(_MakeReader(_MmapStream(_mapStart.get())), rep, out);
+        h.Unpack(_MakeReader(_MmapStream(_mapStart,
+                                         _debugPageMap.get())), rep, out);
     } else {
         h.Unpack(_MakeReader(_PreadStream(_inputFile.get())), rep, out);
     }
@@ -2332,7 +2536,8 @@ void
 CrateFile::_UnpackValue(ValueRep rep, VtArray<T> *out) const {
     auto const &h = _GetValueHandler<T>();
     if (_useMmap) {
-        h.UnpackArray(_MakeReader(_MmapStream(_mapStart.get())), rep, out);
+        h.UnpackArray(_MakeReader(_MmapStream(_mapStart,
+                                              _debugPageMap.get())), rep, out);
     } else {
         h.UnpackArray(_MakeReader(_PreadStream(_inputFile.get())), rep, out);
     }
@@ -2404,7 +2609,8 @@ void CrateFile::_DoTypeRegistration() {
     _unpackValueFunctionsMmap[typeEnumIndex] =
         [this, valueHandler](ValueRep rep, VtValue *out) {
             valueHandler->UnpackVtValue(
-                _MakeReader(_MmapStream(_mapStart.get())), rep, out);
+                _MakeReader(_MmapStream(_mapStart,
+                                        _debugPageMap.get())), rep, out);
         };
 
     _EnumToTfTypeTablePopulater::Populate<T>(

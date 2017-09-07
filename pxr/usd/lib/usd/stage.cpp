@@ -27,12 +27,12 @@
 #include "pxr/usd/usd/attribute.h"
 #include "pxr/usd/usd/clip.h"
 #include "pxr/usd/usd/clipCache.h"
-#include "pxr/usd/usd/conversions.h"
 #include "pxr/usd/usd/debugCodes.h"
 #include "pxr/usd/usd/instanceCache.h"
 #include "pxr/usd/usd/interpolators.h"
 #include "pxr/usd/usd/notice.h"
 #include "pxr/usd/usd/prim.h"
+#include "pxr/usd/usd/primRange.h"
 #include "pxr/usd/usd/relationship.h"
 #include "pxr/usd/usd/resolver.h"
 #include "pxr/usd/usd/resolveInfo.h"
@@ -41,8 +41,8 @@
 #include "pxr/usd/usd/stageCache.h"
 #include "pxr/usd/usd/stageCacheContext.h"
 #include "pxr/usd/usd/tokens.h"
-#include "pxr/usd/usd/primRange.h"
 #include "pxr/usd/usd/usdFileFormat.h"
+#include "pxr/usd/usd/valueUtils.h"
 
 #include "pxr/usd/pcp/changes.h"
 #include "pxr/usd/pcp/errors.h"
@@ -77,7 +77,6 @@
 #include "pxr/base/tf/enum.h"
 #include "pxr/base/tf/envSetting.h"
 #include "pxr/base/tf/hashset.h"
-#include "pxr/base/tf/makePyConstructor.h"
 #include "pxr/base/tf/mallocTag.h"
 #include "pxr/base/tf/ostreamMethods.h"
 #include "pxr/base/tf/pyLock.h"
@@ -1436,48 +1435,13 @@ UsdStage::_SetValue(
     return _SetValueImpl(time, attr, newValue);
 }
 
-namespace {
-bool 
-_ValueContainsBlock(const VtValue* value) {
-    return value && value->IsHolding<SdfValueBlock>();
-}
-
-bool
-_ValueContainsBlock(const SdfAbstractDataValue* value) 
-{
-    return value && value->isValueBlock;
-}
-
-bool
-_ValueContainsBlock(const SdfAbstractDataConstValue* value)
-{
-    const std::type_info& valueBlockTypeId(typeid(SdfValueBlock));
-    return value && value->valueType == valueBlockTypeId;
-}
-
-bool 
-_ClearValueIfBlocked(VtValue* value) {
-    if (_ValueContainsBlock(value)) {
-        *value = VtValue();
-        return true;
-    }
-
-    return false;
-}
-
-bool 
-_ClearValueIfBlocked(SdfAbstractDataValue* value) {
-    return _ValueContainsBlock(value);
-}
-}
-
 template <class T>
 bool
 UsdStage::_SetValueImpl(
     UsdTimeCode time, const UsdAttribute &attr, const T& newValue)
 {
     // if we are setting a value block, we don't want type checking
-    if (!_ValueContainsBlock(&newValue)) {
+    if (!Usd_ValueContainsBlock(&newValue)) {
         // Do a type check.  Obtain typeName.
         TfToken typeName;
         SdfAbstractDataTypedValue<TfToken> abstrToken(&typeName);
@@ -5348,8 +5312,8 @@ _ClipAppliesToLayerStackSite(
     const Usd_ClipRefPtr& clip,
     const PcpLayerStackPtr& layerStack, const SdfPath& primPathInLayerStack)
 {
-    return (layerStack == clip->sourceNode.GetLayerStack()
-        && primPathInLayerStack.HasPrefix(clip->sourceNode.GetPath()));
+    return (layerStack == clip->sourceLayerStack
+        && primPathInLayerStack.HasPrefix(clip->sourcePrimPath));
 }
 
 static bool
@@ -5357,17 +5321,19 @@ _ClipsApplyToNode(
     const Usd_ClipCache::Clips& clips, 
     const PcpNodeRef& node)
 {
-    return (node.GetLayerStack() == clips.sourceNode.GetLayerStack()
-            && node.GetPath().HasPrefix(clips.sourceNode.GetPath()));
+    return (node.GetLayerStack() == clips.sourceLayerStack
+            && node.GetPath().HasPrefix(clips.sourcePrimPath));
 }
 
 static
-const Usd_ClipCache::Clips*
+const std::vector<const Usd_ClipCache::Clips*>
 _GetClipsThatApplyToNode(
     const std::vector<Usd_ClipCache::Clips>& clipsAffectingPrim,
     const PcpNodeRef& node,
     const SdfAbstractDataSpecId& specId)
 {
+    std::vector<const Usd_ClipCache::Clips*> relevantClips;
+
     for (const auto& localClips : clipsAffectingPrim) {
         if (_ClipsApplyToNode(localClips, node)) {
             // Only look for samples in clips for attributes that are
@@ -5387,15 +5353,15 @@ _GetClipsThatApplyToNode(
                 if (!localClips.manifestClip->HasField(
                         specId, SdfFieldKeys->Variability, &attrVariability)
                     || attrVariability != SdfVariabilityVarying) {
-                    return nullptr;
+                    continue;
                 }
             }
 
-            return &localClips;
+            relevantClips.push_back(&localClips);
         }
     }
 
-    return nullptr;
+    return relevantClips;
 }
 
 
@@ -5403,7 +5369,7 @@ bool
 UsdStage::_GetValue(UsdTimeCode time, const UsdAttribute &attr, 
                     VtValue* result) const
 {
-    Usd_UntypedInterpolator interpolator(result);
+    Usd_UntypedInterpolator interpolator(attr, result);
     return _GetValueImpl(time, attr, &interpolator, result);
 }
 
@@ -5464,7 +5430,12 @@ public:
         }
         else {
             if (!TF_VERIFY(layer->GetBracketingTimeSamplesForPath(
-                        specId, localTime, &lower, &upper))) {
+                        specId, localTime, &lower, &upper),
+                TfStringPrintf("No bracketing time samples for "
+                               "%s on <%s> for time %g between %g and %g",
+                               layer->GetIdentifier().c_str(),
+                               specId.GetFullSpecPath().GetText(),
+                               localTime, lower, upper).c_str())) {
                 return false;
             }
         }
@@ -5480,13 +5451,8 @@ public:
             localTime,
             lower);
 
-        if (GfIsClose(lower, upper, /* epsilon = */ 1e-6)) {
-            bool queryResult = layer->QueryTimeSample(specId, lower, result);
-            return queryResult && (!_ClearValueIfBlocked(result));
-        }
-
-        return interpolator->Interpolate(
-            attr, layer, specId, localTime, lower, upper);
+        return Usd_GetOrInterpolateValue(
+            layer, specId, localTime, lower, upper, interpolator, result);
     } 
 
     template <class T>
@@ -5511,13 +5477,8 @@ public:
             localTime,
             lower);
 
-        if (GfIsClose(lower, upper, /* epsilon = */ 1e-6)) {
-            bool queryResult = clip->QueryTimeSample(specId, lower, result);
-            return queryResult && (!_ClearValueIfBlocked(result));
-        }
-
-        return interpolator->Interpolate(
-            attr, clip, specId, localTime, lower, upper);
+        return Usd_GetOrInterpolateValue(
+            clip, specId, localTime, lower, upper, interpolator, result);
     }
 };
 
@@ -5572,7 +5533,7 @@ UsdStage::_GetValueImpl(UsdTimeCode time, const UsdAttribute &attr,
     if (time.IsDefault()) {
         bool valueFound = _GetMetadata(attr, SdfFieldKeys->Default,
                                        TfToken(), /*useFallbacks=*/true, result);
-        return valueFound && (!_ClearValueIfBlocked(result));
+        return valueFound && (!Usd_ClearValueIfBlocked(result));
     }
 
     UsdResolveInfo resolveInfo;
@@ -5621,7 +5582,7 @@ _HasTimeSamples(const SdfLayerRefPtr& source,
             specId, *time, lower, upper);
     }
 
-    return source->HasField(specId, SdfFieldKeys->TimeSamples);
+    return source->GetNumTimeSamplesForPath(specId) > 0;
 }
 
 bool
@@ -5636,7 +5597,9 @@ _HasTimeSamples(const Usd_ClipRefPtr& source,
                source->_GetNumTimeSamplesForPathInLayerForClip(specId) != 0;
     }
 
-    return source->HasField(specId, SdfFieldKeys->TimeSamples);
+    // Use this method to directly access authored time samples,
+    // disregarding 'fake' samples used by clips.
+    return source->_GetNumTimeSamplesForPathInLayerForClip(specId) > 0;
 }
 
 enum _DefaultValueResult {
@@ -5659,7 +5622,7 @@ _HasDefault(const SdfLayerRefPtr& layer, const SdfAbstractDataSpecId& specId,
     }
 
     if (layer->HasField(specId, SdfFieldKeys->Default, value)) {
-        if (_ClearValueIfBlocked(value)) {
+        if (Usd_ClearValueIfBlocked(value)) {
             return _DefaultValueBlocked;
         }
         return _DefaultValueFound;
@@ -5912,7 +5875,7 @@ UsdStage::_GetResolvedValueImpl(const UsdProperty &prop,
         const SdfAbstractDataSpecId specId(&node.GetPath(), &prop.GetName());
         const SdfLayerRefPtrVector& layerStack 
             = node.GetLayerStack()->GetLayers();
-        boost::optional<const Usd_ClipCache::Clips*> clips;
+        boost::optional<std::vector<const Usd_ClipCache::Clips*>> clips;
         for (size_t i = 0, e = layerStack.size(); i < e; ++i) {
             if (nodeHasSpecs) { 
                 if (resolver->ProcessLayer(i, specId, node, 
@@ -5927,7 +5890,7 @@ UsdStage::_GetResolvedValueImpl(const UsdProperty &prop,
                                                      node, specId);
                     // If we don't have specs on this node and clips don't
                     // apply we can mode onto the next node.
-                    if (!nodeHasSpecs && !clips.get()) { 
+                    if (!nodeHasSpecs && clips->empty()) { 
                         break; 
                     }
                 }
@@ -5937,19 +5900,21 @@ UsdStage::_GetResolvedValueImpl(const UsdProperty &prop,
                 ARCH_PRAGMA_PUSH
                 ARCH_PRAGMA_MAYBE_UNINITIALIZED
 
-                // We only care about clips that were introduced at this
-                // position within the LayerStack.
-                if (!clips.get() || clips.get()->sourceLayerIndex != i) {
-                    continue;
-                }
+                for (const Usd_ClipCache::Clips* clipSet : *clips) {
+                    // We only care about clips that were introduced at this
+                    // position within the LayerStack.
+                    if (clipSet->sourceLayerIndex != i) {
+                        continue;
+                    }
 
-                // Look through clips to see if they have a time sample for
-                // this attribute. If a time is given, examine just the clips
-                // that are active at that time.
-                for (const auto& clip : clips.get()->valueClips) {
-                    if (resolver->ProcessClip(clip, specId, node,
-                                              localTime.get_ptr())) {
-                        return;
+                    // Look through clips to see if they have a time sample for
+                    // this attribute. If a time is given, examine just the clips
+                    // that are active at that time.
+                    for (const Usd_ClipRefPtr& clip : clipSet->valueClips) {
+                        if (resolver->ProcessClip(clip, specId, node,
+                                                  localTime.get_ptr())) {
+                            return;
+                        }
                     }
                 }
 
@@ -5979,7 +5944,7 @@ UsdStage::_GetValueFromResolveInfoImpl(const UsdResolveInfo &info,
     if (time.IsDefault()) {
         bool valueFound = _GetMetadata(attr, SdfFieldKeys->Default,
                                        TfToken(), /*useFallbacks=*/true, result);
-        return valueFound && (!_ClearValueIfBlocked(result));
+        return valueFound && (!Usd_ClearValueIfBlocked(result));
     }
 
     if (info._source == UsdResolveInfoSourceTimeSamples) {
@@ -6059,7 +6024,7 @@ UsdStage::_GetValueFromResolveInfo(const UsdResolveInfo &info,
                                    UsdTimeCode time, const UsdAttribute &attr,
                                    VtValue* value) const
 {
-    Usd_UntypedInterpolator interpolator(value);
+    Usd_UntypedInterpolator interpolator(attr, value);
     return _GetValueFromResolveInfoImpl(
         info, time, attr, &interpolator, value);
 }
@@ -6101,7 +6066,7 @@ UsdStage::_GetTimeSampleMap(const UsdAttribute &attr,
                                   &timeSamples)) {
         for (const auto& timeSample : timeSamples) {
             VtValue value;
-            Usd_UntypedInterpolator interp(&value);
+            Usd_UntypedInterpolator interp(attr, &value);
 
             if (_GetValueImpl(timeSample, attr, &interp, &value)) {
                 (*out)[timeSample] = value;

@@ -33,42 +33,38 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 PXRUSDKATANA_USDIN_PLUGIN_DEFINE(PxrUsdInCore_PointInstancerOp, privateData, interface)
 {
-    // Attrs that are modified.
+    UsdGeomPointInstancer instancer =
+        UsdGeomPointInstancer(privateData.GetUsdPrim());
+
+    // Generate input attr map for consumption by the reader.
     //
-    PxrUsdKatanaAttrMap attrs;
+    PxrUsdKatanaAttrMap inputAttrMap;
+
+    // Get the instancer's Katana location.
+    //
+    inputAttrMap.set("outputLocationPath",
+            FnKat::StringAttribute(interface.getOutputLocationPath()));
+
+    // Pass along PxrUsdIn op args.
+    //
+    inputAttrMap.set("opArgs", interface.getOpArg());
+
+    // Generate output attr maps.
+    //
+    // Instancer attr map: describes the instancer itself
+    // Sources attr map: describes the instancer's "instance source" children.
+    // Instances attr map: describes the instancer's "instance array" child.
+    //
+    PxrUsdKatanaAttrMap instancerAttrMap;
     PxrUsdKatanaAttrMap sourcesAttrMap;
     PxrUsdKatanaAttrMap instancesAttrMap;
-
-    // Attrs that are parsed.
-    //
-    PxrUsdKatanaAttrMap instancerOpArgsAttrMap;
-
-    // Transfer instancer args.
-    //
-    FnKat::GroupAttribute opArgsAttr =
-            interface.getAttr("usdPointInstancer.opArgs");
-    for (int64_t i = 0; i < opArgsAttr.getNumberOfChildren(); ++i)
-    {
-        instancerOpArgsAttrMap.set(
-            opArgsAttr.getChildName(i),
-            opArgsAttr.getChildByIndex(i));
-    }
-
-    // Add additional args.
-    //
-    instancerOpArgsAttrMap.set("outputLocationPath",
-            FnKat::StringAttribute(interface.getOutputLocationPath()));
-    instancerOpArgsAttrMap.set("spruneEnabled",
-            interface.getAttr("info.sprune.enabled", "/root"));
-
     PxrUsdKatanaReadPointInstancer(
-            UsdGeomPointInstancer(privateData.GetUsdPrim()),
-            privateData, attrs, sourcesAttrMap, instancesAttrMap,
-            instancerOpArgsAttrMap);
+            instancer, privateData, instancerAttrMap, sourcesAttrMap,
+            instancesAttrMap, inputAttrMap);
 
-    // Send regular attrs directly to the interface.
+    // Send instancer attrs directly to the interface.
     //
-    attrs.toInterface(interface);
+    instancerAttrMap.toInterface(interface);
 
     // Early exit if any errors were encountered.
     //
@@ -78,24 +74,23 @@ PXRUSDKATANA_USDIN_PLUGIN_DEFINE(PxrUsdInCore_PointInstancerOp, privateData, int
         return;
     }
 
-    // Build out the attrs that were modified.
+    // Build the other output attr maps.
     //
-    FnKat::GroupAttribute sourcesAttrs = sourcesAttrMap.build();
-    FnKat::GroupAttribute instancesAttrs = instancesAttrMap.build();
-    if (not sourcesAttrs.isValid() or not instancesAttrs.isValid())
+    FnKat::GroupAttribute sourcesSSCAttrs = sourcesAttrMap.build();
+    FnKat::GroupAttribute instancesSSCAttrs = instancesAttrMap.build();
+    if (not sourcesSSCAttrs.isValid() or not instancesSSCAttrs.isValid())
     {
         return;
     }
 
-    // Tell UsdIn to skip all children; we'll create them ourselves.
+    // Tell UsdIn to skip all children; we'll create them ourselves below.
     //
     interface.setAttr("__UsdIn.skipAllChildren", FnKat::IntAttribute(1));
 
-    // Create 'sources' child using BuildIntermediate with the built-out
-    // sourcesAttrMap.
+    // Create "instance source" children using BuildIntermediate.
     //
     PxrUsdKatanaUsdInArgsRefPtr usdInArgs = privateData.GetUsdInArgs();
-    FnKat::GroupAttribute childAttrs = sourcesAttrs.getChildByName("c");
+    FnKat::GroupAttribute childAttrs = sourcesSSCAttrs.getChildByName("c");
     for (int64_t i = 0; i < childAttrs.getNumberOfChildren(); ++i)
     {
         interface.createChild(
@@ -111,8 +106,7 @@ PXRUSDKATANA_USDIN_PLUGIN_DEFINE(PxrUsdInCore_PointInstancerOp, privateData, int
             PxrUsdKatanaUsdInPrivateData::Delete);
     }
 
-    // Create 'instances' child using StaticSceneCreate with the built-out
-    // instancesAttrMap.
+    // Create "instance array" child using StaticSceneCreate.
     //
-    interface.execOp("StaticSceneCreate", instancesAttrs);
+    interface.execOp("StaticSceneCreate", instancesSSCAttrs);
 }

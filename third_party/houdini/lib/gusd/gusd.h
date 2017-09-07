@@ -24,6 +24,9 @@
 #ifndef __GUSD_PXGUSD_H__
 #define __GUSD_PXGUSD_H__
 
+#include "pxr/usd/usd/prim.h"
+#include "gusd/api.h"
+
 #include <pxr/pxr.h>
 #include <string>
 #include <functional>
@@ -34,8 +37,13 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class TfToken;
 
+GUSD_API
 void GusdInit();
+
+GUSD_API
 void GusdNewGeometryPrim( GA_PrimitiveFactory* f );
+
+GUSD_API
 void GusdNewGeometryIO();
 
 // We sometimes need to be able to convert an absolute path to an asset to a 
@@ -43,13 +51,29 @@ void GusdNewGeometryIO();
 // on the site specific system used to resolve assets, so we provide a callback.
 typedef std::function<std::string (const std::string&)> GusdPathComputeFunc;
 
+GUSD_API
 void GusdRegisterComputeRelativeSearchPathFunc( const GusdPathComputeFunc &func );
+
+GUSD_API
 std::string GusdComputeRelativeSearchPath( const std::string &path );
 
 // When we write a new asset to a USD file, we want to assign a "kind". By
 // default we mark it a "component". 
+GUSD_API
 void GusdSetAssetKind( const TfToken &kind );
+
+GUSD_API
 TfToken GusdGetAssetKind();
+
+// We often need to call some function, which may be system
+// specific, on a USD prim so we provide a callback.
+typedef std::function<bool (const UsdPrim&)> GusdUsdPrimFunc;
+
+GUSD_API
+void GusdRegisterOperateOnUsdPrimFunc( const GusdUsdPrimFunc &func );
+
+GUSD_API
+bool GusdOperateOnUsdPrim( const UsdPrim &prim );
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

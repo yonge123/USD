@@ -39,8 +39,10 @@ pxr_library(hd
         bprim
         bufferArray
         bufferArrayRange
+        bufferArrayRangeGL
         bufferArrayRegistry
         bufferResource
+        bufferResourceGL
         bufferSource
         bufferSpec
         changeTracker
@@ -58,6 +60,10 @@ pxr_library(hd
         drawItemInstance
         drawItemState
         engine
+        extCompCpuComputation
+        extCompPrimvarBufferSource
+        extComputation
+        extComputationContext
         fallbackLightingShader
         geometricShader
         glslProgram
@@ -77,6 +83,7 @@ pxr_library(hd
         perfLog
         persistentBuffer
         points
+        primGather
         primTypeIndex
         renderContextCaps
         renderDelegate
@@ -86,6 +93,7 @@ pxr_library(hd
         renderPassState
         repr
         resource
+        resourceGL
         resourceBinder
         resourceRegistry
         rprim
@@ -96,6 +104,7 @@ pxr_library(hd
         shaderCode
         shaderKey
         shaderParam
+        sortedIds                   
         smoothNormals
         sprim
         strategyBase
@@ -119,10 +128,15 @@ pxr_library(hd
         version.h
 
     PRIVATE_CLASSES
+        compExtCompInputSource
         cullingShaderKey
+        extCompInputSource
+        extComputationContextInternal
+        sceneExtCompInputSource
         unitTestHelper
         unitTestNullRenderDelegate
         unitTestNullRenderPass
+        vtExtractor
         ${optionalPrivateClasses}
 
     RESOURCE_FILES
@@ -134,6 +148,8 @@ pxr_library(hd
         shaders/fallbackSurface.glslfx
         shaders/frustumCull.glslfx
         shaders/instancing.glslfx
+        shaders/lighting.glslfx
+        shaders/lightingIntegrationShader.glslfx
         shaders/mesh.glslfx
         shaders/meshNormal.glslfx
         shaders/meshWire.glslfx
@@ -141,5 +157,6 @@ pxr_library(hd
         shaders/ptexTexture.glslfx
         shaders/renderPass.glslfx
         shaders/renderPassShader.glslfx
+        shaders/terminals.glslfx
 )
 

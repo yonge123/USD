@@ -25,7 +25,6 @@ pxr_library(usd
         clipsAPI
         attributeQuery
         common
-        conversions
         crateInfo
         debugCodes
         editContext
@@ -60,6 +59,10 @@ pxr_library(usd
         usdcFileFormat
         variantSets
 
+    PYTHON_PUBLIC_CLASSES
+        pyEditContext
+        pyConversions
+
     PRIVATE_CLASSES
         clip
         clipCache
@@ -75,9 +78,10 @@ pxr_library(usd
     PRIVATE_HEADERS
         crateDataTypes.h
         crateValueInliners.h
+        valueUtils.h
         wrapUtils.h
 
-    CPPFILES
+    PYTHON_CPPFILES
         moduleDeps.cpp
 
     PYMODULE_CPPFILES
@@ -108,17 +112,27 @@ pxr_library(usd
         wrapStageCache.cpp
         wrapStageCacheContext.cpp
         wrapStagePopulationMask.cpp
+        wrapTokens.cpp
         wrapTimeCode.cpp
         wrapTyped.cpp
         wrapUtils.cpp
         wrapVariantSets.cpp
 
-    PYTHON_FILES
+    PYMODULE_FILES
         __init__.py
 
     RESOURCE_FILES
         plugInfo.json
         generatedSchema.usda
+        schema.usda:usd/schema.usda
+        codegenTemplates/api.h
+        codegenTemplates/plugInfo.json
+        codegenTemplates/schemaClass.cpp
+        codegenTemplates/schemaClass.h
+        codegenTemplates/tokens.cpp
+        codegenTemplates/tokens.h
+        codegenTemplates/wrapSchemaClass.cpp
+        codegenTemplates/wrapTokens.cpp
 )
 
 if (NOT JINJA2_FOUND)
@@ -267,12 +281,10 @@ pxr_install_test_dir(
     DEST testUsdFlatten
 )
 
-
 pxr_install_test_dir(
     SRC testenv/testUsdFlatten2
     DEST testUsdFlatten2
 )
-
 
 pxr_install_test_dir(
     SRC testenv/testUsdFlatten2
@@ -360,6 +372,16 @@ pxr_install_test_dir(
 )
 
 pxr_install_test_dir(
+    SRC testenv/testUsdValueClips
+    DEST testUsdValueClips
+)
+
+pxr_install_test_dir(
+    SRC testenv/testUsdValueClips_Legacy
+    DEST testUsdValueClips_Legacy
+)
+
+pxr_install_test_dir(
     SRC testenv/testUsdVariants
     DEST testUsdVariants
 )
@@ -379,6 +401,23 @@ pxr_register_test(testUsdAttributeConnections
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdAttributeConnections"
     EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdValueClips
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdValueClips"
+    EXPECTED_RETURN_CODE 0
+)
+
+# This test runs the same test script as testUsdValueClips
+# but uses a different set of test assets that are installed above.
+pxr_register_test(testUsdValueClips_Legacy
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdValueClips"
+    EXPECTED_RETURN_CODE 0
+    ENV
+        USD_AUTHOR_LEGACY_CLIPS=1
+        USD_READ_LEGACY_CLIPS=1
 )
 
 pxr_register_test(testUsdVariantEditing

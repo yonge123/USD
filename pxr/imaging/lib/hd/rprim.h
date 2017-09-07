@@ -35,18 +35,30 @@
 #include "pxr/imaging/hd/types.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/base/gf/range3d.h"
+#include "pxr/base/arch/inttypes.h"
 
 #include <boost/shared_ptr.hpp>
+#include <vector>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 
+class HdBufferSource;
 class HdDrawItem;
 class HdRenderIndex;
 class HdRepr;
 class HdRenderParam;
+class HdShader;
 
 typedef boost::shared_ptr<HdRepr> HdReprSharedPtr;
+typedef boost::shared_ptr<HdBufferSource> HdBufferSourceSharedPtr;
+
+typedef std::vector<struct HdBufferSpec> HdBufferSpecVector;
+typedef boost::shared_ptr<class HdBufferSource> HdBufferSourceSharedPtr;
+typedef std::vector<HdBufferSourceSharedPtr> HdBufferSourceVector;
+typedef boost::shared_ptr<HdBufferArrayRange> HdBufferArrayRangeSharedPtr;
+typedef boost::shared_ptr<class HdComputation> HdComputationSharedPtr;
+typedef std::vector<HdComputationSharedPtr> HdComputationVector;
 
 /// \class HdRprim
 ///
@@ -162,6 +174,7 @@ public:
     inline TfTokenVector GetPrimVarVaryingNames(HdSceneDelegate* delegate)     const;
     inline TfTokenVector GetPrimVarFacevaryingNames(HdSceneDelegate* delegate) const;
     inline TfTokenVector GetPrimVarUniformNames(HdSceneDelegate* delegate)     const;
+    inline TfTokenVector GetPrimVarConstantNames(HdSceneDelegate* delegate)    const;
 
     inline VtValue GetPrimVar(HdSceneDelegate* delegate, const TfToken &name)  const;
 
@@ -191,18 +204,57 @@ protected:
                                    HdDirtyBits *dirtyBits);
 
     HD_API
-    void _PopulateInstancePrimVars(HdSceneDelegate *sceneDelegate,
-                                   HdDrawItem *drawItem,
-                                   HdDirtyBits *dirtyBits,
-                                   int instancePrimVarSlot);
+    VtMatrix4dArray _GetInstancerTransforms(HdSceneDelegate* delegate);
+
+    // methods to assist allocating and migrating shared primvar ranges
+    HD_API
+    static bool _IsEnabledSharedVertexPrimvar();
 
     HD_API
-    VtMatrix4dArray _GetInstancerTransforms(HdSceneDelegate* delegate);
+    uint64_t
+    _ComputeSharedPrimvarId(uint64_t baseId,
+                      HdBufferSourceVector const &sources,
+                      HdComputationVector const &computations) const;
+
+    HD_API
+    HdBufferArrayRangeSharedPtr
+    _GetSharedPrimvarRange(uint64_t primvarId,
+                    HdBufferSpecVector const &bufferSpecs,
+                    HdBufferArrayRangeSharedPtr const &existing,
+                    bool * isFirstInstance,
+                    HdResourceRegistrySharedPtr const &resourceRegistry) const;
+
+    /// For a given interpolation mode, obtains a set of ExtComputation primVar
+    /// source computations needed for this Rprim.
+    ///
+    /// The list of primVars that are obtained through an ExtComputation
+    /// for the given interpolationMode is obtained from the scene delegate.
+    ///
+    /// The scene delegate also provides information about which output on
+    /// which computation is providing the source of the primVar.
+    ///
+    /// Based on the information, the function creates the necessary
+    /// computations and appends them on to the sources list (the sources vector
+    /// need not be empty).
+    ///
+    /// The caller is expected to pass these computation on these computations
+    /// onto the resource registry (associating them with BAR's if it is
+    /// expected the primVar will be downloaded)
+    HD_API
+    void _GetExtComputationPrimVarsComputations(
+                                              HdSceneDelegate *sceneDelegate,
+                                              HdInterpolation interpolationMode,
+                                              HdDirtyBits dirtyBits,
+                                              HdBufferSourceVector *sources);
 
     HD_API
     TfToken _GetReprName(HdSceneDelegate* delegate,
                          TfToken const &defaultReprName, bool forced,
                          HdDirtyBits *dirtyBits);
+
+    HD_API
+    virtual HdShaderCodeSharedPtr _GetShaderCode(HdSceneDelegate *delegate,
+                                                 HdShader const *shader) const;
 
     virtual HdDirtyBits _GetInitialDirtyBits() const = 0;
     virtual HdDirtyBits _PropagateDirtyBits(HdDirtyBits bits) const = 0;
@@ -220,7 +272,6 @@ private:
     /// Sets a new surface shader id to be used by this rprim
     void _SetSurfaceShaderId(HdChangeTracker &changeTracker,
                              SdfPath const& surfaceShaderId);
-
 
 protected:
     // shared data across reprs: bufferArrayRanges, bounds, visibility
@@ -302,6 +353,12 @@ inline TfTokenVector
 HdRprim::GetPrimVarUniformNames(HdSceneDelegate* delegate) const
 {
     return delegate->GetPrimVarUniformNames(GetId());
+}
+
+inline TfTokenVector
+HdRprim::GetPrimVarConstantNames(HdSceneDelegate* delegate) const
+{
+    return delegate->GetPrimVarConstantNames(GetId());
 }
 
 inline VtValue

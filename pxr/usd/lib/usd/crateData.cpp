@@ -29,6 +29,7 @@
 #include "pxr/base/tf/bitUtils.h"
 #include "pxr/base/tf/mallocTag.h"
 #include "pxr/base/tf/ostreamMethods.h"
+#include "pxr/base/tf/pathUtils.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/typeInfoMap.h"
 #include "pxr/base/tracelite/trace.h"
@@ -107,8 +108,12 @@ public:
         , _crateFile(CrateFile::CreateNew()) {}
     
     ~Usd_CrateDataImpl() {
+        // Close file synchronously.  We don't want a race condition
+        // on Windows due to the file being open for an indeterminate
+        // amount of time.
+        _crateFile.reset();
+
         // Tear down asynchronously.
-        WorkMoveDestroyAsync(_crateFile);
         WorkMoveDestroyAsync(_flatTypes);
         WorkMoveDestroyAsync(_flatData);
         if (_hashData)
@@ -124,17 +129,53 @@ public:
         if (!TF_VERIFY(fileName == dataFileName || dataFileName.empty()))
             return false;
 
+        // Sort by path for better namespace-grouped data layout.
+        vector<SdfPath> sortedPaths;
+        sortedPaths.reserve(_hashData ? _hashData->size() : _flatData.size());
+        if (_hashData) {
+            for (auto const &p: *_hashData) {
+                sortedPaths.push_back(p.first);
+            }
+        } else {
+            for (auto const &p: _flatData) {
+                sortedPaths.push_back(p.first);
+            }
+        }
+        tbb::parallel_sort(
+            sortedPaths.begin(), sortedPaths.end(),
+            [](SdfPath const &p1, SdfPath const &p2) {
+                // Prim paths before property paths, then property paths grouped
+                // by property name.
+                bool p1IsProperty = p1.IsPropertyPath();
+                bool p2IsProperty = p2.IsPropertyPath();
+                switch ((int)p1IsProperty + (int)p2IsProperty) {
+                case 1:
+                    return !p1IsProperty;
+                case 2:
+                    if (p1.GetName() != p2.GetName()) {
+                        return p1.GetName() < p2.GetName();
+                    }
+                // Intentional fall-through
+                default:
+                case 0:
+                    return p1 < p2;
+                }
+            });
+
+        // Now pack all the specs.
         if (CrateFile::Packer packer = _crateFile->StartPacking(fileName)) {
             if (_hashData) {
-                for (auto const &p: *_hashData) {
+                for (auto const &p: sortedPaths) {
+                    auto iter = _hashData->find(p);
                     packer.PackSpec(
-                        p.first, p.second.specType, p.second.fields.Get());
+                        p, iter->second.specType, iter->second.fields.Get());
                 }
             } else {
-                for (size_t i = 0; i != _flatData.size(); ++i) {
-                    auto const &p = _flatData.begin()[i];
+                for (auto const &p: sortedPaths) {
+                    auto iter = _flatData.find(p);
                     packer.PackSpec(
-                        p.first, _flatTypes[i].type, p.second.fields.Get());
+                        p, _flatTypes[iter-_flatData.begin()].type,
+                        iter->second.fields.Get());
                 }
             }
             if (packer.Close()) {
@@ -172,9 +213,15 @@ public:
                     return std::find(
                         items.begin(), items.end(), path) != items.end();
                 } else {
-                    auto const &items = listOp.GetAddedItems();
-                    return std::find(
-                        items.begin(), items.end(), path) != items.end();
+                    auto const &added = listOp.GetAddedItems();
+                    auto const &prepended = listOp.GetPrependedItems();
+                    auto const &appended = listOp.GetAppendedItems();
+                    return std::find(added.begin(), added.end(), path)
+                        != added.end() ||
+                        std::find(prepended.begin(), prepended.end(), path)
+                        != prepended.end() ||
+                        std::find(appended.begin(), appended.end(), path)
+                        != appended.end();
                 }
             }
         }
@@ -983,7 +1030,7 @@ Usd_CrateData::GetSoftwareVersionToken()
 bool
 Usd_CrateData::CanRead(string const &fileName)
 {
-    return CrateFile::CanRead(fileName);
+    return CrateFile::CanRead(TfAbsPath(fileName));
 }
 
 bool
@@ -994,23 +1041,24 @@ Usd_CrateData::Save(string const &fileName)
         return false;
     }
 
+    auto newFileName = TfAbsPath(fileName);
     bool hasFile = !_impl->GetFileName().empty();
-    bool saveToOtherFile = _impl->GetFileName() != fileName;
+    bool saveToOtherFile = _impl->GetFileName() != newFileName;
         
     if (hasFile && saveToOtherFile) {
         // We copy to a temporary data and save that.
         Usd_CrateData tmp;
         tmp.CopyFrom(SdfAbstractDataConstPtr(this));
-        return tmp.Save(fileName);
+        return tmp.Save(newFileName);
     }
 
-    return _impl->Save(fileName);
+    return _impl->Save(newFileName);
 }
 
 bool
 Usd_CrateData::Open(const std::string &fileName)
 {
-    return _impl->Open(fileName);
+    return _impl->Open(TfAbsPath(fileName));
 }
 
 // ------------------------------------------------------------------------- //

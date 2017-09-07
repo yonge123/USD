@@ -23,10 +23,10 @@
 //
 #include "pxr/usd/usdGeom/gprim.h"
 #include "pxr/usd/usd/schemaBase.h"
-#include "pxr/usd/usd/conversions.h"
 
 #include "pxr/usd/sdf/primSpec.h"
 
+#include "pxr/usd/usd/pyConversions.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include "pxr/base/tf/pyUtils.h"
@@ -165,8 +165,14 @@ namespace {
 WRAP_CUSTOM {
     _class
         .def("GetDisplayColorPrimvar", &UsdGeomGprim::GetDisplayColorPrimvar)
+        .def("CreateDisplayColorPrimvar", 
+             &UsdGeomGprim::CreateDisplayColorPrimvar,
+             (arg("interpolation")=TfToken(), arg("elementSize")=-1))
         .def("GetDisplayOpacityPrimvar",
              &UsdGeomGprim::GetDisplayOpacityPrimvar)
+        .def("CreateDisplayOpacityPrimvar", 
+             &UsdGeomGprim::CreateDisplayOpacityPrimvar,
+             (arg("interpolation")=TfToken(), arg("elementSize")=-1))
         ;
 }
 

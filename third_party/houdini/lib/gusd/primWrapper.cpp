@@ -22,11 +22,12 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "primWrapper.h"
-#include "Context.h"
+#include "context.h"
 
 #include "UT_Gf.h"
 #include "GT_VtArray.h"
 #include "USD_XformCache.h"
+#include "GU_USD.h"
 
 #include <GT/GT_PrimInstance.h>
 #include <GT/GT_DAIndexedString.h>
@@ -291,12 +292,15 @@ GusdPrimWrapper::redefine(
 
 bool 
 GusdPrimWrapper::updateFromGTPrim(
-    const GT_PrimitiveHandle&,
+    const GT_PrimitiveHandle&  sourcePrim,
     const UT_Matrix4D&         houXform,
     const GusdContext&         ctxt,
     GusdSimpleXformCache&      xformCache)
-{ 
-    return false; 
+{
+    // Set the active state of the UsdPrim if any "usdactive" attributes exist
+    updateActiveFromGTPrim(sourcePrim, ctxt.time);
+
+    return true;
 }
 
 void
@@ -309,25 +313,28 @@ GusdPrimWrapper::setVisibility(const TfToken& visibility, UsdTimeCode time)
     }
 
     UsdAttribute visAttr = getUsdPrimForWrite().GetVisibilityAttr();
-    if( visAttr.IsValid() )
+    if( visAttr.IsValid() ) {
+        TfToken oldVal;
+        if( !visAttr.Get( &oldVal, 
+                          UsdTimeCode::Default() ) || oldVal != UsdGeomTokens->invisible ) {
+            visAttr.Set(UsdGeomTokens->invisible, UsdTimeCode::Default()); 
+        }
         visAttr.Set(visibility, time); 
+    }
 }
 
 void
 GusdPrimWrapper::updateVisibilityFromGTPrim(
         const GT_PrimitiveHandle& sourcePrim,
-        UsdTimeCode time)
+        UsdTimeCode time,
+        bool forceWrite )
 {
     // If we're tracking visibility, set this prim's default state to
     // invisible. File-per-frame exports rely on this if the prim isn't
     // persistent throughout the frame range.
-    UsdAttribute visAttr = getUsdPrimForWrite().GetVisibilityAttr();
-    if( visAttr.IsValid() )
-        visAttr.Set(UsdGeomTokens->invisible,
-                    UsdTimeCode::Default()); 
     GT_Owner attrOwner;
     GT_DataArrayHandle houAttr
-        = sourcePrim->findAttribute("visible", attrOwner, 0);
+        = sourcePrim->findAttribute(GUSD_VISIBLE_ATTR, attrOwner, 0);
     if(houAttr) {
         int visible = houAttr->getI32(0);
         if(visible) {
@@ -336,12 +343,28 @@ GusdPrimWrapper::updateVisibilityFromGTPrim(
             setVisibility(UsdGeomTokens->invisible, time);
         }
     }
-    else {
+    else if ( forceWrite ) {
         if(isVisible()) {
             setVisibility(UsdGeomTokens->inherited, time);
         } else {
             setVisibility(UsdGeomTokens->invisible, time);
         }
+    }
+}
+
+void
+GusdPrimWrapper::updateActiveFromGTPrim(
+        const GT_PrimitiveHandle& sourcePrim,
+        UsdTimeCode time)
+{
+    UsdPrim prim = getUsdPrimForWrite().GetPrim();
+
+    GT_Owner attrOwner;
+    GT_DataArrayHandle houAttr
+        = sourcePrim->findAttribute(GUSD_ACTIVE_ATTR, attrOwner, 0);
+    if (houAttr) {
+        int active = houAttr->getI32(0);
+        prim.SetActive((bool)active);
     }
 }
 
@@ -373,7 +396,38 @@ void
 GusdPrimWrapper::updateTransformFromGTPrim( const GfMatrix4d &xform, 
                                             UsdTimeCode time, bool force )
 {
-    UsdGeomXformable prim( getUsdPrimForWrite() );
+    UsdGeomImageable usdGeom = getUsdPrimForWrite();
+    UsdGeomXformable prim( usdGeom );
+
+    // Determine if we need to clear previous transformations from a stronger
+    // opinion on the stage before authoring ours.
+    UsdStagePtr stage = usdGeom.GetPrim().GetStage();
+    UsdEditTarget currEditTarget = stage->GetEditTarget();
+
+    // If the edit target does no mapping, it is most likely the session
+    // layer which means it is in the local layer stack and can overlay
+    // any xformOps.
+    if ( !currEditTarget.GetMapFunction().IsNull() && 
+         !currEditTarget.GetMapFunction().IsIdentity() ) {
+        bool reset;
+        std::vector<UsdGeomXformOp> xformVec = prim.GetOrderedXformOps(&reset);
+
+        // The xformOps attribute is static so we only check if we haven't
+        // changed anything yet. In addition nothing needs to be cleared if it
+        // was previously empty.
+        if (m_lastXformSet.IsDefault() && (int)xformVec.size() > 0) {
+            // Load the root layer for temp, stronger opinion changes.
+            stage->GetRootLayer()->SetPermissionToSave(false);
+            stage->SetEditTarget(stage->GetRootLayer());
+            UsdGeomXformable stagePrim( getUsdPrimForWrite() );
+
+            // Clear the xformOps on the stronger layer, so our weaker edit
+            // target (with mapping across a reference) can write out clean,
+            // new transforms.
+            stagePrim.ClearXformOpOrder();
+            stage->SetEditTarget(currEditTarget);
+        }
+    }
 
     if( !prim )
         return;
@@ -938,7 +992,7 @@ GusdPrimWrapper::loadPrimvars(
             } else {
                 // There is no authored "Cd" primvar.
                 // Try to find "displayColor" instead.
-                colorPrimvar = prim.GetPrimvar(TfToken("displayColor"));
+                colorPrimvar = prim.GetPrimvar(UsdGeomTokens->primvarsDisplayColor);
                 if (colorPrimvar &&
                     colorPrimvar.GetAttr().HasAuthoredValueOpinion()) {
                     authoredPrimvars.push_back(colorPrimvar);
@@ -953,20 +1007,21 @@ GusdPrimWrapper::loadPrimvars(
 
     for( const UsdGeomPrimvar &primvar : authoredPrimvars )
     {
-        DBG(cerr << "loadPrimvar " << primvar.GetBaseName() << "\t" << primvar.GetTypeName() << "\t" << primvar.GetInterpolation() << endl);
+        DBG(cerr << "loadPrimvar " << primvar.GetPrimvarName() << "\t" << primvar.GetTypeName() << "\t" << primvar.GetInterpolation() << endl);
 
-        UT_String name(primvar.GetBaseName());
+        UT_String name(primvar.GetPrimvarName());
 
         // One special case we always handle here is to change
         // the name of the USD "displayColor" primvar to "Cd",
         // as long as there is not already a "Cd" primvar.
-        if (!hasCdPrimvar && name == "displayColor") {
+        if (!hasCdPrimvar && 
+            primvar.GetName() == UsdGeomTokens->primvarsDisplayColor) {
             name = Cd;
         }
 
         // If the name of this primvar doesn't
         // match the primvarPattern, skip it.
-        if (not name.multiMatch(primvarPattern, 1, " ")) {
+        if (!name.multiMatch(primvarPattern, 1, " ")) {
             continue;
         }
 
@@ -976,7 +1031,7 @@ GusdPrimWrapper::loadPrimvars(
         {
             TF_WARN( "Failed to convert primvar %s:%s %s.", 
                         primPath.c_str(),
-                        primvar.GetBaseName().GetText(),
+                        primvar.GetPrimvarName().GetText(),
                         primvar.GetTypeName().GetAsToken().GetText() );
             continue;
         }
@@ -988,7 +1043,7 @@ GusdPrimWrapper::loadPrimvars(
                 TF_WARN( "Not enough values found for primvar: %s:%s. "
                          "%zd values given for %d points.",
                          primPath.c_str(),
-                         primvar.GetBaseName().GetText(),
+                         primvar.GetPrimvarName().GetText(),
                          gtData->entries(), minPoint );
             }
             else {
@@ -1006,7 +1061,7 @@ GusdPrimWrapper::loadPrimvars(
                 TF_WARN( "Not enough values found for primvar: %s:%s. "
                          "%zd values given for %d verticies.", 
                          primPath.c_str(),
-                         primvar.GetBaseName().GetText(), 
+                         primvar.GetPrimvarName().GetText(), 
                          gtData->entries(), minVertex );
             }
             else if( vertex ) {           
@@ -1019,7 +1074,7 @@ GusdPrimWrapper::loadPrimvars(
                 TF_WARN( "Not enough values found for primvar: %s:%s. "
                          "%zd values given for %d faces.", 
                          primPath.c_str(),
-                         primvar.GetBaseName().GetText(),
+                         primvar.GetPrimvarName().GetText(),
                          gtData->entries(), minUniform );
             }
             else if( primitive ) {
@@ -1043,30 +1098,28 @@ GusdPrimWrapper::computeTransform(
         const UT_Matrix4D&          houXform,
         const GusdSimpleXformCache& xformCache ) {
 
-    UsdPrim parent = prim.GetParent();
-
-    // We need the transform into the prims parent space.
-    // If our parent is a group that we have written on this frame, 
+    // We need the transform into the prims space.
+    // If the prim is in a hierarchy that we have written on this frame, 
     // its transform will be in the xformCache. Otherwise, we can read it 
     // from the global cache. 
     //
     // The transform cache is necessary because the gobal cache 
     // will only contain transform that we read from the stage and 
-    // not anything that we have modified. 
+    // not anything that we have modified.
 
-    UT_Matrix4D parentToWorldXform;
-    auto it = xformCache.find( parent.GetPath() );
+    UT_Matrix4D primXform;
+    auto it = xformCache.find( prim.GetPath() );
     if( it != xformCache.end() ) {
-        parentToWorldXform = it->second;
+        primXform = it->second;
     }
     else if( !GusdUSD_XformCache::GetInstance().GetLocalToWorldTransform( 
-                        parent,
+                        prim,
                         time,
-                        parentToWorldXform )) {
-        TF_WARN( "Failed to get transform for %s.", parent.GetPath().GetText() );
-        parentToWorldXform.identity();
+                        primXform )) {
+        TF_WARN( "Failed to get transform for %s.", prim.GetPath().GetText() );
+        primXform.identity();
     }
-    return GusdUT_Gf::Cast( houXform ) / GusdUT_Gf::Cast( parentToWorldXform );
+    return GusdUT_Gf::Cast( houXform ) / GusdUT_Gf::Cast( primXform );
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

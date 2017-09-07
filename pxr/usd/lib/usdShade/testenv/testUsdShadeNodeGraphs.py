@@ -35,7 +35,7 @@ PARAMS = ['ParamOne', 'ParamTwo', 'ParamThree']
 INPUTS = ['InputOne', 'InputTwo', 'InputThree']
 
 class TestUsdShadeNodeGraphs(unittest.TestCase):
-    def _SetupStage(self, createInputs=False):
+    def _SetupStage(self):
         usdStage = Usd.Stage.CreateInMemory()
         self.assertTrue(usdStage)
     
@@ -53,20 +53,12 @@ class TestUsdShadeNodeGraphs(unittest.TestCase):
             shader = UsdShade.Shader.Define(usdStage, shaderPath)
             self.assertTrue(shader)
     
-            if createInputs:
-                shaderInput = shader.CreateInput(paramName, 
-                                                 Sdf.ValueTypeNames.Float)
-            else:
-                shaderInput = shader.CreateParameter(paramName, 
-                                                     Sdf.ValueTypeNames.Float)
+            shaderInput = shader.CreateInput(paramName, 
+                                             Sdf.ValueTypeNames.Float)
             self.assertTrue(shaderInput)
     
-            if createInputs:
-                nodeGraphInput = nodeGraph.CreateInput(inputName, 
-                                                      Sdf.ValueTypeNames.Float)
-            else:
-                nodeGraphInput = nodeGraph.CreateInterfaceAttribute(inputName,
-                    Sdf.ValueTypeNames.Float)
+            nodeGraphInput = nodeGraph.CreateInput(inputName, 
+                                                   Sdf.ValueTypeNames.Float)
             self.assertTrue(nodeGraphInput)
     
             shaderOutput = shader.CreateOutput(outputName, 
@@ -77,32 +69,20 @@ class TestUsdShadeNodeGraphs(unittest.TestCase):
                                                      Sdf.ValueTypeNames.Int)
             self.assertTrue(nodeGraphOutput)
     
-            self.assertTrue(UsdShade.ConnectableAPI.ConnectToSource(nodeGraphOutput, 
-                shaderOutput))
+            self.assertTrue(nodeGraphOutput.ConnectToSource(shaderOutput))
     
-            if createInputs:
-                self.assertTrue(UsdShade.ConnectableAPI.ConnectToSource(shaderInput, 
-                                                                        nodeGraphInput))
-            else:
-                self.assertTrue(shaderInput.ConnectToSource(nodeGraphInput))
-    
+            self.assertTrue(shaderInput.ConnectToSource(nodeGraphInput))
+
         nestedNodeGraph = UsdShade.NodeGraph.Define(usdStage, 
             NESTED_NODEGRAPH_PATH)
         self.assertTrue(nestedNodeGraph)
     
-        if createInputs:
-            nestedNodeGraphInput = nestedNodeGraph.CreateInput("NestedInput", 
-                Sdf.ValueTypeNames.Float)
-        else:
-            nestedNodeGraphInput = nestedNodeGraph.CreateInterfaceAttribute(
-                "NestedInput", Sdf.ValueTypeNames.Float)
+        nestedNodeGraphInput = nestedNodeGraph.CreateInput("NestedInput", 
+            Sdf.ValueTypeNames.Float)
         self.assertTrue(nestedNodeGraphInput)
-        if createInputs: 
-            UsdShade.ConnectableAPI.ConnectToSource(nestedNodeGraphInput,
-                NODEGRAPH_PATH.AppendProperty("inputs:InputTwo"))
-        else:
-            nestedNodeGraphInput.ConnectToSource(NODEGRAPH_PATH.AppendProperty(
-                "interface:InputTwo"))
+
+        nestedNodeGraphInput.ConnectToSource(
+            NODEGRAPH_PATH.AppendProperty("inputs:InputTwo"))
     
         nestedNodeGraphOutput = nestedNodeGraph.CreateOutput("NestedOutput", 
             Sdf.ValueTypeNames.Int)
@@ -111,8 +91,7 @@ class TestUsdShadeNodeGraphs(unittest.TestCase):
         nodeGraphOutputThree = nodeGraph.GetOutput("OutputThree")
         # This should trigger a warning since the source is outside the nested 
         # nodeGraph, but should continue.
-        UsdShade.ConnectableAPI.ConnectToSource(nestedNodeGraphOutput, 
-                                                nodeGraphOutputThree)
+        nestedNodeGraphOutput.ConnectToSource(nodeGraphOutputThree)
     
         return usdStage
     
@@ -143,40 +122,11 @@ class TestUsdShadeNodeGraphs(unittest.TestCase):
         nestedNodeGraphOutputs = nestedNodeGraph.GetOutputs()
         self.assertEqual(len(nestedNodeGraphOutputs), 1)
     
-        nestedOutputSource = UsdShade.ConnectableAPI.GetConnectedSource(
-            nestedNodeGraphOutputs[0])
+        nestedOutputSource = nestedNodeGraphOutputs[0].GetConnectedSource()
     
         self.assertEqual(nestedOutputSource[0].GetPath(), nodeGraph.GetPath())
         self.assertTrue(nestedOutputSource[1] in outputNames)
         self.assertEqual(nestedOutputSource[2], UsdShade.AttributeType.Output)
-    
-    def _TestInterfaceAttributes(self, usdStage):
-        nodeGraph = UsdShade.NodeGraph.Get(usdStage, NODEGRAPH_PATH)
-        nestedNodeGraph = UsdShade.NodeGraph.Get(usdStage, NESTED_NODEGRAPH_PATH)
-        
-        allInterfaceAttrs = nodeGraph.GetInterfaceAttributes('')
-        self.assertEqual(len(allInterfaceAttrs), 3)
-        
-        interfaceAttrNames = {x.GetName() for x in allInterfaceAttrs}
-        self.assertEqual(interfaceAttrNames, set(INPUTS))
-    
-        # Getting all of the interface attributes individually by name should 
-        # be equivalent to getting them all at once with 
-        # GetInterfaceAttributes().
-        interfaceAttrs = {
-            nodeGraph.GetInterfaceAttribute(interfaceAttrName).GetName()
-            for interfaceAttrName in INPUTS}
-        self.assertEqual(interfaceAttrs, {interfaceAttr.GetName() for interfaceAttr 
-                                        in allInterfaceAttrs})
-    
-        # Test interface attr to interface attr connections.
-        nestedInterfaceAttributes = nestedNodeGraph.GetInterfaceAttributes('')
-        self.assertEqual(len(nestedInterfaceAttributes), 1)
-        nestedInterfaceAttrSource = nestedInterfaceAttributes[0].GetConnectedSource()
-        self.assertEqual(nestedInterfaceAttrSource[0].GetPath(), nodeGraph.GetPath())
-        self.assertEqual(nestedInterfaceAttrSource[1], 'InputTwo')
-        self.assertEqual(nestedInterfaceAttrSource[2],
-                    UsdShade.AttributeType.InterfaceAttribute)
     
     def _TestInputs(self, usdStage):
         nodeGraph = UsdShade.NodeGraph.Get(usdStage, NODEGRAPH_PATH)
@@ -188,7 +138,7 @@ class TestUsdShadeNodeGraphs(unittest.TestCase):
         inputNames = {x.GetBaseName() for x in allInputs}
         self.assertEqual(inputNames , set(INPUTS))
     
-        # Getting all of the inputs individually by name should be equivalent to 
+        # Getting all of the inputs indivCreateParameteridually by name should be equivalent to 
         # getting them all at once with GetInputs().
         inputs = {nodeGraph.GetInput(inputName).GetBaseName()
                   for inputName in INPUTS}
@@ -197,8 +147,7 @@ class TestUsdShadeNodeGraphs(unittest.TestCase):
         # Test input to input connections.
         nestedInputs = nestedNodeGraph.GetInputs()
         self.assertEqual(len(nestedInputs), 1)
-        nestedInputSource = UsdShade.ConnectableAPI.GetConnectedSource(
-            nestedInputs[0])
+        nestedInputSource = nestedInputs[0].GetConnectedSource()
         self.assertEqual(nestedInputSource[0].GetPath(), nodeGraph.GetPath())
         self.assertEqual(nestedInputSource[1], 'InputTwo')
         self.assertEqual(nestedInputSource[2], UsdShade.AttributeType.Input)
@@ -219,11 +168,8 @@ class TestUsdShadeNodeGraphs(unittest.TestCase):
         self.assertEqual(len(nestedInputConsumersMap), 1)
 
     def test_Basic(self):
-        stage = self._SetupStage(createInputs=False)
+        stage = self._SetupStage()
         self._TestOutputs(stage)
-        self._TestInterfaceAttributes(stage)
-    
-        stage = self._SetupStage(createInputs=True)
         self._TestInputs(stage)
 
     def test_StaticMethods(self):
@@ -234,15 +180,15 @@ class TestUsdShadeNodeGraphs(unittest.TestCase):
         self.assertFalse(UsdShade.Input.IsInterfaceInputName('paramName'))
         self.assertFalse(UsdShade.Input.IsInterfaceInputName(''))
 
-        stage = self._SetupStage(createInputs=False)
+        stage = self._SetupStage()
         self.assertTrue(UsdShade.Input.IsInput(
             stage.GetPrimAtPath(NODEGRAPH_PATH).GetAttribute(
-                'interface:InputOne')))
+                'inputs:InputOne')))
         self.assertFalse(UsdShade.Input.IsInput(
             stage.GetPrimAtPath(NODEGRAPH_PATH).GetAttribute(
                 'outputs:OutputOne')))
 
-        stage = self._SetupStage(createInputs=True)
+        stage = self._SetupStage()
         self.assertTrue(UsdShade.Input.IsInput(
             stage.GetPrimAtPath(NODEGRAPH_PATH).GetAttribute(
                 'inputs:InputOne')))

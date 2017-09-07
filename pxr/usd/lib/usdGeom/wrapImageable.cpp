@@ -23,10 +23,10 @@
 //
 #include "pxr/usd/usdGeom/imageable.h"
 #include "pxr/usd/usd/schemaBase.h"
-#include "pxr/usd/usd/conversions.h"
 
 #include "pxr/usd/sdf/primSpec.h"
 
+#include "pxr/usd/usd/pyConversions.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include "pxr/base/tf/pyUtils.h"
@@ -160,7 +160,7 @@ WRAP_CUSTOM {
     _class
         .def("CreatePrimvar", &UsdGeomImageable::CreatePrimvar,
              (arg("attrName"), arg("typeName"), arg("interpolation")=TfToken(),
-              arg("elementSize")=-1, arg("custom")=false))
+              arg("elementSize")=-1))
         .def("GetPrimvar", &UsdGeomImageable::GetPrimvar, arg("name"))
         .def("GetPrimvars", &UsdGeomImageable::GetPrimvars,
              return_value_policy<TfPySequenceToList>())

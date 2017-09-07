@@ -28,8 +28,10 @@
 #include "pxr/imaging/hdSt/subdivision.h"
 
 #include "pxr/imaging/hd/bufferArrayRange.h"
+#include "pxr/imaging/hd/bufferArrayRangeGL.h"
 #include "pxr/imaging/hd/bufferResource.h"
 #include "pxr/imaging/hd/meshUtil.h"
+#include "pxr/imaging/hd/patchIndex.h"
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
@@ -121,7 +123,7 @@ public:
 
     virtual HdBufferSourceSharedPtr CreateIndexComputation(
         HdSt_MeshTopology *topology,
-        HdBufferSourceSharedPtr const &osdTopology);
+        HdBufferSourceSharedPtr const &osdTopology) override;
 
     virtual HdBufferSourceSharedPtr CreateRefineComputation(
         HdSt_MeshTopology *topology,
@@ -312,9 +314,12 @@ HdSt_Osd3Subdivision::RefineGPU(HdBufferArrayRangeSharedPtr const &range,
 
     // filling coarse vertices has been done at resource registry.
 
+    HdBufferArrayRangeGLSharedPtr range_ =
+        boost::static_pointer_cast<HdBufferArrayRangeGL> (range);
+
     // vertex buffer wrapper for OpenSubdiv API
     HdSt_OsdRefineComputationGPU::VertexBuffer vertexBuffer(
-        range->GetResource(name));
+        range_->GetResource(name));
 
     // vertex buffer is not interleaved, but aggregated.
     // we need an offset to locate the current range.

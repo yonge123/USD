@@ -33,6 +33,7 @@
 
 #include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/imaging/hd/perfLog.h"
+#include "pxr/imaging/hd/primGather.h"
 #include "pxr/imaging/hd/renderIndex.h"
 #include "pxr/imaging/hd/renderPassState.h"
 #include "pxr/imaging/hd/resourceRegistry.h"
@@ -143,7 +144,7 @@ HdxShadowTask::_Sync(HdTaskContext* ctx)
         _renderPassStates.clear();
 
         HdSceneDelegate* delegate = GetDelegate();
-        const HdRenderIndex &renderIndex = delegate->GetRenderIndex();
+        HdRenderIndex &renderIndex = delegate->GetRenderIndex();
         
         // Extract the HD lights used to render the scene from the 
         // task context, we will use them to find out what
@@ -151,14 +152,18 @@ HdxShadowTask::_Sync(HdTaskContext* ctx)
         // collection for shadows mapping
         
         // XXX: This is inefficient, need to be optimized
-        SdfPathVector sprimPaths = renderIndex.GetSprimSubtree(
-                                                   HdPrimTypeTokens->light,
-                                                   SdfPath::AbsoluteRootPath());
-        SdfPathVector lightPaths =
-            HdxSimpleLightTask::ComputeIncludedLights(
-                sprimPaths,
-                params.lightIncludePaths,
-                params.lightExcludePaths);
+        SdfPathVector lightPaths;
+        if (renderIndex.IsSprimTypeSupported(HdPrimTypeTokens->light)) {
+            SdfPathVector sprimPaths = renderIndex.GetSprimSubtree(
+                HdPrimTypeTokens->light, SdfPath::AbsoluteRootPath());
+
+            HdPrimGather gather;
+
+            gather.Filter(sprimPaths,
+                          params.lightIncludePaths,
+                          params.lightExcludePaths,
+                          &lightPaths);
+        }
         
         HdStLightPtrConstVector lights;
         TF_FOR_ALL (it, lightPaths) {
@@ -173,7 +178,10 @@ HdxShadowTask::_Sync(HdTaskContext* ctx)
         
         GlfSimpleLightVector const glfLights = lightingContext->GetLights();
         
-        TF_VERIFY(lights.size() == glfLights.size());
+        if (!renderIndex.IsSprimTypeSupported(HdPrimTypeTokens->light) ||
+            !TF_VERIFY(lights.size() == glfLights.size())) {
+            return;
+        }
         
         // Iterate through all lights and for those that have
         // shadows enabled we will extract the colection from 
@@ -230,7 +238,8 @@ HdxShadowTask::_Sync(HdTaskContext* ctx)
             shadows->GetProjectionMatrix(passId),
             GfVec4d(0,0,shadows->GetSize()[0],shadows->GetSize()[1]));
 
-        _renderPassStates[passId]->Sync();
+        _renderPassStates[passId]->Sync(
+            GetDelegate()->GetRenderIndex().GetResourceRegistry());
         _passes[passId]->Sync();
     }
 }

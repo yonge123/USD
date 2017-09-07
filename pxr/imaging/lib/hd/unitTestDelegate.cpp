@@ -609,19 +609,6 @@ Hd_UnitTestDelegate::GetSurfaceShaderSource(SdfPath const &shaderId)
 }
 
 /*virtual*/
-TfTokenVector
-Hd_UnitTestDelegate::GetSurfaceShaderParamNames(SdfPath const &shaderId)
-{
-    TfTokenVector names;
-    if (_SurfaceShader *shader = TfMapLookupPtr(_surfaceShaders, shaderId)) {
-        TF_FOR_ALL(paramIt, shader->params) {
-            names.push_back(TfToken(paramIt->GetName()));
-        }
-    }
-    return names;
-}
-
-/*virtual*/
 HdShaderParamVector
 Hd_UnitTestDelegate::GetSurfaceShaderParams(SdfPath const &shaderId)
 {
@@ -905,22 +892,6 @@ Hd_UnitTestDelegate::GetPrimVarInstanceNames(SdfPath const &id)
         names.push_back(_tokens->translate);
     }
     return names;
-}
-
-/*virtual*/
-int
-Hd_UnitTestDelegate::GetPrimVarDataType(SdfPath const& id, TfToken const& key)
-{
-    HD_TRACE_FUNCTION();
-    return 1;
-}
-
-/*virtual*/
-int
-Hd_UnitTestDelegate::GetPrimVarComponents(SdfPath const& id, TfToken const& key)
-{
-    HD_TRACE_FUNCTION();
-    return 1;
 }
 
 void
@@ -1461,19 +1432,19 @@ Hd_UnitTestDelegate::PopulateBasicTestSet()
     // non-quads
     {
         dmat.SetTranslate(GfVec3d(xPos, -3.0, 0.0));
-        AddPolygons(SdfPath("nonquads1"), GfMatrix4f(dmat),
+        AddPolygons(SdfPath("/nonquads1"), GfMatrix4f(dmat),
                              Hd_UnitTestDelegate::CONSTANT);
 
         dmat.SetTranslate(GfVec3d(xPos,  0.0, 0.0));
-        AddPolygons(SdfPath("nonquads2"), GfMatrix4f(dmat),
+        AddPolygons(SdfPath("/nonquads2"), GfMatrix4f(dmat),
                              Hd_UnitTestDelegate::UNIFORM);
 
         dmat.SetTranslate(GfVec3d(xPos,  3.0, 0.0));
-        AddPolygons(SdfPath("nonquads3"), GfMatrix4f(dmat),
+        AddPolygons(SdfPath("/nonquads3"), GfMatrix4f(dmat),
                              Hd_UnitTestDelegate::VERTEX);
 
         dmat.SetTranslate(GfVec3d(xPos,  6.0, 0.0));
-        AddPolygons(SdfPath("nonquads4"), GfMatrix4f(dmat),
+        AddPolygons(SdfPath("/nonquads4"), GfMatrix4f(dmat),
                              Hd_UnitTestDelegate::FACEVARYING);
 
         xPos += 3.0;

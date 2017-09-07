@@ -11,6 +11,13 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/defaults
                       ${CMAKE_SOURCE_DIR}/cmake/macros)
 
 include(Options)
+
+# Versions prior to 3.1.0 on Unix platforms built archive libraries
+# incorrectly.  Require at least that version if necessary.
+if((NOT BUILD_SHARED_LIBS OR PXR_BUILD_MONOLITHIC) AND NOT WIN32)
+    cmake_minimum_required(VERSION 3.1.0)
+endif()
+
 include(ProjectDefaults)
 include(Packages)
 
@@ -31,6 +38,8 @@ set(CMAKE_CXX_FLAGS "${_PXR_CXX_FLAGS} ${CMAKE_CXX_FLAGS}")
 
 include(Public)
 
+pxr_toplevel_prologue()
+
 add_subdirectory(pxr)
 add_subdirectory(extras)
 
@@ -49,7 +58,9 @@ function(_enableThirdPartyPlugin identifier)
 endfunction()
 
 if (${PXR_BUILD_KATANA_PLUGIN})
-    if (NOT ${PXR_BUILD_USD_IMAGING})
+    if(NOT ${PXR_ENABLE_PYTHON_SUPPORT})
+        message(WARNING "Skipping third_party/katana because PXR_ENABLE_PYTHON_SUPPORT=OFF")
+    elseif(NOT ${PXR_BUILD_USD_IMAGING})
         message(WARNING "Skipping third_party/katana because PXR_BUILD_USD_IMAGING=OFF")
     else()
         _enableThirdPartyPlugin("katana")
@@ -57,7 +68,9 @@ if (${PXR_BUILD_KATANA_PLUGIN})
 endif()
 
 if (${PXR_BUILD_MAYA_PLUGIN})
-    if (NOT ${PXR_BUILD_USD_IMAGING})
+    if(NOT ${PXR_ENABLE_PYTHON_SUPPORT})
+        message(WARNING "Skipping third_party/maya because PXR_ENABLE_PYTHON_SUPPORT=OFF")
+    elseif (NOT ${PXR_BUILD_USD_IMAGING})
         message(WARNING "Skipping third_party/maya because PXR_BUILD_USD_IMAGING=OFF")
     else()
         _enableThirdPartyPlugin("maya")
@@ -65,8 +78,12 @@ if (${PXR_BUILD_MAYA_PLUGIN})
 endif()
 
 if (${PXR_BUILD_HOUDINI_PLUGIN})
-    message(STATUS "Enable houdini plugin")
-    _enableThirdPartyPlugin("houdini")
+    if(NOT ${PXR_ENABLE_PYTHON_SUPPORT})
+        message(WARNING "Skipping third_party/houdini because PXR_ENABLE_PYTHON_SUPPORT=OFF")
+    else()
+        message(STATUS "Enable houdini plugin")
+        _enableThirdPartyPlugin("houdini")
+    endif()
 endif()
 
 if (${PXR_BUILD_DOCUMENTATION})                                                  
@@ -114,3 +131,5 @@ if (${PXR_BUILD_DOCUMENTATION})
         DESTINATION ${INST_DOCS_ROOT}
     )
 endif()   
+
+pxr_toplevel_epilogue()

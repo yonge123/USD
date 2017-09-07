@@ -23,10 +23,10 @@
 //
 #include "pxr/usd/usdLux/listAPI.h"
 #include "pxr/usd/usd/schemaBase.h"
-#include "pxr/usd/usd/conversions.h"
 
 #include "pxr/usd/sdf/primSpec.h"
 
+#include "pxr/usd/usd/pyConversions.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include "pxr/base/tf/pyUtils.h"
@@ -50,10 +50,10 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
-_CreateLightListIsValidAttr(UsdLuxListAPI &self,
+_CreateLightListCacheBehaviorAttr(UsdLuxListAPI &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreateLightListIsValidAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
+    return self.CreateLightListCacheBehaviorAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
 }
 
 } // anonymous namespace
@@ -87,10 +87,10 @@ void wrapUsdLuxListAPI()
         .def(!self)
 
         
-        .def("GetLightListIsValidAttr",
-             &This::GetLightListIsValidAttr)
-        .def("CreateLightListIsValidAttr",
-             &_CreateLightListIsValidAttr,
+        .def("GetLightListCacheBehaviorAttr",
+             &This::GetLightListCacheBehaviorAttr)
+        .def("CreateLightListCacheBehaviorAttr",
+             &_CreateLightListCacheBehaviorAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 
@@ -133,11 +133,11 @@ WRAP_CUSTOM {
         .def("ComputeLightList", &UsdLuxListAPI::ComputeLightList)
         .def("StoreLightList", &UsdLuxListAPI::StoreLightList)
         .def("InvalidateLightList", &UsdLuxListAPI::InvalidateLightList)
-        .def("IsLightListValid", &UsdLuxListAPI::IsLightListValid)
+//        .def("IsLightListValid", &UsdLuxListAPI::IsLightListValid)
         ;
 
     scope s = _class;
-    TfPyWrapEnum<UsdLuxListAPI::StoredListBehavior>();
+    TfPyWrapEnum<UsdLuxListAPI::ComputeMode>();
 }
 
 }
