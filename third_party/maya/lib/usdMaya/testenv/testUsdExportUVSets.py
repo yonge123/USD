@@ -169,7 +169,7 @@ class testUsdExportUVSets(unittest.TestCase):
             Gf.Vec2f(0.875, 0.25),
             Gf.Vec2f(0.125, 0),
             Gf.Vec2f(0.125, 0.25),
-            Gf.Vec2f(-1e+30, -1e+30)
+            Gf.Vec2f(-1.234567, -1.234567)
         ]
         expectedIndices = [
             0, 1, 2, 3,
@@ -202,7 +202,7 @@ class testUsdExportUVSets(unittest.TestCase):
             Gf.Vec2f(0.625, 0.5),
             Gf.Vec2f(0.625, 0.75),
             Gf.Vec2f(0.375, 0.75),
-            Gf.Vec2f(-1e+30, -1e+30)
+            Gf.Vec2f(-1.234567, -1.234567)
         ]
         expectedIndices = [
             4, 4, 4, 4,
