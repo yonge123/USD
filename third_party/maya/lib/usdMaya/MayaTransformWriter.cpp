@@ -420,12 +420,17 @@ MayaTransformWriter::MayaTransformWriter(
 {
     auto isInstance = false;
     auto hasTransform = iDag.hasFn(MFn::kTransform);
-    auto setup_merged_shape = [this, &isInstance, &iDag, &hasTransform] () {
+    auto hasOnlyOneShapeBelow = [] (const MDagPath& path) {
+        auto numberOfShapesDirectlyBelow = 0u;
+        path.numberOfShapesDirectlyBelow(numberOfShapesDirectlyBelow);
+        const auto childCount = path.childCount();
+        return numberOfShapesDirectlyBelow == 1 && childCount == 1;
+    };
+
+    auto setup_merged_shape = [this, &isInstance, &iDag, &hasTransform, &hasOnlyOneShapeBelow] () {
         // Use the parent transform if there is only a single shape under the shape's xform
         this->mXformDagPath.pop();
-        auto numberOfShapesDirectlyBelow = 0u;
-        this->mXformDagPath.numberOfShapesDirectlyBelow(numberOfShapesDirectlyBelow);
-        if (numberOfShapesDirectlyBelow == 1) {
+        if (hasOnlyOneShapeBelow(mXformDagPath)) {
             // Use the parent path (xform) instead of the shape path
             this->setUsdPath( getUsdPath().GetParentPath() );
             hasTransform = true;
@@ -448,9 +453,7 @@ MayaTransformWriter::MayaTransformWriter(
         }
     } else if (getArgs().exportInstances) {
         if (hasTransform) {
-            auto numberOfShapesDirectlyBelow = 0u;
-            iDag.numberOfShapesDirectlyBelow(numberOfShapesDirectlyBelow);
-            if (numberOfShapesDirectlyBelow == 1) {
+            if (hasOnlyOneShapeBelow(iDag)) {
                 auto copyDag = iDag;
                 copyDag.extendToShapeDirectlyBelow(0);
                 if (copyDag.isInstanced()) {
@@ -475,9 +478,7 @@ MayaTransformWriter::MayaTransformWriter(
         // Return if has a single shape directly below xform
         if (getArgs().mergeTransformAndShape) {
             if (hasTransform) { // if is an actual transform
-                unsigned int numberOfShapesDirectlyBelow = 0;
-                iDag.numberOfShapesDirectlyBelow(numberOfShapesDirectlyBelow);
-                if (numberOfShapesDirectlyBelow == 1) {
+                if (hasOnlyOneShapeBelow(iDag)) {
                     invalidate_transform();
                 }
             } else { // must be a shape then
@@ -494,6 +495,10 @@ MayaTransformWriter::MayaTransformWriter(
     if (mXformDagPath.isValid()) {
         UsdGeomXform primSchema = UsdGeomXform::Define(getUsdStage(), getUsdPath());
         mUsdPrim = primSchema.GetPrim();
+        if (!mUsdPrim.IsValid()) {
+            setValid(false);
+            return;
+        }
         if (!mIsInstanceSource) {
             if (hasTransform) {
                 MFnTransform transFn(mXformDagPath);
