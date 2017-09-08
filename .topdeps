@@ -33,4 +33,4 @@ tg/simple_features/export_parent_scope
 tg/simple_features/usdview_copy_layer_identifier
 pseudo_root_warning
 ptex_prefer_static
-pr/usdMaya_translatorXformable_use_TfToken
+pr/xformStack
