@@ -1,2 +1,2 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/bugfixes/maya_instances_below_instances
+Subject: [usdMaya] Fixing instancing when instances are below other instances.
