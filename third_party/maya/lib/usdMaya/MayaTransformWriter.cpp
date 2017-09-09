@@ -420,11 +420,32 @@ MayaTransformWriter::MayaTransformWriter(
 {
     auto isInstance = false;
     auto hasTransform = iDag.hasFn(MFn::kTransform);
-    auto hasOnlyOneShapeBelow = [] (const MDagPath& path) {
+    auto hasOnlyOneShapeBelow = [&jobCtx] (const MDagPath& path) {
         auto numberOfShapesDirectlyBelow = 0u;
         path.numberOfShapesDirectlyBelow(numberOfShapesDirectlyBelow);
+        if (numberOfShapesDirectlyBelow != 1) {
+            return false;
+        }
         const auto childCount = path.childCount();
-        return numberOfShapesDirectlyBelow == 1 && childCount == 1;
+        if (childCount == 1) {
+            return true;
+        }
+        // Make sure that the other objects are exportable - ie, still want
+        // to collapse if it has two shapes below, but one of them is an
+        // intermediateObject shape
+        MDagPath childDag(path);
+        auto numExportableChildren = 0u;
+        for (auto i = 0u; i < childCount; ++i) {
+            childDag.push(path.child(i));
+            if (jobCtx.needToTraverse(childDag)) {
+                ++numExportableChildren;
+                if (numExportableChildren > 1) {
+                    return false;
+                }
+            }
+            childDag.pop();
+        }
+        return (numExportableChildren == 1);
     };
 
     auto setup_merged_shape = [this, &isInstance, &iDag, &hasTransform, &hasOnlyOneShapeBelow] () {
