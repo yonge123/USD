@@ -35,6 +35,7 @@
 #include "usdMaya/usdImport.h"
 #include "usdMaya/usdExport.h"
 #include "usdMaya/usdListShadingModes.h"
+#include "usdMaya/usdListUserAttributeWriters.h"
 #include "usdMaya/usdTranslatorImport.h"
 #include "usdMaya/usdTranslatorExport.h"
 #include "usdMaya/usdCacheFormat.h"
@@ -158,6 +159,13 @@ MStatus initializePlugin(
     if (!status) {
         status.perror("registerCommand usdListShadingModes");
     }
+
+    status = plugin.registerCommand("usdListUserAttributeWriters",
+                                    usdListUserAttributeWriters::creator);
+
+    if (!status) {
+        status.perror("registerCommand usdListUserAttributeWriters");
+    }
     
     status = plugin.registerFileTranslator("pxrUsdImport", 
                                     "", 
@@ -216,6 +224,11 @@ MStatus uninitializePlugin(
     status = plugin.deregisterCommand("usdListShadingModes");
     if (!status) {
         status.perror("deregisterCommand usdListShadingModes");
+    }
+
+    status = plugin.deregisterCommand("usdListUserAttributeWriters");
+    if (!status) {
+        status.perror("deregisterCommand usdListUserAttributeWriters");
     }
 
     status = plugin.deregisterFileTranslator("pxrUsdImport");
