@@ -94,7 +94,7 @@ pxr_shared_library(${PXR_PACKAGE}
         MayaNurbsCurveWriter
         MayaNurbsSurfaceWriter
         ModelKindWriter
-        usdListUserAttributeWriters        
+        usdListUserAttributeWriters
 
     PRIVATE_HEADERS
         shadingModePxrRis_rfm_map.h
