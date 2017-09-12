@@ -98,7 +98,7 @@ pxr_shared_library(${PXR_PACKAGE}
         MayaParticleWriter
         MayaInstancerWriter
         ModelKindWriter
-        usdListUserAttributeWriters        
+        usdListUserAttributeWriters
 
     PRIVATE_HEADERS
         shadingModePxrRis_rfm_map.h
