@@ -31,6 +31,7 @@ tg/simple_features/maya_primvar_export
 tg/simple_features/face_varying_in_katana
 tg/simple_features/export_parent_scope
 tg/simple_features/usdview_copy_layer_identifier
+tg/simple_features/maya_user_attribute_writer_plugins
 pseudo_root_warning
 ptex_prefer_static
 pr/usdMaya_translatorXformable_use_TfToken
