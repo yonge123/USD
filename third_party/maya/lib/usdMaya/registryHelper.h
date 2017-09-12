@@ -69,6 +69,19 @@ struct PxrUsdMaya_RegistryHelper
     /// usdMaya will try to load the "mayaPlugin" when shading modes are first accessed.
     static void
         LoadShadingModePlugins();
+
+    /// Searches the plugInfos and looks for UserAttributeWriters.
+    /// 
+    /// "UsdMaya" : {
+    ///     "UserAttributeWriter" : {
+    ///         "mayaPlugin" : "arnoldShaderExporter"
+    ///     }
+    /// }
+    ///
+    /// At that scope, it expects a dictionary with one key: "mayaPlugin".
+    /// usdMaya will try to load the "mayaPlugin" when shading modes are first accessed.
+    static void
+    LoadUserAttributeWriterPlugins();
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
