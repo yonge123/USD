@@ -100,21 +100,6 @@ struct PxrUsdMayaWriteUtil
             const bool translateMayaDoubleToUsdSinglePrecision =
                 PxrUsdMayaUserTaggedAttribute::GetFallbackTranslateMayaDoubleToUsdSinglePrecision());
 
-    /// Given an \p attrPlug, try to create a UsdRi attribute on \p usdPrim with
-    /// the name \p attrName. Note, it's value will not be set.
-    ///
-    /// If \p translateMayaDoubleToUsdSinglePrecision is true, Maya plugs that
-    /// contain double data will result in UsdRi attributes of the appropriate
-    /// float-based type. Otherwise, their type will be double-based.
-    PXRUSDMAYA_API
-    static UsdAttribute GetOrCreateUsdRiAttribute(
-            const MPlug& attrPlug,
-            const UsdPrim& usdPrim,
-            const std::string& attrName,
-            const std::string& nameSpace = "user",
-            const bool translateMayaDoubleToUsdSinglePrecision =
-                PxrUsdMayaUserTaggedAttribute::GetFallbackTranslateMayaDoubleToUsdSinglePrecision());
-
     /// Given an \p attrPlug, determine it's value and set it on \p usdAttr at
     /// \p usdTime.
     ///
