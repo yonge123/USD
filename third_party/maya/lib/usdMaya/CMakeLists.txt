@@ -100,7 +100,6 @@ pxr_shared_library(${PXR_PACKAGE}
         MayaParticleWriter
         MayaInstancerWriter
         ModelKindWriter
-        VdbVisualizerWriter
         usdListUserAttributeWriters
 
     PRIVATE_HEADERS
