@@ -35,7 +35,6 @@
 #include "usdMaya/MayaParticleWriter.h"
 #include "usdMaya/MayaInstancerWriter.h"
 #include "usdMaya/MayaTransformWriter.h"
-#include "usdMaya/VdbVisualizerWriter.h"
 #include "usdMaya/primWriterRegistry.h"
 
 #include <maya/MDagPathArray.h>
@@ -285,14 +284,6 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         MayaImagePlaneWriterPtr primPtr(new MayaImagePlaneWriter(curDag, getUsdPathFromDagPath(curDag, false), *this));
         if (primPtr->isValid()) {
             return primPtr;
-        }
-    } else if (ob.hasFn(MFn::kPluginShape)) {
-        MFnDependencyNode dn(ob);
-        if (dn.typeName() == "vdb_visualizer") {
-            VdbVisualizerWriterPtr primPtr(new VdbVisualizerWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
-            if (primPtr->isValid()) {
-                return primPtr;
-            }
         }
     }
 

@@ -29,8 +29,6 @@
 #include "usdKatana/usdInPluginRegistry.h"
 
 #include "pxr/usd/kind/registry.h"
-#include "pxr/usd/usdAi/aiProcedural.h"
-#include "pxr/usd/usdAi/aiVolume.h"
 #include "pxr/usd/usdGeom/basisCurves.h"
 #include "pxr/usd/usdGeom/camera.h"
 #include "pxr/usd/usdGeom/mesh.h"
@@ -79,8 +77,6 @@ DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_CameraOp)
 DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_ConstraintsOp)
 DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_LooksGroupOp)
 
-DEFINE_GEOLIBOP_PLUGIN(PxrUsdInCore_AiProceduralOp)
-
 DEFINE_ATTRIBUTEFUNCTION_PLUGIN(MaterialReferenceAttrFnc);
 DEFINE_ATTRIBUTEFUNCTION_PLUGIN(LibraryMaterialNamesAttrFnc);
 
@@ -99,8 +95,6 @@ void registerPlugins()
 
     REGISTER_PLUGIN(PxrUsdInCore_ModelOp, "PxrUsdInCore_ModelOp", 0, 1);
     REGISTER_PLUGIN(PxrUsdInCore_CameraOp, "PxrUsdInCore_CameraOp", 0, 1);
-
-    REGISTER_PLUGIN(PxrUsdInCore_AiProceduralOp, "PxrUsdInCore_AiProceduralOp", 0, 1);
 
     REGISTER_PLUGIN(PxrUsdInCore_ConstraintsOp, "UsdInCore_ConstraintsOp", 0, 1);
     REGISTER_PLUGIN(PxrUsdInCore_LooksGroupOp, "UsdInCore_LooksGroupOp", 0, 1);
@@ -132,8 +126,6 @@ void registerPlugins()
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdRiPxrRodLightFilter>("PxrUsdInCore_LightFilterOp");
 
     PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdGeomCamera>("PxrUsdInCore_CameraOp");
-    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdAiProcedural>("PxrUsdInCore_AiProceduralOp");
-    PxrUsdKatanaUsdInPluginRegistry::RegisterUsdType<UsdAiVolume>("PxrUsdInCore_AiProceduralOp");
 
     // register a default op to handle prims with unknown types
     PxrUsdKatanaUsdInPluginRegistry::RegisterUnknownUsdType("PxrUsdInCore_ScopeOp");

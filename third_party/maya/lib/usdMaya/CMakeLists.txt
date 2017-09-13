@@ -14,7 +14,6 @@ pxr_shared_library(${PXR_PACKAGE}
         usdRi
         usdShade
         usdUtils
-        usdAi
         vt
         ${Boost_PYTHON_LIBRARY}
         ${MAYA_Foundation_LIBRARY}
@@ -90,8 +89,6 @@ pxr_shared_library(${PXR_PACKAGE}
 
         UserTaggedAttribute
 
-        ArnoldShaderExport
-
     PRIVATE_CLASSES
         debugCodes
         registryHelper
@@ -103,7 +100,6 @@ pxr_shared_library(${PXR_PACKAGE}
         MayaParticleWriter
         MayaInstancerWriter
         ModelKindWriter
-        VdbVisualizerWriter
         usdListUserAttributeWriters
 
     PRIVATE_HEADERS
