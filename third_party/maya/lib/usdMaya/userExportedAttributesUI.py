@@ -335,10 +335,9 @@ class ExportedAttribute(object):
 
     @staticmethod
     def GetUserAttributeWriters():
-        if ExportedAttribute.userAttributeWriters == None:
-            import types
+        if ExportedAttribute.userAttributeWriters is None:
             r = cmds.usdListUserAttributeWriters()
-            ExportedAttribute.userAttributeWriters = [] if r == None or not isinstance(r, list) else r
+            ExportedAttribute.userAttributeWriters = [] if r is None else r
         return ExportedAttribute.userAttributeWriters
 
     @staticmethod
@@ -658,7 +657,9 @@ class ExportedAttributesView(QTableView):
         self.setAcceptDrops(True)
 
         self.setItemDelegateForColumn(ExportedAttributesModel.USD_ATTR_TYPE_COLUMN,
-            ExportedAttributesViewItemDelegate(USD_ATTR_TYPE_OPTIONS + ExportedAttribute.GetUserAttributeWriters(), self))
+            ExportedAttributesViewItemDelegate(
+                USD_ATTR_TYPE_OPTIONS + ExportedAttribute.GetUserAttributeWriters(),
+                self))
 
         self.setItemDelegateForColumn(ExportedAttributesModel.PRIMVAR_INTERPOLATION_COLUMN,
             ExportedAttributesViewItemDelegate(PRIMVAR_INTERPOLATION_OPTIONS, self))
