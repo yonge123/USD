@@ -47,7 +47,7 @@ TfTokenVector PxrUsdMayaUserAttributeWriterRegistry::_ListWriters() {
     return ret;
 }
 
-void PxrUsdMayaUserAttributeWriterRegistry::_RegisterWriter(
+void PxrUsdMayaUserAttributeWriterRegistry::RegisterWriter(
     const std::string& name,
     const UserAttributeWriter& fn) {
     _writerReg.insert(std::make_pair(TfToken(name), fn));
