@@ -59,9 +59,7 @@ public:
     PXRUSDMAYA_API
     static void RegisterWriter(
         const std::string& name,
-        const UserAttributeWriter& fn) {
-        GetInstance()._RegisterWriter(name, fn);
-    }
+        const UserAttributeWriter& fn);
 
     /// \brief returns a list of available writers.
     static TfTokenVector ListWriters() {
@@ -75,11 +73,6 @@ public:
     }
 private:
     TfTokenVector _ListWriters();
-
-    static void _RegisterWriter(
-        const std::string& name,
-        const UserAttributeWriter& fn);
-
     UserAttributeWriter _GetWriter(const TfToken& name);
     
     PxrUsdMayaUserAttributeWriterRegistry();
