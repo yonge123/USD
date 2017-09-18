@@ -361,8 +361,8 @@ PxrUsdKatanaReadPointInstancer(
     //
     // Validate instancer data.
     //
-
-    const std::string instancerPath = instancer.GetPath().GetString();
+    const auto instancerSdfPath = instancer.GetPath();
+    const std::string instancerPath = instancerSdfPath.GetString();
 
     UsdStageWeakPtr stage = instancer.GetPrim().GetStage();
 
@@ -490,7 +490,6 @@ PxrUsdKatanaReadPointInstancer(
     //
     // Build sources. Keep track of which instances use them.
     //
-
     FnGeolibServices::StaticSceneCreateOpArgsBuilder sourcesBldr(false);
 
     std::vector<int> instanceIndices;
@@ -564,11 +563,11 @@ PxrUsdKatanaReadPointInstancer(
             {
                 SdfPathVector materialPaths;
                 materialBindingsRel.GetForwardedTargets(&materialPaths);
-                for (auto materialPath : materialPaths)
+                for (const auto& materialPath : materialPaths)
                 {
                     const SdfPath &commonPrefix =
                             protoPath.GetCommonPrefix(materialPath);
-                    if (commonPrefix.GetString() == "/")
+                    if (commonPrefix.GetString() == "/" || instancerSdfPath.HasPrefix(commonPrefix))
                     {
                         // XXX Unhandled case.
                         // The prototype prim and its material are not under the
