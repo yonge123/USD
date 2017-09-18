@@ -61,6 +61,7 @@ public:
     SdfPath getMasterPath(const MDagPath& dg);
     PXRUSDMAYA_API
     SdfPath getUsdPath(const MDagPath& dg);
+    bool needToTraverse(const MDagPath& curDag);
 protected:
     PXRUSDMAYA_API
     bool openFile(const std::string& filename, bool append);
