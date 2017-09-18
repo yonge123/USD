@@ -1,2 +1,2 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/bugfixes/katana_instancer_infinite_recursion
+Subject: [PATCH] Fixing infinite recursion when handling usd-arnold exported materials and instancers in katana.
