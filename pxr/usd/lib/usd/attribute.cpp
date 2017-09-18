@@ -373,7 +373,8 @@ UsdAttribute::_GetPathForAuthoring(const SdfPath &path,
 
 
 bool
-UsdAttribute::AppendConnection(const SdfPath& source) const
+UsdAttribute::AddConnection(const SdfPath& source,
+                            UsdListPosition position) const
 {
     std::string errMsg;
     const SdfPath pathToAuthor = _GetPathForAuthoring(source, &errMsg);
@@ -395,11 +396,22 @@ UsdAttribute::AppendConnection(const SdfPath& source) const
     if (!attrSpec)
         return false;
 
-    if (UsdAuthorAppendAsAdd()) {
-        attrSpec->GetConnectionPathList().Add(pathToAuthor);
-    } else {
+    switch (position) {
+    case UsdListPositionFront:
+        attrSpec->GetConnectionPathList().Prepend(pathToAuthor);
+        break;
+    case UsdListPositionBack:
         attrSpec->GetConnectionPathList().Append(pathToAuthor);
+        break;
+    case UsdListPositionTempDefault:
+        if (UsdAuthorOldStyleAdd()) {
+            attrSpec->GetConnectionPathList().Add(pathToAuthor);
+        } else {
+            attrSpec->GetConnectionPathList().Prepend(pathToAuthor);
+        }
+        break;
     }
+
     return true;
 }
 
@@ -478,16 +490,7 @@ UsdAttribute::SetConnections(const SdfPathVector& sources) const
         return false;
 
     attrSpec->GetConnectionPathList().ClearEditsAndMakeExplicit();
-    auto connectionPathList = attrSpec->GetConnectionPathList();
-    if (UsdAuthorAppendAsAdd()) {
-        for (const SdfPath &path: mappedPaths) {
-            connectionPathList.Add(path);
-        }
-    } else {
-        for (const SdfPath &path: mappedPaths) {
-            connectionPathList.Append(path);
-        }
-    }
+    attrSpec->GetConnectionPathList().GetExplicitItems() = mappedPaths;
 
     return true;
 }
