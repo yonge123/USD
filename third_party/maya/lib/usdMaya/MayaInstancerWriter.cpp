@@ -183,7 +183,7 @@ int MayaInstancerWriter::getPathIndex(const MDagPath& path, UsdGeomPointInstance
     auto handlePath = [&] (const SdfPath& usdPath) -> int {
         const int id = static_cast<int>(mRelationships.size());
         mRelationships.emplace(path, id);
-        instancer.GetPrototypesRel().AppendTarget(usdPath);
+        instancer.GetPrototypesRel().AddTarget(usdPath);
         return id;
     };
     const auto it = mRelationships.find(path);
