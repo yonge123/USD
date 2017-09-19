@@ -52,7 +52,7 @@ struct AnimChannel
     XFormOpType opType;
     UsdGeomXformOp::Type usdOpType;
     UsdGeomXformOp::Precision precision;
-    std::string opName;
+    TfToken opName;
     bool isInverse;
 };
 
