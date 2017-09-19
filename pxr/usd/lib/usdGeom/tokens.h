@@ -83,7 +83,6 @@ PXR_NAMESPACE_OPEN_SCOPE
     (extentsHint) \
     (faceSet) \
     (faceVarying) \
-    (faceVaryingInterpolateBoundary) \
     (faceVaryingLinearInterpolation) \
     (faceVertexCounts) \
     (faceVertexIndices) \
@@ -223,7 +222,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \li <b>basis</b> - UsdGeomBasisCurves
 /// \li <b>best</b> - Possible value for UsdGeomImagePlane::GetFitAttr(), Default value for UsdGeomImagePlane::GetFitAttr()
 /// \li <b>bezier</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr(), Default value for UsdGeomBasisCurves::GetBasisAttr()
-/// \li <b>bilinear</b> - Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->all., Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr()
+/// \li <b>bilinear</b> - Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr()
 /// \li <b>boundaries</b> - Possible value for UsdGeomMesh::GetFaceVaryingLinearInterpolationAttr()
 /// \li <b>bspline</b> - Possible value for UsdGeomBasisCurves::GetBasisAttr()
 /// \li <b>camera</b> - UsdGeomImagePlane
@@ -250,14 +249,13 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \li <b>default_</b> - Possible value for UsdGeomImageable::GetPurposeAttr(), Default value for UsdGeomImageable::GetPurposeAttr()
 /// \li <b>depth</b> - UsdGeomImagePlane
 /// \li <b>doubleSided</b> - UsdGeomGprim
-/// \li <b>edgeAndCorner</b> - Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->cornersPlus1, Possible value for UsdGeomMesh::GetInterpolateBoundaryAttr(), Default value for UsdGeomMesh::GetInterpolateBoundaryAttr()
-/// \li <b>edgeOnly</b> - Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->none., Possible value for UsdGeomMesh::GetInterpolateBoundaryAttr()
+/// \li <b>edgeAndCorner</b> - Possible value for UsdGeomMesh::GetInterpolateBoundaryAttr(), Default value for UsdGeomMesh::GetInterpolateBoundaryAttr()
+/// \li <b>edgeOnly</b> - Possible value for UsdGeomMesh::GetInterpolateBoundaryAttr()
 /// \li <b>elementSize</b> - UsdGeomPrimvar - The number of values in the value array that must be aggregated for each element on the  primitive.
 /// \li <b>extent</b> - UsdGeomCone, UsdGeomCapsule, UsdGeomCylinder, UsdGeomSphere, UsdGeomCube, UsdGeomBoundable
 /// \li <b>extentsHint</b> - Name of the attribute used to author extents hints at the root of leaf models. Extents hints are stored by purpose as a vector of GfVec3f values. They are ordered based on the order of purpose tokens returned by  UsdGeomImageable::GetOrderedPurposeTokens.
 /// \li <b>faceSet</b> - This is the namespace prefix used by  UsdGeomFaceSetAPI for authoring faceSet attributes.
 /// \li <b>faceVarying</b> - Possible value for UsdGeomPrimVar::SetInterpolation. For polygons and subdivision surfaces, four values are interpolated over each face of the mesh. Bilinear interpolation  is used for interpolation between the four values.
-/// \li <b>faceVaryingInterpolateBoundary</b> - Legacy token. The modern equivalent is faceVaryingLinearInterpolation.
 /// \li <b>faceVaryingLinearInterpolation</b> - UsdGeomMesh
 /// \li <b>faceVertexCounts</b> - UsdGeomMesh
 /// \li <b>faceVertexIndices</b> - UsdGeomMesh
