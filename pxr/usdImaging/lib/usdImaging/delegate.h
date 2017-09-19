@@ -326,6 +326,8 @@ public:
     USDIMAGING_API
     virtual std::string GetSurfaceShaderSource(SdfPath const &id);
     USDIMAGING_API
+    virtual std::string GetDisplacementShaderSource(SdfPath const &id);
+    USDIMAGING_API
     virtual VtValue GetSurfaceShaderParamValue(SdfPath const &id, 
                                   TfToken const &paramName);
     USDIMAGING_API
@@ -433,7 +435,8 @@ public:
     /// XXX: subtree highlighting with native instancing is not working
     /// correctly right now. Path needs to be a leaf prim or instancer.
     USDIMAGING_API
-    bool PopulateSelection(const SdfPath &path,
+    bool PopulateSelection(HdxSelectionHighlightMode const& highlightMode,
+                           const SdfPath &path,
                            int instanceIndex,
                            HdxSelectionSharedPtr const &result);
 
