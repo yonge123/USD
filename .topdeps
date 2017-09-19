@@ -4,7 +4,6 @@ tg/bugfixes/katana_material_binding_crash_fix
 tg/bugfixes/maya_opposite_attr_fix
 tg/bugfixes/oiio_read_with_asserts
 tg/bugfixes/ubuntu_katana_build_fix
-tg/bugfixes/maya_instances_below_instances
 tg/bugfixes/katana_instancer_infinite_recursion
 tg/maya_particle_cache/initial
 tg/maya_particle/merge_instances
@@ -31,7 +30,6 @@ tg/simple_features/linking_against_houdini_libs
 tg/simple_features/maya_primvar_export
 tg/simple_features/face_varying_in_katana
 tg/simple_features/export_parent_scope
-tg/simple_features/usdview_copy_layer_identifier
 tg/simple_features/maya_user_attribute_writer_plugins
 pseudo_root_warning
 ptex_prefer_static
