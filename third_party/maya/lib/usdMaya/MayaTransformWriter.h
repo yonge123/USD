@@ -90,11 +90,6 @@ private:
     bool mIsShapeAnimated;
     std::vector<AnimChannel> mAnimChanList;
     bool mIsInstanceSource;
-
-    size_t mJointOrientOpIndex[3];
-    size_t mRotateOpIndex[3];
-    size_t mRotateAxisOpIndex[3];
-
 };
 
 typedef std::shared_ptr<MayaTransformWriter> MayaTransformWriterPtr;
