@@ -89,7 +89,9 @@ static void
 computeXFormOps(
         const UsdGeomXformable& usdXformable, 
         const std::vector<AnimChannel>& animChanList, 
-        const UsdTimeCode &usdTime)
+        const UsdTimeCode &usdTime,
+        bool eulerFilter,
+        MayaTransformWriter::TokenRotationMap& previousRotates)
 {
     bool resetsXformStack=false;
     std::vector<UsdGeomXformOp> xformops = usdXformable.GetOrderedXformOps(
@@ -116,12 +118,7 @@ computeXFormOps(
         bool hasAnimated = false, hasStatic = false;
         for (unsigned int i = 0; i<3; i++) {
             if (animChannel.sampleType[i] == ANIMATED) {
-                // NOTE the default value has already been converted to
-                // radians.
-                double chanVal = animChannel.plug[i].asDouble();
-                value[i] = animChannel.opType == ROTATE ? 
-                    GfRadiansToDegrees(chanVal) :
-                    chanVal;
+                value[i] = animChannel.plug[i].asDouble();
                 hasAnimated = true;
             } 
             else if (animChannel.sampleType[i] == STATIC) {
@@ -139,6 +136,40 @@ computeXFormOps(
         // animating ones are actually animating
         if ((usdTime == UsdTimeCode::Default() && hasStatic && !hasAnimated) ||
             (usdTime != UsdTimeCode::Default() && hasAnimated)) {
+
+            if (animChannel.opType == ROTATE) {
+                if (hasAnimated && eulerFilter) {
+                    const TfToken& lookupName = animChannel.opName.IsEmpty() ?
+                            UsdGeomXformOp::GetOpTypeToken(animChannel.usdOpType) :
+                            animChannel.opName;
+                    auto findResult = previousRotates.find(lookupName);
+                    if (findResult == previousRotates.end()) {
+                        MEulerRotation::RotationOrder rotOrder =
+                                PxrUsdMayaXformStack::RotateOrderFromOpType(
+                                        animChannel.usdOpType,
+                                        MEulerRotation::kXYZ);
+                        MEulerRotation currentRotate(value[0], value[1], value[2], rotOrder);
+                        previousRotates[lookupName] = currentRotate;
+                    }
+                    else {
+                        MEulerRotation& previousRotate = findResult->second;
+                        MEulerRotation::RotationOrder rotOrder =
+                                PxrUsdMayaXformStack::RotateOrderFromOpType(
+                                        animChannel.usdOpType,
+                                        previousRotate.order);
+                        MEulerRotation currentRotate(value[0], value[1], value[2], rotOrder);
+                        currentRotate.setToClosestSolution(previousRotate);
+                        for (unsigned int i = 0; i<3; i++) {
+                            value[i] = currentRotate[i];
+                        }
+                        previousRotates[lookupName] = currentRotate;
+                    }
+                }
+                for (unsigned int i = 0; i<3; i++) {
+                    value[i] = GfRadiansToDegrees(value[i]);
+                }
+            }
+
             setXformOp(xformops[channelIdx], value, usdTime);
         }
     }
@@ -153,7 +184,7 @@ static bool
 _GatherAnimChannel(
         XFormOpType opType, 
         const MFnTransform& iTrans, 
-        TfToken parentName,
+        const TfToken& parentName,
         MString xName, MString yName, MString zName, 
         std::vector<AnimChannel>* oAnimChanList, 
         bool isWritingAnimation,
@@ -191,7 +222,7 @@ _GatherAnimChannel(
         // won't be updated if the channel is NOT ANIMATED
         chan.plug[i] = iTrans.findPlug(channels[i]);
         double plugValue = chan.plug[i].asDouble();
-        chan.defValue[i] = opType == ROTATE ? GfRadiansToDegrees(plugValue) : plugValue;
+        chan.defValue[i] = plugValue;
         chan.sampleType[i] = NO_XFORM;
         // If we allow animation and either the parentsample or local sample is
         // not 0 then we havea ANIMATED sample else we have a scale and the
@@ -541,8 +572,8 @@ bool MayaTransformWriter::writeTransformAttrs(
     // Write parent class attrs
     writePrimAttrs(mXformDagPath, usdTime, xformSchema); // for the shape
 
-    // can this use xformSchema instead?  do we even need _usdXform?
-    computeXFormOps(xformSchema, mAnimChanList, usdTime);
+    computeXFormOps(xformSchema, mAnimChanList, usdTime, getArgs().eulerFilter,
+            previousRotates);
     return true;
 }
 

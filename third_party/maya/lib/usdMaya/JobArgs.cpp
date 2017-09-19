@@ -48,6 +48,7 @@ JobExportArgs::JobExportArgs()
         mergeTransformAndShape(true),
         exportInstances(true),
         exportAnimation(false),
+        eulerFilter(false),
         excludeInvisible(false),
         exportDefaultCameras(false),
         exportMeshUVs(true),
