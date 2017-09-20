@@ -77,6 +77,7 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-fr" , "-frameRange"   , MSyntax::kDouble, MSyntax::kDouble);
     syntax.addFlag("-pr" , "-preRoll"   , MSyntax::kDouble);
     syntax.addFlag("-fs" , "-frameSample", MSyntax::kDouble);
+    syntax.addFlag("-ef" , "-eulerFilter", MSyntax::kBoolean);
     syntax.makeFlagMultiUse("-frameSample");
 
     syntax.addFlag("-ro"  , "-renderableOnly", MSyntax::kNoArg);
@@ -294,6 +295,10 @@ try
         jobArgs.exportAnimation=true;
     } else {
         jobArgs.exportAnimation=false;
+    }
+
+    if (argData.isFlagSet("eulerFilter")) {
+        argData.getFlagArgument("eulerFilter", 0, jobArgs.eulerFilter);
     }
 
     if (argData.isFlagSet("preRoll")) {
