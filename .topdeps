@@ -33,4 +33,4 @@ tg/simple_features/export_parent_scope
 tg/simple_features/maya_user_attribute_writer_plugins
 pseudo_root_warning
 ptex_prefer_static
-pr/xformStack
+pr/eulerFilter
