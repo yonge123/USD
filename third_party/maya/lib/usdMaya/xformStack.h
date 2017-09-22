@@ -132,6 +132,38 @@ public:
             TokenPtrPairMap;
     typedef std::unordered_map<size_t, size_t> IndexMap;
 
+    // Templated because we want it to work with both MEulerRotation::RotationOrder
+    // and MTransformationMatrix::RotationOrder
+    template<typename RotationOrder>
+    static RotationOrder RotateOrderFromOpType(
+            UsdGeomXformOp::Type opType,
+            RotationOrder defaultRotOrder=RotationOrder::kXYZ)
+    {
+        switch(opType) {
+            case UsdGeomXformOp::TypeRotateXYZ:
+                return  RotationOrder::kXYZ;
+            break;
+            case UsdGeomXformOp::TypeRotateXZY:
+                return  RotationOrder::kXZY;
+            break;
+            case UsdGeomXformOp::TypeRotateYXZ:
+                return  RotationOrder::kYXZ;
+            break;
+            case UsdGeomXformOp::TypeRotateYZX:
+                return  RotationOrder::kYZX;
+            break;
+            case UsdGeomXformOp::TypeRotateZXY:
+                return  RotationOrder::kZXY;
+            break;
+            case UsdGeomXformOp::TypeRotateZYX:
+                return  RotationOrder::kZYX;
+            break;
+            default:
+                return defaultRotOrder;
+            break;
+        }
+    }
+
     PXRUSDMAYA_API
     const std::vector<PxrUsdMayaXformOpClassification>& GetOps() const {
         return _ops;
