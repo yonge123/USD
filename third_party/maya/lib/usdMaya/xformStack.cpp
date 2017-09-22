@@ -410,28 +410,7 @@ PxrUsdMayaXformStack::MatchingSubstack(
         // this op)
         if (foundOp->GetName() == PxrUsdMayaXformStackTokens->rotate
                 && MrotOrder) {
-            switch(xformOp.GetOpType()) {
-                case UsdGeomXformOp::TypeRotateXYZ:
-                    *MrotOrder = MTransformationMatrix::kXYZ;
-                break;
-                case UsdGeomXformOp::TypeRotateXZY:
-                    *MrotOrder = MTransformationMatrix::kXZY;
-                break;
-                case UsdGeomXformOp::TypeRotateYXZ:
-                    *MrotOrder = MTransformationMatrix::kYXZ;
-                break;
-                case UsdGeomXformOp::TypeRotateYZX:
-                    *MrotOrder = MTransformationMatrix::kYZX;
-                break;
-                case UsdGeomXformOp::TypeRotateZXY:
-                    *MrotOrder = MTransformationMatrix::kZXY;
-                break;
-                case UsdGeomXformOp::TypeRotateZYX:
-                    *MrotOrder = MTransformationMatrix::kZYX;
-                break;
-
-                default: break;
-            }
+            *MrotOrder = RotateOrderFromOpType(xformOp.GetOpType(), *MrotOrder);
         }
 
         // move the nextOp pointer along.

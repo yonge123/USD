@@ -151,6 +151,9 @@ usdTranslatorExport::writer(const MFileObject &file,
             if (theOption[0] == MString("animation")) {
                 jobArgs.exportAnimation = theOption[1].asInt();
             }
+            if (theOption[0] == MString("eulerFilter")) {
+                jobArgs.exportAnimation = theOption[1].asInt();
+            }
             if (theOption[0] == MString("startTime")) {
                 startTime = theOption[1].asDouble();
             }
