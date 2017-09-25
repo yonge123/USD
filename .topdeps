@@ -5,6 +5,7 @@ tg/bugfixes/maya_opposite_attr_fix
 tg/bugfixes/oiio_read_with_asserts
 tg/bugfixes/ubuntu_katana_build_fix
 tg/bugfixes/katana_instancer_infinite_recursion
+tg/bugfixes/katana_testsuite_precision
 tg/maya_particle_cache/initial
 tg/maya_particle/merge_instances
 tg/maya_instancer/initial
