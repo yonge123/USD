@@ -33,8 +33,8 @@ TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaXformStackTokens,
         PXRUSDMAYA_XFORM_STACK_TOKENS);
 
 typedef PxrUsdMayaXformStack::OpClassList OpClassList;
-typedef PxrUsdMayaXformStack::OpClassConstPtr OpClassConstPtr;
-typedef PxrUsdMayaXformStack::OpClassConstPtrPair OpClassConstPtrPair;
+typedef PxrUsdMayaXformStack::OpClassPtr OpClassPtr;
+typedef PxrUsdMayaXformStack::OpClassPtrPair OpClassPtrPair;
 typedef PxrUsdMayaXformStack::TokenPtrPairMap TokenPtrPairMap;
 typedef PxrUsdMayaXformStack::IndexMap IndexMap;
 
@@ -90,9 +90,9 @@ namespace {
     // pointers, which is:
     //    {opPtr, nullptr}    if opPtr does not have an inverted twin
     //    {opPtr, opPtrTwin}  if opPtr does have an inverted twin
-    OpClassConstPtrPair
+    OpClassPtrPair
     _makeInversionPtrPair(
-            const OpClassConstPtr opPtr,
+            const OpClassPtr opPtr,
             const OpClassList& ops,
             const IndexMap& inversionMap)
     {
@@ -103,7 +103,7 @@ namespace {
         }
         else
         {
-            OpClassConstPtr twinOpPtr = &ops[foundTwin->second];
+            OpClassPtr twinOpPtr = &ops[foundTwin->second];
             if (twinOpPtr >= opPtr)
             {
                 return std::make_pair(opPtr, twinOpPtr);
@@ -297,10 +297,10 @@ PxrUsdMayaXformStack::PxrUsdMayaXformStack(
     }
 }
 
-OpClassConstPtr
+OpClassPtr
 PxrUsdMayaXformStack::FindOp(const TfToken& opName, bool isInvertedTwin) const
 {
-    const OpClassConstPtrPair& foundPtrPair = FindOpPair(opName);
+    const OpClassPtrPair& foundPtrPair = FindOpPair(opName);
 
     if(foundPtrPair.first == nullptr) return nullptr;
 
@@ -319,10 +319,10 @@ PxrUsdMayaXformStack::FindOp(const TfToken& opName, bool isInvertedTwin) const
     }
 }
 
-const OpClassConstPtrPair&
+const OpClassPtrPair&
 PxrUsdMayaXformStack::FindOpPair(const TfToken& opName) const
 {
-    static OpClassConstPtrPair _NO_MATCH(nullptr, nullptr);
+    static OpClassPtrPair _NO_MATCH(nullptr, nullptr);
 
     TokenPtrPairMap::const_iterator foundTokenPtrPair =
             _opNamesToPtrs.find(opName);
@@ -334,16 +334,16 @@ PxrUsdMayaXformStack::FindOpPair(const TfToken& opName) const
     return foundTokenPtrPair->second;
 }
 
-std::vector<OpClassConstPtr>
+std::vector<OpClassPtr>
 PxrUsdMayaXformStack::MatchingSubstack(
         const std::vector<UsdGeomXformOp>& xformops,
         MTransformationMatrix::RotationOrder* MrotOrder) const
 {
-    static const std::vector<OpClassConstPtr> _NO_MATCH;
+    static const std::vector<OpClassPtr> _NO_MATCH;
 
     if (xformops.empty()) return _NO_MATCH;
 
-    std::vector<OpClassConstPtr> ret;
+    std::vector<OpClassPtr> ret;
 
     // nextOp keeps track of where we will start looking for matches.  It
     // will only move forward.
@@ -353,7 +353,7 @@ PxrUsdMayaXformStack::MatchingSubstack(
 
     TF_FOR_ALL(iter, xformops) {
         const UsdGeomXformOp& xformOp = *iter;
-        OpClassConstPtr foundOp = nullptr;
+        OpClassPtr foundOp = nullptr;
 
         if(_nameMatters) {
             // First try the fast attrName lookup...
@@ -367,7 +367,7 @@ PxrUsdMayaXformStack::MatchingSubstack(
 
             // we found a pair of opPtrs... make sure one is
             // not less than nextOp...
-            const OpClassConstPtrPair& foundPtrPair = foundTokenPtrPair->second;
+            const OpClassPtrPair& foundPtrPair = foundTokenPtrPair->second;
 
             if (foundPtrPair.first >= &(*nextOp))
             {

@@ -126,9 +126,9 @@ public:
     // If at some point this changes, and we allow user-created OpClassifications, we
     // may consider using reference-counted pointers (though that will have a small
     // extra cost.)
-    typedef const PxrUsdMayaXformOpClassification* OpClassConstPtr;
-    typedef std::pair<OpClassConstPtr, OpClassConstPtr> OpClassConstPtrPair;
-    typedef std::unordered_map<TfToken, OpClassConstPtrPair, TfToken::HashFunctor>
+    typedef const PxrUsdMayaXformOpClassification* OpClassPtr;
+    typedef std::pair<OpClassPtr, OpClassPtr> OpClassPtrPair;
+    typedef std::unordered_map<TfToken, OpClassPtrPair, TfToken::HashFunctor>
             TokenPtrPairMap;
     typedef std::unordered_map<size_t, size_t> IndexMap;
 
@@ -160,7 +160,7 @@ public:
     /// return  Pointer to the op classification object with the given name (and
     ///         inverted twin state); will be nullptr if no match could be found.
     PXRUSDMAYA_API
-    OpClassConstPtr FindOp(const TfToken& opName, bool isInvertedTwin=false) const;
+    OpClassPtr FindOp(const TfToken& opName, bool isInvertedTwin=false) const;
 
     /// \brief  Finds the Op Classification(s) with the given name in this stack
     /// \param  opName the name of the operator classification we  wish to find
@@ -171,7 +171,7 @@ public:
     ///         to the found classification, and the second will be null.  If
     ///         no matches are found, both pointers will be nullptr.
     PXRUSDMAYA_API
-    const OpClassConstPtrPair& FindOpPair(const TfToken& opName) const;
+    const OpClassPtrPair& FindOpPair(const TfToken& opName) const;
 
     /// \brief Returns a list of pointers to matching XformOpDefinitions for this stack
     ///
@@ -185,7 +185,7 @@ public:
     /// stack. The size of this vector will be 0 if no complete match is found,
     /// or xformops.size() if a complete match is found.
     PXRUSDMAYA_API
-    std::vector<OpClassConstPtr>
+    std::vector<OpClassPtr>
     MatchingSubstack(
             const std::vector<UsdGeomXformOp>& xformops,
             MTransformationMatrix::RotationOrder* MrotOrder=nullptr) const;
@@ -230,12 +230,12 @@ public:
 
     /// \brief dummy recursion endpoint for FirstMatchingSubstack variadic template
     PXRUSDMAYA_API
-    inline static std::vector<OpClassConstPtr>
+    inline static std::vector<OpClassPtr>
     FirstMatchingSubstack(
             const std::vector<UsdGeomXformOp>& xformops,
             MTransformationMatrix::RotationOrder* MrotOrder=nullptr)
     {
-        return std::vector<OpClassConstPtr>();
+        return std::vector<OpClassPtr>();
     }
 
     /// \brief Runs MatchingSubstack against the given list of stacks
@@ -243,16 +243,16 @@ public:
     /// Returns the first non-empty result it finds; if all stacks
     /// return an empty vector, an empty vector is returned.
     template<typename... RemainingTypes>
-    static std::vector<OpClassConstPtr>
+    static std::vector<OpClassPtr>
     FirstMatchingSubstack(
             const std::vector<UsdGeomXformOp>& xformops,
             MTransformationMatrix::RotationOrder* MrotOrder,
             const PxrUsdMayaXformStack& firstStack,
             RemainingTypes&... otherStacks)
     {
-        if (xformops.empty()) return std::vector<OpClassConstPtr>();
+        if (xformops.empty()) return std::vector<OpClassPtr>();
 
-        std::vector<PxrUsdMayaXformStack::OpClassConstPtr> stackOps = \
+        std::vector<PxrUsdMayaXformStack::OpClassPtr> stackOps = \
                 firstStack.MatchingSubstack(xformops, MrotOrder);
         if (!stackOps.empty())
         {
