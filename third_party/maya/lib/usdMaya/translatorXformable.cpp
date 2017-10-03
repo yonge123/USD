@@ -390,7 +390,7 @@ PxrUsdMayaTranslatorXformable::Read(
     // different name or out of order that will miss the match, we will rely on
     // matrix decomposition
 
-    std::vector<PxrUsdMayaXformStack::OpClassConstPtr> stackOps = \
+    std::vector<PxrUsdMayaXformStack::OpClassPtr> stackOps = \
             PxrUsdMayaXformStack::FirstMatchingSubstack(
                      xformops, &MrotOrder,
                      PxrUsdMayaXformStack::MayaStack(),
