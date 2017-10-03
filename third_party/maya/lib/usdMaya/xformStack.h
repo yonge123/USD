@@ -26,11 +26,13 @@
 
 #include "pxr/pxr.h"
 #include "usdMaya/api.h"
+#include "pxr/base/tf/declarePtrs.h"
 #include "pxr/base/tf/token.h"
 #include "pxr/usd/usdGeom/xformOp.h"
 
 #include <maya/MTransformationMatrix.h>
 
+#include <limits>
 #include <vector>
 #include <unordered_map>
 
@@ -66,7 +68,7 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaXformStackTokens,
 /// Similar to UsdGeomXformOp, but without a specific attribute;
 /// UsdGeomXformOps can be thought of as "instances" of a
 /// PxrUsdMayaXformOpDefinition "type"
-class PxrUsdMayaXformOpClassification
+class PxrUsdMayaXformOpClassification : public TfWeakBase
 {
 public:
     PXRUSDMAYA_API
@@ -98,9 +100,6 @@ public:
 
     friend class PxrUsdMayaXformStack;
 private:
-    // Private because we currently want the only instances of this class to
-    // be stored in MayaStack and CommonStack, defined at compile
-    // time
     PxrUsdMayaXformOpClassification(const TfToken &name,
                                        UsdGeomXformOp::Type opType,
                                        bool isInvertedTwin=false);
@@ -109,6 +108,8 @@ private:
     const UsdGeomXformOp::Type _opType;
     const bool _isInvertedTwin;
 };
+
+TF_DECLARE_WEAK_PTRS(PxrUsdMayaXformOpClassification);
 
 /// \class PxrUsdMayaXformStack
 /// \brief Defines a standard list of xform operations.
@@ -120,17 +121,19 @@ class PxrUsdMayaXformStack
 public:
     typedef std::vector<PxrUsdMayaXformOpClassification> OpClassList;
 
-    // Note that OpClassPtr is a raw, non-reference-counted pointer; this should be fine,
-    // as all PxrUsdMayaXformOpClassification are statically created, and should never
-    // be deleted, so we don't need to worry about pointers to them going out of scope.
-    // If at some point this changes, and we allow user-created OpClassifications, we
-    // may consider using reference-counted pointers (though that will have a small
-    // extra cost.)
-    typedef const PxrUsdMayaXformOpClassification* OpClassConstPtr;
-    typedef std::pair<OpClassConstPtr, OpClassConstPtr> OpClassConstPtrPair;
-    typedef std::unordered_map<TfToken, OpClassConstPtrPair, TfToken::HashFunctor>
-            TokenPtrPairMap;
+    // For some external functions, we return weak ptrs, for convenience / safety...
+    typedef PxrUsdMayaXformOpClassificationConstPtr OpClassPtr;
+    typedef std::pair<OpClassPtr, OpClassPtr> OpClassPtrPair;
+
+
+    // Internally, we use indices, instead of weak ptrs, for speed...
+    // should be safe, since _ops is const.
+    static constexpr size_t NO_INDEX = std::numeric_limits<size_t>::max();
+    typedef std::pair<size_t, size_t> IndexPair;
+    typedef std::unordered_map<TfToken, IndexPair, TfToken::HashFunctor>
+            TokenIndexPairMap;
     typedef std::unordered_map<size_t, size_t> IndexMap;
+
 
     // Templated because we want it to work with both MEulerRotation::RotationOrder
     // and MTransformationMatrix::RotationOrder
@@ -164,6 +167,11 @@ public:
         }
     }
 
+    // Don't want to accidentally make a copy, since the only instances are supposed
+    // to be static!
+    explicit PxrUsdMayaXformStack(const PxrUsdMayaXformStack& other) = default;
+    explicit PxrUsdMayaXformStack(PxrUsdMayaXformStack&& other) = default;
+
     PXRUSDMAYA_API
     const std::vector<PxrUsdMayaXformOpClassification>& GetOps() const {
         return _ops;
@@ -184,6 +192,22 @@ public:
         return _ops[index];
     }
 
+    PXRUSDMAYA_API
+    size_t GetSize() const {
+        return _ops.size();
+    }
+
+
+    /// \brief  Finds the index of the Op Classification with the given name in this stack
+    /// \param  opName the name of the operator classification we  wish to find
+    /// \param  isInvertedTwin the returned op classification object must match
+    ///         this param for it's IsInvertedTwin() - if an op is found that matches
+    ///         the name, but has the wrong invertedTwin status, nullptr is returned
+    /// return  Undex to the op classification object with the given name (and
+    ///         inverted twin state); will be NO_INDEX if no match could be found.
+    PXRUSDMAYA_API
+    size_t FindOpIndex(const TfToken& opName, bool isInvertedTwin=false) const;
+
     /// \brief  Finds the Op Classification with the given name in this stack
     /// \param  opName the name of the operator classification we  wish to find
     /// \param  isInvertedTwin the returned op classification object must match
@@ -192,7 +216,18 @@ public:
     /// return  Pointer to the op classification object with the given name (and
     ///         inverted twin state); will be nullptr if no match could be found.
     PXRUSDMAYA_API
-    OpClassConstPtr FindOp(const TfToken& opName, bool isInvertedTwin=false) const;
+    OpClassPtr FindOp(const TfToken& opName, bool isInvertedTwin=false) const;
+
+    /// \brief  Finds the indices of Op Classification(s) with the given name in this stack
+    /// \param  opName the name of the operator classification we  wish to find
+    /// return  A pair of indices to op classification objects with the given name;
+    ///         if the objects are part of an inverted twin pair, then both are
+    ///         returned (in the order they appear in this stack). If found, but
+    ///         not as part of an inverted twin pair, the first result will point
+    ///         to the found classification, and the second will be NO_INDEX.  If
+    ///         no matches are found, both will be NO_INDEX.
+    PXRUSDMAYA_API
+    const IndexPair& FindOpIndexPair(const TfToken& opName) const;
 
     /// \brief  Finds the Op Classification(s) with the given name in this stack
     /// \param  opName the name of the operator classification we  wish to find
@@ -203,7 +238,7 @@ public:
     ///         to the found classification, and the second will be null.  If
     ///         no matches are found, both pointers will be nullptr.
     PXRUSDMAYA_API
-    const OpClassConstPtrPair& FindOpPair(const TfToken& opName) const;
+    const OpClassPtrPair FindOpPair(const TfToken& opName) const;
 
     /// \brief Returns a list of pointers to matching XformOpDefinitions for this stack
     ///
@@ -217,7 +252,7 @@ public:
     /// stack. The size of this vector will be 0 if no complete match is found,
     /// or xformops.size() if a complete match is found.
     PXRUSDMAYA_API
-    std::vector<OpClassConstPtr>
+    std::vector<OpClassPtr>
     MatchingSubstack(
             const std::vector<UsdGeomXformOp>& xformops,
             MTransformationMatrix::RotationOrder* MrotOrder=nullptr) const;
@@ -262,29 +297,36 @@ public:
 
     /// \brief dummy recursion endpoint for FirstMatchingSubstack variadic template
     PXRUSDMAYA_API
-    inline static std::vector<OpClassConstPtr>
+    inline static std::vector<OpClassPtr>
     FirstMatchingSubstack(
             const std::vector<UsdGeomXformOp>& xformops,
             MTransformationMatrix::RotationOrder* MrotOrder=nullptr)
     {
-        return std::vector<OpClassConstPtr>();
+        return std::vector<OpClassPtr>();
     }
 
-    /// \brief Runs MatchingSubstack against the given list of stacks
+   /// \brief Runs MatchingSubstack against the given list of stacks
     ///
     /// Returns the first non-empty result it finds; if all stacks
     /// return an empty vector, an empty vector is returned.
     template<typename... RemainingTypes>
-    static std::vector<OpClassConstPtr>
+    static std::vector<OpClassPtr>
     FirstMatchingSubstack(
             const std::vector<UsdGeomXformOp>& xformops,
             MTransformationMatrix::RotationOrder* MrotOrder,
             const PxrUsdMayaXformStack& firstStack,
             RemainingTypes&... otherStacks)
     {
-        if (xformops.empty()) return std::vector<OpClassConstPtr>();
+        // WARNING: this logic is currently duplicated in wrapXformStack.cpp,
+        // Usd_PyXformStack::FirstMatchingSubstack, because it was much
+        // simpler / readable than using variadic templates to convert a
+        // python tuple into variadic arguments. Should be ok because the
+        // logic is currently so simple. If this logic changes, either change it
+        // in both places, or modify the python wrapper to call the variadic
+        // template function directly.
+        if (xformops.empty()) return std::vector<OpClassPtr>();
 
-        std::vector<PxrUsdMayaXformStack::OpClassConstPtr> stackOps = \
+        std::vector<PxrUsdMayaXformStack::OpClassPtr> stackOps = \
                 firstStack.MatchingSubstack(xformops, MrotOrder);
         if (!stackOps.empty())
         {
@@ -294,38 +336,46 @@ public:
     }
 
 private:
-    // Private because we currently want the only instances of this class to
-    // be const static members, MayaStack and CommonStack, defined at compile
-    // time
     PxrUsdMayaXformStack(
             const OpClassList ops,
             const std::vector<std::pair<size_t, size_t> > inversionTwins,
             bool nameMatters=true);
 
-    // Don't want to accidentally make a copy, since the only instances are supposed
-    // to be static!
-    PxrUsdMayaXformStack(const PxrUsdMayaXformStack& other) = delete;
 
-    OpClassList _ops;
-    std::vector<std::pair<size_t, size_t> > _inversionTwins;
+    const OpClassList _ops;
+    std::vector<IndexPair> _inversionTwins;
     IndexMap _inversionMap;
+
+    inline OpClassPtr _MakePtrFromIndex(
+            const size_t i) const
+    {
+        return i == NO_INDEX ? OpClassPtr(nullptr) : OpClassPtr(&_ops[i]);
+    }
+
+    inline OpClassPtrPair _MakePtrPairFromIndexPair(
+            const IndexPair& indexPair) const
+    {
+        return std::make_pair(
+                _MakePtrFromIndex(indexPair.first),
+                _MakePtrFromIndex(indexPair.second));
+    }
 
     // We store lookups from raw attribute name - use full attribute
     // name because it's the only "piece" we know we have a pre-generated
     // TfToken for - even Property::GetBaseName() generates a new TfToken
     // "on the fly".
-    // The lookup maps to a PAIR of pointers into the ops list;
+    // The lookup maps to a PAIR of indices into the ops list;
     // we return a pair because, due to inversion twins, it's possible
     // for there to be two (but there should be only two!) ops with
     // the same name - ie, if they're inversion twins. Thus, each pair
-    // of ptrs will either be:
-    //     { opPtr, nullptr }      if opPtr has no inversion twin
-    // or
-    //     { opPtr, opPtrTwin }    if opPtr has an inversion twin
-    TokenPtrPairMap _attrNamesToPtrs;
+    // of indices will either be:
+    //     { opIndex, NO_INDEX }     if opIndex has no inversion twin
+    //     { opIndex, opIndexTwin }  if opIndex has an inversion twin, and opIndex < opIndexTwin
+    //     { opIndexTwin, opIndex }  if opIndex has an inversion twin, and opIndex > opIndexTwin
+    TokenIndexPairMap _attrNamesToIdxs;
 
     // Also have a lookup by op name, for use by FindOp
-    TokenPtrPairMap _opNamesToPtrs;
+    TokenIndexPairMap _opNamesToIdxs;
 
     bool _nameMatters = true;
 };
