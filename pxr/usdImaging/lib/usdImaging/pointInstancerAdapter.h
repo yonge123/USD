@@ -60,15 +60,13 @@ public:
     
     virtual void TrackVariabilityPrep(UsdPrim const& prim,
                                       SdfPath const& cachePath,
-                                      HdDirtyBits requestedBits,
                                       UsdImagingInstancerContext const* 
                                           instancerContext = NULL);
 
     /// Thread Safe.
     virtual void TrackVariability(UsdPrim const& prim,
                                   SdfPath const& cachePath,
-                                  HdDirtyBits requestedBits,
-                                  HdDirtyBits* dirtyBits,
+                                  HdDirtyBits* timeVaryingBits,
                                   UsdImagingInstancerContext const* 
                                       instancerContext = NULL);
 
@@ -134,9 +132,11 @@ public:
     // ---------------------------------------------------------------------- //
     /// \name Selection
     // ---------------------------------------------------------------------- //
-    virtual bool PopulateSelection(SdfPath const &path,
-                                   VtIntArray const &instanceIndices,
-                                   HdxSelectionSharedPtr const &result);
+    virtual bool PopulateSelection(
+                                HdxSelectionHighlightMode const& highlightMode,
+                                SdfPath const &path,
+                                VtIntArray const &instanceIndices,
+                                HdxSelectionSharedPtr const &result);
 
     // ---------------------------------------------------------------------- //
     /// \name Utilities 
@@ -286,6 +286,7 @@ private:
     // technically be split out to avoid two lookups, however it seems cleaner
     // to keep everything bundled up under the instancer path.
     struct _InstancerData {
+        _InstancerData() : initialized(false) {}
         SdfPath parentInstancerPath;
         _ProtoRPrimMap protoRprimMap;
         _UsdToCacheMap usdToCacheMap;
@@ -293,6 +294,7 @@ private:
         std::mutex mutex;
         HdDirtyBits dirtyBits;
         bool visible;
+        bool initialized;
     };
 
     // A map of instancer data, one entry per instancer prim that has been
