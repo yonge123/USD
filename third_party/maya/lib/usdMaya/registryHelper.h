@@ -69,7 +69,6 @@ struct PxrUsdMaya_RegistryHelper
     /// usdMaya will try to load the "mayaPlugin" when shading modes are first accessed.
     static void
         LoadShadingModePlugins();
-<<<<<<< tg/luma/pull_requests base
 
     /// Searches the plugInfos and looks for UserAttributeWriters.
     /// 
@@ -83,8 +82,6 @@ struct PxrUsdMaya_RegistryHelper
     /// usdMaya will try to load the "mayaPlugin" when shading modes are first accessed.
     static void
     LoadUserAttributeWriterPlugins();
-=======
->>>>>>> tg/ar_resolver_fixes/maya_usdImport
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
