@@ -464,7 +464,7 @@ Arch_MapFileImpl(FILE *file, std::string *errMsg)
                       /*offsetHigh=*/ 0, /*offsetLow=*/0, unsignedLength));
     // Close the mapping handle, and return the view pointer.
     CloseHandle(hFileMap);
-    return Mapping(ptr, Arch_Unmapper());
+    return Mapping(ptr, Arch_Unmapper(length));
 #else // Assume POSIX
     auto m = mmap(nullptr, length,
                   isConst ? PROT_READ : PROT_READ | PROT_WRITE,
@@ -527,6 +527,24 @@ void ArchMemAdvise(void const *addr, size_t len, ArchMemAdvice adv)
                 rval, errno, ArchStrerror().c_str());
     }
 #endif
+}
+
+bool
+ArchQueryMappedMemoryResidency(
+    void const *addr, size_t len, unsigned char *pageMap)
+{
+#if defined(ARCH_OS_LINUX)
+    int ret = mincore(const_cast<void *>(addr), len, pageMap);
+    return ret == 0;
+#elif defined (ARCH_OS_DARWIN)
+    // On darwin the addr param is 'caddr_t' and the vec param is 'char *'.
+    int ret = mincore(
+        reinterpret_cast<caddr_t>(const_cast<void *>(addr)), len,
+        reinterpret_cast<char *>(pageMap));
+    return ret == 0;
+#endif
+    // XXX: Not implemented for other platforms yet.
+    return false;
 }
 
 int64_t
