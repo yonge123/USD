@@ -57,10 +57,13 @@ pxr_library(usdviewq
         adjustDefaultMaterial.py
         nodeViewItem.py
         common.py
+        legendUtil.py
+        nodeLegend.py
+        propertyLegend.py
         attributeValueEditor.py
         pythonExpressionPrompt.py
-        referenceEditor.py
         overridableLineEdit.py
+        variantComboBox.py
         qt.py
         usdviewstyle.qss
 
@@ -70,8 +73,9 @@ pxr_library(usdviewq
         adjustClippingUI.ui
         adjustDefaultMaterialUI.ui
         attributeValueEditorUI.ui
+        nodeLegendUI.ui
+        propertyLegendUI.ui
         pythonExpressionPromptUI.ui
-        referenceEditorUI.ui
 )
 
 install(DIRECTORY
