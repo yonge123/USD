@@ -167,7 +167,11 @@ UsdImagingPointInstancerAdapter::_Populate(UsdPrim const& prim,
     instrData.parentInstancerPath = parentInstancerPath;
 
     TF_DEBUG(USDIMAGING_INSTANCER).Msg("[Add PI] %s\n", instancerPath.GetText());
-    index->InsertInstancer(instancerPath, instancerContext);
+    // Need to use GetAbsoluteRootOrPrimPath() on instancerPath to drop
+    // {instancer=X} from the path, so usd can find the prim.
+    index->InsertInstancer(instancerPath,
+                           _GetPrim(instancerPath.GetAbsoluteRootOrPrimPath()),
+                           instancerContext);
 
     // ---------------------------------------------------------------------- //
     // Main Prototype allocation loop.
@@ -911,7 +915,7 @@ UsdImagingPointInstancerAdapter::UpdateForTime(UsdPrim const& prim,
     }
 }
 
-int
+HdDirtyBits
 UsdImagingPointInstancerAdapter::ProcessPropertyChange(UsdPrim const& prim,
                                       SdfPath const& cachePath, 
                                       TfToken const& propertyName)
@@ -1086,6 +1090,111 @@ UsdImagingPointInstancerAdapter::ProcessPrimRemoval(SdfPath const& usdPath,
     _ProcessPrimRemoval(usdPath, index, /*instancersToRepopulate*/nullptr);
 }
 
+void
+UsdImagingPointInstancerAdapter::MarkDirty(UsdPrim const& prim,
+                                           SdfPath const& cachePath,
+                                           HdDirtyBits dirty,
+                                           UsdImagingIndexProxy* index)
+{
+    if (IsChildPath(cachePath)) {
+        // cachePath : /path/instancerPath.proto_*
+        // instancerPath : /path/instancerPath
+        SdfPath instancerPath = cachePath.GetParentPath();
+        _ProtoRprim const& rproto = _GetProtoRprim(instancerPath, cachePath);
+
+        rproto.adapter->MarkDirty(prim, cachePath, dirty, index);
+    } else {
+        index->MarkInstancerDirty(cachePath, dirty);
+    }
+}
+
+void
+UsdImagingPointInstancerAdapter::MarkRefineLevelDirty(
+                                                   UsdPrim const& prim,
+                                                   SdfPath const& cachePath,
+                                                   UsdImagingIndexProxy* index)
+{
+    if (IsChildPath(cachePath)) {
+        // cachePath : /path/instancerPath.proto_*
+        // instancerPath : /path/instancerPath
+        SdfPath instancerPath = cachePath.GetParentPath();
+        _ProtoRprim const& rproto = _GetProtoRprim(instancerPath, cachePath);
+
+        rproto.adapter->MarkRefineLevelDirty(prim, cachePath, index);
+    }
+}
+
+void
+UsdImagingPointInstancerAdapter::MarkReprDirty(UsdPrim const& prim,
+                                               SdfPath const& cachePath,
+                                               UsdImagingIndexProxy* index)
+{
+    if (IsChildPath(cachePath)) {
+        // cachePath : /path/instancerPath.proto_*
+        // instancerPath : /path/instancerPath
+        SdfPath instancerPath = cachePath.GetParentPath();
+        _ProtoRprim const& rproto = _GetProtoRprim(instancerPath, cachePath);
+
+        rproto.adapter->MarkReprDirty(prim, cachePath, index);
+    }
+}
+
+void
+UsdImagingPointInstancerAdapter::MarkCullStyleDirty(UsdPrim const& prim,
+                                                    SdfPath const& cachePath,
+                                                    UsdImagingIndexProxy* index)
+{
+    if (IsChildPath(cachePath)) {
+        // cachePath : /path/instancerPath.proto_*
+        // instancerPath : /path/instancerPath
+        SdfPath instancerPath = cachePath.GetParentPath();
+        _ProtoRprim const& rproto = _GetProtoRprim(instancerPath, cachePath);
+
+        rproto.adapter->MarkCullStyleDirty(prim, cachePath, index);
+    }
+}
+
+void
+UsdImagingPointInstancerAdapter::MarkTransformDirty(UsdPrim const& prim,
+                                                    SdfPath const& cachePath,
+                                                    UsdImagingIndexProxy* index)
+{
+    if (IsChildPath(cachePath)) {
+        // cachePath : /path/instancerPath.proto_*
+        // instancerPath : /path/instancerPath
+        SdfPath instancerPath = cachePath.GetParentPath();
+        _ProtoRprim const& rproto = _GetProtoRprim(instancerPath, cachePath);
+
+        rproto.adapter->MarkTransformDirty(prim, cachePath, index);
+    } else {
+        static const HdDirtyBits transformDirty =
+                                                HdChangeTracker::DirtyTransform;
+
+        index->MarkInstancerDirty(cachePath, transformDirty);
+    }
+}
+
+void
+UsdImagingPointInstancerAdapter::MarkVisibilityDirty(
+                                                    UsdPrim const& prim,
+                                                    SdfPath const& cachePath,
+                                                    UsdImagingIndexProxy* index)
+{
+    if (IsChildPath(cachePath)) {
+        // cachePath : /path/instancerPath.proto_*
+        // instancerPath : /path/instancerPath
+        SdfPath instancerPath = cachePath.GetParentPath();
+        _ProtoRprim const& rproto = _GetProtoRprim(instancerPath, cachePath);
+
+        rproto.adapter->MarkVisibilityDirty(prim, cachePath, index);
+    } else {
+        static const HdDirtyBits visibilityDirty =
+                                               HdChangeTracker::DirtyVisibility;
+
+        index->MarkInstancerDirty(cachePath, visibilityDirty);
+    }
+}
+
 bool
 UsdImagingPointInstancerAdapter::ShouldCullChildren(UsdPrim const& prim)
 {
@@ -1101,12 +1210,12 @@ UsdImagingPointInstancerAdapter::_UnloadInstancer(SdfPath const& instancerPath,
     TF_FOR_ALL(protoRprimIt, instIt->second.protoRprimMap) {
         SdfPath const& cachePath = protoRprimIt->first;
         index->RemoveRprim(cachePath);
-        index->RemoveDependency(cachePath);
+        index->RemovePrimInfo(cachePath);
     }
 
     // Blow away the instancer and the associated local data.
     index->RemoveInstancer(instancerPath);
-    index->RemoveDependency(instancerPath);
+    index->RemovePrimInfo(instancerPath);
     _instancerData.erase(instIt);
 }
 
@@ -1625,6 +1734,14 @@ UsdImagingPointInstancerAdapter::GetDependPaths(SdfPath const &instancerPath) co
     }
     // XXX: we may want to cache this result in _instancerData.
     return result;
+}
+
+/*virtual*/
+void
+UsdImagingPointInstancerAdapter::_RemovePrim(SdfPath const& cachePath,
+                                             UsdImagingIndexProxy* index)
+{
+    TF_CODING_ERROR("Should use overidden ProcessPrimResync/ProcessPrimRemoval");
 }
 
 /*virtual*/
