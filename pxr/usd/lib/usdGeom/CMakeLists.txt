@@ -47,6 +47,7 @@ pxr_library(usdGeom
         points
         scope
         sphere
+        subset
         xform
         xformable
         xformOp
@@ -86,6 +87,7 @@ pxr_library(usdGeom
         wrapPrimvar.cpp
         wrapScope.cpp
         wrapSphere.cpp
+        wrapSubset.cpp
         wrapTokens.cpp
         wrapXform.cpp
         wrapXformCache.cpp
@@ -117,6 +119,7 @@ pxr_test_scripts(
     testenv/testUsdGeomPrimvar.py
     testenv/testUsdGeomPurposeVisibility.py
     testenv/testUsdGeomSchemata.py
+    testenv/testUsdGeomSubset.py
     testenv/testUsdGeomXformable.py
     testenv/testUsdGeomXformCommonAPI.py
 )
@@ -185,6 +188,10 @@ pxr_install_test_dir(
 )
 
 pxr_install_test_dir(
+    SRC testenv/testUsdGeomSubset
+    DEST testUsdGeomSubset)
+
+pxr_install_test_dir(
     SRC testenv/testUsdGeomBBoxCache
     DEST testUsdGeomBBoxCache
 )
@@ -242,6 +249,12 @@ pxr_register_test(testUsdGeomCurves
 pxr_register_test(testUsdGeomFaceSetAPI
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomFaceSetAPI"
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdGeomSubset
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomSubset"
     EXPECTED_RETURN_CODE 0
 )
 
