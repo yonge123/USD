@@ -40,8 +40,6 @@ pxr_library(usd
         primFlags
         primRange
         property
-        pyEditContext
-        pyConversions
         references
         relationship
         resolveInfo
@@ -61,6 +59,10 @@ pxr_library(usd
         usdcFileFormat
         variantSets
 
+    PYTHON_PUBLIC_CLASSES
+        pyEditContext
+        pyConversions
+
     PRIVATE_CLASSES
         clip
         clipCache
@@ -79,7 +81,7 @@ pxr_library(usd
         valueUtils.h
         wrapUtils.h
 
-    CPPFILES
+    PYTHON_CPPFILES
         moduleDeps.cpp
 
     PYMODULE_CPPFILES
@@ -110,12 +112,13 @@ pxr_library(usd
         wrapStageCache.cpp
         wrapStageCacheContext.cpp
         wrapStagePopulationMask.cpp
+        wrapTokens.cpp
         wrapTimeCode.cpp
         wrapTyped.cpp
         wrapUtils.cpp
         wrapVariantSets.cpp
 
-    PYTHON_FILES
+    PYMODULE_FILES
         __init__.py
 
     RESOURCE_FILES
@@ -132,7 +135,9 @@ pxr_library(usd
         codegenTemplates/wrapTokens.cpp
 )
 
-if (NOT JINJA2_FOUND)
+if (NOT PXR_ENABLE_PYTHON_SUPPORT)
+    message(STATUS "Skipping building usdGenSchema, Python modules required.")
+elseif (NOT JINJA2_FOUND)
     message(WARNING "Skipping building usdGenSchema due to missing dependency: Jinja2")
 else()
     pxr_python_bin(usdGenSchema
