@@ -71,10 +71,6 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaXformStackTokens,
 class PxrUsdMayaXformOpClassification : public TfWeakBase
 {
 public:
-    PxrUsdMayaXformOpClassification(const TfToken &name,
-                                       UsdGeomXformOp::Type opType,
-                                       bool isInvertedTwin=false);
-
     PXRUSDMAYA_API
     TfToken const &GetName() const {
         return _name;
@@ -102,7 +98,12 @@ public:
     PXRUSDMAYA_API
     std::vector<TfToken> CompatibleAttrNames() const;
 
+    friend class PxrUsdMayaXformStack;
 private:
+    PxrUsdMayaXformOpClassification(const TfToken &name,
+                                       UsdGeomXformOp::Type opType,
+                                       bool isInvertedTwin=false);
+
     const TfToken _name;
     const UsdGeomXformOp::Type _opType;
     const bool _isInvertedTwin;
@@ -166,11 +167,6 @@ public:
         }
     }
 
-    PxrUsdMayaXformStack(
-            const OpClassList ops,
-            const std::vector<std::pair<size_t, size_t> > inversionTwins,
-            bool nameMatters=true);
-
     // Don't want to accidentally make a copy, since the only instances are supposed
     // to be static!
     explicit PxrUsdMayaXformStack(const PxrUsdMayaXformStack& other) = default;
@@ -195,6 +191,12 @@ public:
     const PxrUsdMayaXformOpClassification& operator[] (const size_t index) const {
         return _ops[index];
     }
+
+    PXRUSDMAYA_API
+    size_t GetSize() const {
+        return _ops.size();
+    }
+
 
     /// \brief  Finds the index of the Op Classification with the given name in this stack
     /// \param  opName the name of the operator classification we  wish to find
@@ -303,7 +305,7 @@ public:
         return std::vector<OpClassPtr>();
     }
 
-    /// \brief Runs MatchingSubstack against the given list of stacks
+   /// \brief Runs MatchingSubstack against the given list of stacks
     ///
     /// Returns the first non-empty result it finds; if all stacks
     /// return an empty vector, an empty vector is returned.
@@ -315,6 +317,13 @@ public:
             const PxrUsdMayaXformStack& firstStack,
             RemainingTypes&... otherStacks)
     {
+        // WARNING: this logic is currently duplicated in wrapXformStack.cpp,
+        // Usd_PyXformStack::FirstMatchingSubstack, because it was much
+        // simpler / readable than using variadic templates to convert a
+        // python tuple into variadic arguments. Should be ok because the
+        // logic is currently so simple. If this logic changes, either change it
+        // in both places, or modify the python wrapper to call the variadic
+        // template function directly.
         if (xformops.empty()) return std::vector<OpClassPtr>();
 
         std::vector<PxrUsdMayaXformStack::OpClassPtr> stackOps = \
@@ -327,6 +336,12 @@ public:
     }
 
 private:
+    PxrUsdMayaXformStack(
+            const OpClassList ops,
+            const std::vector<std::pair<size_t, size_t> > inversionTwins,
+            bool nameMatters=true);
+
+
     const OpClassList _ops;
     std::vector<IndexPair> _inversionTwins;
     IndexMap _inversionMap;

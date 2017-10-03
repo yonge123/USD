@@ -366,6 +366,14 @@ PxrUsdMayaXformStack::MatchingSubstack(
 
     std::vector<OpClassPtr> ret;
 
+    // We ONLY want to set MrotOrder if we have a successful
+    // match, but we if we have a succesful match until we get
+    // through the whole stack... whereas we find out the rotate
+    // order whenever we get to the rotate op. Therefore, we
+    // set a "temp" rotOrder, and then only set MrotOrder at the
+    // end
+    MTransformationMatrix::RotationOrder tempRotOrder;
+
     // nextOp keeps track of where we will start looking for matches.  It
     // will only move forward.
     size_t nextOpIndex = 0;
@@ -433,30 +441,9 @@ PxrUsdMayaXformStack::MatchingSubstack(
 
         // if we're a rotate, set the maya rotation order (if it's relevant to
         // this op)
-        if (foundOp.GetName() == PxrUsdMayaXformStackTokens->rotate
-                && MrotOrder) {
-            switch(xformOp.GetOpType()) {
-                case UsdGeomXformOp::TypeRotateXYZ:
-                    *MrotOrder = MTransformationMatrix::kXYZ;
-                break;
-                case UsdGeomXformOp::TypeRotateXZY:
-                    *MrotOrder = MTransformationMatrix::kXZY;
-                break;
-                case UsdGeomXformOp::TypeRotateYXZ:
-                    *MrotOrder = MTransformationMatrix::kYXZ;
-                break;
-                case UsdGeomXformOp::TypeRotateYZX:
-                    *MrotOrder = MTransformationMatrix::kYZX;
-                break;
-                case UsdGeomXformOp::TypeRotateZXY:
-                    *MrotOrder = MTransformationMatrix::kZXY;
-                break;
-                case UsdGeomXformOp::TypeRotateZYX:
-                    *MrotOrder = MTransformationMatrix::kZYX;
-                break;
-
-                default: break;
-            }
+        if (MrotOrder != nullptr
+                && foundOp.GetName() == PxrUsdMayaXformStackTokens->rotate) {
+            tempRotOrder = RotateOrderFromOpType(xformOp.GetOpType(), *MrotOrder);
         }
 
         // move the nextOp pointer along.
@@ -470,6 +457,11 @@ PxrUsdMayaXformStack::MatchingSubstack(
         if (opNamesFound[pairIter->first] != opNamesFound[pairIter->second]) {
             return _NO_MATCH;
         }
+    }
+
+    if (MrotOrder != nullptr)
+    {
+        *MrotOrder = tempRotOrder;
     }
 
     return ret;
