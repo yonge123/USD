@@ -88,7 +88,7 @@ class Launcher(object):
                             "prim name (ie, just the last element in the prim "
                             "path), or as a full prim path.  Note that if only "
                             "the prim name is used, and more than one camera "
-                            "exists with the name, which is used will be"
+                            "exists with the name, which is used will be "
                             "effectively random")
 
         parser.add_argument('--mask', action='store',
@@ -230,7 +230,7 @@ class Launcher(object):
             # UI is fully populated (and to capture all the timing information
             # we'd want).
             app.processEvents()
-            app.closeAllWindows()
+            mainWindow._cleanAndClose()
             return 
 
         app.exec_()
