@@ -41,6 +41,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (mayaPlugin)
     (providesTranslator)
     (UsdMaya)
+    (ShadingModePlugin)
     (UserAttributeWriterPlugin)
 );
 
@@ -230,6 +231,14 @@ PxrUsdMaya_RegistryHelper::FindAndLoadMayaPlug(
             break;
         }
     }
+}
+
+/* static */
+void
+PxrUsdMaya_RegistryHelper::LoadShadingModePlugins() {
+    static std::once_flag _shadingModesLoaded;
+    static std::vector<TfToken> scope = {_tokens->UsdMaya, _tokens->ShadingModePlugin};
+    _LoadAllPlugins(_shadingModesLoaded, scope);
 }
 
 void
