@@ -21,41 +21,45 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
+# Qt Components
 from qt import QtCore, QtGui, QtWidgets
-import stageView
+
+# Stdlib components
+import re, sys, os
+from time import time, sleep
+from collections import deque, OrderedDict
+
+# Usd Library Components
+from pxr import Usd, UsdGeom, UsdUtils, UsdImagingGL, Glf, Sdf, Tf
+
+# UI Components
+from ._usdviewq import Utils
 from stageView import StageView
 from mainWindowUI import Ui_MainWindow
 from nodeContextMenu import NodeContextMenu
 from headerContextMenu import HeaderContextMenu
 from layerStackContextMenu import LayerStackContextMenu
 from attributeViewContextMenu import AttributeViewContextMenu
-from customAttributes import _GetCustomAttributes
+from customAttributes import (_GetCustomAttributes, BoundingBoxAttribute, 
+                              LocalToWorldXformAttribute, RelationshipAttribute)
 from nodeViewItem import NodeViewItem
-from pxr import Usd, UsdGeom, UsdUtils, UsdImagingGL
-from pxr import Glf
-from pxr import Sdf
-from pxr import Tf
+from variantComboBox import VariantComboBox
+from legendUtil import ToggleLegendWithBrowser
+import prettyPrint, watchWindow, adjustClipping, adjustDefaultMaterial, settings
 
-from ._usdviewq import Utils
-
-from collections import deque
-from collections import OrderedDict
-from time import time, sleep
-import re, sys, os
-
-import prettyPrint
-import watchWindow
-import adjustClipping
-import adjustDefaultMaterial
-import referenceEditor
-from settings import Settings
-
-from common import (FallbackTextColor, NoValueTextColor, TimeSampleTextColor,
-                    ValueClipsTextColor, DefaultTextColor, HeaderColor, 
-                    RedColor, BoldFont, ItalicFont, GetAttributeColor,
-                    GetAttributeTextFont, HasArcsColor, InstanceColor,
-                    NormalColor, MasterColor, Timer, 
-                    BusyContext, DumpMallocTags, GetInstanceIdForIndex)
+# Common Utilities
+from common import (FallbackTextColor, NoValueTextColor, TimeSampleTextColor, ValueClipsTextColor, 
+                    DefaultTextColor, HeaderColor, RedColor, BoldFont, ItalicFont,
+                    GetAttributeColor, GetAttributeTextFont, HasArcsColor, 
+                    InstanceColor, NormalColor, MasterColor, Timer, Drange,
+                    BusyContext, DumpMallocTags, GetShortString, GetInstanceIdForIndex, 
+                    ItalicizeLabelText, BoldenLabelText, ColorizeLabelText,
+                    INDEX_PROPNAME, INDEX_PROPTYPE, INDEX_PROPVAL,
+                    ATTR_PLAIN_TYPE_ICON, ATTR_WITH_CONN_TYPE_ICON, REL_PLAIN_TYPE_ICON, 
+                    REL_WITH_TARGET_TYPE_ICON, TARGET_TYPE_ICON, CONN_TYPE_ICON, CMP_TYPE_ICON,            
+                    ATTR_PLAIN_TYPE_ROLE, REL_PLAIN_TYPE_ROLE, ATTR_WITH_CONN_TYPE_ROLE,
+                    REL_WITH_TARGET_TYPE_ROLE, CMP_TYPE_ROLE, CONN_TYPE_ROLE, TARGET_TYPE_ROLE,
+                    PropTreeWidgetTypeIsRel)
 
 # Upper HUD entries (declared in variables for abstraction)
 PRIM = "Prims"
@@ -75,134 +79,6 @@ INDEX_VALUE, INDEX_METADATA, INDEX_LAYERSTACK, INDEX_COMPOSITION = range(4)
 
 # Tf Debug entries to include in debug menu
 TF_DEBUG_MENU_ENTRIES = ["HD", "HDX", "USD", "USDIMAGING", "USDVIEWQ"]
-
-def isWritableUsdPath(path):
-    if not os.access(path, os.W_OK):
-        return (False, 'Path is not a writable file.')
-
-    return (True, '')
-
-def getBackupFile(path):
-    # get a backup file name like myfile.0.usd
-    number = 0
-
-    extindex = path.rfind('.')
-    if extindex == -1:
-        exindex = len(path)
-
-    while os.access(path[:extindex] + '.' + str(number) + path[extindex:], os.F_OK):
-        number = number + 1
-
-    return path[:extindex] + '.' + str(number) + path[extindex:]
-
-def uniquify_tablewidgetitems(a):
-    """ Eliminates duplicate list entries in a list
-        of TableWidgetItems. It relies on the row property
-        being available for comparison.
-    """
-    if (len(a) == 0):
-        tmp = []
-    else:
-        tmp = [a[0]]
-        # XXX: we need to compare row #s because
-        # PySide doesn't allow equality comparison for QTableWidgetItems
-        tmp_rows = set() 
-        tmp_rows.add(a[0].row())
-
-        for i in range(1,len(a)):
-            if (a[i].row() not in tmp_rows):
-                tmp.append(a[i])
-                tmp_rows.add(a[i].row())
-    return tmp
-
-def drange(start, stop, step):
-    """Like builtin range() but allows decimals and is a closed interval 
-        that is, it's inclusive of stop"""
-    r = start
-    lst = []
-    epsilon = 1e-3 * step
-    while r <= stop+epsilon:
-        lst.append(r)
-        r += step
-    return lst
-
-def _settingsWarning(filePath):
-    """Send a warning because the settings file should never fail to load
-    """
-    import traceback
-    import sys
-    msg = sys.stderr
-    print >> msg, "------------------------------------------------------------"
-    print >> msg, "WARNING: Unknown problem while trying to access settings:"
-    print >> msg, "------------------------------------------------------------"
-    print >> msg, "This message is being sent because the settings file (%s) " \
-                  "could not be read" % filePath
-    print >> msg, "--"
-    traceback.print_exc(file=msg)
-    print >> msg, "--"
-    print >> msg, "Please file a bug if this warning persists"
-    print >> msg, "Attempting to continue... "
-    print >> msg, "------------------------------------------------------------"
-
-class VariantComboBox(QtWidgets.QComboBox):
-    def __init__(self, parent, prim, variantSetName, mainWindow):
-        QtWidgets.QComboBox.__init__(self, parent)
-        self.prim = prim
-        self.variantSetName = variantSetName
-        self.mainWindow = mainWindow
-
-    def updateVariantSelection(self, index):
-        variantSet = self.prim.GetVariantSet(self.variantSetName)
-        currentVariantSelection = variantSet.GetVariantSelection()
-        newVariantSelection = str(self.currentText())
-        if currentVariantSelection != newVariantSelection:
-            with Timer() as t:
-                variantSet.SetVariantSelection(newVariantSelection)
-                # We need to completely re-generate the prim tree because
-                # changing a prim's variant set can change the namespace
-                # hierarchy.
-                self.mainWindow._updatePrimTreeForVariantSwitch()
-            if self.mainWindow._printTiming:
-                t.PrintTime("change variantSet %s to %s" % 
-                            (variantSet.GetName(), newVariantSelection))
-
-def _GetShortString(prop, frame):
-    from customAttributes import CustomAttribute
-    if isinstance(prop, (Usd.Attribute, CustomAttribute)):
-        val = prop.Get(frame)
-    elif isinstance(prop, Sdf.AttributeSpec):
-        if frame == Usd.TimeCode.Default():
-            val = prop.default
-        else:
-            numTimeSamples = -1
-            if prop.HasInfo('timeSamples'):
-                numTimeSamples = prop.layer.GetNumTimeSamplesForPath(prop.path)
-            if numTimeSamples == -1:
-                val = prop.default
-            elif numTimeSamples == 1:
-                return "1 time sample"
-            else:
-                return str(numTimeSamples) + " time samples"
-    elif isinstance(prop, Sdf.RelationshipSpec):
-        return str(prop.targetPathList)
-
-    from scalarTypes import GetScalarTypeFromAttr
-    scalarType, isArray = GetScalarTypeFromAttr(prop)
-    result = ''
-    if isArray and not isinstance(val, Sdf.ValueBlock):
-        def arrayToStr(a):
-            from itertools import chain
-            elems = a if len(a) <= 6 else chain(a[:3], ['...'], a[-3:])
-            return '[' + ', '.join(map(str, elems)) + ']'
-        if val is not None and len(val):
-            result = "%s[%d]: %s" % (scalarType, len(val), arrayToStr(val))
-        else:
-            result = "%s[]" % scalarType
-    else:
-        result = str(val)
-
-    return result[:500]
-
 
 class MainWindow(QtWidgets.QMainWindow):
 
@@ -279,6 +155,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self._statusFileName = 'state'
             self._deprecatedStatusFileName = '.usdviewrc'
             self._mallocTags  = parserData.mallocTagStats
+            self._bboxCache = None
 
             MainWindow._renderer = parserData.renderer
             if MainWindow._renderer == 'simple':
@@ -322,7 +199,7 @@ class MainWindow(QtWidgets.QMainWindow):
             settingsPathDir = self._outputBaseDirectory()
             if settingsPathDir is None:
                 # Create an ephemeral settings object with a non existent filepath
-                self._settings = Settings('', seq=None, ephemeral=True) 
+                self._settings = settings.Settings('', seq=None, ephemeral=True) 
             else:
                 settingsPath = os.path.join(settingsPathDir, self._statusFileName)
                 deprecatedSettingsPath = \
@@ -336,7 +213,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                + str(settingsPath) + '.\n')
                     print warning
 
-                self._settings = Settings(settingsPath)
+                self._settings = settings.Settings(settingsPath)
 
                 try:
                     self._settings.load()
@@ -345,16 +222,16 @@ class MainWindow(QtWidgets.QMainWindow):
                     try:
                         self._settings.save()
                     except:
-                        _settingsWarning(settingsPath)
+                        settings.EmitWarning(settingsPath)
 
                 except EOFError:
                     # try to force out a new settings file
                     try:
                         self._settings.save()
                     except:
-                        _settingsWarning(settingsPath)
+                        settings.EmitWarning(settingsPath)
                 except:
-                    _settingsWarning(settingsPath)
+                    settings.EmitWarning(settingsPath)
 
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.BusyCursor)
 
@@ -429,8 +306,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self._ui.stepSize.setValidator(stepValidator)
 
             # This causes the last column of the attribute view (the value)
-            #  to be stretched to fill the available space
-            self._ui.propertyView.horizontalHeader().setStretchLastSection(True)
+            # to be stretched to fill the available space
+            self._ui.propertyView.header().setStretchLastSection(True)
 
             self._ui.propertyView.setSelectionBehavior(
                 QtWidgets.QAbstractItemView.SelectRows)
@@ -531,115 +408,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 action = getattr(self._ui,"actionLevel_" + str(i))
                 self._ui.nodeViewDepthGroup.addAction(action)
 
-            # Start the help menus in collapsed position.
-            self._propertyLegendCollapsed = True
-            self._nodeLegendCollapsed = True
-            self._propertyLegendHeightOffset = 50
-            self._nodeLegendHeightOffset = 100
-            self._legendButtonSelectedStyle = ('background: rgb(189, 155, 84); '
-                                               'color: rgb(227, 227, 227);')
-
-            # Configure stretch behavior for node and property panes
-            self._ui.propertyLegendContainer.setContentsMargins(5,0,5,0)
-            self._ui.nodeLegendContainer.setContentsMargins(5,0,5,0)
-
             # needed to set color of boxes
             graphicsScene = QtWidgets.QGraphicsScene()
-            self._ui.propertyLegendColorFallback.setScene(graphicsScene)
-            self._ui.propertyLegendColorDefault.setScene(graphicsScene)
-            self._ui.propertyLegendColorTimeSample.setScene(graphicsScene)
-            self._ui.propertyLegendColorNoValue.setScene(graphicsScene)
-            self._ui.propertyLegendColorValueClips.setScene(graphicsScene)
-            self._ui.propertyLegendColorCustom.setScene(graphicsScene)
             
-            self._ui.nodeLegendColorHasArcs.setScene(graphicsScene)
-            self._ui.nodeLegendColorNormal.setScene(graphicsScene)
-            self._ui.nodeLegendColorInstance.setScene(graphicsScene)
-            self._ui.nodeLegendColorMaster.setScene(graphicsScene)
-
-            # set color of attribute viewer legend boxes
-            self._ui.propertyLegendColorFallback.setForegroundBrush(FallbackTextColor)
-            self._ui.propertyLegendColorDefault.setForegroundBrush(DefaultTextColor)
-            self._ui.propertyLegendColorTimeSample.setForegroundBrush(TimeSampleTextColor)
-            self._ui.propertyLegendColorNoValue.setForegroundBrush(NoValueTextColor)
-            self._ui.propertyLegendColorValueClips.setForegroundBrush(ValueClipsTextColor)
-            self._ui.propertyLegendColorCustom.setForegroundBrush(RedColor)
-
-            self._ui.nodeLegendColorHasArcs.setForegroundBrush(HasArcsColor)
-            self._ui.nodeLegendColorNormal.setForegroundBrush(NormalColor)
-            self._ui.nodeLegendColorInstance.setForegroundBrush(InstanceColor)
-            self._ui.nodeLegendColorMaster.setForegroundBrush(MasterColor)
-
-            # set color of attribute viewer text items
-            legendTextUpdate = lambda t, c: (('<font color=\"%s\">' % c.color().name())
-                                             + t.text() + '</font>') 
-            timeSampleLegend = self._ui.propertyLegendLabelTimeSample
-            timeSampleLegend.setText(legendTextUpdate(timeSampleLegend, TimeSampleTextColor))
-            
-            fallbackLegend = self._ui.propertyLegendLabelFallback
-            fallbackLegend.setText(legendTextUpdate(fallbackLegend, FallbackTextColor))
-
-            valueClipLegend = self._ui.propertyLegendLabelValueClips
-            valueClipLegend.setText(legendTextUpdate(valueClipLegend, ValueClipsTextColor))
-
-            noValueLegend = self._ui.propertyLegendLabelNoValue
-            noValueLegend.setText(legendTextUpdate(noValueLegend, NoValueTextColor))
-
-            defaultLegend = self._ui.propertyLegendLabelDefault
-            defaultLegend.setText(legendTextUpdate(defaultLegend, DefaultTextColor))
-
-            customLegend = self._ui.propertyLegendLabelCustom 
-            customLegend.setText(legendTextUpdate(customLegend, RedColor))
-
-            normalLegend = self._ui.nodeLegendLabelNormal
-            normalLegend.setText(legendTextUpdate(normalLegend, NormalColor))
-
-            masterLegend = self._ui.nodeLegendLabelMaster
-            masterLegend.setText(legendTextUpdate(masterLegend, MasterColor))
-
-            instanceLegend = self._ui.nodeLegendLabelInstance
-            instanceLegend.setText(legendTextUpdate(instanceLegend, InstanceColor))
-
-            hasArcsLegend = self._ui.nodeLegendLabelHasArcs
-            hasArcsLegend.setText(legendTextUpdate(hasArcsLegend, HasArcsColor))
-
-
-            # Format partial strings in the maps for nodeView and propertyView
-            # t indicates the whole (t)ext
-            # s indicates the desired (s)ubstring
-            # m indicates a text (m)ode
-            labelUpdate = lambda t, s, m: t.replace(s,'<'+m+'>'+s+'</'+m+'>')
-            italicize = lambda t, s: labelUpdate(t, s, 'i') 
-            bolden = lambda t, s: labelUpdate(t, s, 'b')
-
-            spanStr = lambda r,g,b: "span style=\"color:rgb(%d, %d, %d);\"" % (r,g,b)
-            colorize = lambda t, s, r, g, b: labelUpdate(t, s, spanStr(r,g,b))
-
-            undefinedFontLegend = self._ui.nodeLegendLabelFontsUndefined
-            undefinedFontLegend.setText(italicize(undefinedFontLegend.text(), 
-                                                  undefinedFontLegend.text()))
-
-            definedFontLegend = self._ui.nodeLegendLabelFontsDefined
-            definedFontLegend.setText(bolden(definedFontLegend.text(), 
-                                             definedFontLegend.text()))
-
-
-            # Set three individual colors in the text line to indicate
-            # the dimmed version of each primary node color
-            dimmedLegend = self._ui.nodeLegendLabelDimmed
-            dimmedLegendText = dimmedLegend.text()
-            dimmedLegendText = colorize(dimmedLegendText, "Dimmed colors", 148, 105, 30)
-            dimmedLegendText = colorize(dimmedLegendText, "denote", 78,91,145)
-            dimmedLegendText = colorize(dimmedLegendText, "inactive prims", 151,151,151)
-            dimmedLegend.setText(dimmedLegendText)
-
-            interpolatedStr = 'Interpolated'
-            tsLabel = self._ui.propertyLegendLabelTimeSample
-            tsLabel.setText(italicize(tsLabel.text(), interpolatedStr))
-
-            vcLabel = self._ui.propertyLegendLabelValueClips
-            vcLabel.setText(italicize(vcLabel.text(), interpolatedStr))
-
             # setup animation objects for the primView and propertyView
             self._propertyLegendAnim = QtCore.QPropertyAnimation(
                 self._ui.propertyLegendContainer, "maximumHeight")
@@ -649,7 +420,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # set the context menu policy for the node browser and attribute
             # inspector headers. This is so we can have a context menu on the 
             # headers that allows you to select which columns are visible.
-            self._ui.propertyView.horizontalHeader()\
+            self._ui.propertyView.header()\
                     .setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
             self._ui.nodeView.header()\
                     .setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -678,6 +449,11 @@ class MainWindow(QtWidgets.QMainWindow):
             nvh.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
             nvh.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)
             nvh.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)
+
+            pvh = self._ui.propertyView.header()             
+            pvh.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+            pvh.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)
+            pvh.setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)
 
             # XXX: 
             # To avoid QTBUG-12850 (https://bugreports.qt.io/browse/QTBUG-12850),
@@ -765,7 +541,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self._ui.actionSave_Overrides_As.triggered.connect(
                 self._saveOverridesAs)
 
-            self._ui.actionQuit.triggered.connect(self._cleanAndClose)
+            # Setup quit actions to ensure _cleanAndClose is only invoked once.
+            self._ui.actionQuit.triggered.connect(QtWidgets.QApplication.instance().quit)
+
+            QtWidgets.QApplication.instance().aboutToQuit.connect(self._cleanAndClose)
 
             self._ui.actionReopen_Stage.triggered.connect(self._reopenStage)
 
@@ -800,12 +579,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self._ui.propertyView.itemSelectionChanged.connect(self._refreshWatchWindow)
 
-            self._ui.propertyView.cellClicked.connect(self._propertyViewItemClicked)
+            self._ui.propertyView.itemClicked.connect(self._propertyViewItemClicked)
 
             self._ui.propertyView.currentItemChanged.connect(
                 self._populateAttributeInspector)
 
-            self._ui.propertyView.horizontalHeader().customContextMenuRequested.\
+            self._ui.propertyView.header().customContextMenuRequested.\
                 connect(self._propertyViewHeaderContextMenu)
 
             self._ui.propertyView.customContextMenuRequested.connect(
@@ -1131,11 +910,25 @@ class MainWindow(QtWidgets.QMainWindow):
 
         return stage
 
+    def _closeStage(self):
+        # Turn off the imager before killing the stage
+        if self._stageView:
+            with Timer() as t:
+                self._stageView.SetStage(None)
+            if self._printTiming:
+                t.PrintTime('shut down Hydra')
+
+        # Close the USD stage.
+        with Timer() as t:
+            self._stage = None
+        if self._printTiming:
+            t.PrintTime('close stage')
+
     def _setPlayShortcut(self):
         self._ui.playButton.setShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Space))
 
     # Non-topology dependent UI changes
-    def _reloadFixedUI(self):
+    def _reloadFixedUI(self, resetStageDataOnly=False):
         # If animation is playing, stop it.
         if self._ui.playButton.isChecked():
             self._ui.playButton.click()
@@ -1154,8 +947,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.framesPerSecond = self._stage.GetFramesPerSecond()
 
-        self.step = self._stage.GetTimeCodesPerSecond() / self.framesPerSecond
-        self._ui.stepSize.setText(str(self.step))
+        if not resetStageDataOnly:
+            self.step = self._stage.GetTimeCodesPerSecond() / self.framesPerSecond
+            self._ui.stepSize.setText(str(self.step))
 
         # if one option is provided(lastframe or firstframe), we utilize it
         if ff is not None and lf is not None: 
@@ -1174,67 +968,69 @@ class MainWindow(QtWidgets.QMainWindow):
         self._ui.stageBegin.setText(str(stageStartTimeCode))
         self._ui.stageEnd.setText(str(stageEndTimeCode))
 
-        self._UpdateTimeSamples()
+        self._UpdateTimeSamples(resetStageDataOnly)
 
-    def _UpdateTimeSamples(self):
+    def _UpdateTimeSamples(self, resetStageDataOnly=False):
         if self.realStartTimeCode is not None and self.realEndTimeCode is not None:
             if self.realStartTimeCode > self.realEndTimeCode:
                 sys.stderr.write('Warning: Invalid frame range (%s, %s)\n'  
                 % (self.realStartTimeCode, self.realEndTimeCode))
                 self._timeSamples = []
             else:
-                self._timeSamples = drange(self.realStartTimeCode, 
+                self._timeSamples = Drange(self.realStartTimeCode, 
                                            self.realEndTimeCode, 
                                            self.step)
         else:
             self._timeSamples = []
 
-        if self._stageView:
-            self._stageView.timeSamples = self._timeSamples
-            
         self._geomCounts = dict()
         self._hasTimeSamples = (len(self._timeSamples) > 0)
         self._setPlaybackAvailability() # this sets self._playbackAvailable
 
         if self._hasTimeSamples:
-            self._currentFrame = self._timeSamples[0]
-            self._ui.frameField.setText(str(self._currentFrame))
             self._ui.rangeBegin.setText(str(self._timeSamples[0]))
             self._ui.rangeEnd.setText(str(self._timeSamples[-1]))
+        
+        if not resetStageDataOnly:
+            self._currentFrame = self._timeSamples[0] if self._hasTimeSamples else 0.0
+            self._ui.frameField.setText(str(self._currentFrame))
 
         if self._playbackAvailable:
-            self._ui.frameSlider.setRange(0, len(self._timeSamples)-1)
-            self._ui.frameSlider.setValue(self._ui.frameSlider.minimum())
+            if not resetStageDataOnly:
+                self._ui.frameSlider.setRange(0, len(self._timeSamples)-1)
+                self._ui.frameSlider.setValue(self._ui.frameSlider.minimum())
             self._setPlayShortcut()
             self._ui.playButton.setCheckable(True)
             self._ui.playButton.setChecked(False)
-        elif not self._hasTimeSamples: 
-            # There are no time samples in the stage. Set the effective query 
-            # time that usdview uses to 0.0 in this case.
-            # This way, we get the following desirable behavior: 
-            # * the frame slider will be inactive, 
-            # * non-animatd attributes with default values will be read correctly.
-            # * animated attributes (in some cases with a single time sample) 
-            #   with no default value will also have the expected value in 
-            #   the attribute browser.
-            #   
-            self._currentFrame = 0.0
-            self._ui.frameField.setText("0.0")
 
     # Vars that need updating during a stage reget/refresh
     def _refreshVars(self):
         # Need to refresh selected items to refresh nodes/view to new stage
         self._itemSelectionChanged()
 
-    def _clearCaches(self):
+    def _refreshBBoxCache(self, useExtentsHint):
+        # Unfortunate that we must blow the entire BBoxCache, but we have no
+        # other alternative, currently.
+        if self._bboxCache and self._bboxCache.GetUseExtentsHint() == useExtentsHint:
+            self._bboxCache.Clear()
+        else:
+            self._bboxCache = UsdGeom.BBoxCache(self._currentFrame, 
+                                                StageView.DefaultDataModel.BBOXPURPOSES, 
+                                                useExtentsHint)
+
+    def _clearCaches(self, preserveCamera=False):
+        """Clears value and computation caches maintained by the controller.
+        Does NOT initiate any GUI updates"""
+        
         self._valueCache = dict()
+        self._geomCounts = dict()
 
         # create new xform, bounding box, and camera caches. If there was an
         # instance of the cache before, this will effectively clear the
         # cache.
         self._xformCache = UsdGeom.XformCache(self._currentFrame)
-        self._setUseExtentsHint(self._ui.useExtentsHint.isChecked())
-        self._refreshCameraListAndMenu(preserveCurrCamera = False)
+        self._refreshBBoxCache(self._ui.useExtentsHint.isChecked())
+        self._refreshCameraListAndMenu(preserveCurrCamera = preserveCamera)
 
 
     # Render plugin support
@@ -1273,15 +1069,10 @@ class MainWindow(QtWidgets.QMainWindow):
     # Topology-dependent UI changes
     def _reloadVaryingUI(self):
 
-        # We must call ReloadStage() before _clearCaches() to avoid a crash in
-        # the case when we have reopened the stage. The problem is when the
-        # stage is being reopened, its internal state is inconsistent, but as a
-        # result of calling _clearCaches(), we will attempt to update bounding
-        # boxes via _setUseExtentHints.
+        self._clearCaches()
+
         if self._stageView:
             self._stageView.ReloadStage(self._stage)
-
-        self._clearCaches()
 
         # The difference between these two is related to multi-selection: 
         # - currentNodes contains all nodes selected
@@ -1300,9 +1091,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self._ui.frameSlider.setValue(self._ui.frameSlider.minimum())
 
-        # Make sure to clear the texture registry, as its contents depend
-        # on the GL state established by the StageView (bug 56866).
-        Glf.TextureRegistry.Reset()
         if not self._stageView:
             self._stageView = StageView(parent=self, dataModel=self)
             self._stageView.SetStage(self._stage)
@@ -1715,16 +1503,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _rangeBeginChanged(self):
         self.realStartTimeCode = float(self._ui.rangeBegin.text())
-        self._UpdateTimeSamples()
+        self._UpdateTimeSamples(resetStageDataOnly=True)
 
     def _stepSizeChanged(self):
         stepStr = self._ui.stepSize.text()
         self.step = float(stepStr)
-        self._UpdateTimeSamples()
+        self._UpdateTimeSamples(resetStageDataOnly=True)
     
     def _rangeEndChanged(self):
         self.realEndTimeCode = float(self._ui.rangeEnd.text())
-        self._UpdateTimeSamples()
+        self._UpdateTimeSamples(resetStageDataOnly=True)
 
     def _frameStringChanged(self):
         indexOfFrame = self._findIndexOfFieldContents(self._ui.frameField)
@@ -1802,85 +1590,53 @@ class MainWindow(QtWidgets.QMainWindow):
                             (self._nodeSearchString, 
                              len(self._nodeSearchResults)))
 
-    def _setAnimValues(self, anim, a1, a2):
-        anim.setStartValue(a1)
-        anim.setEndValue(a2)
-
-    # A function which takes a two-pane area and transforms it to
-    # open or close the bottom pane.
-    #
-    #    legendHeight       
-    #    |   separator height
-    #    |   |  browser height
-    #    |   |  |->     ___________                ___________
-    #    |   |  |      |           |              |           |
-    #    |   |  |      |           |              |           |
-    #    |   |  |->    |           |    <--->     |           |
-    #    |---|-------> +++++++++++++              |           |
-    #    |             |           |    <--->     |           |
-    #    |             |           |              |           |
-    #    |----------->  -----------                +++++++++++
-    def _toggleLegendWithBrowser(self, button, legendMinimized, 
-                                 legendHeight, legendResetHeight, legendAnim):
-        # We are dragging downward, so collapse the legend and expand the
-        # attribute viewer panel to take up the remaining space.
-        if legendMinimized:
-            button.setStyleSheet('')
-            self._setAnimValues(legendAnim, legendHeight, 0)
-        # We are expanding, so do the opposite.
-        else:
-            button.setStyleSheet(self._legendButtonSelectedStyle)
-            self._setAnimValues(legendAnim, legendHeight, legendResetHeight)
-
-        legendAnim.start()
-
     def _nodeLegendToggleCollapse(self):
-        # Toggle status and update the button text accordingly
-        self._nodeLegendCollapsed = not self._nodeLegendCollapsed
-        self._toggleLegendWithBrowser(self._ui.nodeLegendQButton,
-                                      self._nodeLegendCollapsed,
-                                      self._ui.nodeLegendContainer.height(),
-                                      self._nodeLegendHeightOffset,
-                                      self._nodeLegendAnim)
+        ToggleLegendWithBrowser(self._ui.nodeLegendContainer,
+                                self._ui.nodeLegendQButton,
+                                self._nodeLegendAnim)
 
     def _propertyLegendToggleCollapse(self):
-        self._propertyLegendCollapsed = not self._propertyLegendCollapsed
-        self._toggleLegendWithBrowser(self._ui.propertyLegendQButton,
-                                      self._propertyLegendCollapsed,
-                                      self._ui.propertyLegendContainer.height(), 
-                                      self._propertyLegendHeightOffset,
-                                      self._propertyLegendAnim)
+        ToggleLegendWithBrowser(self._ui.propertyLegendContainer,
+                                self._ui.propertyLegendQButton,
+                                self._propertyLegendAnim)
 
     def _attrViewFindNext(self):
         self._ui.propertyView.clearSelection()
         if (self._attrSearchString == self._ui.attrViewLineEdit.text() and
             len(self._attrSearchResults) > 0 and
             self._lastNodeSearched == self._currentNodes[0]):
+            
             # Go to the next result of the currently ongoing search
-
             nextResult = self._attrSearchResults.popleft()
 
-            # the 0 stands for column 0, so it selects the first column.
-            self._ui.propertyView.item(nextResult.row(), 0).setSelected(True)
+            nextResult.setSelected(True)
             self._ui.propertyView.scrollToItem(nextResult)
             self._attrSearchResults.append(nextResult)
             self._lastNodeSearched = self._currentNodes[0]
+
+            itemName = str(nextResult.text(INDEX_PROPNAME))
+            self._ui.attributeValueEditor.populate(itemName, self._currentNodes[0])
+            self._updateMetadataView(self._getSelectedObject())
+            self._updateLayerStackView(self._getSelectedObject())
         else:
             # Begin a new search
             self._attrSearchString = self._ui.attrViewLineEdit.text()
             self._attrSearchResults = self._ui.propertyView.findItems(
                 self._ui.attrViewLineEdit.text(),
-                QtCore.Qt.MatchRegExp)
+                QtCore.Qt.MatchRegExp,
+                INDEX_PROPNAME)
 
             # Now just search for the string itself
             otherSearch = self._ui.propertyView.findItems(
                 self._ui.attrViewLineEdit.text(), 
-                QtCore.Qt.MatchContains)
+                QtCore.Qt.MatchContains,
+                INDEX_PROPNAME)
+
             self._attrSearchResults += otherSearch
 
-            self._attrSearchResults = \
-                uniquify_tablewidgetitems(self._attrSearchResults)
-            self._attrSearchResults.sort(cmp, QtWidgets.QTableWidgetItem.row)
+            # We find properties first, then connections/targets
+            # Based on the default recursive match finding in Qt.
+            self._attrSearchResults.sort()
             self._attrSearchResults = deque(self._attrSearchResults)
 
             self._lastNodeSearched = self._currentNodes[0]
@@ -1932,6 +1688,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self._ui.actionShow_Abstract_Prims.setChecked(\
                         self._settings.get("actionShow_Abstract_Prims", False))
         self._ui.redrawOnScrub.setChecked(self._settings.get("RedrawOnScrub", True))
+
+        # Seems like a good time to clear the texture registry
+        Glf.TextureRegistry.Reset()
 
         # RELOAD fixed and varying UI
         self._reloadFixedUI()
@@ -2090,6 +1849,19 @@ class MainWindow(QtWidgets.QMainWindow):
             lambda : self._cameraSelectionChanged(None))
 
         self._refreshCameraListAndMenu(preserveCurrCamera = False)
+
+    def _updateForStageChanges(self):
+        """Assuming there have been authoring changes to the already-loaded
+        stage, make the minimal updates to the UI required to maintain a
+        consistent state.  This may still be over-zealous until we know
+        what actually changed, but we should be able to preserve camera and
+        playback positions (unless viewing through a stage camera that no
+        longer exists"""
+        
+        self._clearCaches(preserveCamera=True)
+
+        # Update the UIs (it gets all of them) and StageView on a timer
+        self.UpdateNodeViewContents()
 
     def _saveSplitterStates(self):
         # we dont want any of the splitter positions to be saved when using
@@ -2275,9 +2047,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._settings.setAndSave(ShowBBoxPlayback=state)
 
     def _setUseExtentsHint(self, state):
-        self._bboxCache = UsdGeom.BBoxCache(self._currentFrame, 
-                                            stageView.StageView.DefaultDataModel.BBOXPURPOSES, 
-                                            useExtentsHint=state)
+        self._refreshBBoxCache(state)
 
         self._updateAttributeView()
 
@@ -2415,12 +2185,6 @@ class MainWindow(QtWidgets.QMainWindow):
         
     # File handling functionality =============================================
 
-    def closeEvent(self, event):
-        """The window is closing, either by clicking exit or by clicking the "x" 
-        provided by the window manager.
-        """
-        self._cleanAndClose()
-
     def _cleanAndClose(self):
         self._settings.setAndSave(nodeViewHeader = \
                 [self._ui.nodeView.isColumnHidden(c) \
@@ -2452,18 +2216,8 @@ class MainWindow(QtWidgets.QMainWindow):
         if self._timer.isActive():
             self._timer.stop()
 
-        # Turn off the imager before killing the stage
-        if self._stageView:
-            with Timer() as t:
-                self._stageView.SetStage(None)
-            if self._printTiming:
-                t.PrintTime('shut down Hydra')
-
-        # Close the USD stage.
-        with Timer() as t:
-            self._stage.Close()
-        if self._printTiming:
-            t.PrintTime('close stage')
+        # Close the stage.
+        self._closeStage()
 
         # Tear down the UI window.
         with Timer() as t:
@@ -2533,7 +2287,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self._currentSpec = None
             self._currentLayer = None
 
-            self._stage.Close()
+            # Close the current stage so that we don't keep it in memory
+            # while trying to open another stage.
+            self._closeStage()
             self._stage = self._openStage(self._parserData.usdFile,
                                           self._parserData.populationMask)
             # We need this for layers which were cached in memory but changed on
@@ -2561,8 +2317,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
         try:
             self._stage.Reload()
-            self._resetSettings() # reload topology, attributes, GL view
-            self._resetView()
+            # Seems like a good time to clear the texture registry
+            Glf.TextureRegistry.Reset()
+            # reset timeline, and playback settings from stage metadata
+            self._reloadFixedUI(resetStageDataOnly=True)
+            self._updateForStageChanges()
         except Exception as err:
             self.statusMessage('Error occurred rereading all layers for Stage: %s' % err)
         finally:
@@ -2643,14 +2402,25 @@ class MainWindow(QtWidgets.QMainWindow):
     # ===================================================================
     # ==================== Attribute Inspector ==========================
     def _populateAttributeInspector(self, currentItem = None, previtem = None):
+        # We define data 'roles' in the property viewer to distinguish between things
+        # like attributes and attributes with connections, relationships and relationships 
+        # with targets etc etc.
         self._currentProp = self._getSelectedObject(currentItem)
+
+        # In the case of connections and targets, we keep their parent as the selected property
+        if currentItem:
+            role = currentItem.data(INDEX_PROPTYPE, QtCore.Qt.ItemDataRole.WhatsThisRole)
+            if role == CONN_TYPE_ROLE or role == TARGET_TYPE_ROLE:
+                parent = currentItem.parent()
+                self._currentProp = self._getSelectedObject(parent) 
+
         if isinstance(self._currentProp, Usd.Prim):
             self._currentProp = None
         if self._console:
             self._console.reloadConsole(self)
 
         if currentItem is not None:
-            itemName = str(self._ui.propertyView.item(currentItem.row(), 0).text())
+            itemName = str(currentItem.text(INDEX_PROPNAME))
 
             # inform the value editor that we selected a new attribute
             self._ui.attributeValueEditor.populate(itemName, self._currentNodes[0])
@@ -3004,17 +2774,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         return item
 
-    def _updatePrimTreeForVariantSwitch(self):
-        self._clearCaches()
-
-        for prim in self._currentNodes:
-            if prim:
-                self._clearGeomCountsForPrimPath(prim.GetPath())
-
-        self._resetNodeView()
-
-        # Finally redraw the bbox and transitively the scene.
-        self._refreshBBox()
 
     def _getCommonNodes(self, pathsList):
         import os
@@ -3115,6 +2874,11 @@ class MainWindow(QtWidgets.QMainWindow):
             self._stageView.setNodes(self._prunedCurrentNodes, self._currentFrame,
                                      resetCam=False, forceComputeBBox=True) 
 
+        # Clear out any attribute and prim searches when the selected prim changes
+        # We can't hold onto the resulting Qt Widgets, as they are ephemeral.
+        self._nodeSearchResults = []
+        self._attrSearchResults = []
+
         self._updateAttributeInspector(obj=self._getSelectedPrim(),
                                        updateAttributeView=True)
 
@@ -3134,8 +2898,18 @@ class MainWindow(QtWidgets.QMainWindow):
                                        updateAttributeView=False)
 
     def _propertyViewItemClicked(self, item, col):
-        self._updateAttributeInspector(obj=self._getSelectedObject(),
-                                       updateAttributeView=False)
+        role = item.data(INDEX_PROPTYPE, QtCore.Qt.ItemDataRole.WhatsThisRole)
+        if role == CONN_TYPE_ROLE or role == TARGET_TYPE_ROLE:
+            self._ui.propertyView.setCurrentItem(item.parent())
+            item.setSelected(True)
+
+        currIndex = self._ui.attributeInspector.currentIndex()
+        
+        # The INDEX_VALUE tab is updated through a separate callback.
+        if currIndex != INDEX_VALUE:
+            self._updateAttributeInspector(index=currIndex,
+                                           obj=self._getSelectedObject(),
+                                           updateAttributeView=False)
 
     def _getPathsFromItems(self, items, prune = False):
         # this function returns a list of paths given a list of items if
@@ -3242,11 +3016,20 @@ class MainWindow(QtWidgets.QMainWindow):
 
         prim = self._currentNodes[0]
 
-        customAttrs = _GetCustomAttributes(prim, self._bboxCache, self._xformCache)
-        attrs = prim.GetAttributes()
-                        
-        for cAttr in customAttrs:
-            attributeDict[cAttr.GetName()] = cAttr
+        composed, rels = _GetCustomAttributes(prim, self._bboxCache, self._xformCache)
+
+        attrs = prim.GetAttributes() + rels
+        def cmpFunc(attrA, attrB):
+            aName = attrA.GetName()
+            bName = attrB.GetName()
+            return cmp(aName.lower(), bName.lower())
+
+        attrs.sort(cmp=cmpFunc)
+
+        # Add the special composed attributes usdview generates
+        # at the top of our property list.
+        for attr in composed:
+            attributeDict[attr.GetName()] = attr
 
         for attr in attrs:
             attributeDict[attr.GetName()] = attr
@@ -3255,50 +3038,95 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _updateAttributeViewInternal(self):
         frame = self._currentFrame
-        tableWidget = self._ui.propertyView
+        treeWidget = self._ui.propertyView
 
-        previousSelection = tableWidget.selectedItems()
+        previousSelection = treeWidget.selectedItems()
         prevSelectedAttributeNames = set()
         for i in previousSelection:
-            prevSelectedAttributeNames.add(
-                str(tableWidget.item(i.row(),0).text()))
+            prevSelectedAttributeNames.add(str(i.text(INDEX_PROPNAME)))
 
         # get a dictionary of prim attribs/members and store it in self._attributeDict
         self._attributeDict = self._getAttributeDict()
-
-        # Setup table widget
-        tableWidget.clearContents()
-        tableWidget.setRowCount(len(self._attributeDict))
-
+        treeWidget.clear()
         self._populateAttributeInspector()
 
-        attributeCount = 0
+        currRow = 0
         for key, attribute in self._attributeDict.iteritems():
-            # Get the attribute's value and display color
-            fgColor = GetAttributeColor(attribute, frame)
+            targets = None 
 
-            attrName = QtWidgets.QTableWidgetItem(str(key))
-            attrName.setFont(BoldFont)
-            attrName.setForeground(fgColor)
-            tableWidget.setItem(attributeCount, 0, attrName)
+            if (isinstance(attribute, BoundingBoxAttribute) or 
+                isinstance(attribute, LocalToWorldXformAttribute)):
+                typeContent = CMP_TYPE_ICON() 
+                typeRole = CMP_TYPE_ROLE
+            elif type(attribute) == Usd.Attribute:
+                if attribute.HasAuthoredConnections():
+                    typeContent = ATTR_WITH_CONN_TYPE_ICON()
+                    typeRole = ATTR_WITH_CONN_TYPE_ROLE
+                    targets = attribute.GetConnections()
+                else:
+                    typeContent = ATTR_PLAIN_TYPE_ICON()
+                    typeRole = ATTR_PLAIN_TYPE_ROLE
+            else:
+                # Otherwise we have a RelationshipAttribute
+                targets = attribute._relationship.GetTargets() 
 
-            attrText = _GetShortString(attribute, frame)
-            attrVal = QtWidgets.QTableWidgetItem(attrText)
-            valTextFont = GetAttributeTextFont(attribute, frame)
-            if valTextFont:
-                attrVal.setFont(valTextFont)
-                attrName.setFont(valTextFont)
-            attrVal.setForeground(fgColor)
-            tableWidget.setItem(attributeCount, 1, attrVal)
+                if targets:
+                    typeContent = REL_WITH_TARGET_TYPE_ICON()
+                    typeRole = REL_WITH_TARGET_TYPE_ROLE
+                else:
+                    typeContent = REL_PLAIN_TYPE_ICON()
+                    typeRole = REL_PLAIN_TYPE_ROLE
+
+            attrText = GetShortString(attribute, frame) or ""
+            treeWidget.addTopLevelItem(
+                QtWidgets.QTreeWidgetItem(["", str(key), attrText]))
+            treeWidget.topLevelItem(currRow).setIcon(INDEX_PROPTYPE, typeContent)
+            treeWidget.topLevelItem(currRow).setData(INDEX_PROPTYPE,
+                                                     QtCore.Qt.ItemDataRole.WhatsThisRole,
+                                                     typeRole)
+
+            currItem = treeWidget.topLevelItem(currRow)
 
             # Need reference to original value for pretty-print on double-click
             if (key in prevSelectedAttributeNames):
-                tableWidget.item(attributeCount,0).setSelected(True)
-                tableWidget.setCurrentItem(tableWidget.item(attributeCount, 0))
+                currItem.setSelected(True)
+                treeWidget.setCurrentItem(currItem)
+            
+            valTextFont = GetAttributeTextFont(attribute, frame)
+            if valTextFont:
+                currItem.setFont(INDEX_PROPVAL, valTextFont)
+                currItem.setFont(INDEX_PROPNAME, valTextFont) 
+            else:
+                currItem.setFont(INDEX_PROPNAME, BoldFont)
 
-            attributeCount += 1
+            fgColor = GetAttributeColor(attribute, frame)
+            currItem.setForeground(INDEX_PROPNAME, fgColor)
+            currItem.setForeground(INDEX_PROPVAL, fgColor)
 
-        tableWidget.resizeColumnToContents(0)
+            if targets:
+                childRow = 0
+                for t in targets:
+                    valTextFont = GetAttributeTextFont(attribute, frame) or BoldFont
+                    # USD does not provide or infer values for relationship or
+                    # connection targets, so we don't display them here.
+                    currItem.addChild(QtWidgets.QTreeWidgetItem(["", str(t), ""]))
+                    currItem.setFont(INDEX_PROPVAL, valTextFont)
+                    child = currItem.child(childRow)
+
+                    if typeRole == REL_WITH_TARGET_TYPE_ROLE:
+                        child.setIcon(INDEX_PROPTYPE, TARGET_TYPE_ICON())
+                        child.setData(INDEX_PROPTYPE, 
+                                      QtCore.Qt.ItemDataRole.WhatsThisRole, 
+                                      TARGET_TYPE_ROLE)
+                    else:
+                        child.setIcon(INDEX_PROPTYPE, CONN_TYPE_ICON())
+                        child.setData(INDEX_PROPTYPE, 
+                                      QtCore.Qt.ItemDataRole.WhatsThisRole, 
+                                      CONN_TYPE_ROLE)
+
+                    childRow += 1
+
+            currRow += 1
 
     def _updateAttributeView(self):
         """ Sets the contents of the attribute value viewer """
@@ -3320,9 +3148,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 selectedAttribute = attrs[0]
 
         if selectedAttribute:
-            attrName = str(self._ui.propertyView.item(selectedAttribute.row(),0).text())
-            if attrName.startswith("[Relationship]"):
-                attrName = attrName[len("[Relationship] "):]
+            attrName = str(selectedAttribute.text(INDEX_PROPNAME))
+
+            if PropTreeWidgetTypeIsRel(selectedAttribute):
                 obj = self._currentNodes[0].GetRelationship(attrName)
             else:
                 obj = self._currentNodes[0].GetAttribute(attrName)
@@ -3543,7 +3371,9 @@ class MainWindow(QtWidgets.QMainWindow):
             attrName = QtWidgets.QTableWidgetItem(str(variantSetName+ ' variant'))
             tableWidget.setItem(rowIndex, 0, attrName)
             tableWidget.setCellWidget(rowIndex, 1, combo)
-            combo.currentIndexChanged.connect(combo.updateVariantSelection)
+            combo.currentIndexChanged.connect(
+                lambda i, combo=combo: combo.updateVariantSelection(
+                    i, self._updateForStageChanges, self._printTiming))
             rowIndex += 1 
 
         tableWidget.resizeColumnToContents(0)
@@ -3698,7 +3528,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 tableWidget.setItem(i, 1, pathItem)
 
                 if path.IsPropertyPath():
-                    valStr = _GetShortString(spec, self._currentFrame)
+                    valStr = GetShortString(spec, self._currentFrame)
                     ttStr = valStr
                     valueItem = QtWidgets.QTableWidgetItem(valStr)
                     sampleBased = (spec.HasInfo('timeSamples') and
@@ -3997,14 +3827,33 @@ class MainWindow(QtWidgets.QMainWindow):
         return [self._nodeToItemMap[n] for n in self._currentNodes
                     if n in self._nodeToItemMap]
 
-    def editSelectedReference(self):
-        """ Invoke the reference editing dialog """
-        prim = self._currentNodes[0]
-        if not prim.IsReference():
-            return
+    def _getPrimFromPropString(self, p):
+        return self._stage.GetPrimAtPath(p.split('.')[0])
 
-        editor = referenceEditor.ReferenceEditor(self, self._stage, prim)
-        editor.exec_()
+    def jumpToTargetPaths(self, paths):
+        self._setSelectionFromPrimList([self._stage.GetPrimAtPath(Sdf.Path(p).GetPrimPath()) for p in paths])                     
+                                                                                 
+        if len(paths) == 1:                                                      
+            path = Sdf.Path(paths[0])
+
+            # If there is no property component
+            if not path.IsPropertyPath():
+                return
+
+            primName = path.GetPrimPath()
+            propName = path.name
+
+            lookup = self._ui.propertyView.findItems(                            
+                propName,                                                        
+                QtCore.Qt.MatchRegExp | QtCore.Qt.MatchRecursive,                
+                INDEX_PROPNAME)                                                  
+
+            if not lookup:                                                       
+                return                                                           
+                                                                                 
+            item = lookup[0]                                                     
+            item.setSelected(True)                                               
+            self._ui.propertyView.setCurrentItem(item)                           
 
     def jumpToEnclosingModelSelectedPrims(self):
         from common import GetEnclosingModelPrim
