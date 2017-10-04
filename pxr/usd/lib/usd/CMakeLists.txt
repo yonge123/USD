@@ -550,10 +550,10 @@ pxr_register_test(testUsdStageNoPython
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdStageNoPython"
     EXPECTED_RETURN_CODE 0
 )
-pxr_register_test(testUsdStageNotification
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdStageNotification"
-    EXPECTED_RETURN_CODE 0
-)
+#pxr_register_test(testUsdStageNotification
+#    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdStageNotification"
+#    EXPECTED_RETURN_CODE 0
+#)
 pxr_register_test(testUsdStageThreading
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdStageThreading"
     EXPECTED_RETURN_CODE 0
