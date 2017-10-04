@@ -372,7 +372,7 @@ PxrUsdMayaXformStack::MatchingSubstack(
     // order whenever we get to the rotate op. Therefore, we
     // set a "temp" rotOrder, and then only set MrotOrder at the
     // end
-    MTransformationMatrix::RotationOrder tempRotOrder;
+    MTransformationMatrix::RotationOrder tempRotOrder = MTransformationMatrix::kInvalid;
 
     // nextOp keeps track of where we will start looking for matches.  It
     // will only move forward.
@@ -459,7 +459,7 @@ PxrUsdMayaXformStack::MatchingSubstack(
         }
     }
 
-    if (MrotOrder != nullptr)
+    if (MrotOrder != nullptr && tempRotOrder != MTransformationMatrix::kInvalid)
     {
         *MrotOrder = tempRotOrder;
     }
