@@ -28,6 +28,7 @@
 #include "GT_PointInstancer.h"
 #include "GT_OldPointInstancer.h"
 #include "GU_USD.h"
+#include "stageCache.h"
 
 #include <GEO/GEO_Primitive.h>
 #include <GT/GT_PrimInstance.h>
@@ -55,11 +56,19 @@ using std::vector;
 #define DBG(x)
 #endif
 
+
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    (PointInstancer)
+    (PxPointInstancer)
+);
+
+
 namespace {
 
 GT_DataArrayHandle newDataArray( GT_Storage storage, GT_Size size, int tupleSize );
 void copyDataArrayItem( GT_DataArrayHandle dstData, GT_DataArrayHandle srcData, 
-                        GT_Offset offset );
+                        GT_Offset dstOffset, GT_Offset srcOffset );
 }  
 
 GusdRefiner::GusdRefiner(
@@ -185,60 +194,49 @@ GusdRefiner::addPrimitive( const GT_PrimitiveHandle& gtPrimIn )
     GT_PrimitiveHandle gtPrim = gtPrimIn;     // copy to a non-const handle
     int primType = gtPrim->getPrimitiveType();
     DBG( cerr << "GusdRefiner::addPrimitive, " << gtPrim->className() << endl );
-    GT_Owner owner;
-
-    // If we find either an instancepath or usdinstancepath attribute, build a
-    // point instancer.
-    if(gtPrim->findAttribute("instancepath", owner, 0) ||
-        gtPrim->findAttribute("usdinstancepath", owner, 0) ) {
-        m_buildPointInstancer = true;
-    }
 
     // The following is only necessary for point instancers. Prototypes 
     // can't be point instancers.
     if (!m_buildPrototypes) {
-        // If we have imported USD geometry and haven't determined it's type,
-        // get the type to see if it is a point instancer we need to overlay.
-        if( m_pointInstancerType.empty()) {
-            if(auto packedUSD = dynamic_cast<const GusdGT_PackedUSD*>( gtPrim.get() )) {
-                std::string usdFile(packedUSD->getFileName());
-                if (!usdFile.empty()) {
-                    // To open the usd stage and retrieve the original instancer
-                    // type, we borrow the usd locking code from 
-                    // GusdGU_PackedUSD::intrinsicType 
-                    GusdUSD_PrimHolder m_usdPrim = GusdUSD_PrimHolder();
-                    GusdUSD_PrimHolder::ScopedLock lock;
-                    GusdUSD_StageCacheContext cache;
 
-                    GusdUSD_StageProxy::Accessor accessor;
+        // Check per prim if we are building a point instancer. This may cause
+        // problems for point instancers with discontiguous packed prims.
+        bool localBuildPointInstancer = false;
+        // If we have imported USD geometry get the type to see if it is a
+        // point instancer we need to overlay.
+        if(auto packedUSD = dynamic_cast<const GusdGT_PackedUSD*>( gtPrim.get() )) {
+            
+            if(packedUSD->getFileName()) {
 
-                    const TfToken filePath(usdFile);
-                    GusdUSD_Utils::PrimIdentifier identifier;
-                    const SdfPath instancerPrimPath = packedUSD->getSrcPrimPath();
-                    identifier.SetFromVariantPath(instancerPrimPath);
-                    if (cache.Bind(accessor, filePath, identifier, NULL)) {
-                        m_usdPrim = accessor.GetPrimHolderAtPath(identifier.GetPrimPath(), NULL);
-                        lock.Acquire(m_usdPrim, /*write*/false);
+                // Get the usd src prim path used for point instancers
+                const SdfPath& instancerPrimPath =
+                    packedUSD->getSrcPrimPath();
 
-                        if( *lock == NULL ) {
-                            return;
-                        }
-
-                        // Get the type name of the usd file to overlay
-                        m_pointInstancerType = (*lock).GetTypeName().GetText();
+                GusdStageCacheReader cache;
+                if(UsdPrim prim = cache.GetPrimWithVariants(
+                    packedUSD->getFileName(), instancerPrimPath).first) {
+                    // Get the type name of the usd file to overlay
+                    m_pointInstancerType = prim.GetTypeName();
+            
+                    // Make sure to set buildPointInstancer to true if we are overlaying a
+                    // point instancer
+                    if (m_pointInstancerType == _tokens->PointInstancer ||
+                        m_pointInstancerType == _tokens->PxPointInstancer) {
+                        localBuildPointInstancer = true;
                     }
                 }
             }
         }
         
-        // Make sure to set buildPointInstancer to true if we are overlaying a
-        // point instancer
-        if (!m_pointInstancerType.empty() &&
-                (m_pointInstancerType == "PointInstancer" ||
-                    m_pointInstancerType == "PxPointInstancer")) {
-            m_buildPointInstancer = true;
+        // If we find either an instancepath or usdinstancepath attribute, build a
+        // point instancer.
+        GT_Owner owner;
+        if(gtPrim->findAttribute("instancepath", owner, 0) ||
+            gtPrim->findAttribute("usdinstancepath", owner, 0) ) {
+            localBuildPointInstancer = true;
         }
-        if (m_buildPointInstancer) {
+
+        if (m_buildPointInstancer || localBuildPointInstancer) {
             // If we are building point instancer, stash prims that can be 
             // point instanced. Build the point instancer in the finish method.
 
@@ -493,7 +491,7 @@ GusdRefiner::addPrimitive( const GT_PrimitiveHandle& gtPrimIn )
 
         UT_Matrix4D newCtm = m_localToWorldXform;
         newCtm = m* m_localToWorldXform;
-        
+
         m_collector.add( SdfPath(primPath),
                          addNumericSuffix,
                          gtPrim,
@@ -651,7 +649,7 @@ GusdRefinerCollector::finish( GusdRefiner& refiner )
                     
                     auto srcData = instPtAttrs->get( attrIndex );
                     if( auto dstData = pAttrs->get( n ) ) {
-                        copyDataArrayItem( dstData, srcData, primIndex );
+                        copyDataArrayItem( dstData, srcData, primIndex, primArray[primIndex].index );
                     }
                 }
                 if( pivotArray ) {
@@ -677,7 +675,7 @@ GusdRefinerCollector::finish( GusdRefiner& refiner )
                     
                     auto srcData = instUniAttrs->get( attrIndex );
                     if( auto dstData = pAttrs->get( n ) ) {
-                        copyDataArrayItem( dstData, srcData, primIndex );
+                        copyDataArrayItem( dstData, srcData, primIndex, primArray[primIndex].index );
                     }
                 }
             }
@@ -737,8 +735,7 @@ GusdRefinerCollector::finish( GusdRefiner& refiner )
 
         // Add the refined point instancer. If we are overlaying an old point
         // instancer make sure to use the old type (temporary).
-        if (!refiner.m_pointInstancerType.empty() && 
-                refiner.m_pointInstancerType == "PxPointInstancer") {
+        if (refiner.m_pointInstancerType == _tokens->PxPointInstancer) {
             refiner.addPrimitive( new GusdGT_OldPointInstancer( pAttrs, uniformAttrs ) );
         } else {
             refiner.addPrimitive( new GusdGT_PointInstancer( pAttrs, uniformAttrs ) );
@@ -793,38 +790,38 @@ newDataArray( GT_Storage storage, GT_Size size, int tupleSize )
 
 void
 copyDataArrayItem( GT_DataArrayHandle dstData, GT_DataArrayHandle srcData, 
-                   GT_Offset offset )
+                   GT_Offset dstOffset, GT_Offset srcOffset )
 {
     // copy a scalar data item into the destination array at the given offset.
     GT_Storage storage = dstData->getStorage();
     if( storage == GT_STORE_REAL32 ) {
         for( int i = 0; i < dstData->getTupleSize(); ++i ) {
             auto dst = UTverify_cast<GT_Real32Array*>(dstData.get());
-            dst->set( srcData->getF32( 0, i ), offset, i );
+            dst->set( srcData->getF32( srcOffset, i ), dstOffset, i );
         }
     }
     else if( storage == GT_STORE_REAL64 ) {
         for( int i = 0; i < dstData->getTupleSize(); ++i ) {
             auto dst = UTverify_cast<GT_Real64Array*>(dstData.get());
-            dst->set( srcData->getF64( 0, i ), offset, i );
+            dst->set( srcData->getF64( srcOffset, i ), dstOffset, i );
         }
     }
     else if( storage == GT_STORE_INT32 ) {
         for( int i = 0; i < dstData->getTupleSize(); ++i ) {
             auto dst = UTverify_cast<GT_Int32Array*>(dstData.get());
-            dst->set( srcData->getI32( 0, i ), offset, i );
+            dst->set( srcData->getI32( srcOffset, i ), dstOffset, i );
         }
     }
     else if( storage == GT_STORE_INT64 ) {
         for( int i = 0; i < dstData->getTupleSize(); ++i ) {
             auto dst = UTverify_cast<GT_Int64Array*>(dstData.get());
-            dst->set( srcData->getI64( 0, i ), offset, i );
+            dst->set( srcData->getI64( srcOffset, i ), dstOffset, i );
         }
     }
     else if( storage == GT_STORE_STRING ) {
         for( int i = 0; i < dstData->getTupleSize(); ++i ) {
             auto dst = UTverify_cast<GT_DAIndexedString*>(dstData.get());
-            dst->setString( offset, i, srcData->getS( 0, i ) );
+            dst->setString( dstOffset, i, srcData->getS( srcOffset, i ) );
         }
     }
 }
