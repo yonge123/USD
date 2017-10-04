@@ -33,5 +33,6 @@ tg/simple_features/face_varying_in_katana
 tg/simple_features/export_parent_scope
 tg/simple_features/maya_user_attribute_writer_plugins
 tg/simple_features/eulerFilter
+tg/simple_features/allow_custom_material_scope_names_in_katana
 pseudo_root_warning
 ptex_prefer_static
