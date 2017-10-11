@@ -268,23 +268,6 @@ UsdGeomImagePlane::CreateFrameOffsetAttr(VtValue const &defaultValue, bool write
 }
 
 UsdAttribute
-UsdGeomImagePlane::GetFrameCacheAttr() const
-{
-    return GetPrim().GetAttribute(UsdGeomTokens->frameCache);
-}
-
-UsdAttribute
-UsdGeomImagePlane::CreateFrameCacheAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->frameCache,
-                       SdfValueTypeNames->Int,
-                       /* custom = */ false,
-                       SdfVariabilityVarying,
-                       defaultValue,
-                       writeSparsely);
-}
-
-UsdAttribute
 UsdGeomImagePlane::GetWidthAttr() const
 {
     return GetPrim().GetAttribute(UsdGeomTokens->width);
@@ -409,7 +392,6 @@ UsdGeomImagePlane::GetSchemaAttributeNames(bool includeInherited)
         UsdGeomTokens->coverageOrigin,
         UsdGeomTokens->useFrameExtension,
         UsdGeomTokens->frameOffset,
-        UsdGeomTokens->frameCache,
         UsdGeomTokens->width,
         UsdGeomTokens->height,
         UsdGeomTokens->alphaGain,

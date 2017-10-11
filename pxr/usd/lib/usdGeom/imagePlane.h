@@ -362,27 +362,6 @@ public:
 
 public:
     // --------------------------------------------------------------------- //
-    // FRAMECACHE 
-    // --------------------------------------------------------------------- //
-    /// Precached frame count
-    ///
-    /// \n  C++ Type: int
-    /// \n  Usd Type: SdfValueTypeNames->Int
-    /// \n  Variability: SdfVariabilityVarying
-    /// \n  Fallback Value: 45
-    USDGEOM_API
-    UsdAttribute GetFrameCacheAttr() const;
-
-    /// See GetFrameCacheAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    USDGEOM_API
-    UsdAttribute CreateFrameCacheAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
-
-public:
-    // --------------------------------------------------------------------- //
     // WIDTH 
     // --------------------------------------------------------------------- //
     /// Width
