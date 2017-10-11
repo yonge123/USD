@@ -213,9 +213,6 @@ class ImagePlane "ImagePlane" (
     int frameOffset = 0 (
         doc = "Frame offset"
     )
-    int frameCache = 45 (
-        doc = "Precached frame count"
-    )
     float width = 0.0 (
         doc = "Width"
     )

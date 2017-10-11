@@ -94,7 +94,6 @@ PXR_NAMESPACE_OPEN_SCOPE
     (focalLength) \
     (focusDistance) \
     (frame) \
-    (frameCache) \
     (frameOffset) \
     (fStop) \
     (fullGeom) \
@@ -271,7 +270,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \li <b>focalLength</b> - UsdGeomCamera
 /// \li <b>focusDistance</b> - UsdGeomCamera
 /// \li <b>frame</b> - UsdGeomImagePlane
-/// \li <b>frameCache</b> - UsdGeomImagePlane
 /// \li <b>frameOffset</b> - UsdGeomImagePlane
 /// \li <b>fStop</b> - UsdGeomCamera
 /// \li <b>fullGeom</b> - Possible value for UsdGeomPointInstancer::GetPrototypeDrawModeAttr()

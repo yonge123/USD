@@ -114,9 +114,6 @@ class ImagePlane "ImagePlane" (
     double frame = 0 (
         doc = "The frame offset for animated textures."
     )
-    int frameCache = 45 (
-        doc = "Precached frame count"
-    )
     int frameOffset = 0 (
         doc = "Frame offset"
     )
