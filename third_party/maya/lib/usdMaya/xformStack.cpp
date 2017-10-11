@@ -254,7 +254,7 @@ bool PxrUsdMayaXformOpClassification::operator ==(const PxrUsdMayaXformOpClassif
 constexpr size_t PxrUsdMayaXformStack::NO_INDEX;
 
 PxrUsdMayaXformStack::PxrUsdMayaXformStack(
-        const OpClassList ops,
+        const OpClassList& ops,
         const std::vector<std::pair<size_t, size_t> > inversionTwins,
         bool nameMatters) :
                 _ops(ops),

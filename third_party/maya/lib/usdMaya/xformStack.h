@@ -337,7 +337,7 @@ public:
 
 private:
     PxrUsdMayaXformStack(
-            const OpClassList ops,
+            const OpClassList& ops,
             const std::vector<std::pair<size_t, size_t> > inversionTwins,
             bool nameMatters=true);
 
