@@ -392,9 +392,11 @@ PxrUsdMayaTranslatorXformable::Read(
 
     std::vector<PxrUsdMayaXformStack::OpClassPtr> stackOps = \
             PxrUsdMayaXformStack::FirstMatchingSubstack(
-                     xformops, &MrotOrder,
-                     PxrUsdMayaXformStack::MayaStack(),
-                     PxrUsdMayaXformStack::CommonStack());
+                    {
+                        &PxrUsdMayaXformStack::MayaStack(),
+                        &PxrUsdMayaXformStack::CommonStack()
+                    },
+                    xformops, &MrotOrder);
 
     bool importedPivots = false;
     MFnDagNode MdagNode(mayaNode);

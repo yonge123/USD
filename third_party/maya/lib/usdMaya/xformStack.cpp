@@ -255,7 +255,7 @@ constexpr size_t PxrUsdMayaXformStack::NO_INDEX;
 
 PxrUsdMayaXformStack::PxrUsdMayaXformStack(
         const OpClassList& ops,
-        const std::vector<std::pair<size_t, size_t> > inversionTwins,
+        const std::vector<std::pair<size_t, size_t> >& inversionTwins,
         bool nameMatters) :
                 _ops(ops),
                 _inversionTwins(inversionTwins),
@@ -467,7 +467,29 @@ PxrUsdMayaXformStack::MatchingSubstack(
     return ret;
 }
 
-const PxrUsdMayaXformStack& PxrUsdMayaXformStack::MayaStack()
+std::vector<OpClassPtr>
+PxrUsdMayaXformStack::FirstMatchingSubstack(
+        const std::vector<PxrUsdMayaXformStack const *>& stacks,
+        const std::vector<UsdGeomXformOp>& xformops,
+        MTransformationMatrix::RotationOrder* MrotOrder)
+{
+    if (xformops.empty() || stacks.empty()) return std::vector<OpClassPtr>();
+
+    for (auto& stackPtr : stacks)
+    {
+        std::vector<PxrUsdMayaXformStack::OpClassPtr> stackOps = \
+                stackPtr->MatchingSubstack(xformops, MrotOrder);
+        if (!stackOps.empty())
+        {
+            return stackOps;
+        }
+    }
+
+    return std::vector<OpClassPtr>();
+}
+
+const PxrUsdMayaXformStack&
+PxrUsdMayaXformStack::MayaStack()
 {
     static PxrUsdMayaXformStack mayaStack(
             // ops
@@ -518,7 +540,8 @@ const PxrUsdMayaXformStack& PxrUsdMayaXformStack::MayaStack()
     return mayaStack;
 }
 
-const PxrUsdMayaXformStack& PxrUsdMayaXformStack::CommonStack()
+const PxrUsdMayaXformStack&
+PxrUsdMayaXformStack::CommonStack()
 {
     static PxrUsdMayaXformStack commonStack(
             // ops
@@ -549,7 +572,8 @@ const PxrUsdMayaXformStack& PxrUsdMayaXformStack::CommonStack()
     return commonStack;
 }
 
-const PxrUsdMayaXformStack& PxrUsdMayaXformStack::MatrixStack()
+const PxrUsdMayaXformStack&
+PxrUsdMayaXformStack::MatrixStack()
 {
     static PxrUsdMayaXformStack matrixStack(
             // ops

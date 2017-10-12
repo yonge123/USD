@@ -84,9 +84,8 @@ namespace {
             "\n"
             "Returns the first non-empty result it finds; if all stacks\n"
             "return an empty vector, an empty vector is returned.\n"
-            "The first arg must be the list of UsdGeomXformOps to match;\n"
-            "the remaining args are the PxrUsdMayaXformStack objects to test against,\n"
-            "in order.\n"
+            "The first arg must be a list of PxrUsdMayaXformStack objects to test against,\n"
+            "in order, the second arg is the list of UsdGeomXformOps to match.\n"
             "\n"
             "%s",
             RETURN_ROT_ORDER_DOCSTRING.c_str());
@@ -218,15 +217,11 @@ namespace {
         }
 
         static object
-        MatchingSubstack(
-                const PxrUsdMayaXformStack& stack,
-                const std::vector<UsdGeomXformOp>& xformops,
+        AddOptionalRotOrderToOpMatches(
+                std::vector<PxrUsdMayaXformStack::OpClassPtr>& result,
+                MTransformationMatrix::RotationOrder rotOrder,
                 bool returnRotOrder)
         {
-            MTransformationMatrix::RotationOrder rotOrder = MTransformationMatrix::kXYZ;
-            std::vector<PxrUsdMayaXformStack::OpClassPtr> result = \
-                    stack.MatchingSubstack(xformops, &rotOrder);
-
             boost::python::list matching_list;
             if (!result.empty())
             {
@@ -272,74 +267,27 @@ namespace {
         }
 
         static object
-        FirstMatchingSubstack(boost::python::tuple args, boost::python::dict kwargs)
+        MatchingSubstack(
+                const PxrUsdMayaXformStack& stack,
+                const std::vector<UsdGeomXformOp>& xformops,
+                bool returnRotOrder)
         {
-            // WARNING: this logic is currently duplicated in xformStack.h,
-            // PxrUsdMayaXformStack::FirstMatchingSubstack, because it was much
-            // simpler / readable than using variadic templates to convert a
-            // python tuple into variadic arguments. Should be ok because the
-            // logic is currently so simple. If this logic changes, either change it
-            // in both places, or modify the python wrapper to call the variadic
-            // template function directly.
-            bool returnRotOrder = false;
-            if (len(kwargs) > 0)
-            {
-                object returnRotOrderValue = kwargs.get("returnRotOrder");
-                if (returnRotOrderValue.is_none() || len(kwargs) > 1)
-                {
-                    std::string msg = std::string("only allowable kwarg to FirstMatchingSubstack is ") \
-                            + RETURN_ROT_ORDER;
-                    PyErr_SetString(PyExc_ValueError, msg.c_str());
-                    boost::python::throw_error_already_set();
-                }
-                returnRotOrder = extract<bool>(returnRotOrderValue);
-            }
+            MTransformationMatrix::RotationOrder rotOrder = MTransformationMatrix::kXYZ;
+            std::vector<PxrUsdMayaXformStack::OpClassPtr> result = \
+                    stack.MatchingSubstack(xformops, &rotOrder);
+            return AddOptionalRotOrderToOpMatches(result, rotOrder, returnRotOrder);
+        }
 
-            if (len(args) < 1)
-            {
-                PyErr_SetString(PyExc_ValueError,
-                        "FirstMatchingSubstack requires a list of of XformOps as the first arg");
-                boost::python::throw_error_already_set();
-            }
-
-            const std::vector<UsdGeomXformOp> xformOps = extract<std::vector<UsdGeomXformOp>>(args[0]);
-
-            if (!xformOps.empty())
-            {
-                for (ssize_t i=1; i < len(args); ++i)
-                {
-                    const PxrUsdMayaXformStack& stack = extract<PxrUsdMayaXformStack&>(args[i]);
-                    object result = MatchingSubstack(stack, xformOps, returnRotOrder);
-
-                    // Need to check if result was successful... slightly trickier since we may get
-                    // back a tuple or just the list
-                    bool wasEmpty;
-                    if(returnRotOrder)
-                    {
-                        boost::python::tuple& result_tuple = static_cast<boost::python::tuple&>(result);
-                        wasEmpty = boost::python::len(result_tuple[0]) == 0;
-                    }
-                    else
-                    {
-                        wasEmpty = boost::python::len(result) == 0;
-                    }
-                    if (!wasEmpty)
-                    {
-                        return result;
-                    }
-                }
-            }
-
-            if (returnRotOrder)
-            {
-                return boost::python::make_tuple(
-                        boost::python::list(),
-                        static_cast<int>(MEulerRotation::kXYZ));
-            }
-            else
-            {
-                return boost::python::list();
-            }
+        static object
+        FirstMatchingSubstack(
+                const std::vector<PxrUsdMayaXformStack const *>& stacks,
+                const std::vector<UsdGeomXformOp>& xformops,
+                bool returnRotOrder)
+        {
+            MTransformationMatrix::RotationOrder rotOrder = MTransformationMatrix::kXYZ;
+            std::vector<PxrUsdMayaXformStack::OpClassPtr> result = \
+                    PxrUsdMayaXformStack::FirstMatchingSubstack(stacks, xformops, &rotOrder);
+            return AddOptionalRotOrderToOpMatches(result, rotOrder, returnRotOrder);
         }
     };
 }
@@ -364,7 +312,7 @@ void wrapXformStack()
     boost::python::to_python_converter<PxrUsdMayaXformOpClassification,
             Usd_PyXformOpClassification>();
 
-    class_<PxrUsdMayaXformStack>("XformStack", no_init)
+    class_<PxrUsdMayaXformStack, boost::noncopyable>("XformStack", no_init)
         .def("GetOps", &PxrUsdMayaXformStack::GetOps,
                 return_value_policy<TfPySequenceToList>())
         .def("GetInversionTwins", &Usd_PyXformStack::GetInversionTwins)
@@ -391,12 +339,16 @@ void wrapXformStack()
         .def("MatrixStack", &PxrUsdMayaXformStack::MatrixStack,
                 return_value_policy<reference_existing_object>())
         .staticmethod("MatrixStack")
-        .def("FirstMatchingSubstack",
-                boost::python::raw_function(&Usd_PyXformStack::FirstMatchingSubstack),
+        .def("FirstMatchingSubstack", &Usd_PyXformStack::FirstMatchingSubstack,
+                (boost::python::arg("stacks"), boost::python::arg("xformops"),
+                        boost::python::arg("returnRotOrder")=false),
                 FIRST_MATCHING_DOCSTRING.c_str())
         .staticmethod("FirstMatchingSubstack")
     ;
 
     boost::python::to_python_converter<PxrUsdMayaXformStack::OpClassPtrPair,
             Usd_PyXformStack>();
+
+    TfPyContainerConversions::from_python_sequence<std::vector<PxrUsdMayaXformStack const *>,
+        TfPyContainerConversions::variable_capacity_policy >();
 }

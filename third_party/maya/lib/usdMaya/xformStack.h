@@ -125,7 +125,6 @@ public:
     typedef PxrUsdMayaXformOpClassificationConstPtr OpClassPtr;
     typedef std::pair<OpClassPtr, OpClassPtr> OpClassPtrPair;
 
-
     // Internally, we use indices, instead of weak ptrs, for speed...
     // should be safe, since _ops is const.
     static constexpr size_t NO_INDEX = std::numeric_limits<size_t>::max();
@@ -173,7 +172,7 @@ public:
     explicit PxrUsdMayaXformStack(PxrUsdMayaXformStack&& other) = default;
 
     PXRUSDMAYA_API
-    const std::vector<PxrUsdMayaXformOpClassification>& GetOps() const {
+    const OpClassList& GetOps() const {
         return _ops;
     };
 
@@ -295,52 +294,21 @@ public:
     PXRUSDMAYA_API
     static const PxrUsdMayaXformStack& MatrixStack();
 
-    /// \brief dummy recursion endpoint for FirstMatchingSubstack variadic template
-    PXRUSDMAYA_API
-    inline static std::vector<OpClassPtr>
-    FirstMatchingSubstack(
-            const std::vector<UsdGeomXformOp>& xformops,
-            MTransformationMatrix::RotationOrder* MrotOrder=nullptr)
-    {
-        return std::vector<OpClassPtr>();
-    }
-
-   /// \brief Runs MatchingSubstack against the given list of stacks
+    /// \brief Runs MatchingSubstack against the given list of stacks
     ///
     /// Returns the first non-empty result it finds; if all stacks
     /// return an empty vector, an empty vector is returned.
-    template<typename... RemainingTypes>
     static std::vector<OpClassPtr>
     FirstMatchingSubstack(
+            const std::vector<PxrUsdMayaXformStack const *>& stacks,
             const std::vector<UsdGeomXformOp>& xformops,
-            MTransformationMatrix::RotationOrder* MrotOrder,
-            const PxrUsdMayaXformStack& firstStack,
-            RemainingTypes&... otherStacks)
-    {
-        // WARNING: this logic is currently duplicated in wrapXformStack.cpp,
-        // Usd_PyXformStack::FirstMatchingSubstack, because it was much
-        // simpler / readable than using variadic templates to convert a
-        // python tuple into variadic arguments. Should be ok because the
-        // logic is currently so simple. If this logic changes, either change it
-        // in both places, or modify the python wrapper to call the variadic
-        // template function directly.
-        if (xformops.empty()) return std::vector<OpClassPtr>();
-
-        std::vector<PxrUsdMayaXformStack::OpClassPtr> stackOps = \
-                firstStack.MatchingSubstack(xformops, MrotOrder);
-        if (!stackOps.empty())
-        {
-            return stackOps;
-        }
-        return FirstMatchingSubstack(xformops, MrotOrder, otherStacks...);
-    }
+            MTransformationMatrix::RotationOrder* MrotOrder=nullptr);
 
 private:
     PxrUsdMayaXformStack(
             const OpClassList& ops,
-            const std::vector<std::pair<size_t, size_t> > inversionTwins,
+            const std::vector<std::pair<size_t, size_t> >& inversionTwins,
             bool nameMatters=true);
-
 
     const OpClassList _ops;
     std::vector<IndexPair> _inversionTwins;
