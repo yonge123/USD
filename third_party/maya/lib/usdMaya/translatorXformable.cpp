@@ -390,7 +390,7 @@ PxrUsdMayaTranslatorXformable::Read(
     // different name or out of order that will miss the match, we will rely on
     // matrix decomposition
 
-    std::vector<PxrUsdMayaXformStack::OpClassPtr> stackOps = \
+    PxrUsdMayaXformStack::OpClassList stackOps = \
             PxrUsdMayaXformStack::FirstMatchingSubstack(
                     {
                         &PxrUsdMayaXformStack::MayaStack(),
@@ -404,7 +404,7 @@ PxrUsdMayaTranslatorXformable::Read(
         // make sure stackIndices.size() == xformops.size()
         for (unsigned int i=0; i < stackOps.size(); i++) {
             const UsdGeomXformOp& xformop(xformops[i]);
-            const PxrUsdMayaXformOpClassification& opDef(*(stackOps[i]));
+            const PxrUsdMayaXformOpClassification& opDef(stackOps[i]);
             // If we got a valid stack, we have both the members of the inverted twins..
             // ...so we can go ahead and skip the inverted twin
             if (opDef.IsInvertedTwin()) continue;
