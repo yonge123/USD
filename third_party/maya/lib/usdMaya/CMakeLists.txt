@@ -612,5 +612,4 @@ pxr_register_test(testUsdMayaXformStack
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
-        MAYA_APP_DIR=./maya_profile
 )
