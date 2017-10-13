@@ -23,13 +23,18 @@
 # language governing permissions and limitations under the Apache License.
 #
 
-from pxr import Gf
+from pxr import Gf, Usd
+
+# XXX: The try/except here is temporary until we change the Pixar-internal
+# package name to match the external package name.
+try:
+    from pxr import UsdMaya
+except ImportError:
+    from pixar import UsdMaya
 
 from maya import cmds
 from maya.api import OpenMaya as OM
 from maya import standalone
-
-from pxr import Usd, UsdMaya
 
 import os
 import unittest
@@ -895,7 +900,7 @@ class testUsdMayaXformStack(unittest.TestCase):
     def doFirstMatchingTest(self, stacks, opNames, matchingStack, expectEmpty=False):
         orderedOps, expected = self.makeXformOpsAndExpectedClassifications(
             matchingStack, opNames, expectEmpty=expectEmpty)
-        result = UsdMaya.XformStack.FirstMatchingSubstack(orderedOps, *stacks)
+        result = UsdMaya.XformStack.FirstMatchingSubstack(stacks, orderedOps)
         self.assertEqual(result, expected)
         
     def testFirstMatchingSubstack(self):
@@ -1109,8 +1114,10 @@ class testUsdMayaXformStack(unittest.TestCase):
                 errMessage = '\nstackNames: ' + str(stackNames)
                 
                 expectNone = not (mayaStack in stackList or commonStack in stackList)
+#                 resultList, resultRotateOrder = UsdMaya.XformStack.FirstMatchingSubstack(
+#                     stackList, orderedOps, returnRotOrder=True)
                 resultList, resultRotateOrder = UsdMaya.XformStack.FirstMatchingSubstack(
-                    orderedOps, returnRotOrder=True, *stackList)
+                    stackList, orderedOps, True)
                 if expectNone:
                     self.assertEqual(resultList, [], str(stackNames))
                     self.assertEqual(resultRotateOrder, MEulerRotation.kXYZ, errMessage)
