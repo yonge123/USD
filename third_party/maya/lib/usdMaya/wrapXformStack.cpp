@@ -338,7 +338,7 @@ void wrapXformStack()
     boost::python::to_python_converter<PxrUsdMayaXformOpClassification,
             Usd_PyXformOpClassification>();
 
-    class_<PxrUsdMayaXformStack, boost::noncopyable>("XformStack", no_init)
+    class_<PxrUsdMayaXformStack>("XformStack", no_init)
         .def("GetOps", &PxrUsdMayaXformStack::GetOps,
                 return_value_policy<TfPySequenceToList>())
         .def("GetInversionTwins", &Usd_PyXformStack::GetInversionTwins)
@@ -358,13 +358,13 @@ void wrapXformStack()
                 (boost::python::arg("xformops"), boost::python::arg("returnRotOrder")=false),
                 MATCHING_SUBSTACK_DOCSTRING.c_str())
         .def("MayaStack", &PxrUsdMayaXformStack::MayaStack,
-                return_value_policy<reference_existing_object>())
+                return_value_policy<return_by_value>())
         .staticmethod("MayaStack")
         .def("CommonStack", &PxrUsdMayaXformStack::CommonStack,
-                return_value_policy<reference_existing_object>())
+                return_value_policy<return_by_value>())
         .staticmethod("CommonStack")
         .def("MatrixStack", &PxrUsdMayaXformStack::MatrixStack,
-                return_value_policy<reference_existing_object>())
+                return_value_policy<return_by_value>())
         .staticmethod("MatrixStack")
         .def("FirstMatchingSubstack", &Usd_PyXformStack::FirstMatchingSubstack,
                 (boost::python::arg("stacks"), boost::python::arg("xformops"),

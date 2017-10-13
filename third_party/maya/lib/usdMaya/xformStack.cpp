@@ -175,12 +175,10 @@ namespace {
 
 }
 
-TF_DECLARE_REF_PTRS(_PxrUsdMayaXformOpClassificationData);
-
 class _PxrUsdMayaXformOpClassificationData : public TfRefBase
 {
 public:
-    typedef _PxrUsdMayaXformOpClassificationDataRefPtr RefPtr;
+    typedef TfRefPtr<_PxrUsdMayaXformOpClassificationData> RefPtr;
 
     RefPtr static Create(const TfToken &name,
             UsdGeomXformOp::Type opType,
@@ -326,58 +324,145 @@ bool PxrUsdMayaXformOpClassification::operator ==(const PxrUsdMayaXformOpClassif
 // linker symbol...
 constexpr size_t PxrUsdMayaXformStack::NO_INDEX;
 
+class _PxrUsdMayaXformStackData : public TfRefBase
+{
+public:
+    typedef TfRefPtr<_PxrUsdMayaXformStackData> RefPtr;
+
+    RefPtr static Create(const OpClassList& ops,
+            const std::vector<std::pair<size_t, size_t> >& inversionTwins,
+            bool nameMatters)
+    {
+        return RefPtr(new _PxrUsdMayaXformStackData(
+                ops, inversionTwins, nameMatters));
+    }
+
+    _PxrUsdMayaXformStackData(
+            const OpClassList& ops,
+            const std::vector<std::pair<size_t, size_t> >& inversionTwins,
+            bool nameMatters) :
+                    m_ops(ops),
+                    m_inversionTwins(inversionTwins),
+                    m_inversionMap(_buildInversionMap(inversionTwins)),
+                    m_attrNamesToIdxs(
+                            _buildAttrNamesToIdxs(m_ops, m_inversionMap)),
+                    m_opNamesToIdxs(
+                            _buildOpNamesToIdxs(m_ops, m_inversionMap)),
+                    m_nameMatters(nameMatters)
+    {
+        // Verify that all inversion twins are of same type, and exactly one is marked
+        // as the inverted twin
+        for (auto& pair : m_inversionTwins)
+        {
+            const PxrUsdMayaXformOpClassification& first = m_ops[pair.first];
+            const PxrUsdMayaXformOpClassification& second = m_ops[pair.second];
+            if (first.GetName() != second.GetName())
+            {
+                std::string msg = TfStringPrintf(
+                        "Inversion twins %lu (%s) and %lu (%s) did not have same name",
+                        pair.first, first.GetName().GetText(),
+                        pair.second, second.GetName().GetText());
+                throw std::invalid_argument(msg);
+            }
+            if (first.GetOpType() != second.GetOpType())
+            {
+                std::string msg = TfStringPrintf(
+                        "Inversion twins %lu and %lu (%s) were not same op type",
+                        pair.first, pair.second, first.GetName().GetText());
+                throw std::invalid_argument(msg);
+            }
+            if (first.IsInvertedTwin() == second.IsInvertedTwin())
+            {
+                if (first.IsInvertedTwin())
+                {
+                    std::string msg = TfStringPrintf(
+                            "Inversion twins %lu and %lu (%s) were both marked as the inverted twin",
+                            pair.first, pair.second, first.GetName().GetText());
+                    throw std::invalid_argument(msg);
+                }
+                else
+                {
+                    std::string msg = TfStringPrintf(
+                            "Inversion twins %lu and %lu (%s) were both marked as not the inverted twin",
+                            pair.first, pair.second, first.GetName().GetText());
+                    throw std::invalid_argument(msg);
+                }
+            }
+        }
+    }
+
+    inline const OpClass&
+    GetOpClassFromIndex(
+            const size_t i) const
+    {
+        return i == PxrUsdMayaXformStack::NO_INDEX ? OpClass::NullInstance() : m_ops[i];
+    }
+
+    inline OpClassPair
+    MakeOpClassPairFromIndexPair(
+            const IndexPair& indexPair) const
+    {
+        return std::make_pair(
+                GetOpClassFromIndex(indexPair.first),
+                GetOpClassFromIndex(indexPair.second));
+    }
+
+    const OpClassList m_ops;
+    std::vector<IndexPair> m_inversionTwins;
+    IndexMap m_inversionMap;
+
+    // We store lookups from raw attribute name - use full attribute
+    // name because it's the only "piece" we know we have a pre-generated
+    // TfToken for - even Property::GetBaseName() generates a new TfToken
+    // "on the fly".
+    // The lookup maps to a PAIR of indices into the ops list;
+    // we return a pair because, due to inversion twins, it's possible
+    // for there to be two (but there should be only two!) ops with
+    // the same name - ie, if they're inversion twins. Thus, each pair
+    // of indices will either be:
+    //     { opIndex, NO_INDEX }     if opIndex has no inversion twin
+    //     { opIndex, opIndexTwin }  if opIndex has an inversion twin, and opIndex < opIndexTwin
+    //     { opIndexTwin, opIndex }  if opIndex has an inversion twin, and opIndex > opIndexTwin
+    TokenIndexPairMap m_attrNamesToIdxs;
+
+    // Also have a lookup by op name, for use by FindOp
+    TokenIndexPairMap m_opNamesToIdxs;
+
+    bool m_nameMatters = true;
+};
+
 PxrUsdMayaXformStack::PxrUsdMayaXformStack(
         const OpClassList& ops,
         const std::vector<std::pair<size_t, size_t> >& inversionTwins,
         bool nameMatters) :
-                _ops(ops),
-                _inversionTwins(inversionTwins),
-                _inversionMap(_buildInversionMap(inversionTwins)),
-                _attrNamesToIdxs(
-                        _buildAttrNamesToIdxs(_ops, _inversionMap)),
-                _opNamesToIdxs(
-                        _buildOpNamesToIdxs(_ops, _inversionMap)),
-                _nameMatters(nameMatters)
+        _sharedData(_PxrUsdMayaXformStackData::Create(
+                        ops, inversionTwins, nameMatters))
 {
-    // Verify that all inversion twins are of same type, and exactly one is marked
-    // as the inverted twin
-    for (auto& pair : _inversionTwins)
-    {
-        const PxrUsdMayaXformOpClassification& first = _ops[pair.first];
-        const PxrUsdMayaXformOpClassification& second = _ops[pair.second];
-        if (first.GetName() != second.GetName())
-        {
-            std::string msg = TfStringPrintf(
-                    "Inversion twins %lu (%s) and %lu (%s) did not have same name",
-                    pair.first, first.GetName().GetText(),
-                    pair.second, second.GetName().GetText());
-            throw std::invalid_argument(msg);
-        }
-        if (first.GetOpType() != second.GetOpType())
-        {
-            std::string msg = TfStringPrintf(
-                    "Inversion twins %lu and %lu (%s) were not same op type",
-                    pair.first, pair.second, first.GetName().GetText());
-            throw std::invalid_argument(msg);
-        }
-        if (first.IsInvertedTwin() == second.IsInvertedTwin())
-        {
-            if (first.IsInvertedTwin())
-            {
-                std::string msg = TfStringPrintf(
-                        "Inversion twins %lu and %lu (%s) were both marked as the inverted twin",
-                        pair.first, pair.second, first.GetName().GetText());
-                throw std::invalid_argument(msg);
-            }
-            else
-            {
-                std::string msg = TfStringPrintf(
-                        "Inversion twins %lu and %lu (%s) were both marked as not the inverted twin",
-                        pair.first, pair.second, first.GetName().GetText());
-                throw std::invalid_argument(msg);
-            }
-        }
-    }
+}
+
+OpClassList const &
+PxrUsdMayaXformStack::GetOps() const {
+    return _sharedData->m_ops;
+}
+
+std::vector<std::pair<size_t, size_t> > const &
+PxrUsdMayaXformStack::GetInversionTwins() const {
+    return _sharedData->m_inversionTwins;
+}
+
+bool
+PxrUsdMayaXformStack::GetNameMatters() const {
+    return _sharedData->m_nameMatters;
+}
+
+PxrUsdMayaXformOpClassification const &
+PxrUsdMayaXformStack::operator[] (const size_t index) const {
+    return _sharedData->m_ops[index];
+}
+
+size_t
+PxrUsdMayaXformStack::GetSize() const {
+    return _sharedData->m_ops.size();
 }
 
 size_t
@@ -389,7 +474,7 @@ PxrUsdMayaXformStack::FindOpIndex(const TfToken& opName, bool isInvertedTwin) co
 
     // we (potentially) found a pair of opPtrs... use the one that
     // matches isInvertedTwin
-    const PxrUsdMayaXformOpClassification& firstOp = _ops[foundIdxPair.first];
+    const PxrUsdMayaXformOpClassification& firstOp = GetOps()[foundIdxPair.first];
     if (firstOp.IsInvertedTwin())
     {
         if (isInvertedTwin) return foundIdxPair.first;
@@ -405,7 +490,7 @@ PxrUsdMayaXformStack::FindOpIndex(const TfToken& opName, bool isInvertedTwin) co
 const OpClass&
 PxrUsdMayaXformStack::FindOp(const TfToken& opName, bool isInvertedTwin) const
 {
-    return _GetOpClassFromIndex(FindOpIndex(opName, isInvertedTwin));
+    return _sharedData->GetOpClassFromIndex(FindOpIndex(opName, isInvertedTwin));
 }
 
 const IndexPair&
@@ -413,8 +498,8 @@ PxrUsdMayaXformStack::FindOpIndexPair(const TfToken& opName) const
 {
     static IndexPair _NO_MATCH = std::make_pair(NO_INDEX, NO_INDEX);
     TokenIndexPairMap::const_iterator foundTokenIdxPair =
-            _opNamesToIdxs.find(opName);
-    if (foundTokenIdxPair == _opNamesToIdxs.end())
+            _sharedData->m_opNamesToIdxs.find(opName);
+    if (foundTokenIdxPair == _sharedData->m_opNamesToIdxs.end())
     {
         // Couldn't find the xformop in our stack, abort
         return _NO_MATCH;
@@ -425,7 +510,7 @@ PxrUsdMayaXformStack::FindOpIndexPair(const TfToken& opName) const
 const OpClassPair
 PxrUsdMayaXformStack::FindOpPair(const TfToken& opName) const
 {
-    return _MakeOpClassPairFromIndexPair(FindOpIndexPair(opName));
+    return _sharedData->MakeOpClassPairFromIndexPair(FindOpIndexPair(opName));
 }
 
 OpClassList
@@ -451,17 +536,17 @@ PxrUsdMayaXformStack::MatchingSubstack(
     // will only move forward.
     size_t nextOpIndex = 0;
 
-    std::vector<bool> opNamesFound(_ops.size(), false);
+    std::vector<bool> opNamesFound(GetOps().size(), false);
 
     TF_FOR_ALL(iter, xformops) {
         const UsdGeomXformOp& xformOp = *iter;
         size_t foundOpIdx = NO_INDEX;
 
-        if(_nameMatters) {
+        if(GetNameMatters()) {
             // First try the fast attrName lookup...
             TokenIndexPairMap::const_iterator foundTokenIdxPair =
-                    _attrNamesToIdxs.find(xformOp.GetName());
-            if (foundTokenIdxPair == _attrNamesToIdxs.end())
+                    _sharedData->m_attrNamesToIdxs.find(xformOp.GetName());
+            if (foundTokenIdxPair == _sharedData->m_attrNamesToIdxs.end())
             {
                 // Couldn't find the xformop in our stack, abort
                 return _NO_MATCH;
@@ -489,7 +574,7 @@ PxrUsdMayaXformStack::MatchingSubstack(
             assert(foundOpIdx != NO_INDEX);
 
             // Now check that the op type matches...
-            if (!_ops[foundOpIdx].IsCompatibleType(xformOp.GetOpType()))
+            if (!GetOps()[foundOpIdx].IsCompatibleType(xformOp.GetOpType()))
             {
                 return _NO_MATCH;
             }
@@ -497,9 +582,9 @@ PxrUsdMayaXformStack::MatchingSubstack(
         else {
             // If name does not matter, we just iterate through the remaining ops, until
             // we find one with a matching type...
-            for(size_t i = nextOpIndex; i < _ops.size(); ++i)
+            for(size_t i = nextOpIndex; i < GetSize(); ++i)
             {
-                if (_ops[i].IsCompatibleType(xformOp.GetOpType()))
+                if (GetOps()[i].IsCompatibleType(xformOp.GetOpType()))
                 {
                     foundOpIdx = i;
                     break;
@@ -510,7 +595,7 @@ PxrUsdMayaXformStack::MatchingSubstack(
 
 
         // Ok, we found a match...
-        const PxrUsdMayaXformOpClassification& foundOp = _ops[foundOpIdx];
+        const PxrUsdMayaXformOpClassification& foundOp = GetOps()[foundOpIdx];
 
         // if we're a rotate, set the maya rotation order (if it's relevant to
         // this op)
@@ -526,7 +611,7 @@ PxrUsdMayaXformStack::MatchingSubstack(
     }
 
     // check pivot pairs
-    TF_FOR_ALL(pairIter, _inversionTwins) {
+    TF_FOR_ALL(pairIter, GetInversionTwins()) {
         if (opNamesFound[pairIter->first] != opNamesFound[pairIter->second]) {
             return _NO_MATCH;
         }
@@ -666,23 +751,5 @@ PxrUsdMayaXformStack::MatrixStack()
 
     return matrixStack;
 }
-
-const OpClass&
-PxrUsdMayaXformStack::_GetOpClassFromIndex(
-        const size_t i) const
-{
-    return i == NO_INDEX ? OpClass::NullInstance() : _ops[i];
-}
-
-OpClassPair
-PxrUsdMayaXformStack::_MakeOpClassPairFromIndexPair(
-        const IndexPair& indexPair) const
-{
-    return std::make_pair(
-            _GetOpClassFromIndex(indexPair.first),
-            _GetOpClassFromIndex(indexPair.second));
-}
-
-
 
 PXR_NAMESPACE_CLOSE_SCOPE

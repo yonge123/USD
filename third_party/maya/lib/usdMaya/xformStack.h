@@ -177,29 +177,19 @@ public:
     explicit PxrUsdMayaXformStack(PxrUsdMayaXformStack&& other) = default;
 
     PXRUSDMAYA_API
-    const OpClassList& GetOps() const {
-        return _ops;
-    };
+    OpClassList const & GetOps() const;
 
     PXRUSDMAYA_API
-    const std::vector<std::pair<size_t, size_t> >& GetInversionTwins() const {
-        return _inversionTwins;
-    };
+    std::vector<std::pair<size_t, size_t> > const & GetInversionTwins() const;
 
     PXRUSDMAYA_API
-    bool GetNameMatters() const {
-        return _nameMatters;
-    };
+    bool GetNameMatters() const;
 
     PXRUSDMAYA_API
-    const PxrUsdMayaXformOpClassification& operator[] (const size_t index) const {
-        return _ops[index];
-    }
+    PxrUsdMayaXformOpClassification const & operator[] (const size_t index) const;
 
     PXRUSDMAYA_API
-    size_t GetSize() const {
-        return _ops.size();
-    }
+    size_t GetSize() const;
 
 
     /// \brief  Finds the index of the Op Classification with the given name in this stack
@@ -315,34 +305,13 @@ private:
             const std::vector<std::pair<size_t, size_t> >& inversionTwins,
             bool nameMatters=true);
 
-    const OpClassList _ops;
-    std::vector<IndexPair> _inversionTwins;
-    IndexMap _inversionMap;
+    // Because this is an immutable type, we keep a pointer to shared
+    // data; this allows us to only have overhead associated with
+    // a RefPtr, while having easy-python-wrapping (without overhead
+    // of WeakPtr)
+    typedef TfRefPtr<_PxrUsdMayaXformStackData> DataRefPtr;
 
-    inline const OpClass& _GetOpClassFromIndex(
-            const size_t i) const;
-
-    inline OpClassPair _MakeOpClassPairFromIndexPair(
-            const IndexPair& indexPair) const;
-
-    // We store lookups from raw attribute name - use full attribute
-    // name because it's the only "piece" we know we have a pre-generated
-    // TfToken for - even Property::GetBaseName() generates a new TfToken
-    // "on the fly".
-    // The lookup maps to a PAIR of indices into the ops list;
-    // we return a pair because, due to inversion twins, it's possible
-    // for there to be two (but there should be only two!) ops with
-    // the same name - ie, if they're inversion twins. Thus, each pair
-    // of indices will either be:
-    //     { opIndex, NO_INDEX }     if opIndex has no inversion twin
-    //     { opIndex, opIndexTwin }  if opIndex has an inversion twin, and opIndex < opIndexTwin
-    //     { opIndexTwin, opIndex }  if opIndex has an inversion twin, and opIndex > opIndexTwin
-    TokenIndexPairMap _attrNamesToIdxs;
-
-    // Also have a lookup by op name, for use by FindOp
-    TokenIndexPairMap _opNamesToIdxs;
-
-    bool _nameMatters = true;
+    DataRefPtr _sharedData;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
