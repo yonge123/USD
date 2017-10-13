@@ -74,6 +74,12 @@ class _PxrUsdMayaXformStackData;
 class PxrUsdMayaXformOpClassification
 {
 public:
+    PxrUsdMayaXformOpClassification(const TfToken &name,
+                                       UsdGeomXformOp::Type opType,
+                                       bool isInvertedTwin=false);
+
+    PxrUsdMayaXformOpClassification();
+
     static PxrUsdMayaXformOpClassification const & NullInstance();
 
     PXRUSDMAYA_API
@@ -100,15 +106,7 @@ public:
     PXRUSDMAYA_API
     std::vector<TfToken> CompatibleAttrNames() const;
 
-    friend class PxrUsdMayaXformStack;
-    friend class std::vector<PxrUsdMayaXformOpClassification>;
 private:
-    PxrUsdMayaXformOpClassification(const TfToken &name,
-                                       UsdGeomXformOp::Type opType,
-                                       bool isInvertedTwin=false);
-
-    PxrUsdMayaXformOpClassification();
-
     // Because this is an immutable type, we keep a pointer to shared
     // data; this allows us to only have overhead associated with
     // a RefPtr, while having easy-python-wrapping (without overhead
@@ -170,6 +168,11 @@ public:
             break;
         }
     }
+
+    PxrUsdMayaXformStack(
+            const OpClassList& ops,
+            const std::vector<std::pair<size_t, size_t> >& inversionTwins,
+            bool nameMatters=true);
 
     // Don't want to accidentally make a copy, since the only instances are supposed
     // to be static!
@@ -300,11 +303,6 @@ public:
             MTransformationMatrix::RotationOrder* MrotOrder=nullptr);
 
 private:
-    PxrUsdMayaXformStack(
-            const OpClassList& ops,
-            const std::vector<std::pair<size_t, size_t> >& inversionTwins,
-            bool nameMatters=true);
-
     // Because this is an immutable type, we keep a pointer to shared
     // data; this allows us to only have overhead associated with
     // a RefPtr, while having easy-python-wrapping (without overhead
