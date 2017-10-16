@@ -61,7 +61,7 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DEFINE_ENV_SETTING(
-    USD_KATANA_ALLOW_CUSTOM_SCOPE_NAMES_FOR_MATERIALS, false,
+    USD_KATANA_ALLOW_CUSTOM_MATERIAL_SCOPES, false,
     "Set to true to enable custom names for the parent scope "
     "of materials. Otherwise only scopes named Looks are allowed.");
 
@@ -147,7 +147,7 @@ _GetMaterialAssignAttr(
                 PxrUsdKatanaUtils::ConvertUsdMaterialPathToKatLocation(targetPath, data);
 
             static const bool allowCustomScopes = 
-                TfGetEnvSetting(USD_KATANA_ALLOW_CUSTOM_SCOPE_NAMES_FOR_MATERIALS);
+                TfGetEnvSetting(USD_KATANA_ALLOW_CUSTOM_MATERIAL_SCOPES);
                 
             // XXX Materials containing only display terminals are causing issues
             //     with katana material manipulation workflows.
