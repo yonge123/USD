@@ -412,9 +412,6 @@ bool PxrUsdMayaTranslatorImagePlane::Read(
     bool useFrameExtension = false;
     usdImagePlane.GetUseFrameExtensionAttr().Get(&useFrameExtension, earliestTimeCode);
     imagePlaneNode.findPlug("useFrameExtension").setBool(useFrameExtension);
-    int frameCache = 45;
-    usdImagePlane.GetFrameCacheAttr().Get(&frameCache, earliestTimeCode);
-    imagePlaneNode.findPlug("frameCache").setInt(frameCache);
 
     auto set_attribute = [&imagePlaneNode, &args, &context] (const UsdAttribute& attr, const TfToken& token) {
         translate_usd_attribute(attr, imagePlaneNode, token, args, context);

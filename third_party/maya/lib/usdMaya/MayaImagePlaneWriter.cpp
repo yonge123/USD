@@ -105,7 +105,6 @@ bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdG
     }
     primSchema.GetUseFrameExtensionAttr().Set(dnode.findPlug("useFrameExtension").asBool());
     primSchema.GetFrameOffsetAttr().Set(dnode.findPlug("frameOffset").asInt(), usdTime);
-    primSchema.GetFrameCacheAttr().Set(dnode.findPlug("frameCache").asInt());
     primSchema.GetWidthAttr().Set(dnode.findPlug("width").asFloat(), usdTime);
     primSchema.GetHeightAttr().Set(dnode.findPlug("height").asFloat(), usdTime);
     primSchema.GetAlphaGainAttr().Set(dnode.findPlug("alphaGain").asFloat(), usdTime);
