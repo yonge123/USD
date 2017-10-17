@@ -69,6 +69,7 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-nnu" , "-normalizeNurbs" , MSyntax::kBoolean);
     syntax.addFlag("-euv" , "-nurbsExplicitUVType" , MSyntax::kString);
     syntax.addFlag("-cls" , "-exportColorSets", MSyntax::kBoolean);
+    syntax.addFlag("-ero" , "-exportReferenceObjects", MSyntax::kBoolean);
     syntax.addFlag("-dms" , "-defaultMeshScheme", MSyntax::kString);
     syntax.addFlag("-vis" , "-exportVisibility", MSyntax::kBoolean);
     syntax.addFlag("-rt" , "-root", MSyntax::kString);
@@ -196,6 +197,10 @@ try
 
     if (argData.isFlagSet("exportColorSets")) {
         argData.getFlagArgument("exportColorSets", 0, jobArgs.exportColorSets);
+    }
+
+    if (argData.isFlagSet("exportReferenceObjects")) {
+        argData.getFlagArgument("exportReferenceObjects", 0, jobArgs.exportReferenceObjects);
     }
 
     if (argData.isFlagSet("defaultMeshScheme")) {
