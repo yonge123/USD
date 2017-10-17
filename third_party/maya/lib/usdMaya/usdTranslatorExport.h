@@ -46,6 +46,7 @@ const char* const usdTranslatorExportDefaults =
         "exportUVs=1;"
         "normalizeUVs=0;"
         "exportColorSets=1;"
+        "exportReferenceObjects=0;"
         "renderableOnly=0;"
         "allCameras=0;"
         "renderLayerMode=Use Default Layer;"
