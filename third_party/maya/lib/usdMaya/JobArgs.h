@@ -81,6 +81,7 @@ struct JobExportArgs
     TfToken nurbsExplicitUVType;
     
     bool exportColorSets;
+    bool exportReferenceObjects;
 
     TfToken renderLayerMode;
     

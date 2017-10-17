@@ -113,6 +113,9 @@ usdTranslatorExport::writer(const MFileObject &file,
             if (theOption[0] == MString("exportColorSets")) {
                 jobArgs.exportColorSets = theOption[1].asInt();
             }
+            if (theOption[0] == MString("exportReferenceObjects")) {
+                jobArgs.exportReferenceObjects = theOption[1].asInt();
+            }
             if (theOption[0] == MString("renderableOnly")) {
                 jobArgs.excludeInvisible = theOption[1].asInt();
             }
