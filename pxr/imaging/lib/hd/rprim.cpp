@@ -31,6 +31,7 @@
 #include "pxr/imaging/hd/extComputation.h"
 #include "pxr/imaging/hd/instancer.h"
 #include "pxr/imaging/hd/instanceRegistry.h"
+#include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/repr.h"
 #include "pxr/imaging/hd/renderIndex.h"
 #include "pxr/imaging/hd/resourceRegistry.h"
@@ -49,12 +50,12 @@ TF_DEFINE_ENV_SETTING(HD_ENABLE_SHARED_VERTEX_PRIMVAR, 1,
                       "Enable sharing of vertex primvar");
 
 HdRprim::HdRprim(SdfPath const& id,
-                 SdfPath const& instancerID)
+                 SdfPath const& instancerId)
     : _id(id)
-    , _instancerID(instancerID)
-    , _surfaceShaderID()
+    , _instancerId(instancerId)
+    , _materialId()
     , _sharedData(HdDrawingCoord::DefaultNumSlots,
-                  /*hasInstancer=*/(!instancerID.IsEmpty()),
+                  /*hasInstancer=*/(!instancerId.IsEmpty()),
                   /*visible=*/true)
 {
     _sharedData.rprimID = id;
@@ -98,20 +99,20 @@ HdRprim::_Sync(HdSceneDelegate* delegate,
     HdRenderIndex   &renderIndex   = delegate->GetRenderIndex();
     HdChangeTracker &changeTracker = renderIndex.GetChangeTracker();
 
-    // Check if the rprim has a new surface shader associated to it,
+    // Check if the rprim has a new material binding associated to it,
     // if so, we will request the binding from the delegate and set it up in
     // this rprim.
-    if(*dirtyBits & HdChangeTracker::DirtySurfaceShader) {
-        VtValue shaderBinding = 
+    if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
+        VtValue materialId = 
             delegate->Get(GetId(), HdShaderTokens->surfaceShader);
 
-        if(shaderBinding.IsHolding<SdfPath>()){
-            _SetSurfaceShaderId(changeTracker, shaderBinding.Get<SdfPath>());
+        if (materialId.IsHolding<SdfPath>()){
+            _SetMaterialId(changeTracker, materialId.Get<SdfPath>());
         } else {
-            _SetSurfaceShaderId(changeTracker, SdfPath());
+            _SetMaterialId(changeTracker, SdfPath());
         }
 
-        *dirtyBits &= ~HdChangeTracker::DirtySurfaceShader;
+        *dirtyBits &= ~HdChangeTracker::DirtyMaterialId;
     }
 }
 
@@ -135,6 +136,44 @@ HdRprim::_GetReprName(HdSceneDelegate* delegate,
         }
     }
     return defaultReprName;
+}
+
+bool
+HdRprim::CanSkipDirtyBitPropagationAndSync(HdDirtyBits bits) const
+{
+    // For invisible prims, we'd like to avoid syncing data, which involves:
+    // (a) the scene delegate pulling data post dirty-bit propagation 
+    // (b) the rprim processing its dirty bits and
+    // (c) the rprim committing resource updates to the GPU
+    // 
+    // However, the current design adds a draw item for a repr during repr 
+    // initialization (see _InitRepr) even if a prim may be invisible, which
+    // requires us go through the sync process to avoid tripping other checks.
+    // 
+    // XXX: We may want to avoid this altogether, or rethink how we approach
+    // the two workflow scenarios:
+    // ( i) objects that are always invisible (i.e., never loaded by the user or
+    // scene)
+    // (ii) vis-invis'ing objects
+    //  
+    // For now, we take the hit of first repr initialization (+ sync) and avoid
+    // time-varying updates to the invisible prim.
+    // 
+    // Note: If the sync is skipped, the dirty bits in the change tracker
+    // remain the same.
+    bool skip = false;
+
+    HdDirtyBits mask = (HdChangeTracker::DirtyVisibility |
+                        HdChangeTracker::NewRepr);
+
+    if (!IsVisible() && !(bits & mask)) {
+        // By setting the propagated dirty bits to Clean, we effectively 
+        // disable delegate and rprim sync
+        skip = true;
+        HD_PERF_COUNTER_INCR(HdPerfTokens->skipInvisibleRprimSync);
+    }
+
+    return skip;
 }
 
 HdDirtyBits
@@ -200,12 +239,11 @@ HdRprim::GetRenderTag(HdSceneDelegate* delegate, TfToken const& reprName) const
 }
 
 void 
-HdRprim::_SetSurfaceShaderId(HdChangeTracker &changeTracker,
-                             SdfPath const& surfaceShaderId)
+HdRprim::_SetMaterialId(HdChangeTracker &changeTracker,
+                        SdfPath const& materialId)
 {
-    if (_surfaceShaderID != surfaceShaderId)
-    {
-        _surfaceShaderID = surfaceShaderId;
+    if (_materialId != materialId) {
+        _materialId = materialId;
 
         // The batches need to be verified and rebuilt if necessary.
         changeTracker.MarkShaderBindingsDirty();
@@ -254,14 +292,14 @@ HdRprim::_PopulateConstantPrimVars(HdSceneDelegate* delegate,
     // XXX: This should be in HdSt getting the HdSt Shader
     const HdShader *shader = static_cast<const HdShader *>(
                                   renderIndex.GetSprim(HdPrimTypeTokens->shader,
-                                                       _surfaceShaderID));
+                                                       _materialId));
 
     if (shader == nullptr) {
         shader = static_cast<const HdShader *>(
                         renderIndex.GetFallbackSprim(HdPrimTypeTokens->shader));
     }
 
-    _sharedData.surfaceShader = _GetShaderCode(delegate, shader);
+    _sharedData.material = _GetShaderCode(delegate, shader);
 
 
     // update uniforms
@@ -280,7 +318,7 @@ HdRprim::_PopulateConstantPrimVars(HdSceneDelegate* delegate,
 
         // if this is a prototype (has instancer),
         // also push the instancer transform separately.
-        if (!_instancerID.IsEmpty()) {
+        if (!_instancerId.IsEmpty()) {
             // gather all instancer transforms in the instancing hierarchy
             VtMatrix4dArray rootTransforms = _GetInstancerTransforms(delegate);
             VtMatrix4dArray rootInverseTransforms(rootTransforms.size());
@@ -408,18 +446,18 @@ VtMatrix4dArray
 HdRprim::_GetInstancerTransforms(HdSceneDelegate* delegate)
 {
     SdfPath const& id = GetId();
-    SdfPath instancerID = _instancerID;
+    SdfPath instancerId = _instancerId;
     VtMatrix4dArray transforms;
 
     HdRenderIndex &renderIndex = delegate->GetRenderIndex();
 
-    while (!instancerID.IsEmpty()) {
-        transforms.push_back(delegate->GetInstancerTransform(instancerID, id));
-        HdInstancer *instancer = renderIndex.GetInstancer(instancerID);
+    while (!instancerId.IsEmpty()) {
+        transforms.push_back(delegate->GetInstancerTransform(instancerId, id));
+        HdInstancer *instancer = renderIndex.GetInstancer(instancerId);
         if (instancer) {
-            instancerID = instancer->GetParentId();
+            instancerId = instancer->GetParentId();
         } else {
-            instancerID = SdfPath();
+            instancerId = SdfPath();
         }
     }
     return transforms;
