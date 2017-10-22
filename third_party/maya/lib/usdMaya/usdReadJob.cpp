@@ -143,6 +143,8 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
         return false;
     }
 
+    stage->SetEditTarget(stage->GetSessionLayer());
+
     // If readAnimData is true, we expand the Min/Max time sliders to include
     // the stage's range if necessary.
     if (mArgs.readAnimData) {
@@ -199,6 +201,10 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
     if (!usdRootPrimSpec) {
         return false;
     }
+    // Set the variants on the usdRootPrim
+    for (std::map<std::string, std::string>::iterator it=mVariants.begin(); it!=mVariants.end(); ++it) {
+        usdRootPrim.GetVariantSet(it->first).SetVariantSelection(it->second);
+    }
 
     bool isSceneAssembly = mMayaRootDagPath.node().hasFn(MFn::kAssembly);
     if (isSceneAssembly) {
@@ -206,6 +212,14 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
     }
 
     UsdPrimRange range(usdRootPrim);
+    if (range.empty()) {
+        // XXX: This shouldn't really be possible, but it currently is because
+        // combinations of nested assembly nodes with variant set selections
+        // made in Maya are not being handled correctly. usdRootPrim can end up
+        // being an "over" prim spec created by the parent assembly with no
+        // scene description underneath, which results in an empty range.
+        return false;
+    }
 
     // We maintain a registry mapping SdfPaths to MObjects as we create Maya
     // nodes, so prime the registry with the root Maya node and the
