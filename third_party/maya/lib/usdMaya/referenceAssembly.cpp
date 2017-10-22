@@ -708,9 +708,18 @@ MStatus UsdMayaReferenceAssembly::computeInStageDataCached(MDataBlock& dataBlock
             }
 
             UsdStageCacheContext ctx(UsdMayaStageCache::Get());
-            usdStage = UsdStage::Open(rootLayer, 
-                    sessionLayer,
-                    ArGetResolver().GetCurrentContext());
+            usdStage = UsdStage::Open(rootLayer,
+                                      sessionLayer,
+                                      ArGetResolver().GetCurrentContext());
+            usdStage->SetEditTarget(usdStage->GetSessionLayer());
+
+            primPath = usdStage->GetDefaultPrim() ?
+                usdStage->GetDefaultPrim().GetPath() :
+
+                // XXX:
+                // Preserving prior behavior for now-- eventually might make
+                // more sense to bail in this case.
+                SdfPath::AbsoluteRootPath();
         }
         else {
             retValue = MS::kFailure;
