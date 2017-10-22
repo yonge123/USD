@@ -118,6 +118,7 @@ pxr_library(usd
         wrapTyped.cpp
         wrapUtils.cpp
         wrapVariantSets.cpp
+        wrapVersion.cpp 
 
     PYMODULE_FILES
         __init__.py
@@ -173,6 +174,7 @@ pxr_test_scripts(
     testenv/testUsdPrims.py
     testenv/testUsdReferences.py
     testenv/testUsdRelationships.py
+    testenv/testUsdSchemaRegistry.py
     testenv/testUsdSpecializes.py
     testenv/testUsdStage.py
     testenv/testUsdStageCache.py
@@ -359,6 +361,11 @@ pxr_install_test_dir(
 pxr_install_test_dir(
     SRC testenv/testUsdSchemaGen
     DEST testUsdSchemaGen
+)
+
+pxr_install_test_dir(
+    SRC testenv/testUsdSchemaRegistry
+    DEST testUsdSchemaRegistry
 )
 
 pxr_install_test_dir(
@@ -663,5 +670,11 @@ pxr_register_test(testUsdRelationships
 
 pxr_register_test(testUsdSchemaBase
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdSchemaBase"
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdSchemaRegistry
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdSchemaRegistry"
     EXPECTED_RETURN_CODE 0
 )
