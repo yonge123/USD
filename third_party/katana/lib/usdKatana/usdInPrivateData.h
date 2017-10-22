@@ -125,6 +125,10 @@ public:
             FnAttribute::GroupAttribute opArgs);
     
     
+    /// \brief extract private data from either the interface (its natural
+    ///        location) with room for future growth
+    static PxrUsdKatanaUsdInPrivateData * GetPrivateData(
+            const FnKat::GeolibCookInterface& interface);
 
 private:
 
