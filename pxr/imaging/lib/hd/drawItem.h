@@ -69,11 +69,7 @@ public:
     GLenum GetPrimitiveMode() const;
 
     void SetGeometricShader(Hd_GeometricShaderSharedPtr const &geometricShader) {
-        if (!geometricShader) {
-            TF_CODING_ERROR("geometricShader must not be null");
-        } else {
-            _geometricShader = geometricShader;
-        }
+        _geometricShader = geometricShader;
     }
 
     Hd_GeometricShaderSharedPtr const &GetGeometricShader() const {
@@ -81,7 +77,7 @@ public:
     }
 
     HD_API
-    HdShaderCodeSharedPtr GetSurfaceShader() const;
+    HdShaderCodeSharedPtr GetMaterial() const;
 
     GfBBox3d const & GetBounds() const { return _sharedData->bounds; }
 
