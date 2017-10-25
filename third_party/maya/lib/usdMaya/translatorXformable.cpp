@@ -38,6 +38,7 @@
 #include <maya/MDagModifier.h>
 #include <maya/MFnAnimCurve.h>
 #include <maya/MFnTransform.h>
+#include <maya/MEulerRotation.h>
 #include <maya/MGlobal.h>
 #include <maya/MPlug.h>
 #include <maya/MTransformationMatrix.h>
@@ -261,6 +262,43 @@ static bool _pushUSDXformOpToMayaXform(
             _setMayaAttribute(MdagNode, xValue, yValue, zValue, timeArray, MString("scalePivotTranslate"), "X", "Y", "Z", context);
         }
         else {
+            if (opName==PxrUsdMayaXformStackTokens->rotate) {
+                MFnTransform trans;
+                if(trans.setObject(MdagNode.object()))
+                {
+                    auto MrotOrder =
+                            PxrUsdMayaXformStack::RotateOrderFromOpType<MTransformationMatrix::RotationOrder>(
+                                    xformop.GetOpType());
+                    MPlug plg = MdagNode.findPlug("rotateOrder");
+                    if ( !plg.isNull() ) {
+                        trans.setRotationOrder(MrotOrder, /*no need to reorder*/ false);
+                    }
+                }
+            }
+            else if(opName==PxrUsdMayaXformStackTokens->rotateAxis)
+            {
+                // Rotate axis only accepts input in XYZ form
+                // (though it's actually stored as a quaternion),
+                // so we need to convert other rotation orders to XYZ
+                const auto opType = xformop.GetOpType();
+                if (opType != UsdGeomXformOp::TypeRotateXYZ
+                        && opType != UsdGeomXformOp::TypeRotateX
+                        && opType != UsdGeomXformOp::TypeRotateY
+                        && opType != UsdGeomXformOp::TypeRotateZ)
+                {
+                    for (size_t i = 0u; i < xValue.size(); ++i)
+                    {
+                        auto MrotOrder =
+                                PxrUsdMayaXformStack::RotateOrderFromOpType<MEulerRotation::RotationOrder>(
+                                        xformop.GetOpType());
+                        MEulerRotation eulerRot(xValue[i], yValue[i], zValue[i], MrotOrder);
+                        eulerRot.reorderIt(MEulerRotation::kXYZ);
+                        xValue[i] = eulerRot.x;
+                        yValue[i] = eulerRot.y;
+                        zValue[i] = eulerRot.z;
+                    }
+                }
+            }
             _setMayaAttribute(MdagNode, xValue, yValue, zValue, timeArray, MString(opName.GetText()), "X", "Y", "Z", context);
         }
         return true;
@@ -383,8 +421,6 @@ PxrUsdMayaTranslatorXformable::Read(
     std::vector<UsdGeomXformOp> xformops = xformSchema.GetOrderedXformOps(
         &resetsXformStack);
             
-    MTransformationMatrix::RotationOrder MrotOrder = MTransformationMatrix::kXYZ;
-
     // When we find ops, we match the ops by suffix ("" will define the basic
     // translate, rotate, scale) and by order. If we find an op with a
     // different name or out of order that will miss the match, we will rely on
@@ -396,7 +432,7 @@ PxrUsdMayaTranslatorXformable::Read(
                         &PxrUsdMayaXformStack::MayaStack(),
                         &PxrUsdMayaXformStack::CommonStack()
                     },
-                    xformops, &MrotOrder);
+                    xformops);
 
     bool importedPivots = false;
     MFnDagNode MdagNode(mayaNode);
@@ -411,14 +447,6 @@ PxrUsdMayaTranslatorXformable::Read(
 
             const TfToken& opName(opDef.GetName());
 
-            if (opName==PxrUsdMayaXformStackTokens->rotate) {
-                MPlug plg = MdagNode.findPlug("rotateOrder");
-                if ( !plg.isNull() ) {
-                    MFnTransform trans; 
-                    trans.setObject(mayaNode);
-                    trans.setRotationOrder(MrotOrder, /*no need to reorder*/ false);
-                }
-            }
             _pushUSDXformOpToMayaXform(xformop, opName, MdagNode, &importedPivots,
                     args, context);
         }
