@@ -410,8 +410,8 @@ PxrUsdKatanaReadPointInstancer(
     //
     // Validate instancer data.
     //
-    const auto instancerSdfPath = instancer.GetPath();
-    const std::string instancerPath = instancerSdfPath.GetString();
+    
+    const std::string instancerPath = instancer.GetPath().GetString(); 
 
     UsdStageWeakPtr stage = instancer.GetPrim().GetStage();
 
@@ -541,6 +541,7 @@ PxrUsdKatanaReadPointInstancer(
     //
     // Build sources. Keep track of which instances use them.
     //
+
     FnGeolibServices::StaticSceneCreateOpArgsBuilder sourcesBldr(false);
 
     std::vector<int> instanceIndices;
