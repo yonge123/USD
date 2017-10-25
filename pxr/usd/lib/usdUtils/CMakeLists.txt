@@ -17,6 +17,7 @@ pxr_library(usdUtils
     PUBLIC_CLASSES
         authoring
         dependencies
+        flattenLayerStack
         introspection
         pipeline
         registeredVariantSet
@@ -34,6 +35,7 @@ pxr_library(usdUtils
         module.cpp
         wrapAuthoring.cpp
         wrapDependencies.cpp
+        wrapFlattenLayerStack.cpp
         wrapIntrospection.cpp
         wrapPipeline.cpp
         wrapRegisteredVariantSet.cpp
@@ -48,6 +50,7 @@ pxr_library(usdUtils
 pxr_test_scripts(
     testenv/testUsdUtilsAuthoring.py 
     testenv/testUsdUtilsDependencyExtractor.py 
+    testenv/testUsdUtilsFlattenLayerStack.py
     testenv/testUsdUtilsIntrospection.py 
     testenv/testUsdUtilsPipeline.py 
     testenv/testUsdUtilsStageCache.py 
@@ -82,6 +85,11 @@ pxr_install_test_dir(
 )
 
 pxr_install_test_dir(
+    SRC testenv/testUsdUtilsFlattenLayerStack
+    DEST testUsdUtilsFlattenLayerStack
+)
+
+pxr_install_test_dir(
     SRC testenv/testUsdUtilsPipeline
     DEST testUsdUtilsPipeline
 )
@@ -99,11 +107,6 @@ pxr_install_test_dir(
 pxr_install_test_dir(
     SRC testenv/testUsdUtilsStitchClips.testenv
     DEST testUsdUtilsStitchClips
-)
-
-pxr_install_test_dir(
-    SRC testenv/testUsdUtilsStitchClips.testenv
-    DEST testUsdUtilsStitchClips_Legacy
 )
 
 pxr_register_test(testUsdUtilsAuthoring
@@ -137,6 +140,12 @@ pxr_register_test(testUsdUtilsDependencyExtractor4
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsDependencyExtractor crate.usd crate-usd.txt"
     DIFF_COMPARE crate-usd.txt 
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdUtilsFlattenLayerStack
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsFlattenLayerStack"
     EXPECTED_RETURN_CODE 0
 )
 
@@ -174,14 +183,5 @@ pxr_register_test(testUsdUtilsStitchClips
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsStitchClips"
     EXPECTED_RETURN_CODE 0
-    ENV
-        USD_AUTHOR_LEGACY_CLIPS=0
 )
 
-pxr_register_test(testUsdUtilsStitchClips_Legacy
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsStitchClips"
-    EXPECTED_RETURN_CODE 0
-    ENV
-        USD_AUTHOR_LEGACY_CLIPS=1
-)
