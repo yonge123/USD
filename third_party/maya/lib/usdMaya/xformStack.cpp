@@ -263,27 +263,42 @@ PxrUsdMayaXformOpClassification::CompatibleAttrNames() const
     // some global constants (ie, MayaStack and CommonStack)
     std::vector<TfToken> result;
     std::string attrName;
-    if (GetName() == PxrUsdMayaXformStackTokens->rotate
-            && _isThreeAxisRotate(GetOpType()))
+    if (_isThreeAxisRotate(GetOpType()))
     {
-        result.reserve(std::extent<decltype(RotateOpTypes)>::value * 3);
-        // Special handling for rotate, to deal with rotateX/rotateZXY/etc
-        for (UsdGeomXformOp::Type rotateType : RotateOpTypes)
+        // Special handling for rotates, to deal with rotateX/rotateZXY/etc
+        if (GetName() == PxrUsdMayaXformStackTokens->rotate)
         {
-            // Add, ie, xformOp::rotateX
-            result.emplace_back(TfToken(
-                    UsdGeomXformOp::GetOpName(rotateType).GetString(),
-                    TfToken::Immortal));
-            // Add, ie, xformOp::rotateX::rotate
-            result.emplace_back(TfToken(
-                    UsdGeomXformOp::GetOpName(rotateType,
-                            PxrUsdMayaXformStackTokens->rotate).GetString(),
-                    TfToken::Immortal));
-            // Add, ie, xformOp::rotateX::rotateX
-            result.emplace_back(TfToken(
-                    UsdGeomXformOp::GetOpName(rotateType,
-                            UsdGeomXformOp::GetOpTypeToken(rotateType)).GetString(),
-                    TfToken::Immortal));
+            result.reserve(std::extent<decltype(RotateOpTypes)>::value * 3);
+            // Special handling for rotate, to deal with rotateX/rotateZXY/etc
+            for (UsdGeomXformOp::Type rotateType : RotateOpTypes)
+            {
+                // Add, ie, xformOp::rotateX
+                result.emplace_back(TfToken(
+                        UsdGeomXformOp::GetOpName(rotateType).GetString(),
+                        TfToken::Immortal));
+                // Add, ie, xformOp::rotateX::rotate
+                result.emplace_back(TfToken(
+                        UsdGeomXformOp::GetOpName(rotateType,
+                                PxrUsdMayaXformStackTokens->rotate).GetString(),
+                        TfToken::Immortal));
+                // Add, ie, xformOp::rotateX::rotateX
+                result.emplace_back(TfToken(
+                        UsdGeomXformOp::GetOpName(rotateType,
+                                UsdGeomXformOp::GetOpTypeToken(rotateType)).GetString(),
+                        TfToken::Immortal));
+            }
+        }
+        else
+        {
+            result.reserve(std::extent<decltype(RotateOpTypes)>::value);
+            for (UsdGeomXformOp::Type rotateType : RotateOpTypes)
+            {
+                // Add, ie, xformOp::rotateX::rotateAxis
+                result.emplace_back(TfToken(
+                        UsdGeomXformOp::GetOpName(rotateType,
+                                GetName()).GetString(),
+                        TfToken::Immortal));
+            }
         }
     }
     else
