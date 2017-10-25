@@ -43,9 +43,6 @@ class testUsdImportXforms(unittest.TestCase):
         standalone.initialize('usd')
         cmds.loadPlugin('pxrUsd')
 
-        usdFile = os.path.abspath('UsdImportXformsTest.usda')
-        cmds.usdImport(file=usdFile, shadingMode='none')
-
     @classmethod
     def tearDownClass(cls):
         standalone.uninitialize()
@@ -62,6 +59,9 @@ class testUsdImportXforms(unittest.TestCase):
         Tests that importing a USD cube mesh that has XformOps on it all tagged
         as inverse ops results in the correct transform when imported into Maya.
         """
+        usdFile = os.path.abspath('UsdImportXformsTest.usda')
+        cmds.usdImport(file=usdFile, shadingMode='none')
+
         mayaTransform = self._GetMayaTransform('InverseOpsOnlyCube')
         transformationMatrix = mayaTransform.transformation()
 
@@ -189,6 +189,48 @@ class testUsdImportXforms(unittest.TestCase):
                         print "full failed xform:"
                         pprint.pprint(attrVals)
                         raise
+                    
+    def testImportXformsRotateAxis(self):
+        """
+        Tests that importing xforms that have a rotateAxis with rotate order other than just XYZ
+        still imports correctly
+        """
+        usdFile = os.path.abspath('UsdImportXformsTestRotateAxis.usda')
+        cmds.usdImport(file=usdFile, shadingMode='none')
+        
+        expectedRotates = {
+            'X': (60, 0, 0),
+            'Y': (0, 60, 0),
+            'Z': (0, 0, 60),
+            'XYZ': (-120, 60, 0),
+            'YZX': (-106.1021138, 25.6589063, 56.3099325),
+            'ZXY': (120, -60, 0),
+            'XZY': (-120, -60, 0),
+            'YXZ': (106.1021138, 25.6589063, -56.3099325),
+            'ZYX': (-106.1021138, -25.6589063, -56.3099325),
+        }
+        expectedScale = (.5, .5, .5)
+        expectedTranslation = (1.0, 2.0, 3.0)
+        
+        for rotOrderName, expectedRotation in expectedRotates.iteritems():
+            mayaTransform = self._GetMayaTransform(rotOrderName)
+            transformationMatrix = mayaTransform.transformation()
+    
+            actualTranslation = list(
+                transformationMatrix.translation(OM.MSpace.kTransform))
+            self.assertTrue(
+                Gf.IsClose(expectedTranslation, actualTranslation, self.EPSILON))
+    
+            expectedRotation = [Gf.DegreesToRadians(x) for x in expectedRotation]
+            actualRotation = transformationMatrix.rotationOrientation().asEulerRotation()
+            actualRotation = list(actualRotation)
+            #print rotOrderName, actualRotation
+            self.assertTrue(
+                Gf.IsClose(expectedRotation, actualRotation, self.EPSILON))
+    
+            actualScale = list(transformationMatrix.scale(OM.MSpace.kTransform))
+            self.assertTrue(
+                Gf.IsClose(expectedScale, actualScale, self.EPSILON))
 
 
 if __name__ == '__main__':
