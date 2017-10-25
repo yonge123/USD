@@ -872,30 +872,65 @@ class testUsdMayaXformStack(unittest.TestCase):
         self.ops['rotateYXZ'] = self.xform.AddRotateYXZOp(opSuffix='rotate')
         self.ops['rotateZYX'] = self.xform.AddRotateZYXOp(opSuffix='rotate')
         
-        allRotates = {
-            'rotateX': MEulerRotation.kXYZ,
-            'rotateY': MEulerRotation.kXYZ,
-            'rotateZ': MEulerRotation.kXYZ,
-            'rotateXYZ': MEulerRotation.kXYZ,
-            'rotateYZX': MEulerRotation.kYZX,
-            'rotateZXY': MEulerRotation.kZXY,
-            'rotateXZY': MEulerRotation.kXZY,
-            'rotateYXZ': MEulerRotation.kYXZ,
-            'rotateZYX': MEulerRotation.kZYX,
-        }
+        allRotates = [
+            'rotateX',
+            'rotateY',
+            'rotateZ',
+            'rotateXYZ',
+            'rotateYZX',
+            'rotateZXY',
+            'rotateXZY',
+            'rotateYXZ',
+            'rotateZYX',
+        ]
         
         expectedList = [self.stack.FindOp('translate'), self.stack.FindOp('rotate')]
-        for rotateOpName, expectedRotateOrder in allRotates.iteritems():
+        for rotateOpName in allRotates:
             orderedOps = [self.ops['translate'], self.ops[rotateOpName]]
-            resultList, resultRotateOrder = self.stack.MatchingSubstack(orderedOps, returnRotOrder=True)
+            resultList = self.stack.MatchingSubstack(orderedOps)
             self.assertEqual(resultList, expectedList)
-            self.assertEqual(resultRotateOrder, expectedRotateOrder)
             
         # test a failed match
         orderedOps = [self.ops[rotateOpName], self.ops['translate']]
-        resultList, resultRotateOrder = self.stack.MatchingSubstack(orderedOps, returnRotOrder=True)
+        resultList = self.stack.MatchingSubstack(orderedOps)
         self.assertEqual(resultList, [])
-        self.assertEqual(resultRotateOrder, MEulerRotation.kXYZ)
+        
+    def testMatchingSubstack_rotOrder_rotAxis(self):
+        from maya.OpenMaya import MEulerRotation
+        
+        self.makeMayaStackAttrs()
+        self.ops['rotateAxisX'] = self.xform.AddRotateXOp(opSuffix='rotateAxis')
+        self.ops['rotateAxisY'] = self.xform.AddRotateYOp(opSuffix='rotateAxis')
+        self.ops['rotateAxisZ'] = self.xform.AddRotateZOp(opSuffix='rotateAxis')
+        self.ops['rotateAxisXYZ'] = self.ops['rotateAxis']
+        self.ops['rotateAxisYZX'] = self.xform.AddRotateYZXOp(opSuffix='rotateAxis')
+        self.ops['rotateAxisZXY'] = self.xform.AddRotateZXYOp(opSuffix='rotateAxis')
+        self.ops['rotateAxisXZY'] = self.xform.AddRotateXZYOp(opSuffix='rotateAxis')
+        self.ops['rotateAxisYXZ'] = self.xform.AddRotateYXZOp(opSuffix='rotateAxis')
+        self.ops['rotateAxisZYX'] = self.xform.AddRotateZYXOp(opSuffix='rotateAxis')
+        
+        allRotates = {
+            'rotateAxisX',
+            'rotateAxisY',
+            'rotateAxisZ',
+            'rotateAxisXYZ',
+            'rotateAxisYZX',
+            'rotateAxisZXY',
+            'rotateAxisXZY',
+            'rotateAxisYXZ',
+            'rotateAxisZYX',
+        }
+        
+        expectedList = [self.stack.FindOp('translate'), self.stack.FindOp('rotateAxis')]
+        for rotateOpName in allRotates:
+            orderedOps = [self.ops['translate'], self.ops[rotateOpName]]
+            resultList = self.stack.MatchingSubstack(orderedOps)
+            self.assertEqual(resultList, expectedList)
+            
+        # test a failed match
+        orderedOps = [self.ops[rotateOpName], self.ops['translate']]
+        resultList = self.stack.MatchingSubstack(orderedOps)
+        self.assertEqual(resultList, [])
         
     def doFirstMatchingTest(self, stacks, opNames, matchingStack, expectEmpty=False):
         orderedOps, expected = self.makeXformOpsAndExpectedClassifications(
@@ -1114,16 +1149,12 @@ class testUsdMayaXformStack(unittest.TestCase):
                 errMessage = '\nstackNames: ' + str(stackNames)
                 
                 expectNone = not (mayaStack in stackList or commonStack in stackList)
-#                 resultList, resultRotateOrder = UsdMaya.XformStack.FirstMatchingSubstack(
-#                     stackList, orderedOps, returnRotOrder=True)
-                resultList, resultRotateOrder = UsdMaya.XformStack.FirstMatchingSubstack(
-                    stackList, orderedOps, True)
+                resultList = UsdMaya.XformStack.FirstMatchingSubstack(
+                    stackList, orderedOps)
                 if expectNone:
                     self.assertEqual(resultList, [], str(stackNames))
-                    self.assertEqual(resultRotateOrder, MEulerRotation.kXYZ, errMessage)
                 else:
                     self.assertEqual(resultList, expectedList, str(stackNames))
-                    self.assertEqual(resultRotateOrder, expectedRotateOrder, errMessage)
                 
 
 if __name__ == '__main__':
