@@ -530,22 +530,13 @@ PxrUsdMayaXformStack::FindOpPair(const TfToken& opName) const
 
 OpClassList
 PxrUsdMayaXformStack::MatchingSubstack(
-        const std::vector<UsdGeomXformOp>& xformops,
-        MTransformationMatrix::RotationOrder* MrotOrder) const
+        const std::vector<UsdGeomXformOp>& xformops) const
 {
     static const OpClassList _NO_MATCH;
 
     if (xformops.empty()) return _NO_MATCH;
 
     OpClassList ret;
-
-    // We ONLY want to set MrotOrder if we have a successful
-    // match, but we if we have a succesful match until we get
-    // through the whole stack... whereas we find out the rotate
-    // order whenever we get to the rotate op. Therefore, we
-    // set a "temp" rotOrder, and then only set MrotOrder at the
-    // end
-    MTransformationMatrix::RotationOrder tempRotOrder = MTransformationMatrix::kInvalid;
 
     // nextOp keeps track of where we will start looking for matches.  It
     // will only move forward.
@@ -612,13 +603,6 @@ PxrUsdMayaXformStack::MatchingSubstack(
         // Ok, we found a match...
         const PxrUsdMayaXformOpClassification& foundOp = GetOps()[foundOpIdx];
 
-        // if we're a rotate, set the maya rotation order (if it's relevant to
-        // this op)
-        if (MrotOrder != nullptr
-                && foundOp.GetName() == PxrUsdMayaXformStackTokens->rotate) {
-            tempRotOrder = RotateOrderFromOpType(xformOp.GetOpType(), *MrotOrder);
-        }
-
         // move the nextOp pointer along.
         ret.push_back(foundOp);
         opNamesFound[foundOpIdx] = true;
@@ -632,26 +616,20 @@ PxrUsdMayaXformStack::MatchingSubstack(
         }
     }
 
-    if (MrotOrder != nullptr && tempRotOrder != MTransformationMatrix::kInvalid)
-    {
-        *MrotOrder = tempRotOrder;
-    }
-
     return ret;
 }
 
 OpClassList
 PxrUsdMayaXformStack::FirstMatchingSubstack(
         const std::vector<PxrUsdMayaXformStack const *>& stacks,
-        const std::vector<UsdGeomXformOp>& xformops,
-        MTransformationMatrix::RotationOrder* MrotOrder)
+        const std::vector<UsdGeomXformOp>& xformops)
 {
     if (xformops.empty() || stacks.empty()) return OpClassList();
 
     for (auto& stackPtr : stacks)
     {
         std::vector<PxrUsdMayaXformStack::OpClass> stackOps = \
-                stackPtr->MatchingSubstack(xformops, MrotOrder);
+                stackPtr->MatchingSubstack(xformops);
         if (!stackOps.empty())
         {
             return stackOps;
