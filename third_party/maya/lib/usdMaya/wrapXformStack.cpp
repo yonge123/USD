@@ -51,47 +51,6 @@ using boost::python::reference_existing_object;
 PXR_NAMESPACE_USING_DIRECTIVE
 
 namespace {
-    constexpr const char RETURN_ROT_ORDER[] = "returnRotOrder";
-
-    constexpr const char RETURN_ROT_ORDER_DOCSTRING_TEMPLATE[] = \
-            "You may pass '%s=True' as a kwarg to also return the inferred rotation\n"
-            "order as a second return result.  The rotation order is returned as an\n"
-            "integer sutiable for use with transformNode.rotateOrder attribute - ie,\n"
-            "XYZ=0, YZX=1, ZXY=2, XZY=3, YXZ=4, and ZYX=5. It will be set if there is a\n"
-            "three-axis euler rotation present in the input UsdGeomXformOps; if None is\n"
-            "present, XYZ (0) will be returned by defaut";
-
-    const std::string RETURN_ROT_ORDER_DOCSTRING = TfStringPrintf(
-            RETURN_ROT_ORDER_DOCSTRING_TEMPLATE, RETURN_ROT_ORDER);
-
-    const std::string MATCHING_SUBSTACK_DOCSTRING = TfStringPrintf(
-            "Returns a list of matching XformOpDefinitions for this stack\n"
-            "\n"
-            "For each xformop, we want to find the corresponding op within this\n"
-            "stack that it matches.  There are 3 requirements:\n"
-            " - to be considered a match, the name and type must match an op in this stack\n"
-            " - the matches for each xformop must have increasing indexes in the stack\n"
-            " - inversionTwins must either both be matched or neither matched.\n"
-            "\n"
-            "This returns a vector of pointers to the matching XformOpDefinitions in this\n"
-            "stack. The size of this vector will be 0 if no complete match is found,\n"
-            "or xformops.size() if a complete match is found.\n"
-            "\n"
-            "%s",
-            RETURN_ROT_ORDER_DOCSTRING.c_str());
-
-    const std::string FIRST_MATCHING_DOCSTRING = TfStringPrintf(
-            "Runs MatchingSubstack against the given list of stacks\n"
-            "\n"
-            "Returns the first non-empty result it finds; if all stacks\n"
-            "return an empty vector, an empty vector is returned.\n"
-            "The first arg must be a list of PxrUsdMayaXformStack objects to test against,\n"
-            "in order, the second arg is the list of UsdGeomXformOps to match.\n"
-            "\n"
-            "%s",
-            RETURN_ROT_ORDER_DOCSTRING.c_str());
-
-
     // We wrap this class, instead of PxrUsdMayaXformOpClassification directly, mostly
     // just so we can handle the .IsNull() -> None conversion
     class Usd_PyXformOpClassification {
@@ -244,80 +203,6 @@ namespace {
         {
             return convert_index_pair(stack.FindOpIndexPair(opName));
         }
-
-        static object
-        AddOptionalRotOrderToOpMatches(
-                std::vector<PxrUsdMayaXformStack::OpClass>& result,
-                MTransformationMatrix::RotationOrder rotOrder,
-                bool returnRotOrder)
-        {
-            boost::python::list matching_list;
-            if (!result.empty())
-            {
-                for(auto& op : result)
-                {
-                    matching_list.append(op);
-                }
-            }
-            if (returnRotOrder)
-            {
-                // set outRotate to value usable with transformNode.rotateOrder attribute,
-                // if invalid, just return kXYZ
-                int outRotate;
-                switch(rotOrder) {
-                case MTransformationMatrix::kXYZ:
-                    outRotate = MEulerRotation::kXYZ;
-                    break;
-                case MTransformationMatrix::kYZX:
-                    outRotate = MEulerRotation::kYZX;
-                    break;
-                case MTransformationMatrix::kZXY:
-                    outRotate = MEulerRotation::kZXY;
-                    break;
-                case MTransformationMatrix::kXZY:
-                    outRotate = MEulerRotation::kXZY;
-                    break;
-                case MTransformationMatrix::kYXZ:
-                    outRotate = MEulerRotation::kYXZ;
-                    break;
-                case MTransformationMatrix::kZYX:
-                    outRotate = MEulerRotation::kZYX;
-                    break;
-                default:
-                    outRotate = MEulerRotation::kXYZ;
-                    break;
-                }
-                return boost::python::make_tuple(matching_list, outRotate);
-            }
-            else
-            {
-                return matching_list;
-            }
-        }
-
-        static object
-        MatchingSubstack(
-                const PxrUsdMayaXformStack& stack,
-                const std::vector<UsdGeomXformOp>& xformops,
-                bool returnRotOrder)
-        {
-            MTransformationMatrix::RotationOrder rotOrder = MTransformationMatrix::kXYZ;
-            std::vector<PxrUsdMayaXformStack::OpClass> result = \
-                    stack.MatchingSubstack(xformops, &rotOrder);
-            return AddOptionalRotOrderToOpMatches(result, rotOrder, returnRotOrder);
-        }
-
-        static object
-        FirstMatchingSubstack(
-                const std::vector<PxrUsdMayaXformStack const *>& stacks,
-                const std::vector<UsdGeomXformOp>& xformops,
-                bool returnRotOrder)
-        {
-            MTransformationMatrix::RotationOrder rotOrder = MTransformationMatrix::kXYZ;
-            std::vector<PxrUsdMayaXformStack::OpClass> result = \
-                    PxrUsdMayaXformStack::FirstMatchingSubstack(stacks, xformops, &rotOrder);
-            return AddOptionalRotOrderToOpMatches(result, rotOrder, returnRotOrder);
-        }
     };
 }
 
@@ -354,9 +239,7 @@ void wrapXformStack()
                 return_value_policy<copy_const_reference>())
         .def("FindOpIndexPair", &Usd_PyXformStack::FindOpIndexPair)
         .def("FindOpPair", &PxrUsdMayaXformStack::FindOpPair)
-        .def("MatchingSubstack", &Usd_PyXformStack::MatchingSubstack,
-                (boost::python::arg("xformops"), boost::python::arg("returnRotOrder")=false),
-                MATCHING_SUBSTACK_DOCSTRING.c_str())
+        .def("MatchingSubstack", &PxrUsdMayaXformStack::MatchingSubstack)
         .def("MayaStack", &PxrUsdMayaXformStack::MayaStack,
                 return_value_policy<return_by_value>())
         .staticmethod("MayaStack")
@@ -366,15 +249,15 @@ void wrapXformStack()
         .def("MatrixStack", &PxrUsdMayaXformStack::MatrixStack,
                 return_value_policy<return_by_value>())
         .staticmethod("MatrixStack")
-        .def("FirstMatchingSubstack", &Usd_PyXformStack::FirstMatchingSubstack,
-                (boost::python::arg("stacks"), boost::python::arg("xformops"),
-                        boost::python::arg("returnRotOrder")=false),
-                FIRST_MATCHING_DOCSTRING.c_str())
+        .def("FirstMatchingSubstack", &PxrUsdMayaXformStack::FirstMatchingSubstack)
         .staticmethod("FirstMatchingSubstack")
     ;
 
     boost::python::to_python_converter<PxrUsdMayaXformStack::OpClassPair,
             Usd_PyXformStack>();
+
+    boost::python::to_python_converter<std::vector<PxrUsdMayaXformStack::OpClass >,
+        TfPySequenceToPython<std::vector<PxrUsdMayaXformStack::OpClass > > >();
 
     TfPyContainerConversions::from_python_sequence<std::vector<PxrUsdMayaXformStack const *>,
         TfPyContainerConversions::variable_capacity_policy >();
