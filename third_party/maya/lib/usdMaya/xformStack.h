@@ -251,8 +251,7 @@ public:
     PXRUSDMAYA_API
     OpClassList
     MatchingSubstack(
-            const std::vector<UsdGeomXformOp>& xformops,
-            MTransformationMatrix::RotationOrder* MrotOrder=nullptr) const;
+            const std::vector<UsdGeomXformOp>& xformops) const;
 
     /// \brief The standard Maya xform stack
     ///
@@ -299,8 +298,7 @@ public:
     static OpClassList
     FirstMatchingSubstack(
             const std::vector<PxrUsdMayaXformStack const *>& stacks,
-            const std::vector<UsdGeomXformOp>& xformops,
-            MTransformationMatrix::RotationOrder* MrotOrder=nullptr);
+            const std::vector<UsdGeomXformOp>& xformops);
 
 private:
     // Because this is an immutable type, we keep a pointer to shared
