@@ -1165,13 +1165,12 @@ PxrUsdMayaWriteUtil::SetPrimvarKey(
             UsdGeomPrimvar primvar,
             const VtValue& value,
             const VtValue& indices,
-            const UsdTimeCode& usdTime,
-            UsdInterpolationType parameterInterpolation) {
+            const UsdTimeCode& usdTime) {
     if (!primvar) { return; }
 
-    PxrUsdMayaWriteUtil::SetAttributeKey(primvar.GetAttr(), value, usdTime, parameterInterpolation);
+    PxrUsdMayaWriteUtil::SetAttributeKey(primvar.GetAttr(), value, usdTime);
     if (!indices.IsEmpty()) {
-        PxrUsdMayaWriteUtil::SetAttributeKey(primvar._GetIndicesAttr(true), indices, usdTime, UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::SetAttributeKey(primvar._GetIndicesAttr(true), indices, usdTime);
     }
 }
 
