@@ -1046,51 +1046,49 @@ PxrUsdMayaWriteUtil::CleanupAttributeKeys(UsdAttribute attribute,
     static thread_local std::vector<double> time_samples;
     time_samples.clear();
     attribute.GetTimeSamples(&time_samples);
+    std::sort(time_samples.begin(), time_samples.end());
     const auto num_time_samples = time_samples.size();
     if (num_time_samples <= 1) {
         return; // Either default or one time sample which we want to keep
     }
 
-    if (parameterInterpolation == UsdInterpolationTypeHeld) {
-        if (num_time_samples < 2) {
-            return;
-        }
+    if (num_time_samples > 2) {
         const auto max_num_time_samples = num_time_samples - 1;
         VtValue first;
         attribute.Get(&first, time_samples[0]);
-        for (size_t i = 1; i < max_num_time_samples; ++i) {
-            VtValue next;
-            const auto next_time = time_samples[i];
-            attribute.Get(&next, next_time);
-            if (first.operator==(next)) {
-                attribute.ClearAtTime(next_time);
-            } else {
-                first = next;
+        if (parameterInterpolation == UsdInterpolationTypeHeld) {
+            // we don't want to cleanup when there are only two samples, that
+            // state is going to be checked later on!
+            for (size_t i = 1; i < max_num_time_samples; ++i) {
+                VtValue next;
+                const auto next_time = time_samples[i];
+                attribute.Get(&next, next_time);
+                if (first.operator==(next)) {
+                    attribute.ClearAtTime(next_time);
+                } else {
+                    first = next;
+                }
             }
-        }
-    } else {
-        if (num_time_samples < 3) {
-            return;
-        }
-        const auto max_num_time_samples = num_time_samples - 1;
-        VtValue first;
-        attribute.Get(&first, time_samples[0]);
-        for (size_t i = 1; i < max_num_time_samples; ++i) {
-            VtValue middle, last;
-            const auto middle_time = time_samples[i];
-            attribute.Get(&middle, middle_time);
-            attribute.Get(&last, time_samples[i + 1]);
-            if (first.operator==(middle) && first.operator==(last)) {
-                attribute.ClearAtTime(middle_time);
-            } else {
-                first = middle;
+        } else {
+            for (size_t i = 1; i < max_num_time_samples; ++i) {
+                VtValue middle, last;
+                const auto middle_time = time_samples[i];
+                attribute.Get(&middle, middle_time);
+                attribute.Get(&last, time_samples[i + 1]);
+                if (first.operator==(middle) && first.operator==(last)) {
+                    attribute.ClearAtTime(middle_time);
+                } else {
+                    first = middle;
+                }
             }
         }
     }
 
-    if (attribute.GetNumTimeSamples() == 2) {
+    const auto recent_num_time_samples = attribute.GetNumTimeSamples();
+    if (recent_num_time_samples == 2) {
         time_samples.clear();
         attribute.GetTimeSamples(&time_samples);
+        std::sort(time_samples.begin(), time_samples.end());
         VtValue first, last;
         attribute.Get(&first, time_samples[0]);
         attribute.Get(&last, time_samples[1]);
@@ -1099,6 +1097,14 @@ PxrUsdMayaWriteUtil::CleanupAttributeKeys(UsdAttribute attribute,
             attribute.ClearAtTime(time_samples[0]);
             attribute.ClearAtTime(time_samples[1]);
         }
+    // clear if there is only one time sample
+    } else if (recent_num_time_samples == 1) {
+        time_samples.clear();
+        attribute.GetTimeSamples(&time_samples);
+        VtValue first;
+        attribute.Get(&first, time_samples[0]);
+        attribute.Set(first);
+        attribute.ClearAtTime(time_samples[0]);
     }
 }
 
@@ -1114,13 +1120,11 @@ PxrUsdMayaWriteUtil::CleanupPrimvarKeys(
     PxrUsdMayaWriteUtil::CleanupAttributeKeys(primvar._GetIndicesAttr(false), UsdInterpolationTypeHeld);
 }
 
-// We are making a big assumption here, that set attribute keys are called in order.
 void
 PxrUsdMayaWriteUtil::SetAttributeKey(
     UsdAttribute attribute,
     const VtValue& value,
-    const UsdTimeCode& usdTime,
-    UsdInterpolationType parameterInterpolation) {
+    const UsdTimeCode& usdTime) {
     if (!attribute || value.IsEmpty()) { return; }
 
     if (usdTime.IsDefault()) { attribute.Set(value); }
@@ -1128,6 +1132,7 @@ PxrUsdMayaWriteUtil::SetAttributeKey(
     static thread_local std::vector<double> time_samples;
     time_samples.clear();
     attribute.GetTimeSamples(&time_samples);
+    std::sort(time_samples.begin(), time_samples.end());
     const auto num_time_samples = time_samples.size();
     if (num_time_samples <= 1) {
         attribute.Set(value, usdTime);
@@ -1144,15 +1149,11 @@ PxrUsdMayaWriteUtil::SetAttributeKey(
     attribute.Get(&prev, prev_time);
 
     if (prev.operator==(value)) {
-        if (parameterInterpolation == UsdInterpolationTypeHeld) {        
+        // We already made sure that there are at least 2 elements.
+        const auto prev_prev_time = time_samples[time_samples.size() - 2];
+        attribute.Get(&prev, prev_prev_time);
+        if (prev.operator==(value)) {
             attribute.ClearAtTime(prev_time);
-        } else {
-            // We already made sure that there are at least 2 elements.
-            const auto prev_prev_time = time_samples[time_samples.size() - 2];
-            attribute.Get(&prev, prev_prev_time);
-            if (prev.operator==(value)) {
-                attribute.ClearAtTime(prev_prev_time);
-            }
         }
     }
 
