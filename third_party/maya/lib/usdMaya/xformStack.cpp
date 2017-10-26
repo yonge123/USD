@@ -263,27 +263,42 @@ PxrUsdMayaXformOpClassification::CompatibleAttrNames() const
     // some global constants (ie, MayaStack and CommonStack)
     std::vector<TfToken> result;
     std::string attrName;
-    if (GetName() == PxrUsdMayaXformStackTokens->rotate
-            && _isThreeAxisRotate(GetOpType()))
+    if (_isThreeAxisRotate(GetOpType()))
     {
-        result.reserve(std::extent<decltype(RotateOpTypes)>::value * 3);
-        // Special handling for rotate, to deal with rotateX/rotateZXY/etc
-        for (UsdGeomXformOp::Type rotateType : RotateOpTypes)
+        // Special handling for rotates, to deal with rotateX/rotateZXY/etc
+        if (GetName() == PxrUsdMayaXformStackTokens->rotate)
         {
-            // Add, ie, xformOp::rotateX
-            result.emplace_back(TfToken(
-                    UsdGeomXformOp::GetOpName(rotateType).GetString(),
-                    TfToken::Immortal));
-            // Add, ie, xformOp::rotateX::rotate
-            result.emplace_back(TfToken(
-                    UsdGeomXformOp::GetOpName(rotateType,
-                            PxrUsdMayaXformStackTokens->rotate).GetString(),
-                    TfToken::Immortal));
-            // Add, ie, xformOp::rotateX::rotateX
-            result.emplace_back(TfToken(
-                    UsdGeomXformOp::GetOpName(rotateType,
-                            UsdGeomXformOp::GetOpTypeToken(rotateType)).GetString(),
-                    TfToken::Immortal));
+            result.reserve(std::extent<decltype(RotateOpTypes)>::value * 3);
+            // Special handling for rotate, to deal with rotateX/rotateZXY/etc
+            for (UsdGeomXformOp::Type rotateType : RotateOpTypes)
+            {
+                // Add, ie, xformOp::rotateX
+                result.emplace_back(TfToken(
+                        UsdGeomXformOp::GetOpName(rotateType).GetString(),
+                        TfToken::Immortal));
+                // Add, ie, xformOp::rotateX::rotate
+                result.emplace_back(TfToken(
+                        UsdGeomXformOp::GetOpName(rotateType,
+                                PxrUsdMayaXformStackTokens->rotate).GetString(),
+                        TfToken::Immortal));
+                // Add, ie, xformOp::rotateX::rotateX
+                result.emplace_back(TfToken(
+                        UsdGeomXformOp::GetOpName(rotateType,
+                                UsdGeomXformOp::GetOpTypeToken(rotateType)).GetString(),
+                        TfToken::Immortal));
+            }
+        }
+        else
+        {
+            result.reserve(std::extent<decltype(RotateOpTypes)>::value);
+            for (UsdGeomXformOp::Type rotateType : RotateOpTypes)
+            {
+                // Add, ie, xformOp::rotateX::rotateAxis
+                result.emplace_back(TfToken(
+                        UsdGeomXformOp::GetOpName(rotateType,
+                                GetName()).GetString(),
+                        TfToken::Immortal));
+            }
         }
     }
     else
@@ -515,22 +530,13 @@ PxrUsdMayaXformStack::FindOpPair(const TfToken& opName) const
 
 OpClassList
 PxrUsdMayaXformStack::MatchingSubstack(
-        const std::vector<UsdGeomXformOp>& xformops,
-        MTransformationMatrix::RotationOrder* MrotOrder) const
+        const std::vector<UsdGeomXformOp>& xformops) const
 {
     static const OpClassList _NO_MATCH;
 
     if (xformops.empty()) return _NO_MATCH;
 
     OpClassList ret;
-
-    // We ONLY want to set MrotOrder if we have a successful
-    // match, but we if we have a succesful match until we get
-    // through the whole stack... whereas we find out the rotate
-    // order whenever we get to the rotate op. Therefore, we
-    // set a "temp" rotOrder, and then only set MrotOrder at the
-    // end
-    MTransformationMatrix::RotationOrder tempRotOrder = MTransformationMatrix::kInvalid;
 
     // nextOp keeps track of where we will start looking for matches.  It
     // will only move forward.
@@ -597,13 +603,6 @@ PxrUsdMayaXformStack::MatchingSubstack(
         // Ok, we found a match...
         const PxrUsdMayaXformOpClassification& foundOp = GetOps()[foundOpIdx];
 
-        // if we're a rotate, set the maya rotation order (if it's relevant to
-        // this op)
-        if (MrotOrder != nullptr
-                && foundOp.GetName() == PxrUsdMayaXformStackTokens->rotate) {
-            tempRotOrder = RotateOrderFromOpType(xformOp.GetOpType(), *MrotOrder);
-        }
-
         // move the nextOp pointer along.
         ret.push_back(foundOp);
         opNamesFound[foundOpIdx] = true;
@@ -617,26 +616,20 @@ PxrUsdMayaXformStack::MatchingSubstack(
         }
     }
 
-    if (MrotOrder != nullptr && tempRotOrder != MTransformationMatrix::kInvalid)
-    {
-        *MrotOrder = tempRotOrder;
-    }
-
     return ret;
 }
 
 OpClassList
 PxrUsdMayaXformStack::FirstMatchingSubstack(
         const std::vector<PxrUsdMayaXformStack const *>& stacks,
-        const std::vector<UsdGeomXformOp>& xformops,
-        MTransformationMatrix::RotationOrder* MrotOrder)
+        const std::vector<UsdGeomXformOp>& xformops)
 {
     if (xformops.empty() || stacks.empty()) return OpClassList();
 
     for (auto& stackPtr : stacks)
     {
         std::vector<PxrUsdMayaXformStack::OpClass> stackOps = \
-                stackPtr->MatchingSubstack(xformops, MrotOrder);
+                stackPtr->MatchingSubstack(xformops);
         if (!stackOps.empty())
         {
             return stackOps;
