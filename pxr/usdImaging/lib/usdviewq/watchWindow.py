@@ -21,7 +21,7 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
-from PySide import QtGui, QtCore
+from qt import QtCore, QtGui, QtWidgets
 from watchWindowUI import Ui_WatchWindow
 import re
 import os
@@ -31,9 +31,9 @@ import os
 separatorColor = QtGui.QColor(255, 255, 255)
 separatorString = "\n==================================\n"
 
-class WatchWindow(QtGui.QDialog):
+class WatchWindow(QtWidgets.QDialog):
     def __init__(self, parent):
-        QtGui.QDialog.__init__(self,parent)
+        QtWidgets.QDialog.__init__(self,parent)
         self._ui = Ui_WatchWindow()
         self._ui.setupUi(self)
 
@@ -47,43 +47,24 @@ class WatchWindow(QtGui.QDialog):
         self.addAction(self._ui.actionFindNext)
         self.addAction(self._ui.actionFindPrevious)
 
-        QtCore.QObject.connect(self._ui.doneButton, 
-                               QtCore.SIGNAL('clicked()'),
-                               self.accept)
-        QtCore.QObject.connect(self,
-                               QtCore.SIGNAL('finished(int)'),
-                               self._cleanUpAndClose)
-        QtCore.QObject.connect(self._ui.dualScroller,
-                               QtCore.SIGNAL('valueChanged(int)'),
-                               self._changeBothSliders)
-        QtCore.QObject.connect(self._ui.diffButton,
-                               QtCore.SIGNAL('clicked()'),
-                               self._diff)
-        QtCore.QObject.connect(self._ui.actionFind,
-                               QtCore.SIGNAL('triggered()'),
-                               self._find)
-        QtCore.QObject.connect(self._ui.actionFindNext,
-                               QtCore.SIGNAL('triggered()'),
-                               self._findNext)
-        QtCore.QObject.connect(self._ui.actionFindPrevious,
-                               QtCore.SIGNAL('triggered()'),
-                               self._findPrevious)
-        QtCore.QObject.connect(self._ui.varyingEdit,
-                               QtCore.SIGNAL('cursorPositionChanged()'),
-                               self._varyingCursorChanged)
-        QtCore.QObject.connect(self._ui.unvaryingEdit,
-                               QtCore.SIGNAL('cursorPositionChanged()'),
-                               self._unvaryingCursorChanged)
+        self._ui.doneButton.clicked.connect(self.accept)
+        self.finished.connect(self._cleanUpAndClose)
+        self._ui.dualScroller.valueChanged.connect(self._changeBothSliders)
+        self._ui.diffButton.clicked.connect(self._diff)
+        self._ui.actionFind.triggered.connect(self._find)
+        self._ui.actionFindNext.triggered.connect(self._findNext)
+        self._ui.actionFindPrevious.triggered.connect(self._findPrevious)
+        self._ui.varyingEdit.cursorPositionChanged.connect(
+            self._varyingCursorChanged)
+        self._ui.unvaryingEdit.cursorPositionChanged.connect(
+            self._unvaryingCursorChanged)
 	# save splitter state
-	QtCore.QObject.connect(self._ui.splitter,
-                               QtCore.SIGNAL('splitterMoved(int, int)'),
-                               self._splitterMoved)
+	self._ui.splitter.splitterMoved.connect(self._splitterMoved)
 
 	#create a timer for saving splitter state only when it stops moving
 	self._splitterTimer = QtCore.QTimer(self)
 	self._splitterTimer.setInterval(500)
-        QtCore.QObject.connect(self._splitterTimer, QtCore.SIGNAL('timeout()'),
-                               self._saveSplitterState)
+        self._splitterTimer.timeout.connect(self._saveSplitterState)
 
 	self._resetSettings()
 
@@ -105,14 +86,14 @@ class WatchWindow(QtGui.QDialog):
         self._boxWithFocus = self._ui.unvaryingEdit
 
     def _find(self):
-        searchString = QtGui.QInputDialog.getText(self, "Find", 
+        searchString = QtWidgets.QInputDialog.getText(self, "Find",
             "Enter search string\nUse Ctrl+G to \"Find Next\"\n" + \
             "Use Ctrl+Shift+G to \"Find Previous\"")
         if searchString[1]:
             self._searchString = searchString[0]
             if (not self._boxWithFocus.find(self._searchString)):
                 self._boxWithFocus.moveCursor(QtGui.QTextCursor.Start)
-                self._boxWithFocus.find(self._searchString) 
+                self._boxWithFocus.find(self._searchString)
 
     def _findNext(self):
         if (self._searchString == ""):
@@ -127,7 +108,7 @@ class WatchWindow(QtGui.QDialog):
         if (not self._boxWithFocus.find(self._searchString,
             QtGui.QTextDocument.FindBackward)):
             self._boxWithFocus.moveCursor(QtGui.QTextCursor.End)
-            self._boxWithFocus.find(self._searchString, 
+            self._boxWithFocus.find(self._searchString,
                                       QtGui.QTextDocument.FindBackward)
 
     def _diff(self):
@@ -140,7 +121,7 @@ class WatchWindow(QtGui.QDialog):
         varFile.flush()
 
         os.system("xxdiff %s %s" % (unvarFile.name, varFile.name))
-                          
+
         unvarFile.close()
         varFile.close()
 
@@ -170,7 +151,7 @@ class WatchWindow(QtGui.QDialog):
         self._ui.unvaryingEdit.append(s)
 
         self._ui.dualScroller.setMaximum(max(
-            self._ui.unvaryingEdit.verticalScrollBar().maximum(), 
+            self._ui.unvaryingEdit.verticalScrollBar().maximum(),
             self._ui.varyingEdit.verticalScrollBar().maximum()))
         self._ui.dualScroller.setPageStep(min(
             self._ui.unvaryingEdit.verticalScrollBar().pageStep(),

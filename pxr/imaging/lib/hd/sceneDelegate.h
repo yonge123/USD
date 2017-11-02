@@ -49,6 +49,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+class HdExtComputationContext;
 
 /// \class HdSyncRequestVector
 ///
@@ -64,6 +65,39 @@ struct HdSyncRequestVector {
     std::vector<HdDirtyBits> dirtyBits;
 };
 
+/// \struct HdExtComputationPrimVarDesc
+///
+/// Describes a PrimVar that is sourced from an ExtComputation.
+/// The scene delegate is expected to fill in this structure for
+/// a given primVar name on a specific prim.
+///
+/// The structure contains the path to the ExtComputation in the render index,
+/// and which output on that computation to bind the primVar to.
+///
+/// The defaultValue provides expected type information about the primVar
+/// and may be used in case of error.
+struct HdExtComputationPrimVarDesc {
+    SdfPath         computationId;
+    TfToken         computationOutputName;
+    VtValue         defaultValue;
+};
+
+/// \struct HdExtComputationInputParams
+///
+/// Describes a extended information about an input to a ExtComputation.
+///
+/// In particular, inputs that are bound to the outputs of other
+/// ExtComputations.
+///
+/// The scene delegate is expected to fill in this structure for
+/// a given input name on a specific ExtComputation.
+///
+/// The structure contains the path to the source ExtComputation in the
+/// render index, and which output on that computation to bind the input to.
+struct HdExtComputationInputParams {
+    SdfPath sourceComputationId;
+    TfToken computationOutputName;
+};
 
 /// \class HdSceneDelegate
 ///
@@ -141,6 +175,10 @@ public:
     /// Returns the cullstyle for the given prim.
     HD_API
     virtual HdCullStyle GetCullStyle(SdfPath const &id);
+
+    /// Returns the shading style for the given prim.
+    HD_API
+    virtual VtValue GetShadingStyle(SdfPath const &id);
 
     /// Returns the refinement level for the given prim in the range [0,8].
     ///
@@ -223,10 +261,11 @@ public:
     HD_API
     virtual std::string GetDisplacementShaderSource(SdfPath const &shaderId);
 
-    /// Returns a vector of shader parameter names. These names can be used to
-    /// fetch parameter values.
+    /// Returns the per delegate mixin source code for the given shader stage key.
+    /// This allows per-rprim customization of shading for a given delegate.
+    /// \see GetShadingStyle
     HD_API
-    virtual TfTokenVector GetSurfaceShaderParamNames(SdfPath const &shaderId);
+    virtual std::string GetMixinShaderSource(TfToken const &shaderStageKey);
 
     /// Returns a single value for the given shader and named parameter.
     HD_API
@@ -235,10 +274,6 @@ public:
 
     HD_API
     virtual HdShaderParamVector GetSurfaceShaderParams(SdfPath const& shaderId);
-
-    /// Returns a vector of texture IDs for the given surface shader ID.
-    HD_API
-    virtual SdfPathVector GetSurfaceShaderTextures(SdfPath const &shaderId);
 
     // -----------------------------------------------------------------------//
     /// \name Texture Aspects
@@ -253,6 +288,15 @@ public:
     virtual HdTextureResourceSharedPtr GetTextureResource(SdfPath const& textureId);
 
     // -----------------------------------------------------------------------//
+    /// \name Light Aspects
+    // -----------------------------------------------------------------------//
+
+    // Returns a single value for a given light and parameter.
+    HD_API
+    virtual VtValue GetLightParamValue(SdfPath const &id, 
+                                       TfToken const &paramName);
+
+    // -----------------------------------------------------------------------//
     /// \name Camera Aspects
     // -----------------------------------------------------------------------//
 
@@ -260,6 +304,56 @@ public:
     /// orientation.
     HD_API
     virtual std::vector<GfVec4d> GetClipPlanes(SdfPath const& cameraId);
+
+    // -----------------------------------------------------------------------//
+    /// \name ExtComputation Aspects
+    // -----------------------------------------------------------------------//
+
+    ///
+    /// For the given computation id and input type, returns a list of
+    /// name tokens.
+    ///
+    /// If the input type is scene, the input is requested from the scene
+    /// delegate using the Get() method.
+    ///
+    /// If the input type is computation, the input is bound to another
+    /// ExtComputation.  GetExtComputationInputParams() is used to obtain
+    /// the binding information for the input.
+    ///
+    HD_API
+    virtual TfTokenVector GetExtComputationInputNames(SdfPath const& id,
+                                                HdExtComputationInputType type);
+
+    /// Obtain extended information about an input to an ExtComputation,
+    /// such as binding information.
+    ///
+    /// The ExtComputation is identified by id, with the specific input
+    /// identified by input name.
+    ///
+    /// See HdExtComputationInputParams for the information the scene delegate
+    /// is expected to provide.
+    HD_API
+    virtual HdExtComputationInputParams GetExtComputationInputParams(
+                                   SdfPath const& id, TfToken const &inputName);
+
+    HD_API
+    virtual TfTokenVector GetExtComputationOutputNames(SdfPath const& id);
+
+    /// Requests the scene delegate run the ExtComputation with the given id.
+    /// The context contains the input values that delegate requested through
+    /// GetExtComputationInputNames().
+    ///
+    /// The scene delegate is expected to set each output identified by
+    /// GetExtComputationOutputNames() on the context.
+    ///
+    /// Hydra may invoke the computation on a different thread from
+    /// what HdEngine::Execute() was called on.  It may also invoke
+    /// many computations in parallel.
+    HD_API
+    virtual void InvokeExtComputation(SdfPath const& computationId,
+                                      HdExtComputationContext *context);
+
+
 
     // -----------------------------------------------------------------------//
     /// \name Primitive Variables
@@ -289,14 +383,22 @@ public:
     HD_API
     virtual TfTokenVector GetPrimVarInstanceNames(SdfPath const& id);
 
-    /// Returns the primVar data type.
+    /// Returns a list of primVar names that should be bound to
+    /// a generated output from  anExtComputation for the given prim id and
+    /// interpolation mode.  Binding information is obtained through
+    /// GetExtComputationPrimVarDesc()
     HD_API
-    virtual int GetPrimVarDataType(SdfPath const& id, TfToken const& key);
+    virtual TfTokenVector GetExtComputationPrimVarNames(
+                                             SdfPath const& id,
+                                             HdInterpolation interpolationMode);
 
-    /// Returns the number of components in the primVar, for example a
-    /// vec4-valued primVar would return 4.
+    /// Returns a structure describing source information for a primVar
+    /// that is bound to an ExtComputation.  See HdExtComputationPrimVarDesc
+    /// for the expected information to be returned.
     HD_API
-    virtual int GetPrimVarComponents(SdfPath const& id, TfToken const& key);
+    virtual HdExtComputationPrimVarDesc GetExtComputationPrimVarDesc(
+                                                SdfPath const& id,
+                                                TfToken const& varName);
 
 private:
     HdRenderIndex *_index;

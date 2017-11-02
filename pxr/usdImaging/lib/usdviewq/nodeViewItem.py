@@ -21,11 +21,11 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
-from PySide import QtGui, QtCore
+from qt import QtCore, QtWidgets
 from pxr import Usd, UsdGeom
 from ._usdviewq import Utils
 
-from common import (HasArcsColor, NormalColor, InstanceColor, MasterColor, 
+from common import (HasArcsColor, NormalColor, InstanceColor, MasterColor,
                     AbstractPrimFont, DefinedPrimFont, OverPrimFont, BoldFont)
 
 HALF_DARKER = 150
@@ -33,10 +33,10 @@ HALF_DARKER = 150
 def _GetPrimInfo(prim, time):
     return Utils.GetPrimInfo(prim, time)
 
-# This class extends QTreeWidgetItem to also contain all the stage 
+# This class extends QTreeWidgetItem to also contain all the stage
 # node data associated with it and populate itself with that data.
 
-class NodeViewItem(QtGui.QTreeWidgetItem):
+class NodeViewItem(QtWidgets.QTreeWidgetItem):
     def __init__(self, node, mainWindow, nodeHasChildren):
         # Do *not* pass a parent.  The client must build the hierarchy.
         # This can dramatically improve performance when building a
@@ -56,9 +56,9 @@ class NodeViewItem(QtGui.QTreeWidgetItem):
 
         # If we know we'll have children show a norgie, otherwise don't.
         if nodeHasChildren:
-            self.setChildIndicatorPolicy(QtGui.QTreeWidgetItem.ShowIndicator)
+            self.setChildIndicatorPolicy(QtWidgets.QTreeWidgetItem.ShowIndicator)
         else:
-            self.setChildIndicatorPolicy(QtGui.QTreeWidgetItem.DontShowIndicator)
+            self.setChildIndicatorPolicy(QtWidgets.QTreeWidgetItem.DontShowIndicator)
 
     def push(self):
         """Pushes prim data to the UI."""
@@ -103,7 +103,7 @@ class NodeViewItem(QtGui.QTreeWidgetItem):
             else UsdGeom.Tokens.inherited
         if self.imageable and self.active:
             if isVisibilityInherited:
-                self.vis = UsdGeom.Tokens.inherited 
+                self.vis = UsdGeom.Tokens.inherited
             else:
                 self.vis = self.computedVis = UsdGeom.Tokens.invisible
 
@@ -157,7 +157,7 @@ class NodeViewItem(QtGui.QTreeWidgetItem):
                 color = MasterColor
             else:
                 color = NormalColor
-            
+
             return color if self.active else color.color().darker(HALF_DARKER)
         elif role == QtCore.Qt.ToolTipRole:
             toolTip = 'Prim'
@@ -198,7 +198,7 @@ class NodeViewItem(QtGui.QTreeWidgetItem):
         elif role == QtCore.Qt.FontRole:
             return BoldFont
         elif role == QtCore.Qt.ForegroundRole:
-            fgColor = self._nameData(role) 
+            fgColor = self._nameData(role)
             if (self.imageable and self.active and
                     self.vis != UsdGeom.Tokens.invisible and
                     self.computedVis == UsdGeom.Tokens.invisible):
@@ -232,13 +232,13 @@ class NodeViewItem(QtGui.QTreeWidgetItem):
         visAttr = UsdGeom.Imageable(self.node).GetVisibilityAttr()
         if visHasBeenAuthored:
             self.visVaries = visAttr.ValueMightBeTimeVarying()
-                
+
             if not self.visVaries:
                 self.vis = visAttr.Get(time)
 
         if self.visVaries:
             self.vis =  visAttr.Get(time)
-            
+
         self.computedVis = UsdGeom.Tokens.invisible \
             if self.vis == UsdGeom.Tokens.invisible \
             else inheritedVis
@@ -283,7 +283,7 @@ class NodeViewItem(QtGui.QTreeWidgetItem):
 
     def _pushVisRecursive(self, inheritedVis, authoredVisHasChanged):
         myComputedVis = self.loadVis(inheritedVis, authoredVisHasChanged)
-            
+
         for child in [self.child(i) for i in xrange(self.childCount())]:
             child._pushVisRecursive(myComputedVis, authoredVisHasChanged)
 
@@ -311,7 +311,7 @@ class NodeViewItem(QtGui.QTreeWidgetItem):
 
     def setVisible(self, visible):
         if self.canChangeVis():
-            UsdGeom.Imageable(self.node).GetVisibilityAttr().Set(UsdGeom.Tokens.inherited 
+            UsdGeom.Imageable(self.node).GetVisibilityAttr().Set(UsdGeom.Tokens.inherited
                              if visible else UsdGeom.Tokens.invisible)
             self.visChanged()
 

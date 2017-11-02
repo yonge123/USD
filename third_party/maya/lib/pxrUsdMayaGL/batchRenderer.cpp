@@ -65,6 +65,8 @@ TF_DEFINE_PRIVATE_TOKENS(
     (simpleLightTask)
     (camera)
     (render)
+
+    ((MayaEndRenderNotificationName, "UsdMayaEndRenderNotification"))
 );
 
 TF_REGISTRY_FUNCTION(TfDebug)
@@ -96,7 +98,11 @@ std::unique_ptr<UsdMayaGLBatchRenderer> UsdMayaGLBatchRenderer::_sGlobalRenderer
 
 /// \brief struct to hold all the information needed for a 
 /// draw request in vp1 or vp2, without requiring shape querying at
-/// draw time. 
+/// draw time.
+///
+/// Note that we set deleteAfterUse=false when calling the MUserData
+/// constructor. This ensures that the draw data survives across multiple draw
+/// passes in vp2 (e.g. a shadow pass and a color pass).
 class _BatchDrawUserData : public MUserData
 {
 public:
@@ -106,18 +112,22 @@ public:
     boost::scoped_ptr<GfVec4f> _wireframeColor;
 
     // Constructor to use when shape is drawn but no bounding box.
-    _BatchDrawUserData()
-        : MUserData(true), _drawShape(true) {}
-    
+    _BatchDrawUserData() :
+        MUserData(/* deleteAfterUse = */ false),
+        _drawShape(true) {}
+
     // Constructor to use when shape may be drawn but there is a bounding box.
-    _BatchDrawUserData(bool drawShape, const MBoundingBox &bounds, const GfVec4f &wireFrameColor)
-        : MUserData( true )
-        , _drawShape( drawShape )
-        , _bounds( new MBoundingBox(bounds) )
-        ,  _wireframeColor( new GfVec4f(wireFrameColor) ) {}
+    _BatchDrawUserData(
+            const bool drawShape,
+            const MBoundingBox& bounds,
+            const GfVec4f& wireFrameColor) :
+        MUserData(/* deleteAfterUse = */ false),
+        _drawShape(drawShape),
+        _bounds(new MBoundingBox(bounds)),
+        _wireframeColor(new GfVec4f(wireFrameColor)) {}
 
     // Make sure everything gets freed!
-    ~_BatchDrawUserData() {}
+    virtual ~_BatchDrawUserData() {}
 };
 
 
@@ -713,11 +723,41 @@ UsdMayaGLBatchRenderer::TaskDelegate::GetRenderTask(
         _renderTaskIdMap[hash] = renderTaskId;
     }
 
-    // Update collection in the value cache
+
+    //
+    // XXX: The Maya-Hydra plugin needs refactoring such that the plugin is
+    // creating a different collection name for each collection it is trying to
+    // manage. (i.e. Each collection within a frame that has different content
+    // should have a different collection name)
+    //
+    // With Hydra, changing the contents of a collection can be
+    // an expensive operation as it causes draw batches to be rebuilt.
+    //
+    // The Maya-Hydra Plugin is currently reusing the same collection
+    // name for all collections within a frame.
+    // (This stems from a time when collection name had a significant meaning
+    // rather than id'ing a collection).
+    //
+    // The plugin should also track deltas to the contents of a collection
+    // and set Hydra's dirty state when prims get added and removed from
+    // the collection.
+    //
+    // Another possible change that can be made to this code is HdxRenderTask
+    // now takes an array of collections, so it is possible to support different
+    // reprs using the same task.  Therefore, this code should be modified to
+    // only add one task that is provided with the active set of collections.
+    //
+    // However, a further improvement to the code could be made using
+    // UsdDelegate's fallback repr feature instead of using multiple
+    // collections as it would avoid modifying the collection as a Maya shape
+    // object display state changes.  This would result in a much cheaper state
+    // transition within Hydra itself.
+    //
     TfToken colName = renderParams.geometryCol;
     HdRprimCollection rprims(colName, renderParams.drawRepr);
     rprims.SetRootPaths(roots);
     rprims.SetRenderTags(renderParams.renderTags);
+    GetRenderIndex().GetChangeTracker().MarkCollectionDirty(colName);
 
     // update value cache
     _SetValue(renderTaskId, HdTokens->collection, rprims);
@@ -779,7 +819,7 @@ UsdMayaGLBatchRenderer::GetShapeRenderer(
         //
         std::string idString = TfStringPrintf("/x%zx", hash);
         
-        toReturn->Init(_renderIndex,
+        toReturn->Init(_renderIndex.get(),
                        SdfPath(idString),
                        usdPrim,
                        excludePrimPaths);
@@ -806,19 +846,29 @@ _OnMayaSceneUpdateCallback(void* clientData)
     UsdMayaGLBatchRenderer::Reset();
 }
 
-UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer()
-    : _renderIndex(nullptr)
-    , _renderDelegate()
-    , _taskDelegate()
-    , _intersector()
+// For Viewport 2.0, we listen for a notification from Maya's rendering
+// pipeline that all render passes have completed and then we do some cleanup.
+static
+void
+_OnMayaEndRenderCallback(MHWRender::MDrawContext& context, void* clientData)
 {
-    _renderIndex = HdRenderIndex::New(&_renderDelegate);
-    if (!TF_VERIFY(_renderIndex != nullptr)) {
+    UsdMayaGLBatchRenderer* batchRenderer =
+        static_cast<UsdMayaGLBatchRenderer*>(clientData);
+    if (!batchRenderer) {
         return;
     }
-    _taskDelegate = TaskDelegateSharedPtr(
-                          new TaskDelegate(_renderIndex, SdfPath("/mayaTask")));
-    _intersector = HdxIntersectorSharedPtr(new HdxIntersector(_renderIndex));
+
+    batchRenderer->MayaRenderDidEnd();
+}
+
+UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer()
+{
+    _renderIndex.reset(HdRenderIndex::New(&_renderDelegate));
+    if (!TF_VERIFY(_renderIndex)) {
+        return;
+    }
+    _taskDelegate.reset(new TaskDelegate(_renderIndex.get(), SdfPath("/mayaTask")));
+    _intersector.reset(new HdxIntersector(_renderIndex.get()));
 
 
     static MCallbackId sceneUpdateCallbackId = 0;
@@ -827,19 +877,35 @@ UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer()
             MSceneMessage::addCallback(MSceneMessage::kSceneUpdate,
                                        _OnMayaSceneUpdateCallback);
     }
+
+    MHWRender::MRenderer* renderer = MHWRender::MRenderer::theRenderer();
+    if (!renderer) {
+        MGlobal::displayError("Viewport 2.0 renderer not initialized.");
+    } else {
+        renderer->addNotification(
+            _OnMayaEndRenderCallback,
+            _tokens->MayaEndRenderNotificationName.GetText(),
+            MHWRender::MPassContext::kEndRenderSemantic,
+            (void*)this);
+    }
 }
 
 UsdMayaGLBatchRenderer::~UsdMayaGLBatchRenderer()
 {
+    MHWRender::MRenderer* renderer = MHWRender::MRenderer::theRenderer();
+    if (renderer) {
+        renderer->removeNotification(
+            _tokens->MayaEndRenderNotificationName.GetText(),
+            MHWRender::MPassContext::kEndRenderSemantic);
+    }
+
     _intersector.reset();
     _taskDelegate.reset();
 
     // the _shapeRendererMap has UsdImagingDelegate objects which need to be
     // deleted before _renderIndex is deleted.
     _shapeRendererMap.clear();
-    delete _renderIndex;
 }
-
 
 /* static */
 void UsdMayaGLBatchRenderer::Reset()
@@ -861,8 +927,9 @@ UsdMayaGLBatchRenderer::Draw(
     
     _BatchDrawUserData* batchData =
                 static_cast<_BatchDrawUserData*>(drawData.geometry());
-    if( !batchData )
+    if (!batchData) {
         return;
+    }
     
     MMatrix projectionMat;
     view.projectionMatrix(projectionMat);
@@ -904,12 +971,14 @@ UsdMayaGLBatchRenderer::Draw(
     // VP 2.0 Implementation
     //
     MHWRender::MRenderer* theRenderer = MHWRender::MRenderer::theRenderer();
-    if( !theRenderer || !theRenderer->drawAPIIsOpenGL() )
+    if (!theRenderer || !theRenderer->drawAPIIsOpenGL()) {
         return;
+    }
 
     const _BatchDrawUserData* batchData = static_cast<const _BatchDrawUserData*>(userData);
-    if( !batchData )
+    if (!batchData) {
         return;
+    }
     
     MStatus status;
 
@@ -924,7 +993,17 @@ UsdMayaGLBatchRenderer::Draw(
                                         worldViewMat,
                                         projectionMat);
     }
-    
+
+    const MHWRender::MPassContext& passContext = context.getPassContext();
+    const MString& passId = passContext.passIdentifier();
+
+    const auto inserted = _drawnMayaRenderPasses.insert(passId.asChar());
+    if (!inserted.second) {
+        // We've already done a Hydra draw for this Maya render pass, so we
+        // don't do another one.
+        return;
+    }
+
     if( batchData->_drawShape && !_renderQueue.empty() )
     {
         MMatrix viewMat = context.getMatrix(MHWRender::MDrawContext::kViewMtx, &status);
@@ -939,6 +1018,18 @@ UsdMayaGLBatchRenderer::Draw(
         //
         _RenderBatches( &context, viewMat, projectionMat, viewport );
     }
+}
+
+void
+UsdMayaGLBatchRenderer::MayaRenderDidEnd()
+{
+    // Selection is based on what we have last rendered to the display. The
+    // selection queue is cleared during drawing, so this has the effect of
+    // resetting the render queue and prepping the selection queue without any
+    // significant memory hit.
+    _renderQueue.swap(_selectQueue);
+
+    _drawnMayaRenderPasses.clear();
 }
 
 size_t
@@ -967,22 +1058,18 @@ UsdMayaGLBatchRenderer::_QueuePathForDraw(
     const SdfPath& sharedId,
     const RenderParams &params )
 {
-    size_t paramKey = params.Hash();
+    const size_t paramKey = params.Hash();
     
     auto renderSetIter = _renderQueue.find( paramKey );
-    if( renderSetIter == _renderQueue.end() )
-    {
+    if (renderSetIter == _renderQueue.end()) {
         // If we had no _SdfPathSet for this particular RenderParam combination,
         // create a new one.
         _renderQueue[paramKey] = _RenderParamSet( params, _SdfPathSet( {sharedId} ) );
-    }
-    else
-    {
+    } else {
         _SdfPathSet &renderPaths = renderSetIter->second.second;
         renderPaths.insert( sharedId );
     }
 }
-
 
 const HdxIntersector::Hit * 
 UsdMayaGLBatchRenderer::_GetHitInfo(
@@ -993,8 +1080,9 @@ UsdMayaGLBatchRenderer::_GetHitInfo(
     const GfMatrix4d &localToWorldSpace)
 {
     // Guard against user clicking in viewer before renderer is setup
-    if( !_renderIndex )
+    if (!_renderIndex) {
         return NULL;
+    }
 
     // Selection only occurs once per display refresh, with all usd objects
     // simulataneously. If the selectQueue is not empty, that means that
@@ -1147,7 +1235,6 @@ UsdMayaGLBatchRenderer::_GetHitInfo(
     return TfMapLookupPtr( _selectResults, sharedId );
 }
 
-
 void
 UsdMayaGLBatchRenderer::_RenderBatches( 
     const MHWRender::MDrawContext* vp2Context,
@@ -1246,7 +1333,7 @@ UsdMayaGLBatchRenderer::_RenderBatches(
 
     for( const auto &renderSetIter : _renderQueue )
     {
-        size_t hash = renderSetIter.first;
+        const size_t hash = renderSetIter.first;
         const RenderParams &params = renderSetIter.second.first;
         const _SdfPathSet &renderPaths = renderSetIter.second.second;
 
@@ -1264,13 +1351,18 @@ UsdMayaGLBatchRenderer::_RenderBatches(
         glDisable(GL_FRAMEBUFFER_SRGB_EXT);
 
     glPopAttrib(); // GL_LIGHTING_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT
-    
-    // Selection is based on what we have last rendered to the display. The
-    // selection queue is cleared above, so this has the effect of resetting
-    // the render queue and prepping the selection queue without any
-    // significant memory hit.
-    _renderQueue.swap( _selectQueue );
-    
+
+    // Viewport 2 may be rendering in multiple passes, and we want to make sure
+    // we draw once (and only once) for each of those passes, so we delay
+    // swapping the render queue into the select queue until we receive a
+    // notification that all rendering has ended.
+    // For the legacy viewport, rendering is done in a single pass and we will
+    // not receive a notification at the end of rendering, so we do the swap
+    // now.
+    if (!vp2Context) {
+        MayaRenderDidEnd();
+    }
+
     TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg(
         "^^^^^^^^^^^^ RENDER STAGE FINISH ^^^^^^^^^^^^^ (%zu)\n",_renderQueue.size());
 }

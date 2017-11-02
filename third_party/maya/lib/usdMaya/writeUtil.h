@@ -87,9 +87,6 @@ struct PxrUsdMayaWriteUtil
     /// Given an \p attrPlug, try to create a primvar on \p imageable with
     /// the name \p primvarName. Note, it's value will not be set.
     ///
-    /// Attributes that are not part of the primSchema should have \p custom
-    /// set to true.
-    ///
     /// If \p translateMayaDoubleToUsdSinglePrecision is true, Maya plugs that
     /// contain double data will result in primvars of the appropriate
     /// float-based type. Otherwise, their type will be double-based.
@@ -100,7 +97,6 @@ struct PxrUsdMayaWriteUtil
             const std::string& primvarName,
             const TfToken& interpolation = TfToken(),
             const int elementSize = -1,
-            const bool custom = false,
             const bool translateMayaDoubleToUsdSinglePrecision =
                 PxrUsdMayaUserTaggedAttribute::GetFallbackTranslateMayaDoubleToUsdSinglePrecision());
 
@@ -142,6 +138,15 @@ struct PxrUsdMayaWriteUtil
             const MDagPath& dagPath,
             const UsdPrim& usdPrim,
             const UsdTimeCode& usdTime);
+
+    /// Authors class inherits on \p usdPrim.  \p inheritClassNames are
+    /// specified as names (not paths).  For example, they should be
+    /// ["_class_Special", ...].
+    PXRUSDMAYA_API
+    static bool WriteClassInherits(
+            const UsdPrim& usdPrim,
+            const std::vector<std::string>& inheritClassNames);
+
     /// \}
 
     /// \name Helpers for reading Maya data
@@ -153,6 +158,12 @@ struct PxrUsdMayaWriteUtil
             const MFnDependencyNode& depNode,
             const MString& name, 
             std::string* val);
+
+    PXRUSDMAYA_API
+    static bool ReadMayaAttribute(
+            const MFnDependencyNode& depNode,
+            const MString& name, 
+            std::vector<std::string>* val);
 
     /// \brief Reads attribute \p name on \p depNode into \p val.
     PXRUSDMAYA_API

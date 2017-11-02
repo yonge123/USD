@@ -24,6 +24,7 @@
 #include "pxr/pxr.h"
 #include "pxr/usd/usd/variantSets.h"
 #include "pxr/usd/usd/editContext.h"
+#include "pxr/usd/usd/pyEditContext.h"
 
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
@@ -71,8 +72,9 @@ _GetVariantEditContext(const UsdVariantSet &self, const SdfLayerHandle &layer) {
 void wrapUsdVariantSets()
 {
     class_<UsdVariantSet>("VariantSet", no_init)
-        .def("AppendVariant", &UsdVariantSet::AppendVariant,
-             arg("variantName"))
+        .def("AddVariant", &UsdVariantSet::AddVariant,
+             (arg("variantName"),
+              arg("position")=UsdListPositionTempDefault))
         .def("GetVariantNames", &UsdVariantSet::GetVariantNames,
              return_value_policy<TfPySequenceToList>())
         .def("HasAuthoredVariant", &UsdVariantSet::HasAuthoredVariant)
@@ -94,8 +96,9 @@ void wrapUsdVariantSets()
         ;
 
     class_<UsdVariantSets>("VariantSets", no_init)
-        .def("AppendVariantSet", &UsdVariantSets::AppendVariantSet,
-             arg("variantSetName"))
+        .def("AddVariantSet", &UsdVariantSets::AddVariantSet,
+             (arg("variantSetName"),
+              arg("position")=UsdListPositionTempDefault))
         .def("GetNames", _GetNames, return_value_policy<TfPySequenceToList>())
         .def("GetVariantSet", &UsdVariantSets::GetVariantSet,
              arg("variantSetName"))

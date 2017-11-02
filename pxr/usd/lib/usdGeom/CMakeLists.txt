@@ -39,6 +39,7 @@ pxr_library(usdGeom
         mesh
         metrics
         modelAPI
+        motionAPI
         nurbsCurves
         nurbsPatch
         pointBased
@@ -46,6 +47,7 @@ pxr_library(usdGeom
         points
         scope
         sphere
+        subset
         xform
         xformable
         xformOp
@@ -54,7 +56,7 @@ pxr_library(usdGeom
     PUBLIC_HEADERS
         api.h
 
-    CPPFILES
+    PYTHON_CPPFILES
         moduleDeps.cpp
 
     PYMODULE_CPPFILES
@@ -76,6 +78,7 @@ pxr_library(usdGeom
         wrapMesh.cpp
         wrapMetrics.cpp
         wrapModelAPI.cpp
+        wrapMotionAPI.cpp
         wrapNurbsCurves.cpp
         wrapNurbsPatch.cpp
         wrapPointBased.cpp
@@ -84,6 +87,7 @@ pxr_library(usdGeom
         wrapPrimvar.cpp
         wrapScope.cpp
         wrapSphere.cpp
+        wrapSubset.cpp
         wrapTokens.cpp
         wrapXform.cpp
         wrapXformCache.cpp
@@ -91,12 +95,13 @@ pxr_library(usdGeom
         wrapXformOp.cpp
         wrapXformCommonAPI.cpp
 
-    PYTHON_FILES
+    PYMODULE_FILES
         __init__.py
 
     RESOURCE_FILES
         plugInfo.json
         generatedSchema.usda
+        schema.usda:usdGeom/schema.usda
 )
 
 pxr_test_scripts(
@@ -108,11 +113,13 @@ pxr_test_scripts(
     testenv/testUsdGeomConsts.py
     testenv/test_UsdGeomCurves.py
     testenv/testUsdGeomFaceSetAPI.py
+    testenv/testUsdGeomMotionAPI.py
     testenv/testUsdGeomNoPlugLoad.py
     testenv/testUsdGeomPointInstancer.py
     testenv/testUsdGeomPrimvar.py
     testenv/testUsdGeomPurposeVisibility.py
     testenv/testUsdGeomSchemata.py
+    testenv/testUsdGeomSubset.py
     testenv/testUsdGeomXformable.py
     testenv/testUsdGeomXformCommonAPI.py
 )
@@ -171,6 +178,10 @@ pxr_install_test_dir(
     SRC testenv/testUsdGeomPointInstancer
     DEST testUsdGeomPointInstancer
 )
+
+pxr_install_test_dir(
+    SRC testenv/testUsdGeomSubset
+    DEST testUsdGeomSubset)
 
 pxr_install_test_dir(
     SRC testenv/testUsdGeomBBoxCache
@@ -233,16 +244,26 @@ pxr_register_test(testUsdGeomFaceSetAPI
     EXPECTED_RETURN_CODE 0
 )
 
+pxr_register_test(testUsdGeomSubset
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomSubset"
+    EXPECTED_RETURN_CODE 0
+)
+
 pxr_register_test(testUsdGeomIsA
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomIsA"
     EXPECTED_RETURN_CODE 0
 )
 
+# This tests functionality when usdGeom has not been loaded.  That isn't
+# possible with a monolithic library.
+if(NOT PXR_BUILD_MONOLITHIC)
 pxr_register_test(testUsdGeomNoPlugLoad
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomNoPlugLoad"
     EXPECTED_RETURN_CODE 0
 )
+endif()
 
 pxr_register_test(testUsdGeomPrimvar
     PYTHON

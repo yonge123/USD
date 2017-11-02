@@ -71,6 +71,10 @@ public:
     /// note: buffer specs has to be determined before the source resolution.
     virtual void AddBufferSpecs(HdBufferSpecVector *specs) const = 0;
 
+    /// Computes and returns a hash value for the underlying data.
+    HD_API
+    virtual size_t ComputeHash() const;
+
     /// Prepare the access of GetData(). This process may include some
     /// computations (e.g. cpu smooth normals).
     /// Important notes: Resolve itself doesn't have to be thread safe, but
@@ -124,8 +128,37 @@ public:
 
     /// Returns true it this computation has already been resolved.
     bool IsResolved() const {
-        return _state == RESOLVED;
+        return _state >= RESOLVED;
     }
+
+    /// Returns true if an error occured during resolve.
+    bool HasResolveError() const {
+        return _state == RESOLVE_ERROR;
+    }
+
+
+    /// \name Chained Buffers
+    /// Buffer sources may be daisy-chained together.
+    ///
+    /// Pre-chained buffer sources typically represent sources that
+    /// are inputs to computed buffer sources (e.g. coarse vertex
+    /// privmar data needing to be quadrangulated or refined) and
+    /// will be scheduled to be resolved along with their owning
+    /// buffer sources.
+    ///
+    /// Post-chained buffer sources typically represent additional
+    /// results produced by a computation (e.g. primitive param data
+    /// computed along with index buffer data) and will be scheduled
+    /// to be committed along with their owning buffer sources.
+    /// @{
+
+    /// Returns true if this buffer has a pre-chained buffer.
+    HD_API
+    virtual bool HasPreChainedBuffer() const;
+
+    /// Returns the pre-chained buffer.
+    HD_API
+    virtual HdBufferSourceSharedPtr GetPreChainedBuffer() const;
 
     /// Returns true if this buffer has a chained buffer.
     HD_API
@@ -134,6 +167,8 @@ public:
     /// Returns the chained buffer.
     HD_API
     virtual HdBufferSourceSharedPtr GetChainedBuffer() const;
+
+    /// @}
 
     /// Checks the validity of the source buffer.
     /// The function should be called to determine if
@@ -148,6 +183,20 @@ protected:
     void _SetResolved() {
         TF_VERIFY(_state == BEING_RESOLVED);
         _state = RESOLVED;
+    }
+
+    /// Called during Resolve() to indicate an unrecoverable failure occurred
+    /// and the results of the computation can not be used.
+    /// Further calls to Resolve() will not lead to success.
+    ///
+    /// This is different from Resolve() returning false, which indicates
+    /// that additional calls to Resolve() will eventually lead to success.
+    ///
+    /// This is also later in the pipeline than IsValid, which checks
+    /// that the buffer is setup such that Resolve() can be successful.
+    void _SetResolveError() {
+        TF_VERIFY(_state == BEING_RESOLVED);
+        _state = RESOLVE_ERROR;
     }
 
     /// Non-blocking lock acquisition.
@@ -180,7 +229,7 @@ protected:
     virtual bool _CheckValid() const = 0;
 
 private:
-    enum State { UNRESOLVED=0, BEING_RESOLVED, RESOLVED };
+    enum State { UNRESOLVED=0, BEING_RESOLVED, RESOLVED,  RESOLVE_ERROR};
     std::atomic<State> _state;
 };
 
@@ -196,6 +245,8 @@ class HdComputedBufferSource : public HdBufferSource {
 public:
     HD_API
     virtual TfToken const &GetName() const;
+    HD_API
+    virtual size_t ComputeHash() const;
     HD_API
     virtual void const* GetData() const;
     HD_API
@@ -223,6 +274,8 @@ class HdNullBufferSource : public HdBufferSource {
 public:
     HD_API
     virtual TfToken const &GetName() const;
+    HD_API
+    virtual size_t ComputeHash() const;
     HD_API
     virtual void const* GetData() const;
     HD_API

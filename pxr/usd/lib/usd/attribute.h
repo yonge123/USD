@@ -167,7 +167,7 @@ public:
     /// on success, false if the value can not be written.
     ///
     /// \b Note that this value should not be changed as it is typically either
-    /// automatically authored or provided by a property defintion. This method
+    /// automatically authored or provided by a property definition. This method
     /// is provided primarily for fixing invalid scene description.
     USD_API
     bool SetVariability(SdfVariability variability) const;
@@ -224,9 +224,7 @@ public:
     /// contribute time samples for this attribute in the given interval, 
     /// opening them if necessary.
     /// 
-    /// \param interval -  may have any combination of open/infinite and 
-    /// closed/finite endpoints; it may not have open/finite endpoints, however,
-    /// this restriction may be lifted in the future.
+    /// \param interval - the \ref GfInterval on which to gather time samples.     
     ///
     /// \param times - on return, will contain the \em sorted, ascending
     /// timeSample ordinates.  Any data in \p times will be lost, as this
@@ -412,14 +410,15 @@ public:
     /// if there is a fallback, the client will receive that, otherwise they
     /// will receive false when calling Get(). 
     USD_API
-    void Block();
+    void Block() const;
 
     /// @}
 
     /// \name Querying and Editing Connections
     /// @{
 
-    /// Appends \p source to the list of connections.
+    /// Adds \p source to the list of connections, in the position
+    /// specified by \p position.
     ///
     /// Issue an error if \p source identifies a master prim or an object
     /// descendant to a master prim.  It is not valid to author connections to
@@ -429,7 +428,8 @@ public:
     /// authored in the authoring layer, with respect to list-editing
     /// semantics, which we will document soon 
     USD_API
-    bool AppendConnection(const SdfPath& source) const;
+    bool AddConnection(const SdfPath& source,
+                   UsdListPosition position=UsdListPositionTempDefault) const;
 
     /// Removes \p target from the list of targets.
     ///

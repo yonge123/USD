@@ -23,10 +23,10 @@
 //
 #include "usdKatana/blindDataObject.h"
 #include "pxr/usd/usd/schemaBase.h"
-#include "pxr/usd/usd/conversions.h"
 
 #include "pxr/usd/sdf/primSpec.h"
 
+#include "pxr/usd/usd/pyConversions.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include "pxr/base/tf/pyUtils.h"
@@ -60,6 +60,13 @@ static UsdAttribute
 _CreateVisibleAttr(UsdKatanaBlindDataObject &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateVisibleAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateSuppressGroupToAssemblyPromotionAttr(UsdKatanaBlindDataObject &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateSuppressGroupToAssemblyPromotionAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
 }
 
@@ -107,6 +114,13 @@ void wrapUsdKatanaBlindDataObject()
              &This::GetVisibleAttr)
         .def("CreateVisibleAttr",
              &_CreateVisibleAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetSuppressGroupToAssemblyPromotionAttr",
+             &This::GetSuppressGroupToAssemblyPromotionAttr)
+        .def("CreateSuppressGroupToAssemblyPromotionAttr",
+             &_CreateSuppressGroupToAssemblyPromotionAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 

@@ -60,10 +60,12 @@ PXR_NAMESPACE_OPEN_SCOPE
     (drawingCoord0)                             \
     (drawingCoord1)                             \
     (drawingCoordI)                             \
+    (elementCount)                              \
     (extent)                                    \
     (faceColors)                                \
     (geometry)                                  \
     (guide)                                     \
+    (hermite)                                   \
     (hidden)                                    \
     (hull)                                      \
     (hullIndices)                               \
@@ -89,6 +91,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (periodic)                                  \
     (points)                                    \
     (pointsIndices)                             \
+    (power)                                     \
     (primVar)                                   \
     (primID)                                    \
     (primitiveParam)                            \
@@ -142,6 +145,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (instBasisCurvesTopologyRange)              \
     (instMeshTopology)                          \
     (instMeshTopologyRange)                     \
+    (instPrimvarRange)                          \
     (instVertexAdjacency)                       \
     (meshTopology)                              \
     (nonUniformSize)                            \
@@ -152,6 +156,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (rebuildBatches)                            \
     (singleBufferSize)                          \
     (ssboSize)                                  \
+    (skipInvisibleRprimSync)                    \
     (subdivisionRefineCPU)                      \
     (subdivisionRefineGPU)                      \
     (textureResourceMemory)                     \
@@ -204,9 +209,13 @@ PXR_NAMESPACE_OPEN_SCOPE
                                                 \
     /* Sprims */                                \
     (camera)                                    \
-    (light)                                     \
     (drawTarget)                                \
     (shader)                                    \
+    /* Sprims Lights */                         \
+    (light)                                     \
+    (domeLight)                                 \
+    (rectLight)                                 \
+    (sphereLight)                               \
                                                 \
     /* Bprims */                                \
     (texture)

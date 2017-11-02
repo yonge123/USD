@@ -23,10 +23,10 @@
 //
 #include "pxr/usd/usdLux/linkingAPI.h"
 #include "pxr/usd/usd/schemaBase.h"
-#include "pxr/usd/usd/conversions.h"
 
 #include "pxr/usd/sdf/primSpec.h"
 
+#include "pxr/usd/usd/pyConversions.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include "pxr/base/tf/pyUtils.h"
@@ -151,6 +151,10 @@ WRAP_CUSTOM {
         .def("SetLinkMap", &_SetLinkMap)
         .def("DoesLinkPath", &_DoesLinkPath)
         .staticmethod("DoesLinkPath")
+
+        // The following face-set related methods have been deprecated and will
+        // be removed in a future release. Please use a UsdGeomSubset to encode
+        // a face-subset instead of UsdGeomFaceSetAPI.
         .def("DoesLinkFaceSet", &_DoesLinkFaceSet)
         .staticmethod("DoesLinkFaceSet")
         .def("GetLinkPathForFaceSet", &UsdLuxLinkingAPI::GetLinkPathForFaceSet)

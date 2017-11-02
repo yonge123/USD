@@ -34,7 +34,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 HdPersistentBuffer::HdPersistentBuffer(
     TfToken const &role, size_t dataSize, void* data)
-    : HdResource(role)
+    : HdResourceGL(role)
     , _mappedAddress(0)
 {
     HD_TRACE_FUNCTION();
@@ -75,7 +75,9 @@ HdPersistentBuffer::HdPersistentBuffer(
 HdPersistentBuffer::~HdPersistentBuffer()
 {
     GLuint id = GetId();
-    glDeleteBuffers(1, &id);
+    if (id) {
+        glDeleteBuffers(1, &id);
+    }
     SetAllocation(0, 0);
 }
 

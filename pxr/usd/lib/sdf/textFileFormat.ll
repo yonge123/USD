@@ -92,6 +92,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
     /* literal keywords.  we return the yytext so that the yacc grammar
        can make use of it. */
 "add"                 { (*yylval_param) = std::string(yytext, yyleng); return TOK_ADD; }
+"append"              { (*yylval_param) = std::string(yytext, yyleng); return TOK_APPEND; }
 "attributes"          { (*yylval_param) = std::string(yytext, yyleng); return TOK_ATTRIBUTES; }
 "class"               { (*yylval_param) = std::string(yytext, yyleng); return TOK_CLASS; }
 "config"              { (*yylval_param) = std::string(yytext, yyleng); return TOK_CONFIG; }
@@ -114,6 +115,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 "payload"             { (*yylval_param) = std::string(yytext, yyleng); return TOK_PAYLOAD; }
 "permission"          { (*yylval_param) = std::string(yytext, yyleng); return TOK_PERMISSION; }
 "prefixSubstitutions" { (*yylval_param) = std::string(yytext, yyleng); return TOK_PREFIX_SUBSTITUTIONS; }
+"prepend"             { (*yylval_param) = std::string(yytext, yyleng); return TOK_PREPEND; }
 "properties"          { (*yylval_param) = std::string(yytext, yyleng); return TOK_PROPERTIES; }
 "references"          { (*yylval_param) = std::string(yytext, yyleng); return TOK_REFERENCES; }
 "relocates"           { (*yylval_param) = std::string(yytext, yyleng); return TOK_RELOCATES; }
@@ -158,9 +160,17 @@ PXR_NAMESPACE_USING_DIRECTIVE
         return TOK_PATHREF;
     }
 
-    /* asset references */
-@([[:alnum:]$_/\. \-:]+([@#][[:alnum:]_/\.\-:]+)?)?@ {
-        (*yylval_param) = Sdf_EvalQuotedString(yytext, yyleng, 1);
+    /* Single '@'-delimited asset references */
+@([^[:cntrl:]@]+)?@ {
+        (*yylval_param) = 
+            Sdf_EvalAssetPath(yytext, yyleng, /* tripleDelimited = */ false);
+        return TOK_ASSETREF;
+    }
+
+    /* Triple '@'-delimited asset references. */
+@@@(([^[:cntrl:]@]|@{1,2}[^@]|\\@@@)+)?(@{0,2})@@@ {
+        (*yylval_param) = 
+            Sdf_EvalAssetPath(yytext, yyleng, /* tripleDelimited = */ true);
         return TOK_ASSETREF;
     }
 

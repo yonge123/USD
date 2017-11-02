@@ -35,10 +35,10 @@
 #include <UT/UT_Version.h>
 
 #include "gusd/PRM_Shared.h"
-#include "gusd/USD_StageCache.h"
+#include "gusd/stageCache.h"
 #include "gusd/UT_Assert.h"
+#include "gusd/UT_Error.h"
 #include "gusd/UT_Gf.h"
-#include "gusd/UT_Usd.h"
 
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usdGeom/camera.h"
@@ -114,9 +114,6 @@ GusdOBJ_usdcamera::GetTemplates()
     /* Our common camera params come from the same initialization script
        as the standard camera.*/
 
-    static PRM_Default fileDef( 
-            0, "pxh_mwhich(\"${SHOT}_sconvert/${SHOT}_sconvert_presto.usd\")",
-            CH_OLD_EXPRESSION);
     static PRM_Default primPathDef(0, "/World/main_cam");
     static PRM_Name frameName("frame", "Frame");
     static PRM_Default frameDef(0, "$FF");
@@ -134,7 +131,7 @@ GusdOBJ_usdcamera::GetTemplates()
     GusdPRM_Shared prmShared;
 
     static PRM_Template camTemplates[] = {
-        PRM_Template(PRM_FILE, 1, &prmShared->filePathName, &fileDef,
+        PRM_Template(PRM_FILE, 1, &prmShared->filePathName, 0,
                      /*choicelist*/ 0, /*range*/ 0,
                      /*callback*/ 0, &prmShared->usdFileROData),
         PRM_Template(PRM_STRING, 1, &prmShared->primPathName,
@@ -365,6 +362,7 @@ GusdOBJ_usdcamera::runCreateScript()
             }
         }
         
+#if 0
         // Replace the choices for the resolution menu with ones that 
         // we read from our configuration script.
         if(PRM_Parm *parm = parms->getParmPtr("resMenu"))
@@ -381,6 +379,7 @@ GusdOBJ_usdcamera::runCreateScript()
             }
 
         }
+#endif
         return true;
     }
     return false;
@@ -448,15 +447,14 @@ GusdOBJ_usdcamera::_EvalCamVariable(fpreal& val, int idx, int thread)
     
     const fpreal t = CHgetEvalTime(thread);
     
-    _CamHolder::ScopedLock lock;
-    if(UsdGeomCamera cam = _LoadCamera(lock, t, thread))
+    if(UsdGeomCamera cam = _LoadCamera(t, thread))
     {
         float frame = evalFloatT(_frameIdx, 0, t, thread);
         switch(idx)
         {
         case VAR_SCREENASPECT:
             {
-                val = cam.GetCamera(frame, _isZUp).GetAspectRatio();
+                val = cam.GetCamera(frame).GetAspectRatio();
                 return true;
             }
         case VAR_YRES:
@@ -466,7 +464,7 @@ GusdOBJ_usdcamera::_EvalCamVariable(fpreal& val, int idx, int thread)
                 //     however it's needed to get around a Houdini bug
                 //     (see bug 94389)
                 const float screenAspect =
-                    cam.GetCamera(frame, _isZUp).GetAspectRatio();
+                    cam.GetCamera(frame).GetAspectRatio();
                 float xRes = evalFloatT("res", 0, t, thread);
                 val = xRes / screenAspect;
                 return true;
@@ -606,8 +604,7 @@ GusdOBJ_usdcamera::applyInputIndependentTransform(OP_Context& ctx, UT_DMatrix4& 
     mx.identity();
     fpreal t = ctx.getTime();
 
-    _CamHolder::ScopedLock lock;
-    if(UsdGeomCamera cam = _LoadCamera(lock, t, ctx.getThread()))
+    if(UsdGeomCamera cam = _LoadCamera(t, ctx.getThread()))
     {
         float frame = evalFloat(_frameIdx, 0, t);
 
@@ -643,10 +640,6 @@ GusdOBJ_usdcamera::applyInputIndependentTransform(OP_Context& ctx, UT_DMatrix4& 
         }
 
         mx = GusdUT_Gf::Cast(ctm);
-
-        // Houdini is Y-up cameras, so we may need to correct
-        if(_isZUp)
-            mx.prerotate(UT_Axis3::XAXIS, M_PI/2);
     }
     return OBJ_Camera::applyInputIndependentTransform(ctx, mx);
 }
@@ -655,11 +648,7 @@ GusdOBJ_usdcamera::applyInputIndependentTransform(OP_Context& ctx, UT_DMatrix4& 
 OP_ERROR
 GusdOBJ_usdcamera::_Cook(OP_Context& ctx)
 {
-    _CamHolder::ScopedLock lock;
-    if(_LoadCamera(lock, ctx.getTime(), ctx.getThread())) {
-        // Don't need to keep a lock to the prim to report errors.
-        lock.Release();
-    }
+    _LoadCamera(ctx.getTime(), ctx.getThread());
     
     /* XXX: There's a potential race condition here, between
             loading and stealing cached errors.
@@ -682,8 +671,7 @@ GusdOBJ_usdcamera::cookMyObj(OP_Context& ctx)
 
 
 UsdGeomCamera
-GusdOBJ_usdcamera::_LoadCamera(_CamHolder::ScopedLock& lock,
-                           fpreal t, int thread)
+GusdOBJ_usdcamera::_LoadCamera(fpreal t, int thread)
 {
     /* XXX: Disallow camera loading until the scene has finished loading.
        What happens otherwise is that some parm values are pulled on
@@ -704,13 +692,8 @@ GusdOBJ_usdcamera::_LoadCamera(_CamHolder::ScopedLock& lock,
 
     {
         UT_AutoReadLock readLock(_lock);
-        if(!_camParmsMicroNode.requiresUpdate(t)) {
-            if(_cam) {
-                lock.Acquire(_cam, /*write*/ false);
-                return *lock;
-            }
-            return UsdGeomCamera();
-        }
+        if(!_camParmsMicroNode.requiresUpdate(t))
+            return _cam;
     }
 
     UT_AutoWriteLock writeLock(_lock);
@@ -719,7 +702,7 @@ GusdOBJ_usdcamera::_LoadCamera(_CamHolder::ScopedLock& lock,
     if(_camParmsMicroNode.updateIfNeeded(t, thread))
     {
         _errors.clearAndDestroyErrors();
-        _cam.Clear();
+        _cam = UsdGeomCamera();
 
         GusdPRM_Shared prmShared;
         UT_String usdPath, primPath;
@@ -730,32 +713,18 @@ GusdOBJ_usdcamera::_LoadCamera(_CamHolder::ScopedLock& lock,
         GusdUT_ErrorManager errMgr(_errors);
         GusdUT_ErrorContext err(errMgr);
 
-        std::string errStr;
+        GusdStageCacheReader cache;
+        if(UsdPrim prim = cache.GetPrimWithVariants(
+               usdPath, primPath, GusdStageOpts::LoadAll(), &err).first) {
 
-        GusdUSD_StageCacheContext cache;
-        if(auto proxy = cache.FindOrCreateProxy(TfToken(usdPath.toStdString())))
-        {
-            // Add dependency on the proxy (I.e., listen for reloads)
-            _camParmsMicroNode.addExplicitInput(proxy->GetMicroNode());
-            
-            GusdUSD_StageProxy::Accessor accessor;
-            GusdUSD_Utils::PrimIdentifier primIdentifier;
-            if(primIdentifier.SetFromVariantPath(primPath, &err) &&
-               cache.Bind(accessor, proxy, primIdentifier, &err)) {
-                _cam = accessor.GetPrimSchemaHolderAtPath<UsdGeomCamera>(
-                    *primIdentifier, &err);
-                if(_cam) {
-                    _isZUp = UsdUtilsGetCamerasAreZup(accessor.GetStage());
+            // Track changes to the stage (eg., reloads)
+            DEP_MicroNode* stageMicroNode =
+                cache.GetStageMicroNode(prim.GetStage());
+            UT_ASSERT_P(stageMicroNode);
+            _camParmsMicroNode.addExplicitInput(*stageMicroNode);
 
-                    /* Acquire a read-lock on the lock passed in as input.
-                       This ensures the caller maintains a lock beyond  
-                       the scope of the load.*/
-                    lock.Acquire(_cam, /*write*/ false);
-                    return *lock;
-                } else {
-                    _isZUp = false;
-                }
-            }
+            _cam = GusdUSD_Utils::MakeSchemaObj<UsdGeomCamera>(prim, &err);
+            return _cam;
         }
     }
     return UsdGeomCamera();

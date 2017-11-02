@@ -164,5 +164,67 @@ PxrUsdKatanaUsdInPluginRegistry::FindKindForSite(
     return _DoFindKind(kind, opName, _kindExtReg);
 }
 
+
+
+typedef std::vector<PxrUsdKatanaUsdInPluginRegistry::LocationDecoratorFnc>
+        _LocationDecoratorFncList;
+static _LocationDecoratorFncList _locationDecoratorFncList;
+
+
+void PxrUsdKatanaUsdInPluginRegistry::RegisterLocationDecoratorFnc(
+        LocationDecoratorFnc fnc)
+{
+    _locationDecoratorFncList.push_back(fnc);
+}
+
+FnKat::GroupAttribute
+PxrUsdKatanaUsdInPluginRegistry::ExecuteLocationDecoratorFncs(
+        FnKat::GeolibCookInterface& interface,
+        FnKat::GroupAttribute opArgs,
+        PxrUsdKatanaUsdInPrivateData* privateData)
+{
+    for (auto i : _locationDecoratorFncList)
+    {
+        (*i)(interface, opArgs, privateData);
+        
+        if (privateData)
+        {
+            opArgs = privateData->updateExtensionOpArgs(opArgs);
+        }
+    }
+    
+    return opArgs;
+}
+
+
+typedef std::map<std::string, PxrUsdKatanaUsdInPluginRegistry::OpDirectExecFnc>
+        _OpDirectExecFncTable;
+
+static _OpDirectExecFncTable _opDirectExecFncTable;
+
+void PxrUsdKatanaUsdInPluginRegistry::RegisterOpDirectExecFnc(
+       const std::string& opName,
+       OpDirectExecFnc fnc)
+{
+    _opDirectExecFncTable[opName] = fnc;
+}
+    
+void PxrUsdKatanaUsdInPluginRegistry::ExecuteOpDirectExecFnc(
+        const std::string& opName,
+        const PxrUsdKatanaUsdInPrivateData& privateData,
+        FnKat::GroupAttribute opArgs,
+        FnKat::GeolibCookInterface& interface)
+{
+    _OpDirectExecFncTable::iterator I = _opDirectExecFncTable.find(opName);
+    
+    if (I != _opDirectExecFncTable.end())
+    {
+        (*((*I).second))(privateData, opArgs, interface);
+    }
+}
+
+
+
+
 PXR_NAMESPACE_CLOSE_SCOPE
 

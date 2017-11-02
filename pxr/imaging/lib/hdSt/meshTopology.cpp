@@ -91,7 +91,7 @@ HdBufferSourceSharedPtr
 HdSt_MeshTopology::GetPointsIndexBuilderComputation()
 {
     // this is simple enough to return the result right away.
-    int numPoints = ComputeNumPoints();
+    int numPoints = GetNumPoints();
     VtIntArray indices(numPoints);
     for (int i = 0; i < numPoints; ++i) indices[i] = i;
 
@@ -262,9 +262,6 @@ HdSt_MeshTopology::GetOsdRefineComputation(HdBufferSourceSharedPtr const &source
                         "GetOsdRefineComputation.");
         return source;
     }
-
-    HdResourceRegistry *resourceRegistry = &HdResourceRegistry::GetInstance();
-    resourceRegistry->AddSource(source);
 
     HdBufferSourceSharedPtr topologyBuilder = _osdTopologyBuilder.lock();
 

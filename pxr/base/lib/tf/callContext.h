@@ -54,10 +54,10 @@ TfCallContext(BUILD_COMPONENT_SRC_PREFIX __FILE__, __ARCH_FUNCTION__, __LINE__, 
 class TfCallContext
 {
 public:
-    TfCallContext(char const *file,
-                  char const *function,
-                  size_t line,
-                  char const *prettyFunction) :
+    constexpr TfCallContext(char const *file,
+                            char const *function,
+                            size_t line,
+                            char const *prettyFunction) :
         _file(file),
         _function(function),
         _line(line),
@@ -99,12 +99,6 @@ public:
     char const *_prettyFunction;
     mutable bool _hidden;
 };
-
-TF_API TfCallContext
-Tf_PythonCallContext(char const *fileName,
-                     char const *moduleName,
-                     char const *functionName,
-                     size_t line);
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

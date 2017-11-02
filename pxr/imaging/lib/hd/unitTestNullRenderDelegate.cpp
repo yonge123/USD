@@ -28,6 +28,7 @@
 #include "pxr/imaging/hd/shader.h"
 #include "pxr/imaging/hd/texture.h"
 #include "pxr/imaging/hd/repr.h"
+#include "pxr/imaging/hd/resourceRegistry.h"
 #include "pxr/imaging/hd/unitTestNullRenderPass.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -66,6 +67,7 @@ public:
     {
         return bits;
     }
+
     virtual void _InitRepr(TfToken const &reprName,
                            HdDirtyBits *dirtyBits) override
     {
@@ -160,11 +162,11 @@ Hd_UnitTestNullRenderDelegate::GetRenderParam() const
     return nullptr;
 }
 
-HdRenderPassSharedPtr
-Hd_UnitTestNullRenderDelegate::CreateRenderPass(HdRenderIndex *index)
+HdResourceRegistrySharedPtr
+Hd_UnitTestNullRenderDelegate::GetResourceRegistry() const
 {
-    return HdRenderPassSharedPtr(
-        new Hd_UnitTestNullRenderPass(index));
+    static HdResourceRegistrySharedPtr resourceRegistry(new HdResourceRegistry);
+    return resourceRegistry;
 }
 
 HdRenderPassSharedPtr

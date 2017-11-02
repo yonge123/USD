@@ -45,11 +45,9 @@
 #include "pxr/usd/sdf/types.h"
 #include "pxr/usd/pcp/cache.h"
 #include "pxr/base/vt/value.h"
-#include "pxr/base/work/dispatcher.h"
+#include "pxr/base/work/arenaDispatcher.h"
 
-#include <boost/mpl/assert.hpp>
 #include <boost/optional.hpp>
-#include <boost/scoped_ptr.hpp>
 
 #include <tbb/concurrent_vector.h>
 #include <tbb/concurrent_unordered_set.h>
@@ -57,6 +55,7 @@
 
 #include <functional>
 #include <string>
+#include <memory>
 #include <unordered_map>
 #include <utility>
 
@@ -386,9 +385,6 @@ public:
     
     USD_API
     virtual ~UsdStage();
-
-    USD_API
-    void Close();
 
     /// Calls SdfLayer::Reload on all layers contributing to this stage,
     /// except session layers and sublayers of session layers.
@@ -1469,6 +1465,9 @@ private:
     template <class... Args>
     static UsdStageRefPtr _OpenImpl(InitialLoadSet load, Args const &... args);
 
+    // Releases resources used by this stage.
+    void _Close();
+
     // Common ref ptr initialization, called by public, static constructors.
     //
     // This method will either return a valid refptr (if the stage is correctly
@@ -2015,9 +2014,9 @@ private:
     // The stage's EditTarget.
     UsdEditTarget _editTarget;
 
-    boost::scoped_ptr<PcpCache> _cache;
-    boost::scoped_ptr<Usd_ClipCache> _clipCache;
-    boost::scoped_ptr<Usd_InstanceCache> _instanceCache;
+    std::unique_ptr<PcpCache> _cache;
+    std::unique_ptr<Usd_ClipCache> _clipCache;
+    std::unique_ptr<Usd_InstanceCache> _instanceCache;
 
     // A map from Path to Prim, for fast random access.
     typedef TfHashMap<
@@ -2033,7 +2032,7 @@ private:
     _LayerAndNoticeKeyVec _layersAndNoticeKeys;
     size_t _lastChangeSerialNumber;
 
-    boost::optional<WorkDispatcher> _dispatcher;
+    boost::optional<WorkArenaDispatcher> _dispatcher;
 
     // To provide useful aggregation of malloc stats, we bill everything
     // for this stage - from all access points - to this tag.
@@ -2046,7 +2045,7 @@ private:
     UsdStagePopulationMask _populationMask;
     
     bool _isClosingStage;
-    
+
     friend class UsdAttribute;
     friend class UsdAttributeQuery;
     friend class UsdEditTarget;
@@ -2059,6 +2058,7 @@ private:
     friend class UsdSpecializes;
     friend class UsdVariantSet;
     friend class UsdVariantSets;
+    friend class Usd_PcpCacheAccess;
     friend class Usd_PrimData;
     friend class Usd_StageOpenRequest;
 };

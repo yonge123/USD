@@ -24,11 +24,12 @@
 #include "pxr/pxr.h"
 #include "pxr/usd/usd/object.h"
 
-#include "pxr/usd/usd/conversions.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/wrapUtils.h"
 
 #include "pxr/base/tf/ostreamMethods.h"
+
+#include "pxr/usd/usd/pyConversions.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include "pxr/base/tf/pyUtils.h"
@@ -157,7 +158,8 @@ __getattribute__(object selfObj, const char *name) {
         strcmp(name, "GetDescription") == 0 ||
         strcmp(name, "GetPrim") == 0 ||
         strcmp(name, "GetPath") == 0 ||
-        strcmp(name, "GetPrimPath") == 0) {
+        strcmp(name, "GetPrimPath") == 0 ||
+        strcmp(name, "IsPseudoRoot") == 0){
         // Dispatch to object's __getattribute__.
         return (*_object__getattribute__)(selfObj, name);
     } else {

@@ -53,35 +53,19 @@ public:
                      UsdImagingInstancerContext const* instancerContext = NULL);
 
     USDIMAGING_API
-    virtual bool IsSupported(HdRenderIndex* renderIndex);
+    virtual bool IsSupported(UsdImagingIndexProxy const* index) const;
 
     // ---------------------------------------------------------------------- //
     /// \name Parallel Setup and Resolve
     // ---------------------------------------------------------------------- //
-    
-    USDIMAGING_API
-    virtual void TrackVariabilityPrep(UsdPrim const& prim,
-                                      SdfPath const& cachePath,
-                                      HdDirtyBits requestedBits,
-                                      UsdImagingInstancerContext const* 
-                                          instancerContext = NULL);
 
     /// Thread Safe.
     USDIMAGING_API
     virtual void TrackVariability(UsdPrim const& prim,
                                   SdfPath const& cachePath,
-                                  HdDirtyBits requestedBits,
-                                  HdDirtyBits* dirtyBits,
+                                  HdDirtyBits* timeVaryingBits,
                                   UsdImagingInstancerContext const* 
                                       instancerContext = NULL);
-
-    USDIMAGING_API
-    virtual void UpdateForTimePrep(UsdPrim const& prim,
-                                   SdfPath const& cachePath, 
-                                   UsdTimeCode time,
-                                   HdDirtyBits requestedBits,
-                                   UsdImagingInstancerContext const* 
-                                       instancerContext = NULL);
 
     /// Thread Safe.
     USDIMAGING_API
@@ -89,7 +73,6 @@ public:
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
                                HdDirtyBits requestedBits,
-                               HdDirtyBits* dirtyBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext = NULL);
 

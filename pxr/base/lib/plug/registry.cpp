@@ -43,6 +43,8 @@
 #include <tbb/concurrent_vector.h>
 #include <tbb/spin_mutex.h>
 
+#include <functional>
+
 using std::pair;
 using std::string;
 using std::vector;
@@ -95,6 +97,7 @@ PlugRegistry::_RegisterPlugin(
                 metadata.plugInfo);
         break;
 
+#ifdef PXR_PYTHON_SUPPORT_ENABLED
     case Plug_RegistrationMetadata::PythonType:
         newPlugin =
             PlugPlugin::_NewPythonModulePlugin(
@@ -103,6 +106,7 @@ PlugRegistry::_RegisterPlugin(
                 metadata.resourcePath,
                 metadata.plugInfo);
         break;
+#endif // PXR_PYTHON_SUPPORT_ENABLED
 
     case Plug_RegistrationMetadata::ResourceType:
         newPlugin =
@@ -147,12 +151,12 @@ PlugRegistry::_RegisterPlugins(const std::vector<std::string>& pathsToPlugInfo)
         // XXX -- Is this mutex really needed?
         std::lock_guard<std::mutex> lock(_mutex);
         Plug_ReadPlugInfo(pathsToPlugInfo,
-                          boost::bind(
+                          std::bind(
                               &PlugRegistry::_InsertRegisteredPluginPath,
-                              this, _1),
-                          boost::bind(
+                              this, std::placeholders::_1),
+                          std::bind(
                               &PlugRegistry::_RegisterPlugin<NewPluginsVec>,
-                              this, _1, &newPlugins),
+                              this, std::placeholders::_1, &newPlugins),
                           _dispatcher.get());
     }
 

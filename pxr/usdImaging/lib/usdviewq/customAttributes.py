@@ -29,13 +29,10 @@
 # defined below.
 #
 def _GetCustomAttributes(currentNode, bboxCache, xformCache):
-    attrList = [BoundingBoxAttribute(currentNode, bboxCache),
-                      LocalToWorldXformAttribute(currentNode, xformCache)]
-
-    attrList += [RelationshipAttribute(currentNode, relationship) \
-                    for relationship in currentNode.GetRelationships()]
-
-    return attrList
+    return ([BoundingBoxAttribute(currentNode, bboxCache),
+               LocalToWorldXformAttribute(currentNode, xformCache)],
+            [RelationshipAttribute(currentNode, relationship) \
+                    for relationship in currentNode.GetRelationships()])
 
 #
 # The base class for per-node custom attributes.
@@ -58,7 +55,7 @@ class CustomAttribute:
     # convenience function to make this look more like a UsdAttribute
     def GetTypeName(self):
         return ""
-        
+
 #
 # Displays the bounding box of a node
 #
@@ -75,7 +72,7 @@ class BoundingBoxAttribute(CustomAttribute):
     def Get(self, frame):
         try:
             bbox = self._bboxCache.ComputeWorldBound(self._currentNode)
-            
+
         except RuntimeError, err:
             bbox = "Invalid: " + str(err)
 
@@ -102,7 +99,7 @@ class LocalToWorldXformAttribute(CustomAttribute):
 
         return pwt
 
-# 
+#
 # Displays a relationship on the node
 #
 class RelationshipAttribute(CustomAttribute):
@@ -111,7 +108,7 @@ class RelationshipAttribute(CustomAttribute):
         self._relationship = relationship
 
     def GetName(self):
-        return "[Relationship] " + self._relationship.GetName()
+        return self._relationship.GetName()
 
     def Get(self, frame):
         return self._relationship.GetTargets()

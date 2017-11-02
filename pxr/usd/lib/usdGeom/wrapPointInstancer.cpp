@@ -23,10 +23,10 @@
 //
 #include "pxr/usd/usdGeom/pointInstancer.h"
 #include "pxr/usd/usd/schemaBase.h"
-#include "pxr/usd/usd/conversions.h"
 
 #include "pxr/usd/sdf/primSpec.h"
 
+#include "pxr/usd/usd/pyConversions.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include "pxr/base/tf/pyUtils.h"
@@ -242,12 +242,16 @@ void wrapUsdGeomPointInstancer()
 namespace {
 
 static
-std::vector<bool>
-_ComputeMaskAtTime(
-    const UsdGeomPointInstancer& self,
-    const UsdTimeCode time)
+boost::python::list
+_ComputeMaskAtTime(const UsdGeomPointInstancer& self,
+                   const UsdTimeCode time)
 {
-    return self.ComputeMaskAtTime(time);
+    boost::python::list items;
+    for (const auto& b : self.ComputeMaskAtTime(time)) {
+        items.append(static_cast<bool>(b));
+    }
+
+    return items;
 }
 
 static

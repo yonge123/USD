@@ -2,7 +2,7 @@
 (
     "This file describes the USD katana blind object schemata for code generation."
     subLayers = [
-        @../../../../pxr/usd/lib/usd/schema.usda@
+        @usd/schema.usda@
     ]
 
 )
@@ -42,6 +42,12 @@ class BlindDataObject "BlindDataObject" (
     bool katana:visible (
         customData = { 
             string apiName = "visible"
+        }
+    )
+    bool katana:suppressGroupToAssemblyPromotion (
+        doc = """If true don't promote a group to an assembly."""
+        customData = { 
+            string apiName = "suppressGroupToAssemblyPromotion"
         }
     )
 }

@@ -24,10 +24,13 @@
 
 #include "pxr/pxr.h"
 #include "pxr/base/arch/demangle.h"
-#include "pxr/base/tf/pyObjWrapper.h"
-#include "pxr/base/tf/pyUtils.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/vt/streamOut.h"
+
+#ifdef PXR_PYTHON_SUPPORT_ENABLED
+#include "pxr/base/tf/pyObjWrapper.h"
+#include "pxr/base/tf/pyUtils.h"
+#endif // PXR_PYTHON_SUPPORT_ENABLED
 
 #include <iostream>
 
@@ -78,12 +81,6 @@ VtStreamOut(double const &val, std::ostream &stream)
     return stream << TfStreamDouble(val);
 }
 
-std::ostream &
-VtStreamOut(TfPyObjWrapper const &obj, std::ostream &stream)
-{
-    return stream << TfPyObjectRepr(obj.Get());
-}
-
 namespace {
 
 void
@@ -119,5 +116,13 @@ VtStreamOutArray(
 {
     _vtStreamArray(i, size, reserved, out);
 }
+
+#ifdef PXR_PYTHON_SUPPORT_ENABLED
+std::ostream &
+VtStreamOut(TfPyObjWrapper const &obj, std::ostream &stream)
+{
+    return stream << TfPyObjectRepr(obj.Get());
+}
+#endif // PXR_PYTHON_SUPPORT_ENABLED
 
 PXR_NAMESPACE_CLOSE_SCOPE

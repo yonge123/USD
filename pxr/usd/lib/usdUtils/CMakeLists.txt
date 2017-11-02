@@ -17,6 +17,7 @@ pxr_library(usdUtils
     PUBLIC_CLASSES
         authoring
         dependencies
+        flattenLayerStack
         introspection
         pipeline
         registeredVariantSet
@@ -27,13 +28,14 @@ pxr_library(usdUtils
     PUBLIC_HEADERS
         api.h
         
-    CPPFILES
+    PYTHON_CPPFILES
         moduleDeps.cpp
 
     PYMODULE_CPPFILES
         module.cpp
         wrapAuthoring.cpp
         wrapDependencies.cpp
+        wrapFlattenLayerStack.cpp
         wrapIntrospection.cpp
         wrapPipeline.cpp
         wrapRegisteredVariantSet.cpp
@@ -41,13 +43,14 @@ pxr_library(usdUtils
         wrapStitch.cpp
         wrapStitchClips.cpp
 
-    PYTHON_FILES
+    PYMODULE_FILES
         __init__.py
 )
 
 pxr_test_scripts(
     testenv/testUsdUtilsAuthoring.py 
     testenv/testUsdUtilsDependencyExtractor.py 
+    testenv/testUsdUtilsFlattenLayerStack.py
     testenv/testUsdUtilsIntrospection.py 
     testenv/testUsdUtilsPipeline.py 
     testenv/testUsdUtilsStageCache.py 
@@ -79,6 +82,11 @@ pxr_install_test_dir(
 pxr_install_test_dir(
     SRC testenv/testUsdUtilsDependencyExtractor
     DEST testUsdUtilsDependencyExtractor4
+)
+
+pxr_install_test_dir(
+    SRC testenv/testUsdUtilsFlattenLayerStack
+    DEST testUsdUtilsFlattenLayerStack
 )
 
 pxr_install_test_dir(
@@ -135,6 +143,12 @@ pxr_register_test(testUsdUtilsDependencyExtractor4
     EXPECTED_RETURN_CODE 0
 )
 
+pxr_register_test(testUsdUtilsFlattenLayerStack
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsFlattenLayerStack"
+    EXPECTED_RETURN_CODE 0
+)
+
 pxr_register_test(testUsdUtilsPipeline
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsPipeline"
@@ -170,3 +184,4 @@ pxr_register_test(testUsdUtilsStitchClips
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsStitchClips"
     EXPECTED_RETURN_CODE 0
 )
+

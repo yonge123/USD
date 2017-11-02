@@ -105,6 +105,16 @@ My_TestGLDrawing::InitTest()
         std::cout << "Using HD Renderer.\n";
         _engine.reset(new UsdImagingGLHdEngine(
             _stage->GetPseudoRoot().GetPath(), excludedPaths));
+        if (!_GetRenderer().IsEmpty()) {
+            if (!_engine->SetRendererPlugin(_GetRenderer())) {
+                std::cerr << "Couldn't set renderer plugin: " <<
+                    _GetRenderer().GetText() << std::endl;
+                exit(-1);
+            } else {
+                std::cout << "Renderer plugin: " << _GetRenderer().GetText()
+                    << std::endl;
+            }
+        }
     } else{
         std::cout << "Using Reference Renderer.\n"; 
         _engine.reset(new UsdImagingGLRefEngine(excludedPaths));

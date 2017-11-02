@@ -38,6 +38,7 @@
 #include "pxr/base/tf/refBase.h"
 #include "pxr/base/tf/weakBase.h"
 
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -325,8 +326,9 @@ private:
             // node that was marked \c SdfPermissionPrivate, or we arrive
             // at this node from  another node that was denied permission.
             bool permissionDenied:1;
-            // The type of the arc to the parent node.
-            PcpArcType arcType:4;
+            // The type of the arc to the parent node.  We only need 4
+            // bits but we use 5 to avoid signed/unsigned issues.
+            PcpArcType arcType:5;
             // Index among sibling arcs at origin; lower is stronger
             _ChildrenSizeType arcSiblingNumAtOrigin:_childrenSize;
             // Absolute depth in namespace of node that introduced this
@@ -394,7 +396,7 @@ private:
     // Container of graph data. PcpPrimIndex_Graph implements a 
     // copy-on-write scheme, so this data may be shared among multiple graph
     // instances.
-    boost::shared_ptr<_SharedData> _data;
+    std::shared_ptr<_SharedData> _data;
 
     // The following data is not included in the shared data object above
     // because they will typically differ between graph instances. Including

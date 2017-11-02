@@ -39,6 +39,8 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+
+typedef boost::shared_ptr<class HdResourceRegistry> HdResourceRegistrySharedPtr;
 typedef boost::shared_ptr<class HdSt_BasisCurvesTopology>
                                               HdSt_BasisCurvesTopologySharedPtr;
 
@@ -94,10 +96,9 @@ private:
         InstancePrimVar  // has to be at the very end
     };
 
-    enum DirtyBits {
+    enum DirtyBits : HdDirtyBits {
         DirtyIndices        = HdChangeTracker::CustomBitsBegin,
-        DirtyHullIndices    = (DirtyIndices       << 1),
-        DirtyNewRepr        = (DirtyHullIndices   << 1),
+        DirtyHullIndices    = (DirtyIndices       << 1)
     };
 
     /// We only support drawing smooth curves for a small subset of all the
@@ -111,12 +112,9 @@ private:
                          HdDirtyBits *dirtyBits,
                          const HdBasisCurvesReprDesc &desc);
 
-    void _UpdateDrawItemGeometricShader(HdDrawItem *drawItem,
+    void _UpdateDrawItemGeometricShader(HdSceneDelegate *sceneDelegate,
+                                        HdDrawItem *drawItem,
                                         const HdBasisCurvesReprDesc &desc);
-
-    void _SetGeometricShaders();
-
-    void _ResetGeometricShaders();
 
     HdSt_BasisCurvesTopologySharedPtr _topology;
     HdTopology::ID _topologyId;

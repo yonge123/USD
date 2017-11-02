@@ -32,6 +32,7 @@
 #include "pxr/imaging/hd/indirectDrawBatch.h"
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/renderContextCaps.h"
+#include "pxr/imaging/hd/resourceRegistry.h"
 #include "pxr/imaging/hd/tokens.h"
 
 #include "pxr/base/gf/matrix4f.h"
@@ -41,9 +42,9 @@
 
 #include "pxr/base/work/loops.h"
 
-#include <boost/bind.hpp>
 #include <boost/functional/hash.hpp>
-#include <boost/make_shared.hpp>
+
+#include <functional>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -76,17 +77,19 @@ _NewDrawBatch(HdDrawItemInstance * drawItemInstance)
 }
 
 void
-HdCommandBuffer::PrepareDraw(HdRenderPassStateSharedPtr const &renderPassState)
+HdCommandBuffer::PrepareDraw(HdRenderPassStateSharedPtr const &renderPassState,
+                             HdResourceRegistrySharedPtr const &resourceRegistry)
 {
     HD_TRACE_FUNCTION();
 
     TF_FOR_ALL(batchIt, _drawBatches) {
-        (*batchIt)->PrepareDraw(renderPassState);
+        (*batchIt)->PrepareDraw(renderPassState, resourceRegistry);
     }
 }
 
 void
-HdCommandBuffer::ExecuteDraw(HdRenderPassStateSharedPtr const &renderPassState)
+HdCommandBuffer::ExecuteDraw(HdRenderPassStateSharedPtr const &renderPassState,
+                             HdResourceRegistrySharedPtr const &resourceRegistry)
 {
     HD_TRACE_FUNCTION();
 
@@ -102,7 +105,7 @@ HdCommandBuffer::ExecuteDraw(HdRenderPassStateSharedPtr const &renderPassState)
     // draw batches
     //
     TF_FOR_ALL(batchIt, _drawBatches) {
-        (*batchIt)->ExecuteDraw(renderPassState);
+        (*batchIt)->ExecuteDraw(renderPassState, resourceRegistry);
     }
     HD_PERF_COUNTER_SET(HdPerfTokens->drawBatches, _drawBatches.size());
 
@@ -175,10 +178,10 @@ HdCommandBuffer::_RebuildDrawBatches()
 
         if (!bindlessTexture) {
             // Geometric, RenderPass and Lighting shaders should never break
-            // batches, however surface shaders can. We consider the surface 
+            // batches, however materials can. We consider the material 
             // parameters to be part of the batch key here for that reason.
             boost::hash_combine(key, HdShaderParam::ComputeHash(
-                                    drawItem->GetSurfaceShader()->GetParams()));
+                                    drawItem->GetMaterial()->GetParams()));
         }
 
         TF_DEBUG(HD_DRAW_BATCH).Msg("%lu (%lu)\n", 
@@ -277,8 +280,10 @@ HdCommandBuffer::FrustumCull(GfMatrix4d const &viewProjMatrix)
 
     if (!mtCullingDisabled) {
         WorkParallelForN(_drawItemInstances.size(), 
-                         boost::bind(&_Worker::cull, &_drawItemInstances, 
-                         viewProjMatrix, _1, _2));
+                         std::bind(&_Worker::cull, &_drawItemInstances, 
+                                   std::cref(viewProjMatrix),
+                                   std::placeholders::_1,
+                                   std::placeholders::_2));
     } else {
         _Worker::cull(&_drawItemInstances, 
                       viewProjMatrix, 

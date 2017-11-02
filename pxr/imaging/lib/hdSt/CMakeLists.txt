@@ -25,8 +25,10 @@ pxr_library(hdSt
         drawTargetAttachmentDesc
         drawTargetAttachmentDescArray
         drawTargetRenderPassState
+        instancer
         light      
         mesh
+        mixinShaderCode
         points
         renderDelegate
         renderPass

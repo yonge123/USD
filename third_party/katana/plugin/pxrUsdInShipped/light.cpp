@@ -31,7 +31,7 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-PXRUSDKATANA_USDIN_PLUGIN_DEFINE(PxrUsdInCore_LightOp, privateData, interface)
+PXRUSDKATANA_USDIN_PLUGIN_DEFINE(PxrUsdInCore_LightOp, privateData, opArgs, interface)
 {
     PxrUsdKatanaUsdInArgsRefPtr usdInArgs = privateData.GetUsdInArgs();
     PxrUsdKatanaAttrMap attrs;
@@ -81,14 +81,21 @@ PXRUSDKATANA_USDIN_PLUGIN_DEFINE(PxrUsdInCore_LightOp, privateData, interface)
             for (const SdfPath &filterPath: filterPaths) {
                 if (UsdPrim filterPrim =
                     usdInArgs->GetStage()->GetPrimAtPath(filterPath)) {
+
                     interface.createChild(
-                            filterPath.GetName(),
-                            "PxrUsdIn",
-                            interface.getOpArg(),
-                            FnKat::GeolibCookInterface::ResetRootFalse,
-                            new PxrUsdKatanaUsdInPrivateData(
-                                filterPrim, usdInArgs, &privateData),
-                            PxrUsdKatanaUsdInPrivateData::Delete);
+                        filterPath.GetName(),
+                        // Use the top-level PxrUsdIn op to get proper
+                        // op dispatch, including site-specific plugins.
+                        // (We can't use empty string to re-run this
+                        // same op because we are already in the
+                        // light-specific op, and we need to run a
+                        // light-filter op instead.)
+                        "PxrUsdIn",
+                        opArgs,
+                        FnKat::GeolibCookInterface::ResetRootFalse,
+                        new PxrUsdKatanaUsdInPrivateData(
+                            filterPrim, usdInArgs, &privateData),
+                        PxrUsdKatanaUsdInPrivateData::Delete);
                 }
             }
         }

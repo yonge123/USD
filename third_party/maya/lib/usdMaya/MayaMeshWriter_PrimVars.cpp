@@ -62,6 +62,16 @@ MayaMeshWriter::_GetMeshUVSetData(
         return false;
     }
 
+    // using itFV.getUV() does not always give us the right answer, so
+    // instead, we have to use itFV.getUVIndex() and use that to index into the
+    // UV set.
+    MFloatArray uArray;
+    MFloatArray vArray;
+    mesh.getUVs(uArray, vArray, &uvSetName);
+    if (uArray.length() != vArray.length()) {
+        return false;
+    }
+
     // We'll populate the assignment indices for every face vertex, but we'll
     // only push values into the data if the face vertex has a value. All face
     // vertices are initially unassigned/unauthored.
@@ -78,10 +88,13 @@ MayaMeshWriter::_GetMeshUVSetData(
             continue;
         }
 
-        float2 uv;
-        itFV.getUV(uv, &uvSetName);
+        int uvIndex;
+        itFV.getUVIndex(uvIndex, &uvSetName);
+        if (uvIndex < 0 || static_cast<size_t>(uvIndex) >= uArray.length()) {
+            return false;
+        }
 
-        GfVec2f value(uv[0], uv[1]);
+        GfVec2f value(uArray[uvIndex], vArray[uvIndex]);
         uvArray->push_back(value);
         (*assignmentIndices)[fvi] = uvArray->size() - 1;
     }
@@ -516,7 +529,7 @@ bool MayaMeshWriter::_addDisplayPrimvars(
     // If we already have an authored value, don't try to write a new one.
     UsdAttribute colorAttr = primSchema.GetDisplayColorAttr();
     if (!colorAttr.HasAuthoredValueOpinion() && !RGBData.empty()) {
-        UsdGeomPrimvar displayColor = primSchema.GetDisplayColorPrimvar();
+        UsdGeomPrimvar displayColor = primSchema.CreateDisplayColorPrimvar();
         if (interpolation != displayColor.GetInterpolation()) {
             displayColor.SetInterpolation(interpolation);
         }
@@ -547,7 +560,7 @@ bool MayaMeshWriter::_addDisplayPrimvars(
         // value.  We only want to write values that are not the "default".
         bool hasDefaultAlpha = AlphaData.size() == 1 && GfIsClose(AlphaData[0], 1.0, 1e-9);
         if (!hasDefaultAlpha) {
-            UsdGeomPrimvar displayOpacity = primSchema.GetDisplayOpacityPrimvar();
+            UsdGeomPrimvar displayOpacity = primSchema.CreateDisplayOpacityPrimvar();
             if (interpolation != displayOpacity.GetInterpolation()) {
                 displayOpacity.SetInterpolation(interpolation);
             }

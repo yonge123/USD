@@ -75,11 +75,9 @@ pxr_install_test_dir(
 pxr_register_test(testUsdStitchClips
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/bin/usdstitchclips --noComment --clipPath
-    /World/fx/Particles_Splash --out result.usd Particles_Splash.101.usd Particles_Splash.102.usd Particles_Splash.103.usd Particles_Splash.104.usd Particles_Splash.105.usd Particles_Splash.106.usd Particles_Splash.107.usd Particles_Splash.108.usd Particles_Splash.109.usd "
+    /World/fx/Particles_Splash --out result.usda Particles_Splash.101.usd Particles_Splash.102.usd Particles_Splash.103.usd Particles_Splash.104.usd Particles_Splash.105.usd Particles_Splash.106.usd Particles_Splash.107.usd Particles_Splash.108.usd Particles_Splash.109.usd "
     EXPECTED_RETURN_CODE 0
-    DIFF_COMPARE result.usd result.topology.usd
-    ENV
-        USD_DEFAULT_FILE_FORMAT=usda
+    DIFF_COMPARE result.usda result.topology.usda
 )
 
 pxr_install_test_dir(
@@ -148,3 +146,28 @@ pxr_register_test(testUsdStitchClipsTemplate6
     COMMAND "${CMAKE_INSTALL_PREFIX}/bin/usdstitchclips --noComment --templateMetadata --startTimeCode 101 --endTimeCode 104 --stride 1 --templatePath p.#.usd p.*.usda"
     EXPECTED_RETURN_CODE 1
 )
+
+pxr_install_test_dir(
+    SRC testenv/testStitchClips
+    DEST testUsdStitchClipsCustomSetName
+)
+
+pxr_register_test(testUsdStitchClipsCustomSetName
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/bin/usdstitchclips --noComment --clipSet bob --clipPath /World/fx/Particles_Splash --out result_customSetName.usda Particles_Splash.101.usd Particles_Splash.102.usd Particles_Splash.103.usd Particles_Splash.104.usd Particles_Splash.105.usd Particles_Splash.106.usd Particles_Splash.107.usd Particles_Splash.108.usd Particles_Splash.109.usd "
+    EXPECTED_RETURN_CODE 0 
+    DIFF_COMPARE result_customSetName.usda result_customSetName.topology.usda
+)
+
+pxr_install_test_dir(
+    SRC testenv/testStitchClipsTemplate
+    DEST testUsdStitchClipsTemplateCustomSetName
+)
+
+pxr_register_test(testUsdStitchClipsTemplateCustomSetName
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/bin/usdstitchclips --noComment --clipSet bob --templateMetadata --startTimeCode 101 --endTimeCode 104 --stride 1 --templatePath p.#.usd --clipPath /World/fx/Particles_Splash/points --out result_customSetName.usda p.101.usda p.102.usda p.103.usda p.104.usda"
+    EXPECTED_RETURN_CODE 0
+    DIFF_COMPARE result_customSetName.usda result_customSetName.topology.usda
+)
+

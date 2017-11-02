@@ -25,6 +25,7 @@
 
 #include "pxr/imaging/hd/renderPassState.h"
 
+#include "pxr/imaging/hd/bufferArrayRangeGL.h"
 #include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/imaging/hd/fallbackLightingShader.h"
 #include "pxr/imaging/hd/drawItem.h"
@@ -34,7 +35,6 @@
 #include "pxr/imaging/hd/shaderCode.h"
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
-
 
 #include "pxr/base/gf/frustum.h"
 #include "pxr/base/tf/staticTokens.h"
@@ -105,12 +105,10 @@ HdRenderPassState::~HdRenderPassState()
 }
 
 void
-HdRenderPassState::Sync()
+HdRenderPassState::Sync(HdResourceRegistrySharedPtr const &resourceRegistry)
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
-
-    HdResourceRegistry *resourceRegistry = &HdResourceRegistry::GetInstance();
 
     VtVec4fArray clipPlanes;
     TF_FOR_ALL(it, _clipPlanes) {
@@ -145,10 +143,13 @@ HdRenderPassState::Sync()
         _renderPassStateBar = resourceRegistry->AllocateUniformBufferArrayRange(
             HdTokens->drawingShader, bufferSpecs);
 
+        HdBufferArrayRangeGLSharedPtr _renderPassStateBar_ =
+            boost::static_pointer_cast<HdBufferArrayRangeGL> (_renderPassStateBar);
+
         // add buffer binding request
         _renderPassShader->AddBufferBinding(
             HdBindingRequest(HdBinding::UBO, _tokens->renderPassState,
-                             _renderPassStateBar, /*interleaved=*/true));
+                             _renderPassStateBar_, /*interleaved=*/true));
     }
 
     // Lighting hack supports different blending amounts, but we are currently
@@ -297,9 +298,13 @@ HdRenderPassState::SetRenderPassShader(HdRenderPassShaderSharedPtr const &render
 
     _renderPassShader = renderPassShader;
     if (_renderPassStateBar) {
+
+        HdBufferArrayRangeGLSharedPtr _renderPassStateBar_ =
+            boost::static_pointer_cast<HdBufferArrayRangeGL> (_renderPassStateBar);
+
         _renderPassShader->AddBufferBinding(
             HdBindingRequest(HdBinding::UBO, _tokens->renderPassState,
-                             _renderPassStateBar, /*interleaved=*/true));
+                             _renderPassStateBar_, /*interleaved=*/true));
     }
 }
 

@@ -135,6 +135,11 @@ HdGLSLProgram::CompileShader(GLenum type,
         // XXX:validation
         TF_WARN("Failed to compile shader (%s): \n%s",
                 shaderType, logString.c_str());
+
+        // shader is no longer needed.
+        glDeleteShader(shader);
+        
+        return false;
     }
 
     // attach the shader to the program
@@ -228,7 +233,7 @@ HdGLSLProgram::Validate() const
         if (size == 0) {
             return false;
         }
-        if (size != _program.GetSize()) {
+        if (static_cast<size_t>(size) != _program.GetSize()) {
             return false;
         }
     }
@@ -236,37 +241,36 @@ HdGLSLProgram::Validate() const
 }
 
 HdGLSLProgramSharedPtr
-HdGLSLProgram::GetComputeProgram(TfToken const &shaderToken)
+HdGLSLProgram::GetComputeProgram(
+        TfToken const &shaderToken,
+        HdResourceRegistry *resourceRegistry)
 {
-    HdResourceRegistry *resourceRegistry = &HdResourceRegistry::GetInstance();
+    // Find the program from registry
+    HdInstance<HdGLSLProgram::ID, HdGLSLProgramSharedPtr> programInstance;
 
-    {
-        // Find the program from registry
-        HdInstance<HdGLSLProgram::ID, HdGLSLProgramSharedPtr> programInstance;
+    std::unique_lock<std::mutex> regLock = 
+        resourceRegistry->RegisterGLSLProgram(
+            HdGLSLProgram::ComputeHash(shaderToken), &programInstance);
 
-        std::unique_lock<std::mutex> regLock = 
-            resourceRegistry->RegisterGLSLProgram(HdGLSLProgram::ComputeHash(shaderToken), &programInstance);
+    if (programInstance.IsFirstInstance()) {
+        // if not exists, create new one
+        HdGLSLProgramSharedPtr newProgram(
+            new HdGLSLProgram(HdTokens->computeShader));
 
-        if (programInstance.IsFirstInstance()) {
-            // if not exists, create new one
-            HdGLSLProgramSharedPtr newProgram(
-                new HdGLSLProgram(HdTokens->computeShader));
-
-            GlfGLSLFX glslfx(HdPackageComputeShader());
-            std::string version = "#version 430\n";
-            if (!newProgram->CompileShader(
-                    GL_COMPUTE_SHADER, version + glslfx.GetSource(shaderToken))) {
-                TF_CODING_ERROR("Fail to compile " + shaderToken.GetString());
-                return HdGLSLProgramSharedPtr();
-            }
-            if (!newProgram->Link()) {
-                TF_CODING_ERROR("Fail to link " + shaderToken.GetString());
-                return HdGLSLProgramSharedPtr();
-            }
-            programInstance.SetValue(newProgram);
+        GlfGLSLFX glslfx(HdPackageComputeShader());
+        std::string version = "#version 430\n";
+        if (!newProgram->CompileShader(
+                GL_COMPUTE_SHADER, version + glslfx.GetSource(shaderToken))) {
+            TF_CODING_ERROR("Fail to compile " + shaderToken.GetString());
+            return HdGLSLProgramSharedPtr();
         }
-        return programInstance.GetValue();
+        if (!newProgram->Link()) {
+            TF_CODING_ERROR("Fail to link " + shaderToken.GetString());
+            return HdGLSLProgramSharedPtr();
+        }
+        programInstance.SetValue(newProgram);
     }
+    return programInstance.GetValue();
 }
 
 

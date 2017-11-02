@@ -50,11 +50,10 @@
 #include "pxr/base/vt/array.h"
 #include "pxr/base/vt/value.h"
 
-#include <boost/utility/enable_if.hpp>
-#include <boost/type_traits/is_integral.hpp>
-#include <boost/bind.hpp>
 #include <boost/mpl/for_each.hpp>
 
+#include <functional>
+#include <type_traits>
 #include <utility>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -352,6 +351,8 @@ struct _MakeFactoryMap {
     template <class CppType>
     void add(const SdfValueTypeName& scalar, const char* alias = NULL)
     {
+        namespace ph = std::placeholders;
+
         static const bool isShaped = true;
 
         const SdfValueTypeName array = scalar.GetArrayType();
@@ -364,12 +365,12 @@ struct _MakeFactoryMap {
         _ValueFactoryMap &f = *_factories;
         f[scalarName] =
             ValueFactory(scalarName, scalar.GetDimensions(), !isShaped,
-                         boost::bind(MakeScalarValueTemplate<CppType>,
-                                     _1, _2, _3, _4));
+                         std::bind(MakeScalarValueTemplate<CppType>,
+                                   ph::_1, ph::_2, ph::_3, ph::_4));
         f[arrayName] =
             ValueFactory(arrayName, array.GetDimensions(), isShaped,
-                         boost::bind(MakeShapedValueTemplate<CppType>,
-                                     _1, _2, _3, _4));
+                         std::bind(MakeShapedValueTemplate<CppType>,
+                                   ph::_1, ph::_2, ph::_3, ph::_4));
     }
     
     _ValueFactoryMap *_factories;
@@ -545,6 +546,22 @@ Sdf_EvalQuotedString(const char* x, size_t n, size_t trimBothSides,
     if (numLines)
         *numLines = std::count(ret.begin(), ret.end(), '\n');
     
+    return ret;
+}
+
+std::string 
+Sdf_EvalAssetPath(const char* x, size_t n, bool tripleDelimited)
+{
+    // See _StringFromAssetPath for the code that writes asset paths.
+
+    // Asset paths are assumed to only contain printable characters and 
+    // no escape sequences except for the "@@@" delimiter.
+    size_t numDelimiters = tripleDelimited ? 3 : 1;
+    std::string ret(x + numDelimiters, n - (2 * numDelimiters));
+    if (tripleDelimited) {
+        ret = TfStringReplace(ret, "\\@@@", "@@@");
+    }
+
     return ret;
 }
 

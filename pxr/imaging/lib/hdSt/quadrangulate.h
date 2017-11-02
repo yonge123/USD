@@ -204,6 +204,9 @@ public:
     // which happens before calling _SetResult().
     virtual int GetGLComponentDataType() const;
 
+    virtual bool HasPreChainedBuffer() const;
+    virtual HdBufferSourceSharedPtr GetPreChainedBuffer() const;
+
 protected:
     virtual bool _CheckValid() const;
 
@@ -244,12 +247,14 @@ class HdSt_QuadrangulateComputationGPU : public HdComputation {
 public:
     /// This computaion doesn't generate buffer source (i.e. 2nd phase)
     HdSt_QuadrangulateComputationGPU(HdSt_MeshTopology *topology,
-                                   TfToken const &sourceName,
-                                   GLenum dataType,
-                                   SdfPath const &id);
-    virtual void Execute(HdBufferArrayRangeSharedPtr const &range);
+                               TfToken const &sourceName,
+                               GLenum dataType,
+                               SdfPath const &id);
+    virtual void Execute(HdBufferArrayRangeSharedPtr const &range,
+                         HdResourceRegistry *resourceRegistry);
     virtual void AddBufferSpecs(HdBufferSpecVector *specs) const;
     virtual int GetNumOutputElements() const;
+
 private:
     SdfPath const _id;
     HdSt_MeshTopology *_topology;

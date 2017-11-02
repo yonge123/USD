@@ -131,12 +131,12 @@ class TestUsdCreateProperties(unittest.TestCase):
             assert rel.IsCustom()
             self.assertEqual(rel.GetName(), rel.GetPath().name)
             self.assertEqual(rel.GetTargets(), [])
-            rel.AppendTarget("/Parent")
+            rel.AddTarget("/Parent")
             assert rel.HasAuthoredTargets()
             self.assertEqual(rel.GetTargets(), ['/Parent'])
 
             # Test relative path
-            rel.AppendTarget("../../Sibling1")
+            rel.AddTarget("../../Sibling1")
             self.assertEqual(rel.GetTargets(), ['/Parent', '/Parent/Sibling1'])
 
             rel.SetCustom(False)
@@ -144,7 +144,7 @@ class TestUsdCreateProperties(unittest.TestCase):
 
             stage = Usd.Stage.Open(strongLayer.identifier);
             p = stage.OverridePrim("/Parent")
-            p.GetReferences().AppendReference(Sdf.Reference(weakLayer.identifier, "/Parent"))
+            p.GetReferences().AddReference(Sdf.Reference(weakLayer.identifier, "/Parent"))
 
             # make sure our reference worked
             strongPrim = stage.GetPrimAtPath("/Parent/Nested/Child")
@@ -180,7 +180,7 @@ class TestUsdCreateProperties(unittest.TestCase):
                 "Expected to be able to SetMetadata <" + str(strongPrim.GetPath())
                 + ".attr2>, but failed.")
             _AssertTrue(
-                strongPrim.GetRelationship("rel1").AppendTarget("/Foo/Bar"),
+                strongPrim.GetRelationship("rel1").AddTarget("/Foo/Bar"),
                 "Expected to be able to AppendTarget to <" + str(strongPrim.GetPath())
                 + ".rel1>, but failed.")
             _AssertTrue(
@@ -204,7 +204,6 @@ class TestUsdCreateProperties(unittest.TestCase):
                         "Expected to be able to create an override relationship at <"
                         + str(prim.GetPath()) + "> but failed")
 
-            stage.Close()
             strongLayer._WriteDataFile("strong.txt")
 
             # print "============================================================="
@@ -241,7 +240,7 @@ class TestUsdCreateProperties(unittest.TestCase):
 
             stage = Usd.Stage.Open(strongLayer.identifier);
             p = stage.OverridePrim("/Parent")
-            p.GetReferences().AppendReference(Sdf.Reference(weakLayer.identifier, "/Parent"))
+            p.GetReferences().AddReference(Sdf.Reference(weakLayer.identifier, "/Parent"))
             assert p.GetAttribute("attr1").IsDefined()
             assert p.GetAttribute("attr1").IsAuthoredAt(weakLayer)
             assert not p.GetAttribute("attr1").IsAuthoredAt(strongLayer)
@@ -465,8 +464,11 @@ class TestUsdCreateProperties(unittest.TestCase):
                 self.assertEqual([ap.path for ap in arrayAssetValue],
                             [ap.path for ap in arrayAssetQueryValue])
 
-                self.assertEqual(singleAssetValue.resolvedPath, targetFile.name)
-                self.assertTrue(all([ap.resolvedPath == targetFile.name
+                # NOTE: We use os.path.abspath() to ensure the paths can be
+                #       accurately compared.  On Windows this will change
+                #       forward slash directory separators to backslashes.
+                self.assertEqual(os.path.abspath(singleAssetValue.resolvedPath), targetFile.name)
+                self.assertTrue(all([os.path.abspath(ap.resolvedPath) == targetFile.name
                                 for ap in arrayAssetValue]))
                 self.assertEqual(singleAssetValue.resolvedPath, 
                             singleAssetQueryValue.resolvedPath)
@@ -486,6 +488,13 @@ class TestUsdCreateProperties(unittest.TestCase):
                 self.assertEqual(singleAssetValue.resolvedPath, '')
                 self.assertTrue(all([ap.resolvedPath == '' for ap in arrayAssetValue]))
 
+                # NOTE: rootFile will want to delete the underlying file
+                #       on __exit__ from the context manager.  But stage s
+                #       may have the file open.  If so the deletion will
+                #       fail on Windows.  Explicitly release our reference
+                #       to the stage to close the file.
+                del s
+
     def test_GetPropertyStack(self):
         primPath = Sdf.Path('/root')
         propName = 'test'
@@ -504,12 +513,12 @@ class TestUsdCreateProperties(unittest.TestCase):
             stage = Usd.Stage.Open(layerB.identifier)
             over = stage.OverridePrim(primPath)
             over.CreateAttribute(propName, Sdf.ValueTypeNames.String)
-            over.GetReferences().AppendReference(Sdf.Reference(layerA.identifier, primPath))
+            over.GetReferences().AddReference(Sdf.Reference(layerA.identifier, primPath))
 
             stage = Usd.Stage.Open(layerC.identifier)
             over = stage.OverridePrim(primPath)
             over.CreateAttribute(propName, Sdf.ValueTypeNames.String)
-            over.GetReferences().AppendReference(Sdf.Reference(layerB.identifier, primPath))
+            over.GetReferences().AddReference(Sdf.Reference(layerB.identifier, primPath))
 
             attr = over.GetAttribute(propName)
             expectedPropertyStack = [l.GetPropertyAtPath(propPath) for l in
@@ -561,7 +570,7 @@ class TestUsdCreateProperties(unittest.TestCase):
             # Add a reference to our topology layer
             rootPath = Sdf.Path('/root')
             rootPrim = stage.GetPrimAtPath(rootPath)
-            rootPrim.GetReferences().AppendReference(
+            rootPrim.GetReferences().AddReference(
                 Sdf.Reference(topologyLayer.identifier, rootPath))
 
             clipTime = 102.0

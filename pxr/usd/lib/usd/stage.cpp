@@ -27,12 +27,12 @@
 #include "pxr/usd/usd/attribute.h"
 #include "pxr/usd/usd/clip.h"
 #include "pxr/usd/usd/clipCache.h"
-#include "pxr/usd/usd/conversions.h"
 #include "pxr/usd/usd/debugCodes.h"
 #include "pxr/usd/usd/instanceCache.h"
 #include "pxr/usd/usd/interpolators.h"
 #include "pxr/usd/usd/notice.h"
 #include "pxr/usd/usd/prim.h"
+#include "pxr/usd/usd/primRange.h"
 #include "pxr/usd/usd/relationship.h"
 #include "pxr/usd/usd/resolver.h"
 #include "pxr/usd/usd/resolveInfo.h"
@@ -41,8 +41,8 @@
 #include "pxr/usd/usd/stageCache.h"
 #include "pxr/usd/usd/stageCacheContext.h"
 #include "pxr/usd/usd/tokens.h"
-#include "pxr/usd/usd/primRange.h"
 #include "pxr/usd/usd/usdFileFormat.h"
+#include "pxr/usd/usd/valueUtils.h"
 
 #include "pxr/usd/pcp/changes.h"
 #include "pxr/usd/pcp/errors.h"
@@ -77,7 +77,6 @@
 #include "pxr/base/tf/enum.h"
 #include "pxr/base/tf/envSetting.h"
 #include "pxr/base/tf/hashset.h"
-#include "pxr/base/tf/makePyConstructor.h"
 #include "pxr/base/tf/mallocTag.h"
 #include "pxr/base/tf/ostreamMethods.h"
 #include "pxr/base/tf/pyLock.h"
@@ -88,9 +87,7 @@
 #include "pxr/base/work/loops.h"
 #include "pxr/base/work/utils.h"
 
-#include <boost/bind.hpp>
 #include <boost/optional.hpp>
-#include <boost/scoped_ptr.hpp>
 #include <boost/utility/in_place_factory.hpp>
 
 #include <tbb/spin_rw_mutex.h>
@@ -278,7 +275,6 @@ static void
 _CopyAndRemoveDescendentPaths(const T& paths, SdfPathVector* outPaths)
 {
     using std::unique_copy;
-    using boost::bind;
 
     outPaths->reserve(paths.size());
 
@@ -290,7 +286,9 @@ _CopyAndRemoveDescendentPaths(const T& paths, SdfPathVector* outPaths)
     // 'q' also in pathVecToRecompose such that p.HasPrefix(q).
     unique_copy(paths.begin(), paths.end(),
                 back_inserter(*outPaths),
-                bind(&SdfPath::HasPrefix, _2, _1));
+                [](SdfPath const &l, SdfPath const &r) {
+                    return r.HasPrefix(l);
+                });
 }
 
 
@@ -446,14 +444,14 @@ UsdStage::~UsdStage()
         "UsdStage::~UsdStage(rootLayer=@%s@, sessionLayer=@%s@)\n",
         _rootLayer ? _rootLayer->GetIdentifier().c_str() : "<null>",
         _sessionLayer ? _sessionLayer->GetIdentifier().c_str() : "<null>");
-    Close();
+    _Close();
     if (_mallocTagID != _dormantMallocTagID){
         free(const_cast<char*>(_mallocTagID));
     }
 }
 
 void
-UsdStage::Close()
+UsdStage::_Close()
 {
     TfScopedVar<bool> resetIsClosing(_isClosingStage, true);
 
@@ -1436,48 +1434,13 @@ UsdStage::_SetValue(
     return _SetValueImpl(time, attr, newValue);
 }
 
-namespace {
-bool 
-_ValueContainsBlock(const VtValue* value) {
-    return value && value->IsHolding<SdfValueBlock>();
-}
-
-bool
-_ValueContainsBlock(const SdfAbstractDataValue* value) 
-{
-    return value && value->isValueBlock;
-}
-
-bool
-_ValueContainsBlock(const SdfAbstractDataConstValue* value)
-{
-    const std::type_info& valueBlockTypeId(typeid(SdfValueBlock));
-    return value && value->valueType == valueBlockTypeId;
-}
-
-bool 
-_ClearValueIfBlocked(VtValue* value) {
-    if (_ValueContainsBlock(value)) {
-        *value = VtValue();
-        return true;
-    }
-
-    return false;
-}
-
-bool 
-_ClearValueIfBlocked(SdfAbstractDataValue* value) {
-    return _ValueContainsBlock(value);
-}
-}
-
 template <class T>
 bool
 UsdStage::_SetValueImpl(
     UsdTimeCode time, const UsdAttribute &attr, const T& newValue)
 {
     // if we are setting a value block, we don't want type checking
-    if (!_ValueContainsBlock(&newValue)) {
+    if (!Usd_ValueContainsBlock(&newValue)) {
         // Do a type check.  Obtain typeName.
         TfToken typeName;
         SdfAbstractDataTypedValue<TfToken> abstrToken(&typeName);
@@ -2215,7 +2178,7 @@ UsdStage::ExpandPopulationMask(
 
         auto popMask = GetPopulationMask();
         for (auto const &path: tgtPaths) {
-            popMask.Add(path);
+            popMask.Add(path.GetPrimPath());
         }
         SetPopulationMask(popMask);
     }
@@ -3399,6 +3362,7 @@ UsdStage::_HandleLayersDidChange(
     // Keep track of paths to USD objects that need to be recomposed or
     // have otherwise changed.
     SdfPathSet pathsToRecompose, otherResyncPaths, otherChangedPaths;
+    SdfPathSet changedActivePaths;
 
     // Add dependent paths for any PrimSpecs whose fields have changed that may
     // affect cached prim information.
@@ -3423,15 +3387,24 @@ UsdStage::_HandleLayersDidChange(
             if (path == SdfPath::AbsoluteRootPath() ||
                 path.IsPrimOrPrimVariantSelectionPath()) {
 
-                if (entry.flags.didReorderChildren) {
+                bool didChangeActive = false;
+                for (const auto& info : entry.infoChanged) {
+                    if (info.first == SdfFieldKeys->Active) {
+                        TF_DEBUG(USD_CHANGES).Msg(
+                            "Changed field: %s\n", info.first.GetText());
+                        didChangeActive = true;
+                        break;
+                    }
+                }
+
+                if (didChangeActive || entry.flags.didReorderChildren) {
                     willRecompose = true;
                 } else {
                     for (const auto& info : entry.infoChanged) {
-                        const auto infoKey = info.first;
-                        if ((infoKey == SdfFieldKeys->Active)    ||
-                            (infoKey == SdfFieldKeys->Kind)      ||
-                            (infoKey == SdfFieldKeys->TypeName)  ||
-                            (infoKey == SdfFieldKeys->Specifier) ||
+                        const auto& infoKey = info.first;
+                        if (infoKey == SdfFieldKeys->Kind ||
+                            infoKey == SdfFieldKeys->TypeName ||
+                            infoKey == SdfFieldKeys->Specifier ||
                             
                             // XXX: Could be more specific when recomposing due
                             //      to clip changes. E.g., only update the clip
@@ -3439,8 +3412,7 @@ UsdStage::_HandleLayersDidChange(
                             UsdIsClipRelatedField(infoKey)) {
 
                             TF_DEBUG(USD_CHANGES).Msg(
-                                "Changed field: %s\n",
-                                infoKey.GetText());
+                                "Changed field: %s\n", infoKey.GetText());
 
                             willRecompose = true;
                             break;
@@ -3451,7 +3423,11 @@ UsdStage::_HandleLayersDidChange(
                 if (willRecompose) {
                     _AddDependentPaths(layerAndChangelist.first, path, 
                                        *_cache, &pathsToRecompose);
-            }
+                }
+                if (didChangeActive) {
+                    _AddDependentPaths(layerAndChangelist.first, path, 
+                                       *_cache, &changedActivePaths);
+                }
             }
             else {
                 if (path.IsPropertyPath()) {
@@ -3491,6 +3467,16 @@ UsdStage::_HandleLayersDidChange(
     PcpChanges changes;
     changes.DidChange(std::vector<PcpCache*>(1, _cache.get()),
                       n.GetChangeListMap());
+
+    // Pcp does not consider activation changes to be significant since
+    // it doesn't look at activation during composition. However, UsdStage
+    // needs to do so, since it elides children of deactivated prims.
+    // This ensures that prim indexes for these prims are ejected from
+    // the PcpCache.
+    for (const SdfPath& p : changedActivePaths) {
+        changes.DidChangeSignificantly(_cache.get(), p);
+    }
+
     _Recompose(changes, &pathsToRecompose);
 
     // Add in all other paths that are marked as resynced here so
@@ -3505,11 +3491,12 @@ UsdStage::_HandleLayersDidChange(
     _CopyAndRemoveDescendentPaths(pathsToRecompose, &pathsToRecomposeVec);
 
     using std::remove_if;
-    using boost::bind;
 
     pathsToRecomposeVec.erase(
         remove_if(pathsToRecomposeVec.begin(), pathsToRecomposeVec.end(),
-                  bind(&UsdStage::_IsObjectDescendantOfInstance, this, _1)),
+                  [this](SdfPath const &path) {
+                      return _IsObjectDescendantOfInstance(path);
+                  }),
         pathsToRecomposeVec.end());
 
     // Collect the paths in otherChangedPaths that aren't under paths that
@@ -3527,7 +3514,9 @@ UsdStage::_HandleLayersDidChange(
     otherChangedPathsVec.reserve(otherChangedPaths.size());
     remove_copy_if(otherChangedPaths.begin(), otherChangedPaths.end(),
                    back_inserter(otherChangedPathsVec),
-                   bind(&UsdStage::_IsObjectDescendantOfInstance, this, _1));
+                   [this](SdfPath const &path) {
+                       return _IsObjectDescendantOfInstance(path);
+                   });
 
     // Now we want to remove all elements of otherChangedPathsVec that are
     // prefixed by elements in pathsToRecompose.
@@ -5348,8 +5337,8 @@ _ClipAppliesToLayerStackSite(
     const Usd_ClipRefPtr& clip,
     const PcpLayerStackPtr& layerStack, const SdfPath& primPathInLayerStack)
 {
-    return (layerStack == clip->sourceNode.GetLayerStack()
-        && primPathInLayerStack.HasPrefix(clip->sourceNode.GetPath()));
+    return (layerStack == clip->sourceLayerStack
+        && primPathInLayerStack.HasPrefix(clip->sourcePrimPath));
 }
 
 static bool
@@ -5357,17 +5346,19 @@ _ClipsApplyToNode(
     const Usd_ClipCache::Clips& clips, 
     const PcpNodeRef& node)
 {
-    return (node.GetLayerStack() == clips.sourceNode.GetLayerStack()
-            && node.GetPath().HasPrefix(clips.sourceNode.GetPath()));
+    return (node.GetLayerStack() == clips.sourceLayerStack
+            && node.GetPath().HasPrefix(clips.sourcePrimPath));
 }
 
 static
-const Usd_ClipCache::Clips*
+const std::vector<const Usd_ClipCache::Clips*>
 _GetClipsThatApplyToNode(
     const std::vector<Usd_ClipCache::Clips>& clipsAffectingPrim,
     const PcpNodeRef& node,
     const SdfAbstractDataSpecId& specId)
 {
+    std::vector<const Usd_ClipCache::Clips*> relevantClips;
+
     for (const auto& localClips : clipsAffectingPrim) {
         if (_ClipsApplyToNode(localClips, node)) {
             // Only look for samples in clips for attributes that are
@@ -5387,15 +5378,15 @@ _GetClipsThatApplyToNode(
                 if (!localClips.manifestClip->HasField(
                         specId, SdfFieldKeys->Variability, &attrVariability)
                     || attrVariability != SdfVariabilityVarying) {
-                    return nullptr;
+                    continue;
                 }
             }
 
-            return &localClips;
+            relevantClips.push_back(&localClips);
         }
     }
 
-    return nullptr;
+    return relevantClips;
 }
 
 
@@ -5403,7 +5394,7 @@ bool
 UsdStage::_GetValue(UsdTimeCode time, const UsdAttribute &attr, 
                     VtValue* result) const
 {
-    Usd_UntypedInterpolator interpolator(result);
+    Usd_UntypedInterpolator interpolator(attr, result);
     return _GetValueImpl(time, attr, &interpolator, result);
 }
 
@@ -5464,7 +5455,12 @@ public:
         }
         else {
             if (!TF_VERIFY(layer->GetBracketingTimeSamplesForPath(
-                        specId, localTime, &lower, &upper))) {
+                        specId, localTime, &lower, &upper),
+                TfStringPrintf("No bracketing time samples for "
+                               "%s on <%s> for time %g between %g and %g",
+                               layer->GetIdentifier().c_str(),
+                               specId.GetFullSpecPath().GetText(),
+                               localTime, lower, upper).c_str())) {
                 return false;
             }
         }
@@ -5480,13 +5476,8 @@ public:
             localTime,
             lower);
 
-        if (GfIsClose(lower, upper, /* epsilon = */ 1e-6)) {
-            bool queryResult = layer->QueryTimeSample(specId, lower, result);
-            return queryResult && (!_ClearValueIfBlocked(result));
-        }
-
-        return interpolator->Interpolate(
-            attr, layer, specId, localTime, lower, upper);
+        return Usd_GetOrInterpolateValue(
+            layer, specId, localTime, lower, upper, interpolator, result);
     } 
 
     template <class T>
@@ -5511,13 +5502,8 @@ public:
             localTime,
             lower);
 
-        if (GfIsClose(lower, upper, /* epsilon = */ 1e-6)) {
-            bool queryResult = clip->QueryTimeSample(specId, lower, result);
-            return queryResult && (!_ClearValueIfBlocked(result));
-        }
-
-        return interpolator->Interpolate(
-            attr, clip, specId, localTime, lower, upper);
+        return Usd_GetOrInterpolateValue(
+            clip, specId, localTime, lower, upper, interpolator, result);
     }
 };
 
@@ -5572,7 +5558,7 @@ UsdStage::_GetValueImpl(UsdTimeCode time, const UsdAttribute &attr,
     if (time.IsDefault()) {
         bool valueFound = _GetMetadata(attr, SdfFieldKeys->Default,
                                        TfToken(), /*useFallbacks=*/true, result);
-        return valueFound && (!_ClearValueIfBlocked(result));
+        return valueFound && (!Usd_ClearValueIfBlocked(result));
     }
 
     UsdResolveInfo resolveInfo;
@@ -5621,7 +5607,7 @@ _HasTimeSamples(const SdfLayerRefPtr& source,
             specId, *time, lower, upper);
     }
 
-    return source->HasField(specId, SdfFieldKeys->TimeSamples);
+    return source->GetNumTimeSamplesForPath(specId) > 0;
 }
 
 bool
@@ -5636,7 +5622,9 @@ _HasTimeSamples(const Usd_ClipRefPtr& source,
                source->_GetNumTimeSamplesForPathInLayerForClip(specId) != 0;
     }
 
-    return source->HasField(specId, SdfFieldKeys->TimeSamples);
+    // Use this method to directly access authored time samples,
+    // disregarding 'fake' samples used by clips.
+    return source->_GetNumTimeSamplesForPathInLayerForClip(specId) > 0;
 }
 
 enum _DefaultValueResult {
@@ -5659,7 +5647,7 @@ _HasDefault(const SdfLayerRefPtr& layer, const SdfAbstractDataSpecId& specId,
     }
 
     if (layer->HasField(specId, SdfFieldKeys->Default, value)) {
-        if (_ClearValueIfBlocked(value)) {
+        if (Usd_ClearValueIfBlocked(value)) {
             return _DefaultValueBlocked;
         }
         return _DefaultValueFound;
@@ -5912,7 +5900,7 @@ UsdStage::_GetResolvedValueImpl(const UsdProperty &prop,
         const SdfAbstractDataSpecId specId(&node.GetPath(), &prop.GetName());
         const SdfLayerRefPtrVector& layerStack 
             = node.GetLayerStack()->GetLayers();
-        boost::optional<const Usd_ClipCache::Clips*> clips;
+        boost::optional<std::vector<const Usd_ClipCache::Clips*>> clips;
         for (size_t i = 0, e = layerStack.size(); i < e; ++i) {
             if (nodeHasSpecs) { 
                 if (resolver->ProcessLayer(i, specId, node, 
@@ -5927,7 +5915,7 @@ UsdStage::_GetResolvedValueImpl(const UsdProperty &prop,
                                                      node, specId);
                     // If we don't have specs on this node and clips don't
                     // apply we can mode onto the next node.
-                    if (!nodeHasSpecs && !clips.get()) { 
+                    if (!nodeHasSpecs && clips->empty()) { 
                         break; 
                     }
                 }
@@ -5937,19 +5925,21 @@ UsdStage::_GetResolvedValueImpl(const UsdProperty &prop,
                 ARCH_PRAGMA_PUSH
                 ARCH_PRAGMA_MAYBE_UNINITIALIZED
 
-                // We only care about clips that were introduced at this
-                // position within the LayerStack.
-                if (!clips.get() || clips.get()->sourceLayerIndex != i) {
-                    continue;
-                }
+                for (const Usd_ClipCache::Clips* clipSet : *clips) {
+                    // We only care about clips that were introduced at this
+                    // position within the LayerStack.
+                    if (clipSet->sourceLayerIndex != i) {
+                        continue;
+                    }
 
-                // Look through clips to see if they have a time sample for
-                // this attribute. If a time is given, examine just the clips
-                // that are active at that time.
-                for (const auto& clip : clips.get()->valueClips) {
-                    if (resolver->ProcessClip(clip, specId, node,
-                                              localTime.get_ptr())) {
-                        return;
+                    // Look through clips to see if they have a time sample for
+                    // this attribute. If a time is given, examine just the clips
+                    // that are active at that time.
+                    for (const Usd_ClipRefPtr& clip : clipSet->valueClips) {
+                        if (resolver->ProcessClip(clip, specId, node,
+                                                  localTime.get_ptr())) {
+                            return;
+                        }
                     }
                 }
 
@@ -5979,7 +5969,7 @@ UsdStage::_GetValueFromResolveInfoImpl(const UsdResolveInfo &info,
     if (time.IsDefault()) {
         bool valueFound = _GetMetadata(attr, SdfFieldKeys->Default,
                                        TfToken(), /*useFallbacks=*/true, result);
-        return valueFound && (!_ClearValueIfBlocked(result));
+        return valueFound && (!Usd_ClearValueIfBlocked(result));
     }
 
     if (info._source == UsdResolveInfoSourceTimeSamples) {
@@ -6059,7 +6049,7 @@ UsdStage::_GetValueFromResolveInfo(const UsdResolveInfo &info,
                                    UsdTimeCode time, const UsdAttribute &attr,
                                    VtValue* value) const
 {
-    Usd_UntypedInterpolator interpolator(value);
+    Usd_UntypedInterpolator interpolator(attr, value);
     return _GetValueFromResolveInfoImpl(
         info, time, attr, &interpolator, value);
 }
@@ -6101,7 +6091,7 @@ UsdStage::_GetTimeSampleMap(const UsdAttribute &attr,
                                   &timeSamples)) {
         for (const auto& timeSample : timeSamples) {
             VtValue value;
-            Usd_UntypedInterpolator interp(&value);
+            Usd_UntypedInterpolator interp(attr, &value);
 
             if (_GetValueImpl(timeSample, attr, &interp, &value)) {
                 (*out)[timeSample] = value;
@@ -6139,11 +6129,10 @@ UsdStage::_GetTimeSamplesInIntervalFromResolveInfo(
     const GfInterval& interval,
     std::vector<double>* times) const
 {
-    if ((interval.IsMinFinite() && interval.IsMinOpen())
-        || (interval.IsMaxFinite() && interval.IsMaxOpen())) {
-        TF_CODING_ERROR("Finite endpoints in the specified interval (%s)"
-                        "must be closed.", TfStringify(interval).c_str());
-        return false;
+    // An empty requested interval would result in in empty times
+    // vector so avoid computing any of the contained samples
+    if (interval.IsEmpty()) {
+        return true;
     }
 
     // This is the lowest-level site for guaranteeing that all GetTimeSample
@@ -6153,11 +6142,29 @@ UsdStage::_GetTimeSamplesInIntervalFromResolveInfo(
                                           vector<double>* target, 
                                           const GfInterval& interval) 
     {
-        const auto sampleRangeBegin = std::lower_bound(samples.begin(),
-            samples.end(), interval.GetMin());
-        const auto sampleRangeEnd = std::upper_bound(sampleRangeBegin,
-            samples.end(), interval.GetMax());
-        target->insert(target->end(), sampleRangeBegin, sampleRangeEnd);
+        std::set<double>::iterator samplesBegin, samplesEnd; 
+
+        if (interval.IsMinOpen()) {
+            samplesBegin = std::upper_bound(samples.begin(), 
+                                            samples.end(), 
+                                            interval.GetMin()); 
+        } else {
+            samplesBegin = std::lower_bound(samples.begin(), 
+                                            samples.end(), 
+                                            interval.GetMin());
+        }
+
+        if (interval.IsMaxOpen()) {
+            samplesEnd = std::lower_bound(samplesBegin,
+                                          samples.end(), 
+                                          interval.GetMax());
+        } else {
+            samplesEnd = std::upper_bound(samplesBegin,
+                                          samples.end(),
+                                          interval.GetMax());
+        }
+
+        target->insert(target->end(), samplesBegin, samplesEnd);
     };
 
     if (info._source == UsdResolveInfoSourceTimeSamples) {
@@ -6242,7 +6249,6 @@ UsdStage::_GetTimeSamplesInIntervalFromResolveInfo(
                     std::unique(
                         timesFromAllClips.begin(), timesFromAllClips.end()),
                     timesFromAllClips.end());
-
                 times->swap(timesFromAllClips);
                 return true;
             }

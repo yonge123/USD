@@ -23,10 +23,11 @@
 //
 #include "pxr/pxr.h"
 #include "pxr/usd/usd/editContext.h"
+#include "pxr/usd/usd/pyEditContext.h"
 
-#include <boost/make_shared.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/python.hpp>
+
+#include <memory>
 
 using namespace boost::python;
 
@@ -35,8 +36,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 struct Usd_PyEditContextAccess {
     static void __enter__(UsdPyEditContext &self) {
         self._editContext = self._editTarget.IsValid() ?
-            boost::make_shared<UsdEditContext>(self._stage, self._editTarget) :
-            boost::make_shared<UsdEditContext>(self._stage);
+            std::make_shared<UsdEditContext>(self._stage, self._editTarget) :
+            std::make_shared<UsdEditContext>(self._stage);
     }
 
     static void __exit__(UsdPyEditContext &self, object, object, object) {

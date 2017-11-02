@@ -28,7 +28,6 @@
 #include "pxr/usd/sdf/types.h"
 #include "pxr/base/arch/inttypes.h"
 
-#include <boost/function.hpp>
 #include <boost/numeric/conversion/cast.hpp>
 #include <boost/type_traits/is_floating_point.hpp>
 #include <boost/type_traits/is_integral.hpp>
@@ -37,6 +36,7 @@
 #include <boost/variant.hpp>
 
 #include <climits>
+#include <functional>
 #include <limits>
 #include <map>
 #include <string>
@@ -312,9 +312,9 @@ private:
     _Variant _variant;
 };
 
-typedef boost::function<VtValue (vector<unsigned int> const &,
-                                 vector<Value> const &,
-                                 size_t &, string *)> ValueFactoryFunc;
+typedef std::function<VtValue (vector<unsigned int> const &,
+                               vector<Value> const &,
+                               size_t &, string *)> ValueFactoryFunc;
 
 struct ValueFactory {
     ValueFactory() {}
@@ -342,6 +342,11 @@ ValueFactory const &GetValueFactoryForMenvaName(std::string const &name,
 // characters present in the original string.
 std::string Sdf_EvalQuotedString(const char* x, size_t n, size_t trimBothSides,
                                  unsigned int* numLines = NULL);
+
+// Read the string representing an asset path at [x..x+n]. If tripleDelimited
+// is true, the string is assumed to have 3 delimiters on both sides of the
+// asset path, otherwise the string is assumed to have just 1.
+std::string Sdf_EvalAssetPath(const char* x, size_t n, bool tripleDelimited);
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

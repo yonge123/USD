@@ -23,10 +23,10 @@
 //
 #include "pxr/usd/usdLux/diskLight.h"
 #include "pxr/usd/usd/schemaBase.h"
-#include "pxr/usd/usd/conversions.h"
 
 #include "pxr/usd/sdf/primSpec.h"
 
+#include "pxr/usd/usd/pyConversions.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include "pxr/base/tf/pyUtils.h"
@@ -48,6 +48,13 @@ namespace {
 // fwd decl.
 WRAP_CUSTOM;
 
+        
+static UsdAttribute
+_CreateRadiusAttr(UsdLuxDiskLight &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateRadiusAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
+}
 
 } // anonymous namespace
 
@@ -81,6 +88,13 @@ void wrapUsdLuxDiskLight()
 
         .def(!self)
 
+        
+        .def("GetRadiusAttr",
+             &This::GetRadiusAttr)
+        .def("CreateRadiusAttr",
+             &_CreateRadiusAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
 
     ;
 

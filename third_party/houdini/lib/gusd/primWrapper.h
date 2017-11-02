@@ -25,6 +25,9 @@
 #define __GUSD_PRIMWRAPPER_H__
 
 #include <GT/GT_Primitive.h>
+#include <UT/UT_ConcurrentHashMap.h>
+
+#include "gusd/api.h"
 
 #include <pxr/pxr.h>
 #include "pxr/usd/usd/prim.h"
@@ -32,8 +35,6 @@
 #include "pxr/usd/usdGeom/imageable.h"
 
 #include "GT_Utils.h"
-#include "USD_Holder.h"
-#include "USD_Proxy.h"
 #include "purpose.h"
 
 class GU_PackedImpl;
@@ -80,7 +81,6 @@ class GusdContext;
 /// which in turn calls the "defineForRead" to create a GusdPrimWrapper. These 
 /// prims can be refined into native GT_Primitives that the viewport can draw.
 
-typedef GusdUSD_HolderT<UsdGeomImageable> GusdUSD_ImageableHolder;
 
 typedef std::map<SdfPath,UT_Matrix4D> GusdSimpleXformCache;
 
@@ -96,10 +96,9 @@ public:
         DefinitionForWriteFunction;
 
     typedef boost::function<GT_PrimitiveHandle
-            (const GusdUSD_StageProxyHandle&,
-             const UsdGeomImageable&,
-             const UsdTimeCode&,
-             const GusdPurposeSet&)>
+             (const UsdGeomImageable&,
+              UsdTimeCode,
+              GusdPurposeSet)>
         DefinitionForReadFunction;
 
     typedef boost::function<bool
@@ -115,6 +114,7 @@ public:
     /// 
     /// When writing a USD file, we refine the geometry to a set of prims that we
     /// can deal with then we call this method on each of those prims.
+    GUSD_API
     static GT_PrimitiveHandle
     defineForWrite( const GT_PrimitiveHandle& sourcePrim,
                     const UsdStagePtr& stage,
@@ -125,17 +125,20 @@ public:
     /// and returns true.
     /// So far only F3D volumes do this. They can derive a name from meta
     /// data stored in the f3d file.
+    GUSD_API
     static bool 
     getPrimName( const GT_PrimitiveHandle &sourcePrim,
                  std::string &primName );
 
     // When we write USD for the given type, we will use a name like $USDNAME_0.
     // where USDNAME is the name registered for this type
+    GUSD_API
     static const char*
     getUsdName( int gtPrimId );
 
     // When we USD for an object that is marked as a group type, we write 
     // the object and then all its children.
+    GUSD_API
     static bool
     isGroupType( int gtPrimId );
 
@@ -144,21 +147,23 @@ public:
     /// When reading a USD file, we call this function to create a Gusd_GTPrimitive
     /// for each USD prim, we then refine that to something that can be 
     /// used in a detail.
+    GUSD_API
     static GT_PrimitiveHandle
-    defineForRead( const GusdUSD_StageProxyHandle&  stage, 
-                   const UsdGeomImageable&          sourcePrim, 
-                   const UsdTimeCode&               time,
-                   const GusdPurposeSet&            purposes );
+    defineForRead( const UsdGeomImageable&  sourcePrim, 
+                   UsdTimeCode              time,
+                   GusdPurposeSet           purposes );
 
     /// \brief Is this gt prim a point instancer?
     ///
     /// This is used to know if we need to write the instance prototypes.
+    GUSD_API
     static bool 
     isPointInstancerPrim(const GT_PrimitiveHandle& prim,
                          const GusdContext& ctxt);
 
     /// Register function for creating new USD prims from GT_Primitives and, optionally,
     /// a function for giving these prims a name.
+    GUSD_API
     static bool registerPrimDefinitionFuncForWrite(int gtPrimId,
                                                    DefinitionForWriteFunction function,
                                                    GetPrimNameFunction getNameFunction = NULL,
@@ -166,34 +171,41 @@ public:
                                                    const char* usdName = NULL );
 
     /// Register function for creating new GusdPrimWrappers from USD prim.
+    GUSD_API
     static bool registerPrimDefinitionFuncForRead(const TfToken& usdTypeName,
                                                   DefinitionForReadFunction function);
 
     /// Return true is the give prim can be supported directly in USD. This
     /// is used by the refiner to know when to stop refining.
+    GUSD_API
     static bool isGTPrimSupported(const GT_PrimitiveHandle& prim);
 
+    GUSD_API
     GusdPrimWrapper();
+    GUSD_API
     GusdPrimWrapper( const UsdTimeCode &time, const GusdPurposeSet &purposes );
+    GUSD_API
     GusdPrimWrapper( const GusdPrimWrapper &in );
+    GUSD_API
     virtual ~GusdPrimWrapper();
 
     /// Return true if the underlying USD prim is valid
+    GUSD_API
     virtual bool isValid() const;
 
     virtual const UsdGeomImageable getUsdPrimForWrite() const = 0;
 
-    virtual const UsdGeomImageable 
-        getUsdPrimForRead(GusdUSD_ImageableHolder::ScopedLock &lock) const = 0; 
+    virtual const UsdGeomImageable getUsdPrimForRead() const = 0; 
 
+    GUSD_API
     virtual bool unpack(
-        GU_Detail&              gdr,
-        const TfToken&          fileName,
-        const SdfPath&          primPath,
-        const UT_Matrix4D&      xform,
-        fpreal                  frame,
-        const char *            viewportLod,
-        const GusdPurposeSet&   purposes );
+        GU_Detail&          gdr,
+        const UT_StringRef& fileName,
+        const SdfPath&      primPath,
+        const UT_Matrix4D&  xform,
+        fpreal              frame,
+        const char *        viewportLod,
+        GusdPurposeSet      purposes );
 
     /// \brief Create a new USD prim to match GT primitive.
     ///
@@ -201,6 +213,7 @@ public:
     /// and all the primitives on it each frame. However, there is some
     /// data we want to persist across frames. So we keep the GusdPrimWrappers
     /// and ask them to redefine their USD prims on each frame.
+    GUSD_API
     virtual bool redefine( 
            const UsdStagePtr& stage,
            const SdfPath& path, 
@@ -212,6 +225,7 @@ public:
     ///
     /// If \p sourcePrim is an instance, \p localXform is the instance transform
     /// otherwise it is the primitive transform from the prim.
+    GUSD_API
     virtual bool updateFromGTPrim(
         const GT_PrimitiveHandle& sourcePrim,
         const UT_Matrix4D&        houXform,
@@ -230,8 +244,11 @@ public:
     /// Keep track of the visibility state of the prim for book marks.
     void markVisible( bool in ) { m_visible = in; }
     bool isVisible() const { return  m_visible; }
+
+    GUSD_API
     virtual void setVisibility(const TfToken& visibility, UsdTimeCode time);
     
+    GUSD_API
     static GT_DataArrayHandle convertPrimvarData( 
                     const UsdGeomPrimvar& primvar, 
                     UsdTimeCode time );
@@ -239,8 +256,9 @@ public:
     // Load primvars for prim from USD.
     // remapIndicies is used to expand curve primvars into point attributes if
     // needed.
+    GUSD_API
     void loadPrimvars( 
-                    const UsdTimeCode&        time,
+                    UsdTimeCode               time,
                     const GT_RefineParms*     rparms,
                     int                       minUniform,
                     int                       minPoint,
@@ -258,11 +276,16 @@ public:
 
 protected:
 
-
     /// Look for "visible" attribute on sourcePrim. If it doesn't exist
     /// set a visibility sample based on isVisible()
     void updateVisibilityFromGTPrim( const GT_PrimitiveHandle& sourcePrim,
-                                     UsdTimeCode time );
+                                     UsdTimeCode time,
+                                     bool forceWrite = true );
+
+    /// Look for a "usdactive" attribute on sourcePrim. UsdPrim::SetActive
+    /// based on this value. If attribute doesn't exist, do nothing.
+    void updateActiveFromGTPrim( const GT_PrimitiveHandle& sourcePrim,
+                                 UsdTimeCode time );
 
     void updateTransformFromGTPrim( const GfMatrix4d &xform, UsdTimeCode time, bool force );
 
@@ -270,20 +293,20 @@ protected:
                                     const std::string& name,
                                     const GT_DataArrayHandle& houAttr, 
                                     UsdAttribute& usdAttr, 
-                                    const UsdTimeCode& time );
+                                    UsdTimeCode time );
 
     bool updatePrimvarFromGTPrim( 
                 const TfToken&              name,
                 const GT_Owner&             owner,
                 const TfToken&              interpolation,
-                const UsdTimeCode&          time,
+                UsdTimeCode                 time,
                 const GT_DataArrayHandle&   data );
 
     // Write primvar values from a GT attribute list to USD.
     bool updatePrimvarFromGTPrim( const GT_AttributeListHandle& gtAttrs,
                                   const GusdGT_AttrFilter&      primvarFilter,
                                   const TfToken&                interpolation,
-                                  const UsdTimeCode&            time );
+                                  UsdTimeCode                   time );
 
     void clearCaches();
 
@@ -298,10 +321,10 @@ protected:
     
     static GfMatrix4d computeTransform( 
                 const UsdPrim&              prim,
-                const UsdTimeCode&          time,
+                UsdTimeCode                 time,
                 const UT_Matrix4D&          houXform,
                 const GusdSimpleXformCache& xformCache );
-
+    
 protected:
 
     UsdTimeCode     m_time;
@@ -363,9 +386,19 @@ private:
                 templateName( templateName_ ) {}
     };
 
+    struct TfTokenHashCmp {
+        static bool equal(const TfToken& a, const TfToken& b)
+        { return a == b; }
+
+        static size_t hash(const TfToken& key)
+        { return key.Hash(); }
+    };
+
     typedef UT_Map<int64,   GTTypeInfo>                 GTTypeInfoMap;
-    typedef UT_Map<TfToken, DefinitionForReadFunction>  USDTypeToDefineFuncMap;
     typedef UT_Set<int64>                               GTTypeSet;
+    typedef UT_ConcurrentHashMap<
+        TfToken, DefinitionForReadFunction, TfTokenHashCmp>
+        USDTypeToDefineFuncMap;
 
     static GTTypeInfoMap                s_gtTypeInfoMap;
     static USDTypeToDefineFuncMap       s_usdTypeToFuncMap; 

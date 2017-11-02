@@ -57,30 +57,14 @@ public:
     // ---------------------------------------------------------------------- //
     /// \name Parallel Setup and Resolve
     // ---------------------------------------------------------------------- //
-    
-    USDIMAGING_API
-    virtual void TrackVariabilityPrep(UsdPrim const& prim,
-                                      SdfPath const& cachePath,
-                                      HdDirtyBits requestedBits,
-                                      UsdImagingInstancerContext const* 
-                                          instancerContext = NULL);
 
     /// Thread Safe.
     USDIMAGING_API
     virtual void TrackVariability(UsdPrim const& prim,
                                   SdfPath const& cachePath,
-                                  HdDirtyBits requestedBits,
-                                  HdDirtyBits* dirtyBits,
+                                  HdDirtyBits* timeVaryingBits,
                                   UsdImagingInstancerContext const* 
                                       instancerContext = NULL);
-
-    USDIMAGING_API
-    virtual void UpdateForTimePrep(UsdPrim const& prim,
-                                   SdfPath const& cachePath, 
-                                   UsdTimeCode time,
-                                   HdDirtyBits requestedBits,
-                                   UsdImagingInstancerContext const* 
-                                       instancerContext = NULL);
 
     /// Thread Safe.
     USDIMAGING_API
@@ -88,7 +72,6 @@ public:
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
                                HdDirtyBits requestedBits,
-                               HdDirtyBits* dirtyBits,
                                UsdImagingInstancerContext const* 
                                    instancerContext = NULL);
 
@@ -97,9 +80,36 @@ public:
     // ---------------------------------------------------------------------- //
 
     USDIMAGING_API
-    virtual int ProcessPropertyChange(UsdPrim const& prim,
-                                      SdfPath const& cachePath, 
-                                      TfToken const& property);
+    virtual HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
+                                              SdfPath const& cachePath,
+                                              TfToken const& property);
+
+
+    virtual void MarkDirty(UsdPrim const& prim,
+                           SdfPath const& cachePath,
+                           HdDirtyBits dirty,
+                           UsdImagingIndexProxy* index);
+
+    virtual void MarkRefineLevelDirty(UsdPrim const& prim,
+                                      SdfPath const& cachePath,
+                                      UsdImagingIndexProxy* index);
+
+    virtual void MarkReprDirty(UsdPrim const& prim,
+                               SdfPath const& cachePath,
+                               UsdImagingIndexProxy* index);
+
+    virtual void MarkCullStyleDirty(UsdPrim const& prim,
+                                    SdfPath const& cachePath,
+                                    UsdImagingIndexProxy* index);
+
+    virtual void MarkTransformDirty(UsdPrim const& prim,
+                                    SdfPath const& cachePath,
+                                    UsdImagingIndexProxy* index);
+
+    virtual void MarkVisibilityDirty(UsdPrim const& prim,
+                                     SdfPath const& cachePath,
+                                     UsdImagingIndexProxy* index);
+
 
     /// Returns the color and opacity for a given prim, taking into account
     /// surface shader colors and explicitly authored color on the prim.
@@ -108,6 +118,15 @@ public:
                         UsdImagingValueCache::PrimvarInfo* primvarInfo,
                         UsdTimeCode time);
    
+    // Helper function: add a given type of rprim, potentially with instancer
+    // name mangling, and add any bound shader.
+    USDIMAGING_API
+    static SdfPath _AddRprim(TfToken const& primType,
+                      UsdPrim const& usdPrim,
+                      UsdImagingIndexProxy* index,
+                      SdfPath const& materialId,
+                      UsdImagingInstancerContext const* instancerContext);
+
 protected:
 
     /// This function can be overridden if the gprim adapter wants to have
@@ -119,6 +138,10 @@ protected:
             SdfPath const& shaderPath,
             UsdTimeCode time,
             UsdImagingValueCache* valueCache);
+
+    USDIMAGING_API
+    virtual void _RemovePrim(SdfPath const& cachePath,
+                             UsdImagingIndexProxy* index) final;
 
 private:
 
@@ -137,6 +160,13 @@ private:
                            UsdTimeCode time,
                            UsdImagingValueCache* valueCache);
 
+    // Helper method for the _DiscoverPrimvars methods above.
+    void _ComputeAndMergePrimvar(UsdGeomGprim const& gprim,
+                           SdfPath const& cachePath,
+                           TfToken const &primvarName,
+                           UsdTimeCode time,
+                           UsdImagingValueCache* valueCache);
+
     /// Reads the extent from the given prim. If the extent is not authored,
     /// an empty GfRange3d is returned, the extent will not be computed.
     GfRange3d _GetExtent(UsdPrim const& prim, UsdTimeCode time);
@@ -148,8 +178,8 @@ private:
     /// inherited purpose. Inherited values are strongest.
     TfToken _GetPurpose(UsdPrim const & prim, UsdTimeCode time);
 
-    /// Returns the surface shader for this prim
-    SdfPath _GetSurfaceShader(UsdPrim const& prim);
+    /// Returns the path to the material used by this prim
+    SdfPath _GetMaterialId(UsdPrim const& prim);
 };
 
 

@@ -26,6 +26,7 @@
 
 #include "pxr/pxr.h"
 #include "pxr/imaging/hd/types.h"
+#include "pxr/imaging/hd/sortedIds.h"
 #include "pxr/base/tf/token.h"
 #include "pxr/usd/sdf/path.h"
 
@@ -83,13 +84,25 @@ public:
 
     ///
     /// Removes the prim identifier by primId.  TypeId is the type of that
-    /// prim.  Memory for the prim is deallocated using the render delagate.
+    /// prim.  Memory for the prim is deallocated using the render delegate.
     /// The prim is also removed from the change tracker.
     ///
     void RemovePrim(const TfToken &typeId,
                     const SdfPath &primId,
                     HdChangeTracker &tracker,
                     HdRenderDelegate *renderDelegate);
+
+    ///
+    /// Removes the subtree of prims identifier by root that are owned
+    /// by the given scene delegate.
+    /// This function affects all prim types.
+    /// Memory for the prim is deallocated using the render delegate.
+    /// The prim is also removed from the change tracker.
+    ///
+    void RemoveSubtree(const SdfPath &root,
+                       HdSceneDelegate* sceneDelegate,
+                       HdChangeTracker &tracker,
+                       HdRenderDelegate *renderDelegate);
 
     /// Obtains a modifiable pointer the prim with the given type and id.
     /// If no prim with the given id is in the index or the type id is
@@ -115,7 +128,7 @@ public:
     ///
     void GetPrimSubtree(const TfToken &typeId,
                         const SdfPath &rootPath,
-                        SdfPathVector *outPaths) const;
+                        SdfPathVector *outPaths);
 
     ///
     /// Uses the provided render delegate to create the fallback prims
@@ -151,12 +164,11 @@ private:
     };
 
     typedef std::unordered_map<SdfPath, _PrimInfo, SdfPath::Hash> _PrimMap;
-    typedef std::set<SdfPath> _PrimIDSet;
 
     struct _PrimTypeEntry
-    {
+   {
         _PrimMap         primMap;
-        _PrimIDSet       primIds;           // Primarily for sub-tree searching
+        Hd_SortedIds     primIds;   // Primarily for sub-tree searching
         PrimType        *fallbackPrim;
 
         _PrimTypeEntry()

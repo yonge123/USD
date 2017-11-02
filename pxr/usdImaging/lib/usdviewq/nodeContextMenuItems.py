@@ -21,7 +21,7 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
-from PySide import QtGui
+from qt import QtGui, QtWidgets
 from usdviewContextMenuItem import UsdviewContextMenuItem
 import os
 import sys
@@ -64,16 +64,16 @@ class NodeContextMenuItem(UsdviewContextMenuItem):
 
     def IsEnabled(self):
         return True
-	
+
     def IsSeparator(self):
         return False
-    	
+
     def GetText(self):
         return ""
 
     def RunCommand(self):
         return True
-	
+
 #
 # Puts a separator in the context menu
 #
@@ -104,7 +104,7 @@ class JumpToEnclosingModelItem(NodeContextMenuItem):
 
 #
 # Replace each selected prim with the Material it or its closest ancestor is
-# bound to. 
+# bound to.
 #
 class JumpToBoundMaterialMenuItem(NodeContextMenuItem):
 
@@ -124,7 +124,7 @@ class JumpToBoundMaterialMenuItem(NodeContextMenuItem):
 
     def GetText(self):
         return "Jump to Bound Material (%s)" % (self._material.GetName() if
-                                                self._material else 
+                                                self._material else
                                                 "no material bound")
     def RunCommand(self):
         self._mainWindow.jumpToBoundMaterialSelectedPrims()
@@ -169,7 +169,7 @@ class ToggleVisibilityMenuItem(NodeContextMenuItem):
 
     def IsEnabled(self):
         return self._imageable
-    
+
     def GetText(self):
         return "Make Invisible" if self._isVisible else "Make Visible"
 
@@ -191,7 +191,7 @@ class VisOnlyMenuItem(NodeContextMenuItem):
             if prim.IsA(UsdGeom.Imageable):
                 return True
         return False
-    
+
     def GetText(self):
         return "Vis Only"
 
@@ -202,7 +202,7 @@ class VisOnlyMenuItem(NodeContextMenuItem):
 # Remove any vis/invis authored on selected prims
 #
 class RemoveVisMenuItem(NodeContextMenuItem):
-    
+
     def IsEnabled(self):
         from common import HasSessionVis
         for prim in self._currentNodes:
@@ -232,7 +232,7 @@ class LoadOrUnloadMenuItem(NodeContextMenuItem):
 
     def IsEnabled(self):
         return self._loadable
-    
+
     def GetText(self):
         return "Unload" if self._loaded else "Load"
 
@@ -258,7 +258,7 @@ class CopyPrimPathMenuItem(NodeContextMenuItem):
         pathlist = [str(p.GetPath()) for p in self._currentNodes]
         pathStrings = '\n'.join(pathlist)
 
-        cb = QtGui.QApplication.clipboard()
+        cb = QtWidgets.QApplication.clipboard()
         cb.setText(pathStrings, QtGui.QClipboard.Selection )
         cb.setText(pathStrings, QtGui.QClipboard.Clipboard )
 
@@ -274,7 +274,7 @@ class CopyModelPathMenuItem(NodeContextMenuItem):
 
         self._modelPrim = GetEnclosingModelPrim(self._currentNodes[0]) if \
             len(self._currentNodes) == 1 else None
-    
+
     def IsEnabled(self):
         return self._modelPrim
 
@@ -284,7 +284,7 @@ class CopyModelPathMenuItem(NodeContextMenuItem):
 
     def RunCommand(self):
         modelPath = str(self._modelPrim.GetPath())
-        cb = QtGui.QApplication.clipboard()
+        cb = QtWidgets.QApplication.clipboard()
         cb.setText(modelPath, QtGui.QClipboard.Selection )
         cb.setText(modelPath, QtGui.QClipboard.Clipboard )
 
@@ -299,12 +299,12 @@ class IsolateCopyNodeMenuItem(NodeContextMenuItem):
 
     def GetText(self):
         return "Isolate Copy of Prim..."
-	
+
     def RunCommand(self):
         inFile = self._currentNodes[0].GetScene().GetUsdFile()
 
         guessOutFile = os.getcwd() + "/" + self._currentNodes[0].GetName() + "_copy.usd"
-        (outFile, _) = QtGui.QFileDialog.getSaveFileName(None,
+        (outFile, _) = QtWidgets.QFileDialog.getSaveFileName(None,
                                                          "Specify the Usd file to create",
                                                          guessOutFile,
                                                          'Usd files (*.usd)')
@@ -328,9 +328,9 @@ class IsolateCopyNodeMenuItem(NodeContextMenuItem):
     def IsEnabled(self):
         return len(self._currentNodes) == 1 and self._currentNodes[0].GetActive()
 
-	
+
 #
-# Launches usdview on the asset instantiated at the selected prim, as 
+# Launches usdview on the asset instantiated at the selected prim, as
 # defined by USD assetInfo present on the prim
 #
 class IsolateAssetMenuItem(NodeContextMenuItem):
@@ -353,7 +353,7 @@ class IsolateAssetMenuItem(NodeContextMenuItem):
                 if layer:
                     self._assetName = name
                     self._filePath = layer.realPath
-    
+
     def IsEnabled(self):
         return self._assetName
 

@@ -25,13 +25,8 @@
 #include "pxr/usd/usd/object.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
-#include "pxr/usd/usd/conversions.h"
 
 #include "pxr/base/tf/ostreamMethods.h"
-#include "pxr/base/tf/pyUtils.h"
-
-#include <boost/python/extract.hpp>
-#include <boost/python/object.hpp>
 
 PXR_NAMESPACE_OPEN_SCOPE
 

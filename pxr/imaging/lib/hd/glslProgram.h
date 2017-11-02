@@ -27,13 +27,13 @@
 #include "pxr/pxr.h"
 #include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
-#include "pxr/imaging/hd/resource.h"
+#include "pxr/imaging/hd/resourceGL.h"
 
 #include <boost/shared_ptr.hpp>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-
+class HdResourceRegistry;
 typedef boost::shared_ptr<class HdGLSLProgram> HdGLSLProgramSharedPtr;
 
 /// \class HdGLSLProgram
@@ -68,20 +68,21 @@ public:
     bool Validate() const;
 
     /// Returns HdResource of the program object.
-    HdResource const &GetProgram() const { return _program; }
+    HdResourceGL const &GetProgram() const { return _program; }
 
     /// Returns HdResource of the global uniform buffer object for this program.
-    HdResource const &GetGlobalUniformBuffer() const {
+    HdResourceGL const &GetGlobalUniformBuffer() const {
         return _uniformBuffer;
     }
 
     /// Convenience method to get a shared compute shader program
     HD_API
-    static HdGLSLProgramSharedPtr GetComputeProgram(TfToken const &shaderToken);
+    static HdGLSLProgramSharedPtr GetComputeProgram(TfToken const &shaderToken,
+        HdResourceRegistry *resourceRegistry);
 
 private:
-    HdResource _program;
-    HdResource _uniformBuffer;
+    HdResourceGL _program;
+    HdResourceGL _uniformBuffer;
 };
 
 

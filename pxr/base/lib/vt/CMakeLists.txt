@@ -16,7 +16,6 @@ pxr_library(vt
 
     PUBLIC_CLASSES
         array
-        arrayPyBuffer
         dictionary
         functions
         hash
@@ -24,18 +23,25 @@ pxr_library(vt
         streamOut
         types
         value
+
+    PYTHON_PUBLIC_CLASSES
+        arrayPyBuffer
         valueFromPython
+        pyDictionaryUtils
         wrapArray
 
     PUBLIC_HEADERS
         api.h
         traits.h
         operators.h
-        PRIVATE_CLASSES
-        PRIVATE_HEADERS
+    
+    PYTHON_PUBLIC_HEADERS
+        pyOperators.h
+
+    PRIVATE_HEADERS
         typeHeaders.h
 
-    CPPFILES
+    PYTHON_CPPFILES
         moduleDeps.cpp
 
     PYMODULE_CPPFILES
@@ -52,8 +58,8 @@ pxr_library(vt
         wrapDictionary.cpp
         wrapValue.cpp
 
-    PYTHON_FILES
-    __init__.py
+    PYMODULE_FILES
+        __init__.py
 )
 
 pxr_build_test(testVtCpp

@@ -37,7 +37,15 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 HdChangeTracker::HdChangeTracker() 
-    : _needsGarbageCollection(false)
+    : _rprimState()
+    , _instancerState()
+    , _taskState()
+    , _sprimState()
+    , _bprimState()
+    , _extComputationState()
+    , _generalState()
+    , _collectionState()
+    , _needsGarbageCollection(false)
     , _instancerRprimMap()
     , _varyingStateVersion(1)
     , _indexVersion(0)
@@ -99,9 +107,9 @@ HdChangeTracker::MarkRprimDirty(SdfPath const& id, HdDirtyBits bits)
     if (!TF_VERIFY(it != _rprimState.end(), "%s\n", id.GetText()))
         return;
 
-    // used for force-sync on new repr. don't touch changeCount
-    if (bits == HdChangeTracker::ForceSync) {
-        it->second |= HdChangeTracker::ForceSync;
+    // used ensure the repr has been created. don't touch changeCount
+    if (bits == HdChangeTracker::InitRepr) {
+        it->second |= HdChangeTracker::InitRepr;
         return;
     }
 
@@ -365,6 +373,53 @@ HdChangeTracker::MarkBprimClean(SdfPath const& id, HdDirtyBits newBits)
     it->second = newBits;
 }
 
+// ---------------------------------------------------------------------- //
+/// \name ExtComputation Object Tracking
+// ---------------------------------------------------------------------- //
+void
+HdChangeTracker::ExtComputationInserted(SdfPath const& id,
+                                        HdDirtyBits initialDirtyState)
+{
+    TF_DEBUG(HD_EXT_COMPUTATION_ADDED).Msg("ExtComputation Added: %s\n",
+                                           id.GetText());
+    _extComputationState[id] = initialDirtyState;
+}
+
+void
+HdChangeTracker::ExtComputationRemoved(SdfPath const& id)
+{
+    TF_DEBUG(HD_EXT_COMPUTATION_REMOVED).Msg("ExtComputation Removed: %s\n",
+                                             id.GetText());
+    _extComputationState.erase(id);
+}
+
+void
+HdChangeTracker::MarkExtComputationDirty(SdfPath const& id, HdDirtyBits bits)
+{
+    _IDStateMap::iterator it = _extComputationState.find(id);
+    if (!TF_VERIFY(it != _extComputationState.end()))
+        return;
+    it->second = it->second | bits;
+}
+
+HdDirtyBits
+HdChangeTracker::GetExtComputationDirtyBits(SdfPath const& id) const
+{
+    _IDStateMap::const_iterator it = _extComputationState.find(id);
+    if (!TF_VERIFY(it != _extComputationState.end()))
+        return Clean;
+    return it->second;
+}
+
+void
+HdChangeTracker::MarkExtComputationClean(SdfPath const& id, HdDirtyBits newBits)
+{
+    _IDStateMap::iterator it = _extComputationState.find(id);
+    if (!TF_VERIFY(it != _extComputationState.end()))
+        return;
+
+    it->second =  newBits;
+}
 
 // -------------------------------------------------------------------------- //
 /// \name RPrim Object Tracking
@@ -687,9 +742,9 @@ HdChangeTracker::MarkAllCollectionsDirty()
 }
 
 unsigned
-HdChangeTracker::GetCollectionVersion(TfToken const& collectionName)
+HdChangeTracker::GetCollectionVersion(TfToken const& collectionName) const
 {
-    _CollectionStateMap::iterator it = _collectionState.find(collectionName);
+    _CollectionStateMap::const_iterator it = _collectionState.find(collectionName);
     if (!(it != _collectionState.end())) {
         TF_CODING_ERROR("Change Tracker unable to find collection %s",
                         collectionName.GetText());
@@ -699,7 +754,7 @@ HdChangeTracker::GetCollectionVersion(TfToken const& collectionName)
 }
 
 unsigned
-HdChangeTracker::GetVisibilityChangeCount()
+HdChangeTracker::GetVisibilityChangeCount() const
 {
     return _visChangeCount;
 }
@@ -772,8 +827,8 @@ HdChangeTracker::StringifyDirtyBits(HdDirtyBits dirtyBits)
     if (dirtyBits & Varying) {
         ss << "<Varying> ";
     }
-    if (dirtyBits & ForceSync) {
-        ss << "<ForceSync> ";
+    if (dirtyBits & InitRepr) {
+        ss << "<InitRepr> ";
     }
     if (dirtyBits & DirtyPrimID) {
         ss << " PrimID ";
@@ -790,8 +845,8 @@ HdChangeTracker::StringifyDirtyBits(HdDirtyBits dirtyBits)
     if (dirtyBits & DirtyPrimVar) {
         ss << "PrimVar ";
     }
-    if (dirtyBits & DirtySurfaceShader) {
-        ss << "SurfaceShader ";
+    if (dirtyBits & DirtyMaterialId) {
+        ss << "MaterialId ";
     }
     if (dirtyBits & DirtyTopology) {
         ss << "Topology ";

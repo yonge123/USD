@@ -238,7 +238,8 @@ bool
 GlfGLSLFX::_ProcessFile(string const & filePath, _ParseContext & context)
 {
     if (!TfPathExists(filePath)) {
-        TF_RUNTIME_ERROR("GlfGLSLFX::_ProcessFile. File doesn't exist: \"%s\"\n", filePath.c_str());
+        // XXX:validation
+        TF_WARN("File doesn't exist: \"%s\"\n", filePath.c_str());
         return false;
     }
 
@@ -259,6 +260,9 @@ GlfGLSLFX::_ProcessInput(std::istream * input,
                          _ParseContext & context)
 {
     while (getline(*input, context.currentLine)) {
+        // trim to avoid issues with cross-platform line endings
+        context.currentLine = TfStringTrimRight(context.currentLine);
+
         // increment the line number
         ++context.lineNo;
 

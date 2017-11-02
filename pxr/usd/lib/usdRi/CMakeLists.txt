@@ -19,7 +19,6 @@ pxr_library(usdRi
         lightAPI
         lightFilterAPI
         lightPortalAPI
-        lookAPI
         materialAPI
         pxrAovLight
         pxrBarnLightFilter
@@ -35,6 +34,7 @@ pxr_library(usdRi
         risPattern
         rmanUtilities
         rslShader
+        splineAPI
         statements
         textureAPI
         tokens
@@ -42,8 +42,10 @@ pxr_library(usdRi
     PUBLIC_HEADERS
         api.h
 
-    CPPFILES
+    PYTHON_CPPFILES
         moduleDeps.cpp
+
+    CPPFILES
         typeUtils
 
     PYMODULE_CPPFILES
@@ -51,7 +53,6 @@ pxr_library(usdRi
         wrapLightAPI.cpp
         wrapLightFilterAPI.cpp
         wrapLightPortalAPI.cpp
-        wrapLookAPI.cpp
         wrapMaterialAPI.cpp
         wrapPxrAovLight.cpp
         wrapPxrBarnLightFilter.cpp
@@ -67,26 +68,35 @@ pxr_library(usdRi
         wrapRisPattern.cpp
         wrapRmanUtilities.cpp
         wrapRslShader.cpp
+        wrapSplineAPI.cpp
         wrapStatements.cpp
         wrapTextureAPI.cpp
         wrapTokens.cpp
 
-    PYTHON_FILES
+    PYMODULE_FILES
         __init__.py
 
     RESOURCE_FILES
         plugInfo.json
         generatedSchema.usda
+        schema.usda:usdRi/schema.usda
 )
 
 pxr_test_scripts(
     testenv/testUsdRiSchemata.py
+    testenv/testUsdRiSplineAPI.py
     testenv/testUsdRiUtilities.py
 )
 
 pxr_register_test(testUsdRiSchemata
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdRiSchemata"  
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdRiSplineAPI
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdRiSplineAPI"  
     EXPECTED_RETURN_CODE 0
 )
 

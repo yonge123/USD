@@ -13,13 +13,9 @@ pxr_library(usdShade
         connectableAPI
         debugCodes
         input
-        interfaceAttribute
         look
         material
         output
-        parameter
-        pShader
-        pShaderUtils
         shader
         nodeGraph
         tokens
@@ -28,30 +24,28 @@ pxr_library(usdShade
     PUBLIC_HEADERS
         api.h
 
-    CPPFILES
+    PYTHON_CPPFILES
         moduleDeps.cpp
 
     PYMODULE_CPPFILES
         module.cpp
         wrapConnectableAPI.cpp
         wrapInput.cpp
-        wrapInterfaceAttribute.cpp
         wrapLook.cpp
         wrapMaterial.cpp
         wrapOutput.cpp
-        wrapParameter.cpp
-        wrapPShader.cpp
         wrapShader.cpp
         wrapNodeGraph.cpp
         wrapTokens.cpp
         wrapUtils.cpp
 
-    PYTHON_FILES
+    PYMODULE_FILES
         __init__.py
 
     RESOURCE_FILES
         plugInfo.json
         generatedSchema.usda
+        schema.usda:usdShade/schema.usda
 )
 
 pxr_test_scripts(
@@ -59,6 +53,7 @@ pxr_test_scripts(
     testenv/testUsdShadeConnectability.py
     testenv/testUsdShadeInterfaceInputConsumers.py
     testenv/testUsdShadeMaterialFaceSet.py
+    testenv/testUsdShadeMaterialBindFaceSubset.py
     testenv/testUsdShadeMaterialAuthoring.py
     testenv/testUsdShadeMaterialBaseMaterial.py
     testenv/testUsdShadeMaterialSpecializesBaseComposition.py
@@ -71,6 +66,10 @@ pxr_install_test_dir(
     DEST testUsdShadeMaterialFaceSet
 )
 
+pxr_install_test_dir(
+    SRC testenv/testUsdShadeMaterialBindFaceSubset
+    DEST testUsdShadeMaterialBindFaceSubset
+)
 pxr_install_test_dir(
     SRC testenv/testUsdShadeMaterialAuthoring
     DEST testUsdShadeMaterialAuthoring
@@ -107,6 +106,13 @@ pxr_register_test(testUsdShadeMaterialFaceSet
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdShadeMaterialFaceSet"
     DIFF_COMPARE SphereWithFaceSets.usda
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdShadeMaterialBindFaceSubset
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdShadeMaterialBindFaceSubset"
+    DIFF_COMPARE SphereWithMaterialBind.usda
     EXPECTED_RETURN_CODE 0
 )
 

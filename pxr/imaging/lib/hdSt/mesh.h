@@ -78,6 +78,13 @@ protected:
                  TfToken const &reprName,
                  HdDirtyBits *dirtyBitsState) override;
 
+    virtual
+    HdShaderCodeSharedPtr _GetShaderCode(HdSceneDelegate *sceneDelegate,
+                                         HdShader const *shader) const override;
+
+    HdDirtyBits _PropagateDirtyBits(
+        HdDirtyBits dirtyBits);
+
     bool _UsePtexIndices(const HdRenderIndex &renderIndex) const;
 
     void _UpdateDrawItem(HdSceneDelegate *sceneDelegate,
@@ -86,20 +93,16 @@ protected:
                          HdMeshReprDesc desc,
                          bool requireSmoothNormals);
 
-    void _UpdateDrawItemGeometricShader(HdRenderIndex &renderIndex,
+    void _UpdateDrawItemGeometricShader(HdSceneDelegate *sceneDelegate,
                                         HdDrawItem *drawItem,
-                                        HdMeshReprDesc desc);
-
-    void _SetGeometricShaders(HdRenderIndex &renderIndex);
-
-    void _ResetGeometricShaders();
+                                        const HdMeshReprDesc &desc);
 
     void _PopulateTopology(HdSceneDelegate *sceneDelegate,
                            HdDrawItem *drawItem,
                            HdDirtyBits *dirtyBits,
                            HdMeshReprDesc desc);
 
-    void _PopulateAdjacency();
+    void _PopulateAdjacency(HdResourceRegistrySharedPtr const &resourceRegistry);
 
     void _PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
                                  HdDrawItem *drawItem,
@@ -119,7 +122,7 @@ protected:
     int _GetRefineLevelForDesc(HdMeshReprDesc desc);
 
     virtual HdDirtyBits _GetInitialDirtyBits() const override;
-    HdDirtyBits _PropagateDirtyBits(HdDirtyBits bits) const override;
+    virtual HdDirtyBits _PropagateDirtyBits(HdDirtyBits bits) const override;
 
     virtual void _InitRepr(TfToken const &reprName,
                            HdDirtyBits *dirtyBits) override;
@@ -131,18 +134,18 @@ private:
         InstancePrimVar // has to be at the very end
     };
 
-    enum DirtyBits {
+    enum DirtyBits : HdDirtyBits {
         DirtySmoothNormals  = HdChangeTracker::CustomBitsBegin,
         DirtyIndices        = (DirtySmoothNormals << 1),
         DirtyHullIndices    = (DirtyIndices       << 1),
-        DirtyPointsIndices  = (DirtyHullIndices   << 1),
-        DirtyNewRepr        = (DirtyPointsIndices << 1),
+        DirtyPointsIndices  = (DirtyHullIndices   << 1)
     };
 
     HdSt_MeshTopologySharedPtr _topology;
     Hd_VertexAdjacencySharedPtr _vertexAdjacency;
 
     HdTopology::ID _topologyId;
+    HdTopology::ID _vertexPrimvarId;
     int _customDirtyBitsInUse;
     bool _doubleSided;
     bool _packedNormals;

@@ -35,23 +35,22 @@ class GusdGroupBaseWrapper : public GusdPrimWrapper
 public:
     GusdGroupBaseWrapper();
     GusdGroupBaseWrapper( 
-            const UsdTimeCode &time, 
-            const GusdPurposeSet& purposes );
+            UsdTimeCode time, 
+            GusdPurposeSet purposes );
     GusdGroupBaseWrapper( const GusdGroupBaseWrapper& in );
     virtual ~GusdGroupBaseWrapper();
 
     virtual bool unpack(
-        GU_Detail&              gdr,
-        const TfToken&          fileName,
-        const SdfPath&          primPath,
-        const UT_Matrix4D&      xform,
-        fpreal                  frame,
-        const char *            viewportLod,
-        const GusdPurposeSet&   purposes ) override;
+        GU_Detail&          gdr,
+        const UT_StringRef& fileName,
+        const SdfPath&      primPath,
+        const UT_Matrix4D&  xform,
+        fpreal              frame,
+        const char *        viewportLod,
+        GusdPurposeSet      purposes ) override;
 
 protected:
     bool refineGroup( 
-            const GusdUSD_StageProxyHandle& stage,
             const UsdPrim&                  prim,
             GT_Refine&                      refiner,
             const GT_RefineParms*           parms=NULL) const;
@@ -62,6 +61,12 @@ protected:
             const UT_Matrix4D&        houXform,
             const GusdContext&        ctxt,
             GusdSimpleXformCache&     xformCache );
+
+    void updateGroupActiveFromGTPrim( 
+            const UsdGeomImageable&     destPrim,
+            const GT_PrimitiveHandle&   sourcePrim,
+            UsdTimeCode                 time );
+
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

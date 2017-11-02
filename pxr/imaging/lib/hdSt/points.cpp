@@ -26,6 +26,7 @@
 
 #include "pxr/imaging/hdSt/points.h"
 #include "pxr/imaging/hdSt/pointsShaderKey.h"
+#include "pxr/imaging/hdSt/instancer.h"
 
 #include "pxr/base/gf/vec2i.h"
 #include "pxr/base/tf/getenv.h"
@@ -92,11 +93,20 @@ HdStPoints::_UpdateDrawItem(HdSceneDelegate *sceneDelegate,
     _PopulateConstantPrimVars(sceneDelegate, drawItem, dirtyBits);
 
     /* INSTANCE PRIMVARS */
-    _PopulateInstancePrimVars(sceneDelegate, drawItem, dirtyBits,
-                              InstancePrimVar);
+    if (!GetInstancerId().IsEmpty()) {
+        HdStInstancer *instancer = static_cast<HdStInstancer*>(
+            sceneDelegate->GetRenderIndex().GetInstancer(GetInstancerId()));
+        if (TF_VERIFY(instancer)) {
+            instancer->PopulateDrawItem(drawItem, &_sharedData,
+                dirtyBits, InstancePrimVar);
+        }
+    }
 
     HdSt_PointsShaderKey shaderKey;
-    drawItem->SetGeometricShader(Hd_GeometricShader::Create(shaderKey));
+    drawItem->SetGeometricShader(
+        Hd_GeometricShader::Create(
+            shaderKey, 
+            sceneDelegate->GetRenderIndex().GetResourceRegistry()));
 
     /* PRIMVAR */
     if (HdChangeTracker::IsAnyPrimVarDirty(*dirtyBits, id)) {
@@ -138,7 +148,7 @@ HdStPoints::_GetRepr(HdSceneDelegate *sceneDelegate,
                             dirtyBits);
         }
 
-        *dirtyBits &= ~DirtyNewRepr;
+        *dirtyBits &= ~HdChangeTracker::NewRepr;
     }
 
     return it->second;
@@ -153,7 +163,8 @@ HdStPoints::_PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
     HF_MALLOC_TAG_FUNCTION();
 
     SdfPath const& id = GetId();
-    HdResourceRegistry *resourceRegistry = &HdResourceRegistry::GetInstance();
+    HdResourceRegistrySharedPtr const &resourceRegistry = 
+        sceneDelegate->GetRenderIndex().GetResourceRegistry();
 
     // The "points" attribute is expected to be in this list.
     TfTokenVector primVarNames = GetPrimVarVertexNames(sceneDelegate);
@@ -229,13 +240,14 @@ HdDirtyBits
 HdStPoints::_GetInitialDirtyBits() const
 {
     HdDirtyBits mask = HdChangeTracker::Clean
+        | HdChangeTracker::InitRepr
         | HdChangeTracker::DirtyExtent
         | HdChangeTracker::DirtyInstanceIndex
         | HdChangeTracker::DirtyPoints
         | HdChangeTracker::DirtyPrimID
         | HdChangeTracker::DirtyPrimVar
         | HdChangeTracker::DirtyRepr
-        | HdChangeTracker::DirtySurfaceShader
+        | HdChangeTracker::DirtyMaterialId
         | HdChangeTracker::DirtyTransform
         | HdChangeTracker::DirtyVisibility
         | HdChangeTracker::DirtyWidths
@@ -270,7 +282,7 @@ HdStPoints::_InitRepr(TfToken const &reprName,
             }
         }
 
-        *dirtyBits |= DirtyNewRepr;
+        *dirtyBits |= HdChangeTracker::NewRepr;
     }
 
 }

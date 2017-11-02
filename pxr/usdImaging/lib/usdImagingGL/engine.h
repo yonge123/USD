@@ -35,7 +35,6 @@
 #include "pxr/imaging/glf/simpleMaterial.h"
 
 #include "pxr/base/tf/declarePtrs.h"
-#include "pxr/base/tf/type.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/usd/timeCode.h"
 
@@ -200,6 +199,9 @@ public:
     virtual void SetLightingState(GlfSimpleLightingContextPtr const &src);
 
     /// Set lighting state
+    /// Derived classes should ensure that passing an empty lights
+    /// vector disables lighting.
+    /// \param lights is the set of lights to use, or empty to disable lighting.
     USDIMAGINGGL_API
     virtual void SetLightingState(GlfSimpleLightVector const &lights,
                                   GlfSimpleMaterial const &material,
@@ -357,14 +359,18 @@ public:
     USDIMAGINGGL_API
     virtual bool IsConverged() const;
 
-    /// Return the typevector of available render-graph delegate plugins.
+    /// Return the vector of available render-graph delegate plugins.
     USDIMAGINGGL_API
-    virtual std::vector<TfType> GetRendererPlugins();
+    virtual TfTokenVector GetRendererPlugins() const;
 
-    /// Set the current render-graph delegate to \p type.
-    /// the plugin for the type will be loaded if not yet.
+    /// Return the user-friendly description of a renderer plugin.
     USDIMAGINGGL_API
-    virtual bool SetRendererPlugin(TfType const &type);
+    virtual std::string GetRendererPluginDesc(TfToken const &id) const;
+
+    /// Set the current render-graph delegate to \p id.
+    /// the plugin will be loaded if it's not yet.
+    USDIMAGINGGL_API
+    virtual bool SetRendererPlugin(TfToken const &id);
 
     /// Returns GPU resource allocation info
     USDIMAGINGGL_API

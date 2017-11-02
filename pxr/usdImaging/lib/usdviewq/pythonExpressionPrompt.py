@@ -21,7 +21,7 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
-from PySide import QtGui, QtCore
+from qt import QtCore, QtWidgets
 from pythonExpressionPromptUI import Ui_PythonExpressionPrompt
 from prettyPrint import prettyPrint
 
@@ -32,33 +32,29 @@ import sys, copy, pythonInterpreter
 # python prompt and returning the last value or "_" upon confirmation.
 # The widget can be invoked using 'getValueFromPython' which will return
 # the value of "_"
-class PythonExpressionPrompt(QtGui.QDialog):
+class PythonExpressionPrompt(QtWidgets.QDialog):
 
     def __init__(self, parent, exception = None, val = None):
-        QtGui.QDialog.__init__(self, parent)
+        QtWidgets.QDialog.__init__(self, parent)
         self._ui = Ui_PythonExpressionPrompt()
         self._ui.setupUi(self)
         self._mainWindow = parent._mainWindow     # get mainWindow instance
         self._val = val         # this is the object that is currently authored
         self._oldValID = -1     # this is the ID of the current object at "_"
-        
+
         self._setupConsole()    # get or create a python console widget
 
         # if a exception was passed as an argument, raise it so it prints.
         if exception is not None:
             print >> sys.stderr, exception
 
-        QtCore.QObject.connect(self._ui.buttonBox.button(
-                               QtGui.QDialogButtonBox.Apply),
-                               QtCore.SIGNAL('clicked()'),
-                               self,
-                               QtCore.SLOT('accept()'))
+        self._ui.buttonBox.button(QtWidgets.QDialogButtonBox.Apply).clicked.connect(self.accept)
 
     def _setupConsole(self):
         # get or create an instance of Myconsole
         if Myconsole.instance is None:
             Myconsole.instance = Myconsole(self)
-        
+
         # setting the parent places the Myconsole widget inside this one
         Myconsole.instance.setParent(self)
 
@@ -73,9 +69,7 @@ class PythonExpressionPrompt(QtGui.QDialog):
         self.updatePreview()    # update the preview box
 
         # we want to update the preview box whenver the value of "_" changes
-        QtCore.QObject.connect(self._console,
-                               QtCore.SIGNAL('textChanged()'),
-                               self.updatePreview)
+        self._console.textChanged.connect(self.updatePreview)
 
     def updatePreview(self):
         # called when the text in the interpreter changes, but the preview is
@@ -91,20 +85,20 @@ class PythonExpressionPrompt(QtGui.QDialog):
         # called when clicking the Save button
         # grab the value of "_" and save it in self._val
         self._val = self._console.getLastValue()
-        QtGui.QDialog.accept(self)
+        QtWidgets.QDialog.accept(self)
 
     def reject(self):
         # called when clicking the Close Without Saving button
         self._val = None
-        QtGui.QDialog.reject(self)
+        QtWidgets.QDialog.reject(self)
 
     def exec_(self):
         # called to "execute" the dialog process
         # we override this function to make sure to return I/O to stdin and
         # stdout, and make exec_ return the last value of "_"
-        QtGui.QDialog.exec_(self)
+        QtWidgets.QDialog.exec_(self)
         return self._val
-    
+
     def __del__(self):
         # we have to remove the parent from the "Myconsole" instance
         # because the parent (self) is about to be deleted.
@@ -138,6 +132,7 @@ class Myconsole(interpreterView):
         interpreterView.__init__(self, parent)
 
         from pxr import Usd, UsdGeom, Gf, Tf
+        from qt import QtCore, QtGui, QtWidgets
 
         # Make a _Controller
         self._controller = pythonInterpreter.Controller(

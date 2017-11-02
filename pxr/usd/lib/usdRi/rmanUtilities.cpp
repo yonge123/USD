@@ -64,22 +64,18 @@ UsdRiConvertFromRManInterpolateBoundary(int i)
 int
 UsdRiConvertToRManFaceVaryingLinearInterpolation(TfToken const& token)
 { 
-    if(token == UsdGeomTokens->bilinear 
-       || token == UsdGeomTokens->all) {
+    if(token == UsdGeomTokens->all) {
         return 0;
     }
-    else if(token == UsdGeomTokens->edgeAndCorner 
-            || token == UsdGeomTokens->cornersOnly
+    else if(token == UsdGeomTokens->cornersOnly
             || token == UsdGeomTokens->cornersPlus1
             || token == UsdGeomTokens->cornersPlus2) {
         return 1;
     }
-    else if(token == UsdGeomTokens->edgeOnly
-            || token == UsdGeomTokens->none) {
+    else if(token == UsdGeomTokens->none) {
         return 2;
     }
-    else if(token == UsdGeomTokens->alwaysSharp
-            || token == UsdGeomTokens->boundaries) {
+    else if(token == UsdGeomTokens->boundaries) {
         return 3;
     }
 
@@ -105,6 +101,37 @@ UsdRiConvertFromRManFaceVaryingLinearInterpolation(int i)
     default:
         TF_CODING_ERROR("Invalid FaceVaryingLinearInterpolation int: %d", i);
         return UsdGeomTokens->none;
+    }
+}
+
+int
+UsdRiConvertToRManTriangleSubdivisionRule(TfToken const& token)
+{
+    // XXX A value of 2 is needed in order for the smoothing algorithm to work.
+    if(token == UsdGeomTokens->catmullClark) {
+        return 0;
+    }
+    else if(token == UsdGeomTokens->smooth)
+        return 2;
+    else{
+        TF_CODING_ERROR("Invalid TriangleSubdivisionRule Token: %s",
+            token.GetText());
+        return 0;
+    }
+}
+
+TfToken const&
+UsdRiConvertFromRManTriangleSubdivisionRule(int i)
+{
+    // XXX A value of 2 is needed in order for the smoothing algorithm to work.
+    switch(i){
+    case 0:
+        return UsdGeomTokens->catmullClark;
+    case 2:
+        return UsdGeomTokens->smooth;
+    default:
+        TF_CODING_ERROR("Invalid TriangleSubdivisionRule int: %d", i);
+        return UsdGeomTokens->catmullClark;
     }
 }
 

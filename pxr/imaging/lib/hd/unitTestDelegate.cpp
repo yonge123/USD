@@ -169,7 +169,7 @@ Hd_UnitTestDelegate::AddBasisCurves(SdfPath const &id,
 
     HdRenderIndex& index = GetRenderIndex();
     SdfPath shaderId;
-    TfMapLookup(_surfaceShaderBindings, id, &shaderId);
+    TfMapLookup(_shaderBindings, id, &shaderId);
     index.InsertRprim(HdPrimTypeTokens->basisCurves, this, id, instancerId);
 
     _curves[id] = _Curves(points, curveVertexCounts, 
@@ -195,7 +195,7 @@ Hd_UnitTestDelegate::AddPoints(SdfPath const &id,
 
     HdRenderIndex& index = GetRenderIndex();
     SdfPath shaderId;
-    TfMapLookup(_surfaceShaderBindings, id, &shaderId);
+    TfMapLookup(_shaderBindings, id, &shaderId);
     index.InsertRprim(HdPrimTypeTokens->points, this, id, instancerId);
 
     _points[id] = _Points(points,
@@ -246,13 +246,14 @@ Hd_UnitTestDelegate::SetInstancerProperties(SdfPath const &id,
 }
 
 void
-Hd_UnitTestDelegate::AddSurfaceShader(SdfPath const &id,
-                               std::string const &source,
+Hd_UnitTestDelegate::AddShader(SdfPath const &id,
+                               std::string const &sourceSurface,
+                               std::string const &sourceDisplacement,
                                HdShaderParamVector const &params)
 {
     HdRenderIndex& index = GetRenderIndex();
     index.InsertSprim(HdPrimTypeTokens->shader, this, id);
-    _surfaceShaders[id] = _SurfaceShader(source, params);
+    _shaders[id] = _Shader(sourceSurface, sourceDisplacement, params);
 }
 
 void
@@ -601,31 +602,29 @@ Hd_UnitTestDelegate::GetInstancerTransform(SdfPath const& instancerId,
 std::string
 Hd_UnitTestDelegate::GetSurfaceShaderSource(SdfPath const &shaderId)
 {
-    if (_SurfaceShader *shader = TfMapLookupPtr(_surfaceShaders, shaderId)) {
-        return shader->source;
+    if (_Shader *shader = TfMapLookupPtr(_shaders, shaderId)) {
+        return shader->sourceSurface;
     } else {
         return TfToken();
     }
 }
 
 /*virtual*/
-TfTokenVector
-Hd_UnitTestDelegate::GetSurfaceShaderParamNames(SdfPath const &shaderId)
+std::string
+Hd_UnitTestDelegate::GetDisplacementShaderSource(SdfPath const &shaderId)
 {
-    TfTokenVector names;
-    if (_SurfaceShader *shader = TfMapLookupPtr(_surfaceShaders, shaderId)) {
-        TF_FOR_ALL(paramIt, shader->params) {
-            names.push_back(TfToken(paramIt->GetName()));
-        }
+    if (_Shader *shader = TfMapLookupPtr(_shaders, shaderId)) {
+        return shader->sourceDisplacement;
+    } else {
+        return TfToken();
     }
-    return names;
 }
 
 /*virtual*/
 HdShaderParamVector
 Hd_UnitTestDelegate::GetSurfaceShaderParams(SdfPath const &shaderId)
 {
-    if (_SurfaceShader *shader = TfMapLookupPtr(_surfaceShaders, shaderId)) {
+    if (_Shader *shader = TfMapLookupPtr(_shaders, shaderId)) {
         return shader->params;
     }
     
@@ -637,7 +636,7 @@ VtValue
 Hd_UnitTestDelegate::GetSurfaceShaderParamValue(SdfPath const &shaderId, 
                               TfToken const &paramName)
 {
-    if (_SurfaceShader *shader = TfMapLookupPtr(_surfaceShaders, shaderId)) {
+    if (_Shader *shader = TfMapLookupPtr(_shaders, shaderId)) {
         TF_FOR_ALL(paramIt, shader->params) {
             if (paramIt->GetName() == paramName)
                 return paramIt->GetFallbackValue();
@@ -756,7 +755,7 @@ Hd_UnitTestDelegate::Get(SdfPath const& id, TfToken const& key)
         }
     } else if (key == HdShaderTokens->surfaceShader) {
         SdfPath shaderId;
-        TfMapLookup(_surfaceShaderBindings, id, &shaderId);
+        TfMapLookup(_shaderBindings, id, &shaderId);
 
         return VtValue(shaderId);
     }
@@ -905,22 +904,6 @@ Hd_UnitTestDelegate::GetPrimVarInstanceNames(SdfPath const &id)
         names.push_back(_tokens->translate);
     }
     return names;
-}
-
-/*virtual*/
-int
-Hd_UnitTestDelegate::GetPrimVarDataType(SdfPath const& id, TfToken const& key)
-{
-    HD_TRACE_FUNCTION();
-    return 1;
-}
-
-/*virtual*/
-int
-Hd_UnitTestDelegate::GetPrimVarComponents(SdfPath const& id, TfToken const& key)
-{
-    HD_TRACE_FUNCTION();
-    return 1;
 }
 
 void
@@ -1461,19 +1444,19 @@ Hd_UnitTestDelegate::PopulateBasicTestSet()
     // non-quads
     {
         dmat.SetTranslate(GfVec3d(xPos, -3.0, 0.0));
-        AddPolygons(SdfPath("nonquads1"), GfMatrix4f(dmat),
+        AddPolygons(SdfPath("/nonquads1"), GfMatrix4f(dmat),
                              Hd_UnitTestDelegate::CONSTANT);
 
         dmat.SetTranslate(GfVec3d(xPos,  0.0, 0.0));
-        AddPolygons(SdfPath("nonquads2"), GfMatrix4f(dmat),
+        AddPolygons(SdfPath("/nonquads2"), GfMatrix4f(dmat),
                              Hd_UnitTestDelegate::UNIFORM);
 
         dmat.SetTranslate(GfVec3d(xPos,  3.0, 0.0));
-        AddPolygons(SdfPath("nonquads3"), GfMatrix4f(dmat),
+        AddPolygons(SdfPath("/nonquads3"), GfMatrix4f(dmat),
                              Hd_UnitTestDelegate::VERTEX);
 
         dmat.SetTranslate(GfVec3d(xPos,  6.0, 0.0));
-        AddPolygons(SdfPath("nonquads4"), GfMatrix4f(dmat),
+        AddPolygons(SdfPath("/nonquads4"), GfMatrix4f(dmat),
                              Hd_UnitTestDelegate::FACEVARYING);
 
         xPos += 3.0;

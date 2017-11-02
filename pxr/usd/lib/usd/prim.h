@@ -45,9 +45,9 @@
 #include <boost/iterator/iterator_adaptor.hpp>
 #include <boost/mpl/assert.hpp>
 #include <boost/range/iterator_range.hpp>
-#include <boost/type_traits/is_base_of.hpp>
 
 #include <string>
+#include <type_traits>
 #include <vector>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -396,7 +396,7 @@ public:
     /// from schema \c T.
     template <typename T>
     bool IsA() const {
-        BOOST_MPL_ASSERT_MSG((boost::is_base_of<UsdSchemaBase, T>::value),
+        BOOST_MPL_ASSERT_MSG((std::is_base_of<UsdSchemaBase, T>::value),
                              Provided_type_must_derive_UsdSchemaBase,
                              (T));
         return _IsA(TfType::Find<T>());
@@ -532,6 +532,15 @@ public:
     USD_API
     UsdPrim GetFilteredNextSibling(
         const Usd_PrimFlagsPredicate &predicate) const;
+        
+    /// Returns true if the prim is the pseudo root.  
+    ///
+    /// Equivalent to 
+    /// \code
+    /// prim.GetPath() == SdfPath::AbsoluteRootPath()
+    /// \endcode
+    USD_API
+    bool IsPseudoRoot() const;
 
     // --------------------------------------------------------------------- //
     /// \name Variants 
@@ -1005,7 +1014,7 @@ private:
     friend class UsdPrimRange;
     friend class Usd_PrimData;
     friend class Usd_PrimFlagsPredicate;
-    friend class UsdPrim_RelTargetFinder;
+    friend struct UsdPrim_RelTargetFinder;
     friend struct UsdPrim_AttrConnectionFinder;
 
     // Prim constructor.

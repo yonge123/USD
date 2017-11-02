@@ -24,8 +24,9 @@
 #include "packedUsdWrapper.h"
 
 #include "pxr/usd/usd/variantSets.h"
+#include "pxr/base/tf/staticTokens.h"
 
-#include "gusd/Context.h"
+#include "gusd/context.h"
 
 #include "GT_PackedUSD.h"
 #include "GU_PackedUSD.h"
@@ -36,6 +37,11 @@ using std::cout;
 using std::cerr;
 using std::endl;
 using std::string;
+
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    (ReferencedPath)
+);
 
 GusdPackedUsdWrapper::GusdPackedUsdWrapper(
         const UsdStagePtr& stage,
@@ -87,7 +93,7 @@ defineForWrite(
         const SdfPath& path,
         const GusdContext& ctxt)
 {
-    return new GusdPackedUsdWrapper( stage, path, ctxt.overlayGeo );
+    return new GusdPackedUsdWrapper( stage, path, ctxt.writeOverlay );
 }
 
 bool GusdPackedUsdWrapper::
@@ -104,21 +110,6 @@ redefine(const UsdStagePtr& stage,
     m_primRefForWrite = stage->DefinePrim( path );
     clearCaches();
     return true;
-}
-
-const UsdGeomImageable 
-GusdPackedUsdWrapper::getUsdPrimForRead(
-    GusdUSD_ImageableHolder::ScopedLock &lock) const
-{
-    // obtain first lock to get geomtry as UsdGeomMesh.
-    GusdUSD_PrimHolder::ScopedReadLock innerLock;
-    innerLock.Acquire( m_primRefForRead );
-
-    // Build new holder after casting to imageable
-    GusdUSD_ImageableHolder tmp( UsdGeomImageable( (*innerLock).GetPrim() ),
-                                 m_primRefForRead.GetLock() );
-    lock.Acquire(tmp, /*write*/false);
-    return *lock;
 }
 
 bool GusdPackedUsdWrapper::
@@ -200,7 +191,7 @@ GusdPackedUsdWrapper::updateFromGTPrim(
         return false;
     }
 
-    if( !ctxt.overlayGeo ) {
+    if( !ctxt.writeOverlay ) {
 
         string fileName = gtPackedUSD->getAuxFileName().toStdString();
         if( fileName.empty() )
@@ -230,7 +221,7 @@ GusdPackedUsdWrapper::updateFromGTPrim(
         SdfLayerOffset layerOffset = SdfLayerOffset(usdTimeOffset, usdTimeScale);
 
         // Add the reference. Layer offset will only appear if not default values.
-        m_primRefForWrite.GetReferences().AppendReference(fileName, rootPath, layerOffset );
+        m_primRefForWrite.GetReferences().AddReference(fileName, rootPath, layerOffset );
 
         // Set variant selections.
         if(ctxt.authorVariantSelections &&
@@ -263,7 +254,7 @@ GusdPackedUsdWrapper::updateFromGTPrim(
         // for building point instancers.
         if( relPath != SdfPath::ReflexiveRelativePath() ) {
             m_primRefForWrite.CreateAttribute(
-                                TfToken("ReferencedPath"),
+                                _tokens->ReferencedPath,
                                 SdfValueTypeNames->String,
                                 SdfVariabilityUniform)
                                     .Set(relPath.GetString());
@@ -273,24 +264,23 @@ GusdPackedUsdWrapper::updateFromGTPrim(
             UsdGeomImageable( m_primRefForWrite ).GetPurposeAttr().Set( ctxt.purpose );
         }
 
-        //// visibility
-        if( ctxt.granularity == GusdContext::PER_FRAME ) { 
-            updateVisibilityFromGTPrim(sourcePrim, ctxt.time);
-        }
-
         // Make instanceable
         if( ctxt.makeRefsInstanceable ) {
             m_primRefForWrite.SetInstanceable( true );
         }
     }
 
+    updateVisibilityFromGTPrim(sourcePrim, ctxt.time, 
+                               (!ctxt.writeOverlay || ctxt.overlayAll) && 
+                                ctxt.granularity == GusdContext::PER_FRAME );
+
     // transform ---------------------------------------------------------------
 
-    if( !ctxt.overlayGeo || ctxt.overlayAll || 
+    if( !ctxt.writeOverlay || ctxt.overlayAll || 
         ctxt.overlayPoints || ctxt.overlayTransforms ) {
 
         GfMatrix4d xform = computeTransform( 
-                                m_primRefForWrite.GetPrim(),
+                                m_primRefForWrite.GetPrim().GetParent(),
                                 ctxt.time,
                                 houXform,
                                 xformCache );
@@ -298,7 +288,7 @@ GusdPackedUsdWrapper::updateFromGTPrim(
         updateTransformFromGTPrim( xform, ctxt.time, 
                                    ctxt.granularity == GusdContext::PER_FRAME );
     }
-    return true;
+    return GusdPrimWrapper::updateFromGTPrim(sourcePrim, houXform, ctxt, xformCache);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

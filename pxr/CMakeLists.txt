@@ -1,3 +1,5 @@
+pxr_core_prologue()
+
 add_subdirectory(base)
 add_subdirectory(usd)
 
@@ -8,8 +10,7 @@ if (${PXR_BUILD_IMAGING})
     endif()
 endif()
 
-pxr_setup_python()
-pxr_setup_plugins()
+pxr_core_epilogue()
 
 export(PACKAGE pxr)
 
@@ -20,5 +21,6 @@ install(FILES
   DESTINATION "${CMAKE_INSTALL_PREFIX}"
 )
 
-install(EXPORT pxrTargets DESTINATION "cmake")
-
+if(BUILD_SHARED_LIBS AND NOT PXR_BUILD_MONOLITHIC)
+	install(EXPORT pxrTargets DESTINATION "cmake")
+endif()

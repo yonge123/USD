@@ -23,9 +23,9 @@
 //
 #include "pxr/pxr.h"
 #include "pxr/usd/usd/attribute.h"
-#include "pxr/usd/usd/conversions.h"
 #include "pxr/usd/usd/wrapUtils.h"
 
+#include "pxr/usd/usd/pyConversions.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include "pxr/base/tf/pyUtils.h"
@@ -152,7 +152,9 @@ void wrapUsdAttribute()
 
         .def("Block", &UsdAttribute::Block)
 
-        .def("AppendConnection", &UsdAttribute::AppendConnection, arg("source"))
+        .def("AddConnection", &UsdAttribute::AddConnection,
+             (arg("source"),
+              arg("position")=UsdListPositionTempDefault))
         .def("RemoveConnection", &UsdAttribute::RemoveConnection, arg("source"))
         .def("BlockConnections", &UsdAttribute::BlockConnections)
         .def("SetConnections", &UsdAttribute::SetConnections, arg("sources"))

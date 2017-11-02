@@ -23,7 +23,7 @@
 //
 #include "instancerWrapper.h"
 
-#include "gusd/Context.h"
+#include "gusd/context.h"
 #include "gusd/GU_PackedUSD.h"
 #include "gusd/UT_Gf.h"
 #include "gusd/refiner.h"
@@ -31,7 +31,6 @@
 
 #include "gusd/GT_PrimCache.h"
 #include "gusd/USD_XformCache.h"
-#include "gusd/GU_USD.h"
 
 #include <GT/GT_DAConstantValue.h>
 #include <GT/GT_DAIndexedString.h>
@@ -51,6 +50,7 @@
 #include <UT/UT_StringArray.h>
 
 #include "pxr/usd/usdGeom/xformCache.h"
+#include "pxr/usd/sdf/cleanupEnabler.h"
 
 #include <pxr/base/gf/quatf.h>
 #include <pxr/base/gf/transform.h>
@@ -69,6 +69,13 @@ using std::map;
 #else
 #define DBG(x)
 #endif
+
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    ((prunable, "pruning:prunable"))
+    (ReferencedPath)
+    (Xform)
+);     
 
 namespace {
 
@@ -265,7 +272,9 @@ void setTransformAttrsFromMatrices(const UT_Matrix4D &worldToLocal,
                                    UsdAttribute& usdRotationAttr,
                                    UsdAttribute& usdScaleAttr,
                                    const GT_AttributeListHandle& gtAttrs,
-                                   UsdTimeCode time)
+                                   UsdTimeCode time,
+                                   const UsdGeomPointInstancer& pointInstancer,
+                                   std::vector<UT_Matrix4D> prototypeTransforms)
 {
     if (!usdPositionAttr.IsValid() 
      || !usdRotationAttr.IsValid()
@@ -294,6 +303,16 @@ void setTransformAttrsFromMatrices(const UT_Matrix4D &worldToLocal,
     GT_Real32Array* houScales = new GT_Real32Array(numXforms, 3);
     GT_DataArrayHandle houScalesHandle(houScales);
 
+
+    VtArray<int> indices;
+    pointInstancer.GetProtoIndicesAttr().Get( &indices, time);
+
+    // If we have transforms on prototypes, we have to remove them from our
+    // final instance transformation, as the potin instancer schema accounts
+    // for prototype transforms.
+    bool removeProtoTransforms = (indices.size() == numXforms) &&
+                                 (prototypeTransforms.size() > 0);
+
     for(GA_Size i=0; i<numXforms; ++i) {
         
         // Build a 4x4 that represents this instance transformation.
@@ -305,6 +324,14 @@ void setTransformAttrsFromMatrices(const UT_Matrix4D &worldToLocal,
             houXformArray[i*16+12], houXformArray[i*16+13], houXformArray[i*16+14], houXformArray[i*16+15] );
 
         UT_Matrix4D localInstXform = instXform * worldToLocal;
+
+        // Multiply by the prototype inverse to "subtract" its transformation
+        if (removeProtoTransforms) {
+            int protoIdx = indices[i];
+            UT_Matrix4D protoXform = prototypeTransforms[protoIdx];
+            protoXform.invert();
+            localInstXform =  protoXform * localInstXform;
+        }
 
         UT_Vector3 position;
         localInstXform.getTranslates( position );
@@ -345,13 +372,11 @@ GusdInstancerWrapper(
 
 GusdInstancerWrapper::
 GusdInstancerWrapper(
-        const GusdUSD_StageProxyHandle& stage,
-        UsdGeomPointInstancer           usdInstancer, 
-        const UsdTimeCode&              time,
-        const GusdPurposeSet&           purposes )
+    const UsdGeomPointInstancer& usdInstancer, 
+    UsdTimeCode                  time,
+    GusdPurposeSet               purposes )
     : GusdPrimWrapper( time, purposes )
-    , m_usdPointInstancerForRead( usdInstancer, stage->GetLock() )
-    , m_stageProxy( stage )
+    , m_usdPointInstancerForRead( usdInstancer )
 {
 }
 
@@ -395,9 +420,9 @@ defineForWrite(
         const GusdContext& ctxt)
 {
     GusdInstancerWrapper* instancePrim =
-        new GusdInstancerWrapper( stage, path, ctxt, ctxt.overlayGeo );
+        new GusdInstancerWrapper( stage, path, ctxt, ctxt.writeOverlay );
 
-    if((!ctxt.overlayGeo || ctxt.overlayAll)) {
+    if(!ctxt.writeOverlay || ctxt.overlayAll) {
         
         // Set empty defaults for positions, scale, and indices. 
         // This prevents katana errors when expanding per-frame exports
@@ -406,8 +431,10 @@ defineForWrite(
             VtIntArray intArray;
             instancePrim->m_usdPointInstancerForWrite.GetProtoIndicesAttr().Set(intArray, UsdTimeCode::Default());
             VtVec3fArray vec3fArray;
+            VtQuathArray quathArray;
             instancePrim->m_usdPointInstancerForWrite.GetPositionsAttr().Set(vec3fArray, UsdTimeCode::Default());
             instancePrim->m_usdPointInstancerForWrite.GetScalesAttr().Set(vec3fArray, UsdTimeCode::Default());
+            instancePrim->m_usdPointInstancerForWrite.GetOrientationsAttr().Set(quathArray, UsdTimeCode::Default());
         }
 
     }
@@ -416,13 +443,13 @@ defineForWrite(
     // relationships.
     instancePrim->writePrototypes( ctxt, stage, sourcePrim );
 
-    if( ctxt.overlayGeo ) {
+    if( ctxt.writeOverlay ) {
 
         // If we are writing an overlay, turn off pruning for this point instancer.
         // We may have shuffled the instance index order. 
         if( UsdAttribute attr = 
                 instancePrim->m_usdPointInstancerForWrite.GetPrim().CreateAttribute( 
-                                        TfToken("pruning:prunable"), SdfValueTypeNames->Bool, 
+                                        _tokens->prunable, SdfValueTypeNames->Bool, 
                                         false, SdfVariabilityUniform )) {
             attr.Set( false );
         }
@@ -433,13 +460,11 @@ defineForWrite(
 }
 
 GT_PrimitiveHandle GusdInstancerWrapper::
-defineForRead( const GusdUSD_StageProxyHandle&  stage,
-               const UsdGeomImageable&          sourcePrim, 
-               const UsdTimeCode&               time,
-               const GusdPurposeSet&            purposes )
+defineForRead( const UsdGeomImageable&  sourcePrim, 
+               UsdTimeCode              time,
+               GusdPurposeSet           purposes )
 {
     return new GusdInstancerWrapper( 
-                    stage, 
                     UsdGeomPointInstancer( sourcePrim.GetPrim() ),
                     time,
                     purposes );
@@ -451,9 +476,9 @@ redefine( const UsdStagePtr& stage,
           const GusdContext& ctxt,
           const GT_PrimitiveHandle& sourcePrim )
 {
-    initUsdPrim( stage, path, ctxt.overlayGeo );
+    initUsdPrim( stage, path, ctxt.writeOverlay );
 
-    if((!ctxt.overlayGeo || ctxt.overlayAll)) {
+    if(!ctxt.writeOverlay || ctxt.overlayAll) {
         
         // Set empty defaults for positions, scale, and indices. 
         // This prevents katana errors when expanding per-frame exports
@@ -463,13 +488,19 @@ redefine( const UsdStagePtr& stage,
             m_usdPointInstancerForWrite.GetProtoIndicesAttr().Set(
                     intArray, UsdTimeCode::Default());
             VtVec3fArray vec3fArray;
+            VtQuathArray quathArray;
             m_usdPointInstancerForWrite.GetPositionsAttr().Set(
                     vec3fArray, UsdTimeCode::Default());
             m_usdPointInstancerForWrite.GetScalesAttr().Set(
                     vec3fArray, UsdTimeCode::Default());
+            m_usdPointInstancerForWrite.GetOrientationsAttr().Set(
+                quathArray, UsdTimeCode::Default());
+       
         }
     }
-    stage->OverridePrim( path.AppendPath( kReferenceProtoPath ) );
+
+    stage->OverridePrim( path.AppendPath(
+        !m_prototypesScope.IsEmpty() ? m_prototypesScope : kReferenceProtoPath));
 
     m_relationshipIndexMap.clear();
     clearCaches();
@@ -554,29 +585,49 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
         return;
     }
 
+    // Check to make sure we have a valid source prim (NULL when 0 points)
+    if (sourcePrim == NULL) {
+        return;
+    }
+
     // Get prorotypes path from context in case it was set as a parameter.
     string usdPrototypesPath = ctxt.usdPrototypesPath;
     GT_Owner owner;
     GT_DataArrayHandle prototypesPathAttr;
     // If an attribute exists for usdprototypespath, set that as our path.
     prototypesPathAttr = sourcePrim->findAttribute("usdprototypespath", owner, 0);
-    if(prototypesPathAttr != NULL ) {
+    if(prototypesPathAttr != NULL && prototypesPathAttr->entries() > 0) {
         usdPrototypesPath = prototypesPathAttr->getS(0);
     }
-    // If the refiner found just points with an instancepath attribute, we need
-    // to write out the transforms on the prototypes.
-    bool writePrototypeTransforms = false;
-    if(!sourcePrim->findAttribute("__instancetransform", owner, 0)) {
-        writePrototypeTransforms = true;
-    }
-    if (usdPrototypesPath.empty() && !ctxt.overlayGeo) {
+
+    if (usdPrototypesPath.empty() && !ctxt.writeOverlay) {
         TF_WARN("No usdprototypespath attribute found. Specify where all the packed prototypes are to build a point instancer.");
         return;
+    }
+    
+    // Check if we have an attribute for a custom prototypes scope.
+    string usdPrototypesScope;
+    GT_DataArrayHandle prototypesScopeAttr;
+    prototypesScopeAttr = sourcePrim->findAttribute("usdprototypesscope", owner, 0);
+    if(prototypesScopeAttr != NULL && prototypesScopeAttr->entries() > 0) {
+        usdPrototypesScope = prototypesScopeAttr->getS(0);
+    }
+
+    m_prototypesScope = kReferenceProtoPath;
+    if (!usdPrototypesScope.empty()) {
+        std::string errMsg;
+        if (!SdfPath::IsValidPathString(usdPrototypesScope, &errMsg)) {
+            TF_WARN("Prototype scope '%s' is an invalid Usd scope, "
+                "using standard prototype scope instead.",
+                usdPrototypesScope.c_str());
+        } else {
+            m_prototypesScope = SdfPath(usdPrototypesScope);
+        }
     }
 
     // Get the prim path for the root (point instancer) to use as the parent
     // scope for prototypes
-    SdfPath protoPath = m_usdPointInstancerForWrite.GetPath().AppendPath(kReferenceProtoPath);
+    SdfPath protoPath = m_usdPointInstancerForWrite.GetPath().AppendPath(m_prototypesScope);
 
     // Collect sops containing prototypes into a list. If usdPrototypesPath
     // references a sop, it will be a length of one. If it references a subnet,
@@ -584,7 +635,7 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
     std::vector<SOP_Node*> protoNodes;
     OBJ_Node* objNode;
     UT_Matrix4D localToWorldMatrix;
-    double time = ctxt.time.GetValue();
+    double time = GusdUSD_Utils::GetNumericTime(ctxt.time);
     OP_Context houdiniContext(time);
     if (!usdPrototypesPath.empty()) {
         objNode = OPgetDirector()->findOBJNode(usdPrototypesPath.c_str());
@@ -605,7 +656,7 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
             objNode = CAST_OBJNODE(protoNode->getCreator());
         }
 
-        if( (protoNodes.empty() || !objNode) && !ctxt.overlayGeo ) {
+        if( (protoNodes.empty() || !objNode) && !ctxt.writeOverlay ) {
             TF_WARN("No node found at usdPrototypesPath '%s'", usdPrototypesPath.c_str());
             return;
         }
@@ -617,7 +668,7 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
     // Populate a map from instance path to detail hanlde. Each detail will be
     // refined then written as a prototype, and the instance path will be used
     // to create a mapping to the usd path for indexing in the point instancer.
-    std::map<string, GU_DetailHandle> protoDetailMap;
+    std::map<std::tuple<string, bool>, GU_DetailHandle> protoDetailMap;
 
     // Iterate through sops containing prototypes, and create a detail handle
     // for each packed primitive.
@@ -640,26 +691,45 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
                                                     "usdinstancepath",
                                                     searchOrder,
                                                     4 ));
+
+            // If the usdinstancepath is a valid Sdf path, we use it as the
+            // names of each prototype.
+            bool generateProtoNames = false;
             // We also support instancepath instead of usdinstancepath
             if (!instancePathAttr.isValid()) {
                 instancePathAttr = GA_ROHandleS( detailLock->findAttribute(
                                                         "instancepath",
                                                         searchOrder,
                                                         4 ));
+                // These are generall full paths to nodes and should not be
+                // used as prototype scopes.
+                generateProtoNames = true;
             }
 
             // Iteratve over each primitive and create a detail handle
             GA_Range primRange = detailLock->getPrimitiveRange();
             for(GA_Iterator offsetIt(primRange); !offsetIt.atEnd(); ++offsetIt) {
                 // Use the context's usdinstancepath as default if no attributes
-                string usdInstancePath = ctxt.usdInstancePath;
+                std::tuple<string, bool> usdInstancePath(ctxt.usdInstancePath, generateProtoNames);
                 if (instancePathAttr.isValid()) {
+#if HDK_API_VERSION < 16050000
                     string instancePathAttrVal = instancePathAttr.get(offsetIt.getOffset());
+#else
+                    string instancePathAttrVal = instancePathAttr.get(offsetIt.getOffset()).toStdString();
+#endif
                     if (!instancePathAttrVal.empty()) {
-                        usdInstancePath = instancePathAttrVal;
+                        std::get<0>(usdInstancePath) = instancePathAttrVal;
+                        std::string errMsg;
+                        if (!generateProtoNames &&
+                            !SdfPath::IsValidPathString(instancePathAttrVal, &errMsg)) {
+                            TF_WARN("Instance name '%s' is an invalid Usd scope, "
+                                "using standard prototype naming instead.",
+                                instancePathAttrVal.c_str());
+                            std::get<1>(usdInstancePath) = true;
+                        }
                     }
                 }
-                if (!usdInstancePath.empty()) {
+                if (!std::get<0>(usdInstancePath).empty()) {
                     const GU_Detail *srcDetail = detailLock.getGdp();
                     GA_PrimitiveGroup primGroup(*srcDetail);
                     primGroup.addOffset(offsetIt.getOffset());
@@ -669,6 +739,11 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
                     // Handle owns the detail so it will free the memory
                     detailHandle.allocateAndSet(detail, true);
                     if(detailHandle) {
+                        if ( protoDetailMap.count(usdInstancePath) ) {
+                            TF_WARN ("Multiple prototypes found with instance "
+                                "path '%s', may result in loss of prototypes.",
+                                std::get<0>(usdInstancePath).c_str());
+                        }
                         protoDetailMap[usdInstancePath] = detailHandle;
                     }
                 } else {
@@ -697,16 +772,21 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
         // We don't want to force overlays of prototypes. If it has the same
         // scope in an overlay all it will still overlay, but this way new
         // prototypes won't be pure overs.
-        newContext.overlayGeo = false;
+        newContext.writeOverlay = false;
 
         // If a prototype is selecting a variant, make sure to set it
         newContext.authorVariantSelections = true;
 
         GusdRefinerCollector refinerCollector;
         // TODO: add custom scoping for prototypes
-        string protoUsdName("prototype_");
-        protoUsdName += std::to_string(protoIdx);
-        protoIdx++;
+        string protoUsdName;
+        if ( !std::get<1>(pair.first) ) {
+            protoUsdName = std::get<0>(pair.first);
+        } else {
+            protoUsdName = "prototype_";
+            protoUsdName += std::to_string(protoIdx);
+            protoIdx++;
+        }
         SdfPath protoUsdPath = protoPath.AppendPath(SdfPath(protoUsdName));
         
         GusdRefiner refiner( 
@@ -720,9 +800,6 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
         // Set the refiner to build prototypes (so we don't recurse and create
         // another point instancer)
         refiner.m_buildPrototypes = true;
-        if(writePrototypeTransforms) { // Only use for points, otherwise transform double counted
-            refiner.m_writePrototypeTransforms = true;
-        }
 
         // Refine the detail handle
         refiner.refineDetail( pair.second, refineParms );
@@ -768,14 +845,18 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
                                           gtPrim.xform,
                                           newContext,
                                           xformCache );
+
+                // Create an array of prototype transforms for subtracting from
+                // instance transforms later
+                m_prototypeTransforms.push_back(gtPrim.xform);
             }
         }
 
         // Add the mapping from instance path (pair.first) to usd path
-        protoPathsMap[pair.first] = protoUsdPath;
+        protoPathsMap[std::get<0>(pair.first)] = protoUsdPath;
     }
 
-    if(ctxt.overlayGeo && (!ctxt.overlayAll || usdPrototypesPath.empty())) {
+    if(ctxt.writeOverlay && (!ctxt.overlayAll || usdPrototypesPath.empty())) {
 
         // If we are doing an overlay, build the map from the existing relationships
         UsdRelationship prototypesRel = m_usdPointInstancerForWrite.GetPrototypesRel();
@@ -787,15 +868,10 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
     }
     UsdRelationship prototypesRel = m_usdPointInstancerForWrite.GetPrototypesRel();
     
-    // When overlaying all we are writing a new prototypes array so we want
-    // the index to start at 0.
-    SdfPathVector previousTargets;
-    if (ctxt.overlayGeo && ctxt.overlayAll) {
-        prototypesRel.ClearTargets(true);
-    } else {
-        prototypesRel.GetForwardedTargets(&previousTargets);
-    }
-    int relIdx = previousTargets.size();
+    // Always clear the prortypes relationship array as we either don't touch it
+    // or write it from scrath (rather than trying to add on top of old protos).
+    prototypesRel.ClearTargets(true);
+    int relIdx = 0;
 
     // When overlaying all, we want to set the prototypes relationship array
     // rather then add targets to it, so we collect all paths into a vector.
@@ -809,25 +885,66 @@ writePrototypes(const GusdContext& ctxt, const UsdStagePtr& stage,
         // but point the relationship to point to a descendant. When we wrote
         // the prototype file, we added an attribute to tell us what descendant
         // to use.
-        UsdPrim protoRootPrim( stage->DefinePrim( pair.second, TfToken("Xform") ));
+        UsdPrim protoRootPrim( stage->DefinePrim( pair.second, _tokens->Xform ));
         protoRootPrim.Load();
+        // TODO Enable cleanup to remove empty tokens left after moving
+        // transforms in the case of prototype transforms where the prototype
+        // is not the referenced root.
+        //SdfCleanupEnabler();
         for(auto protoPrim : protoRootPrim.GetAllChildren()) {
             UsdAttribute pathAttr
-                = protoPrim.GetAttribute(TfToken("ReferencedPath"));
+                = protoPrim.GetAttribute(_tokens->ReferencedPath);
             if( pathAttr ) {
                 string subPath;
                 pathAttr.Get(&subPath);
                 relationshipPath = protoPrim.GetPath().AppendPath(SdfPath(subPath));
+
+                // Get the prototype scope referenced by the relationship array
+                UsdPrim protoTarget = stage->GetPrimAtPath(relationshipPath);
+                if (!protoTarget.IsValid()) {
+                    TF_WARN( "Prototype does not exist at '%s'",
+                                relationshipPath.GetString().c_str() );
+                    continue;
+                }
+
+                // Get the Xformables at the prototype scope and the referenced
+                // prototype scope (where we actually retrieve geometry)
+                UsdGeomXformable protoXformable( protoPrim );
+                UsdGeomXformable protoTargetXformable( protoTarget );
+
+                // Get the xforms we wrote out on the prototype scope
+                bool resetXformStack = false;
+                std::vector<UsdGeomXformOp> xformOps = protoXformable.GetOrderedXformOps(&resetXformStack);
+                if (xformOps.size()==0)
+                    continue;
+
+                // Set the transform on the referenced scope to be the same
+                // we wrote onto the prototype scope. First clear previous
+                // xformOps.
+                protoTargetXformable.SetXformOpOrder(std::vector<UsdGeomXformOp>());
+                for (auto xformOp : xformOps) {
+                    // Add an equivalent xformOp to the target prototype scope
+                    // that was in the original protoype scope.
+                    const UsdGeomXformOp xformOpTarget =
+                        protoTargetXformable.AddXformOp(xformOp.GetOpType(),
+                                                        xformOp.GetPrecision());
+                    xformOpTarget.Set( xformOp.GetOpTransform(ctxt.time),
+                                       ctxt.time);
+
+                    // Clear each xformOp from the original scope.
+                    xformOp.GetAttr().Clear();
+                }
+                protoXformable.GetXformOpOrderAttr().Clear();
             }
         }
-        if(ctxt.overlayGeo && ctxt.overlayAll) {
+        if(ctxt.overlayAll) {
             relationshipPaths.push_back(relationshipPath);
         } else {
-            prototypesRel.AppendTarget(relationshipPath);
+            prototypesRel.AddTarget(relationshipPath);
         }
         m_relationshipIndexMap[TfToken(mapKey)] = relIdx++;
     }
-    if (ctxt.overlayGeo && ctxt.overlayAll) {
+    if (ctxt.overlayAll) {
         // Set the targets as this forces the point instancer to explicitly
         // only uses the new prototypes and not the ones from the file
         // we are overlaying.
@@ -850,13 +967,13 @@ updateFromGTPrim(const GT_PrimitiveHandle& sourcePrim,
     DBG(cerr << "GusdInstanceWrapper::updateFromGTPrim, " << 
             m_usdPointInstancerForWrite.GetPath().GetString() << endl);
 
-    bool writeTransforms = !ctxt.overlayGeo || ctxt.overlayAll || 
-                                ctxt.overlayPoints || ctxt.overlayTransforms;
+    bool writeTransforms = !ctxt.writeOverlay || ctxt.overlayAll || 
+                                    ctxt.overlayPoints || ctxt.overlayTransforms;
 
     //--------------------------------------------------------------------------
 
     GfMatrix4d xform = computeTransform (
-                            m_usdPointInstancerForWrite.GetPrim(),
+                            m_usdPointInstancerForWrite.GetPrim().GetParent(),
                             ctxt.time,
                             houXform,
                             xformCache);
@@ -871,7 +988,7 @@ updateFromGTPrim(const GT_PrimitiveHandle& sourcePrim,
     // If this is not an overlay, write out the transform.
     // (If it is an overlay, the instances themselves will be
     // set to correct locations via their position attribute.)
-    if( !ctxt.overlayGeo ) {
+    if( !ctxt.writeOverlay ) {
         
         // transform
         updateTransformFromGTPrim( xform, ctxt.time, 
@@ -893,9 +1010,8 @@ updateFromGTPrim(const GT_PrimitiveHandle& sourcePrim,
         worldToLocal.invert();
  
         // visibility
-        if( ctxt.granularity == GusdContext::PER_FRAME ) { 
-            updateVisibilityFromGTPrim(sourcePrim, ctxt.time);
-        }        
+        updateVisibilityFromGTPrim(sourcePrim, ctxt.time, 
+                               ctxt.granularity == GusdContext::PER_FRAME );
 
         // P
         houAttr = sourcePrim->findAttribute("P", attrOwner, 0);
@@ -969,7 +1085,7 @@ updateFromGTPrim(const GT_PrimitiveHandle& sourcePrim,
                 }
             }
             gotValidIndices = true;
-        } else if (!ctxt.overlayGeo || ctxt.overlayAll) {
+        } else if (!ctxt.writeOverlay || ctxt.overlayAll) {
             TF_WARN( "Instance prototypes not specified as instance path or packed prim" );
         }
 
@@ -982,6 +1098,27 @@ updateFromGTPrim(const GT_PrimitiveHandle& sourcePrim,
         houAttr = sourcePrim->findAttribute("v", attrOwner, 0);
         usdAttr = m_usdPointInstancerForWrite.GetVelocitiesAttr();
         if(houAttr && usdAttr) {
+            GusdGT_Utils::setUsdAttribute(usdAttr, houAttr, ctxt.time);
+        }
+
+        // w
+        houAttr = sourcePrim->findAttribute("w", attrOwner, 0);
+        usdAttr = m_usdPointInstancerForWrite.GetAngularVelocitiesAttr();
+        if(houAttr && usdAttr) {
+
+            // Houdini stores angular velocity in radians per second.
+            // USD is degrees per second
+            const GT_Size numVals = houAttr->entries() * houAttr->getTupleSize();
+            std::vector<fpreal32> wArray(numVals);
+            houAttr->fillArray(wArray.data(), 0, numVals, houAttr->getTupleSize()); 
+
+            std::transform(
+                wArray.begin(),
+                wArray.end(),
+                wArray.begin(),
+                std::bind1st(std::multiplies<fpreal32>(), 180.0 / M_PI));
+
+            houAttr.reset(new GT_Real32Array(wArray.data(), houAttr->entries() , houAttr->getTupleSize()));
             GusdGT_Utils::setUsdAttribute(usdAttr, houAttr, ctxt.time);
         }
 
@@ -1001,10 +1138,12 @@ updateFromGTPrim(const GT_PrimitiveHandle& sourcePrim,
                                   usdPositionAttr,
                                   usdRotationAttr,
                                   usdScalesAttr,
-                                  gtPointAttrs, ctxt.time);
+                                  gtPointAttrs,
+                                  ctxt.time,
+                                  m_usdPointInstancerForWrite,
+                                  m_prototypeTransforms);
             }
             else {
-
                 setTransformAttrsFromComponents(
                                   usdPositionAttr,
                                   usdRotationAttr,
@@ -1024,17 +1163,17 @@ updateFromGTPrim(const GT_PrimitiveHandle& sourcePrim,
 
     // primvars ----------------------------------------------------------------
     
-    if( !ctxt.overlayGeo || ctxt.overlayAll || ctxt.overlayPrimvars ) {
+    if( !ctxt.writeOverlay || ctxt.overlayAll || ctxt.overlayPrimvars ) {
 
         GusdGT_AttrFilter filter = ctxt.attributeFilter;
         // Filter attributes which were used to construct the instance transform
         // and prototype relationships.
         filter.appendPattern(GT_OWNER_POINT,
                 "^__* ^orient ^rot ^scale ^instancepath ^usdinstancepath \
-                 ^usdprototypespath ^trans ^up");
-        filter.appendPattern(GT_OWNER_POINT, "^P ^N ^v ^visible");
-        filter.appendPattern(GT_OWNER_CONSTANT, "^visible ^usdprimpath \
-                 ^instancepath ^usdinstancepath ^usdprototypespath");
+                 ^usdprototypespath ^usdprototypesscope ^trans ^up");
+        filter.appendPattern(GT_OWNER_POINT, "^P ^N ^v");
+        filter.appendPattern(GT_OWNER_CONSTANT, "^usdprimpath ^instancepath \
+                ^usdinstancepath ^usdprototypespath ^usdprototypesscope");
         if(const GT_AttributeListHandle pointAttrs = sourcePrim->getPointAttributes()) {
 
             GusdGT_AttrFilter::OwnerArgs owners;
@@ -1053,35 +1192,16 @@ updateFromGTPrim(const GT_PrimitiveHandle& sourcePrim,
     
     // -------------------------------------------------------------------------
 
-    return true;
-}
-
-const UsdGeomImageable 
-GusdInstancerWrapper::getUsdPrimForRead(
-    GusdUSD_ImageableHolder::ScopedLock &lock) const
-{
-    // obtain first lock to get geomtry as UsdGeomMesh.
-    GusdUSD_InstancerHolder::ScopedReadLock innerLock;
-    innerLock.Acquire( m_usdPointInstancerForRead );
-
-    // Build new holder after casting to imageable
-    GusdUSD_ImageableHolder tmp( UsdGeomImageable( (*innerLock).GetPrim() ),
-                                 m_usdPointInstancerForRead.GetLock() );
-    lock.Acquire(tmp, /*write*/false);
-    return *lock;
+    return GusdPrimWrapper::updateFromGTPrim(sourcePrim, houXform, ctxt, xformCache);
 }
 
 bool GusdInstancerWrapper::
 refine( GT_Refine& refiner,
         const GT_RefineParms* parms ) const
 {
-    GusdUSD_InstancerHolder::ScopedReadLock lock;
-    lock.Acquire(m_usdPointInstancerForRead);
-    UsdGeomPointInstancer pointInstancer = *lock;
+    const UsdGeomPointInstancer& pointInstancer = m_usdPointInstancerForRead;
 
-    GusdUSD_StageProxy::Accessor accessor( m_stageProxy, UsdStage::LoadNone,
-                                           SdfPath() );
-    UsdStageRefPtr stage = accessor.GetStage();
+    UsdStagePtr stage = pointInstancer.GetPrim().GetStage();
 
     DBG(cerr << "GusdInstancerWrapper::refine, " << pointInstancer.GetPrim().GetPath() << endl);
     
@@ -1125,10 +1245,8 @@ refine( GT_Refine& refiner,
             continue;
         }
 
-        GusdUSD_PrimHolder holder( p, m_stageProxy->GetLock() );
         GT_PrimitiveHandle gtPrim = GusdGT_PrimCache::GetInstance().GetPrim( 
-                                        m_stageProxy,
-                                        holder, m_time, m_purposes );
+                                        p, m_time, m_purposes );
 
 
         auto transforms = new GT_TransformArray();
@@ -1158,19 +1276,16 @@ refine( GT_Refine& refiner,
 bool
 GusdInstancerWrapper::unpack( 
     GU_Detail&              gdr,
-    const TfToken&          fileName,
+    const UT_StringRef&     fileName,
     const SdfPath&          primPath,
     const UT_Matrix4D&      xform,
     fpreal                  frame,
     const char*             viewportLod,
-    const GusdPurposeSet&   purposes )
+    GusdPurposeSet          purposes )
 {
 
-    GusdUSD_ImageableHolder::ScopedLock lock;
-
-    UsdGeomImageable imagable = getUsdPrimForRead( lock );
-    UsdPrim usdPrim = imagable.GetPrim();
-    UsdGeomPointInstancer instancerPrim( usdPrim );
+    const UsdGeomPointInstancer& instancerPrim = m_usdPointInstancerForRead;
+    UsdPrim usdPrim = instancerPrim.GetPrim();
 
     UsdRelationship relationship = instancerPrim.GetPrototypesRel();
     SdfPathVector targets;
@@ -1226,7 +1341,7 @@ GusdInstancerWrapper::unpack(
         }
 
         GU_PrimPacked *guPrim = 
-            GusdGU_PackedUSD::Build( gdr, fileName.GetText(), 
+            GusdGU_PackedUSD::Build( gdr, fileName,
                                      targets[idx], 
                                      primPath,
                                      i,

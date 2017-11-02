@@ -31,8 +31,9 @@
 
 #include <pxr/pxr.h>
 
-#include "gusd/USD_Proxy.h"
-#include "gusd/USD_StageCache.h"
+#include "gusd/api.h"
+#include "gusd/defaultArray.h"
+#include "gusd/stageCache.h"
 #include "gusd/USD_Traverse.h"
 #include "gusd/USD_Utils.h"
 
@@ -44,16 +45,28 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 /** The default names of the USD ref attributes.
     @{ */
-#define GUSD_PATH_ATTR          "usdpath"
-#define GUSD_PRIMPATH_ATTR      "usdprimpath"
-#define GUSD_FRAME_ATTR         "frame"
-#define GUSD_VARIANTS_ATTR      "usdvariants"
-#define GUSD_CONSTRAINT_ATTR    "usdconstraint"
+#define GUSD_PATH_ATTR              "usdpath"
+#define GUSD_PRIMPATH_ATTR          "usdprimpath"
+#define GUSD_FRAME_ATTR             "frame"
+#define GUSD_VARIANTS_ATTR          "usdvariants"
+#define GUSD_CONSTRAINT_ATTR        "usdconstraint"
+#define GUSD_PURPOSE_ATTR           "usdpurpose"
+#define GUSD_ACTIVE_ATTR            "usdactive"
+#define GUSD_VISIBLE_ATTR           "usdvisible"
+
+#define GUSD_OVERTRANSFORMS_ATTR    "usdovertransforms"
+#define GUSD_OVERPOINTS_ATTR        "usdoverpoints"
+#define GUSD_OVERPRIMVARS_ATTR      "usdoverprimvars"
+#define GUSD_OVERALL_ATTR           "usdoverall"
+
+#define GUSD_WRITESTATICTOPOLOGY_ATTR  "usdwritestatictopology"
+#define GUSD_WRITESTATICPRIMVARS_ATTR  "usdwritestaticprimvars"
+#define GUSD_WRITESTATICGEO_ATTR       "usdwritestaticgeo"
 /** @} */
 
 
 /** Set of helpers for working with ranges of prims/points, etc.*/
-class GusdGU_USD
+class GUSD_API GusdGU_USD
 {
 public:
     /** Compute an array of offsets from a range.*/
@@ -64,98 +77,60 @@ public:
     static bool ComputeRangeIndexMap(const GA_Range& r,
                                      GA_OffsetArray& indexMap);
 
-    /** Configuration for generic (packed or attribute) prim binding.*/
-    struct BindOptions
-    {   
-        BindOptions();
-        
-        // Parms specific to binding to attributes.
-        UT_StringHolder pathAttr, primPathAttr, variantsAttr, frameAttr;
-        bool            packedPrims;    /*! Bind to packed prims.
-                                            If false, bindings use attributes
-                                            to determine prim references.*/
-    };
-
-    /** Convenience helper for binding a range of prims.*/
-    struct PrimHandle
-    {
-        PrimHandle() {}
-        PrimHandle(GusdUSD_StageCache& stageCache,
-                   const ArResolverContext& resolverCtx)
-            : cache(stageCache, resolverCtx) {}
-
-        bool    Bind(const BindOptions& opts,
-                     const GA_Detail& gd,
-                     const GA_Range& rng,
-                     UT_Array<SdfPath>* variants=NULL,
-                     UT_Array<GusdPurposeSet>* purposes=NULL,
-                     GusdUSD_Utils::PrimTimeMap* timeMap=NULL,
-                     GusdUT_ErrorContext* err=NULL);
-
-        GusdUSD_StageCacheContext           cache;
-        GusdUSD_StageProxy::MultiAccessor   accessor;
-        UT_Array<UsdPrim>                   prims;
-        bool                                packedPrims;
-    };
-
-    static bool BindPrims(const BindOptions& opts,
-                          const GA_Detail& gd,
-                          GusdUSD_StageProxy::MultiAccessor& accessor,
-                          UT_Array<UsdPrim>& prims,
-                          const GA_Range& rng,
-                          GusdUSD_StageCacheContext& cache,
-                          UT_Array<SdfPath>* variants=NULL,
-                          UT_Array<GusdPurposeSet>* purposes=NULL,
-                          GusdUSD_Utils::PrimTimeMap* timeMap=NULL,
-                          GusdUT_ErrorContext* err=NULL);
+    static bool
+    BindPrims(GusdStageCacheReader& cache,
+              UT_Array<UsdPrim>& prims,
+              const GA_Detail& gd,
+              const GA_Range& rng,
+              UT_Array<SdfPath>* variants=nullptr,
+              GusdDefaultArray<GusdPurposeSet>* purposes=nullptr,
+              GusdDefaultArray<UsdTimeCode>* times=nullptr,
+              GusdUT_ErrorContext* err=nullptr);
 
     /** Bind prims from references defined in the given attributes.
         This creates an entry in @a prims for each entry in the given range,
         mapped to the corresponding prim.
         If @a variants is non-null, resolved variant paths are stored
         in the given array.*/
-    static bool BindPrimsFromAttrs(
-                    GusdUSD_StageProxy::MultiAccessor& accessor,
-                    UT_Array<UsdPrim>& prims,
-                    const GA_Range& rng,
-                    const GA_Attribute& pathAttr,
-                    const GA_Attribute& primPathAttr,
-                    const GA_Attribute* variantsAttr,
-                    GusdUSD_StageCacheContext& cache,
-                    UT_Array<SdfPath>* variants=NULL,
-                    GusdUT_ErrorContext* err=NULL);
+    static bool
+    BindPrimsFromAttrs(GusdStageCacheReader& cache,
+                       UT_Array<UsdPrim>& prims,
+                       const GA_Range& rng,
+                       const GA_Attribute& pathAttr,
+                       const GA_Attribute& primPathAttr,
+                       const GA_Attribute* variantsAttr,
+                       UT_Array<SdfPath>* variants=nullptr,
+                       GusdUT_ErrorContext* err=nullptr);
 
-    static bool BindPrimsFromPackedPrims(
-                    GusdUSD_StageProxy::MultiAccessor& accessor,
-                    UT_Array<UsdPrim>& prims,
-                    const GA_Range& rng,
-                    GusdUSD_StageCacheContext& cache,
-                    UT_Array<SdfPath>* variants=NULL,
-                    UT_Array<GusdPurposeSet>* purposes = NULL,
-                    GusdUT_ErrorContext* err=NULL);
+    static bool
+    BindPrimsFromPackedPrims(UT_Array<UsdPrim>& prims,
+                             const GA_Range& rng,
+                             UT_Array<SdfPath>* variants=nullptr,
+                             UT_Array<GusdPurposeSet>* purposes=nullptr,
+                             GusdUT_ErrorContext* err=nullptr);
 
     static bool GetTimeCodesFromAttr(
                     const GA_Range& rng,
                     const GA_Attribute& attr,
                     UT_Array<UsdTimeCode>& times,
-                    GusdUT_ErrorContext* err=NULL);
+                    GusdUT_ErrorContext* err=nullptr);
 
     static bool GetTimeCodesFromPackedPrims(
                     const GA_Range& rng,
                     UT_Array<UsdTimeCode>& times,
-                    GusdUT_ErrorContext* err=NULL);
+                    GusdUT_ErrorContext* err=nullptr);
 
     /** Given a string attribute that represents prim paths,
         return an array of actual prim paths.
         @{ */
     static bool GetPrimPathsFromStringAttr(const GA_Attribute& attr,
                                            UT_Array<SdfPath>& paths,
-                                           GusdUT_ErrorContext* err=NULL);
+                                           GusdUT_ErrorContext* err=nullptr);
 
     static bool GetPrimPathsFromStringAttr(const GA_Attribute& attr,
                                            const GA_Range& rng,
                                            UT_Array<SdfPath>& paths,
-                                           GusdUT_ErrorContext* err=NULL);
+                                           GusdUT_ErrorContext* err=nullptr);
     /** @} */
 
     
@@ -163,28 +138,16 @@ public:
         @{ */
     static bool GetTokensFromStringAttr(const GA_Attribute& attr,
                                         UT_Array<TfToken>& tokens,
-                                        const char* nameSpace=NULL,
-                                        GusdUT_ErrorContext* err=NULL);
+                                        const char* nameSpace=nullptr,
+                                        GusdUT_ErrorContext* err=nullptr);
 
     static bool GetTokensFromStringAttr(const GA_Attribute& attr,
                                         const GA_Range& rng,
                                         UT_Array<TfToken>& tokens,
-                                        const char* nameSpace=NULL,
-                                        GusdUT_ErrorContext* err=NULL);
+                                        const char* nameSpace=nullptr,
+                                        GusdUT_ErrorContext* err=nullptr);
     /** @} */
 
-
-    /** Get stage proxies from attributes over the given range.
-        If @a variants is non-null, resolved variant paths are stored
-        in the given array.*/
-    static bool GetStageProxiesFromAttrs(
-                    const GA_Range& rng,
-                    const GA_Attribute& pathAttr,
-                    const GA_Attribute* variantsAttr,
-                    UT_Array<GusdUSD_StageProxyHandle>& proxies,
-                    GusdUSD_StageCacheContext& cache,
-                    UT_Array<SdfPath>* variants=NULL,
-                    GusdUT_ErrorContext* err=NULL);
 
     /** Append points to a detail that represent references to prims.
         The point offsets are contiguous, and the offset of the first
@@ -195,7 +158,7 @@ public:
                             const UT_Array<UsdPrim>& prims,
                             const char* pathAttrName=GUSD_PATH_ATTR,
                             const char* primPathAttrName=GUSD_PRIMPATH_ATTR,
-                            GusdUT_ErrorContext* err=NULL);
+                            GusdUT_ErrorContext* err=nullptr);
 
     typedef GU_PrimPacked* (*PackedPrimBuildFunc)( 
                                     GU_Detail&              detail,
@@ -216,10 +179,10 @@ public:
                             GU_Detail& gd,
                             const UT_Array<UsdPrim>& prims,
                             const UT_Array<SdfPath>& variants,
-                            const GusdUSD_Utils::PrimTimeMap& timeMap,
-                            const UT_StringArray& viewportLOD,
-                            const UT_Array<GusdPurposeSet>& purposes,
-                            GusdUT_ErrorContext* err=NULL);
+                            const GusdDefaultArray<UsdTimeCode>& times,
+                            const GusdDefaultArray<UT_StringHolder>& lods,
+                            const GusdDefaultArray<GusdPurposeSet>& purposes,
+                            GusdUT_ErrorContext* err=nullptr);
 
     typedef GusdUSD_Traverse::PrimIndexPair PrimIndexPair;
 
@@ -237,7 +200,7 @@ public:
                             const GA_AttributeFilter& filter,
                             const char* pathAttrName=GUSD_PATH_ATTR,
                             const char* primPathAttrName=GUSD_PRIMPATH_ATTR,
-                            GusdUT_ErrorContext* err=NULL);
+                            GusdUT_ErrorContext* err=nullptr);
 
     static bool         AppendExpandedPackedPrims(
                             GU_Detail& gd,
@@ -245,11 +208,11 @@ public:
                             const GA_Range& srcRng,
                             const UT_Array<PrimIndexPair>& primIndexPairs,
                             const UT_Array<SdfPath>& variants,
-                            const GusdUSD_Utils::PrimTimeMap& timeMap,
+                            const GusdDefaultArray<UsdTimeCode>& times,
                             const GA_AttributeFilter& filter,
                             bool unpackToPolygons,
                             const UT_String& primvarPattern,
-                            GusdUT_ErrorContext* err=NULL);
+                            GusdUT_ErrorContext* err=nullptr);
 
     /** Apply all variant selections in @a selections to each prim
         in the range, storing the resulting variant path in @a variantsAttr.
@@ -263,16 +226,16 @@ public:
                             const UT_Array<UsdPrim>& prims,
                             const GusdUSD_Utils::VariantSelArray& selections,
                             const char* variantsAttr=GUSD_VARIANTS_ATTR,
-                            const UT_Array<SdfPath>* prevVariants=NULL,
-                            GusdUT_ErrorContext* err=NULL);
+                            const UT_Array<SdfPath>* prevVariants=nullptr,
+                            GusdUT_ErrorContext* err=nullptr);
 
     static bool         WriteVariantSelectionsToPackedPrims(
                             GU_Detail& gd,
                             const GA_Range& rng,
                             const UT_Array<UsdPrim>& prims,
                             const GusdUSD_Utils::VariantSelArray& selections,
-                            const UT_Array<SdfPath>* prevVariants=NULL,
-                            GusdUT_ErrorContext* err=NULL);
+                            const UT_Array<SdfPath>* prevVariants=nullptr,
+                            GusdUT_ErrorContext* err=nullptr);
                             
     /** Append variant selections defined by @a orderedVariants and
         @a variantIndices as an expansion of prims from @a srcRng.
@@ -286,7 +249,7 @@ public:
                             const GusdUSD_Utils::IndexPairArray& variantIndices,
                             const GA_AttributeFilter& filter,
                             const char* variantsAttr=GUSD_VARIANTS_ATTR,
-                            GusdUT_ErrorContext* err=NULL);
+                            GusdUT_ErrorContext* err=nullptr);
 
     static GA_Offset    AppendPackedPrimsForExpandedVariants(
                             GU_Detail& gd,
@@ -295,7 +258,7 @@ public:
                             const UT_Array<UT_StringHolder>& orderedVariants,
                             const GusdUSD_Utils::IndexPairArray& variantIndices,
                             const GA_AttributeFilter& filter,
-                            GusdUT_ErrorContext* err=NULL);
+                            GusdUT_ErrorContext* err=nullptr);
 
     /** Copy attributes from a source to dest range.*/
     static bool         CopyAttributes(
@@ -309,7 +272,7 @@ public:
                             const GA_OffsetArray& offsets,
                             UT_StringArray& viewportLOD,
                             UT_Array<GusdPurposeSet>& purposes,
-                            GusdUT_ErrorContext* err=NULL);
+                            GusdUT_ErrorContext* err=nullptr);
 
     /** Compute world transforms from attributes over an array of offsets.
 
@@ -325,7 +288,7 @@ public:
     static bool ComputeTransformsFromPackedPrims(const GA_Detail& gd,
                                                  const GA_OffsetArray& offsets,
                                                  UT_Matrix4D* xforms,
-                                                 GusdUT_ErrorContext* err=NULL);
+                                                 GusdUT_ErrorContext* err=nullptr);
 
     /** Support representations of attributes when authoring new transforms.*/
     enum OrientAttrRepresentation
@@ -351,19 +314,19 @@ public:
                                   OrientAttrRepresentation orientRep,
                                   ScaleAttrRepresentation scaleRep,
                                   const UT_Matrix4D* xforms,
-                                  GusdUT_ErrorContext* err=NULL);
+                                  GusdUT_ErrorContext* err=nullptr);
 
     static bool SetPackedPrimTransforms(GU_Detail& gd,
                                         const GA_Range& r,
                                         const UT_Matrix4D* xforms,
-                                        GusdUT_ErrorContext* err=NULL);
+                                        GusdUT_ErrorContext* err=nullptr);
  
     static bool MultTransformableAttrs(GU_Detail& gd,
                                        const GA_Range& r,
                                        const GA_OffsetArray& indexMap,
                                        const UT_Matrix4D* xforms,
                                        bool keepLengths=false,
-                                       const GA_AttributeFilter* filter=NULL);
+                                       const GA_AttributeFilter* filter=nullptr);
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

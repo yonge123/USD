@@ -33,6 +33,7 @@
 #include "pxr/usd/usdUtils/stageCache.h"
 #include "pxr/usd/sdf/layer.h"
 #include "pxr/usd/sdf/path.h"
+#include "pxr/usd/sdf/attributeSpec.h"
 #include "pxr/base/tracelite/trace.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stageCacheContext.h"
@@ -50,18 +51,70 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 TF_INSTANTIATE_SINGLETON(UsdKatanaCache);
 
-SdfLayerRefPtr&
-UsdKatanaCache::_FindOrCreateSessionLayer(
-        FnAttribute::GroupAttribute sessionAttr, std::string rootLocation)
+
+namespace
 {
+    template <typename fnAttrT, typename podT>
+    bool AddSimpleTypedSdfAttribute(SdfPrimSpecHandle prim,
+            const std::string & attrName, const fnAttrT & valueAttr, 
+            const FnAttribute::IntAttribute & forceArrayAttr, 
+            SdfValueTypeName scalarType)
+    {
+        if (!prim)
+        {
+            return false;
+        }
+        
+        if (!valueAttr.isValid())
+        {
+            return false;
+        }
+        
+        bool isArray;
+        if (forceArrayAttr.isValid()) {
+            isArray = forceArrayAttr.getValue();
+        }
+        else {
+            isArray = valueAttr.getNumberOfValues() != 1;
+        }
+        auto sdfAttr = SdfAttributeSpec::New(prim, attrName,
+                isArray ? scalarType.GetArrayType() : scalarType);
+        
+        if (!sdfAttr)
+        {
+            return false;
+        }
+        
+        if (isArray)
+        {
+            VtArray<podT> vtArray;
+            
+            auto sample = valueAttr.getNearestSample(0.0f);
+            vtArray.assign(&sample[0],
+                    &sample[0] + valueAttr.getNumberOfValues());
+            
+            sdfAttr->SetDefaultValue(VtValue(vtArray));
+        }
+        else
+        {
+            sdfAttr->SetDefaultValue(
+                    VtValue(valueAttr.getValue(typename fnAttrT::value_type(),
+                            false)));
+        }
+        return true;
+    }
+}
+
+SdfLayerRefPtr& 
+UsdKatanaCache::_FindOrCreateSessionLayer(
+    FnAttribute::GroupAttribute sessionAttr,
+    const std::string& rootLocation) {
     // Grab a reader lock for reading the _sessionKeyCache
     boost::upgrade_lock<boost::upgrade_mutex>
                 readerLock(UsdKatanaGetSessionCacheLock());
     
     
-    std::string cacheKey = FnAttribute::GroupAttribute("s", sessionAttr,
-            "r", FnAttribute::StringAttribute(rootLocation),
-                    true).getHash().str();
+    std::string cacheKey = _ComputeCacheKey(sessionAttr, rootLocation);
     
     // Open the usd stage
     SdfLayerRefPtr sessionLayer;
@@ -164,6 +217,125 @@ UsdKatanaCache::_FindOrCreateSessionLayer(
             spec->SetActive(stateAttr.getValue());
         }
         
+        FnAttribute::GroupAttribute attrsAttr =
+                sessionAttr.getChildByName("attrs");
+        
+        for (int64_t i = 0, e = attrsAttr.getNumberOfChildren(); i != e;
+                ++i)
+        {
+            std::string entryName = FnAttribute::DelimiterDecode(
+                    attrsAttr.getChildName(i));
+            
+            FnAttribute::GroupAttribute entryAttr =
+                    attrsAttr.getChildByIndex(i);            
+            
+            if (!pystring::startswith(entryName, rootLocationPlusSlash))
+            {
+                continue;
+            }
+            
+            std::string primPath = pystring::slice(entryName,
+                    rootLocation.size());
+            
+            SdfPath varSelPath(primPath);
+            
+            SdfPrimSpecHandle spec = SdfCreatePrimInLayer(
+                        sessionLayer, varSelPath.GetPrimPath());
+            
+            if (!spec)
+            {
+                continue;
+            }
+            
+            for (int64_t i = 0, e = entryAttr.getNumberOfChildren(); i != e;
+                ++i)
+            {
+                std::string attrName = entryAttr.getChildName(i);
+                FnAttribute::GroupAttribute attrDef =
+                        entryAttr.getChildByIndex(i);
+
+                FnAttribute::IntAttribute forceArrayAttr = 
+                    attrDef.getChildByName("forceArray");
+                
+                
+                FnAttribute::DataAttribute valueAttr =
+                        attrDef.getChildByName("value");
+                if (!valueAttr.isValid())
+                {
+                    continue;
+                }
+                
+                // TODO, additional SdfValueTypes, blocking, metadata
+                
+                switch (valueAttr.getType())
+                {
+                case kFnKatAttributeTypeInt:
+                {
+                    AddSimpleTypedSdfAttribute<
+                            FnAttribute::IntAttribute, int>(
+                            spec, attrName, valueAttr, forceArrayAttr,
+                            SdfValueTypeNames->Int);
+                    
+                    break;
+                }
+                case kFnKatAttributeTypeFloat:
+                {
+                    AddSimpleTypedSdfAttribute<
+                            FnAttribute::FloatAttribute, float>(
+                            spec, attrName, valueAttr, forceArrayAttr,
+                            SdfValueTypeNames->Float);
+                    
+                    break;
+                }
+                case kFnKatAttributeTypeDouble:
+                {
+                    AddSimpleTypedSdfAttribute<
+                            FnAttribute::DoubleAttribute, double>(
+                            spec, attrName, valueAttr, forceArrayAttr,
+                            SdfValueTypeNames->Double);
+                    break;
+                }
+                case kFnKatAttributeTypeString:
+                {
+                    AddSimpleTypedSdfAttribute<
+                            FnAttribute::StringAttribute, std::string>(
+                            spec, attrName, valueAttr, forceArrayAttr,
+                            SdfValueTypeNames->String);
+                    
+                    break;
+                }
+                default:
+                    break;
+                };
+            }
+        }
+
+        FnAttribute::StringAttribute dynamicSublayersAttr =
+                sessionAttr.getChildByName("subLayers");
+
+        if (dynamicSublayersAttr.getNumberOfValues() > 0){
+
+            FnAttribute::StringAttribute::array_type dynamicSublayers = dynamicSublayersAttr.getNearestSample(0);
+            if (dynamicSublayersAttr.getTupleSize() != 2 || 
+                dynamicSublayers.size() % 2 != 0){
+                TF_CODING_ERROR("sublayers must contain a list of two-tuples [(rootLocation, sublayerIdentifier)]");
+            }
+
+            std::set<std::string> subLayersSet;
+            std::vector<std::string> subLayers;
+            for (size_t i = 0; i<dynamicSublayers.size(); i+=2){
+                std::string sublayerRootLocation = dynamicSublayers[i];
+                if (sublayerRootLocation == rootLocation && strlen(dynamicSublayers[i+1]) > 0){
+                    if (subLayersSet.find(dynamicSublayers[i+1]) == subLayersSet.end()){
+                        subLayers.push_back(dynamicSublayers[i+1]);
+                        subLayersSet.insert(dynamicSublayers[i+1]);
+                    }
+                    else
+                        TF_CODING_ERROR("Cannot add same sublayer twice.");
+                }
+            }
+            sessionLayer->SetSubLayerPaths(subLayers);
+        }
     }
     
     return _sessionKeyCache[cacheKey];
@@ -355,10 +527,6 @@ UsdKatanaCache::GetUncachedStage(std::string const& fileName,
     
 }
 
-
-
-
-
 UsdImagingGLSharedPtr const& 
 UsdKatanaCache::GetRenderer(UsdStageRefPtr const& stage,
                             UsdPrim const& root,
@@ -423,6 +591,30 @@ UsdKatanaCache::GetRenderer(UsdStageRefPtr const& stage,
     return res.first->second;
 }
 
+std::string UsdKatanaCache::_ComputeCacheKey(
+    FnAttribute::GroupAttribute sessionAttr,
+    const std::string& rootLocation) {
+    return FnAttribute::GroupAttribute(
+        "s", sessionAttr, "r", FnAttribute::StringAttribute(rootLocation), true)
+        .getHash()
+        .str();
+}
+
+SdfLayerRefPtr UsdKatanaCache::FindSessionLayer(
+    FnAttribute::GroupAttribute sessionAttr,
+    const std::string& rootLocation) {
+    std::string cacheKey = _ComputeCacheKey(sessionAttr, rootLocation);
+    return FindSessionLayer(cacheKey);
+}
+
+SdfLayerRefPtr UsdKatanaCache::FindSessionLayer(
+    const std::string& cacheKey) {
+    const auto& it = _sessionKeyCache.find(cacheKey);
+    if (it != _sessionKeyCache.end()) {
+        return it->second;
+    }
+    return NULL;
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

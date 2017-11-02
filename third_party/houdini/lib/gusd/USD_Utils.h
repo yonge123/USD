@@ -24,6 +24,8 @@
 #ifndef _GUSD_USD_UTILS_H_
 #define _GUSD_USD_UTILS_H_
 
+#include "gusd/api.h"
+
 #include <pxr/pxr.h>
 #include "pxr/base/tf/token.h"
 #include "pxr/usd/usdGeom/imageable.h"
@@ -35,8 +37,8 @@
 #include <UT/UT_Map.h>
 #include <UT/UT_SharedPtr.h>
 #include <UT/UT_StringHolder.h>
+#include <UT/UT_WorkBuffer.h>
 
-class UT_WorkBuffer;
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -47,67 +49,36 @@ namespace GusdUSD_Utils
 {
 
 
-/** Map of times for an array of prims. 
-    If no per-prim times are given, a default time is returned.*/
-struct PrimTimeMap
-{
-    PrimTimeMap() : times() {}
-
-    bool            HasPerPrimTimes() const     { return !times.isEmpty(); }
-    
-    UsdTimeCode     operator()(exint i) const
-                    { return HasPerPrimTimes() ? times(i) : defaultTime; }
-        
-    UT_Array<UsdTimeCode>   times;
-    UsdTimeCode             defaultTime;
-};
+/// Extract the numeric time from a time code.
+/// If @a time is not numeric, returns the numeric value
+/// from UsdTimeCode::EarliestTime().
+GUSD_API
+double      GetNumericTime(UsdTimeCode time);
 
 
-/** Object identifying a prim.*/
-struct PrimIdentifier
-{
-public:
-    PrimIdentifier() {}
+/// Parse and construct and SdfPath from a string.
+/// Parse errors are collection in @a err.
+/// Returns true if there were no parse errors.
+GUSD_API
+bool        CreateSdfPath(const UT_StringRef& pathStr,
+                          SdfPath& path,
+                          GusdUT_ErrorContext* err=nullptr);
 
-    PrimIdentifier(const SdfPath& primPath,
-                   const SdfPath& variants=SdfPath())
-        : _primPath(primPath), _variants(variants) {}
 
-    PrimIdentifier(const char* primPath, GusdUT_ErrorContext* err=NULL)
-        { SetPrimPath(primPath, err); }
+/// Get a prim from a stage.
+/// This provides common error reporting if the prim can't be found.
+GUSD_API
+UsdPrim     GetPrimFromStage(const UsdStagePtr& stage,
+                             const SdfPath& path,
+                             GusdUT_ErrorContext* err=nullptr);
 
-    PrimIdentifier(const UT_StringRef& primPath,
-                   const UT_StringRef& variants=UT_StringRef(),
-                   GusdUT_ErrorContext* err=NULL);
 
-    explicit        operator bool() const   { return _primPath.IsPrimPath(); }
-
-    const SdfPath&  operator*() const       { return _primPath; }
-
-    const SdfPath&  GetPrimPath() const     { return _primPath; }
-    void            SetPrimPath(const SdfPath& path)
-                    { _primPath = path; }
-    bool            SetPrimPath(const UT_StringRef& path,
-                                GusdUT_ErrorContext* err=NULL);
-
-    const SdfPath&  GetVariants() const     { return _variants; }
-    void            SetVariants(const SdfPath& variants)
-                    { _variants = variants; }
-    bool            SetVariants(const UT_StringRef& path,
-                                GusdUT_ErrorContext* err=NULL);
-
-    /** Update the prim and variant paths from
-        a single path that might container variant selections.
-        @{ */
-    bool            SetFromVariantPath(const SdfPath& variants);
-
-    bool            SetFromVariantPath(const UT_StringRef& variants,
-                                       GusdUT_ErrorContext* err=NULL);
-    /** @} */
-
-private:
-    SdfPath     _primPath, _variants;
-};
+/// Helper for creating and validating schema objects.
+/// This provides common error reporting when the prim doesn't
+/// match an expected schema type.
+template <typename SchemaT>
+SchemaT     MakeSchemaObj(const UsdPrim& prim,
+                          GusdUT_ErrorContext* err=nullptr);
 
 
 /** Given a string representing a list of whitespace-delimited paths,
@@ -117,6 +88,7 @@ private:
     The resulting @a primPaths and @a variantPaths arrays
     will be the same size. If no variants are associated with a path,
     then the corresponding entry in @a variants will be an empty path. */
+GUSD_API
 bool        GetPrimAndVariantPathsFromPathList(
                 const char* str,
                 UT_Array<SdfPath>& primPaths,
@@ -124,23 +96,17 @@ bool        GetPrimAndVariantPathsFromPathList(
                 GusdUT_ErrorContext* err=NULL);
 
 /** Extract a prim path and variant selection from a path.*/
-void        ExtractPathComponents(const SdfPath& path,
-                                  SdfPath& primPath,
-                                  SdfPath& variants);
+GUSD_API
+void        ExtractPrimPathAndVariants(const SdfPath& path,
+                                       SdfPath& primPath,
+                                       SdfPath& variants);
 
+GUSD_API
 bool        ImageablePrimIsVisible(const UsdGeomImageable& prim,
                                    UsdTimeCode time);
 
-bool        ImageablePrimHasDefaultPurpose(const UsdGeomImageable& prim);
-
-
-/** Helper to check that a prim should be drawn.
-    This tests both visibility and that a prim has a default purpose.*/
-bool        ImageablePrimIsDefaultDrawable(const UsdGeomImageable& prim,
-                                           UsdTimeCode time);
-
-
 /** Sort an array of prims (by path) */
+GUSD_API
 bool        SortPrims(UT_Array<UsdPrim>& prims);
 
 
@@ -149,6 +115,7 @@ bool        SortPrims(UT_Array<UsdPrim>& prims);
     Derived types of types that match the pattern are not added
     to the list; the minimal set of matching types is returned
     to simplify later type comparisons.*/
+GUSD_API
 void        GetBaseSchemaTypesMatchingPattern(const char* pattern,
                                               UT_Array<TfType>& types,
                                               bool caseSensitive=true);
@@ -158,11 +125,13 @@ void        GetBaseSchemaTypesMatchingPattern(const char* pattern,
     Derived types of types that match the pattern are not added
     to the list; the minimal set of matching types is returned
     to simplify later type comparisons.*/
+GUSD_API
 void        GetBaseModelKindsMatchingPattern(const char* pattern,
                                              UT_Array<TfToken>& kinds,
                                              bool caseSensitive=true);
 
 
+GUSD_API
 void        GetPurposesMatchingPattern(const char* pattern,
                                        UT_Array<TfToken>& purposes,
                                        bool caseSensitive=true);
@@ -193,6 +162,7 @@ typedef UT_Array<VariantSel> VariantSelArray;
     Appends string {vset=sel} to @a buf. If the buffer is empty,
     the buffer is initialized to the path up to @a prim, including
     any of the variant selections specified in @a variants.*/
+GUSD_API
 void        AppendVariantSelectionString(UT_WorkBuffer& buf,
                                          const SdfPath& prim,
                                          const SdfPath& variants,
@@ -209,6 +179,7 @@ void        AppendVariantSelectionString(UT_WorkBuffer& buf,
     The resulting @a indices array provides an index per-prim into
     the @a orderedVariants array. The indices may be -1 to indicate
     that the entry has no variant selections.*/
+GUSD_API
 bool        AppendVariantSelections(const UT_Array<UsdPrim>& prims,
                                     const VariantSelArray& selections,
                                     UT_Array<UT_StringHolder>& orderedVariants,
@@ -218,6 +189,7 @@ bool        AppendVariantSelections(const UT_Array<UsdPrim>& prims,
 
 struct NameMatcher
 {
+    virtual        ~NameMatcher() = 0;
     virtual bool    operator()(const std::string& name) const = 0;
 };
 
@@ -231,6 +203,7 @@ typedef UT_Array<IndexPair>     IndexPairArray;
     The first component of the pair in @a indices is the index of the
     original prim from @a prims from which the entry was expanded.
     The second component is an index into the @a orderedVariants array. */
+GUSD_API
 bool        ExpandVariantSetPaths(const UT_Array<UsdPrim>& prims,
                                   const std::string& variantSet,
                                   const NameMatcher& matcher,
@@ -239,12 +212,20 @@ bool        ExpandVariantSetPaths(const UT_Array<UsdPrim>& prims,
                                   const UT_Array<SdfPath>* prevVariants=NULL);
 
 
+/// Author variant selections on a layer using
+/// variants stored in a path.
+GUSD_API
+void        SetVariantsFromPath(const SdfPath& path,    
+                                const SdfLayerHandle& layer);
+
+
 /** Compute a set of properties matching the namespace of a range of prims.
     For every prim in @a prims, this appends an entry in @a indices for
     each matching attribute. The first component of the pairt in @a indices
     is the index of the original prim from @a prims that the attribute
     was matched from. The second component is an index into the
     @a orderedNames array.*/
+GUSD_API
 bool        GetPropertyNames(const UT_Array<UsdPrim>& prims,
                              const NameMatcher& matcher,
                              UT_Array<UT_StringHolder>& orderedNames,
@@ -253,21 +234,33 @@ bool        GetPropertyNames(const UT_Array<UsdPrim>& prims,
 
 
 /** Query all unique variant set names for a range of prims.*/
+GUSD_API
 bool        GetUniqueVariantSetNames(const UT_Array<UsdPrim>& prims,
                                      UT_Array<UT_StringHolder>& names);
 
 
 /** Query all unique variant names for a specific variant
     set on all of the given prims.*/
+GUSD_API
 bool        GetUniqueVariantNames(const UT_Array<UsdPrim>& prims,
                                   const std::string& variantSet,
                                   UT_Array<UT_StringHolder>& names);
 
 
 /** Query all unique property names for a range of prims.*/
+GUSD_API
 bool        GetUniquePropertyNames(const UT_Array<UsdPrim>& prims,
                                    UT_Array<UT_StringHolder>& names,
                                    const std::string& nameSpace=std::string());
+
+
+inline double
+GetNumericTime(UsdTimeCode time)
+{
+    return time.IsNumeric() ?
+        time.GetValue() : UsdTimeCode::EarliestTime().GetValue();
+}
+
 
 inline bool
 ImageablePrimIsVisible(const UsdGeomImageable& prim, UsdTimeCode time)
@@ -278,23 +271,6 @@ ImageablePrimIsVisible(const UsdGeomImageable& prim, UsdTimeCode time)
 }
 
 
-inline bool
-ImageablePrimHasDefaultPurpose(const UsdGeomImageable& prim)
-{
-    TfToken purpose;
-    prim.GetPurposeAttr().Get(&purpose);
-    return purpose == UsdGeomTokens->default_;
-}
-
-
-inline bool
-ImageablePrimIsDefaultDrawable(const UsdGeomImageable& prim, UsdTimeCode time)
-{
-    return ImageablePrimHasDefaultPurpose(prim) &&
-           ImageablePrimIsVisible(prim, time);
-}
-
-
 inline UsdTimeCode
 ClampTimeCode(UsdTimeCode t, double start, double end, int digits)
 {
@@ -302,6 +278,23 @@ ClampTimeCode(UsdTimeCode t, double start, double end, int digits)
         return t;
     return UsdTimeCode(
         SYSniceNumber(SYSclamp(t.GetValue(), start, end), digits));
+}
+
+
+template <typename SchemaT>
+SchemaT
+MakeSchemaObj(const UsdPrim& prim, GusdUT_ErrorContext* err)
+{
+    SchemaT obj(prim);
+    if(!obj && err) {
+        static const std::string typeName =
+            TfType::Find<SchemaT>().GetTypeName();
+
+        UT_WorkBuffer buf;
+        buf.sprintf("Prim <%s> is not a %s.",
+                    prim.GetPath().GetText(), typeName.c_str());
+    }
+    return obj;
 }
 
 

@@ -31,8 +31,6 @@
 
 #include <opensubdiv/far/topologyRefinerFactory.h>
 
-#include <boost/bind.hpp>
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 
@@ -70,7 +68,7 @@ Converter::GetType() const {
         int numFaces = topology.GetFaceVertexCounts().size();
         int const * numVertsPtr = topology.GetFaceVertexCounts().cdata();
         if (std::find_if(numVertsPtr, numVertsPtr + numFaces,
-                         boost::bind(std::not_equal_to<int>(), _1, 3))
+                         [](int x) { return x != 3; })
             == numVertsPtr + numFaces) {
         } else {
             TF_WARN("Can't apply loop subdivision on prim %s, since "
@@ -172,18 +170,18 @@ Converter::GetOptions() const {
     // triangle subdivision
     //
 
-    TfToken const trianglesSubdivision =
+    TfToken const triangleSubdivision =
         topology.GetSubdivTags().GetTriangleSubdivision();
 
-    if (!trianglesSubdivision.IsEmpty()) {
-        if (trianglesSubdivision==PxOsdOpenSubdivTokens->catmark || 
-                trianglesSubdivision==PxOsdOpenSubdivTokens->catmullClark) {
+    if (!triangleSubdivision.IsEmpty()) {
+        if (triangleSubdivision==PxOsdOpenSubdivTokens->catmark || 
+                triangleSubdivision==PxOsdOpenSubdivTokens->catmullClark) {
             options.SetTriangleSubdivision(Options::TRI_SUB_CATMARK);
-        } else if (trianglesSubdivision==PxOsdOpenSubdivTokens->smooth) {
+        } else if (triangleSubdivision==PxOsdOpenSubdivTokens->smooth) {
             options.SetTriangleSubdivision(Options::TRI_SUB_SMOOTH);
         } else {
             TF_WARN("Unknown triangle subdivision rule (%s) (%s)",
-                trianglesSubdivision.GetText(), name.GetText());
+                triangleSubdivision.GetText(), name.GetText());
         }
     }
 

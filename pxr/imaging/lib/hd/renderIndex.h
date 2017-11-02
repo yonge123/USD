@@ -30,21 +30,25 @@
 #include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/primTypeIndex.h"
+#include "pxr/imaging/hd/sortedIds.h"
 #include "pxr/imaging/hd/tokens.h"
 
 #include "pxr/imaging/hf/perfLog.h"
 
-#include "pxr/base/gf/vec4i.h"
-
 #include "pxr/usd/sdf/path.h"
+
+#include "pxr/base/gf/vec4i.h"
+#include "pxr/base/tf/hashmap.h"
 
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/smart_ptr.hpp>
-#include "pxr/base/tf/hashmap.h"
+
+#include <tbb/enumerable_thread_specific.h>
 
 #include <vector>
 #include <unordered_map>
+#include <memory>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -56,17 +60,18 @@ class HdDrawItem;
 class HdRprimCollection;
 class HdSceneDelegate;
 class HdRenderDelegate;
+class HdExtComputation;
 class VtValue;
+class HdInstancer;
 
 
 typedef boost::shared_ptr<class HdDirtyList> HdDirtyListSharedPtr;
-typedef boost::shared_ptr<class HdInstancer> HdInstancerSharedPtr;
 typedef boost::shared_ptr<class HdTask> HdTaskSharedPtr;
+typedef boost::shared_ptr<class HdResourceRegistry> HdResourceRegistrySharedPtr;
 typedef std::vector<HdTaskSharedPtr> HdTaskSharedPtrVector;
 typedef std::unordered_map<TfToken,
                            VtValue,
-                           TfToken::HashFunctor,
-                           TfToken::TokensEqualFunctor> HdTaskContext;
+                           TfToken::HashFunctor> HdTaskContext;
 
 /// \class HdRenderIndex
 ///
@@ -78,8 +83,8 @@ typedef std::unordered_map<TfToken,
 ///
 class HdRenderIndex final : public boost::noncopyable {
 public:
-
-    typedef std::unordered_map<TfToken, std::vector<HdDrawItem const*>,
+    typedef std::vector<HdDrawItem const*> HdDrawItemPtrVector;
+    typedef std::unordered_map<TfToken, HdDrawItemPtrVector,
                                boost::hash<TfToken> > HdDrawItemView;
 
     /// Create a render index with the given render delegate.
@@ -100,6 +105,13 @@ public:
     /// Clear all r (render), s (state) and b (buffer) prims.
     HD_API
     void Clear();
+
+    /// Clear all entries in the render index under
+    /// the given root and belong to a specified delegate.
+    ///
+    /// Used for example to unload a delegate.
+    HD_API
+    void RemoveSubtree(const SdfPath &root, HdSceneDelegate* sceneDelegate);
 
     // ---------------------------------------------------------------------- //
     /// Given a prim id, returns the path of the correspoding rprim
@@ -122,15 +134,7 @@ public:
     void SyncAll(HdTaskSharedPtrVector const &tasks, HdTaskContext *taskContext);
 
     /// Returns a vector of Rprim IDs that are bound to the given DelegateID.
-    HD_API
-    SdfPathVector const& GetDelegateRprimIDs(SdfPath const& delegateID) const;
 
-    /// For each delegate that has at least one child with dirty bits matching
-    /// the given dirtyMask, pushes the delegate ID into the given IDs vector.
-    /// The resulting vector is a list of all delegate IDs who have at least one
-    /// child that matches the mask.
-    HD_API
-    void GetDelegateIDsWithDirtyRprims(int dirtyMask, SdfPathVector* IDs) const;
 
     // ---------------------------------------------------------------------- //
     /// \name Change Tracker
@@ -182,9 +186,15 @@ public:
     HD_API
     TfToken GetRenderTag(SdfPath const& id, TfToken const& reprName) const;
 
+    /// Returns a sorted list of all Rprims in the render index.
+    /// The list is sorted by std::less<SdfPath>
+    HD_API
+    const SdfPathVector &GetRprimIds() { return _rprimIds.GetIds(); }
+
+
     /// Returns the subtree rooted under the given path.
     HD_API
-    SdfPathVector GetRprimSubtree(SdfPath const& root) const;
+    SdfPathVector GetRprimSubtree(SdfPath const& root);
 
 
     // ---------------------------------------------------------------------- //
@@ -208,7 +218,7 @@ public:
 
     /// Returns the instancer of id
     HD_API
-    HdInstancerSharedPtr GetInstancer(SdfPath const &id) const;
+    HdInstancer *GetInstancer(SdfPath const &id) const;
 
     // ---------------------------------------------------------------------- //
     /// \name Task Support
@@ -255,7 +265,7 @@ public:
     /// type.
     HD_API
     SdfPathVector GetSprimSubtree(TfToken const& typeId,
-                                  SdfPath const& root) const;
+                                  SdfPath const& root);
 
     /// Returns the fullback prim for the Sprim of the given type.
     HD_API
@@ -286,11 +296,39 @@ public:
     /// type.
     HD_API
     SdfPathVector GetBprimSubtree(TfToken const& typeId,
-                                  SdfPath const& root) const;
+                                  SdfPath const& root);
 
     /// Returns the fallback prim for the Bprim of the given type.
     HD_API
     HdBprim *GetFallbackBprim(TfToken const& typeId) const;
+
+    // ---------------------------------------------------------------------- //
+    /// \name ExtComputation Support
+    // ---------------------------------------------------------------------- //
+
+    /// Insert an ExtComputation into index
+    HD_API
+    void InsertExtComputation(HdSceneDelegate* delegate,
+                              SdfPath const &id);
+
+    /// Remove an ExtComputation from index
+    HD_API
+    void RemoveExtComputation(SdfPath const& id);
+
+    /// Returns true if ExtComputation \p id exists in index.
+    bool HasExtComputation(SdfPath const& id) {
+        return _extComputationMap.find(id) != _extComputationMap.end();
+    }
+
+    /// Returns the ExtComputation of id
+    HD_API
+    HdExtComputation const *GetExtComputation(SdfPath const &id) const;
+
+    /// Query function to look up a computation and its delegate
+    HD_API
+    void GetExtComputationInfo(SdfPath const &id,
+                               HdExtComputation **computation,
+                               HdSceneDelegate **sceneDelegate);
 
 
     // ---------------------------------------------------------------------- //
@@ -302,8 +340,10 @@ public:
     HD_API
     HdRenderDelegate *GetRenderDelegate() const;
 
+    /// Returns a shared ptr to the resource registry of the current render
+    /// delegate.
     HD_API
-    TfToken GetRenderDelegateType() const;
+    HdResourceRegistrySharedPtr GetResourceRegistry() const;
 
 private:
     // The render index constructor is private so we can check
@@ -333,31 +373,41 @@ private:
     static inline const TfToken & _GetTypeId();
 
 
+    void _RemoveRprimSubtree(const SdfPath &root,
+                             HdSceneDelegate* sceneDelegate);
+    void _RemoveInstancerSubtree(const SdfPath &root,
+                                 HdSceneDelegate* sceneDelegate);
+    void _RemoveExtComputationSubtree(const SdfPath &root,
+                                      HdSceneDelegate* sceneDelegate);
+    void _RemoveTaskSubtree(const SdfPath &root,
+                            HdSceneDelegate* sceneDelegate);
+
+
     // ---------------------------------------------------------------------- //
     // Index State
     // ---------------------------------------------------------------------- //
     struct _RprimInfo {
         HdSceneDelegate *sceneDelegate;
-        size_t           childIndex;
         HdRprim         *rprim;
+    };
+
+    typedef std::unique_ptr<HdExtComputation> HdExtComputationPtr;
+    struct _ExtComputationInfo {
+        HdSceneDelegate     *sceneDelegate;
+        HdExtComputationPtr  extComputation;
     };
 
 
     typedef TfHashMap<SdfPath, HdTaskSharedPtr, SdfPath::Hash> _TaskMap;
     typedef TfHashMap<SdfPath, _RprimInfo, SdfPath::Hash> _RprimMap;
-    typedef TfHashMap<SdfPath, SdfPathVector, SdfPath::Hash> _DelegateRprimMap;
-
-
-    typedef std::set<SdfPath> _RprimIDSet;
     typedef std::map<uint32_t, SdfPath> _RprimPrimIDMap;
 
     typedef Hd_PrimTypeIndex<HdSprim> _SprimIndex;
     typedef Hd_PrimTypeIndex<HdBprim> _BprimIndex;
 
-    _DelegateRprimMap _delegateRprimMap;
-    _RprimMap _rprimMap;
+    _RprimMap     _rprimMap;
+    Hd_SortedIds  _rprimIds;
 
-    _RprimIDSet _rprimIDSet;
     _RprimPrimIDMap _rprimPrimIdMap;
 
     _TaskMap _taskMap;
@@ -368,8 +418,14 @@ private:
     HdChangeTracker _tracker;
     int32_t _nextPrimId; 
 
-    typedef TfHashMap<SdfPath, HdInstancerSharedPtr, SdfPath::Hash> _InstancerMap;
+    typedef TfHashMap<SdfPath, HdInstancer*, SdfPath::Hash> _InstancerMap;
     _InstancerMap _instancerMap;
+
+
+    typedef std::unordered_map<SdfPath, _ExtComputationInfo, SdfPath::Hash>
+                                                             _ExtComputationMap;
+    _ExtComputationMap _extComputationMap;
+
 
     // XXX: TO FIX Move
     typedef std::vector<HdDirtyListSharedPtr> _DirtyListVector;
@@ -385,6 +441,15 @@ private:
 
     /// Release the fallback prims.
     void _DestroyFallbackPrims();
+
+    typedef tbb::enumerable_thread_specific<HdRenderIndex::HdDrawItemView>
+                                                           _ConcurrentDrawItems;
+
+    void _AppendDrawItems(const SdfPathVector &rprimIds,
+                          size_t begin,
+                          size_t end,
+                          HdRprimCollection const& collection,
+                          _ConcurrentDrawItems* result);
 
     /// Register core hydra reprs. Only ever called once, the first time
     /// a render index is created.

@@ -23,10 +23,10 @@
 //
 #include "pxr/usd/usdShade/material.h"
 #include "pxr/usd/usd/schemaBase.h"
-#include "pxr/usd/usd/conversions.h"
 
 #include "pxr/usd/sdf/primSpec.h"
 
+#include "pxr/usd/usd/pyConversions.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include "pxr/base/tf/pyUtils.h"
@@ -107,6 +107,7 @@ void wrapUsdShadeMaterial()
 // --(BEGIN CUSTOM CODE)--
 
 #include "pxr/usd/usd/editContext.h"
+#include "pxr/usd/usd/pyEditContext.h"
 
 namespace {
 
@@ -151,12 +152,30 @@ WRAP_CUSTOM {
         .def("HasBaseMaterial",
              &UsdShadeMaterial::HasBaseMaterial)
 
+
+        .def("CreateMaterialBindSubset", 
+             &UsdShadeMaterial::CreateMaterialBindSubset,
+             (arg("geom"), arg("subsetName"), 
+              arg("indices"), arg("elementType")=UsdGeomTokens->face))
+            .staticmethod("CreateMaterialBindSubset")
+        .def("GetMaterialBindSubsets", 
+             &UsdShadeMaterial::GetMaterialBindSubsets, 
+             arg("geom"), return_value_policy<TfPySequenceToList>())
+             .staticmethod("GetMaterialBindSubsets")
+        .def("SetMaterialBindSubsetsFamilyType", 
+             &UsdShadeMaterial::SetMaterialBindSubsetsFamilyType,
+             (arg("geom"), arg("familyType")))
+             .staticmethod("SetMaterialBindSubsetsFamilyType")
+        .def("GetMaterialBindSubsetsFamilyType",
+             &UsdShadeMaterial::GetMaterialBindSubsetsFamilyType,
+             arg("geom"))
+             .staticmethod("GetMaterialBindSubsetsFamilyType")
+        
+        // These are now deprecated.
         .def("CreateMaterialFaceSet", &UsdShadeMaterial::CreateMaterialFaceSet)
             .staticmethod("CreateMaterialFaceSet")
-
         .def("GetMaterialFaceSet", &UsdShadeMaterial::GetMaterialFaceSet)
             .staticmethod("GetMaterialFaceSet")
-
         .def("HasMaterialFaceSet", &UsdShadeMaterial::HasMaterialFaceSet)
             .staticmethod("HasMaterialFaceSet")
 

@@ -45,7 +45,6 @@
 #include "pxr/usd/usdGeom/xform.h"
 #include "pxr/usd/usdGeom/collectionAPI.h"
 
-#include "pxr/usd/usdShade/pShaderUtils.h"
 #include "pxr/usd/usdShade/material.h"
 
 #include "pxr/usd/usdRi/statements.h"
@@ -571,10 +570,22 @@ PxrUsdKatanaGeomGetPrimvarGroup(
 
     std::vector<UsdGeomPrimvar> primvarAttrs = imageable.GetPrimvars();
     TF_FOR_ALL(primvar, primvarAttrs) {
+        // Katana backends (such as RFK) are not prepared to handle
+        // groups of primvars under geometry.arbitrary, which leaves us
+        // without a ready-made way to incorporate namespaced primvars like
+        // "primvars:skel:jointIndices".  Until we untangle that, skip importing
+        // any namespaced primvars.
+        if (primvar->NameContainsNamespaces())
+            continue;
+
         // If there is a block from blind data, skip to avoid the cost
         UsdKatanaBlindDataObject kbd(imageable.GetPrim());
+
+        // XXX If we allow namespaced primvars (by eliminating the 
+        // short-circuit above), we will require GetKbdAttribute to be able
+        // to translate namespaced names...
         UsdAttribute blindAttr = kbd.GetKbdAttribute("geometry.arbitrary." + 
-                                        primvar->GetBaseName().GetString());
+                                        primvar->GetPrimvarName().GetString());
         if (blindAttr) {
             VtValue vtValue;
             if (!blindAttr.Get(&vtValue) && blindAttr.HasAuthoredValueOpinion()) {
@@ -586,11 +597,12 @@ PxrUsdKatanaGeomGetPrimvarGroup(
         SdfValueTypeName typeName;
         int              elementSize;
 
+        // GetDeclarationInfo inclues all namespaces other than "primvars:" in
+        // 'name'
         primvar->GetDeclarationInfo(&name, &typeName, 
                                     &interpolation, &elementSize);
 
-        // Name: this will eventually want to be GetBaseName() to strip
-        // off prefixes
+        // Name: this will eventually need to know how to translate namespaces
         std::string gdName = name;
 
         // Convert interpolation -> scope
@@ -729,7 +741,12 @@ PxrUsdKatanaReadPrim(
         {
             FnKat::GroupBuilder arbBuilder;
             arbBuilder.update(primvarGroup);
-            attrs.set("geometry.arbitrary", arbBuilder.build());
+            
+            FnKat::GroupAttribute arbGroup = arbBuilder.build();
+            if (arbGroup.getNumberOfChildren() > 0)
+            {
+                attrs.set("geometry.arbitrary", arbGroup);
+            }
         }
     }
 

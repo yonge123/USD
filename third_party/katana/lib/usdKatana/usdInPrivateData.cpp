@@ -38,7 +38,7 @@ PxrUsdKatanaUsdInPrivateData::PxrUsdKatanaUsdInPrivateData(
         const UsdPrim& prim,
         PxrUsdKatanaUsdInArgsRefPtr usdInArgs,
         const PxrUsdKatanaUsdInPrivateData* parentData)
-    : _prim(prim), _usdInArgs(usdInArgs)
+    : _prim(prim), _usdInArgs(usdInArgs), _extGb(0)
 {
     // XXX: manually track instance and master path for possible
     //      relationship re-retargeting. This approach does not yet
@@ -403,6 +403,53 @@ PxrUsdKatanaUsdInPrivateData::GetMotionSampleTimes(
     }
 
     return result;
+}
+
+void PxrUsdKatanaUsdInPrivateData::setExtensionOpArg(
+        const std::string & name, FnAttribute::Attribute attr)
+{
+    if (!_extGb)
+    {
+        _extGb = new FnAttribute::GroupBuilder;
+    }
+
+    _extGb->set("ext." + name, attr);
+}
+
+
+FnAttribute::Attribute PxrUsdKatanaUsdInPrivateData::getExtensionOpArg(
+        const std::string & name, FnAttribute::GroupAttribute opArgs)
+{
+    if (name.empty())
+    {
+        return opArgs.getChildByName("ext");
+    }
+    
+    return opArgs.getChildByName("ext." + name);
+}
+
+
+FnAttribute::GroupAttribute
+PxrUsdKatanaUsdInPrivateData::updateExtensionOpArgs(
+        FnAttribute::GroupAttribute opArgs)
+{
+    if (!_extGb)
+    {
+        return opArgs;
+    }
+    
+    return FnAttribute::GroupBuilder()
+        .update(opArgs)
+        .deepUpdate(_extGb->build())
+        .build();
+}
+
+PxrUsdKatanaUsdInPrivateData *
+PxrUsdKatanaUsdInPrivateData::GetPrivateData(
+        const FnKat::GeolibCookInterface& interface)
+{
+    return static_cast<PxrUsdKatanaUsdInPrivateData*>(
+            interface.getPrivateData());
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
