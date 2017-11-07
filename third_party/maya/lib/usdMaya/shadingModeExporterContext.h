@@ -85,13 +85,14 @@ public:
             const MObject& shadingEngine,
             const UsdStageRefPtr& stage,
             bool mergeTransformAndShape,
+            bool stripNamespaces,
             const PxrUsdMayaUtil::ShapeSet& bindableRoots,
             SdfPath overrideRootPath);
 private:
     MObject _shadingEngine;
     const UsdStageRefPtr& _stage;
     bool _mergeTransformAndShape;
-    bool _handleUsdNamespaces;
+    bool _stripNamespaces;
     SdfPath _overrideRootPath;
 
     SdfPathSet _bindableRoots;
