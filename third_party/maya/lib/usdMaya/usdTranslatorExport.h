@@ -54,6 +54,7 @@ const char* const usdTranslatorExportDefaults =
         "exportInstances=1;"
         "defaultMeshScheme=CatmullClark SDiv;"
         "exportVisibility=1;"
+        "stripNamespaces=0;"
         "animation=0;"
         "startTime=1;"
         "endTime=1";

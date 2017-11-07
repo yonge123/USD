@@ -228,7 +228,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
             if (!mJobCtx.mArgs.exportRootSdfPath.IsEmpty() && curDagPath.length() > 0){
                 // However if an export root is specified, we skip any dag
                 // parents that are above that root.
-                SdfPath sdfDagPath = SdfPath(PxrUsdMayaUtil::MDagPathToUsdPath(curDagPath, false));
+                SdfPath sdfDagPath = SdfPath(PxrUsdMayaUtil::MDagPathToUsdPath(curDagPath, false,
+                                                                               mJobCtx.mArgs.stripNamespaces));
                 if (mJobCtx.mArgs.exportRootSdfPath.GetCommonPrefix(sdfDagPath) !=
                     mJobCtx.mArgs.exportRootSdfPath) {
                     continue;
@@ -256,6 +257,14 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
 
                 // Write out data (non-animated/default values).
                 if (const auto& usdPrim = primWriter->getPrim()) {
+                    if (mJobCtx.mArgs.stripNamespaces && mPrimPaths.find(usdPrim.GetPath()) != mPrimPaths.end()){
+                        std::string error = TfStringPrintf("Multiple dag nodes map to the same prim path after "
+                                                           "stripping namespaces: %s", usdPrim.GetPath().GetText());
+                        MGlobal::displayError(MString(error.c_str()));
+                        return false;
+                    }
+                    mPrimPaths.insert(usdPrim.GetPath());
+
                     primWriter->write(UsdTimeCode::Default());
 
                     MDagPath dag = primWriter->getDagPath();
@@ -289,6 +298,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
                 mJobCtx.mArgs.dagPaths,
                 mJobCtx.mArgs.shadingMode,
                 mJobCtx.mArgs.mergeTransformAndShape,
+                mJobCtx.mArgs.stripNamespaces,
                 mJobCtx.mArgs.usdModelRootOverridePath,
                 mJobCtx.mArgs.parentScope,
                 mJobCtx.mDagPathToUsdPathMap);
@@ -406,7 +416,7 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
     // Get the usdVariantRootPrimPath (optionally filter by renderLayer prefix)
     MayaPrimWriterPtr firstPrimWriterPtr = *mJobCtx.mMayaPrimWriterList.begin();
     std::string firstPrimWriterPathStr(PxrUsdMayaUtil::MDagPathToUsdPathString(
-        firstPrimWriterPtr->getDagPath()));
+        firstPrimWriterPtr->getDagPath(), mJobCtx.mArgs.stripNamespaces));
     SdfPath usdVariantRootPrimPath(firstPrimWriterPathStr);
     usdVariantRootPrimPath = usdVariantRootPrimPath.GetPrefixes()[0];
 

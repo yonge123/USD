@@ -145,11 +145,17 @@ SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool inst
             std::stringstream ss;
             ss << mInstancesPrim.GetPath().GetString();
             MObject node = dagPath.node();
-            ss << "/" << dagPath.fullPathName().asChar() + 1;
+            ss << "/";
+            if (mArgs.stripNamespaces){
+                ss << PxrUsdMayaUtil::stripNamespaces(dagPath.fullPathName()).asChar() + 1;
+            } else{
+                ss << dagPath.fullPathName().asChar() + 1;
+            }
             if (!node.hasFn(MFn::kTransform)) {
                 ss << "/Shape";
             }
             auto pathName = ss.str();
+            pathName = TfStringReplace(pathName, "_", "__");  // avoid any issue with |: / _ name clashes
             std::replace(pathName.begin(), pathName.end(), '|', '_');
             std::replace(pathName.begin(), pathName.end(), ':', '_');
             return rootOverridePath(mArgs, SdfPath(pathName));
@@ -157,7 +163,7 @@ SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool inst
             return SdfPath();
         }
     } else {
-        const auto path = rootOverridePath(mArgs, PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false));
+        const auto path = rootOverridePath(mArgs, PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false, mArgs.stripNamespaces));
         if (mParentScopePath.IsEmpty()) {
             return path;
         } else {

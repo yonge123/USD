@@ -49,6 +49,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <regex>
 
 namespace PxrUsdMayaUtil
 {
@@ -185,10 +186,10 @@ bool isIntermediate(const MObject & object);
 PXRUSDMAYA_API
 bool isRenderable(const MObject & object);
 
-// strip iDepth namespaces from the node name, go from taco:foo:bar to bar
-// for iDepth > 1
+// strip iDepth namespaces from the node name or string path, go from
+// taco:foo:bar to bar for iDepth > 1. If iDepth is -1, strips all namespaces.
 PXRUSDMAYA_API
-MString stripNamespaces(const MString & iNodeName, unsigned int iDepth);
+MString stripNamespaces(const MString & iNodeName, int iDepth = -1);
 
 PXRUSDMAYA_API
 std::string SanitizeName(const std::string& name);
@@ -305,7 +306,7 @@ void Connect(
         bool clearDstPlug);
 
 PXRUSDMAYA_API
-std::string MDagPathToUsdPathString(const MDagPath& dagPath);
+std::string MDagPathToUsdPathString(const MDagPath& dagPath, bool stripNamespaces);
 
 /// For \p dagPath, returns a UsdPath corresponding to it.  
 /// If \p mergeTransformAndShape and the dagPath is a shapeNode, it will return
@@ -315,7 +316,7 @@ std::string MDagPathToUsdPathString(const MDagPath& dagPath);
 /// Elements of the path will be sanitized such that it is a valid SdfPath.
 /// This means it will replace ':' with '_'.
 PXRUSDMAYA_API
-PXR_NS::SdfPath MDagPathToUsdPath(const MDagPath& dagPath, bool mergeTransformAndShape);
+PXR_NS::SdfPath MDagPathToUsdPath(const MDagPath& dagPath, bool mergeTransformAndShape, bool stripNamespaces);
 
 /// Conveniency function to retreive custom data
 PXRUSDMAYA_API
