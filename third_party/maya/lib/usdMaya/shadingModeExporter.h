@@ -46,6 +46,7 @@ public:
     virtual void DoExport(const UsdStageRefPtr& stage,
                           const PxrUsdMayaUtil::ShapeSet& bindableRoots,
                           bool mergeTransformAndShape,
+                          bool stripNamespaces,
                           const SdfPath& overrideRootPath,
                           const std::string& parentScope,
                           const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap);

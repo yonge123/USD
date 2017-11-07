@@ -72,6 +72,7 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-ero" , "-exportReferenceObjects", MSyntax::kBoolean);
     syntax.addFlag("-dms" , "-defaultMeshScheme", MSyntax::kString);
     syntax.addFlag("-vis" , "-exportVisibility", MSyntax::kBoolean);
+    syntax.addFlag("-sn" , "-stripNamespaces", MSyntax::kBoolean);
     syntax.addFlag("-rt" , "-root", MSyntax::kString);
     syntax.addFlag("-psc", "-parentScope", MSyntax::kString);
 
@@ -225,6 +226,10 @@ try
         argData.getFlagArgument("exportVisibility", 0, jobArgs.exportVisibility);
     }
 
+    if (argData.isFlagSet("stripNamespaces")) {
+        argData.getFlagArgument("stripNamespaces", 0, jobArgs.stripNamespaces);
+    }
+
     if (argData.isFlagSet("root")) {
         MString stringVal;
         argData.getFlagArgument("root", 0, stringVal);
@@ -236,7 +241,7 @@ try
             if (rootDagPath.isValid()){
                 SdfPath rootSdfPath;
                 PxrUsdMayaUtil::GetDagPathByName(rootPath, rootDagPath);
-                rootSdfPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false);
+                rootSdfPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false, jobArgs.stripNamespaces);
                 jobArgs.exportRootPath = rootPath;
                 jobArgs.exportRootSdfPath = rootSdfPath;
             } else {

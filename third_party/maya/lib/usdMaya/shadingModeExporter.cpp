@@ -40,6 +40,7 @@ PxrUsdMayaShadingModeExporter::DoExport(
     const UsdStageRefPtr& stage,
     const PxrUsdMayaUtil::ShapeSet& bindableRoots,
     bool mergeTransformAndShape,
+    bool stripNamespaces,
     const SdfPath& overrideRootPath,
     const std::string& parentScope,
     const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type&) {
@@ -51,6 +52,7 @@ PxrUsdMayaShadingModeExporter::DoExport(
             shadingEngine,
             stage,
             mergeTransformAndShape,
+            stripNamespaces,
             bindableRoots,
             overrideRootPath);
 
