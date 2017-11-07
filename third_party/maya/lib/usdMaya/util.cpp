@@ -481,16 +481,15 @@ MString PxrUsdMayaUtil::stripNamespaces(const MString & iNodeName, int iDepth)
             MStringArray strArray;
             if (pathPartsArray[i].split(':', strArray) == MS::kSuccess) {
                 int len = strArray.length();
-                if (iDepth == -1 || len <= iDepth + 1) {
-                    // we want to strip off all namespaces or more namespaces
-                    // than what we have so we just return the last name
-                    ss << strArray[len - 1];
-                } else {
+                // if iDepth is -1, we don't keep any namespaces
+                if (iDepth != -1) {
+                    // add any ns beyond iDepth so if name is: "stripped:save1:save2:name" add "save1:save2:",
+                    // but if there aren't any to save like: "stripped:name" then add nothing.
                     for (int j = iDepth; j < len - 1; ++j) {
                         ss << strArray[j] << ":";
                     }
-                    ss << strArray[len - 1];
                 }
+                ss << strArray[len - 1];  // add the node name
             }
         }
         auto path = ss.str();
