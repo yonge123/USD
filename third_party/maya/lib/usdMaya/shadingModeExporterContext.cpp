@@ -51,11 +51,13 @@ PxrUsdMayaShadingModeExportContext::PxrUsdMayaShadingModeExportContext(
         const MObject& shadingEngine,
         const UsdStageRefPtr& stage,
         bool mergeTransformAndShape,
+        bool stripNamespaces,
         const PxrUsdMayaUtil::ShapeSet& bindableRoots,
         SdfPath overrideRootPath) :
     _shadingEngine(shadingEngine),
     _stage(stage),
     _mergeTransformAndShape(mergeTransformAndShape),
+    _stripNamespaces(stripNamespaces),
     _overrideRootPath(overrideRootPath)
 {
     if (bindableRoots.empty()) {
@@ -68,7 +70,8 @@ PxrUsdMayaShadingModeExportContext::PxrUsdMayaShadingModeExportContext(
 
 
             SdfPath usdPath = PxrUsdMayaUtil::MDagPathToUsdPath(bindableRootDagPath, 
-                _mergeTransformAndShape);
+                _mergeTransformAndShape,
+                _stripNamespaces);
 
             // If _overrideRootPath is not empty, replace the root namespace with it
             if (!_overrideRootPath.IsEmpty() ) {
@@ -132,7 +135,8 @@ PxrUsdMayaShadingModeExportContext::GetAssignments() const
             continue;
 
         SdfPath usdPath = PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, 
-            _mergeTransformAndShape);
+            _mergeTransformAndShape,
+            _stripNamespaces);
 
         // If _overrideRootPath is not empty, replace the root namespace with it
         if (!_overrideRootPath.IsEmpty() ) {
