@@ -1,0 +1,4 @@
+From: Paul Molodowitch <pm@stanfordalumni.org>
+Subject: disable testUsdExportRenderLayerMode on maya-2018
+
+because old-style render layers are disabled by default
