@@ -91,8 +91,18 @@ if (NOT PXR_HEADLESS_TEST_MODE)
     )
 
     pxr_install_test_dir(
-        SRC testenv/testUsdviewDefaultSettings
-        DEST testusdviewDefaultSettings
+        SRC testenv/testUsdviewPropertySearch
+        DEST testusdviewPropertySearch
+    )
+
+    pxr_install_test_dir(
+        SRC testenv/testUsdviewMetadatatabSelect
+        DEST testusdviewMetadatatabSelect
+    )
+
+    pxr_install_test_dir(
+        SRC testenv/testUsdviewTimeSamples
+        DEST testusdviewTimeSamples
     )
 
     pxr_register_test(testusdviewAlive                                               
@@ -195,9 +205,21 @@ if (NOT PXR_HEADLESS_TEST_MODE)
         EXPECTED_RETURN_CODE 0
     )
 
-    pxr_register_test(testusdviewDefaultSettings
+    pxr_register_test(testusdviewPropertySearch
         PYTHON
-        COMMAND "${CMAKE_INSTALL_PREFIX}/bin/testusdview --testScript testUsdviewDefaultSettings.py --defaultsettings test.usda"
+        COMMAND "${CMAKE_INSTALL_PREFIX}/bin/testusdview --testScript testUsdviewPropertySearch.py test.usda"
+        EXPECTED_RETURN_CODE 0
+    )
+
+    pxr_register_test(testusdviewMetadatatabSelect
+        PYTHON
+        COMMAND "${CMAKE_INSTALL_PREFIX}/bin/testusdview --testScript testUsdviewMetadatatabSelect.py test.usda"
+        EXPECTED_RETURN_CODE 0
+    )
+
+    pxr_register_test(testusdviewTimeSamples
+        PYTHON
+        COMMAND "${CMAKE_INSTALL_PREFIX}/bin/testusdview --testScript testUsdviewTimeSamples.py test.usda"
         EXPECTED_RETURN_CODE 0
     )
 endif()
