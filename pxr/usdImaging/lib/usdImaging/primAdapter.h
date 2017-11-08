@@ -82,6 +82,16 @@ public:
     // given prim.
     virtual bool ShouldCullChildren(UsdPrim const& prim);
 
+    // Indicates the adapter is a multiplexing adapter (e.g. PointInstancer),
+    // potentially managing its children. This flag is used in nested
+    // instancer cases to determine which adapter is assigned to which prim.
+    virtual bool IsInstancerAdapter();
+
+    // Indicates whether the prim bound to this adapter is native-instanceable.
+    // By default, NI should only work on prims without bound adapters (like
+    // Xforms), but this doesn't take proxy objects (like cards) into account.
+    virtual bool IsNativeInstanceable(UsdPrim const& prim) { return false; }
+
     // ---------------------------------------------------------------------- //
     /// \name Parallel Setup and Resolve
     // ---------------------------------------------------------------------- //
@@ -265,6 +275,10 @@ public:
     /// Returns the depending rprim paths which don't exist in descendants.
     /// Used for change tracking over subtree boundary (e.g. instancing)
     virtual SdfPathVector GetDependPaths(SdfPath const &path) const;
+
+    /// Gets the model:drawMode attribute for the given prim, walking up
+    /// the namespace if necessary.
+    TfToken GetModelDrawMode(UsdPrim const& prim);
 
     // ---------------------------------------------------------------------- //
     /// \name Render Index Compatibility
