@@ -44,8 +44,8 @@ pxr_library(usdviewq
         scalarTypes.py
         stageView.py
         usdviewContextMenuItem.py
-        nodeContextMenu.py
-        nodeContextMenuItems.py
+        primContextMenu.py
+        primContextMenuItems.py
         headerContextMenu.py
         attributeViewContextMenu.py
         layerStackContextMenu.py
@@ -55,16 +55,17 @@ pxr_library(usdviewq
         watchWindow.py
         adjustClipping.py
         adjustDefaultMaterial.py
-        nodeViewItem.py
+        primViewItem.py
         common.py
         legendUtil.py
-        nodeLegend.py
+        primLegend.py
         propertyLegend.py
         attributeValueEditor.py
         pythonExpressionPrompt.py
         overridableLineEdit.py
         variantComboBox.py
         qt.py
+        constantGroup.py
         usdviewstyle.qss
 
     PYSIDE_UI_FILES
@@ -73,7 +74,7 @@ pxr_library(usdviewq
         adjustClippingUI.ui
         adjustDefaultMaterialUI.ui
         attributeValueEditorUI.ui
-        nodeLegendUI.ui
+        primLegendUI.ui
         propertyLegendUI.ui
         pythonExpressionPromptUI.ui
 )
@@ -81,4 +82,14 @@ pxr_library(usdviewq
 install(DIRECTORY
     icons
     DESTINATION lib/python/pxr/Usdviewq
+)
+
+pxr_test_scripts(
+    testenv/testUsdviewqConstantGroup.py
+)
+
+pxr_register_test(testUsdviewqConstantGroup
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdviewqConstantGroup"
+    EXPECTED_RETURN_CODE 0
 )
