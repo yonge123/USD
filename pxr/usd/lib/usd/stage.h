@@ -1483,26 +1483,6 @@ private:
     // --------------------------------------------------------------------- //
     // Spec Existence & Definition Helpers
     // --------------------------------------------------------------------- //
-    using _MasterToFlattenedPathMap 
-        = std::unordered_map<SdfPath, SdfPath, SdfPath::Hash>;
-
-    void _CopyMetadata(const UsdObject &source,
-                       const SdfSpecHandle& dest) const;
-    
-    void _CopyProperty(const UsdProperty &prop,
-                       const SdfPrimSpecHandle& dest,
-                       const _MasterToFlattenedPathMap 
-                            &masterToFlattened) const;
-
-    void _CopyMasterPrim(const UsdPrim &masterPrim,
-                         const SdfLayerHandle &destinationLyer,
-                         const _MasterToFlattenedPathMap 
-                            &masterToFlattened) const;
-
-    void _FlattenPrim(const UsdPrim &usdPrim,
-                      const SdfLayerHandle &layer,
-                      const SdfPath &path,
-                      const _MasterToFlattenedPathMap &masterToFlattened) const;
 
     SdfPropertySpecHandleVector
     _GetPropertyStack(const UsdProperty &prop, UsdTimeCode time) const;
@@ -1555,6 +1535,10 @@ private:
     UsdPrim _DefinePrim(const SdfPath &path, const TfToken &typeName);
 
     bool _RemoveProperty(const SdfPath& path);
+
+    UsdProperty _FlattenProperty(const UsdProperty &srcProp,
+                                 const UsdPrim &dstParent, 
+                                 const TfToken &dstName);
 
     // --------------------------------------------------------------------- //
     // Value & Metadata Authoring
@@ -1945,13 +1929,6 @@ private:
     // --------------------------------------------------------------------- //
     // Specialized Time Sample I/O
     // --------------------------------------------------------------------- //
-
-    // Returns the TSM, transformed for the current offset & scale.
-    SdfTimeSampleMap _GetTimeSampleMap(const UsdAttribute &attr) const;
-
-    // Same as _GetTimeSampleMap but report whether or not timesamples exist.
-    bool _GetTimeSampleMap(const UsdAttribute &attr,
-                           SdfTimeSampleMap *out) const;
 
     /// Gets the set of time samples authored for a given attribute 
     /// within the \p interval. The interval may have any combination 
