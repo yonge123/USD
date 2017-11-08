@@ -75,6 +75,14 @@ UsdImagingPrimAdapter::ShouldCullChildren(UsdPrim const&)
 }
 
 /*virtual*/
+bool
+UsdImagingPrimAdapter::IsInstancerAdapter()
+{
+    // By default, opt-out of nested-instancing adapter resolution.
+    return false;
+}
+
+/*virtual*/
 void
 UsdImagingPrimAdapter::ProcessPrimResync(SdfPath const& usdPath, 
                                          UsdImagingIndexProxy* index) 
@@ -374,6 +382,12 @@ UsdImagingPrimAdapter::GetMaterialId(UsdPrim const& prim)
     } else {
         return UsdImaging_MaterialStrategy::ComputeShaderPath(prim);
     }
+}
+
+TfToken
+UsdImagingPrimAdapter::GetModelDrawMode(UsdPrim const& prim)
+{
+    return _delegate->_GetModelDrawMode(prim);
 }
 
 SdfPath
