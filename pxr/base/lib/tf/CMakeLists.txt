@@ -35,7 +35,6 @@ pxr_library(tf
         diagnosticBase
         diagnosticHelper
         diagnosticMgr
-        diagnosticNotice
         dl
         enum
         envSetting
@@ -65,6 +64,7 @@ pxr_library(tf
         refPtrTracker
         regTest
         registryManager
+        safeOutputFile
         scoped
         scopeDescription
         setenv
@@ -143,13 +143,15 @@ pxr_library(tf
         pyStaticTokens.h
 
     PRIVATE_CLASSES
+        atomicRenameUtil
         debugCodes
         noticeRegistry
 
     PYTHON_PRIVATE_CLASSES
         pyErrorInternal
 
-    PRIVATE_HEADERS 
+    PRIVATE_HEADERS
+        scopeDescriptionPrivate.h
         pxrDoubleConversion/ieee.h
         pxrDoubleConversion/utils.h
         pxrDoubleConversion/double-conversion.h
@@ -184,7 +186,7 @@ pxr_library(tf
         wrapCallContext.cpp
         wrapDebug.cpp
         wrapDiagnostic.cpp
-        wrapDiagnosticNotice.cpp
+        wrapDiagnosticBase.cpp
         wrapEnum.cpp
         wrapEnvSetting.cpp
         wrapError.cpp
@@ -299,7 +301,6 @@ pxr_build_test(testTf
         testenv/debug.cpp
         testenv/denseHashMap.cpp
         testenv/delegate.cpp
-        testenv/diagnosticNotices.cpp
         testenv/dl.cpp
         testenv/enum.cpp
         testenv/error.cpp
@@ -320,6 +321,7 @@ pxr_build_test(testTf
         testenv/refPtr.cpp
         testenv/registryManager.cpp
         testenv/registryManagerUnload.cpp
+        testenv/safeOutputFile.cpp
         testenv/scoped.cpp
         testenv/scopeDescription.cpp
         testenv/setenv.cpp
@@ -346,7 +348,6 @@ pxr_test_scripts(
     testenv/testTfPython.py
     testenv/testTfPyDateTime.py
     testenv/testTfPyNotice.py
-    testenv/testTfPyDiagnosticNotices.py
     testenv/testTfPyOptional.py
     testenv/testTfPyScopeDescription.py
     testenv/testTfPyStaticTokens.py
@@ -374,18 +375,6 @@ pxr_install_test_dir(
     DEST TfDebugTestEnvList/baseline
 )
 endif()
-pxr_install_test_dir(
-    SRC testenv/baseline/TfDiagnosticNotice_Fatal
-    DEST TfDiagnosticNotice_Fatal/baseline
-)
-pxr_install_test_dir(
-    SRC testenv/baseline/TfDiagnosticNotices
-    DEST TfDiagnosticNotices/baseline
-)
-pxr_install_test_dir(
-    SRC testenv/baseline/TfDiagnosticNotices_python
-    DEST TfDiagnosticNotices_Python/baseline
-)
 pxr_install_test_dir(
     SRC testenv/baseline/TfDelegate
     DEST TfDelegate/baseline
@@ -472,22 +461,6 @@ pxr_register_test(TfError
 )
 pxr_register_test(TfErrorThreadTransport
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfErrorThreadTransport"
-)
-pxr_register_test(TfDiagnosticNotices
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfDiagnosticNotices"
-    CLEAN_OUTPUT "${PROJECT_SOURCE_DIR}/" 
-    DIFF_COMPARE output.txt
-)
-pxr_register_test(TfDiagnosticNotice_Fatal
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfDiagnosticNotice_Fatal"
-    CLEAN_OUTPUT "${PROJECT_SOURCE_DIR}/"
-    EXPECTED_RETURN_CODE 134
-    DIFF_COMPARE output_fatal.txt
-)
-pxr_register_test(TfDiagnosticNotices_Python
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTfPyDiagnosticNotices"
-    DIFF_COMPARE pyDiagnosticNoticeOutput.txt
 )
 pxr_register_test(TfEnvSetting
     ENV
@@ -582,6 +555,9 @@ pxr_register_test(TfRegTest_TfScoped
 pxr_register_test(TfRegTest_TfUndefinedTest
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfUndefinedTest"
     EXPECTED_RETURN_CODE 3
+)
+pxr_register_test(TfSafeOutputFile
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfSafeOutputFile"
 )
 pxr_register_test(TfScopeDescription
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfScopeDescription"
