@@ -24,7 +24,6 @@ tg/simple_features/usdview_reload_shortcut
 tg/simple_features/vp2_maya_proxy
 tg/simple_features/maya_call_once_deadlock
 tg/simple_features/tests_set_maya_app_dir
-tg/simple_features/loading_shading_mode_plugs
 tg/simple_features/clear_writers_before_save
 tg/simple_features/passing_primdag_map_to_shading_exporter
 tg/simple_features/vec4_primvar_katana
