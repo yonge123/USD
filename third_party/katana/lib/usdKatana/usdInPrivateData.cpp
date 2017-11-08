@@ -460,7 +460,7 @@ PxrUsdKatanaUsdInPrivateData::GetMotionSampleTimes(
 }
 
 void PxrUsdKatanaUsdInPrivateData::setExtensionOpArg(
-        const std::string & name, FnAttribute::Attribute attr)
+        const std::string & name, FnAttribute::Attribute attr) const
 {
     if (!_extGb)
     {
@@ -472,7 +472,7 @@ void PxrUsdKatanaUsdInPrivateData::setExtensionOpArg(
 
 
 FnAttribute::Attribute PxrUsdKatanaUsdInPrivateData::getExtensionOpArg(
-        const std::string & name, FnAttribute::GroupAttribute opArgs)
+        const std::string & name, FnAttribute::GroupAttribute opArgs) const
 {
     if (name.empty())
     {
@@ -485,7 +485,7 @@ FnAttribute::Attribute PxrUsdKatanaUsdInPrivateData::getExtensionOpArg(
 
 FnAttribute::GroupAttribute
 PxrUsdKatanaUsdInPrivateData::updateExtensionOpArgs(
-        FnAttribute::GroupAttribute opArgs)
+        FnAttribute::GroupAttribute opArgs) const
 {
     if (!_extGb)
     {

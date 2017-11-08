@@ -38,11 +38,7 @@ from pxr import Sdf, Usd, UsdGeom
 from pxr import UsdImagingGL
 from pxr import CameraUtil
 
-from common import (RENDER_MODE_WIREFRAME, RENDER_MODE_WIREFRAME_ON_SURFACE,
-                    RENDER_MODE_SMOOTH_SHADED, RENDER_MODE_FLAT_SHADED,
-                    RENDER_MODE_POINTS, RENDER_MODE_GEOM_ONLY,
-                    RENDER_MODE_GEOM_FLAT, RENDER_MODE_GEOM_SMOOTH,
-                    RENDER_MODE_HIDDEN_SURFACE_WIREFRAME)
+from common import RenderModes, ShadedRenderModes
 
 DEBUG_CLIPPING = "USDVIEWQ_DEBUG_CLIPPING"
 
@@ -1103,7 +1099,7 @@ class StageView(QtOpenGL.QGLWidget):
             self._defaultComplexity = 1.0
             self._defaultDrawSelHighlights = True
             self._defaultShowBBoxes = True
-            self._defaultRenderMode = RENDER_MODE_SMOOTH_SHADED
+            self._defaultRenderMode = RenderModes.SMOOTH_SHADED
             self._defaultShowHUD = True
 
         @property
@@ -1457,15 +1453,15 @@ class StageView(QtOpenGL.QGLWidget):
         self._lastY = 0
 
         self._renderer = None
-        self._renderModeDict={RENDER_MODE_WIREFRAME:UsdImagingGL.GL.DrawMode.DRAW_WIREFRAME,
-                              RENDER_MODE_WIREFRAME_ON_SURFACE:UsdImagingGL.GL.DrawMode.DRAW_WIREFRAME_ON_SURFACE,
-                              RENDER_MODE_SMOOTH_SHADED:UsdImagingGL.GL.DrawMode.DRAW_SHADED_SMOOTH,
-                              RENDER_MODE_POINTS:UsdImagingGL.GL.DrawMode.DRAW_POINTS,
-                              RENDER_MODE_FLAT_SHADED:UsdImagingGL.GL.DrawMode.DRAW_SHADED_FLAT,
-                              RENDER_MODE_GEOM_ONLY:UsdImagingGL.GL.DrawMode.DRAW_GEOM_ONLY,
-                              RENDER_MODE_GEOM_SMOOTH:UsdImagingGL.GL.DrawMode.DRAW_GEOM_SMOOTH,
-                              RENDER_MODE_GEOM_FLAT:UsdImagingGL.GL.DrawMode.DRAW_GEOM_FLAT,
-                              RENDER_MODE_HIDDEN_SURFACE_WIREFRAME:UsdImagingGL.GL.DrawMode.DRAW_WIREFRAME}
+        self._renderModeDict={RenderModes.WIREFRAME:UsdImagingGL.GL.DrawMode.DRAW_WIREFRAME,
+                              RenderModes.WIREFRAME_ON_SURFACE:UsdImagingGL.GL.DrawMode.DRAW_WIREFRAME_ON_SURFACE,
+                              RenderModes.SMOOTH_SHADED:UsdImagingGL.GL.DrawMode.DRAW_SHADED_SMOOTH,
+                              RenderModes.POINTS:UsdImagingGL.GL.DrawMode.DRAW_POINTS,
+                              RenderModes.FLAT_SHADED:UsdImagingGL.GL.DrawMode.DRAW_SHADED_FLAT,
+                              RenderModes.GEOM_ONLY:UsdImagingGL.GL.DrawMode.DRAW_GEOM_ONLY,
+                              RenderModes.GEOM_SMOOTH:UsdImagingGL.GL.DrawMode.DRAW_GEOM_SMOOTH,
+                              RenderModes.GEOM_FLAT:UsdImagingGL.GL.DrawMode.DRAW_GEOM_FLAT,
+                              RenderModes.HIDDEN_SURFACE_WIREFRAME:UsdImagingGL.GL.DrawMode.DRAW_WIREFRAME}
 
         self._renderParams = UsdImagingGL.GL.RenderParams()
         self._defaultFov = 60
@@ -1488,7 +1484,7 @@ class StageView(QtOpenGL.QGLWidget):
         self._overrideFar = None
 
         self._cameraPrim = None
-        self._nodes = []
+        self._selectedPrims = []
 
         # blind state of instance selection (key:path, value:indices)
         self._selectedInstances = dict()
@@ -1790,14 +1786,14 @@ class StageView(QtOpenGL.QGLWidget):
     def setCullBackfaces(self, enabled):
         self._cullBackfaces = enabled
         
-    def setNodes(self, nodes, frame, resetCam=False, forceComputeBBox=False,
-                 frameFit=1.1):
-        '''Set the current nodes. resetCam = True causes the camera to reframe
-        the specified nodes. frameFit sets the ratio of the camera's frustum's
+    def setSelectedPrims(self, selectedPrims, frame, resetCam=False,
+                forceComputeBBox=False, frameFit=1.1):
+        '''Set the selected prims. resetCam = True causes the camera to reframe
+        the specified prims. frameFit sets the ratio of the camera's frustum's
         relevant dimension to the object's bounding box. 1.1, the default,
-        fits the node's bounding box in the frame with a roughly 10% margin.
+        fits the prim's bounding box in the frame with a roughly 10% margin.
         '''
-        self._nodes = nodes
+        self._selectedPrims = selectedPrims
         self._currentFrame = frame
 
         # set highlighted paths to renderer
@@ -1813,7 +1809,7 @@ class StageView(QtOpenGL.QGLWidget):
             try:
                 startTime = time()
                 self._bbox = self.getStageBBox()
-                if len(nodes) == 1 and nodes[0].GetPath() == '/':
+                if len(selectedPrims) == 1 and selectedPrims[0].GetPath() == '/':
                     if self._bbox.GetRange().IsEmpty():
                         self._selectionBBox = self._getDefaultBBox()
                     else:
@@ -1857,7 +1853,7 @@ class StageView(QtOpenGL.QGLWidget):
 
         self._renderer.ClearSelected()
 
-        for p in self._nodes:
+        for p in self._selectedPrims:
             if p == psuRoot:
                 continue
             if self._selectedInstances.has_key(p.GetPath()):
@@ -1880,7 +1876,7 @@ class StageView(QtOpenGL.QGLWidget):
 
     def getSelectionBBox(self):
         bbox = Gf.BBox3d()
-        for n in self._nodes:
+        for n in self._selectedPrims:
             if n.IsActive() and not n.IsInMaster():
                 primBBox = self._dataModel.bboxCache.ComputeWorldBound(n)
                 bbox = Gf.BBox3d.Combine(bbox, primBBox)
@@ -2150,16 +2146,12 @@ class StageView(QtOpenGL.QGLWidget):
         self._renderParams.clipPlanes = [Gf.Vec4d(i) for i in
                                          gfCamera.clippingPlanes]
 
-        if self._nodes:
+        if self._selectedPrims:
             sceneAmbient = (0.01, 0.01, 0.01, 1.0)
             material = Glf.SimpleMaterial()
             lights = []
             # for renderModes that need lights
-            if self._dataModel.renderMode in (RENDER_MODE_FLAT_SHADED,
-                                              RENDER_MODE_SMOOTH_SHADED,
-                                              RENDER_MODE_WIREFRAME_ON_SURFACE,
-                                              RENDER_MODE_GEOM_SMOOTH,
-                                              RENDER_MODE_GEOM_FLAT):
+            if self._dataModel.renderMode in ShadedRenderModes:
 
                 stagePos = Gf.Vec3d(self._bbcenter[0], self._bbcenter[1],
                                     self._bbcenter[2])
@@ -2226,7 +2218,7 @@ class StageView(QtOpenGL.QGLWidget):
             # modes that want no lighting simply leave lights as an empty list
             self._renderer.SetLightingState(lights, material, sceneAmbient)
 
-            if self._dataModel.renderMode == RENDER_MODE_HIDDEN_SURFACE_WIREFRAME:
+            if self._dataModel.renderMode == RenderModes.HIDDEN_SURFACE_WIREFRAME:
                 GL.glEnable( GL.GL_POLYGON_OFFSET_FILL )
                 GL.glPolygonOffset( 1.0, 1.0 )
                 GL.glPolygonMode( GL.GL_FRONT_AND_BACK, GL.GL_FILL )
