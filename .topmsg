@@ -1,4 +1,0 @@
-From: Paul Molodowitch <pm@stanfordalumni.org>
-Subject: [cmake] Disable TBB_USE_DEBUG_BUILD
-
-causes usdview / usdcat to error
