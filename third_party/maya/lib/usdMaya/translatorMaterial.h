@@ -82,7 +82,7 @@ struct PxrUsdMayaTranslatorMaterial
             bool stripNamespaces,
             SdfPath overrideRootPath,
             const std::string& parentScope,
-            PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap);
+            const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap);
 };
 
 
