@@ -394,7 +394,7 @@ PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
         const TfToken& shadingMode,
         bool mergeTransformAndShape,
         SdfPath overrideRootPath,
-        PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap)
+        const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap)
 {
     if (shadingMode == PxrUsdMayaShadingModeTokens->none) {
         return;
