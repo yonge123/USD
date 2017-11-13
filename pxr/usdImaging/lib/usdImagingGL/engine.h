@@ -157,7 +157,8 @@ public:
                 && wireframeColor              == other.wireframeColor
                 && alphaThreshold              == other.alphaThreshold
                 && clipPlanes                  == other.clipPlanes
-                && enableHardwareShading       == other.enableHardwareShading;
+                && enableHardwareShading       == other.enableHardwareShading
+                && displayImagePlanes          == other.displayImagePlanes;
         }
         bool operator!=(const RenderParams &other) const {
             return !(*this == other);

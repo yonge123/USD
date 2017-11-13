@@ -187,6 +187,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self._displayCameraOracles = False
             self._displayPrimId = False
             self._enableHardwareShading = True
+            self._displayImagePlanes = True
             self._cullBackfaces = False
 
             self._showMask = False
@@ -621,6 +622,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self._ui.actionEnable_Hardware_Shading.toggled.connect(
                 self._toggleEnableHardwareShading)
+
+            self._ui.actionDisplay_Image_Planes.toggled.connect(self._toggleDisplayImagePlanes)
 
             self._ui.actionCull_Backfaces.toggled.connect(self._toggleCullBackfaces)
 
@@ -1469,6 +1472,10 @@ class MainWindow(QtWidgets.QMainWindow):
         return self._enableHardwareShading
 
     @property
+    def displayImagePlanes(self):
+        return self._displayImagePlanes
+
+    @property
     def cullBackfaces(self):
         return self._cullBackfaces
 
@@ -2028,13 +2035,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self._enableHardwareShading = self._settings.get("EnableHardwareShading", True)
         self._ui.actionEnable_Hardware_Shading.setChecked(self._enableHardwareShading)
 
-        displayImagePlanes = self._settings.get("DisplayImagePlanes", True)
-        self._ui.actionDisplay_Image_Planes.setChecked(displayImagePlanes)
-        self._stageView.setDisplayImagePlanes(displayImagePlanes)
+        self._displayImagePlanes = self._settings.get("DisplayImagePlanes", True)
+        self._ui.actionDisplay_Image_Planes.setChecked(self._displayImagePlanes)
 
         cullBackfaces = self._settings.get("CullBackfaces", False)
         self._ui.actionCull_Backfaces.setChecked(cullBackfaces)
-        self._stageView.setCullBackfaces(cullBackfaces)
 
         showMaskSetting = self._settings.get("actionCameraMask", "none")
         self._showMask = (showMaskSetting != "none")
@@ -2395,8 +2400,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _toggleDisplayImagePlanes(self, checked):
         self._settings.setAndSave(DisplayImagePlanes=checked)
-        self._stageView.setDisplayImagePlanes(checked)
-        self._stageView.update()
+        self._displayImagePlanes = checked
+        if self._stageView:
+            self._stageView.update()
 
     def _toggleCullBackfaces(self, checked):
         self._settings.setAndSave(CullBackfaces=checked)
