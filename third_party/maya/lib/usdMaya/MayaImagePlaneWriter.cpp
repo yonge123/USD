@@ -4,6 +4,8 @@
 #include "pxr/usd/usdGeom/imagePlane.h"
 #include <maya/MFnDependencyNode.h>
 
+#include "writeUtil.h"
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 
@@ -70,6 +72,27 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
     TF_AXIOM(primSchema);
     mUsdPrim = primSchema.GetPrim();
     TF_AXIOM(mUsdPrim);
+}
+
+MayaImagePlaneWriter::~MayaImagePlaneWriter() {
+    UsdGeomImagePlane primSchema(mUsdPrim);
+
+    if (primSchema) {
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFilenameAttr(), UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetUseFrameExtensionAttr(), UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFrameOffsetAttr(), UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetWidthAttr(), UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetHeightAttr(), UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetAlphaGainAttr(), UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetAlphaGainAttr(), UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetDepthAttr(), UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetSqueezeCorrectionAttr(), UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetOffsetAttr(), UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetSizeAttr(), UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetRotateAttr(), UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetCoverageAttr(), UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetCoverageOriginAttr(), UsdInterpolationTypeHeld);
+    }
 }
 
 void MayaImagePlaneWriter::write(const UsdTimeCode& usdTime) {
