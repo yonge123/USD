@@ -46,7 +46,7 @@ class MayaMeshWriter : public MayaTransformWriter
                    const SdfPath& uPath,
                    bool instanceSource,
                    usdWriteJobCtx& jobCtx);
-    virtual ~MayaMeshWriter() {};
+    virtual ~MayaMeshWriter();
 
     virtual void write(const UsdTimeCode &usdTime);
     
@@ -82,36 +82,41 @@ class MayaMeshWriter : public MayaTransformWriter
         bool* clamped);
 
     bool _createAlphaPrimVar(UsdGeomGprim &primSchema,
+                             const UsdTimeCode& usdTime,
                              const TfToken& name,
                              const VtArray<float>& data,
                              const TfToken& interpolation,
                              const VtArray<int>& assignmentIndices,
-                             const int unassignedValueIndex,
                              bool clamped);
 
     bool _createRGBPrimVar(UsdGeomGprim &primSchema,
+                           const UsdTimeCode& usdTime,
                            const TfToken& name,
                            const VtArray<GfVec3f>& data,
                            const TfToken& interpolation,
                            const VtArray<int>& assignmentIndices,
-                           const int unassignedValueIndex,
                            bool clamped);
 
     bool _createRGBAPrimVar(UsdGeomGprim &primSchema,
+                            const UsdTimeCode& usdTime,
                             const TfToken& name,
                             const VtArray<GfVec3f>& rgbData,
                             const VtArray<float>& alphaData,
                             const TfToken& interpolation,
                             const VtArray<int>& assignmentIndices,
-                            const int unassignedValueIndex,
                             bool clamped);
 
+    void _writeMotionVector(UsdGeomMesh& primSchema,
+                            const UsdTimeCode& usdTime,
+                            MFnMesh& mesh,
+                            const MString& colorSetName);
+
     bool _createUVPrimVar(UsdGeomGprim &primSchema,
+                          const UsdTimeCode& usdTime,
                           const TfToken& name,
                           const VtArray<GfVec2f>& data,
                           const TfToken& interpolation,
-                          const VtArray<int>& assignmentIndices,
-                          const int unassignedValueIndex);
+                          const VtArray<int>& assignmentIndices);
 
     /// Adds displayColor and displayOpacity primvars using the given color,
     /// alpha, and assignment data if the \p primSchema does not already have
@@ -123,7 +128,6 @@ class MayaMeshWriter : public MayaTransformWriter
         const VtArray<float>& AlphaData,
         const TfToken& interpolation,
         const VtArray<int>& assignmentIndices,
-        const int unassignedValueIndex,
         const bool clamped,
         const bool authored);
 
