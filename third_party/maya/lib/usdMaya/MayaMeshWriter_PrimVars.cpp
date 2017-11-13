@@ -106,7 +106,6 @@ MayaMeshWriter::_GetMeshUVSetData(
     PxrUsdMayaUtil::CompressFaceVaryingPrimvarIndices(mesh,
                                                       interpolation,
                                                       assignmentIndices);
-
     return true;
 }
 
