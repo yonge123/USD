@@ -78,7 +78,7 @@ namespace {
     }
 
     IndexMap _buildInversionMap(
-            const std::vector<std::pair<size_t, size_t> >& inversionTwins)
+            const std::vector<IndexPair>& inversionTwins)
     {
         IndexMap result;
         for (const auto& twinPair : inversionTwins)
@@ -133,15 +133,9 @@ namespace {
             {
                 auto indexPair = _makeInversionIndexPair(i, inversionMap);
                 // Insert, and check if it already existed
-                if (!result.insert({attrName, indexPair}).second)
-                {
-                    // The attrName was already in the lookup map...
-                    // ...this shouldn't happen, error
-                    std::string msg = TfStringPrintf(
-                            "AttrName %s already found in attrName lookup map",
-                            attrName.GetText());
-                    throw std::invalid_argument(msg);
-                }
+                TF_VERIFY(result.insert({attrName, indexPair}).second,
+                        "AttrName %s already found in attrName lookup map",
+                        attrName.GetText());
             }
         }
         return result;
@@ -160,15 +154,9 @@ namespace {
 
             auto indexPair = _makeInversionIndexPair(i, inversionMap);
             // Insert, and check if it already existed
-            if (!result.insert({op.GetName(), indexPair}).second)
-            {
-                // The op name was already in the lookup map...
-                // ...this shouldn't happen, error
-                std::string msg = TfStringPrintf(
-                        "Op classification name %s already found in op lookup map",
-                        op.GetName().GetText());
-                throw std::invalid_argument(msg);
-            }
+            TF_VERIFY(result.insert({op.GetName(), indexPair}).second,
+                    "Op classification name %s already found in op lookup map",
+                    op.GetName().GetText());
         }
         return result;
     }
@@ -345,7 +333,7 @@ public:
     typedef TfRefPtr<_PxrUsdMayaXformStackData> RefPtr;
 
     RefPtr static Create(const OpClassList& ops,
-            const std::vector<std::pair<size_t, size_t> >& inversionTwins,
+            const std::vector<IndexPair>& inversionTwins,
             bool nameMatters)
     {
         return RefPtr(new _PxrUsdMayaXformStackData(
@@ -354,7 +342,7 @@ public:
 
     _PxrUsdMayaXformStackData(
             const OpClassList& ops,
-            const std::vector<std::pair<size_t, size_t> >& inversionTwins,
+            const std::vector<IndexPair>& inversionTwins,
             bool nameMatters) :
                     m_ops(ops),
                     m_inversionTwins(inversionTwins),
@@ -371,38 +359,17 @@ public:
         {
             const PxrUsdMayaXformOpClassification& first = m_ops[pair.first];
             const PxrUsdMayaXformOpClassification& second = m_ops[pair.second];
-            if (first.GetName() != second.GetName())
-            {
-                std::string msg = TfStringPrintf(
-                        "Inversion twins %lu (%s) and %lu (%s) did not have same name",
-                        pair.first, first.GetName().GetText(),
-                        pair.second, second.GetName().GetText());
-                throw std::invalid_argument(msg);
-            }
-            if (first.GetOpType() != second.GetOpType())
-            {
-                std::string msg = TfStringPrintf(
-                        "Inversion twins %lu and %lu (%s) were not same op type",
-                        pair.first, pair.second, first.GetName().GetText());
-                throw std::invalid_argument(msg);
-            }
-            if (first.IsInvertedTwin() == second.IsInvertedTwin())
-            {
-                if (first.IsInvertedTwin())
-                {
-                    std::string msg = TfStringPrintf(
-                            "Inversion twins %lu and %lu (%s) were both marked as the inverted twin",
-                            pair.first, pair.second, first.GetName().GetText());
-                    throw std::invalid_argument(msg);
-                }
-                else
-                {
-                    std::string msg = TfStringPrintf(
-                            "Inversion twins %lu and %lu (%s) were both marked as not the inverted twin",
-                            pair.first, pair.second, first.GetName().GetText());
-                    throw std::invalid_argument(msg);
-                }
-            }
+            TF_VERIFY(first.GetName() == second.GetName(),
+                    "Inversion twins %lu (%s) and %lu (%s) did not have same name",
+                    pair.first, first.GetName().GetText(),
+                    pair.second, second.GetName().GetText());
+            TF_VERIFY(first.GetOpType() == second.GetOpType(),
+                    "Inversion twins %lu and %lu (%s) were not same op type",
+                    pair.first, pair.second, first.GetName().GetText());
+            TF_VERIFY(first.IsInvertedTwin() != second.IsInvertedTwin(),
+                    "Inversion twins %lu and %lu (%s) were both marked as %s inverted twin",
+                    pair.first, pair.second, first.GetName().GetText(),
+                    first.IsInvertedTwin() ? "the" : "not the");
         }
     }
 
@@ -448,7 +415,7 @@ public:
 
 PxrUsdMayaXformStack::PxrUsdMayaXformStack(
         const OpClassList& ops,
-        const std::vector<std::pair<size_t, size_t> >& inversionTwins,
+        const std::vector<IndexPair>& inversionTwins,
         bool nameMatters) :
         _sharedData(_PxrUsdMayaXformStackData::Create(
                         ops, inversionTwins, nameMatters))
@@ -460,7 +427,7 @@ PxrUsdMayaXformStack::GetOps() const {
     return _sharedData->m_ops;
 }
 
-std::vector<std::pair<size_t, size_t> > const &
+std::vector<IndexPair> const &
 PxrUsdMayaXformStack::GetInversionTwins() const {
     return _sharedData->m_inversionTwins;
 }
