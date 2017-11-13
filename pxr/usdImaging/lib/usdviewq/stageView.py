@@ -1195,6 +1195,10 @@ class StageView(QtOpenGL.QGLWidget):
             return True
 
         @property
+        def displayImagePlanes(self):
+            return True
+
+        @property
         def cullBackfaces(self):
             return False
 
@@ -1918,8 +1922,8 @@ class StageView(QtOpenGL.QGLWidget):
         self._renderParams.enableIdRender = self._dataModel.displayPrimId
         self._renderParams.enableSampleAlphaToCoverage = not self._dataModel.displayPrimId
         self._renderParams.highlight = renderSelHighlights
-        self._renderParams.enableHardwareShading = self._enableHardwareShading
-        self._renderParams.displayImagePlanes = self._displayImagePlanes
+        self._renderParams.enableHardwareShading = self._dataModel.enableHardwareShading
+        self._renderParams.displayImagePlanes = self._dataModel.displayImagePlanes
 
         pseudoRoot = self._stage.GetPseudoRoot()
 
@@ -2545,8 +2549,8 @@ class StageView(QtOpenGL.QGLWidget):
         self._renderParams.gammaCorrectColors = False
         self._renderParams.enableIdRender = True
         self._renderParams.enableSampleAlphaToCoverage = False
-        self._renderParams.enableHardwareShading = self._enableHardwareShading
-        self._renderParams.displayImagePlanes = self._displayImagePlanes
+        self._renderParams.enableHardwareShading = self._dataModel.enableHardwareShading
+        self._renderParams.displayImagePlanes = self._dataModel.displayImagePlanes
 
         results = self._renderer.TestIntersection(
                 pickFrustum.ComputeViewMatrix(),
