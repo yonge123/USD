@@ -171,7 +171,7 @@ public:
 
     PxrUsdMayaXformStack(
             const OpClassList& ops,
-            const std::vector<std::pair<size_t, size_t> >& inversionTwins,
+            const std::vector<IndexPair>& inversionTwins,
             bool nameMatters=true);
 
     // Don't want to accidentally make a copy, since the only instances are supposed
@@ -183,7 +183,7 @@ public:
     OpClassList const & GetOps() const;
 
     PXRUSDMAYA_API
-    std::vector<std::pair<size_t, size_t> > const & GetInversionTwins() const;
+    const std::vector<IndexPair>& GetInversionTwins() const;
 
     PXRUSDMAYA_API
     bool GetNameMatters() const;
@@ -199,8 +199,8 @@ public:
     /// \param  opName the name of the operator classification we  wish to find
     /// \param  isInvertedTwin the returned op classification object must match
     ///         this param for it's IsInvertedTwin() - if an op is found that matches
-    ///         the name, but has the wrong invertedTwin status, nullptr is returned
-    /// return  Undex to the op classification object with the given name (and
+    ///         the name, but has the wrong invertedTwin status, NO_INDEX is returned
+    /// return  Index to the op classification object with the given name (and
     ///         inverted twin state); will be NO_INDEX if no match could be found.
     PXRUSDMAYA_API
     size_t FindOpIndex(const TfToken& opName, bool isInvertedTwin=false) const;
@@ -209,9 +209,11 @@ public:
     /// \param  opName the name of the operator classification we  wish to find
     /// \param  isInvertedTwin the returned op classification object must match
     ///         this param for it's IsInvertedTwin() - if an op is found that matches
-    ///         the name, but has the wrong invertedTwin status, nullptr is returned
-    /// return  Pointer to the op classification object with the given name (and
-    ///         inverted twin state); will be nullptr if no match could be found.
+    ///         the name, but has the wrong invertedTwin status, OpClass::NullInstance
+    ///         is returned
+    /// return  Reference to the op classification object with the given name (and
+    ///         inverted twin state); will be a reference to OpClass::NullInstance
+    ///         if no match could be found.
     PXRUSDMAYA_API
     const OpClass& FindOp(const TfToken& opName, bool isInvertedTwin=false) const;
 
@@ -228,16 +230,16 @@ public:
 
     /// \brief  Finds the Op Classification(s) with the given name in this stack
     /// \param  opName the name of the operator classification we  wish to find
-    /// return  A pair of pointers to op classification objects with the given name;
-    ///         if the objects are part of an inverted twin pair, then both are
-    ///         returned (in the order they appear in this stack). If found, but
-    ///         not as part of an inverted twin pair, the first result will point
-    ///         to the found classification, and the second will be null.  If
-    ///         no matches are found, both pointers will be nullptr.
+    /// return  A pair classification objects with the given name; if the objects
+    ///         are part of an inverted twin pair, then both are returned (in the
+    ///         order they appear in this stack). If found, but not as part of an
+    ///         inverted twin pair, the first result will point to the found
+    ///         classification, and the second will be OpClass::NullInstance.  If
+    ///         no matches are found, both results will be OpClass::NullInstance.
     PXRUSDMAYA_API
     const OpClassPair FindOpPair(const TfToken& opName) const;
 
-    /// \brief Returns a list of pointers to matching XformOpDefinitions for this stack
+    /// \brief Returns a list of matching XformOpDefinitions for this stack
     ///
     /// For each xformop, we want to find the corresponding op within this
     /// stack that it matches.  There are 3 requirements:
@@ -245,9 +247,9 @@ public:
     ///  - the matches for each xformop must have increasing indexes in the stack
     ///  - inversionTwins must either both be matched or neither matched.
     ///
-    /// This returns a vector of pointers to the matching XformOpDefinitions in this
-    /// stack. The size of this vector will be 0 if no complete match is found,
-    /// or xformops.size() if a complete match is found.
+    /// This returns a vector of the matching XformOpDefinitions in this stack. The
+    /// size of this vector will be 0 if no complete match is found, or xformops.size()
+    /// if a complete match is found.
     PXRUSDMAYA_API
     OpClassList
     MatchingSubstack(
