@@ -14,7 +14,7 @@ class UsdGeomImagePlane;
 
 class MayaImagePlaneWriter : public MayaPrimWriter {
 public:
-    MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx);
+    MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, usdWriteJobCtx& job);
     virtual ~MayaImagePlaneWriter();
     
     virtual void write(const UsdTimeCode& usdTime) override;
