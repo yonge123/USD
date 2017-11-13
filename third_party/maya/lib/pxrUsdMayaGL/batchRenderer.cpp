@@ -784,6 +784,7 @@ UsdMayaGLBatchRenderer::TaskDelegate::GetRenderTask(
     taskParams.cullStyle             = renderParams.cullStyle;
     taskParams.geomStyle             = HdGeomStylePolygons;
     taskParams.enableHardwareShading = true;
+    taskParams.displayImagePlanes    = false;
 
     // note that taskParams.rprims and taskParams.viewport are not updated
     // in this function, and needed to be preserved.
