@@ -42,7 +42,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 template <typename GfVec3_T>
 static void
-_setXformOp(UsdGeomXformOp &op, 
+_setXformOp(const UsdGeomXformOp &op, 
         const GfVec3_T& value, 
         const UsdTimeCode &usdTime)
 {
@@ -63,7 +63,9 @@ _setXformOp(UsdGeomXformOp &op,
 
 // Given an Op, value and time, set the Op value based on op type and precision
 static void 
-setXformOp(UsdGeomXformOp& op, const GfVec3d& value, const UsdTimeCode& usdTime)
+setXformOp(const UsdGeomXformOp& op,
+        const GfVec3d& value,
+        const UsdTimeCode& usdTime)
 {
     if (op.GetOpType() == UsdGeomXformOp::TypeTransform) {
         GfMatrix4d shearXForm(1.0);
@@ -93,18 +95,6 @@ computeXFormOps(
         bool eulerFilter,
         MayaTransformWriter::TokenRotationMap& previousRotates)
 {
-    bool resetsXformStack=false;
-    std::vector<UsdGeomXformOp> xformops = usdXformable.GetOrderedXformOps(
-        &resetsXformStack);
-    if (xformops.size() != animChanList.size()) {
-        MString errorMsg(TfStringPrintf(
-            "ERROR in MayaTransformWriter::computeXFormOps "
-            "for scope:%s USDOptSize:%lu ChannelListSize:%lu SKIPPING...", 
-            usdXformable.GetPath().GetText(), xformops.size(), animChanList.size()).c_str());
-        MGlobal::displayError(errorMsg);
-        return;
-    }
-
     // Iterate over each AnimChannel, retrieve the default value and pull the
     // Maya data if needed. Then store it on the USD Ops
     for (unsigned int channelIdx = 0; channelIdx < animChanList.size(); ++channelIdx) {
@@ -170,7 +160,7 @@ computeXFormOps(
                 }
             }
 
-            setXformOp(xformops[channelIdx], value, usdTime);
+            setXformOp(animChannel.op, value, usdTime);
         }
     }
 }
@@ -433,11 +423,11 @@ void MayaTransformWriter::pushTransformStack(
     // Loop over anim channel vector and create corresponding XFormOps
     // including the inverse ones if needed
     TF_FOR_ALL(iter, mAnimChanList) {
-        const AnimChannel& animChan = *iter;
-        usdXformable.AddXformOp(
-                animChan.usdOpType, animChan.precision,
-                animChan.opName,
-                animChan.isInverse);
+        AnimChannel& animChan = *iter;
+        animChan.op = usdXformable.AddXformOp(
+            animChan.usdOpType, animChan.precision,
+            animChan.opName,
+            animChan.isInverse);
     }
 }
 

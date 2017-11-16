@@ -204,7 +204,6 @@ static bool _pushUSDXformOpToMayaXform(
         const UsdGeomXformOp& xformop, 
         const TfToken& opName,
         MFnDagNode &MdagNode,
-        bool *importedPivots,
         const PxrUsdMayaPrimReaderArgs& args,
         const PxrUsdMayaPrimReaderContext* context)
 {
@@ -234,7 +233,7 @@ static bool _pushUSDXformOpToMayaXform(
         }
     } 
     else {
-        // pick the first avaiable sample or default
+        // pick the first available sample or default
         UsdTimeCode time=UsdTimeCode::EarliestTime();
         if (_getXformOpAsVec3d(xformop, value, time)) {
             xValue.resize(1);
@@ -253,9 +252,6 @@ static bool _pushUSDXformOpToMayaXform(
         else if (opName==PxrUsdMayaXformStackTokens->pivot) {
             _setMayaAttribute(MdagNode, xValue, yValue, zValue, timeArray, MString("rotatePivot"), "X", "Y", "Z", context);
             _setMayaAttribute(MdagNode, xValue, yValue, zValue, timeArray, MString("scalePivot"), "X", "Y", "Z", context);
-            if (*importedPivots) {
-                *importedPivots = true;
-            }
         }
         else if (opName==PxrUsdMayaXformStackTokens->pivotTranslate) {
             _setMayaAttribute(MdagNode, xValue, yValue, zValue, timeArray, MString("rotatePivotTranslate"), "X", "Y", "Z", context);
@@ -373,6 +369,8 @@ static bool _pushUSDXformToMayaXform(
             if (!_isIdentityMatrix(localXform)) {
                 MGlobal::displayWarning("Decomposing non identity 4X4 matrix at: " 
                     + MString(xformSchema.GetPath().GetText()));
+                // XXX if we want to support the old pivotPosition, we can pass
+                // it into this function..
                 PxrUsdMayaTranslatorXformable::ConvertUsdMatrixToComponents(
                         localXform, &xlate, &rotate, &scale);
             }
@@ -434,7 +432,6 @@ PxrUsdMayaTranslatorXformable::Read(
                     },
                     xformops);
 
-    bool importedPivots = false;
     MFnDagNode MdagNode(mayaNode);
     if (!stackOps.empty()) {
         // make sure stackIndices.size() == xformops.size()
@@ -447,40 +444,14 @@ PxrUsdMayaTranslatorXformable::Read(
 
             const TfToken& opName(opDef.GetName());
 
-            _pushUSDXformOpToMayaXform(xformop, opName, MdagNode, &importedPivots,
-                    args, context);
+            _pushUSDXformOpToMayaXform(xformop, opName, MdagNode, args, context);
         }
     } else {
-        // This xform can't be safely interpreted by Maya. Decompose Matrix
         if (_pushUSDXformToMayaXform(xformSchema, MdagNode, args, context) == 
                 false) {
             MGlobal::displayError(
                     "Unable to successfully decompose matrix at USD Prim:" 
                     + MString(xformSchema.GetPath().GetText()));
-        }
-    }
-    
-
-    // XXX:bug 117525
-    // We support UsdGeomXformable.pivotPosition until we have robust
-    // interchange with pivots encoded as xformOps.
-    if (!importedPivots) {
-        GfVec3f pivotPosition(0.);
-        static const GfVec3f origin(0.);
-        static const TfToken pivotPosTok("pivotPosition");
-        if (xformSchema.GetPrim().GetAttribute(pivotPosTok).Get(
-                &pivotPosition, UsdTimeCode::Default())
-            && !GfIsClose(pivotPosition, origin, 1e-6)) {
-            MTimeArray timeArray;
-            std::vector<double> xValue(1, pivotPosition[0]);
-            std::vector<double> yValue(1, pivotPosition[1]);
-            std::vector<double> zValue(1, pivotPosition[2]);
-            _setMayaAttribute(MdagNode, xValue, yValue, zValue, timeArray,
-                             MString("rotatePivot"), "X", "Y", "Z",
-                             context);
-            _setMayaAttribute(MdagNode, xValue, yValue, zValue, timeArray,
-                             MString("scalePivot"), "X", "Y", "Z",
-                             context);
         }
     }
 
