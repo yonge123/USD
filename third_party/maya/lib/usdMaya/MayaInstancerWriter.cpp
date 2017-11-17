@@ -70,6 +70,20 @@ MayaInstancerWriter::write(const UsdTimeCode &usdTime)
     writeTransformAttrs(usdTime, primSchema);
     writeInstancerAttrs(usdTime, primSchema);
 }
+bool
+MayaInstancerWriter::exportsGprims() const
+{
+    return true;
+}
+
+bool
+MayaInstancerWriter::shouldPruneChildren() const
+{
+    return true;
+}
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
 
 template <typename MArrayType, typename M, typename V>
 static VtArray<V>
