@@ -89,6 +89,7 @@ pxr_shared_library(${PXR_PACKAGE}
         debugCodes
         registryHelper
         MayaCameraWriter
+        MayaInstancerWriter
         MayaMeshWriter
         MayaNurbsCurveWriter
         MayaNurbsSurfaceWriter
@@ -150,6 +151,7 @@ pxr_test_scripts(
         testenv/testUsdExportInstances.py
         testenv/testUsdExportMesh.py
         testenv/testUsdExportNurbsCurve.py
+        testenv/testUsdExportOverImport.py
         testenv/testUsdExportRenderLayerMode.py
         testenv/testUsdExportSelection.py
         testenv/testUsdExportUVSets.py
@@ -286,6 +288,20 @@ pxr_register_test(testUsdExportNurbsCurve
 )
 
 pxr_install_test_dir(
+    SRC testenv/UsdExportOverImportTest
+    DEST testUsdExportOverImport
+)
+pxr_register_test(testUsdExportOverImport
+    CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdExportOverImport"
+    TESTENV testUsdExportOverImport
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+        MAYA_DISABLE_CIP=1
+)
+
+pxr_install_test_dir(
     SRC testenv/UsdExportRenderLayerModeTest
     DEST testUsdExportRenderLayerMode
 )
@@ -297,6 +313,7 @@ pxr_register_test(testUsdExportRenderLayerMode
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        MAYA_ENABLE_LEGACY_RENDER_LAYERS=1
 )
 
 pxr_install_test_dir(
