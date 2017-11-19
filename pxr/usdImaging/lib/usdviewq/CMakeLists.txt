@@ -39,7 +39,7 @@ pxr_library(usdviewq
         __init__.py
         arrayAttributeView.py
         customAttributes.py
-        mainWindow.py
+        appController.py
         plugContext.py
         scalarTypes.py
         stageView.py
@@ -52,7 +52,7 @@ pxr_library(usdviewq
         prettyPrint.py
         pythonInterpreter.py
         settings.py
-        watchWindow.py
+        settings2.py
         adjustClipping.py
         adjustDefaultMaterial.py
         primViewItem.py
@@ -70,7 +70,6 @@ pxr_library(usdviewq
 
     PYSIDE_UI_FILES
         mainWindowUI.ui
-        watchWindowUI.ui
         adjustClippingUI.ui
         adjustDefaultMaterialUI.ui
         attributeValueEditorUI.ui
@@ -86,10 +85,17 @@ install(DIRECTORY
 
 pxr_test_scripts(
     testenv/testUsdviewqConstantGroup.py
+    testenv/testUsdviewqSettings2.py
 )
 
 pxr_register_test(testUsdviewqConstantGroup
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdviewqConstantGroup"
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdviewqSettings2
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdviewqSettings2"
     EXPECTED_RETURN_CODE 0
 )
