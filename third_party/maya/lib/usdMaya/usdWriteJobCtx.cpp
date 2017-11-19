@@ -23,11 +23,8 @@
 //
 #include "usdMaya/usdWriteJobCtx.h"
 
-#include "pxr/usd/ar/resolver.h"
-#include "pxr/usd/ar/resolverContext.h"
-#include "pxr/usd/usdGeom/scope.h"
-
 #include "usdMaya/MayaCameraWriter.h"
+#include "usdMaya/MayaInstancerWriter.h"
 #include "usdMaya/MayaMeshWriter.h"
 #include "usdMaya/MayaNurbsCurveWriter.h"
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
@@ -35,6 +32,14 @@
 #include "usdMaya/MayaInstancerWriter.h"
 #include "usdMaya/MayaTransformWriter.h"
 #include "usdMaya/primWriterRegistry.h"
+#include "usdMaya/stageCache.h"
+
+#include "pxr/usd/ar/resolver.h"
+#include "pxr/usd/ar/resolverContext.h"
+#include "pxr/usd/sdf/layer.h"
+#include "pxr/usd/sdf/path.h"
+#include "pxr/usd/usd/stage.h"
+#include "pxr/usd/usdGeom/scope.h"
 
 #include <maya/MDagPathArray.h>
 #include <maya/MGlobal.h>
@@ -42,21 +47,23 @@
 #include <maya/MPxNode.h>
 
 #include <sstream>
+#include <string>
+
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+
 namespace {
     inline
-    SdfPath rootOverridePath(const JobExportArgs& args, const SdfPath& path) {
-        auto ret = path;
-        if (!args.usdModelRootOverridePath.IsEmpty() ) {
-            ret = ret.ReplacePrefix(ret.GetPrefixes()[0], args.usdModelRootOverridePath);
+    SdfPath& rootOverridePath(const JobExportArgs& args, SdfPath& path) {
+        if (!args.usdModelRootOverridePath.IsEmpty() && !path.IsEmpty()) {
+            path = path.ReplacePrefix(path.GetPrefixes()[0], args.usdModelRootOverridePath);
         }
         if (!args.exportRootPath.empty()) {
             static const SdfPath _emptySdfPath("/");
-            ret = ret.ReplacePrefix(args.exportRootSdfPath.GetParentPath(), _emptySdfPath);
+            path = path.ReplacePrefix(args.exportRootSdfPath.GetParentPath(), _emptySdfPath);
         }
-        return ret;
+        return path;
     }
 
     constexpr auto instancesScopeName = "/InstanceSources";
@@ -90,7 +97,7 @@ SdfPath usdWriteJobCtx::getMasterPath(const MDagPath& dg)
         } else {
             return SdfPath();
         }
-        auto primWriter = _createPrimWriter(allInstances[0], true);
+        auto primWriter = _createPrimWriter(allInstances[0], SdfPath(), true);
         if (primWriter != nullptr) {
             primWriter->write(UsdTimeCode::Default());
             mMayaPrimWriterList.push_back(primWriter);
@@ -157,12 +164,14 @@ SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool inst
             pathName = TfStringReplace(pathName, "_", "__");  // avoid any issue with |: / _ name clashes
             std::replace(pathName.begin(), pathName.end(), '|', '_');
             std::replace(pathName.begin(), pathName.end(), ':', '_');
-            return rootOverridePath(mArgs, SdfPath(pathName));
+            SdfPath path = SdfPath(pathName);
+            return rootOverridePath(mArgs, path);
         } else {
             return SdfPath();
         }
     } else {
-        const auto path = rootOverridePath(mArgs, PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false, mArgs.stripNamespaces));
+        auto path = PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false, mArgs.stripNamespaces);
+        path = rootOverridePath(mArgs, path);
         if (mParentScopePath.IsEmpty()) {
             return path;
         } else {
@@ -181,6 +190,14 @@ bool usdWriteJobCtx::openFile(const std::string& filename, bool append)
             return false;
         }
     } else {
+        // If we're exporting over a file that was previously imported, there
+        // may still be stages in the stage cache that have that file as a root
+        // layer. Creating a new stage with that file will fail because the
+        // layer already exists in the layer registry, so we try to clear the
+        // layer from the registry by erasing any stages in the stage cache
+        // with that root layer.
+        UsdMayaStageCache::EraseAllStagesWithRootLayerPath(filename);
+
         mStage = UsdStage::CreateNew(filename, resolverCtx);
         if (!mStage) {
             MGlobal::displayError("Failed to create stage file " + MString(filename.c_str()));
@@ -217,15 +234,18 @@ void usdWriteJobCtx::processInstances()
 }
 
 MayaPrimWriterPtr usdWriteJobCtx::createPrimWriter(
-    const MDagPath& curDag)
+    const MDagPath& curDag, const SdfPath& usdPath)
 {
-    return _createPrimWriter(curDag, false);
+    return _createPrimWriter(curDag, usdPath, false);
 }
 
 MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
-    const MDagPath& curDag, bool instanceSource)
+    const MDagPath& curDag, const SdfPath& usdPath, bool instanceSource)
 {
     MObject ob = curDag.node();
+
+    const SdfPath writePath = usdPath.IsEmpty() ?
+            getUsdPathFromDagPath(curDag, instanceSource) : usdPath;
 
     // Check whether a user prim writer exists for the node first, since plugin
     // nodes may provide the same function sets as native Maya nodes. If a
@@ -239,7 +259,7 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         if (PxrUsdMayaPrimWriterRegistry::WriterFactoryFn primWriterFactory =
                 PxrUsdMayaPrimWriterRegistry::Find(mayaTypeName)) {
             MayaPrimWriterPtr primPtr(primWriterFactory(
-                curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
+                curDag, writePath, instanceSource, *this));
             if (primPtr && primPtr->isValid()) {
                 // We found a registered user prim writer that handles this node
                 // type, so return now.
@@ -248,30 +268,36 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         }
     }
 
-    if (ob.hasFn(MFn::kInstancer)) {
-        MayaInstancerWriterPtr primPtr(new MayaInstancerWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
+    // Deal with instances first because they're special.
+    // Then the rest of the checks need to occur with derived classes
+    // coming before base classes (e.g. instancer before transform).
+    if (mArgs.exportInstances && curDag.isInstanced() && !instanceSource) {
+        MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, writePath, instanceSource, *this));
         if (primPtr->isValid()) {
             return primPtr;
         }
-    }
-    else if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator) ||
-        (mArgs.exportInstances && curDag.isInstanced() && !instanceSource)) {
-        MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
+    } else if (ob.hasFn(MFn::kInstancer)) {
+        MayaInstancerWriterPtr primPtr(new MayaInstancerWriter(curDag, writePath, instanceSource, *this));
+        if (primPtr->isValid()) {
+            return primPtr;
+        }
+    } else if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator)) {
+        MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, writePath, instanceSource, *this));
         if (primPtr->isValid()) {
             return primPtr;
         }
     } else if (ob.hasFn(MFn::kMesh)) {
-        MayaMeshWriterPtr primPtr(new MayaMeshWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
+        MayaMeshWriterPtr primPtr(new MayaMeshWriter(curDag, writePath, instanceSource, *this));
         if (primPtr->isValid()) {
             return primPtr;
         }
     } else if (ob.hasFn(MFn::kNurbsCurve)) {
-        MayaNurbsCurveWriterPtr primPtr(new MayaNurbsCurveWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
+        MayaNurbsCurveWriterPtr primPtr(new MayaNurbsCurveWriter(curDag, writePath, instanceSource, *this));
         if (primPtr->isValid()) {
             return primPtr;
         }
     } else if (ob.hasFn(MFn::kNurbsSurface)) {
-        MayaNurbsSurfaceWriterPtr primPtr(new MayaNurbsSurfaceWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
+        MayaNurbsSurfaceWriterPtr primPtr(new MayaNurbsSurfaceWriter(curDag, writePath, instanceSource, *this));
         if (primPtr->isValid()) {
             return primPtr;
         }
@@ -281,7 +307,9 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
             return primPtr;
         }
     } else if (ob.hasFn(MFn::kCamera)) {
-        MayaCameraWriterPtr primPtr(new MayaCameraWriter(curDag, getUsdPathFromDagPath(curDag, false), *this));
+        const SdfPath cameraWritePath = usdPath.IsEmpty() ?
+                getUsdPathFromDagPath(curDag, false) : usdPath;
+        MayaCameraWriterPtr primPtr(new MayaCameraWriter(curDag, cameraWritePath, *this));
         if (primPtr->isValid()) {
             return primPtr;
         }
