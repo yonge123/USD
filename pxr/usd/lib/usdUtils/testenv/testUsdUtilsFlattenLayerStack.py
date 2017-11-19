@@ -22,13 +22,16 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 from pxr import UsdUtils, Sdf, Usd, Gf, Vt
-import unittest
+import os, unittest
 
 class TestUsdUtilsFlattenLayerStack(unittest.TestCase):
     def test_Basic(self):
         src_stage = Usd.Stage.Open('root.usda')
-        layer = UsdUtils.FlattenLayerStack(src_stage)
+        layer = UsdUtils.FlattenLayerStack(src_stage, tag="test.usda")
         result_stage = Usd.Stage.Open(layer)
+
+        # Confirm that the tag makde it into the display name.
+        self.assertTrue('test.usda' in layer.GetDisplayName())
 
         print '#'*72
         print 'Flattened layer:'
@@ -104,11 +107,11 @@ class TestUsdUtilsFlattenLayerStack(unittest.TestCase):
         p = result_stage.GetPrimAtPath('/Sphere')
         a = p.GetAttribute('relativePath')
         # It should have become an absolute path.
-        self.assertTrue( a.Get().path.startswith('/') )
+        self.assertTrue(os.path.isabs(a.Get().path))
         # Check arrays of paths.
         a = p.GetAttribute('relativePathVec')
         for path in a.Get():
-            self.assertTrue( path.path.startswith('/') )
+            self.assertTrue(os.path.isabs(path.path) )
 
         # Confirm Sdf-level result of list-editing.
         p = layer.GetPrimAtPath('/ListOpTest')
