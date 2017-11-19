@@ -58,7 +58,8 @@ JobExportArgs::JobExportArgs()
         exportColorSets(true),
         renderLayerMode(PxUsdExportJobArgsTokens->defaultLayer),
         defaultMeshScheme(UsdGeomTokens->catmullClark),
-        exportVisibility(true)
+        exportVisibility(true),
+        stripNamespaces(false)
 {
 }
 

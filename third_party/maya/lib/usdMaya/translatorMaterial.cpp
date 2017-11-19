@@ -393,6 +393,7 @@ PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
         const PxrUsdMayaUtil::ShapeSet& bindableRoots,
         const TfToken& shadingMode,
         bool mergeTransformAndShape,
+        bool stripNamespaces,
         SdfPath overrideRootPath)
 {
     if (shadingMode == PxrUsdMayaShadingModeTokens->none) {
@@ -402,7 +403,7 @@ PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
     if (auto exporterCreator =
             PxrUsdMayaShadingModeRegistry::GetExporter(shadingMode)) {
         if (auto exporter = exporterCreator()) {
-            exporter->DoExport(stage, bindableRoots, mergeTransformAndShape, overrideRootPath);
+            exporter->DoExport(stage, bindableRoots, mergeTransformAndShape, stripNamespaces, overrideRootPath);
         }
     }
     else {

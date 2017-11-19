@@ -220,6 +220,14 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
 
                 // Write out data (non-animated/default values).
                 if (const auto& usdPrim = primWriter->getPrim()) {
+                    if (mJobCtx.mArgs.stripNamespaces && mPrimPaths.find(usdPrim.GetPath()) != mPrimPaths.end()){
+                        std::string error = TfStringPrintf("Multiple dag nodes map to the same prim path after "
+                                                           "stripping namespaces: %s", usdPrim.GetPath().GetText());
+                        MGlobal::displayError(MString(error.c_str()));
+                        return false;
+                    }
+                    mPrimPaths.insert(usdPrim.GetPath());
+
                     primWriter->write(UsdTimeCode::Default());
 
                     MDagPath dag = primWriter->getDagPath();
@@ -253,6 +261,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
                 mJobCtx.mArgs.dagPaths,
                 mJobCtx.mArgs.shadingMode,
                 mJobCtx.mArgs.mergeTransformAndShape,
+                mJobCtx.mArgs.stripNamespaces,
                 mJobCtx.mArgs.usdModelRootOverridePath);
 
     if (!mModelKindWriter.MakeModelHierarchy(mJobCtx.mStage)) {

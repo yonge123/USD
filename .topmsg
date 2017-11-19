@@ -1,0 +1,4 @@
+From: nxkb <nxkbar@gmail.com>
+Subject: tg/simple_features/strip_namespaces
+
+add feature to strip_namespaces in maya USD exporter

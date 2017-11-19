@@ -82,6 +82,8 @@ class usdWriteJob
 
     PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type mDagPathToUsdPathMap;
 
+    SdfPathSet mPrimPaths;
+
     PxrUsdMayaChaserRefPtrVector mChasers;
 
     PxrUsdMaya_ModelKindWriter mModelKindWriter;
