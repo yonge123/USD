@@ -244,17 +244,6 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         }
     }
 
-<<<<<<< tg/maya_instancer/initial
-    if (ob.hasFn(MFn::kInstancer)) {
-        MayaInstancerWriterPtr primPtr(new MayaInstancerWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
-        if (primPtr->isValid()) {
-            return primPtr;
-        }
-    }
-    else if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator) ||
-        (mArgs.exportInstances && curDag.isInstanced() && !instanceSource)) {
-        MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, getUsdPathFromDagPath(curDag, instanceSource), instanceSource, *this));
-=======
     // Deal with instances first because they're special.
     // Then the rest of the checks need to occur with derived classes
     // coming before base classes (e.g. instancer before transform).
@@ -270,7 +259,6 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         }
     } else if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator)) {
         MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, writePath, instanceSource, *this));
->>>>>>> top-bases/tg/maya_instancer/initial
         if (primPtr->isValid()) {
             return primPtr;
         }

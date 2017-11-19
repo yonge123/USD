@@ -1,9 +1,5 @@
 //
-<<<<<<< tg/maya_instancer/initial
-// Copyright 2016 Pixar
-=======
 // Copyright 2017 Pixar
->>>>>>> top-bases/tg/maya_instancer/initial
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in

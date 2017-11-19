@@ -70,20 +70,6 @@ MayaInstancerWriter::write(const UsdTimeCode &usdTime)
     writeTransformAttrs(usdTime, primSchema);
     writeInstancerAttrs(usdTime, primSchema);
 }
-bool
-MayaInstancerWriter::exportsGprims() const
-{
-    return true;
-}
-
-bool
-MayaInstancerWriter::shouldPruneChildren() const
-{
-    return true;
-}
-
-PXR_NAMESPACE_CLOSE_SCOPE
-
 
 template <typename MArrayType, typename M, typename V>
 static VtArray<V>
@@ -265,21 +251,7 @@ MayaInstancerWriter::writeInstancerAttrs(
             // reference that has an existing transform on the far side of the
             // reference. However, its behavior at least matches the
             // behavior in PxrUsdMayaTranslatorModelAssembly. If we fix the
-            // behavior there, we need to make sure that this 
-bool
-MayaInstancerWriter::exportsGprims() const
-{
-    return true;
-}
-
-bool
-MayaInstancerWriter::shouldPruneChildren() const
-{
-    return true;
-}
-
-PXR_NAMESPACE_CLOSE_SCOPE
-is also
+            // behavior there, we need to make sure that this is also
             // fixed to match.
             const AnimChannelSampleType instancerTranslateSampleType =
                     _GetInstancerTranslateSampleType(prototypeDagPath);
