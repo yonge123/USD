@@ -29,7 +29,6 @@
 #include "usdMaya/MayaNurbsCurveWriter.h"
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
 #include "usdMaya/MayaParticleWriter.h"
-#include "usdMaya/MayaInstancerWriter.h"
 #include "usdMaya/MayaTransformWriter.h"
 #include "usdMaya/primWriterRegistry.h"
 #include "usdMaya/stageCache.h"
