@@ -95,17 +95,6 @@ computeXFormOps(
         bool eulerFilter,
         MayaTransformWriter::TokenRotationMap& previousRotates)
 {
-    bool resetsXformStack=false;
-    std::vector<UsdGeomXformOp> xformops = usdXformable.GetOrderedXformOps( &resetsXformStack);
-    if (xformops.size() != animChanList.size()) {
-        MString errorMsg(TfStringPrintf(
-            "ERROR in MayaTransformWriter::computeXFormOps "
-            "for scope:%s USDOptSize:%lu ChannelListSize:%lu SKIPPING...", 
-            usdXformable.GetPath().GetText(), xformops.size(), animChanList.size()).c_str());
-        MGlobal::displayError(errorMsg);
-        return;
-    }
-
     // Iterate over each AnimChannel, retrieve the default value and pull the
     // Maya data if needed. Then store it on the USD Ops
     for (unsigned int channelIdx = 0; channelIdx < animChanList.size(); ++channelIdx) {
@@ -171,7 +160,7 @@ computeXFormOps(
                 }
             }
 
-            setXformOp(xformops[channelIdx], value, usdTime);
+            setXformOp(animChannel.op, value, usdTime);
         }
     }
 }
@@ -437,7 +426,7 @@ void MayaTransformWriter::pushTransformStack(
         AnimChannel& animChan = *iter;
         animChan.op = usdXformable.AddXformOp(
             animChan.usdOpType, animChan.precision,
-            TfToken(animChan.opName),
+            animChan.opName,
             animChan.isInverse);
     }
 }
