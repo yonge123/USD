@@ -106,14 +106,14 @@ struct UsdGeomTokensType {
     /// 
     /// Possible value for UsdGeomBasisCurves::GetBasisAttr()
     const TfToken bspline;
-    /// \brief "cards"
-    /// 
-    /// Possible value for UsdGeomModelAPI::GetModelDrawModeAttr()
-    const TfToken cards;
     /// \brief "camera"
     /// 
     /// UsdGeomImagePlane
     const TfToken camera;
+    /// \brief "cards"
+    /// 
+    /// Possible value for UsdGeomModelAPI::GetModelDrawModeAttr()
+    const TfToken cards;
     /// \brief "catmullClark"
     /// 
     /// Possible value for UsdGeomMesh::GetSubdivisionSchemeAttr(), Default value for UsdGeomMesh::GetSubdivisionSchemeAttr(), Possible value for UsdGeomMesh::GetTriangleSubdivisionRuleAttr(), Default value for UsdGeomMesh::GetTriangleSubdivisionRuleAttr()
@@ -250,6 +250,10 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomMesh
     const TfToken faceVertexIndices;
+    /// \brief "familyName"
+    /// 
+    /// UsdGeomSubset
+    const TfToken familyName;
     /// \brief "fill"
     /// 
     /// Possible value for UsdGeomImagePlane::GetFitAttr()
@@ -258,10 +262,6 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomImagePlane
     const TfToken fit;
-    /// \brief "familyName"
-    /// 
-    /// UsdGeomSubset
-    const TfToken familyName;
     /// \brief "focalLength"
     /// 
     /// UsdGeomCamera
@@ -300,11 +300,11 @@ struct UsdGeomTokensType {
     const TfToken holeIndices;
     /// \brief "horizontal"
     /// 
-    /// UsdGeomMesh
+    /// Possible value for UsdGeomImagePlane::GetFitAttr()
     const TfToken horizontal;
     /// \brief "horizontalAperture"
     /// 
-    /// Possible value for UsdGeomImagePlane::GetFitAttr()
+    /// UsdGeomCamera
     const TfToken horizontalAperture;
     /// \brief "horizontalApertureOffset"
     /// 
@@ -318,14 +318,14 @@ struct UsdGeomTokensType {
     /// 
     /// int64listop prim metadata that specifies the PointInstancer ids that should be masked (unrenderable) over all time.
     const TfToken inactiveIds;
-    /// \brief "infoFilename"
-    /// 
-    /// UsdGeomImagePlane
-    const TfToken infoFilename;
     /// \brief "indices"
     /// 
     /// UsdGeomSubset
     const TfToken indices;
+    /// \brief "info:filename"
+    /// 
+    /// UsdGeomImagePlane
+    const TfToken infoFilename;
     /// \brief "inherited"
     /// 
     /// Possible value for UsdGeomImageable::GetVisibilityAttr(), Default value for UsdGeomImageable::GetVisibilityAttr()
@@ -570,7 +570,7 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomMesh
     const TfToken subdivisionScheme;
-    /// \brief "toSize"
+    /// \brief "to size"
     /// 
     /// Possible value for UsdGeomImagePlane::GetFitAttr()
     const TfToken toSize;
@@ -656,7 +656,7 @@ struct UsdGeomTokensType {
     const TfToken vertex;
     /// \brief "vertical"
     /// 
-    ///  Possible value for UsdGeomImagePlane::GetFitAttr()
+    /// Possible value for UsdGeomImagePlane::GetFitAttr()
     const TfToken vertical;
     /// \brief "verticalAperture"
     /// 
