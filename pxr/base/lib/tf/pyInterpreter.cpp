@@ -75,17 +75,15 @@ TfPyInitialize()
                     "the 'main thread'.  Python doc says not to do this.");
         }
 
+        static std::string programName(ArchGetExecutablePath());
+
         // Initialize Python threading.  This grabs the GIL.  We'll release it
         // at the end of this function.
         PyEval_InitThreads();
 
         // Setting the program name is necessary in order for python to 
-        // find the correct built-in modules.
-#ifdef USD_PYTHON_EXECUTABLE_STR
-        static std::string pyExecutable(USD_PYTHON_EXECUTABLE_STR);
-        TF_WARN("Setting programName to: %s", pyExecutable.c_str());
-        Py_SetProgramName(const_cast<char*>(pyExecutable.c_str()));
-#endif // USD_PYTHON_EXECUTABLE_STR
+        // find the correct built-in modules. 
+        Py_SetProgramName(const_cast<char*>(programName.c_str()));
 
         // We're here when this is a C++ program initializing python (i.e. this
         // is a case of "embedding" a python interpreter, as opposed to
