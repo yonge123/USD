@@ -70,10 +70,6 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomImagePlane
     const TfToken alphaGain;
-    /// \brief "alwaysSharp"
-    /// 
-    /// Legacy token representing a deprecated  faceVaryingInterpolateBoundary state. The modern equivalent is UsdGeomTokens->boundaries.
-    const TfToken alwaysSharp;
     /// \brief "angularVelocities"
     /// 
     /// UsdGeomPointInstancer
@@ -574,14 +570,14 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomCube, UsdGeomImagePlane
     const TfToken size;
-    /// \brief "squeezeCorrection"
-    /// 
-    /// UsdGeomImagePlane
-    const TfToken squeezeCorrection;
     /// \brief "smooth"
     /// 
     /// Possible value for UsdGeomMesh::GetTriangleSubdivisionRuleAttr()
     const TfToken smooth;
+    /// \brief "squeezeCorrection"
+    /// 
+    /// UsdGeomImagePlane
+    const TfToken squeezeCorrection;
     /// \brief "stereoRole"
     /// 
     /// UsdGeomCamera
