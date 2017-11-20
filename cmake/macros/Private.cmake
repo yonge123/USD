@@ -66,7 +66,7 @@ function(_copy_headers LIBRARY_NAME)
                 )
             else()
                 add_custom_command(
-                OUTPUT ${outfile}
+                        OUTPUT ${outfile}
                         COMMAND
                             "${PYTHON_EXECUTABLE}"
                             "${PROJECT_SOURCE_DIR}/cmake/macros/copyHeaderForBuild.py"
