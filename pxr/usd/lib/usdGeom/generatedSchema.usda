@@ -92,7 +92,7 @@ class ImagePlane "ImagePlane" (
     """
 )
 {
-    rel camera = None (
+    rel camera (
         doc = "Link to the camera from where aperture sizes are queried."
     )
     int2 coverage = (0, 0) (
@@ -114,7 +114,7 @@ class ImagePlane "ImagePlane" (
     float2 offset = (0, 0) (
         doc = "Image plane offset in inches."
     )
-    rel proxyPrim = None (
+    rel proxyPrim (
         doc = '''The proxyPrim relationship allows us to link a
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
