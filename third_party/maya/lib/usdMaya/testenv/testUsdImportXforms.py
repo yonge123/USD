@@ -47,6 +47,10 @@ class testUsdImportXforms(unittest.TestCase):
     def tearDownClass(cls):
         standalone.uninitialize()
 
+    def setUp(cls):
+        # Create a new file so each test case starts with a fresh state.
+        cmds.file(new=1, f=1)        
+
     def _GetMayaTransform(self, transformName):
         selectionList = OM.MSelectionList()
         selectionList.add(transformName)
@@ -112,9 +116,7 @@ class testUsdImportXforms(unittest.TestCase):
         }
         
         rand = Random(3)
-        
-        cmds.file(new=1, f=1)
-        
+
         allNodes = []
         allExpected = {}
         
@@ -232,6 +234,41 @@ class testUsdImportXforms(unittest.TestCase):
             self.assertTrue(
                 Gf.IsClose(expectedScale, actualScale, self.EPSILON))
 
+
+    def testPivot(self):
+        """
+        Tests that pivotPosition attribute doesn't interfere with the matrix
+        that we get in maya when importing a usd file.
+        """
+        def _usdToMayaPath(usdPath):
+            return str(usdPath).replace('/', '|')
+        from maya import cmds
+        cmds.loadPlugin('pxrUsd')
+        usdFile = './pivotTests.usda'
+        from pxr import Usd, UsdGeom
+        stage = Usd.Stage.Open(usdFile)
+        xformCache = UsdGeom.XformCache()
+
+        cmds.usdImport(file=os.path.abspath(usdFile), primPath='/World')
+
+        usdPaths = [
+                '/World/anim/chars/SomeCharacter/Geom/Face/Eyes/LEye',
+                '/World/anim/chars/SomeCharacter/Geom/Face/Eyes/LEye/Sclera_sbdv',
+                '/World/anim/chars/SomeCharacter/Geom/Face/Eyes/REye/Sclera_sbdv',
+                '/World/anim/chars/SomeCharacter/Geom/Hair/HairStandin/Hair/Hair_sbdv',
+                '/World/anim/chars/SomeCharacter/Geom/Hair/HairStandin/Hair/HairFrontPiece_sbdv',
+                ]
+
+        for usdPath in usdPaths:
+            usdMatrix = xformCache.GetLocalToWorldTransform(stage.GetPrimAtPath(usdPath))
+            mayaPath = _usdToMayaPath(usdPath)
+            mayaMatrix = Gf.Matrix4d(*cmds.xform(mayaPath, query=True, matrix=True, worldSpace=True))
+
+            print 'testing matrix at', usdPath
+            self.assertTrue(Gf.IsClose(
+                usdMatrix.ExtractTranslation(), 
+                mayaMatrix.ExtractTranslation(), 
+                self.EPSILON))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -1336,7 +1336,6 @@
     <property name="title">
      <string>Window</string>
     </property>
-    <addaction name="actionWatch_Window"/>
     <addaction name="showInterpreter"/>
    </widget>
    <widget class="QMenu" name="menuEdit_Prim">
@@ -2455,35 +2454,33 @@
     <string>Display Image Planes</string>
    </property>
   </action>
-  <actiongroup name="actionGroupCameraReticles">
-   <action name="actionCameraReticles_Inside">
-    <property name="checkable">
-     <bool>true</bool>
-    </property>
-    <property name="checked">
-     <bool>false</bool>
-    </property>
-    <property name="text">
-     <string>Camera Reticles Inside</string>
-    </property>
-   </action>
-   <action name="actionCameraReticles_Outside">
-    <property name="checkable">
-     <bool>true</bool>
-    </property>
-    <property name="checked">
-     <bool>false</bool>
-    </property>
-    <property name="text">
-     <string>Camera Reticles Outside</string>
-    </property>
-   </action>
-   <action name="actionCameraReticles_Color">
-    <property name="text">
-     <string>Select Color...</string>
-    </property>
-   </action>
-  </actiongroup>
+  <action name="actionCameraReticles_Inside">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Camera Reticles Inside</string>
+   </property>
+  </action>
+  <action name="actionCameraReticles_Outside">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Camera Reticles Outside</string>
+   </property>
+  </action>
+  <action name="actionCameraReticles_Color">
+   <property name="text">
+    <string>Select Color...</string>
+   </property>
+  </action>
   <actiongroup name="actionGroupCameraMask">
    <action name="actionCameraMask_Full">
     <property name="checkable">
