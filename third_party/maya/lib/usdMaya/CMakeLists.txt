@@ -59,6 +59,7 @@ pxr_shared_library(${PXR_PACKAGE}
         util
         usdPrimProvider
         writeUtil
+        xformStack
 
         MayaPrimWriter
         MayaTransformWriter
@@ -125,6 +126,7 @@ pxr_shared_library(${PXR_PACKAGE}
         wrapRoundTripUtil.cpp
         wrapStageCache.cpp
         wrapUserTaggedAttribute.cpp
+        wrapXformStack.cpp
 
     PYMODULE_FILES
         __init__.py
@@ -152,6 +154,7 @@ pxr_test_scripts(
         testenv/testUsdExportMesh.py
         testenv/testUsdExportNurbsCurve.py
         testenv/testUsdExportOverImport.py
+        testenv/testUsdExportPointInstancer.py
         testenv/testUsdExportRenderLayerMode.py
         testenv/testUsdExportSelection.py
         testenv/testUsdExportUVSets.py
@@ -168,6 +171,7 @@ pxr_test_scripts(
         testenv/testUsdMayaProxyShape.py
         testenv/testUsdMayaReferenceAssemblyEdits.py
         testenv/testUsdMayaUserExportedAttributes.py
+        testenv/testUsdMayaXformStack.py
         testenv/testUsdMetadataAttributeConverters.py
         testenv/testUsdReferenceAssemblyChangeRepresentations.py
         testenv/testUsdReferenceAssemblySelection.py
@@ -294,6 +298,20 @@ pxr_register_test(testUsdExportOverImport
     CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdExportOverImport"
     TESTENV testUsdExportOverImport
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+        MAYA_DISABLE_CIP=1
+)
+
+pxr_install_test_dir(
+    SRC testenv/UsdExportPointInstancerTest
+    DEST testUsdExportPointInstancer
+)
+pxr_register_test(testUsdExportPointInstancer
+    CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdExportPointInstancer"
+    TESTENV testUsdExportPointInstancer
     ENV
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
@@ -567,3 +585,12 @@ pxr_register_test(testUsdReferenceAssemblySelection
         MAYA_DISABLE_CIP=1
 )
 
+pxr_register_test(testUsdMayaXformStack
+    CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdMayaXformStack"
+    TESTENV testUsdMayaXformStack
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+        MAYA_DISABLE_CIP=1
+)
