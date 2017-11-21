@@ -68,23 +68,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-namespace {
-    static
-    bool _HasParent(const MDagPath& curDagPath, const MDagPath& curLeafDagPath) {
-        MFnDagNode dagNode(curDagPath);
-        if (dagNode.inUnderWorld()) {
-            for (auto dagPathCopy = curDagPath; dagPathCopy.pathCount(); dagPathCopy.pop()) {
-                MFnDagNode dagNodeCopy(dagPathCopy);
-                if (!dagNodeCopy.inUnderWorld()) {
-                    return dagNodeCopy.hasParent(curLeafDagPath.node());
-                }
-            }
-            return false;
-        } else {
-            return dagNode.hasParent(curLeafDagPath.node());
-        }
-    }
-}
 
 usdWriteJob::usdWriteJob(const JobExportArgs & iArgs) :
     mModelKindWriter(iArgs), mJobCtx(iArgs)
@@ -205,9 +188,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
     // Now do a depth-first traversal of the Maya DAG from the world root.
     // We keep a reference to arg dagPaths as we encounter them.
     MDagPath curLeafDagPath;
-    MItDag itDag(MItDag::kDepthFirst, MFn::kInvalid);
-    itDag.traverseUnderWorld(true);
-    for (; !itDag.isDone(); itDag.next()) {
+    for (MItDag itDag(MItDag::kDepthFirst, MFn::kInvalid); !itDag.isDone(); itDag.next()) {
         MDagPath curDagPath;
         itDag.getPath(curDagPath);
         std::string curDagPathStr(curDagPath.partialPathName().asChar());
@@ -220,8 +201,9 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
             // This dagPath IS one of the arg dagPaths. It AND all of its
             // children should be included in the export.
             curLeafDagPath = curDagPath;
-        } else if (!_HasParent(curDagPath, curLeafDagPath)) {
-            // The lowest-level, non-underworld dagNode from the dagPath is not one of the arg dagPaths, so prune
+        } else if (!MFnDagNode(curDagPath).hasParent(curLeafDagPath.node())) {
+            // This dagPath is not a child of one of the arg dagPaths, so prune
+            // it and everything below it from the traversal.
             itDag.prune();
             continue;
         }
@@ -381,9 +363,10 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
     std::string defaultModelingVariant;
 
     // Get the usdVariantRootPrimPath (optionally filter by renderLayer prefix)
-    MayaPrimWriterPtr firstPrimWriterPtr = *mMayaPrimWriterList.begin();
-    std::string firstPrimWriterPathStr(PxrUsdMayaUtil::MDagPathToUsdPathString(
-        firstPrimWriterPtr->getDagPath()));
+    MayaPrimWriterPtr firstPrimWriterPtr = *mJobCtx.mMayaPrimWriterList.begin();
+    std::string firstPrimWriterPathStr( firstPrimWriterPtr->getDagPath().fullPathName().asChar() );
+    std::replace( firstPrimWriterPathStr.begin(), firstPrimWriterPathStr.end(), '|', '/');
+    std::replace( firstPrimWriterPathStr.begin(), firstPrimWriterPathStr.end(), ':', '_'); // replace namespace ":" with "_"
     SdfPath usdVariantRootPrimPath(firstPrimWriterPathStr);
     usdVariantRootPrimPath = usdVariantRootPrimPath.GetPrefixes()[0];
 
