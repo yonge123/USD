@@ -34,5 +34,4 @@ TF_WRAP_MODULE {
     TF_WRAP(RoundTripUtil);
     TF_WRAP(StageCache);
     TF_WRAP(UserTaggedAttribute);
-    TF_WRAP(XformStack);
 }
