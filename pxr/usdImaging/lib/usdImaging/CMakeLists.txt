@@ -20,6 +20,7 @@ pxr_library(usdImaging
         usdGeom
         usdHydra
         usdLux
+        usdRi
         usdShade
         ar
         ${Boost_PYTHON_LIBRARY}
@@ -49,15 +50,16 @@ pxr_library(usdImaging
         domeLightAdapter
         drawModeAdapter
         gprimAdapter
+        hydraMaterialAdapter
         instanceAdapter
         lightAdapter
+        materialAdapter
         meshAdapter
         nurbsPatchAdapter
         pointsAdapter
         pointInstancerAdapter
         primAdapter
         rectLightAdapter
-        shaderAdapter
         sphereAdapter
         sphereLightAdapter
 

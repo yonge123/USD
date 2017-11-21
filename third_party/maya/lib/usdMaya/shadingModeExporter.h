@@ -47,7 +47,8 @@ public:
                           const PxrUsdMayaUtil::ShapeSet& bindableRoots,
                           bool mergeTransformAndShape,
                           bool stripNamespaces,
-                          const SdfPath& overrideRootPath);
+                          const SdfPath& overrideRootPath,
+                          const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap);
 
     PXRUSDMAYA_API
     virtual void Export(const PxrUsdMayaShadingModeExportContext& context);
