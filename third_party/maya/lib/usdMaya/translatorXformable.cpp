@@ -204,7 +204,7 @@ static bool _pushUSDXformOpToMayaXform(
         const UsdGeomXformOp& xformop, 
         const TfToken& opName,
         MFnDagNode &MdagNode,
-        bool *importedPivots,
+        bool* importedPivots,
         const PxrUsdMayaPrimReaderArgs& args,
         const PxrUsdMayaPrimReaderContext* context)
 {
@@ -234,7 +234,7 @@ static bool _pushUSDXformOpToMayaXform(
         }
     } 
     else {
-        // pick the first avaiable sample or default
+        // pick the first available sample or default
         UsdTimeCode time=UsdTimeCode::EarliestTime();
         if (_getXformOpAsVec3d(xformop, value, time)) {
             xValue.resize(1);
@@ -373,6 +373,8 @@ static bool _pushUSDXformToMayaXform(
             if (!_isIdentityMatrix(localXform)) {
                 MGlobal::displayWarning("Decomposing non identity 4X4 matrix at: " 
                     + MString(xformSchema.GetPath().GetText()));
+                // XXX if we want to support the old pivotPosition, we can pass
+                // it into this function..
                 PxrUsdMayaTranslatorXformable::ConvertUsdMatrixToComponents(
                         localXform, &xlate, &rotate, &scale);
             }
@@ -476,11 +478,11 @@ PxrUsdMayaTranslatorXformable::Read(
             std::vector<double> yValue(1, pivotPosition[1]);
             std::vector<double> zValue(1, pivotPosition[2]);
             _setMayaAttribute(MdagNode, xValue, yValue, zValue, timeArray,
-                             MString("rotatePivot"), "X", "Y", "Z",
-                             context);
+                                MString("rotatePivot"), "X", "Y", "Z",
+                                context);
             _setMayaAttribute(MdagNode, xValue, yValue, zValue, timeArray,
-                             MString("scalePivot"), "X", "Y", "Z",
-                             context);
+                                MString("scalePivot"), "X", "Y", "Z",
+                                context);
         }
     }
 
