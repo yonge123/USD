@@ -271,7 +271,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
                 mJobCtx.mArgs.dagPaths,
                 mJobCtx.mArgs.shadingMode,
                 mJobCtx.mArgs.mergeTransformAndShape,
-                mJobCtx.mArgs.usdModelRootOverridePath);
+                mJobCtx.mArgs.usdModelRootOverridePath,
+                mDagPathToUsdPathMap);
 
     if (!mModelKindWriter.MakeModelHierarchy(mJobCtx.mStage)) {
         return false;
