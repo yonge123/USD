@@ -112,13 +112,17 @@ private:
                          HdDirtyBits *dirtyBits,
                          const HdBasisCurvesReprDesc &desc);
 
+    void _UpdateReprGeometricShader(HdSceneDelegate *sceneDelegate,
+                                 _BasisCurvesReprConfig::DescArray const& descs,
+                                 HdReprSharedPtr repr);
+
     void _UpdateDrawItemGeometricShader(HdSceneDelegate *sceneDelegate,
                                         HdDrawItem *drawItem,
                                         const HdBasisCurvesReprDesc &desc);
 
     HdSt_BasisCurvesTopologySharedPtr _topology;
     HdTopology::ID _topologyId;
-    int _customDirtyBitsInUse;
+    HdDirtyBits _customDirtyBitsInUse;
     int _refineLevel;  // XXX: could be moved into HdBasisCurveTopology.
 };
 
