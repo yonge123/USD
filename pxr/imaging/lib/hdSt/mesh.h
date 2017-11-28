@@ -95,6 +95,10 @@ protected:
                          HdMeshReprDesc desc,
                          bool requireSmoothNormals);
 
+    void _UpdateReprGeometricShader(HdSceneDelegate *sceneDelegate,
+                                    _MeshReprConfig::DescArray const &descs,
+                                    HdReprSharedPtr repr);
+
     void _UpdateDrawItemGeometricShader(HdSceneDelegate *sceneDelegate,
                                         HdDrawItem *drawItem,
                                         const HdMeshReprDesc &desc);
@@ -148,7 +152,7 @@ private:
 
     HdTopology::ID _topologyId;
     HdTopology::ID _vertexPrimvarId;
-    int _customDirtyBitsInUse;
+    HdDirtyBits _customDirtyBitsInUse;
     bool _doubleSided;
     bool _packedNormals;
     HdCullStyle _cullStyle;
