@@ -407,7 +407,7 @@ PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
             PxrUsdMayaShadingModeRegistry::GetExporter(shadingMode)) {
         if (auto exporter = exporterCreator()) {
             exporter->DoExport(stage, bindableRoots, mergeTransformAndShape,
-                stripNamespaces, overrideRootPath, parentScope,
+                stripNamespaces, overrideRootPath,  parentScope,
                 dagPathToUsdMap, materialCollectionsPath);
         }
     }
