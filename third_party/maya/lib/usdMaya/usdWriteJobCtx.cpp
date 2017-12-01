@@ -102,12 +102,6 @@ SdfPath usdWriteJobCtx::getMasterPath(const MDagPath& dg)
     }
 }
 
-SdfPath usdWriteJobCtx::getUsdPath(const MDagPath& dg)
-{
-    const auto it = mDagPathToUsdPathMap.find(dg);
-    return it == mDagPathToUsdPathMap.end() ? SdfPath() : it->second;
-}
-
 bool usdWriteJobCtx::needToTraverse(const MDagPath& curDag)
 {
     MObject ob = curDag.node();

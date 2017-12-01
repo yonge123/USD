@@ -543,11 +543,9 @@ MayaTransformWriter::MayaTransformWriter(
 void MayaTransformWriter::write(const UsdTimeCode &usdTime)
 {
     if (!mIsInstanceSource) {
-        if (mUsdPrim) {
-            UsdGeomXform primSchema(mUsdPrim);
-            // Set attrs
-            writeTransformAttrs(usdTime, primSchema);
-        }
+        UsdGeomXform primSchema(mUsdPrim);
+        // Set attrs
+        writeTransformAttrs(usdTime, primSchema);
     }
 }
 

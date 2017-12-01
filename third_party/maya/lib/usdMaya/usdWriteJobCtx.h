@@ -68,7 +68,6 @@ public:
             const MDagPath& curDag,
             const SdfPath& usdPath = SdfPath());
     PXRUSDMAYA_API
-    SdfPath getUsdPath(const MDagPath& dg);
     bool needToTraverse(const MDagPath& curDag);
 protected:
     PXRUSDMAYA_API
@@ -79,10 +78,6 @@ protected:
     JobExportArgs mArgs;
     // List of the primitive writers to iterate over
     std::vector<MayaPrimWriterPtr> mMayaPrimWriterList;
-    // Storing the dagpath to the usd path map, this is required for any type
-    // of writers that use other nodes from the scenegraph.
-    // For example, the instancer writer is one of them.
-    PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type mDagPathToUsdPathMap;
     // Stage used to write out USD file
     UsdStageRefPtr mStage;
 private:
