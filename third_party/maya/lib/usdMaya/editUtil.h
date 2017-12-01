@@ -39,6 +39,7 @@
 #include <vector>
 #include <map>
 
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 /// \brief Utility class for handling edits on Assemblies in Maya.
