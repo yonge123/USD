@@ -53,6 +53,8 @@ JobExportArgs::JobExportArgs()
         exportDefaultCameras(false),
         exportMeshUVs(true),
         normalizeMeshUVs(false),
+        exportMaterialCollections(false),
+        materialCollectionsPath(""),
         normalizeNurbs(false),
         exportNurbsExplicitUV(true),
         nurbsExplicitUVType(PxUsdExportJobArgsTokens->Uniform),

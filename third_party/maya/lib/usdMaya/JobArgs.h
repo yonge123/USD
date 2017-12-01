@@ -76,6 +76,9 @@ struct JobExportArgs
     bool exportMeshUVs;
     bool normalizeMeshUVs;
     
+    bool exportMaterialCollections;
+    std::string materialCollectionsPath;
+
     bool normalizeNurbs;
     bool exportNurbsExplicitUV;
     TfToken nurbsExplicitUVType;
