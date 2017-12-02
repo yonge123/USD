@@ -59,7 +59,7 @@ PxrUsdMayaShadingModeExporter::DoExport(
     bool stripNamespaces,
     const SdfPath& overrideRootPath,
     const std::string& parentScope,
-    const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type&,
+    const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap,
     const SdfPath &materialCollectionsPath) 
 {
     MItDependencyNodes shadingEngineIter(MFn::kShadingEngine);
@@ -79,21 +79,26 @@ PxrUsdMayaShadingModeExporter::DoExport(
         }
     }
 
+    PxrUsdMayaShadingModeExportContext context(
+        MObject(),
+        stage,
+        mergeTransformAndShape,
+        stripNamespaces,
+        bindableRoots,
+        overrideRootPath,
+        parentScope,
+        dagPathToUsdMap);
+
+    PreExport(context);
+
     MaterialAssignments matAssignments;
     for (; !shadingEngineIter.isDone(); shadingEngineIter.next()) {
         MObject shadingEngine(shadingEngineIter.thisNode());
-
-        PxrUsdMayaShadingModeExportContext c(
-            shadingEngine,
-            stage,
-            mergeTransformAndShape,
-            stripNamespaces,
-            bindableRoots,
-            overrideRootPath);
+        context.SetShadingEngine(shadingEngine);
 
         UsdShadeMaterial mat;
         SdfPathSet boundPrimPaths;
-        Export(c, &mat, &boundPrimPaths);
+        Export(context, &mat, &boundPrimPaths);
 
         if (!boundPrimPaths.empty()) {
             matAssignments.push_back(std::make_pair(
@@ -101,11 +106,14 @@ PxrUsdMayaShadingModeExporter::DoExport(
         }
     }
 
+    context.SetShadingEngine(MObject());
+    PostExport(context);
+
     if (materialCollectionsPrim && !matAssignments.empty()) {
         std::vector<UsdCollectionAPI> collections = 
                 UsdUtilsCreateCollections(matAssignments, 
                         materialCollectionsPrim);
-    } 
+    }
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
