@@ -37,8 +37,17 @@ PXR_NAMESPACE_OPEN_SCOPE
 class PxrUsdMayaShadingModeExportContext
 {
 public:
+    void SetShadingEngine(MObject shadingEngine) { _shadingEngine = shadingEngine; }
     MObject GetShadingEngine() const { return _shadingEngine; }
     const UsdStageRefPtr& GetUsdStage() const { return _stage; }
+    bool GetMergeTransformAndShape() const { return _mergeTransformAndShape; }
+    bool GetStripNamespaces() const { return _stripNamespaces; }
+    const SdfPath& GetOverrideRootPath() const { return _overrideRootPath; }
+    const std::string& GetParentScope() const { return _parentScope; }
+    const SdfPathSet& GetBindableRoots() const { return _bindableRoots; }
+
+    const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& GetDagPathToUsdMap() const
+    { return _dagPathToUsdMap; }
 
     PXRUSDMAYA_API
     MObject GetSurfaceShader() const;
@@ -92,15 +101,18 @@ public:
             bool mergeTransformAndShape,
             bool stripNamespaces,
             const PxrUsdMayaUtil::ShapeSet& bindableRoots,
-            SdfPath overrideRootPath);
+            SdfPath overrideRootPath,
+            const std::string& parentScope,
+            const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap);
 private:
     MObject _shadingEngine;
     const UsdStageRefPtr& _stage;
     bool _mergeTransformAndShape;
     bool _stripNamespaces;
+    const std::string& _parentScope;
     SdfPath _overrideRootPath;
-
     SdfPathSet _bindableRoots;
+    const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& _dagPathToUsdMap;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
