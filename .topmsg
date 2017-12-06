@@ -1,5 +1,0 @@
-From: Paul Molodowitch <pm@stanfordalumni.org>
-Subject: Py_SetProgramName tweak to find python lib dir
-
-Py_SetProgramName is used both as a hint for finding the python lib dir, and
-setting sys.executable - this changes makes both uses possible
