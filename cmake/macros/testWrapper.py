@@ -224,14 +224,6 @@ if __name__ == '__main__':
     if args.verbose:
         print "chdir: {0}".format(testDir)
 
-    # in case it's a maya test, set up a maya profile directory ($MAYA_APP_DIR)
-    # that's empty, so we can ensure we test with a default profile - had some
-    # crashes with 2017 when using an existing user profile (due to some
-    # problems with color management settings)
-    # Also, maya creates the $MAYA_APP_DIR on demand, so we don't need to bother
-    # making the directory ourselves
-    os.environ['MAYA_APP_DIR'] = os.path.join(testDir, 'maya_profile')
-
     # Copy the contents of the testenv directory into our test run directory so
     # the test has it's own copy that it can reference and possibly modify.
     if args.testenv_dir and os.path.isdir(args.testenv_dir):
