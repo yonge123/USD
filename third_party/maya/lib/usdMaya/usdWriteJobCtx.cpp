@@ -65,7 +65,7 @@ namespace {
         return path;
     }
 
-    constexpr auto instancesScopeName = "/InstanceSources";
+    const SdfPath instancesScopePath("/InstanceSources");
 }
 
 usdWriteJobCtx::usdWriteJobCtx(const JobExportArgs& args) : mArgs(args), mNoInstances(true)
@@ -138,6 +138,7 @@ bool usdWriteJobCtx::needToTraverse(const MDagPath& curDag)
 
 SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool instanceSource /* = false */)
 {
+    SdfPath path;
     if (instanceSource) {
         if (mInstancesPrim) {
             mNoInstances = false;
@@ -157,20 +158,22 @@ SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool inst
             pathName = TfStringReplace(pathName, "_", "__");  // avoid any issue with |: / _ name clashes
             std::replace(pathName.begin(), pathName.end(), '|', '_');
             std::replace(pathName.begin(), pathName.end(), ':', '_');
-            SdfPath path = SdfPath(pathName);
-            return rootOverridePath(mArgs, path);
+            path = SdfPath(pathName);
         } else {
             return SdfPath();
         }
     } else {
-        auto path = PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false, mArgs.stripNamespaces);
-        path = rootOverridePath(mArgs, path);
-        if (mParentScopePath.IsEmpty()) {
-            return path;
-        } else {
-            return SdfPath(mParentScopePath.GetString() + path.GetString());
+        path = PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false, mArgs.stripNamespaces);
+        if (!mParentScopePath.IsEmpty())
+        {
+            // Since path is from MDagPathToUsdPath, it will always be
+            // an absolute path...
+            path = path.ReplacePrefix(
+                    SdfPath::AbsoluteRootPath(),
+                    mParentScopePath);
         }
     }
+    return rootOverridePath(mArgs, path);
 }
 
 bool usdWriteJobCtx::openFile(const std::string& filename, bool append)
@@ -202,14 +205,19 @@ bool usdWriteJobCtx::openFile(const std::string& filename, bool append)
         if (mArgs.parentScope[0] != '/') {
             mArgs.parentScope = "/" + mArgs.parentScope;
         }
-        SdfPath parentScopePath(mArgs.parentScope);
-        mParentScopePath = UsdGeomScope::Define(mStage, rootOverridePath(mArgs, parentScopePath)).GetPrim().GetPrimPath();
+        mParentScopePath = SdfPath(mArgs.parentScope);
+        // Note that we only need to create the parentScope prim if we're not
+        // using a usdModelRootOverridePath - if we ARE using
+        // usdModelRootOverridePath, then IT will take the name of our parent
+        // scope, and will be created when we writ out the model variants
+        if (mArgs.usdModelRootOverridePath.IsEmpty()) {
+            mParentScopePath = UsdGeomScope::Define(mStage,
+                                                    mParentScopePath).GetPrim().GetPrimPath();
+        }
     }
 
-
     if (mArgs.exportInstances) {
-        SdfPath instancesPath(instancesScopeName);
-        mInstancesPrim = mStage->OverridePrim(rootOverridePath(mArgs, instancesPath));
+        mInstancesPrim = mStage->OverridePrim(instancesScopePath);
     }
 
     return true;
