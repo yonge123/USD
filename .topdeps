@@ -1,5 +1,4 @@
 tg/ar_resolver_fixes/maya_usdImport
-tg/bugfixes/disable_renderLayerMode_tests_on_maya2018
 tg/bugfixes/katana_material_binding_crash_fix
 tg/bugfixes/maya_opposite_attr_fix
 tg/bugfixes/oiio_read_with_asserts
