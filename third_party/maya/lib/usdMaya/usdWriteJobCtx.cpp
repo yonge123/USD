@@ -152,11 +152,15 @@ SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool inst
             return SdfPath();
         }
     } else {
-        path = mParentScopePath.IsEmpty() ?
-               PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false) :
-               SdfPath(mParentScopePath.GetString() +
-                       PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false).GetString());
-
+        path = PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false);
+        if (!mParentScopePath.IsEmpty())
+        {
+            // Since path is from MDagPathToUsdPath, it will always be
+            // an absolute path...
+            path = path.ReplacePrefix(
+                    SdfPath::AbsoluteRootPath(),
+                    mParentScopePath);
+        }
     }
     return rootOverridePath(mArgs, path);
 }
