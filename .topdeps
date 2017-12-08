@@ -31,6 +31,7 @@ tg/simple_features/eulerFilter
 tg/simple_features/allow_custom_material_scope_names_in_katana
 tg/simple_features/maya_pref_export
 tg/simple_features/strip_namespaces
+pr/saveFlattenedAs
 pr/shadingModeExporter_pre_post_export
 pr/testusdviewNavigationKeys_RUN_SERIAL
 pseudo_root_warning
