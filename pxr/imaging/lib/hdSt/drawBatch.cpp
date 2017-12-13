@@ -23,21 +23,21 @@
 //
 #include "pxr/imaging/glf/glew.h"
 
+#include "pxr/imaging/hdSt/codeGen.h"
 #include "pxr/imaging/hdSt/commandBuffer.h"
 #include "pxr/imaging/hdSt/drawBatch.h"
 #include "pxr/imaging/hdSt/glslfxShader.h"
-#include "pxr/imaging/hdSt/surfaceShader.h"
+#include "pxr/imaging/hdSt/lightingShader.h"
+#include "pxr/imaging/hdSt/package.h"
+#include "pxr/imaging/hdSt/renderPassState.h"
 #include "pxr/imaging/hdSt/resourceRegistry.h"
+#include "pxr/imaging/hdSt/renderPassShader.h"
+#include "pxr/imaging/hdSt/surfaceShader.h"
 
 #include "pxr/imaging/hd/binding.h"
-#include "pxr/imaging/hd/codeGen.h"
 #include "pxr/imaging/hd/geometricShader.h"
 #include "pxr/imaging/hd/glslProgram.h"
-#include "pxr/imaging/hd/lightingShader.h"
-#include "pxr/imaging/hd/package.h"
 #include "pxr/imaging/hd/perfLog.h"
-#include "pxr/imaging/hd/renderPassState.h"
-#include "pxr/imaging/hd/renderPassShader.h"
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
@@ -186,7 +186,7 @@ HdSt_DrawBatch::Rebuild()
 }
 
 HdSt_DrawBatch::_DrawingProgram &
-HdSt_DrawBatch::_GetDrawingProgram(HdRenderPassStateSharedPtr const &state,
+HdSt_DrawBatch::_GetDrawingProgram(HdStRenderPassStateSharedPtr const &state,
                                  bool indirect,
                                  HdStResourceRegistrySharedPtr const &resourceRegistry)
 {
@@ -242,7 +242,7 @@ HdSt_DrawBatch::_GetDrawingProgram(HdRenderPassStateSharedPtr const &state,
 
             GlfGLSLFXSharedPtr glslSurfaceFallback = 
                 GlfGLSLFXSharedPtr(
-                        new GlfGLSLFX(HdPackageFallbackSurfaceShader()));
+                        new GlfGLSLFX(HdStPackageFallbackSurfaceShader()));
 
             HdShaderCodeSharedPtr fallbackSurface =
                 HdShaderCodeSharedPtr(
@@ -294,7 +294,7 @@ HdSt_DrawBatch::_DrawingProgram::CompileShader(
         (*it)->AddBindings(&customBindings);
     }
 
-    Hd_CodeGen codeGen(_geometricShader, shaders);
+    HdSt_CodeGen codeGen(_geometricShader, shaders);
 
     // let resourcebinder resolve bindings and populate metadata
     // which is owned by codegen.
