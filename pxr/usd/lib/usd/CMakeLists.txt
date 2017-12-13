@@ -155,6 +155,7 @@ endif()
 pxr_test_scripts(
     testenv/testUsdAttributeBlocking.py
     testenv/testUsdAttributeConnections.py
+    testenv/testUsdBugs.py
     testenv/testUsdBug119633.py
     testenv/testUsdBug141491.py
     testenv/testUsdChangeProcessing.py
@@ -212,6 +213,13 @@ pxr_build_test(testUsdCreateAttributeCpp
         usd
     CPPFILES
         testenv/testUsdCreateAttributeCpp.cpp
+)
+
+pxr_build_test(testUsdHardToReach
+    LIBRARIES
+        usd
+    CPPFILES
+        testenv/testUsdHardToReach.cpp
 )
 
 pxr_build_test(testUsdIntegerCoding
