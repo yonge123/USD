@@ -111,46 +111,6 @@ public:
         TfToken const &role,
         HdBufferSpecVector const &bufferSpecs);
 
-    /// Check if \p range is compatible with \p newBufferSpecs.
-    /// If not, allocate new bufferArrayRange with merged buffer specs,
-    /// register migration computation and return the new range.
-    /// Otherwise just return the same range.
-    HD_API
-    HdBufferArrayRangeSharedPtr MergeBufferArrayRange(
-        HdAggregationStrategy *strategy,
-        HdBufferArrayRegistry &bufferArrayRegistry,
-        TfToken const &role,
-        HdBufferSpecVector const &newBufferSpecs,
-        HdBufferArrayRangeSharedPtr const &range);
-
-    /// MergeBufferArrayRange of non uniform buffer.
-    HD_API
-    HdBufferArrayRangeSharedPtr MergeNonUniformBufferArrayRange(
-        TfToken const &role,
-        HdBufferSpecVector const &newBufferSpecs,
-        HdBufferArrayRangeSharedPtr const &range);
-
-    /// MergeBufferArrayRange of non uniform immutable buffer.
-    HD_API
-    HdBufferArrayRangeSharedPtr MergeNonUniformImmutableBufferArrayRange(
-        TfToken const &role,
-        HdBufferSpecVector const &newBufferSpecs,
-        HdBufferArrayRangeSharedPtr const &range);
-
-    /// MergeBufferArrayRange of uniform buffer.
-    HD_API
-    HdBufferArrayRangeSharedPtr MergeUniformBufferArrayRange(
-        TfToken const &role,
-        HdBufferSpecVector const &newBufferSpecs,
-        HdBufferArrayRangeSharedPtr const &range);
-
-    /// MergeBufferArrayRange of shader storage buffer.
-    HD_API
-    HdBufferArrayRangeSharedPtr MergeShaderStorageBufferArrayRange(
-        TfToken const &role,
-        HdBufferSpecVector const &newBufferSpecs,
-        HdBufferArrayRangeSharedPtr const &range);
-
     /// Append source data for given range to be committed later.
     HD_API
     void AddSources(HdBufferArrayRangeSharedPtr const &range,
@@ -210,6 +170,12 @@ public:
         _uniformSsboAggregationStrategy.reset(strategy);
     }
 
+    /// Set the aggregation strategy for single buffers (for nested instancer).
+    /// Takes ownership of the passed in strategy object.
+    void SetSingleStorageAggregationStrategy(HdAggregationStrategy *strategy) {
+        _singleAggregationStrategy.reset(strategy);
+    }
+
     /// Returns a report of resource allocation by role in bytes and
     /// a summary total allocation of GPU memory in bytes for this registry.
     HD_API
@@ -256,6 +222,7 @@ public:
     /// Returns the HdInstance pointing to shared HdBufferArrayRange,
     /// distinguished by given ID.
     /// *Refer the comment on RegisterTopology for the same consideration.
+    HD_API
     std::unique_lock<std::mutex> RegisterPrimvarRange(HdTopology::ID id,
          HdInstance<HdTopology::ID, HdBufferArrayRangeSharedPtr> *pInstance);
 
@@ -300,7 +267,7 @@ protected:
     /// be cumulative with the existing key values. 
     virtual void _TallyResourceAllocation(VtDictionary *result) const;
 
-private:
+protected:
 
     // aggregated buffer array
     HdBufferArrayRegistry _nonUniformBufferArrayRegistry;
@@ -315,6 +282,8 @@ private:
     std::unique_ptr<HdAggregationStrategy> _uniformUboAggregationStrategy;
     std::unique_ptr<HdAggregationStrategy> _uniformSsboAggregationStrategy;
     std::unique_ptr<HdAggregationStrategy> _singleAggregationStrategy;
+
+private:
 
     // TODO: this is a transient structure. we'll revisit the BufferSource
     // interface later.
