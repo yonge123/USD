@@ -51,37 +51,6 @@ HdPackageComputeShader()
 }
 
 TfToken
-HdPackageRenderPassShader()
-{
-    static TfToken renderPassShader =
-        _GetShaderPath("renderPassShader.glslfx");
-    return renderPassShader;
-}
-
-TfToken
-HdPackageLightingIntegrationShader()
-{
-    static TfToken shader =
-        _GetShaderPath("lightingIntegrationShader.glslfx");
-    return shader;
-}
-
-TfToken
-HdPackageFallbackLightingShader()
-{
-    static TfToken fallbackLightingShader =
-        _GetShaderPath("fallbackLightingShader.glslfx");
-    return fallbackLightingShader;
-}
-
-TfToken
-HdPackageFallbackSurfaceShader()
-{
-    static TfToken s = _GetShaderPath("fallbackSurface.glslfx");
-    return s;
-}
-
-TfToken
 HdPackagePtexTextureShader()
 {
     static TfToken s = _GetShaderPath("ptexTexture.glslfx");
