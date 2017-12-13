@@ -63,6 +63,7 @@ from common import (UIBaseColors, UIPropertyValueSourceColors, UIFonts, GetAttri
 import settings2
 from settings2 import StateSource
 from plugContext import PlugContext
+from rootDataModel import RootDataModel
 
 SETTINGS_VERSION = "1"
 
@@ -427,16 +428,20 @@ class AppController(QtCore.QObject):
             QtWidgets.QApplication.instance().installEventFilter(self._filterObj)
 
             # read the stage here
-            self._stage = self._openStage(self._parserData.usdFile,
-                                          self._parserData.populationMask)
-            if not self._stage:
+            stage = self._openStage(
+                self._parserData.usdFile, self._parserData.populationMask)
+            if not stage:
                 sys.exit(0)
 
-            if not self._stage.GetPseudoRoot():
+            if not stage.GetPseudoRoot():
                 print parserData.usdFile, 'has no prims; exiting.'
                 sys.exit(0)
 
-            self._initialSelectPrim = self._stage.GetPrimAtPath(parserData.primPath)
+            self._rootDataModel = RootDataModel(printTiming=self._printTiming)
+            self._rootDataModel.stage = stage
+
+            self._initialSelectPrim = self._rootDataModel.stage.GetPrimAtPath(
+                parserData.primPath)
             if not self._initialSelectPrim:
                 print 'Could not find prim at path <%s> to select. '\
                     'Ignoring...' % parserData.primPath
@@ -641,7 +646,8 @@ class AppController(QtCore.QObject):
             for interpolationType in Usd.InterpolationType.allValues:
                 action = self._ui.menuInterpolation.addAction(interpolationType.displayName)
                 action.setCheckable(True)
-                action.setChecked(self._stage.GetInterpolationType() == interpolationType)
+                action.setChecked(
+                    self._rootDataModel.stage.GetInterpolationType() == interpolationType)
                 self._ui.interpolationActionGroup.addAction(action)
 
             self._ui.primViewDepthGroup = QtWidgets.QActionGroup(self)
@@ -1038,7 +1044,8 @@ class AppController(QtCore.QObject):
         self._configureRendererPlugins()
 
         if self._mallocTags == 'stageAndImaging':
-            DumpMallocTags(self._stage, "stage-loading and imaging")
+            DumpMallocTags(self._rootDataModel.stage,
+                "stage-loading and imaging")
 
     def statusMessage(self, msg, timeout = 0):
         self._statusBar.showMessage(msg, timeout * 1000)
@@ -1058,18 +1065,9 @@ class AppController(QtCore.QObject):
             t.PrintTime("'%s'" % msg)
 
     def _openStage(self, usdFilePath, populationMaskPaths):
-        # Attempt to do specialized asset resolution based on the
-        # UsdviewPlug installed plugin, otherwise use the configured
-        # Ar instance for asset resolution.
-        try:
-            from pixar import UsdviewPlug
-            self._pathResolverContext = \
-                UsdviewPlug.ConfigureAssetResolution(usdFilePath)
-
-        except ImportError:
-            Ar.GetResolver().ConfigureResolverForAsset(usdFilePath)
-            self._pathResolverContext = \
-                Ar.GetResolver().CreateDefaultContextForAsset(usdFilePath)
+        Ar.GetResolver().ConfigureResolverForAsset(usdFilePath)
+        self._pathResolverContext = \
+            Ar.GetResolver().CreateDefaultContextForAsset(usdFilePath)
 
         def _GetFormattedError(reasons=[]):
             err = ("Error: Unable to open stage '{0}'\n".format(usdFilePath))
@@ -1134,7 +1132,7 @@ class AppController(QtCore.QObject):
                 # while still holding the preload-stage open.  This turns out
                 # to be much, much cheaper for scenes that are properly
                 # payloaded for scalability.
-                sl = Sdf.Layer.CreateAnonymous("usdview-session")
+                sl = Sdf.Layer.CreateAnonymous("usdview-session.usda")
 
                 # We can only safely do Sdf-level ops inside an Sdf.ChangeBlock,
                 # so gather all the paths from the UsdStage first.
@@ -1171,18 +1169,10 @@ class AppController(QtCore.QObject):
         return stage
 
     def _closeStage(self):
-        # Turn off the imager before killing the stage
-        if self._stageView:
-            with Timer() as t:
-                self._stageView.SetStage(None)
-            if self._printTiming:
-                t.PrintTime('shut down Hydra')
-
         # Close the USD stage.
-        with Timer() as t:
-            self._stage = None
-        if self._printTiming:
-            t.PrintTime('close stage')
+        if self._stageView:
+            self._stageView.closeRenderer()
+        self._rootDataModel.stage = None
 
     def _setPlayShortcut(self):
         self._ui.playButton.setShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Space))
@@ -1198,17 +1188,17 @@ class AppController(QtCore.QObject):
         lf = self._parserData.lastframe
 
         # frame range supplied by stage
-        stageStartTimeCode = self._stage.GetStartTimeCode()
-        stageEndTimeCode = self._stage.GetEndTimeCode()
+        stageStartTimeCode = self._rootDataModel.stage.GetStartTimeCode()
+        stageEndTimeCode = self._rootDataModel.stage.GetEndTimeCode()
 
         # final range results
         self.realStartTimeCode = None
         self.realEndTimeCode = None
 
-        self.framesPerSecond = self._stage.GetFramesPerSecond()
+        self.framesPerSecond = self._rootDataModel.stage.GetFramesPerSecond()
 
         if not resetStageDataOnly:
-            self.step = self._stage.GetTimeCodesPerSecond() / self.framesPerSecond
+            self.step = self._rootDataModel.stage.GetTimeCodesPerSecond() / self.framesPerSecond
             self._ui.stepSize.setText(str(self.step))
 
         # if one option is provided(lastframe or firstframe), we utilize it
@@ -1221,7 +1211,7 @@ class AppController(QtCore.QObject):
         elif lf is not None:
             self.realStartTimeCode = stageStartTimeCode
             self.realEndTimeCode = lf
-        elif self._stage.HasAuthoredTimeCodeRange():
+        elif self._rootDataModel.stage.HasAuthoredTimeCodeRange():
             self.realStartTimeCode = stageStartTimeCode
             self.realEndTimeCode = stageEndTimeCode
 
@@ -1332,14 +1322,11 @@ class AppController(QtCore.QObject):
 
         self._clearCaches()
 
-        if self._stageView:
-            self._stageView.SetStage(self._stage)
-
         # The difference between these two is related to multi-selection:
         # - currentPrims contains all prims selected
         # - prunedCurrentPrims contains all prims selected, excluding prims that
         #   already have a parent selected (used to avoid double-rendering)
-        self._currentPrims = [self._stage.GetPseudoRoot()]
+        self._currentPrims = [self._rootDataModel.stage.GetPseudoRoot()]
         self._prunedCurrentPrims = self._currentPrims
 
         if self._debug:
@@ -1363,8 +1350,9 @@ class AppController(QtCore.QObject):
                 self._ui.primStageSplitter.addWidget(self._ui.attributeBrowserFrame)
 
             else:
-                self._stageView = StageView(parent=self._mainWindow, dataModel=self)
-                self._stageView.SetStage(self._stage)
+                self._stageView = StageView(parent=self._mainWindow,
+                    dataModel=self, rootDataModel=self._rootDataModel,
+                    printTiming=self._printTiming)
 
                 self._stageView.fpsHUDInfo = self._fpsHUDInfo
                 self._stageView.fpsHUDKeys = self._fpsHUDKeys
@@ -1895,12 +1883,12 @@ class AppController(QtCore.QObject):
             isMatch = lambda x: pattern in x.lower()
 
         matches = [prim.GetPath() for prim
-                   in Usd.PrimRange.Stage(self._stage,
+                   in Usd.PrimRange.Stage(self._rootDataModel.stage,
                                              self._displayPredicate)
                    if isMatch(prim.GetName())]
 
         if self._showAllMasterPrims:
-            for master in self._stage.GetMasters():
+            for master in self._rootDataModel.stage.GetMasters():
                 matches += [prim.GetPath() for prim
                             in Usd.PrimRange(master, self._displayPredicate)
                             if isMatch(prim.GetName())]
@@ -2154,7 +2142,7 @@ class AppController(QtCore.QObject):
         and clears selection (sets to pseudoRoot), UNLESS 'selectPrim' is
         not None, in which case we'll select and frame it."""
         self._ui.primView.clearSelection()
-        pRoot = self._stage.GetPseudoRoot()
+        pRoot = self._rootDataModel.stage.GetPseudoRoot()
         if selectPrim is None:
             # if we had a command-line specified selection, re-frame it
             selectPrim = self._initialSelectPrim or pRoot
@@ -2206,7 +2194,7 @@ class AppController(QtCore.QObject):
     def _changeInterpolationType(self, interpolationType):
         for t in Usd.InterpolationType.allValues:
             if t.displayName == str(interpolationType.text()):
-                self._stage.SetInterpolationType(t)
+                self._rootDataModel.stage.SetInterpolationType(t)
                 self._resetSettings()
                 break
 
@@ -2466,7 +2454,7 @@ class AppController(QtCore.QObject):
         if (saveName.rsplit('.')[-1] != 'usd'):
             saveName += '.usd'
 
-        if self._stage:
+        if self._rootDataModel.stage:
             # In the future, we may allow usdview to be brought up with no file,
             # in which case it would create an in-memory root layer, to which
             # all edits will be targeted.  In order to future proof
@@ -2474,9 +2462,9 @@ class AppController(QtCore.QObject):
             # export it to the given filename. If it isn't anonmyous (i.e., it
             # is a regular usd file on disk), export the session layer and add
             # the stage root file as a sublayer.
-            rootLayer = self._stage.GetRootLayer()
+            rootLayer = self._rootDataModel.stage.GetRootLayer()
             if not rootLayer.anonymous:
-                self._stage.GetSessionLayer().Export(saveName, 'Created by UsdView')
+                self._rootDataModel.stage.GetSessionLayer().Export(saveName, 'Created by UsdView')
                 targetLayer = Sdf.Layer.FindOrOpen(saveName)
                 UsdUtils.CopyLayerMetadata(rootLayer, targetLayer,
                                            skipSublayers=True)
@@ -2489,11 +2477,12 @@ class AppController(QtCore.QObject):
                 if self.realEndTimeCode:
                     targetLayer.endTimeCode = self.realEndTimeCode
 
-                targetLayer.subLayerPaths.append(self._stage.GetRootLayer().realPath)
+                targetLayer.subLayerPaths.append(
+                    self._rootDataModel.stage.GetRootLayer().realPath)
                 targetLayer.RemoveInertSceneDescription()
                 targetLayer.Save()
             else:
-                self._stage.GetRootLayer().Export(saveName, 'Created by UsdView')
+                self._rootDataModel.stage.GetRootLayer().Export(saveName, 'Created by UsdView')
 
     def _reopenStage(self):
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.BusyCursor)
@@ -2509,12 +2498,14 @@ class AppController(QtCore.QObject):
             # Close the current stage so that we don't keep it in memory
             # while trying to open another stage.
             self._closeStage()
-            self._stage = self._openStage(self._parserData.usdFile,
-                                          self._parserData.populationMask)
+            stage = self._openStage(
+                self._parserData.usdFile, self._parserData.populationMask)
             # We need this for layers which were cached in memory but changed on
             # disk. The additional Reload call should be cheap when nothing
             # actually changed.
-            self._stage.Reload()
+            stage.Reload()
+
+            self._rootDataModel.stage = stage
 
             self._resetSettings()
             self._resetView()
@@ -2534,7 +2525,7 @@ class AppController(QtCore.QObject):
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.BusyCursor)
 
         try:
-            self._stage.Reload()
+            self._rootDataModel.stage.Reload()
             # Seems like a good time to clear the texture registry
             Glf.TextureRegistry.Reset()
             # reset timeline, and playback settings from stage metadata
@@ -2560,8 +2551,8 @@ class AppController(QtCore.QObject):
             self._stageView.updateGL()
 
     def _refreshCameraListAndMenu(self, preserveCurrCamera):
-        self._allSceneCameras = Utils._GetAllPrimsOfType(self._stage,
-                                                 Tf.Type.Find(UsdGeom.Camera))
+        self._allSceneCameras = Utils._GetAllPrimsOfType(
+            self._rootDataModel.stage, Tf.Type.Find(UsdGeom.Camera))
         currCamera = self._startingPrimCamera
         if self._stageView:
             currCamera = self._stageView.getCameraPrim()
@@ -2582,7 +2573,8 @@ class AppController(QtCore.QObject):
                 cameraWasSet = True
 
             if self._startingPrimCameraPath:
-                prim = self._stage.GetPrimAtPath(self._startingPrimCameraPath)
+                prim = self._rootDataModel.stage.GetPrimAtPath(
+                    self._startingPrimCameraPath)
                 if not prim.IsValid():
                     msg = sys.stderr
                     print >> msg, "WARNING: Camera path %r did not exist in " \
@@ -2718,7 +2710,8 @@ class AppController(QtCore.QObject):
             # depth-1 so we need to have items at depth.  We know something
             # changed if any items were added to _itemsToPush.
             n = len(self._itemsToPush)
-            self._populateItem(self._stage.GetPseudoRoot(), maxDepth=depth)
+            self._populateItem(self._rootDataModel.stage.GetPseudoRoot(),
+                maxDepth=depth)
             changed = (n != len(self._itemsToPush))
 
             # Expand the tree to depth.
@@ -2831,13 +2824,13 @@ class AppController(QtCore.QObject):
 
     def _populateRoots(self):
         invisibleRootItem = self._ui.primView.invisibleRootItem()
-        rootPrim = self._stage.GetPseudoRoot()
+        rootPrim = self._rootDataModel.stage.GetPseudoRoot()
         rootItem = self._populateItem(rootPrim)
         self._populateChildren(rootItem)
 
         if self._showAllMasterPrims:
             self._populateChildren(rootItem,
-                                   childrenToAdd=self._stage.GetMasters())
+                childrenToAdd=self._rootDataModel.stage.GetMasters())
 
         # Add all descendents all at once.
         invisibleRootItem.addChild(rootItem)
@@ -2876,10 +2869,10 @@ class AppController(QtCore.QObject):
         # Note the explicit str(path) in the following expr is necessary
         # because path may be a QString.
         path = path if isinstance(path, Sdf.Path) else Sdf.Path(str(path))
-        parent = self._stage.GetPrimAtPath(path)
+        parent = self._rootDataModel.stage.GetPrimAtPath(path)
         if not parent:
             raise RuntimeError("Prim not found at path in stage: %s" % str(path))
-        pseudoRoot = self._stage.GetPseudoRoot()
+        pseudoRoot = self._rootDataModel.stage.GetPseudoRoot()
         if parent not in self._primToItemMap:
             # find the first loaded parent
             childList = []
@@ -2902,7 +2895,7 @@ class AppController(QtCore.QObject):
                     item.setExpanded(True)
 
         # finally, return the requested item, which now must be in the map
-        return self._primToItemMap[self._stage.GetPrimAtPath(path)]
+        return self._primToItemMap[self._rootDataModel.stage.GetPrimAtPath(path)]
 
     def resetSelectionToPseudoroot(self):
         self.selectPrimByPath("/", UsdImagingGL.GL.ALL_INSTANCES, "replace")
@@ -2928,12 +2921,12 @@ class AppController(QtCore.QObject):
             # For now, only continue if we're replacing
             if updateMode != "replace":
                 return None
-            path = self._stage.GetPseudoRoot().GetPath()
+            path = self._rootDataModel.stage.GetPseudoRoot().GetPath()
 
         # If model picking on, find model and select instead, IFF we are
         # requested to apply picking modes
         if applyPickMode and self._pickMode == PickModes.MODELS:
-            prim = self._stage.GetPrimAtPath(str(path))
+            prim = self._rootDataModel.stage.GetPrimAtPath(str(path))
             model = prim if prim.IsModel() else GetEnclosingModelPrim(prim)
             if model:
                 path = model.GetPath()
@@ -2971,7 +2964,8 @@ class AppController(QtCore.QObject):
                 item.setSelected(not item.isSelected())
             # if nothing selected, select root.
             if len(self._ui.primView.selectedItems()) == 0:
-                item = self._getItemAtPath(self._stage.GetPseudoRoot().GetPath())
+                item = self._getItemAtPath(
+                    self._rootDataModel.stage.GetPseudoRoot().GetPath())
                 item.setSelected(True)
 
         if instanceIndex != UsdImagingGL.GL.ALL_INSTANCES:
@@ -2987,7 +2981,8 @@ class AppController(QtCore.QObject):
         return commonPrefix.rsplit('/', 1)[0]
 
     def _getAttributePrim(self):
-        return self._stage.GetPrimAtPath(self._currentPrims[0].GetPath())
+        return self._rootDataModel.stage.GetPrimAtPath(
+            self._currentPrims[0].GetPath())
 
     def _currentPathChanged(self):
         """Called when the currentPathWidget text is changed"""
@@ -3053,10 +3048,12 @@ class AppController(QtCore.QObject):
 
         # get prims, but do not include prims whose parents are selected too.
         prunedPaths = self._getPathsFromItems(selectedItems, True)
-        self._prunedCurrentPrims = [self._stage.GetPrimAtPath(pth) for pth in prunedPaths]
+        self._prunedCurrentPrims = [
+            self._rootDataModel.stage.GetPrimAtPath(pth) for pth in prunedPaths]
         # get all prims selected
         paths = self._getPathsFromItems(selectedItems, False)
-        self._currentPrims = [self._stage.GetPrimAtPath(pth) for pth in paths]
+        self._currentPrims = [
+            self._rootDataModel.stage.GetPrimAtPath(pth) for pth in paths]
 
         self._ui.currentPathWidget.setText(', '.join([str(p) for p in paths]))
 
@@ -3619,7 +3616,7 @@ class AppController(QtCore.QObject):
                 WalkNodes(nodeItem, child)
 
         path = obj.GetPath().GetAbsoluteRootOrPrimPath()
-        prim = self._stage.GetPrimAtPath(path)
+        prim = self._rootDataModel.stage.GetPrimAtPath(path)
         if not prim:
             return
 
@@ -3649,7 +3646,8 @@ class AppController(QtCore.QObject):
         # The pseudoroot is different enough from prims and properties that
         # it makes more sense to process it separately
         if path == Sdf.Path.absoluteRootPath:
-            layers = GetRootLayerStackInfo(self._stage.GetRootLayer())
+            layers = GetRootLayerStackInfo(
+                self._rootDataModel.stage.GetRootLayer())
             tableWidget.setColumnCount(2)
             tableWidget.horizontalHeaderItem(1).setText('Layer Offset')
 
@@ -3828,7 +3826,8 @@ class AppController(QtCore.QObject):
             currentPaths = [n.GetPath() for n in self._prunedCurrentPrims if n.IsActive()]
 
             for pth in currentPaths:
-                count,types = self._tallyPrimStats(self._stage.GetPrimAtPath(pth))
+                count,types = self._tallyPrimStats(
+                    self._rootDataModel.stage.GetPrimAtPath(pth))
                 # no entry for Prim counts? initilize it
                 if not self._upperHUDInfo.has_key(HUDEntries.PRIM):
                     self._upperHUDInfo[HUDEntries.PRIM] = 0
@@ -3993,12 +3992,12 @@ class AppController(QtCore.QObject):
                     if n in self._primToItemMap]
 
     def _getPrimFromPropString(self, p):
-        return self._stage.GetPrimAtPath(p.split('.')[0])
+        return self._rootDataModel.stage.GetPrimAtPath(p.split('.')[0])
 
     def jumpToTargetPaths(self, paths):
         prims = []
         for path in paths:
-            prim = self._stage.GetPrimAtPath(
+            prim = self._rootDataModel.stage.GetPrimAtPath(
                 Sdf.Path(str(path)).GetAbsoluteRootOrPrimPath())
 
             if not prim:
@@ -4063,8 +4062,8 @@ class AppController(QtCore.QObject):
 
     def visOnlySelectedPrims(self):
         with BusyContext():
-            ResetSessionVisibility(self._stage)
-            InvisRootPrims(self._stage)
+            ResetSessionVisibility(self._rootDataModel.stage)
+            InvisRootPrims(self._rootDataModel.stage)
             for item in self.getSelectedItems():
                 item.makeVisible()
             self.editComplete('Made ONLY selected prims visible')
@@ -4089,7 +4088,7 @@ class AppController(QtCore.QObject):
 
     def resetSessionVisibility(self):
         with BusyContext():
-            ResetSessionVisibility(self._stage)
+            ResetSessionVisibility(self._rootDataModel.stage)
             self.editComplete('Removed ALL session visibility opinions.')
             # QTreeWidget does not honor setUpdatesEnabled, and updating
             # the Vis column for all widgets is pathologically slow.
@@ -4185,7 +4184,7 @@ class AppController(QtCore.QObject):
                 QtWidgets.QApplication.sendEvent(self._stageView, mrEvent)
 
     def onRollover(self, path, instanceIndex, modifiers):
-        prim = self._stage.GetPrimAtPath(path)
+        prim = self._rootDataModel.stage.GetPrimAtPath(path)
         if prim:
             headerStr = ""
             propertyStr = ""
