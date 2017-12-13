@@ -28,11 +28,13 @@
 #include "pxr/imaging/hdSt/meshShaderKey.h"
 #include "pxr/imaging/hdSt/meshTopology.h"
 #include "pxr/imaging/hdSt/mixinShaderCode.h"
+#include "pxr/imaging/hdSt/package.h"
 #include "pxr/imaging/hdSt/quadrangulate.h"
 #include "pxr/imaging/hdSt/shader.h"
 #include "pxr/imaging/hdSt/surfaceShader.h"
 #include "pxr/imaging/hdSt/instancer.h"
 #include "pxr/imaging/hdSt/resourceRegistry.h"
+#include "pxr/imaging/hdSt/smoothNormals.h"
 
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/gf/matrix4f.h"
@@ -568,12 +570,16 @@ HdStMesh::_PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
             HdBufferSourceSharedPtr source(
                 new HdVtBufferSource(*nameIt, value));
 
-            // verify primvar length
-            if (source->GetNumElements() != numPoints) {
-                TF_WARN(
-                    "# of points mismatch (%d != %d) for primvar %s, prim %s",
-                    source->GetNumElements(), numPoints,
-                    nameIt->GetText(), id.GetText());
+            // verify primvar length -- it is alright to have more data than we
+            // index into; the inverse is when we issue a warning and skip
+            // update.
+            if (source->GetNumElements() < numPoints) {
+                TF_CODING_ERROR(
+                    "Vertex primvar %s for prim %s has only %d elements, while"
+                    " its topology expects at least %d elements. Skipping "
+                    " primvar update.",
+                    nameIt->GetText(), id.GetText(),
+                    source->GetNumElements(), numPoints);
 
                 if (*nameIt == HdTokens->points) {
                     // If points data is invalid, it pretty much invalidates
@@ -582,10 +588,26 @@ HdStMesh::_PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
                     _sharedData.barContainer.Set(
                            drawItem->GetDrawingCoord()->GetVertexPrimVarIndex(),
                            HdBufferArrayRangeSharedPtr());
+
+                    TF_CODING_ERROR(
+                    "Skipping prim %s because its points data is insufficient.",
+                    id.GetText());
+
                     return;
                 }
 
                 continue;
+
+            } else if (source->GetNumElements() > numPoints) {
+                TF_WARN(
+                    "Vertex primvar %s for prim %s has %d elements, while"
+                    " its topology references only upto element index %d.",
+                    nameIt->GetText(), id.GetText(),
+                    source->GetNumElements(), numPoints);
+
+                // If the primvar has more data than needed, we issue a warning,
+                // but don't skip the primvar update. We handle it naively, and
+                // thus will use more GPU memory than needed.
             }
 
             if (refineLevel > 0) {
@@ -711,12 +733,14 @@ HdStMesh::_PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
             // float? (e.g. when switing flat -> smooth first time).
                 GLenum normalsDataType = usePackedNormals ?
                                          GL_INT_2_10_10_10_REV : pointsDataType;
-                computations.push_back(
-                        _vertexAdjacency->GetSmoothNormalsComputationGPU(
-                                                              HdTokens->points,
-                                                              normalsName,
-                                                              pointsDataType,
-                                                              normalsDataType));
+                HdComputationSharedPtr smoothNormalsComputation(
+                    new HdSt_SmoothNormalsComputationGPU(
+                        _vertexAdjacency.get(),
+                        HdTokens->points,
+                        normalsName,
+                        pointsDataType,
+                        normalsDataType));
+                computations.push_back(smoothNormalsComputation);
 
                 // note: we haven't had explicit dependency for GPU
                 // computations just yet. Currently they are executed
@@ -1050,6 +1074,26 @@ HdStMesh::_UsePtexIndices(const HdRenderIndex &renderIndex) const
     return _IsEnabledForceQuadrangulate();
 }
 
+static std::string
+_GetMixinShaderSource(TfToken const &shaderStageKey)
+{
+    if (shaderStageKey.IsEmpty()) {
+        return std::string("");
+    }
+
+    // TODO: each delegate should provide their own package of mixin shaders
+    // the lighting mixins are fallback only.
+    static std::once_flag firstUse;
+    static std::unique_ptr<GlfGLSLFX> mixinFX;
+   
+    std::call_once(firstUse, [](){
+        std::string filePath = HdStPackageLightingIntegrationShader();
+        mixinFX.reset(new GlfGLSLFX(filePath));
+    });
+
+    return mixinFX->GetSource(shaderStageKey);
+}
+
 HdShaderCodeSharedPtr
 HdStMesh::_GetShaderCode(HdSceneDelegate *sceneDelegate, HdShader const *shader) const
 {
@@ -1059,8 +1103,7 @@ HdStMesh::_GetShaderCode(HdSceneDelegate *sceneDelegate, HdShader const *shader)
         /// XXX In the future this could be a place to pull on a surface entry
         /// to get a custom terminal.
         if (!mixin.IsEmpty()) {
-            std::string mixinSource = 
-                sceneDelegate->GetMixinShaderSource(mixin);
+            std::string mixinSource = _GetMixinShaderSource(mixin);
             // Don't create code if the delegate returned an empty mixin source
             // from the given mixin.
             if (!mixinSource.empty()) {
@@ -1071,6 +1114,40 @@ HdStMesh::_GetShaderCode(HdSceneDelegate *sceneDelegate, HdShader const *shader)
         }
     }
     return shader->GetShaderCode();
+}
+
+HdBufferArrayRangeSharedPtr
+HdStMesh::_GetSharedPrimvarRange(uint64_t primvarId,
+    HdBufferSpecVector const &bufferSpecs,
+    HdBufferArrayRangeSharedPtr const &existing,
+    bool * isFirstInstance,
+    HdStResourceRegistrySharedPtr const &resourceRegistry) const
+{
+    HdInstance<uint64_t, HdBufferArrayRangeSharedPtr> barInstance;
+    std::unique_lock<std::mutex> regLock = 
+        resourceRegistry->RegisterPrimvarRange(primvarId, &barInstance);
+
+    HdBufferArrayRangeSharedPtr range;
+
+    if (barInstance.IsFirstInstance()) {
+        if (existing) {
+            range = resourceRegistry->
+                MergeNonUniformImmutableBufferArrayRange(
+                    HdTokens->primVar, bufferSpecs, existing);
+        } else {
+            range = resourceRegistry->
+                AllocateNonUniformImmutableBufferArrayRange(
+                    HdTokens->primVar, bufferSpecs);
+        }
+        barInstance.SetValue(range);
+    } else {
+        range = barInstance.GetValue();
+    }
+
+    if (isFirstInstance) {
+        *isFirstInstance = barInstance.IsFirstInstance();
+    }
+    return range;
 }
 
 void
@@ -1132,6 +1209,7 @@ HdStMesh::_UpdateDrawItem(HdSceneDelegate *sceneDelegate,
     if (scheme == PxOsdOpenSubdivTokens->bilinear ||
         scheme == PxOsdOpenSubdivTokens->none) {
         requireSmoothNormals = false;
+        *dirtyBits &= ~DirtySmoothNormals;
     }
 
     if (requireSmoothNormals && !_vertexAdjacency) {
@@ -1285,11 +1363,15 @@ HdStMesh::_PropagateDirtyBits(HdDirtyBits bits) const
                 HdChangeTracker::DirtyRefineLevel;
     }
 
-    // propagate scene-based dirtyBits into rprim-custom dirtyBits
-    if (bits & HdChangeTracker::DirtyPoints) {
+    // If points or topology changed, recompute smooth normals.
+    // Note: we latch on DirtyTopology here, since subdiv scheme affects whether
+    // smooth normals are computed or not.
+    if (bits & (HdChangeTracker::DirtyPoints |
+                HdChangeTracker::DirtyTopology)) {
         bits |= _customDirtyBitsInUse & DirtySmoothNormals;
     }
 
+    // If the topology is dirty, recompute custom indices resources.
     if (bits & HdChangeTracker::DirtyTopology) {
         bits |= _customDirtyBitsInUse &
                    (DirtyIndices      |
