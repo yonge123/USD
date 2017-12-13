@@ -22,25 +22,39 @@ pxr_library(hdSt
         basisCurves
         camera
         commandBuffer
+        computeShader
+        copyComputation
         dispatchBuffer
         drawItemInstance
         drawTarget
         drawTargetAttachmentDesc
         drawTargetAttachmentDescArray
         drawTargetRenderPassState
+        extCompGpuComputation
+        extCompGpuComputationBufferSource
+        extCompGpuComputationResource
+        fallbackLightingShader
         glslfxShader
         instancer
+        interleavedMemoryManager
         light      
+        lightingShader
         mesh
         mixinShaderCode
+        package
         persistentBuffer
         points
         renderDelegate
         renderPass
+        renderPassShader
+        renderPassState
         resourceRegistry
         shader
+        smoothNormals
         surfaceShader
         unitTestGLDrawing
+        vboMemoryManager
+        vboSimpleMemoryManager
 
     PUBLIC_HEADERS
         api.h
@@ -49,6 +63,7 @@ pxr_library(hdSt
         basisCurvesComputations
         basisCurvesShaderKey
         basisCurvesTopology
+        codeGen
         cullingShaderKey
         drawBatch
         drawTargetTextureResource
@@ -64,6 +79,14 @@ pxr_library(hdSt
         unitTestHelper
 
     RESOURCE_FILES
+        plugInfo.json
+        shaders/fallbackLighting.glslfx
+        shaders/fallbackLightingShader.glslfx
+        shaders/fallbackSurface.glslfx
+        shaders/lighting.glslfx
+        shaders/lightingIntegrationShader.glslfx
+        shaders/renderPass.glslfx
+        shaders/renderPassShader.glslfx
 )
 
 if (X11_FOUND OR APPLE)
