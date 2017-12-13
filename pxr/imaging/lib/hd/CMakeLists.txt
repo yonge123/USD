@@ -46,31 +46,24 @@ pxr_library(hd
         bufferSource
         bufferSpec
         changeTracker
-        codeGen
+        compExtCompInputSource
         computation
-        computeShader
         conversions
-        copyComputation
         debugCodes
         dirtyList
         drawingCoord
         drawItem
         engine
         extCompCpuComputation
-        extCompGpuComputation
-        extCompGpuComputationBufferSource
-        extCompGpuComputationResource
+        extCompInputSource
         extCompPrimvarBufferSource
         extComputation
         extComputationContext
-        fallbackLightingShader
         geometricShader
         glslProgram
         glUtils
         instancer
         instanceRegistry
-        interleavedMemoryManager
-        lightingShader
         mesh
         meshTopology
         meshUtil
@@ -84,23 +77,23 @@ pxr_library(hd
         renderDelegate
         renderIndex
         renderPass
-        renderPassShader
         renderPassState
         repr
         resource
-        resourceGL
         resourceBinder
+        resourceGL
         resourceRegistry
         rprim
         rprimCollection
         rprimSharedData
         sceneDelegate
+        sceneExtCompInputSource
         shader
         shaderCode
         shaderKey
         shaderParam
-        sortedIds                   
         smoothNormals
+        sortedIds                   
         sprim
         strategyBase
         task
@@ -109,10 +102,12 @@ pxr_library(hd
         tokens
         topology
         unitTestDelegate
-        vboMemoryManager
-        vboSimpleMemoryManager
+        unitTestHelper
+        unitTestNullRenderDelegate
+        unitTestNullRenderPass
         vertexAdjacency
         vtBufferSource
+        vtExtractor
 
     PUBLIC_HEADERS
         api.h
@@ -121,34 +116,20 @@ pxr_library(hd
         version.h
 
     PRIVATE_CLASSES
-        compExtCompInputSource
-        extCompInputSource
         extComputationContextInternal
-        sceneExtCompInputSource
-        unitTestHelper
-        unitTestNullRenderDelegate
-        unitTestNullRenderPass
-        vtExtractor
         ${optionalPrivateClasses}
 
     RESOURCE_FILES
         plugInfo.json
         shaders/basisCurves.glslfx
         shaders/compute.glslfx
-        shaders/fallbackLighting.glslfx
-        shaders/fallbackLightingShader.glslfx
-        shaders/fallbackSurface.glslfx
         shaders/frustumCull.glslfx
         shaders/instancing.glslfx
-        shaders/lighting.glslfx
-        shaders/lightingIntegrationShader.glslfx
         shaders/mesh.glslfx
         shaders/meshNormal.glslfx
         shaders/meshWire.glslfx
         shaders/points.glslfx
         shaders/ptexTexture.glslfx
-        shaders/renderPass.glslfx
-        shaders/renderPassShader.glslfx
         shaders/terminals.glslfx
 )
 
