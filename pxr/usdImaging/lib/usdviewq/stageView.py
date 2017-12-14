@@ -38,7 +38,8 @@ from pxr import Sdf, Usd, UsdGeom
 from pxr import UsdImagingGL
 from pxr import CameraUtil
 
-from common import RenderModes, ShadedRenderModes
+from common import RenderModes, ShadedRenderModes, Timer
+from rootDataModel import RootDataModel
 
 DEBUG_CLIPPING = "USDVIEWQ_DEBUG_CLIPPING"
 
@@ -1423,10 +1424,8 @@ class StageView(QtOpenGL.QGLWidget):
         of source."""
         return self._lastComputedGfCamera.frustum
 
-    def __init__(self, parent=None, dataModel=None):
-        self._dataModel = dataModel or StageView.DefaultDataModel()
-
-        self._dataModel.signalDefaultMaterialChanged.connect(self.updateGL)
+    def __init__(self, parent=None, dataModel=None, rootDataModel=None,
+            printTiming=False):
 
         glFormat = QtOpenGL.QGLFormat()
         msaa = os.getenv("USDVIEW_ENABLE_MSAA", "1")
@@ -1436,6 +1435,13 @@ class StageView(QtOpenGL.QGLWidget):
         # XXX: for OSX (QT5 required)
         # glFormat.setProfile(QtOpenGL.QGLFormat.CoreProfile)
         super(StageView, self).__init__(glFormat, parent)
+
+        self._dataModel = dataModel or StageView.DefaultDataModel()
+        self._rootDataModel = rootDataModel or RootDataModel()
+        self._printTiming = printTiming
+
+        self._dataModel.signalDefaultMaterialChanged.connect(self.updateGL)
+        self._rootDataModel.signalStageReplaced.connect(self._stageReplaced)
 
         self._dataModel.freeCamera = FreeCamera(True)
         self._lastComputedGfCamera = None
@@ -1453,7 +1459,6 @@ class StageView(QtOpenGL.QGLWidget):
         self._hud.addGroup("BottomLeft",  250, 160)  # GPU stats
         self._hud.addGroup("BottomRight", 200, 32)   # Camera, Complexity
 
-        self._stage = None
         self._stageIsZup = True
         self._currentFrame = 0
         self._cameraMode = "none"
@@ -1548,6 +1553,13 @@ class StageView(QtOpenGL.QGLWidget):
                 raise RuntimeError("StageView could not initialize renderer without a valid GL context")
         return self._renderer
 
+    def closeRenderer(self):
+        '''Close the current renderer.'''
+        with Timer() as t:
+            self._renderer = None
+        if self._printTiming:
+            t.PrintTime('shut down Hydra')
+
     def GetRendererPlugins(self):
         if self._renderer:
             return self._renderer.GetRendererPlugins()
@@ -1565,18 +1577,15 @@ class StageView(QtOpenGL.QGLWidget):
             self._rendererPluginName = self.GetRendererPluginDisplayName(plugId)
             self._renderer.SetRendererPlugin(plugId)
 
-    def GetStage(self):
-        return self._stage
-
-    def SetStage(self, stage):
+    def _stageReplaced(self):
         '''Set the USD Stage this widget will be displaying. To decommission
         (even temporarily) this widget, supply None as 'stage'.'''
-        if stage != self._stage:
-            self._renderer = None
-            self.allSceneCameras = None
-            self._stage = stage
-        if stage:
-            self._stageIsZup = UsdGeom.GetStageUpAxis(stage) == UsdGeom.Tokens.z
+
+        self.allSceneCameras = None
+
+        if self._rootDataModel.stage:
+            self._stageIsZup = (
+                UsdGeom.GetStageUpAxis(self._rootDataModel.stage) == UsdGeom.Tokens.z)
             self._dataModel.freeCamera = FreeCamera(self._stageIsZup)
 
     # simple GLSL program for axis/bbox drawings
@@ -1857,7 +1866,7 @@ class StageView(QtOpenGL.QGLWidget):
         self.updateGL()
 
     def _updateSelection(self):
-        psuRoot = self._stage.GetPseudoRoot()
+        psuRoot = self._rootDataModel.stage.GetPseudoRoot()
         renderer = self._getRenderer()
         if not renderer:
             # error has already been issued
@@ -1881,7 +1890,8 @@ class StageView(QtOpenGL.QGLWidget):
         return Gf.BBox3d(Gf.Range3d((-10,-10,-10), (10,10,10)))
 
     def getStageBBox(self):
-        bbox = self._dataModel.bboxCache.ComputeWorldBound(self._stage.GetPseudoRoot())
+        bbox = self._dataModel.bboxCache.ComputeWorldBound(
+            self._rootDataModel.stage.GetPseudoRoot())
         if bbox.GetRange().IsEmpty():
             bbox = self._getEmptyBBox()
         return bbox
@@ -1912,7 +1922,7 @@ class StageView(QtOpenGL.QGLWidget):
                          "the prim is not a UsdGeom.Camera." %(cameraPrim.GetName()))
 
     def renderSinglePass(self, renderMode, renderSelHighlights):
-        if not self._stage:
+        if not self._rootDataModel.stage:
             return
         renderer = self._getRenderer()
         if not renderer:
@@ -1937,7 +1947,7 @@ class StageView(QtOpenGL.QGLWidget):
         self._renderParams.enableHardwareShading = self._dataModel.enableHardwareShading
         self._renderParams.displayImagePlanes = self._dataModel.displayImagePlanes
 
-        pseudoRoot = self._stage.GetPseudoRoot()
+        pseudoRoot = self._rootDataModel.stage.GetPseudoRoot()
 
         renderer.SetSelectionColor(self._dataModel.highlightColor)
         renderer.Render(pseudoRoot, self._renderParams)
@@ -2121,7 +2131,7 @@ class StageView(QtOpenGL.QGLWidget):
             GL.glBindVertexArray(0)
 
     def paintGL(self):
-        if not self._stage:
+        if not self._rootDataModel.stage:
             return
         renderer = self._getRenderer()
         if not renderer:
@@ -2562,7 +2572,7 @@ class StageView(QtOpenGL.QGLWidget):
           selectedInstanceIndex, selectedElementIndex
         '''
         renderer = self._getRenderer()
-        if not self._stage or not renderer:
+        if not self._rootDataModel.stage or not renderer:
             # error has already been issued
             return None, Sdf.Path.emptyPath, None, None, None
 
@@ -2592,7 +2602,7 @@ class StageView(QtOpenGL.QGLWidget):
                 pickFrustum.ComputeViewMatrix(),
                 pickFrustum.ComputeProjectionMatrix(),
                 Gf.Matrix4d(1.0),
-                self._stage.GetPseudoRoot(), self._renderParams)
+                self._rootDataModel.stage.GetPseudoRoot(), self._renderParams)
         if Tf.Debug.IsDebugSymbolNameEnabled(DEBUG_CLIPPING):
             print "Pick results = {}".format(results)
         return results
@@ -2630,7 +2640,7 @@ class StageView(QtOpenGL.QGLWidget):
         Emits a signalPrimSelected or signalRollover depending on
         whether 'button' is None.
         '''
-        if not self._stage:
+        if not self._rootDataModel.stage:
             return
         renderer = self._getRenderer()
         if not renderer:
@@ -2662,7 +2672,7 @@ class StageView(QtOpenGL.QGLWidget):
         else:
             selectedInstanceIndex = UsdImagingGL.GL.ALL_INSTANCES
 
-        selectedPrim = self._stage.GetPrimAtPath(selectedPrimPath)
+        selectedPrim = self._rootDataModel.stage.GetPrimAtPath(selectedPrimPath)
 
         if button:
             self.signalPrimSelected.emit(selectedPrimPath, selectedInstanceIndex, button, modifiers)
@@ -2746,9 +2756,9 @@ class StageView(QtOpenGL.QGLWidget):
         '''
 
         tmpStage = Usd.Stage.CreateNew(stagePath)
-        if self._stage:
+        if self._rootDataModel.stage:
             tmpStage.GetRootLayer().TransferContent(
-                self._stage.GetSessionLayer())
+                self._rootDataModel.stage.GetSessionLayer())
 
         if not self.cameraPrim:
             # Export the free camera if it's the currently-visible camera
@@ -2760,10 +2770,11 @@ class StageView(QtOpenGL.QGLWidget):
 
         # Reopen just the tmp layer, to sublayer in the pose cache without
         # incurring Usd composition cost.
-        if self._stage:
+        if self._rootDataModel.stage:
             from pxr import Sdf
             sdfLayer = Sdf.Layer.FindOrOpen(stagePath)
             sdfLayer.subLayerPaths.append(
-                os.path.abspath(self._stage.GetRootLayer().realPath))
+                os.path.abspath(
+                    self._rootDataModel.stage.GetRootLayer().realPath))
             sdfLayer.Save()
 

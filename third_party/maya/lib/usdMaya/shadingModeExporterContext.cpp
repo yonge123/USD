@@ -53,12 +53,16 @@ PxrUsdMayaShadingModeExportContext::PxrUsdMayaShadingModeExportContext(
         bool mergeTransformAndShape,
         bool stripNamespaces,
         const PxrUsdMayaUtil::ShapeSet& bindableRoots,
-        SdfPath overrideRootPath) :
+        SdfPath overrideRootPath,
+        const std::string& parentScope,
+        const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap) :
     _shadingEngine(shadingEngine),
     _stage(stage),
     _mergeTransformAndShape(mergeTransformAndShape),
     _stripNamespaces(stripNamespaces),
-    _overrideRootPath(overrideRootPath)
+    _parentScope(parentScope),
+    _overrideRootPath(overrideRootPath),
+    _dagPathToUsdMap(dagPathToUsdMap)
 {
     if (bindableRoots.empty()) {
         // if none specified, push back '/' which encompasses all
@@ -215,7 +219,8 @@ _GetMaterialParent(const UsdStageRefPtr& stage,
 UsdPrim
 PxrUsdMayaShadingModeExportContext::MakeStandardMaterialPrim(
         const AssignmentVector& assignmentsToBind,
-        const std::string& name) const
+        const std::string& name,
+        SdfPathSet * const boundPrimPaths) const
 {
     UsdPrim ret;
 
@@ -248,13 +253,16 @@ PxrUsdMayaShadingModeExportContext::MakeStandardMaterialPrim(
             UsdPrim boundPrim = stage->OverridePrim(boundPrimPath);
             if (faceIndices.empty()) {
                 material.Bind(boundPrim);
+                if (boundPrimPaths) {
+                    boundPrimPaths->insert(boundPrim.GetPath());
+                }
             } else if (TfGetEnvSetting(PIXMAYA_EXPORT_OLD_STYLE_FACESETS)) {
                 UsdGeomFaceSetAPI faceSet = material.CreateMaterialFaceSet(
                         boundPrim);
                 faceSet.AppendFaceGroup(faceIndices, materialPath);
+                // XXX: don't bother updating boundPrimPaths in this case as 
+                // old style facesets will be deprecated soon.
             } else {
-                // It might be worth adding a utility method for the following 
-                // block of code in core.
                 UsdGeomSubset faceSubset = 
                     UsdShadeMaterial::CreateMaterialBindSubset(
                         UsdGeomImageable(boundPrim), 
@@ -262,6 +270,10 @@ PxrUsdMayaShadingModeExportContext::MakeStandardMaterialPrim(
                         faceIndices, 
                         /* elementType */ UsdGeomTokens->face);
                 material.Bind(faceSubset.GetPrim());
+                
+                if (boundPrimPaths) {
+                    boundPrimPaths->insert(faceSubset.GetPath());
+                }
 
                 UsdShadeMaterial::SetMaterialBindSubsetsFamilyType(
                     UsdGeomImageable(boundPrim), UsdGeomTokens->partition);
