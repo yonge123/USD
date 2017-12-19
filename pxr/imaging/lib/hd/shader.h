@@ -46,9 +46,11 @@ public:
         DirtySurfaceShader    = 1 << 2,
         DirtyParams           = 1 << 3,
         DirtyComputeShader    = 1 << 4,
+        DirtyResource         = 1 << 5,
         AllDirty              = (DirtySurfaceShader
                                  |DirtyParams
-                                 |DirtyComputeShader)
+                                 |DirtyComputeShader
+                                 |DirtyResource)
     };
 
     HD_API
@@ -71,6 +73,70 @@ private:
     HdShader(const HdShader &)             = delete;
     HdShader &operator =(const HdShader &) = delete;
 };
+
+
+/// \struct HdMaterialRelationship
+///
+/// Describes a connection between two nodes/terminals.
+struct HdMaterialRelationship {
+    SdfPath sourceId;
+    TfToken sourceTerminal;
+    SdfPath remoteId;
+    TfToken remoteTerminal;
+};
+
+// VtValue requirements
+bool operator==(const HdMaterialRelationship& lhs, 
+                const HdMaterialRelationship& rhs);
+
+
+/// \struct HdValueAndRole
+///
+/// A pair of (value, role).  The role value comes from SdfValueRoleNames
+/// and indicates the intended interpretation.  For example, the role
+/// indicates whether a GfVec3f value should be interpreted as a color,
+/// point, vector, or normal.
+struct HdValueAndRole {
+    VtValue value;
+    TfToken role;
+};
+
+// VtValue requirements
+bool operator==(const HdValueAndRole& lhs,
+                const HdValueAndRole& rhs);
+
+/// \struct HdMaterialNode
+///
+/// Describes a material node which is made of a path, a type and
+/// a list of parameters.
+struct HdMaterialNode {
+    SdfPath path;
+    TfToken type;
+    std::map<TfToken, HdValueAndRole> parameters;
+};
+
+// VtValue requirements
+HD_API
+bool operator==(const HdMaterialNode& lhs, const HdMaterialNode& rhs);
+
+
+/// \struct HdMaterialNodes
+///
+/// Describes a material network composed of nodes and relationships
+/// between the nodes and terminals of those nodes.
+struct HdMaterialNodes {
+    std::vector<HdMaterialRelationship> relationships;
+    std::vector<HdMaterialNode> nodes;
+};
+
+// VtValue requirements
+HD_API
+std::ostream& operator<<(std::ostream& out, const HdMaterialNodes& pv);
+HD_API
+bool operator==(const HdMaterialNodes& lhs, const HdMaterialNodes& rhs);
+HD_API
+bool operator!=(const HdMaterialNodes& lhs, const HdMaterialNodes& rhs);
+
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

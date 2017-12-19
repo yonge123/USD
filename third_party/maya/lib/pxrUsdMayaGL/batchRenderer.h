@@ -33,6 +33,8 @@
 #include "pxrUsdMayaGL/softSelectHelper.h"
 
 #include "pxr/base/arch/hash.h"
+#include "pxr/base/gf/matrix4d.h"
+#include "pxr/base/gf/vec4d.h"
 #include "pxr/base/tf/debug.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/imaging/glf/simpleLightingContext.h"
@@ -61,7 +63,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-class MDagPath;
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -263,13 +264,14 @@ public:
         virtual VtValue Get(SdfPath const& id, TfToken const& key);
 
         PXRUSDMAYAGL_API
-        void SetCameraState(const GfMatrix4d& viewMatrix,
+        void SetCameraState(const GfMatrix4d& worldToViewMatrix,
                             const GfMatrix4d& projectionMatrix,
                             const GfVec4d& viewport);
 
         // VP 1.0 only.
         PXRUSDMAYAGL_API
-        void SetLightingStateFromVP1(const MMatrix& viewMatForLights);
+        void SetLightingStateFromVP1(const GfMatrix4d& worldToViewMatrix,
+                                     const GfMatrix4d& projectionMatrix);
 
         // VP 2.0 only.
         PXRUSDMAYAGL_API
@@ -368,19 +370,6 @@ public:
             const MHWRender::MDrawContext& context,
             const MUserData *userData );
 
-    /// \brief Notify the batch renderer that a Maya render has ended.
-    ///
-    /// Viewport 2.0 may execute a render in multiple passes (shadow, color,
-    /// etc.), and Maya sends a notification when all rendering has finished.
-    /// When this notification is received, this method should be called to
-    /// reset some state in the batch renderer and prepare it for subsequent
-    /// selection.
-    /// For the legacy viewport, rendering is done in a single pass and there
-    /// is no such notification sent by Maya, so this method is called
-    /// internally at the end of Hydra draws for the legacy viewport.
-    PXRUSDMAYAGL_API
-    void MayaRenderDidEnd();
-
 private:
     
     /// \brief Helper function to find a key for the shape in the renderer cache
@@ -416,9 +405,30 @@ private:
     /// performance hit when no batches are queued.
     void _RenderBatches(
             const MHWRender::MDrawContext* vp2Context,
-            const MMatrix& viewMat,
-            const MMatrix& projectionMat,
-            const GfVec4d& viewport );
+            const GfMatrix4d& worldToViewMatrix,
+            const GfMatrix4d& projectionMatrix,
+            const GfVec4d& viewport);
+
+    /// \brief Handler for Maya Viewport 2.0 end render notifications.
+    ///
+    /// Viewport 2.0 may execute a render in multiple passes (shadow, color,
+    /// etc.), and Maya sends a notification when all rendering has finished.
+    /// When this notification is received, this method is invoked to reset
+    /// some state in the batch renderer and prepare it for subsequent
+    /// selection.
+    /// For the legacy viewport, there is no such notification sent by Maya.
+    static void _OnMayaEndRenderCallback(
+            MHWRender::MDrawContext& context,
+            void* clientData);
+
+    /// \brief Perform post-render state cleanup.
+    ///
+    /// For Viewport 2.0, this method gets invoked by
+    /// _OnMayaEndRenderCallback() and is what does the actual cleanup work.
+    /// For the legacy viewport, there is no such notification sent by Maya, so
+    /// this method is called internally at the end of Hydra draws for the
+    /// legacy viewport.
+    void _MayaRenderDidEnd();
 
     /// \brief Cache of hashed \c ShapeRenderer objects for fast lookup
     typedef std::unordered_map<size_t,ShapeRenderer> _ShapeRendererMap;

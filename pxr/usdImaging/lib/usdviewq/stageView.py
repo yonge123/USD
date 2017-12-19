@@ -38,7 +38,8 @@ from pxr import Sdf, Usd, UsdGeom
 from pxr import UsdImagingGL
 from pxr import CameraUtil
 
-from common import RenderModes, ShadedRenderModes
+from common import RenderModes, ShadedRenderModes, Timer
+from rootDataModel import RootDataModel
 
 DEBUG_CLIPPING = "USDVIEWQ_DEBUG_CLIPPING"
 
@@ -1171,6 +1172,10 @@ class StageView(QtOpenGL.QGLWidget):
             self._defaultShowBBoxes = value
 
         @property
+        def showBBoxPlayback(self):
+            return False
+
+        @property
         def displayGuide(self):
             return False
 
@@ -1311,11 +1316,13 @@ class StageView(QtOpenGL.QGLWidget):
 
     @property
     def _fitCameraInViewport(self):
-       return self._dataModel.showMask or self._dataModel.showMask_Outline or self.showReticles
+       return ((self._dataModel.showMask or self._dataModel.showMask_Outline or self.showReticles)
+               and self._cameraPrim != None)
 
     @property
-    def _cropViewportToCameraViewport(self):
-       return self._dataModel.showMask and self._dataModel.showMask_Opaque
+    def _cropImageToCameraViewport(self):
+       return ((self._dataModel.showMask and self._dataModel.showMask_Opaque)
+               and self._cameraPrim != None)
 
     @property
     def cameraPrim(self):
@@ -1413,10 +1420,8 @@ class StageView(QtOpenGL.QGLWidget):
         of source."""
         return self._lastComputedGfCamera.frustum
 
-    def __init__(self, parent=None, dataModel=None):
-        self._dataModel = dataModel or StageView.DefaultDataModel()
-
-        self._dataModel.signalDefaultMaterialChanged.connect(self.updateGL)
+    def __init__(self, parent=None, dataModel=None, rootDataModel=None,
+            printTiming=False):
 
         glFormat = QtOpenGL.QGLFormat()
         msaa = os.getenv("USDVIEW_ENABLE_MSAA", "1")
@@ -1426,6 +1431,13 @@ class StageView(QtOpenGL.QGLWidget):
         # XXX: for OSX (QT5 required)
         # glFormat.setProfile(QtOpenGL.QGLFormat.CoreProfile)
         super(StageView, self).__init__(glFormat, parent)
+
+        self._dataModel = dataModel or StageView.DefaultDataModel()
+        self._rootDataModel = rootDataModel or RootDataModel()
+        self._printTiming = printTiming
+
+        self._dataModel.signalDefaultMaterialChanged.connect(self.updateGL)
+        self._rootDataModel.signalStageReplaced.connect(self._stageReplaced)
 
         self._dataModel.freeCamera = FreeCamera(True)
         self._lastComputedGfCamera = None
@@ -1443,7 +1455,6 @@ class StageView(QtOpenGL.QGLWidget):
         self._hud.addGroup("BottomLeft",  250, 160)  # GPU stats
         self._hud.addGroup("BottomRight", 200, 32)   # Camera, Complexity
 
-        self._stage = None
         self._stageIsZup = True
         self._currentFrame = 0
         self._cameraMode = "none"
@@ -1453,6 +1464,7 @@ class StageView(QtOpenGL.QGLWidget):
         self._lastY = 0
 
         self._renderer = None
+        self._reportedContextError = False
         self._renderModeDict={RenderModes.WIREFRAME:UsdImagingGL.GL.DrawMode.DRAW_WIREFRAME,
                               RenderModes.WIREFRAME_ON_SURFACE:UsdImagingGL.GL.DrawMode.DRAW_WIREFRAME_ON_SURFACE,
                               RenderModes.SMOOTH_SHADED:UsdImagingGL.GL.DrawMode.DRAW_SHADED_SMOOTH,
@@ -1509,10 +1521,25 @@ class StageView(QtOpenGL.QGLWidget):
         self._cameraGuidesVBO = None
         self._vao = 0
 
-    def InitRenderer(self):
-        '''Create (or re-create) the imager.'''
-        self._renderer = UsdImagingGL.GL()
-        self._rendererPluginName = ""
+    def _getRenderer(self):
+        # Unfortunately, we cannot assume that initializeGL() was called
+        # before attempts to use the renderer (e.g. pick()), so we must
+        # create the renderer lazily, when we try to do real work with it.
+        if not self._renderer:
+            if self.isValid():
+                self._renderer = UsdImagingGL.GL()
+                self._rendererPluginName = ""
+            elif not self._reportedContextError:
+                self._reportedContextError = True
+                raise RuntimeError("StageView could not initialize renderer without a valid GL context")
+        return self._renderer
+
+    def closeRenderer(self):
+        '''Close the current renderer.'''
+        with Timer() as t:
+            self._renderer = None
+        if self._printTiming:
+            t.PrintTime('shut down Hydra')
 
     def GetRendererPlugins(self):
         if self._renderer:
@@ -1531,28 +1558,16 @@ class StageView(QtOpenGL.QGLWidget):
             self._rendererPluginName = self.GetRendererPluginDisplayName(plugId)
             self._renderer.SetRendererPlugin(plugId)
 
-    def GetStage(self):
-        return self._stage
-
-    def SetStage(self, stage):
+    def _stageReplaced(self):
         '''Set the USD Stage this widget will be displaying. To decommission
-        (even temporarily) this widget, supply None as 'stage' '''
-        if stage is None:
-            self._renderer = None
-            self._stage = None
-            self.allSceneCameras = None
-        else:
-            self.ReloadStage(stage)
-            self._dataModel.freeCamera = FreeCamera(self._stageIsZup)
+        (even temporarily) this widget, supply None as 'stage'.'''
 
-    def ReloadStage(self, stage):
-        self._stage = stage
-        # Since this function gets call on startup as well we need to make it
-        # does not try to create a renderer because there is no OGL context yet
-        if self._renderer != None:
-            self.InitRenderer()
-        self._stageIsZup = UsdGeom.GetStageUpAxis(stage) == UsdGeom.Tokens.z
         self.allSceneCameras = None
+
+        if self._rootDataModel.stage:
+            self._stageIsZup = (
+                UsdGeom.GetStageUpAxis(self._rootDataModel.stage) == UsdGeom.Tokens.z)
+            self._dataModel.freeCamera = FreeCamera(self._stageIsZup)
 
     # simple GLSL program for axis/bbox drawings
     def GetSimpleGLSLProgram(self):
@@ -1804,20 +1819,22 @@ class StageView(QtOpenGL.QGLWidget):
         self.updateGL()
 
     def _updateSelection(self):
-        psuRoot = self._stage.GetPseudoRoot()
-        if not self._renderer:
+        psuRoot = self._rootDataModel.stage.GetPseudoRoot()
+        renderer = self._getRenderer()
+        if not renderer:
+            # error has already been issued
             return
 
-        self._renderer.ClearSelected()
+        renderer.ClearSelected()
 
         for p in self._selectedPrims:
             if p == psuRoot:
                 continue
             if self._selectedInstances.has_key(p.GetPath()):
                 for instanceIndex in self._selectedInstances[p.GetPath()]:
-                    self._renderer.AddSelected(p.GetPath(), instanceIndex)
+                    renderer.AddSelected(p.GetPath(), instanceIndex)
             else:
-                self._renderer.AddSelected(p.GetPath(), UsdImagingGL.GL.ALL_INSTANCES)
+                renderer.AddSelected(p.GetPath(), UsdImagingGL.GL.ALL_INSTANCES)
 
     def _getEmptyBBox(self):
         return Gf.BBox3d()
@@ -1826,7 +1843,8 @@ class StageView(QtOpenGL.QGLWidget):
         return Gf.BBox3d(Gf.Range3d((-10,-10,-10), (10,10,10)))
 
     def getStageBBox(self):
-        bbox = self._dataModel.bboxCache.ComputeWorldBound(self._stage.GetPseudoRoot())
+        bbox = self._dataModel.bboxCache.ComputeWorldBound(
+            self._rootDataModel.stage.GetPseudoRoot())
         if bbox.GetRange().IsEmpty():
             bbox = self._getEmptyBBox()
         return bbox
@@ -1857,7 +1875,11 @@ class StageView(QtOpenGL.QGLWidget):
                          "the prim is not a UsdGeom.Camera." %(cameraPrim.GetName()))
 
     def renderSinglePass(self, renderMode, renderSelHighlights):
-        if not self._stage or not self._renderer:
+        if not self._rootDataModel.stage:
+            return
+        renderer = self._getRenderer()
+        if not renderer:
+            # error has already been issued
             return
 
         # update rendering parameters
@@ -1877,22 +1899,20 @@ class StageView(QtOpenGL.QGLWidget):
         self._renderParams.highlight = renderSelHighlights
         self._renderParams.enableHardwareShading = self._dataModel.enableHardwareShading
 
-        pseudoRoot = self._stage.GetPseudoRoot()
+        pseudoRoot = self._rootDataModel.stage.GetPseudoRoot()
 
-        self._renderer.SetSelectionColor(self._dataModel.highlightColor)
-        self._renderer.Render(pseudoRoot, self._renderParams)
+        renderer.SetSelectionColor(self._dataModel.highlightColor)
+        renderer.Render(pseudoRoot, self._renderParams)
         self._forceRefresh = False
 
 
     def initializeGL(self):
-        if not self.context():
+        if not self.isValid():
             return
         from pxr import Glf
         if not Glf.GlewInit():
             return
         Glf.RegisterDefaultDebugOutputMessageCallback()
-        # Initialize the renderer now since the context is available
-        self.InitRenderer()
 
     def updateGL(self):
         """We override this virtual so that we can make it a no-op during
@@ -1910,7 +1930,7 @@ class StageView(QtOpenGL.QGLWidget):
             super(StageView, self).updateGL()
             self._dataModel.drawSelHighlights = drawHighlights
 
-    def computeGfCameraForCurrentPrim(self):
+    def computeGfCameraForCurrentCameraPrim(self):
         if self._cameraPrim and self._cameraPrim.IsActive():
             gfCamera = UsdGeom.Camera(self._cameraPrim).GetCamera(
                 self._currentFrame)
@@ -1918,35 +1938,35 @@ class StageView(QtOpenGL.QGLWidget):
         else:
             return None
 
-    def computeSize(self):
+    def computeWindowSize(self):
          size = self.size() * QtWidgets.QApplication.instance().devicePixelRatio()
          return (int(size.width()), int(size.height()))
 
-    def computeViewport(self):
-        return (0, 0) + self.computeSize()
+    def computeWindowViewport(self):
+        return (0, 0) + self.computeWindowSize()
 
-    def computeGfCameraAndViewport(self):
-        windowPolicy = CameraUtil.MatchVertically
-        targetAspect = (
-          float(self.size().width()) / max(1.0, self.size().height()))
-        conformCameraWindow = True
+    def resolveCamera(self):
+        """Returns a tuple of the camera to use for rendering (either a scene
+        camera or a free camera) and that camera's original aspect ratio.
+        Depending on camera guide settings, the camera frustum may be conformed
+        to fit the window viewport. Emits a signalFrustumChanged if the
+        camera frustum has changed since the last time resolveCamera was called."""
 
-        camera = self.computeGfCameraForCurrentPrim()
+        # If 'camera' is None, make sure we have a valid freeCamera
+        camera = self.computeGfCameraForCurrentCameraPrim()
         if not camera:
-            # If 'camera' is None, make sure we have a valid freeCamera
             self.switchToFreeCamera()
             camera = self._dataModel.freeCamera.computeGfCamera(self._bbox)
-        elif self._fitCameraInViewport:
-            if targetAspect < camera.aspectRatio:
-                windowPolicy = CameraUtil.MatchHorizontally
-            conformCameraWindow = False
 
-        if conformCameraWindow:
-            CameraUtil.ConformWindow(camera, windowPolicy, targetAspect)
+        cameraAspectRatio = camera.aspectRatio
 
-        viewport = Gf.Range2d(Gf.Vec2d(0, 0),
-                              Gf.Vec2d(self.computeSize()))
-        viewport = CameraUtil.ConformedWindow(viewport, windowPolicy, camera.aspectRatio)
+        # Conform the camera's frustum to the window viewport, if necessary.
+        if not self._cropImageToCameraViewport:
+            targetAspect = float(self.size().width()) / max(1.0, self.size().height())
+            if self._fitCameraInViewport:
+                CameraUtil.ConformWindow(camera, CameraUtil.Fit, targetAspect)
+            else:
+                CameraUtil.ConformWindow(camera, CameraUtil.MatchVertically, targetAspect)
 
         frustumChanged = ((not self._lastComputedGfCamera) or
                           self._lastComputedGfCamera.frustum != camera.frustum)
@@ -1954,8 +1974,26 @@ class StageView(QtOpenGL.QGLWidget):
         self._lastComputedGfCamera = Gf.Camera(camera)
         if frustumChanged:
             self.signalFrustumChanged.emit()
-        return (camera, (viewport.GetMin()[0], viewport.GetMin()[1],
-                         viewport.GetSize()[0], viewport.GetSize()[1]))
+        return (camera, cameraAspectRatio)
+
+    def computeCameraViewport(self, cameraAspectRatio):
+        # Conform the camera viewport to the camera's aspect ratio,
+        # and center the camera viewport in the window viewport.
+        windowPolicy = CameraUtil.MatchVertically
+        targetAspect = (
+          float(self.size().width()) / max(1.0, self.size().height()))
+        if targetAspect < cameraAspectRatio:
+            windowPolicy = CameraUtil.MatchHorizontally
+
+        viewport = Gf.Range2d(Gf.Vec2d(0, 0),
+                              Gf.Vec2d(self.computeWindowSize()))
+        viewport = CameraUtil.ConformedWindow(viewport, windowPolicy, cameraAspectRatio)
+
+        viewport = (viewport.GetMin()[0], viewport.GetMin()[1],
+                    viewport.GetSize()[0], viewport.GetSize()[1])
+        viewport = ViewportMakeCenteredIntegral(viewport)
+
+        return viewport
 
     def copyViewState(self):
         """Returns a copy of this StageView's view-affecting state,
@@ -1966,9 +2004,10 @@ class StageView(QtOpenGL.QGLWidget):
         with respect to our owner's time.
         """
         viewState = {}
-        for attr in ["_cameraPrim", "_stageIsZup",
-                     "_overrideNear", "_overrideFar" ]:
-            viewState[attr] = getattr(self, attr)
+        viewState["_cameraPrim"] = self._cameraPrim
+        viewState["_stageIsZup"] = self._stageIsZup
+        viewState["_overrideNear"] = self._overrideNear
+        viewState["_overrideFar"] = self._overrideFar
         # Since FreeCamera is a compound/class object, we must copy
         # it more deeply
         viewState["_freeCamera"] = self._dataModel.freeCamera.clone() if self._dataModel.freeCamera else None
@@ -1976,12 +2015,16 @@ class StageView(QtOpenGL.QGLWidget):
 
     def restoreViewState(self, viewState):
         """Restore view parameters from 'viewState', and redraw"""
-        for key,val in viewState.iteritems():
-            setattr(self, key, val)
+        self._cameraPrim = viewState["_cameraPrim"]
+        self._stageIsZup = viewState["_stageIsZup"]
+        self._overrideNear = viewState["_overrideNear"]
+        self._overrideFar = viewState["_overrideFar"]
+
+        restoredCamera = viewState["_freeCamera"]
         # Detach our freeCamera from the given viewState, to
         # insulate against changes to viewState by caller
-        if viewState.has_key("_freeCamera") and self._dataModel.freeCamera:
-            self._dataModel.freeCamera = self._dataModel.freeCamera.clone()
+        self._dataModel.freeCamera = restoredCamera.clone() if restoredCamera else None
+
         self.update()
 
     def drawWireframeCube(self, col, mvpMatrix):
@@ -2040,7 +2083,11 @@ class StageView(QtOpenGL.QGLWidget):
             GL.glBindVertexArray(0)
 
     def paintGL(self):
-        if not self._stage or not self._renderer:
+        if not self._rootDataModel.stage:
+            return
+        renderer = self._getRenderer()
+        if not renderer:
+            # error has already been issued
             return
 
         from OpenGL import GL
@@ -2067,23 +2114,19 @@ class StageView(QtOpenGL.QGLWidget):
         GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
         GL.glEnable(GL.GL_BLEND)
 
-        (gfCamera, cameraViewport) = self.computeGfCameraAndViewport()
+        (gfCamera, cameraAspect) = self.resolveCamera()
         frustum = gfCamera.frustum
+        cameraViewport = self.computeCameraViewport(cameraAspect)
 
-        viewport = self.computeViewport()
-        cameraViewport = ViewportMakeCenteredIntegral(cameraViewport)
-        if self._fitCameraInViewport:
-            if self._cropViewportToCameraViewport:
-                viewport = cameraViewport
-            else:
-                windowAspect = float(viewport[2]) / max(1.0, viewport[3])
-                CameraUtil.ConformWindow(frustum, CameraUtil.Fit, windowAspect)
+        viewport = self.computeWindowViewport()
+        if self._cropImageToCameraViewport:
+            viewport = cameraViewport
 
         cam_pos = frustum.position
         cam_up = frustum.ComputeUpVector()
         cam_right = Gf.Cross(frustum.ComputeViewDirection(), cam_up)
 
-        self._renderer.SetCameraState(
+        renderer.SetCameraState(
             frustum.ComputeViewMatrix(),
             frustum.ComputeProjectionMatrix(),
             Gf.Vec4d(*viewport))
@@ -2172,14 +2215,14 @@ class StageView(QtOpenGL.QGLWidget):
                 material.shininess = 32.0
 
             # modes that want no lighting simply leave lights as an empty list
-            self._renderer.SetLightingState(lights, material, sceneAmbient)
+            renderer.SetLightingState(lights, material, sceneAmbient)
 
             if self._dataModel.renderMode == RenderModes.HIDDEN_SURFACE_WIREFRAME:
                 GL.glEnable( GL.GL_POLYGON_OFFSET_FILL )
                 GL.glPolygonOffset( 1.0, 1.0 )
                 GL.glPolygonMode( GL.GL_FRONT_AND_BACK, GL.GL_FILL )
 
-                self.renderSinglePass( self._renderer.DrawMode.DRAW_GEOM_ONLY,
+                self.renderSinglePass( renderer.DrawMode.DRAW_GEOM_ONLY,
                                        False)
 
                 GL.glDisable( GL.GL_POLYGON_OFFSET_FILL )
@@ -2198,7 +2241,8 @@ class StageView(QtOpenGL.QGLWidget):
             if self._dataModel.displayCameraOracles:
                 self.DrawCameraGuides(viewProjectionMatrix)
 
-            if self._dataModel.showBBoxes:
+            if self._dataModel.showBBoxes and\
+                    (self._dataModel.showBBoxPlayback or not self._dataModel.playing):
                 self.DrawBBox(viewProjectionMatrix)
         else:
             GL.glClear(GL.GL_COLOR_BUFFER_BIT)
@@ -2208,7 +2252,7 @@ class StageView(QtOpenGL.QGLWidget):
             self._glTimeElapsedQuery.End()
 
         # reset the viewport for 2D and HUD drawing
-        uiTasks = [ Prim2DSetupTask(self.computeViewport()) ]
+        uiTasks = [ Prim2DSetupTask(self.computeWindowViewport()) ]
         if self._dataModel.showMask:
             color = self._dataModel.cameraMaskColor
             if self._dataModel.showMask_Opaque:
@@ -2236,14 +2280,14 @@ class StageView(QtOpenGL.QGLWidget):
 
         # ### DRAW HUD ### #
         if self._dataModel.showHUD:
-            self.drawHUD()
+            self.drawHUD(renderer)
 
         GL.glDisable(GL_FRAMEBUFFER_SRGB_EXT)
 
-        if (not self._dataModel.playing) & (not self._renderer.IsConverged()):
+        if (not self._dataModel.playing) & (not renderer.IsConverged()):
             QtCore.QTimer.singleShot(5, self.update)
 
-    def drawHUD(self):
+    def drawHUD(self, renderer):
         # compute the time it took to render this frame,
         # so we can display it in the HUD
         ms = self._renderTime * 1000.
@@ -2301,7 +2345,7 @@ class StageView(QtOpenGL.QGLWidget):
 
         # GPU stats (TimeElapsed is in nano seconds)
         if self._dataModel.showHUD_GPUstats:
-            allocInfo = self._renderer.GetResourceAllocation()
+            allocInfo = renderer.GetResourceAllocation()
             gpuMemTotal = 0
             texMem = 0
             if "gpuMemoryUsed" in allocInfo:
@@ -2453,7 +2497,7 @@ class StageView(QtOpenGL.QGLWidget):
         # range.  We don't expect the worst-case to happen often.
         if not self._dataModel.freeCamera:
             return
-        cameraFrustum = self.computeGfCameraAndViewport()[0].frustum
+        cameraFrustum = self.resolveCamera()[0].frustum
         trueFar = cameraFrustum.nearFar.max
         smallNear = min(FreeCamera.defaultNear,
                         self._dataModel.freeCamera._selSize / 10.0)
@@ -2479,7 +2523,9 @@ class StageView(QtOpenGL.QGLWidget):
           selectedPoint, selectedPrimPath, selectedInstancerPath,
           selectedInstanceIndex, selectedElementIndex
         '''
-        if not self._stage or not self._renderer:
+        renderer = self._getRenderer()
+        if not self._rootDataModel.stage or not renderer:
+            # error has already been issued
             return None, Sdf.Path.emptyPath, None, None, None
 
         from OpenGL import GL
@@ -2503,28 +2549,41 @@ class StageView(QtOpenGL.QGLWidget):
         self._renderParams.enableSampleAlphaToCoverage = False
         self._renderParams.enableHardwareShading = self._dataModel.enableHardwareShading
 
-        results = self._renderer.TestIntersection(
+        results = renderer.TestIntersection(
                 pickFrustum.ComputeViewMatrix(),
                 pickFrustum.ComputeProjectionMatrix(),
                 Gf.Matrix4d(1.0),
-                self._stage.GetPseudoRoot(), self._renderParams)
+                self._rootDataModel.stage.GetPseudoRoot(), self._renderParams)
         if Tf.Debug.IsDebugSymbolNameEnabled(DEBUG_CLIPPING):
             print "Pick results = {}".format(results)
         return results
 
     def computePickFrustum(self, x, y):
 
-        # normalize position and pick size by the viewport size
-        width, height = self.computeSize()
-        size = Gf.Vec2d(1.0 / width, 1.0 / height)
-
         # compute pick frustum
-        cameraFrustum = self.computeGfCameraAndViewport()[0].frustum
+        (gfCamera, cameraAspect) = self.resolveCamera()
+        cameraFrustum = gfCamera.frustum
 
-        return cameraFrustum.ComputeNarrowedFrustum(
-            Gf.Vec2d((2.0 * x) / width - 1.0,
-                     (2.0 * (height-y)) / height - 1.0),
-            size)
+        viewport = self.computeWindowViewport()
+        if self._cropImageToCameraViewport:
+            viewport = self.computeCameraViewport(cameraAspect)
+
+        # normalize position and pick size by the viewport size
+        point = Gf.Vec2d((x - viewport[0]) / float(viewport[2]),
+                         (y - viewport[1]) / float(viewport[3]))
+        point[0] = (point[0] * 2.0 - 1.0)
+        point[1] = -1.0 * (point[1] * 2.0 - 1.0)
+
+        size = Gf.Vec2d(1.0 / viewport[2], 1.0 / viewport[3])
+
+        # "point" is normalized to the image viewport size, but if the image
+        # is cropped to the camera viewport, the image viewport won't fill the
+        # whole window viewport.  Clicking outside the image will produce
+        # normalized coordinates > 1 or < -1; in this case, we should skip
+        # picking.
+        inImageBounds = (abs(point[0]) <= 1.0 and abs(point[1]) <= 1.0)
+
+        return (inImageBounds, cameraFrustum.ComputeNarrowedFrustum(point, size))
 
     def pickObject(self, x, y, button, modifiers):
         '''
@@ -2532,11 +2591,23 @@ class StageView(QtOpenGL.QGLWidget):
         Emits a signalPrimSelected or signalRollover depending on
         whether 'button' is None.
         '''
-        if not self._stage:
+        if not self._rootDataModel.stage:
+            return
+        renderer = self._getRenderer()
+        if not renderer:
+            # error has already been issued
             return
 
-        selectedPoint, selectedPrimPath, selectedInstancerPath, selectedInstanceIndex, selectedElementIndex = \
-            self.pick(self.computePickFrustum(x, y))
+        (inImageBounds, pickFrustum) = self.computePickFrustum(x,y)
+
+        if inImageBounds:
+            selectedPoint, selectedPrimPath, selectedInstancerPath, \
+            selectedInstanceIndex, selectedElementIndex = self.pick(pickFrustum)
+        else:
+            # If we're picking outside the image viewport (maybe because camera
+            # guides are on), treat that as a de-select.
+            selectedPoint, selectedPrimPath, selectedInstancerPath, \
+            selectedInstanceIndex, selectedElementIndex = None, Sdf.Path.emptyPath, None, None, None
 
         # The call to TestIntersection will return the path to a master prim
         # (selectedPrimPath) and its instancer (selectedInstancerPath) if the prim is
@@ -2544,7 +2615,7 @@ class StageView(QtOpenGL.QGLWidget):
         # Figure out which instance was actually picked and use that as our selection
         # in this case.
         if selectedInstancerPath:
-            instancePrimPath, absInstanceIndex = self._renderer.GetPrimPathFromInstanceIndex(
+            instancePrimPath, absInstanceIndex = renderer.GetPrimPathFromInstanceIndex(
                 selectedPrimPath, selectedInstanceIndex)
             if instancePrimPath:
                 selectedPrimPath = instancePrimPath
@@ -2552,7 +2623,7 @@ class StageView(QtOpenGL.QGLWidget):
         else:
             selectedInstanceIndex = UsdImagingGL.GL.ALL_INSTANCES
 
-        selectedPrim = self._stage.GetPrimAtPath(selectedPrimPath)
+        selectedPrim = self._rootDataModel.stage.GetPrimAtPath(selectedPrimPath)
 
         if button:
             self.signalPrimSelected.emit(selectedPrimPath, selectedInstanceIndex, button, modifiers)
@@ -2589,8 +2660,11 @@ class StageView(QtOpenGL.QGLWidget):
     def glDraw(self):
         # override glDraw so we can time it.
         startTime = time()
-        if self._renderer:
-            QtOpenGL.QGLWidget.glDraw(self)
+        # Make sure the renderer is created
+        if not self._getRenderer():
+            # error has already been issued
+            return
+        QtOpenGL.QGLWidget.glDraw(self)
         self._renderTime = time() - startTime
 
     def SetForceRefresh(self, val):
@@ -2633,9 +2707,9 @@ class StageView(QtOpenGL.QGLWidget):
         '''
 
         tmpStage = Usd.Stage.CreateNew(stagePath)
-        if self._stage:
+        if self._rootDataModel.stage:
             tmpStage.GetRootLayer().TransferContent(
-                self._stage.GetSessionLayer())
+                self._rootDataModel.stage.GetSessionLayer())
 
         if not self.cameraPrim:
             # Export the free camera if it's the currently-visible camera
@@ -2647,10 +2721,11 @@ class StageView(QtOpenGL.QGLWidget):
 
         # Reopen just the tmp layer, to sublayer in the pose cache without
         # incurring Usd composition cost.
-        if self._stage:
+        if self._rootDataModel.stage:
             from pxr import Sdf
             sdfLayer = Sdf.Layer.FindOrOpen(stagePath)
             sdfLayer.subLayerPaths.append(
-                os.path.abspath(self._stage.GetRootLayer().realPath))
+                os.path.abspath(
+                    self._rootDataModel.stage.GetRootLayer().realPath))
             sdfLayer.Save()
 
