@@ -1221,17 +1221,27 @@ class AppController(QtCore.QObject):
         self._UpdateTimeSamples(resetStageDataOnly)
 
     def _UpdateTimeSamples(self, resetStageDataOnly=False):
-        if self.realStartTimeCode is not None and self.realEndTimeCode is not None:
-            if self.realStartTimeCode > self.realEndTimeCode:
-                sys.stderr.write('Warning: Invalid frame range (%s, %s)\n'
-                % (self.realStartTimeCode, self.realEndTimeCode))
-                self._timeSamples = []
+        def _setTimeSamplesFromRange():
+            if self.realStartTimeCode is not None and self.realEndTimeCode is not None:
+                if self.realStartTimeCode > self.realEndTimeCode:
+                    sys.stderr.write('Warning: Invalid frame range (%s, %s)\n'
+                    % (self.realStartTimeCode, self.realEndTimeCode))
+                    self._timeSamples = []
+                else:
+                    self._timeSamples = Drange(self.realStartTimeCode,
+                                            self.realEndTimeCode,
+                                            self.step)
             else:
-                self._timeSamples = Drange(self.realStartTimeCode,
-                                           self.realEndTimeCode,
-                                           self.step)
+                self._timeSamples = []
+
+        if self._authoredStepsOnly:
+            samples = self._rootDataModel.authoredSamples
+            if len(samples) > 0:
+                self._timeSamples = samples
+            else:
+                _setTimeSamplesFromRange()
         else:
-            self._timeSamples = []
+            _setTimeSamplesFromRange()
 
         self._geomCounts = dict()
         self._hasTimeSamples = (len(self._timeSamples) > 0)
@@ -1745,6 +1755,7 @@ class AppController(QtCore.QObject):
 
     def _authoredOptionToggled(self, checked):
         self._authoredStepsOnly = checked
+        self._UpdateTimeSamples(resetStageDataOnly=False)
 
     # Frame-by-frame/Playback functionality ===================================
 
