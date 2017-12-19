@@ -113,7 +113,7 @@ MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime,
 
         TfToken const &visibilityTok = (isVisible ? UsdGeomTokens->inherited : 
                                         UsdGeomTokens->invisible);
-        if (usdTime.IsDefault() != isAnimated ) {
+        if (shouldWriteSample(usdTime, isAnimated)) {
             if (usdTime.IsDefault())
                 primSchema.CreateVisibilityAttr(VtValue(visibilityTok), true);
             else
@@ -182,6 +182,11 @@ MayaPrimWriter::shouldPruneChildren() const
     return false;
 }
 
+bool
+MayaPrimWriter::shouldWriteSample(const UsdTimeCode& usdTime, bool isAnimated) const
+{
+    return mWriteJobCtx.shouldWriteSample(usdTime, isAnimated);
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

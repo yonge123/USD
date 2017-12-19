@@ -141,6 +141,8 @@ global proc int usdTranslatorExport (string $parent,
         intFieldGrp -l "End Time:" endTimeField;
         textFieldGrp -l "Frame Samples:" frameSamplesField;
         button -l "Animation Range" -command ("usdTranslatorExport_AnimationRangeCB") animRangeButton;
+
+        checkBox -l "Export for Value Clip" asClipCheckBox;
         
         setParent $parent;
         
@@ -192,6 +194,8 @@ global proc int usdTranslatorExport (string $parent,
                         $curText = (string) $frameSample;
                     }
                     textFieldGrp -e -text $curText frameSamplesField;
+                }else if ($optionBreakDown[0] == "asClip") {
+                    usdTranslatorExport_SetCheckbox($optionBreakDown[1], "asClipCheckBox");
                 }
             }
         }
@@ -218,6 +222,7 @@ global proc int usdTranslatorExport (string $parent,
         $currentOptions = usdTranslatorExport_AppendFromIntField($currentOptions, "startTime", "startTimeField");
         $currentOptions = usdTranslatorExport_AppendFromIntField($currentOptions, "endTime", "endTimeField");
         $currentOptions = usdTranslatorExport_AppendMultiFloatFromTextField($currentOptions, "frameSample", "frameSamplesField");
+        $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "asClip", "asClipCheckBox");
                 
         eval($resultCallback+" \""+$currentOptions+"\"");
         $bResult = 1;
