@@ -119,6 +119,7 @@ class DataModelProxySource(StateSource):
         self._mainWindow._defaultMaterialAmbient = self.stateProperty("defaultMaterialAmbient", default=0.2)
         self._mainWindow._defaultMaterialSpecular = self.stateProperty("defaultMaterialSpecular", default=0.1)
         self._mainWindow._redrawOnScrub = self.stateProperty("redrawOnScrub", default=True)
+        self._mainWindow._authoredStepsOnly = self.stateProperty("authoredStepsOnly", default=False)
         self._mainWindow._renderMode = self.stateProperty("renderMode", default=RenderModes.SMOOTH_SHADED)
         self._mainWindow._pickMode = self.stateProperty("pickMode", default=PickModes.PRIMS)
 
@@ -173,6 +174,7 @@ class DataModelProxySource(StateSource):
         state["defaultMaterialAmbient"] = self._mainWindow._defaultMaterialAmbient
         state["defaultMaterialSpecular"] = self._mainWindow._defaultMaterialSpecular
         state["redrawOnScrub"] = self._mainWindow._redrawOnScrub
+        state["authoredStepsOnly"] = self._mainWindow._authoredStepsOnly
         state["renderMode"] = self._mainWindow._renderMode
         state["pickMode"] = self._mainWindow._pickMode
         state["selectionHighlightMode"] = self._mainWindow._selHighlightMode
@@ -770,6 +772,8 @@ class AppController(QtCore.QObject):
             self._ui.showInterpreter.triggered.connect(self._showInterpreter)
 
             self._ui.redrawOnScrub.toggled.connect(self._redrawOptionToggled)
+
+            self._ui.authoredStepsOnly.toggled.connect(self._authoredOptionToggled)
 
             if self._stageView:
                 self._ui.actionRecompute_Clipping_Planes.triggered.connect(
@@ -1735,6 +1739,14 @@ class AppController(QtCore.QObject):
     def redrawOnScrub(self, value):
         self._redrawOnScrub = value
 
+    @property
+    def authoredStepsOnly(self):
+        return self._authoredStepsOnly
+
+    @authoredStepsOnly.setter
+    def authoredStepsOnly(self, value):
+        self._authoredStepsOnly = value
+
     def ResetDefaultMaterialSettings(self):
         self._defaultMaterialAmbient = .2
         self._defaultMaterialSpecular = .1
@@ -1754,6 +1766,9 @@ class AppController(QtCore.QObject):
     def _redrawOptionToggled(self, checked):
         self._redrawOnScrub = checked
         self._ui.frameSlider.setTracking(self._redrawOnScrub)
+
+    def _authoredOptionToggled(self, checked):
+        self._authoredStepsOnly = checked
 
     # Frame-by-frame/Playback functionality ===================================
 
@@ -1776,6 +1791,7 @@ class AppController(QtCore.QObject):
         self._ui.stageBegin.setEnabled(isEnabled)
         self._ui.stageEnd.setEnabled(isEnabled)
         self._ui.redrawOnScrub.setEnabled(isEnabled)
+        self._ui.authoredStepsOnly.setEnabled(isEnabled)
 
 
     def _playClicked(self):
@@ -2035,6 +2051,7 @@ class AppController(QtCore.QObject):
         _stageView object created in _reloadVaryingUI"""
 
         self._ui.redrawOnScrub.setChecked(self._redrawOnScrub)
+        self._ui.authoredStepsOnly.setChecked(self._authoredStepsOnly)
         self._ui.actionShow_Inactive_Prims.setChecked(self._showInactivePrims)
         self._ui.actionShow_All_Master_Prims.setChecked(self._showAllMasterPrims)
         self._ui.actionShow_Undefined_Prims.setChecked(self._showUndefinedPrims)
