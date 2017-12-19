@@ -127,6 +127,7 @@ struct PxrUsdMayaWriteUtil
             const MPlug& attrPlug,
             const UsdAttribute& usdAttr,
             const UsdTimeCode& usdTime,
+            const bool writeIfConstant,
             const bool translateMayaDoubleToUsdSinglePrecision =
                 PxrUsdMayaUserTaggedAttribute::GetFallbackTranslateMayaDoubleToUsdSinglePrecision());
 
@@ -137,7 +138,8 @@ struct PxrUsdMayaWriteUtil
     static bool WriteUserExportedAttributes(
             const MDagPath& dagPath,
             const UsdPrim& usdPrim,
-            const UsdTimeCode& usdTime);
+            const UsdTimeCode& usdTime,
+            const bool writeIfConstant);
 
     /// Authors class inherits on \p usdPrim.  \p inheritClassNames are
     /// specified as names (not paths).  For example, they should be

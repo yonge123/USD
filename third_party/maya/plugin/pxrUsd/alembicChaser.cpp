@@ -233,7 +233,7 @@ _WritePrefixedAttrs(
         }
 
         if (usdAttr) {
-            PxrUsdMayaWriteUtil::SetUsdAttr(plg, usdAttr, usdTime);
+            PxrUsdMayaWriteUtil::SetUsdAttr(plg, usdAttr, usdTime, usdTime.IsDefault());
         }
         else {
             MGlobal::displayError(TfStringPrintf(

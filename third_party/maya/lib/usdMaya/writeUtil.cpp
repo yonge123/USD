@@ -447,6 +447,7 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
         const MPlug& attrPlug,
         const UsdAttribute& usdAttr,
         const UsdTimeCode& usdTime,
+        const bool writeIfConstant,
         const bool translateMayaDoubleToUsdSinglePrecision)
 {
     if (!usdAttr || attrPlug.isNull()) {
@@ -454,7 +455,9 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
     }
 
     bool isAnimated = attrPlug.isDestination();
-    if (usdTime.IsDefault() == isAnimated) {
+    // If attr is animated, we will never write the default value.
+    // If attr is not animated, we will write the default value or the first frame of a clip.
+    if ((usdTime.IsDefault() && isAnimated) || (!writeIfConstant && !isAnimated)){
         return true;
     }
 
@@ -780,7 +783,8 @@ bool
 PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
         const MDagPath& dagPath,
         const UsdPrim& usdPrim,
-        const UsdTimeCode& usdTime)
+        const UsdTimeCode& usdTime,
+        const bool writeIfConstant)
 {
     std::vector<PxrUsdMayaUserTaggedAttribute> exportedAttributes =
         PxrUsdMayaUserTaggedAttribute::GetUserTaggedAttributesForNode(dagPath);
@@ -830,10 +834,10 @@ PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
         }
 
         if (usdAttr) {
-            // FIXME: check if this is start of clip
             if (!PxrUsdMayaWriteUtil::SetUsdAttr(attrPlug,
                                                     usdAttr,
                                                     usdTime,
+                                                    writeIfConstant,
                                                     translateMayaDoubleToUsdSinglePrecision)) {
                 MGlobal::displayError(
                     TfStringPrintf("Could not set value for attribute: '%s'",

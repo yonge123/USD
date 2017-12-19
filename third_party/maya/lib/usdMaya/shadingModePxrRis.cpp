@@ -181,7 +181,8 @@ private:
             PxrUsdMayaWriteUtil::SetUsdAttr(
                 attrPlug,
                 input.GetAttr(),
-                UsdTimeCode::Default());
+                UsdTimeCode::Default(),
+                true);
 
             if (attrPlug.isConnected() && attrPlug.isDestination()) {
                 MPlug connected(PxrUsdMayaUtil::GetConnected(attrPlug));
