@@ -38,6 +38,7 @@ class RootDataModel(QtCore.QObject):
         QtCore.QObject.__init__(self)
 
         self._stage = None
+        self._authoredSamples = None
         self._printTiming = printTiming
 
     @property
@@ -57,7 +58,7 @@ class RootDataModel(QtCore.QObject):
             raise ValueError("Expected USD Stage, got: {}".format(repr(value)))
 
         if value is not self._stage:
-
+            self._authoredSamples = None
             if value is None:
                 with Timer() as t:
                     self._stage = None
@@ -67,3 +68,14 @@ class RootDataModel(QtCore.QObject):
                 self._stage = value
 
             self.signalStageReplaced.emit()
+
+    @property
+    def authoredSamples(self):
+        if self._authoredSamples is None:
+            if self._stage is None:
+                return []
+            else:
+                self._authoredSamples = self._stage.GetTimeSamplesFromPrims()
+                return self._authoredSamples
+        else:
+            return self._authoredSamples
