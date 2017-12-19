@@ -975,14 +975,13 @@ bool
 PxrUsdMayaUtil::AddUnassignedUVIfNeeded(
         VtArray<GfVec2f>* uvData,
         VtArray<int>* assignmentIndices,
-        int* unassignedValueIndex,
         const GfVec2f& defaultUV)
 {
     if (!assignmentIndices || assignmentIndices->empty()) {
         return false;
     }
 
-    *unassignedValueIndex = -1;
+    int unassignedValueIndex = -1;
 
     for (size_t i = 0; i < assignmentIndices->size(); ++i) {
         if ((*assignmentIndices)[i] >= 0) {
@@ -990,17 +989,15 @@ PxrUsdMayaUtil::AddUnassignedUVIfNeeded(
             continue;
         }
 
-        // We found an unassigned index. Add the unassigned value to uvData
-        // if we haven't already.
-        if (*unassignedValueIndex < 0) {
-            if (uvData) {
+        if (unassignedValueIndex < 0) {
+            if (uvData->size()) {
+                unassignedValueIndex = uvData->size();
                 uvData->push_back(defaultUV);
             }
-            *unassignedValueIndex = uvData->size() - 1;
         }
 
         // Assign the component the unassigned value index.
-        (*assignmentIndices)[i] = *unassignedValueIndex;
+        (*assignmentIndices)[i] = unassignedValueIndex;
     }
 
     return true;
@@ -1011,7 +1008,6 @@ PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
         VtArray<GfVec3f>* RGBData,
         VtArray<float>* AlphaData,
         VtArray<int>* assignmentIndices,
-        int* unassignedValueIndex,
         const GfVec3f& defaultRGB,
         const float defaultAlpha)
 {
@@ -1024,7 +1020,7 @@ PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
                         RGBData->size(), AlphaData->size());
     }
 
-    *unassignedValueIndex = -1;
+    int unassignedValueIndex = -1;
 
     for (size_t i=0; i < assignmentIndices->size(); ++i) {
         if ((*assignmentIndices)[i] >= 0) {
@@ -1032,20 +1028,20 @@ PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
             continue;
         }
 
-        // We found an unassigned index. Add unassigned values to RGBData and
-        // AlphaData if we haven't already.
-        if (*unassignedValueIndex < 0) {
+        if (unassignedValueIndex < 0) {
             if (RGBData) {
+                unassignedValueIndex = RGBData->size();
                 RGBData->push_back(defaultRGB);
             }
+
             if (AlphaData) {
+                unassignedValueIndex = AlphaData->size();
                 AlphaData->push_back(defaultAlpha);
             }
-            *unassignedValueIndex = RGBData->size() - 1;
         }
 
         // Assign the component the unassigned value index.
-        (*assignmentIndices)[i] = *unassignedValueIndex;
+        (*assignmentIndices)[i] = unassignedValueIndex;
     }
 
     return true;
