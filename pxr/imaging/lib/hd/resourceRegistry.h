@@ -64,8 +64,6 @@ typedef boost::shared_ptr<class HdBasisCurvesTopology>
 typedef boost::weak_ptr<class HdBufferArrayRange> HdBufferArrayRangePtr;
 typedef boost::shared_ptr<class HdComputation> HdComputationSharedPtr;
 typedef boost::shared_ptr<class HdGLSLProgram> HdGLSLProgramSharedPtr;
-typedef boost::shared_ptr<class HdDispatchBuffer> HdDispatchBufferSharedPtr;
-typedef boost::shared_ptr<class HdPersistentBuffer> HdPersistentBufferSharedPtr;
 typedef boost::shared_ptr<class Hd_VertexAdjacency> Hd_VertexAdjacencySharedPtr;
 typedef boost::shared_ptr<class Hd_GeometricShader> Hd_GeometricShaderSharedPtr;
 typedef boost::shared_ptr<class HdResourceRegistry> HdResourceRegistrySharedPtr;
@@ -82,8 +80,7 @@ public:
     HdResourceRegistry();
 
     HD_API
-    ~HdResourceRegistry();
-
+    virtual ~HdResourceRegistry();
     /// Allocate new non uniform buffer array range
     HD_API
     HdBufferArrayRangeSharedPtr AllocateNonUniformBufferArrayRange(
@@ -113,46 +110,6 @@ public:
     HdBufferArrayRangeSharedPtr AllocateSingleBufferArrayRange(
         TfToken const &role,
         HdBufferSpecVector const &bufferSpecs);
-
-    /// Check if \p range is compatible with \p newBufferSpecs.
-    /// If not, allocate new bufferArrayRange with merged buffer specs,
-    /// register migration computation and return the new range.
-    /// Otherwise just return the same range.
-    HD_API
-    HdBufferArrayRangeSharedPtr MergeBufferArrayRange(
-        HdAggregationStrategy *strategy,
-        HdBufferArrayRegistry &bufferArrayRegistry,
-        TfToken const &role,
-        HdBufferSpecVector const &newBufferSpecs,
-        HdBufferArrayRangeSharedPtr const &range);
-
-    /// MergeBufferArrayRange of non uniform buffer.
-    HD_API
-    HdBufferArrayRangeSharedPtr MergeNonUniformBufferArrayRange(
-        TfToken const &role,
-        HdBufferSpecVector const &newBufferSpecs,
-        HdBufferArrayRangeSharedPtr const &range);
-
-    /// MergeBufferArrayRange of non uniform immutable buffer.
-    HD_API
-    HdBufferArrayRangeSharedPtr MergeNonUniformImmutableBufferArrayRange(
-        TfToken const &role,
-        HdBufferSpecVector const &newBufferSpecs,
-        HdBufferArrayRangeSharedPtr const &range);
-
-    /// MergeBufferArrayRange of uniform buffer.
-    HD_API
-    HdBufferArrayRangeSharedPtr MergeUniformBufferArrayRange(
-        TfToken const &role,
-        HdBufferSpecVector const &newBufferSpecs,
-        HdBufferArrayRangeSharedPtr const &range);
-
-    /// MergeBufferArrayRange of shader storage buffer.
-    HD_API
-    HdBufferArrayRangeSharedPtr MergeShaderStorageBufferArrayRange(
-        TfToken const &role,
-        HdBufferSpecVector const &newBufferSpecs,
-        HdBufferArrayRangeSharedPtr const &range);
 
     /// Append source data for given range to be committed later.
     HD_API
@@ -213,6 +170,12 @@ public:
         _uniformSsboAggregationStrategy.reset(strategy);
     }
 
+    /// Set the aggregation strategy for single buffers (for nested instancer).
+    /// Takes ownership of the passed in strategy object.
+    void SetSingleStorageAggregationStrategy(HdAggregationStrategy *strategy) {
+        _singleAggregationStrategy.reset(strategy);
+    }
+
     /// Returns a report of resource allocation by role in bytes and
     /// a summary total allocation of GPU memory in bytes for this registry.
     HD_API
@@ -259,6 +222,7 @@ public:
     /// Returns the HdInstance pointing to shared HdBufferArrayRange,
     /// distinguished by given ID.
     /// *Refer the comment on RegisterTopology for the same consideration.
+    HD_API
     std::unique_lock<std::mutex> RegisterPrimvarRange(HdTopology::ID id,
          HdInstance<HdTopology::ID, HdBufferArrayRangeSharedPtr> *pInstance);
 
@@ -285,35 +249,25 @@ public:
          HdInstance<HdTextureResource::ID, HdTextureResourceSharedPtr> *instance, 
          bool *found);
 
-    /// Register a buffer allocated with \a count * \a commandNumUints *
-    /// sizeof(GLuint) to be used as an indirect dispatch buffer.
-    HD_API
-    HdDispatchBufferSharedPtr RegisterDispatchBuffer(
-        TfToken const &role, int count, int commandNumUints);
-
-    /// Register a buffer initialized with \a dataSize bytes of \a data
-    /// to be used as a persistently mapped shader storage buffer.
-    HD_API
-    HdPersistentBufferSharedPtr RegisterPersistentBuffer(
-        TfToken const &role, size_t dataSize, void *data);
-
     HD_API
     void InvalidateGeometricShaderRegistry();
-
-    /// Remove any entries associated with expired dispatch buffers.
-    HD_API
-    void GarbageCollectDispatchBuffers();
-
-    /// Remove any entries associated with expired persistently mapped buffers.
-    HD_API
-    void GarbageCollectPersistentBuffers();
 
     /// Debug dump
     HD_API
     friend std::ostream &operator <<(std::ostream &out,
                                      const HdResourceRegistry& self);
 
-private:
+protected:
+    /// A hook for derived registries to perform additional GC when
+    /// GarbageCollect() is invoked.
+    virtual void _GarbageCollect();
+
+    /// A hook for derived registries to tally their resources
+    /// by key into the given dictionary.  Any additions should
+    /// be cumulative with the existing key values. 
+    virtual void _TallyResourceAllocation(VtDictionary *result) const;
+
+protected:
 
     // aggregated buffer array
     HdBufferArrayRegistry _nonUniformBufferArrayRegistry;
@@ -328,6 +282,8 @@ private:
     std::unique_ptr<HdAggregationStrategy> _uniformUboAggregationStrategy;
     std::unique_ptr<HdAggregationStrategy> _uniformSsboAggregationStrategy;
     std::unique_ptr<HdAggregationStrategy> _singleAggregationStrategy;
+
+private:
 
     // TODO: this is a transient structure. we'll revisit the BufferSource
     // interface later.
@@ -409,14 +365,6 @@ private:
     typedef HdInstance<HdTextureResource::ID, HdTextureResourceSharedPtr>
          _TextureResourceRegistry;
     HdInstanceRegistry<_TextureResourceRegistry> _textureResourceRegistry;
-
-    typedef std::vector<HdDispatchBufferSharedPtr>
-        _DispatchBufferRegistry;
-    _DispatchBufferRegistry _dispatchBufferRegistry;
-
-    typedef std::vector<HdPersistentBufferSharedPtr>
-        _PersistentBufferRegistry;
-    _PersistentBufferRegistry _persistentBufferRegistry;
 
 };
 

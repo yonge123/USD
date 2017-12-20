@@ -44,8 +44,6 @@
 #include "pxr/imaging/hd/texture.h"
 #include "pxr/imaging/hd/tokens.h"
 
-#include "pxr/imaging/glf/glslfx.h"
-
 #include "pxr/base/work/arenaDispatcher.h"
 #include "pxr/base/work/loops.h"
 #include "pxr/base/tf/pyLock.h"
@@ -58,9 +56,6 @@
 #include <tbb/concurrent_vector.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
-
-
-typedef boost::shared_ptr<class GlfGLSLFX> GlfGLSLFXSharedPtr;
 
 
 HdRenderIndex::HdRenderIndex(HdRenderDelegate *renderDelegate)
@@ -916,6 +911,7 @@ namespace {
 
     static void
     _PreSyncRPrims(HdSceneDelegate *sceneDelegate,
+                   HdChangeTracker *tracker,
                    _RprimSyncRequestVector *syncReq,
                    _ReprList const& reprs,
                    size_t begin,
@@ -967,6 +963,8 @@ namespace {
                     reprsMask >>= 1;
                 }
                 dirtyBits &= ~HdChangeTracker::InitRepr;
+                // Update the InitRepr bit in the change tracker.
+                tracker->MarkRprimClean(rprim->GetId(), dirtyBits);
             }
 
             if (rprim->CanSkipDirtyBitPropagationAndSync(dirtyBits)) {
@@ -988,13 +986,15 @@ namespace {
 
     static void
     _PreSyncRequestVector(HdSceneDelegate *sceneDelegate,
+                          HdChangeTracker *tracker,
                           _RprimSyncRequestVector *syncReq,
                           _ReprList const &reprs)
     {
         size_t numPrims = syncReq->rprims.size();
         WorkParallelForN(numPrims,
                          std::bind(&_PreSyncRPrims,
-                                   sceneDelegate, syncReq, std::cref(reprs),
+                                   sceneDelegate, tracker,
+                                   syncReq, std::cref(reprs),
                                    std::placeholders::_1,
                                    std::placeholders::_2));
 
@@ -1118,7 +1118,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector const &tasks,
 
             // PERFORMANCE: this loop can be expensive.
             for (auto const& sdfPath : hdDirtyList->GetDirtyRprims()) {
-                dirtyIds[sdfPath] |= (1 << reprIndex);
+                dirtyIds[sdfPath] |= (1ULL << reprIndex);
             }
         }
     }
@@ -1204,6 +1204,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector const &tasks,
             dirtyBitDispatcher.Run(
                                    std::bind(&_PreSyncRequestVector,
                                              sceneDelegate,
+                                             &_tracker,
                                              r,
                                              std::cref(reprs)));
 

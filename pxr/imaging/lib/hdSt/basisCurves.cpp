@@ -28,7 +28,9 @@
 #include "pxr/imaging/hdSt/basisCurvesShaderKey.h"
 #include "pxr/imaging/hdSt/basisCurvesTopology.h"
 #include "pxr/imaging/hdSt/basisCurvesComputations.h"
+#include "pxr/imaging/hdSt/extCompGpuComputation.h"
 #include "pxr/imaging/hdSt/instancer.h"
+#include "pxr/imaging/hdSt/resourceRegistry.h"
 
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/gf/matrix4f.h"
@@ -41,7 +43,6 @@
 #include "pxr/imaging/hd/meshTopology.h"
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/repr.h"
-#include "pxr/imaging/hd/resourceRegistry.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/vertexAdjacency.h"
@@ -296,23 +297,12 @@ HdStBasisCurves::_GetRepr(HdSceneDelegate *sceneDelegate,
 
     // For the bits geometric shader depends on, reset the geometric shaders
     // for all the draw items of all the reprs.
+    bool needsSetGeometricShader = false;
     if (*dirtyBits & (HdChangeTracker::DirtyRefineLevel |
                       HdChangeTracker::DirtyMaterialId)) {
-
-        TF_DEBUG(HD_RPRIM_UPDATED).
-            Msg("HdStBasisCurves - Resetting the geometric shader for all draw"
-                " items (currently only 1 per repr) of all reprs");
-
-        TF_FOR_ALL (it, _reprs) {
-            TF_FOR_ALL (drawItem, *(it->second->GetDrawItems())) {
-                drawItem->SetGeometricShader(Hd_GeometricShaderSharedPtr());
-            }
-        }
+        needsSetGeometricShader = true;
     }
 
-    // Note: We only update/set the geometric shaders for the draw items of 
-    // the incoming 'reprName'. The draw items corresponding to other reprs
-    // may or may not be set. 
     int drawItemIndex = 0;
     for (size_t descIdx = 0; descIdx < reprDescs.size(); ++descIdx) {
         // curves don't have multiple draw items (for now)
@@ -324,17 +314,45 @@ HdStBasisCurves::_GetRepr(HdSceneDelegate *sceneDelegate,
             if (HdChangeTracker::IsDirty(*dirtyBits)) {
                 _UpdateDrawItem(sceneDelegate, drawItem, dirtyBits, desc);
             } 
-            
-            if (!drawItem->GetGeometricShader()) {
-                // Make sure all of the draw items have a geometric shader
-                _UpdateDrawItemGeometricShader(sceneDelegate, drawItem, desc);
-            }
         }
+    }
+
+    if (needsSetGeometricShader) {
+        // needsSetGeometricShader is set when all reprs need a refresh of their
+        // geometric shader.
+
+        TF_DEBUG(HD_RPRIM_UPDATED).
+            Msg("HdStBasisCurves - Resetting the geometric shader for all draw"
+                " items (currently only 1 per repr) of all reprs");
+
+        TF_FOR_ALL (it, _reprs) {
+            _BasisCurvesReprConfig::DescArray const &descs =
+                _GetReprDesc(it->first);
+            _UpdateReprGeometricShader(sceneDelegate, descs, it->second);
+        }
+    } else if (*dirtyBits & HdChangeTracker::NewRepr) {
+        // If NewRepr is set, we haven't initialized the geometric shader yet.
+        _UpdateReprGeometricShader(sceneDelegate, reprDescs, curRepr);
     }
 
     *dirtyBits &= ~HdChangeTracker::NewRepr;
 
     return curRepr;
+}
+
+void
+HdStBasisCurves::_UpdateReprGeometricShader(HdSceneDelegate *sceneDelegate,
+                                 _BasisCurvesReprConfig::DescArray const &descs,
+                                 HdReprSharedPtr repr)
+{
+    int drawItemIndex = 0;
+    for (size_t descIdx = 0; descIdx < descs.size(); ++descIdx) {
+        if (descs[descIdx].geomStyle != HdBasisCurvesGeomStyleInvalid) {
+            _UpdateDrawItemGeometricShader(sceneDelegate,
+                repr->GetDrawItem(drawItemIndex++),
+                descs[descIdx]);
+        }
+    }
 }
 
 void
@@ -347,8 +365,9 @@ HdStBasisCurves::_PopulateTopology(HdSceneDelegate *sceneDelegate,
     HF_MALLOC_TAG_FUNCTION();
 
     SdfPath const& id = GetId();
-    HdResourceRegistrySharedPtr const& resourceRegistry = 
-        sceneDelegate->GetRenderIndex().GetResourceRegistry();
+    HdStResourceRegistrySharedPtr const& resourceRegistry = 
+        boost::static_pointer_cast<HdStResourceRegistry>(
+        sceneDelegate->GetRenderIndex().GetResourceRegistry());
 
     if (*dirtyBits & HdChangeTracker::DirtyRefineLevel) {
         _refineLevel = GetRefineLevel(sceneDelegate);
@@ -458,8 +477,9 @@ HdStBasisCurves::_PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
     HF_MALLOC_TAG_FUNCTION();
 
     SdfPath const& id = GetId();
-    HdResourceRegistrySharedPtr const& resourceRegistry = 
-        sceneDelegate->GetRenderIndex().GetResourceRegistry();
+    HdStResourceRegistrySharedPtr const& resourceRegistry = 
+        boost::static_pointer_cast<HdStResourceRegistry>(
+        sceneDelegate->GetRenderIndex().GetResourceRegistry());
 
     // The "points" attribute is expected to be in this list.
     TfTokenVector primVarNames = GetPrimVarVertexNames(sceneDelegate);
@@ -514,12 +534,14 @@ HdStBasisCurves::_PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
     }
 
     HdBufferSourceVector computationSources;
-    _GetExtComputationPrimVarsComputations(sceneDelegate,
-                                           HdInterpolationVertex,
-                                           *dirtyBits,
-                                           &sources,
-                                           &computations,
-                                           &computationSources);
+    HdSt_GetExtComputationPrimVarsComputations(
+        id,
+        sceneDelegate,
+        HdInterpolationVertex,
+        *dirtyBits,
+        &sources,
+        &computations,
+        &computationSources);
 
     // XXX: To Do: Check primvar counts against Topology expected counts
     // XXX: To Do: Width / Normal Interpolation
@@ -575,8 +597,9 @@ HdStBasisCurves::_PopulateElementPrimVars(HdSceneDelegate *sceneDelegate,
     HF_MALLOC_TAG_FUNCTION();
 
     SdfPath const& id = GetId();
-    HdResourceRegistrySharedPtr const& resourceRegistry = 
-        sceneDelegate->GetRenderIndex().GetResourceRegistry();
+    HdStResourceRegistrySharedPtr const& resourceRegistry = 
+        boost::static_pointer_cast<HdStResourceRegistry>(
+        sceneDelegate->GetRenderIndex().GetResourceRegistry());
 
     TfTokenVector primVarNames = GetPrimVarUniformNames(sceneDelegate);
 

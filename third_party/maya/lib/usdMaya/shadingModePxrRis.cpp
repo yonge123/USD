@@ -213,7 +213,10 @@ private:
         return _ExportShadingNodeHelper(materialPrim, depNode, context, &processedNodes, true);
     }
 
-    void Export(const PxrUsdMayaShadingModeExportContext& context) override {
+    void Export(const PxrUsdMayaShadingModeExportContext& context,
+                UsdShadeMaterial * const mat, 
+                SdfPathSet * const boundPrimPaths) override 
+    {
         MStatus status;
         const PxrUsdMayaShadingModeExportContext::AssignmentVector &assignments =
             context.GetAssignments();
@@ -221,9 +224,13 @@ private:
             return;
         }
 
-        UsdPrim materialPrim = context.MakeStandardMaterialPrim(assignments);
-        if (!materialPrim) {
+        UsdPrim materialPrim = context.MakeStandardMaterialPrim(assignments,
+            std::string(), boundPrimPaths);
+        UsdShadeMaterial material(materialPrim); 
+        if (!material) {
             return;
+        } else {
+            *mat = material;
         }
 
         MFnDependencyNode ssDepNode(context.GetSurfaceShader(), &status);

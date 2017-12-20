@@ -83,6 +83,8 @@ public:
     const JobExportArgs&   getArgs()       const { return mWriteJobCtx.getArgs(); }
     const UsdPrim&         getPrim()       const { return mUsdPrim; }
 
+    bool getExportsVisibility() const { return mExportsVisibility; }
+    void setExportsVisibility(bool exports);
 
     bool shouldWriteSample(const UsdTimeCode &usdTime, bool isAnimated) const;
 
@@ -100,6 +102,7 @@ private:
     SdfPath mUsdPath;
 
     bool mIsValid;
+    bool mExportsVisibility;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -37,9 +37,10 @@ pxr_library(usdviewq
 
     PYMODULE_FILES
         __init__.py
+        appEventFilter.py
         arrayAttributeView.py
         customAttributes.py
-        mainWindow.py
+        appController.py
         plugContext.py
         scalarTypes.py
         stageView.py
@@ -52,7 +53,7 @@ pxr_library(usdviewq
         prettyPrint.py
         pythonInterpreter.py
         settings.py
-        watchWindow.py
+        settings2.py
         adjustClipping.py
         adjustDefaultMaterial.py
         primViewItem.py
@@ -66,11 +67,11 @@ pxr_library(usdviewq
         variantComboBox.py
         qt.py
         constantGroup.py
+        rootDataModel.py
         usdviewstyle.qss
 
     PYSIDE_UI_FILES
         mainWindowUI.ui
-        watchWindowUI.ui
         adjustClippingUI.ui
         adjustDefaultMaterialUI.ui
         attributeValueEditorUI.ui
@@ -86,10 +87,31 @@ install(DIRECTORY
 
 pxr_test_scripts(
     testenv/testUsdviewqConstantGroup.py
+    testenv/testUsdviewqSettings2.py
+    testenv/testUsdviewqRootDataModel.py
+    testenv/testUsdviewqPlugContextProxy.py
 )
 
 pxr_register_test(testUsdviewqConstantGroup
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdviewqConstantGroup"
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdviewqSettings2
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdviewqSettings2"
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdviewqRootDataModel
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdviewqRootDataModel"
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdviewqPlugContextProxy
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdviewqPlugContextProxy"
     EXPECTED_RETURN_CODE 0
 )

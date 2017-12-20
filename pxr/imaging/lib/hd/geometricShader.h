@@ -46,7 +46,7 @@ typedef boost::shared_ptr<class Hd_GeometricShader> Hd_GeometricShaderSharedPtr;
 ///
 class Hd_GeometricShader : public HdShaderCode {
 public:
-    /// Used in Hd_CodeGen to generate the appropriate shader source 
+    /// Used in HdSt_CodeGen to generate the appropriate shader source 
     enum class PrimitiveType { 
         PRIM_POINTS, 
         PRIM_BASIS_CURVES_LINES,     // when linear (or) non-refined cubic
@@ -149,14 +149,17 @@ public:
     }
 
     /// Return the GL primitive type of the draw item based on _primType
+    HD_API
     GLenum GetPrimitiveMode() const;
 
     // Returns the primitive index size based on the primitive mode
     // 3 for triangles, 4 for quads, 16 for regular b-spline patches etc.
+    HD_API
     int GetPrimitiveIndexSize() const;
 
     // Returns the primitive index size for the geometry shader shade
     // 1 for points, 2 for lines, 3 for triangles, 4 for lines_adjacency    
+    HD_API
     int GetNumPrimitiveVertsForGeometryShader() const;
 
     /// template factory for convenience

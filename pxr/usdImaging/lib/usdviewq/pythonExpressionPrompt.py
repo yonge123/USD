@@ -36,6 +36,7 @@ class PythonExpressionPrompt(QtWidgets.QDialog):
 
     def __init__(self, parent, exception = None, val = None):
         QtWidgets.QDialog.__init__(self, parent)
+        self.setObjectName("PythonExpressionPrompt")
         self._ui = Ui_PythonExpressionPrompt()
         self._ui.setupUi(self)
         self._mainWindow = parent._mainWindow     # get mainWindow instance
@@ -120,6 +121,7 @@ class Myconsole(interpreterView):
 
     def __init__(self, parent):
         initialPrompt = ("\nLocal State Variables\n"
+                "    plugCtx: a plugin context object\n"
                 "    stage: the current Usd.Stage object\n"
                 "    frame: the current frame for playback\n"
                 "    selectedPrims: a list of all selected prims\n"
@@ -130,6 +132,7 @@ class Myconsole(interpreterView):
                 "    layer: the currently selected sdf layer in the composition tree (if any)\n\n")
 
         interpreterView.__init__(self, parent)
+        self.setObjectName("Myconsole")
 
         from pxr import Usd, UsdGeom, Gf, Tf
         from qt import QtCore, QtGui, QtWidgets
@@ -148,18 +151,18 @@ class Myconsole(interpreterView):
         # return the current value of "_"
         return self.locals()['__builtins__']['_']
 
-    def reloadConsole(self, mainWindow, val = None):
+    def reloadConsole(self, appController, val = None):
         # refreshes locals and redirects I/O
         if '__builtins__' in self.locals():
             self.locals()['__builtins__']['_'] = val
 
-        self.locals()['mainWindow'] = mainWindow
-        self.locals()['stage'] = mainWindow._stage
-        self.locals()['frame'] = mainWindow._currentFrame
-        self.locals()['selectedPrims'] = list(mainWindow._currentPrims)
-        self.locals()['selectedInstances'] = mainWindow._stageView._selectedInstances.copy()
-        self.locals()['prim'] = mainWindow._currentPrims[0] if \
-                                        mainWindow._currentPrims else None
-        self.locals()['property'] = mainWindow._currentProp
-        self.locals()['spec'] = mainWindow._currentSpec
-        self.locals()['layer'] = mainWindow._currentLayer
+        self.locals()['plugCtx'] = appController._plugCtx
+        self.locals()['stage'] = appController._rootDataModel.stage
+        self.locals()['frame'] = appController._currentFrame
+        self.locals()['selectedPrims'] = list(appController._currentPrims)
+        self.locals()['selectedInstances'] = appController._stageView._selectedInstances.copy()
+        self.locals()['prim'] = appController._currentPrims[0] if \
+                                        appController._currentPrims else None
+        self.locals()['property'] = appController._currentProp
+        self.locals()['spec'] = appController._currentSpec
+        self.locals()['layer'] = appController._currentLayer

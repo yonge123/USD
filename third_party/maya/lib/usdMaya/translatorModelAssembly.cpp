@@ -110,6 +110,22 @@ PxrUsdMayaTranslatorModelAssembly::Create(
         return true;
     }
 
+    // Guard against a situation where the prim being referenced has
+    // xformOp's specified in its xformOpOrder but the reference assembly
+    // in Maya has an identity transform. We would normally skip writing out
+    // the xformOpOrder, but that isn't correct since we would inherit the
+    // xformOpOrder, which we don't want.
+    // Instead, always write out an empty xformOpOrder if the transform writer
+    // did not write out an xformOpOrder in its constructor. This guarantees
+    // that we get an identity transform as expected (instead of inheriting).
+    bool resetsXformStack;
+    UsdGeomXformable xformable(prim);
+    std::vector<UsdGeomXformOp> orderedXformOps =
+            xformable.GetOrderedXformOps(&resetsXformStack);
+    if (orderedXformOps.empty() && !resetsXformStack) {
+        xformable.CreateXformOpOrderAttr().Block();
+    }
+
     const MDagPath& currPath = args.GetMDagPath();
 
     // because of how we generate these things and node collapsing, sometimes
@@ -240,18 +256,14 @@ _GetReferenceInfo(
     std::string* assetIdentifier,
     SdfPath* assetPrimPath)
 {
-    SdfReferenceListOp refs;
-    prim.GetMetadata(SdfFieldKeys->References, &refs);
+    SdfReferenceListOp refsOp;
+    SdfReferenceListOp::ItemVector refs;
+    prim.GetMetadata(SdfFieldKeys->References, &refsOp);
+    refsOp.ApplyOperations(&refs);
 
     // this logic is not robust.  awaiting bug 99278.
-    if (!refs.GetAddedItems().empty()) {
-        const SdfReference& ref = refs.GetAddedItems()[0];
-        *assetIdentifier = ref.GetAssetPath();
-        *assetPrimPath = ref.GetPrimPath();
-        return true;
-    }
-    if (!refs.GetExplicitItems().empty()) {
-        const SdfReference& ref = refs.GetExplicitItems()[0];
+    if (!refs.empty()) {
+        const SdfReference& ref = refs[0];
         *assetIdentifier = ref.GetAssetPath();
         *assetPrimPath = ref.GetPrimPath();
         return true;

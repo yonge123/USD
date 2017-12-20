@@ -364,26 +364,6 @@ _MakeResolvedAssetPathsImpl(const SdfLayerRefPtr &anchor,
     }
 }
 
-static void
-_MakeResolvedAssetPathsImpl(const SdfLayerRefPtr &anchor,
-                            const ArResolverContext &context,
-                            VtValue *value)
-{
-    if (value->IsHolding<SdfAssetPath>()) {
-        SdfAssetPath assetPath;
-        value->UncheckedSwap(assetPath);
-        _MakeResolvedAssetPathsImpl(anchor, context, &assetPath, 1);
-        value->UncheckedSwap(assetPath);
-    }
-    else if (value->IsHolding<VtArray<SdfAssetPath>>()) {
-        VtArray<SdfAssetPath> assetPaths;
-        value->UncheckedSwap(assetPaths);
-        _MakeResolvedAssetPathsImpl(anchor, context, assetPaths.data(), 
-                                    assetPaths.size());
-        value->UncheckedSwap(assetPaths);
-    }
-}
-
 void
 UsdStage::_MakeResolvedAssetPaths(UsdTimeCode time,
                                   const UsdAttribute& attr,
@@ -404,11 +384,19 @@ UsdStage::_MakeResolvedAssetPaths(UsdTimeCode time,
                                   const UsdAttribute& attr,
                                   VtValue* value) const
 {
-    // Get the layer providing the strongest value and use that to anchor the
-    // resolve.
-    auto anchor = _GetLayerWithStrongestValue(time, attr);
-    if (anchor) {
-        _MakeResolvedAssetPathsImpl(anchor, GetPathResolverContext(), value);
+    if (value->IsHolding<SdfAssetPath>()) {
+        SdfAssetPath assetPath;
+        value->UncheckedSwap(assetPath);
+        _MakeResolvedAssetPaths(time, attr, &assetPath, 1);
+        value->UncheckedSwap(assetPath);
+            
+    }
+    else if (value->IsHolding<VtArray<SdfAssetPath>>()) {
+        VtArray<SdfAssetPath> assetPaths;
+        value->UncheckedSwap(assetPaths);
+        _MakeResolvedAssetPaths(time, attr, assetPaths.data(), 
+                                assetPaths.size());
+        value->UncheckedSwap(assetPaths);
     }
 }
 
@@ -1866,6 +1854,7 @@ UsdStage::_WalkPrimsWithMastersImpl(
 
 void
 UsdStage::_DiscoverPayloads(const SdfPath& rootPath,
+                            UsdLoadPolicy policy,
                             SdfPathSet* primIndexPaths,
                             bool unloadedOnly,
                             SdfPathSet* usdPrimPaths) const
@@ -1873,29 +1862,34 @@ UsdStage::_DiscoverPayloads(const SdfPath& rootPath,
     tbb::concurrent_vector<SdfPath> primIndexPathsVec;
     tbb::concurrent_vector<SdfPath> usdPrimPathsVec;
 
-    _WalkPrimsWithMasters(
-        rootPath,
+    auto addPrimPayload =
         [this, unloadedOnly, primIndexPaths, usdPrimPaths,
          &primIndexPathsVec, &usdPrimPathsVec]
         (UsdPrim const &prim) {
-            // Inactive prims are never included in this query.  Masters are
-            // also never included, since they aren't independently loadable.
-            if (!prim.IsActive() || prim.IsMaster())
-                return;
-            
-            if (prim._GetSourcePrimIndex().HasPayload()) {
-                SdfPath const &payloadIncludePath =
-                    prim._GetSourcePrimIndex().GetPath();
-                if (!unloadedOnly ||
-                    !_cache->IsPayloadIncluded(payloadIncludePath)) {
-                    if (primIndexPaths)
-                        primIndexPathsVec.push_back(payloadIncludePath);
-                    if (usdPrimPaths)
-                        usdPrimPathsVec.push_back(prim.GetPath());
-                }
+        // Inactive prims are never included in this query.  Masters are
+        // also never included, since they aren't independently loadable.
+        if (!prim.IsActive() || prim.IsMaster())
+            return;
+        
+        if (prim._GetSourcePrimIndex().HasPayload()) {
+            SdfPath const &payloadIncludePath =
+                prim._GetSourcePrimIndex().GetPath();
+            if (!unloadedOnly ||
+                !_cache->IsPayloadIncluded(payloadIncludePath)) {
+                if (primIndexPaths)
+                    primIndexPathsVec.push_back(payloadIncludePath);
+                if (usdPrimPaths)
+                    usdPrimPathsVec.push_back(prim.GetPath());
             }
-        });
-
+        }
+    };
+    
+    if (policy == UsdLoadWithDescendants) {
+        _WalkPrimsWithMasters(rootPath, addPrimPayload);
+    } else {
+        addPrimPayload(GetPrimAtPath(rootPath));
+    }
+            
     // Copy stuff out.
     if (primIndexPaths) {
         primIndexPaths->insert(
@@ -1948,14 +1942,14 @@ UsdStage::_DiscoverAncestorPayloads(const SdfPath& rootPath,
 }
 
 UsdPrim
-UsdStage::Load(const SdfPath& path)
+UsdStage::Load(const SdfPath& path, UsdLoadPolicy policy)
 {
     SdfPathSet exclude, include;
     include.insert(path);
 
     // Update the load set; this will trigger recomposition and include any
     // recursive payloads needed.
-    LoadAndUnload(include, exclude);
+    LoadAndUnload(include, exclude, policy);
 
     return GetPrimAtPath(path);
 }
@@ -1973,12 +1967,14 @@ UsdStage::Unload(const SdfPath& path)
 
 void
 UsdStage::LoadAndUnload(const SdfPathSet &loadSet,
-                        const SdfPathSet &unloadSet)
+                        const SdfPathSet &unloadSet,
+                        UsdLoadPolicy policy)
 {
     TfAutoMallocTag2 tag("Usd", _mallocTagID);
 
     SdfPathSet aggregateLoads, aggregateUnloads;
-    _LoadAndUnload(loadSet, unloadSet, &aggregateLoads, &aggregateUnloads);
+    _LoadAndUnload(loadSet, unloadSet,
+                   &aggregateLoads, &aggregateUnloads, policy);
 
     // send notifications when loading or unloading
     if (aggregateLoads.empty() && aggregateUnloads.empty()) {
@@ -2000,7 +1996,8 @@ void
 UsdStage::_LoadAndUnload(const SdfPathSet &loadSet,
                          const SdfPathSet &unloadSet,
                          SdfPathSet *aggregateLoads,
-                         SdfPathSet *aggregateUnloads)
+                         SdfPathSet *aggregateUnloads,
+                         UsdLoadPolicy policy)
 {
     // Include implicit (recursive or ancestral) related payloads in both sets.
     SdfPathSet finalLoadSet, finalUnloadSet;
@@ -2013,7 +2010,7 @@ UsdStage::_LoadAndUnload(const SdfPathSet &loadSet,
         if (!_IsValidForLoad(path)) {
             continue;
         }
-        _DiscoverPayloads(path, &finalLoadSet, /*unloadedOnly=*/true);
+        _DiscoverPayloads(path, policy, &finalLoadSet, /*unloadedOnly=*/true);
         _DiscoverAncestorPayloads(path, &finalLoadSet, /*unloadedOnly=*/true);
     }
 
@@ -2115,7 +2112,8 @@ UsdStage::_LoadAndUnload(const SdfPathSet &loadSet,
         aggregateUnloads->insert(finalUnloadSet.begin(), finalUnloadSet.end());
     }
 
-    _LoadAndUnload(loadSet, SdfPathSet(), aggregateLoads, aggregateUnloads);
+    _LoadAndUnload(loadSet, SdfPathSet(),
+                   aggregateLoads, aggregateUnloads, policy);
 }
 
 SdfPathSet
@@ -2165,7 +2163,8 @@ UsdStage::FindLoadable(const SdfPath& rootPath)
     }
 
     SdfPathSet loadable;
-    _DiscoverPayloads(path, NULL, /* unloadedOnly = */ false, &loadable);
+    _DiscoverPayloads(path, UsdLoadWithDescendants, nullptr,
+                      /* unloadedOnly = */ false, &loadable);
     return loadable;
 }
 
@@ -3403,6 +3402,11 @@ UsdStage::_HandleLayersDidChange(
             const SdfPath &path = entryList.first;
             const SdfChangeList::Entry &entry = entryList.second;
 
+            // Skip target paths entirely -- we do not create target objects in
+            // USD.
+            if (path.IsTargetPath())
+                continue;
+
             TF_DEBUG(USD_CHANGES).Msg(
                 "<%s> in @%s@ changed.\n",
                 path.GetText(), 
@@ -3455,23 +3459,11 @@ UsdStage::_HandleLayersDidChange(
                 }
             }
             else {
-                if (path.IsPropertyPath()) {
-                    willRecompose = 
-                        entry.flags.didAddPropertyWithOnlyRequiredFields    ||
-                        entry.flags.didAddProperty                          ||
-                        entry.flags.didRemovePropertyWithOnlyRequiredFields ||
-                        entry.flags.didRemoveProperty;
-                }
-                else if (path.IsTargetPath()) {
-                    // XXX: This will cause us to include target paths like
-                    // /Foo.rel[/Bar] in the resynced path list in the
-                    // ObjectsChanged notice we emit. This is a bug; no such
-                    // object exists in the USD scenegraph. Keeping this here
-                    // for now to maintain current behavior.
-                    willRecompose =
-                        entry.flags.didAddTarget ||
-                        entry.flags.didRemoveTarget;
-                }
+                willRecompose = path.IsPropertyPath() &&
+                    (entry.flags.didAddPropertyWithOnlyRequiredFields ||
+                     entry.flags.didAddProperty ||
+                     entry.flags.didRemovePropertyWithOnlyRequiredFields ||
+                     entry.flags.didRemoveProperty);
 
                 if (willRecompose) {
                     _AddDependentPaths(layerAndChangelist.first, path, 
@@ -4697,7 +4689,8 @@ static const T &_UncheckedGet(const VtValue *val) {
 
 template <class T>
 void _UncheckedSwap(SdfAbstractDataValue *dv, T& val) {
-    std::swap(*static_cast<T*>(dv->value), val);
+    using namespace std;
+    swap(*static_cast<T*>(dv->value), val);
 }
 template <class T>
 void _UncheckedSwap(VtValue *value, T& val) {
@@ -4727,6 +4720,28 @@ static void _ApplyLayerOffset(Storage storage,
     }
 }
 
+template <class Storage>
+static void _MakeResolvedAssetPaths(Storage storage,
+                                    const PcpNodeRef &node,
+                                    const SdfLayerRefPtr &layer)
+{
+    if (_IsHolding<SdfAssetPath>(storage)) {
+        SdfAssetPath assetPath;
+        _UncheckedSwap(storage, assetPath);
+        _MakeResolvedAssetPathsImpl(
+            layer, node.GetLayerStack()->GetIdentifier().pathResolverContext,
+            &assetPath, 1);
+        _UncheckedSwap(storage, assetPath);
+    } else if (_IsHolding<VtArray<SdfAssetPath>>(storage)) {
+        VtArray<SdfAssetPath> assetPaths;
+        _UncheckedSwap(storage, assetPaths);
+        _MakeResolvedAssetPathsImpl(
+            layer, node.GetLayerStack()->GetIdentifier().pathResolverContext,
+            assetPaths.data(), assetPaths.size());
+        _UncheckedSwap(storage, assetPaths);
+    }
+}
+
 // If the given dictionary contains any SdfAssetPath or
 // VtArray<SdfAssetPath> as values, fills in those values
 // with their resolved paths.
@@ -4739,14 +4754,12 @@ _ResolveAssetPathsInDictionary(const SdfLayerRefPtr &anchor,
         VtValue& v = entry.second;
         if (v.IsHolding<VtDictionary>()) {
             VtDictionary resolvedDict;
-            v.Swap(resolvedDict);
+            v.UncheckedSwap(resolvedDict);
             _ResolveAssetPathsInDictionary(anchor, node, &resolvedDict);
-            v.Swap(resolvedDict);
+            v.UncheckedSwap(resolvedDict);
         }
         else {
-            _MakeResolvedAssetPathsImpl(
-                anchor, 
-                node.GetLayerStack()->GetIdentifier().pathResolverContext, &v);
+            _MakeResolvedAssetPaths(&v, node, anchor);
         }
     }
 }
@@ -4801,22 +4814,8 @@ struct StrongestValueComposer
                 return true;
             } else if (_IsHolding<SdfTimeSampleMap>(_value)) {
                 _ApplyLayerOffset(_value, node, layer);
-            } else if (_IsHolding<SdfAssetPath>(_value)) {
-                SdfAssetPath assetPath;
-                _UncheckedSwap(_value, assetPath);
-                _MakeResolvedAssetPathsImpl(
-                    layer, 
-                    node.GetLayerStack()->GetIdentifier().pathResolverContext,
-                    &assetPath, 1);
-                _UncheckedSwap(_value, assetPath);
-            } else if (_IsHolding<VtArray<SdfAssetPath>>(_value)) {
-                VtArray<SdfAssetPath> assetPaths;
-                _UncheckedSwap(_value, assetPaths);
-                _MakeResolvedAssetPathsImpl(
-                    layer, 
-                    node.GetLayerStack()->GetIdentifier().pathResolverContext,
-                    assetPaths.data(), assetPaths.size());
-                _UncheckedSwap(_value, assetPaths);
+            } else {
+                _MakeResolvedAssetPaths(_value, node, layer);
             }
         }
         return _done;

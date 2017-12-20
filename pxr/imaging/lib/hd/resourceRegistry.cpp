@@ -27,15 +27,9 @@
 #include "pxr/imaging/hd/bufferArrayRange.h"
 #include "pxr/imaging/hd/bufferResource.h"
 #include "pxr/imaging/hd/computation.h"
-#include "pxr/imaging/hd/copyComputation.h"
-#include "pxr/imaging/hd/dispatchBuffer.h"
-#include "pxr/imaging/hd/persistentBuffer.h"
 #include "pxr/imaging/hd/glslProgram.h"
-#include "pxr/imaging/hd/interleavedMemoryManager.h"
 #include "pxr/imaging/hd/meshTopology.h"
 #include "pxr/imaging/hd/tokens.h"
-#include "pxr/imaging/hd/vboMemoryManager.h"
-#include "pxr/imaging/hd/vboSimpleMemoryManager.h"
 #include "pxr/imaging/hd/vertexAdjacency.h"
 
 #include "pxr/imaging/glf/textureRegistry.h"
@@ -60,23 +54,7 @@ HdResourceRegistry::HdResourceRegistry() :
     _singleAggregationStrategy(),
     _numBufferSourcesToResolve(0)
 {
-    // default aggregation strategies for varying (vertex, varying) primvars
-    _nonUniformAggregationStrategy.reset(
-        new HdVBOMemoryManager(/*isImmutable=*/false));
-    _nonUniformImmutableAggregationStrategy.reset(
-        new HdVBOMemoryManager(/*isImmutable=*/true));
-
-    // default aggregation strategy for uniform on SSBO (for primvars)
-    _uniformSsboAggregationStrategy.reset(
-        new HdInterleavedSSBOMemoryManager());
-
-    // default aggregation strategy for uniform on UBO (for globals)
-    _uniformUboAggregationStrategy.reset(
-        new HdInterleavedUBOMemoryManager());
-
-    // default aggregation strategy for single buffers (for nested instancer)
-    _singleAggregationStrategy.reset(
-        new HdVBOSimpleMemoryManager());
+    /*NOTHING*/
 }
 
 HdResourceRegistry::~HdResourceRegistry()
@@ -137,117 +115,6 @@ HdResourceRegistry::AllocateSingleBufferArrayRange(
                                     _singleAggregationStrategy.get(),
                                     role,
                                     bufferSpecs);
-}
-
-HdBufferArrayRangeSharedPtr
-HdResourceRegistry::MergeBufferArrayRange(
-    HdAggregationStrategy *strategy,
-    HdBufferArrayRegistry &bufferArrayRegistry,
-    TfToken const &role,
-    HdBufferSpecVector const &newBufferSpecs,
-    HdBufferArrayRangeSharedPtr const &range)
-{
-    HD_TRACE_FUNCTION();
-
-    if (!TF_VERIFY(range)) return HdBufferArrayRangeSharedPtr();
-
-    // get existing buffer specs
-    HdBufferSpecVector oldBufferSpecs;
-    range->AddBufferSpecs(&oldBufferSpecs);
-
-    // immutable ranges should always be migrated, otherwise compare bufferspec
-    if (range->IsImmutable() || !HdBufferSpec::IsSubset(newBufferSpecs, oldBufferSpecs)) {
-        // create / moveto the new buffer array.
-
-        HdComputationVector computations;
-
-        // existing content has to be transferred.
-        TF_FOR_ALL(it, oldBufferSpecs) {
-            if (std::find(newBufferSpecs.begin(), newBufferSpecs.end(), *it)
-                == newBufferSpecs.end()) {
-
-                // migration computation
-                computations.push_back(
-                    HdComputationSharedPtr(new HdCopyComputationGPU(
-                                               /*src=*/range, it->name)));
-            }
-        }
-        // new buffer array should have a union of
-        // new buffer specs and exsiting buffer specs.
-        HdBufferSpecVector bufferSpecs = HdBufferSpec::ComputeUnion(
-            newBufferSpecs, oldBufferSpecs);
-
-        // allocate new range.
-        HdBufferArrayRangeSharedPtr result = bufferArrayRegistry.AllocateRange(
-            strategy, role, bufferSpecs);
-
-        // register copy computation.
-        if (!computations.empty()) {
-            TF_FOR_ALL(it, computations) {
-                AddComputation(result, *it);
-            }
-        }
-
-        // The source range will be no longer used.
-        // Increment version of the underlying bufferArray to notify
-        // all batches pointing the range to be rebuilt.
-        //
-        // XXX: Currently we have migration computations for each individual
-        // ranges, so the version is being incremented redundantly.
-        // It shouldn't be a big issue, but we can put several range
-        // computations into single computation to avoid that redundancy
-        // if we like. Or alternatively the change tracker can take care of it.
-        range->IncrementVersion();
-
-        HD_PERF_COUNTER_INCR(HdPerfTokens->bufferArrayRangeMerged);
-
-        return result;
-    }
-
-    return range;
-}
-
-HdBufferArrayRangeSharedPtr
-HdResourceRegistry::MergeNonUniformBufferArrayRange(
-    TfToken const &role,
-    HdBufferSpecVector const &newBufferSpecs,
-    HdBufferArrayRangeSharedPtr const &range)
-{
-    return MergeBufferArrayRange(_nonUniformAggregationStrategy.get(),
-                                 _nonUniformBufferArrayRegistry,
-                                 role, newBufferSpecs, range);
-}
-
-HdBufferArrayRangeSharedPtr
-HdResourceRegistry::MergeNonUniformImmutableBufferArrayRange(
-    TfToken const &role,
-    HdBufferSpecVector const &newBufferSpecs,
-    HdBufferArrayRangeSharedPtr const &range)
-{
-    return MergeBufferArrayRange(_nonUniformImmutableAggregationStrategy.get(),
-                                 _nonUniformImmutableBufferArrayRegistry,
-                                 role, newBufferSpecs, range);
-}
-HdBufferArrayRangeSharedPtr
-HdResourceRegistry::MergeUniformBufferArrayRange(
-    TfToken const &role,
-    HdBufferSpecVector const &newBufferSpecs,
-    HdBufferArrayRangeSharedPtr const &range)
-{
-    return MergeBufferArrayRange(_uniformUboAggregationStrategy.get(),
-                                 _uniformUboBufferArrayRegistry,
-                                 role, newBufferSpecs, range);
-}
-
-HdBufferArrayRangeSharedPtr
-HdResourceRegistry::MergeShaderStorageBufferArrayRange(
-    TfToken const &role,
-    HdBufferSpecVector const &newBufferSpecs,
-    HdBufferArrayRangeSharedPtr const &range)
-{
-    return MergeBufferArrayRange(_uniformSsboAggregationStrategy.get(),
-                                 _uniformSsboBufferArrayRegistry,
-                                 role, newBufferSpecs, range);
 }
 
 void
@@ -620,8 +487,14 @@ HdResourceRegistry::GarbageCollect()
     // Cleanup texture registries
     _textureResourceRegistry.GarbageCollect();
 
-    GarbageCollectDispatchBuffers();
-    GarbageCollectPersistentBuffers();
+    // Prompt derived registries to collect their garbage.
+    _GarbageCollect();
+}
+
+void
+HdResourceRegistry::_GarbageCollect()
+{
+    /* NOTHING */
 }
 
 VtDictionary
@@ -667,52 +540,8 @@ HdResourceRegistry::GetResourceAllocation() const
 
         // the role of program and global uniform buffer is always same.
         std::string const &role = program->GetProgram().GetRole().GetString();
-        if (result.count(role)) {
-            size_t currentSize = result[role].Get<size_t>();
-            result[role] = VtValue(currentSize + size);
-        } else {
-            result[role] = VtValue(size);
-        }
-
-        gpuMemoryUsed += size;
-    }
-
-    // dispatch buffers
-    TF_FOR_ALL (bufferIt, _dispatchBufferRegistry) {
-        HdDispatchBufferSharedPtr buffer = (*bufferIt);
-        if (!TF_VERIFY(buffer)) {
-            continue;
-        }
-
-        std::string const & role = buffer->GetRole().GetString();
-        size_t size = size_t(buffer->GetEntireResource()->GetSize());
-
-        if (result.count(role)) {
-            size_t currentSize = result[role].Get<size_t>();
-            result[role] = VtValue(currentSize + size);
-        } else {
-            result[role] = VtValue(size);
-        }
-
-        gpuMemoryUsed += size;
-    }
-
-    // persistent buffers
-    TF_FOR_ALL (bufferIt, _persistentBufferRegistry) {
-        HdPersistentBufferSharedPtr buffer = (*bufferIt);
-        if (!TF_VERIFY(buffer)) {
-            continue;
-        }
-
-        std::string const & role = buffer->GetRole().GetString();
-        size_t size = size_t(buffer->GetSize());
-
-        if (result.count(role)) {
-            size_t currentSize = result[role].Get<size_t>();
-            result[role] = VtValue(currentSize + size);
-        } else {
-            result[role] = VtValue(size);
-        }
+        result[role] = VtDictionaryGet<size_t>(result, role,
+                                               VtDefault = 0) + size;
 
         gpuMemoryUsed += size;
     }
@@ -743,9 +572,22 @@ HdResourceRegistry::GetResourceAllocation() const
 
     result[HdPerfTokens->gpuMemoryUsed.GetString()] = gpuMemoryUsed;
 
+    // Prompt derived registries to tally their resources.
+    _TallyResourceAllocation(&result);
+
+    gpuMemoryUsed =
+        VtDictionaryGet<size_t>(result, HdPerfTokens->gpuMemoryUsed.GetString(),
+                                VtDefault = 0);
+
     HD_PERF_COUNTER_SET(HdPerfTokens->gpuMemoryUsed, gpuMemoryUsed);
 
     return result;
+}
+
+void
+HdResourceRegistry::_TallyResourceAllocation(VtDictionary*) const
+{
+    /* NOTHING */
 }
 
 static bool _IsEnabledTopologyInstancing()
@@ -873,57 +715,6 @@ std::ostream &operator <<(std::ostream &out,
     out << self._singleBufferArrayRegistry;
 
     return out;
-}
-
-HdDispatchBufferSharedPtr
-HdResourceRegistry::RegisterDispatchBuffer(
-    TfToken const &role, int count, int commandNumUints)
-{
-    HdDispatchBufferSharedPtr result(
-        new HdDispatchBuffer(role, count, commandNumUints));
-
-    _dispatchBufferRegistry.push_back(result);
-
-    return result;
-}
-
-void
-HdResourceRegistry::GarbageCollectDispatchBuffers()
-{
-    HD_TRACE_FUNCTION();
-
-    _dispatchBufferRegistry.erase(
-        std::remove_if(
-            _dispatchBufferRegistry.begin(), _dispatchBufferRegistry.end(),
-            std::bind(&HdDispatchBufferSharedPtr::unique,
-                      std::placeholders::_1)),
-        _dispatchBufferRegistry.end());
-}
-
-
-HdPersistentBufferSharedPtr
-HdResourceRegistry::RegisterPersistentBuffer(
-        TfToken const &role, size_t dataSize, void *data)
-{
-    HdPersistentBufferSharedPtr result(
-            new HdPersistentBuffer(role, dataSize, data));
-
-    _persistentBufferRegistry.push_back(result);
-
-    return result;
-}
-
-void
-HdResourceRegistry::GarbageCollectPersistentBuffers()
-{
-    HD_TRACE_FUNCTION();
-
-    _persistentBufferRegistry.erase(
-        std::remove_if(
-            _persistentBufferRegistry.begin(), _persistentBufferRegistry.end(),
-            std::bind(&HdPersistentBufferSharedPtr::unique,
-                      std::placeholders::_1)),
-        _persistentBufferRegistry.end());
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
