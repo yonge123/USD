@@ -446,6 +446,7 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
         const MPlug& attrPlug,
         const UsdAttribute& usdAttr,
         const UsdTimeCode& usdTime,
+        const bool writeIfConstant,
         const bool translateMayaDoubleToUsdSinglePrecision)
 {
     if (!usdAttr || attrPlug.isNull()) {
@@ -453,7 +454,9 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
     }
 
     bool isAnimated = attrPlug.isDestination();
-    if (usdTime.IsDefault() == isAnimated) {
+    // If attr is animated, we will never write the default value.
+    // If attr is not animated, we will write the default value or the first frame of a clip.
+    if ((usdTime.IsDefault() && isAnimated) || (!writeIfConstant && !isAnimated)){
         return true;
     }
 
@@ -776,7 +779,8 @@ bool
 PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
         const MDagPath& dagPath,
         const UsdPrim& usdPrim,
-        const UsdTimeCode& usdTime)
+        const UsdTimeCode& usdTime,
+        const bool writeIfConstant)
 {
     std::vector<PxrUsdMayaUserTaggedAttribute> exportedAttributes =
         PxrUsdMayaUserTaggedAttribute::GetUserTaggedAttributesForNode(dagPath);
@@ -831,6 +835,7 @@ PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
             if (!PxrUsdMayaWriteUtil::SetUsdAttr(attrPlug,
                                                     usdAttr,
                                                     usdTime,
+                                                    writeIfConstant,
                                                     translateMayaDoubleToUsdSinglePrecision)) {
                 MGlobal::displayError(
                     TfStringPrintf("Could not set value for attribute: '%s'",
@@ -1035,6 +1040,7 @@ PxrUsdMayaWriteUtil::ReadMayaAttribute(
 
 void
 PxrUsdMayaWriteUtil::CleanupAttributeKeys(UsdAttribute attribute,
+                                          bool keepSingleSample,
                                           UsdInterpolationType parameterInterpolation)
 {
     if (!attribute) {
@@ -1090,12 +1096,16 @@ PxrUsdMayaWriteUtil::CleanupAttributeKeys(UsdAttribute attribute,
         attribute.Get(&first, time_samples[0]);
         attribute.Get(&last, time_samples[1]);
         if (first == last) {
-            attribute.Set(first);
-            attribute.ClearAtTime(time_samples[0]);
-            attribute.ClearAtTime(time_samples[1]);
+            if (keepSingleSample){
+                attribute.ClearAtTime(time_samples[1]);
+            } else {
+                attribute.Set(first);
+                attribute.ClearAtTime(time_samples[0]);
+                attribute.ClearAtTime(time_samples[1]);
+            }
         }
     // clear if there is only one time sample
-    } else if (recent_num_time_samples == 1) {
+    } else if (recent_num_time_samples == 1 && !keepSingleSample) {
         time_samples.clear();
         attribute.GetTimeSamples(&time_samples);
         VtValue first;
@@ -1108,13 +1118,14 @@ PxrUsdMayaWriteUtil::CleanupAttributeKeys(UsdAttribute attribute,
 void
 PxrUsdMayaWriteUtil::CleanupPrimvarKeys(
     UsdGeomPrimvar primvar,
+    bool keepSingleSample,
     UsdInterpolationType parameterInterpolation) {
     if (!primvar) {
         return;
     }
 
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primvar.GetAttr(), parameterInterpolation);
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primvar._GetIndicesAttr(false), UsdInterpolationTypeHeld);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primvar.GetAttr(), keepSingleSample, parameterInterpolation);
+    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primvar._GetIndicesAttr(false), keepSingleSample, UsdInterpolationTypeHeld);
 }
 
 void
