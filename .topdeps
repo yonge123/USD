@@ -1,0 +1,12 @@
+tg/luma/pull_requests
+tg/image_plane/translatorImagePlane
+tg/customization/non_crazy_default_uv
+tg/customization/disable_threadlimit_tests
+tg/customization/no_maya_errors_for_shader_color
+tg/customization/default_shaders_usdview
+tg/customization/usdview_stepping_through_samples
+tg/simple_features/remove_gnu_hash_map
+tg/simple_features/katana_improved_deformation_blur
+tg/simple_features/maya_error_unknown_shadingMode
+tg/aiUsd/katana_shader_import
+tg/bugfixes/testsuite_stability
