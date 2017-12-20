@@ -40,7 +40,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 
-const char* const usdTranslatorExportDefaults = 
+const char* const usdTranslatorExportDefaults =
         "shadingMode=GPrim Colors;"
         "exportRefsAsInstanceable=0;"
         "exportUVs=1;"
@@ -59,7 +59,8 @@ const char* const usdTranslatorExportDefaults =
         "stripNamespaces=0;"
         "animation=0;"
         "startTime=1;"
-        "endTime=1";
+        "endTime=1;"
+        "asClip=0;";
 
 
 class usdTranslatorExport : public MPxFileTranslator

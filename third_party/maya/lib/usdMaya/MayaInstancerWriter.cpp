@@ -288,8 +288,7 @@ MayaInstancerWriter::writeInstancerAttrs(
     // the xform is animated.)
     for (const MayaInstancerWriter_TranslateOpData& opData :
                 _instancerTranslateOps) {
-        if ((opData.sampleType == STATIC && usdTime.IsDefault()) ||
-                (opData.sampleType == ANIMATED && !usdTime.IsDefault())) {
+        if (shouldWriteSample(usdTime, opData.sampleType == ANIMATED)) {
             GfVec3d origin;
             if (_GetTransformedOriginInLocalSpace(opData.mayaPath, &origin)) {
                 UsdGeomXformOp translateOp = opData.op;
