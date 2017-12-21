@@ -1273,6 +1273,10 @@ function(_pxr_library NAME)
             ${apiPrivate}
     )
 
+    if (PXR_PLUGS_FALLBACK_TO_INSTALL_PREFIX)
+        target_compile_definitions(${NAME} PRIVATE "PXR_PLUGS_FALLBACK_TO_INSTALL_PREFIX")
+    endif ()
+
     # Copy headers to the build directory and include from there and from
     # external packages.
     _copy_headers(${NAME}
