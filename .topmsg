@@ -1,2 +1,2 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/simple_features/dont_fallback_to_build_locations
+Subject: [USD] Add an option to skip fallback to build locations when loading plugins.
