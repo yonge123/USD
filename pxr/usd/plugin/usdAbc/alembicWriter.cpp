@@ -2242,6 +2242,10 @@ _WriteNamespacedPropertyGroup(
         // Convert each property.
         for (const auto& name : context->GetUnextractedNames()) {
             TfTokenVector names = SdfPath::TokenizeIdentifierAsTokens(name);
+            if (name == UsdAbcPropertyNames->uv ||
+                name == UsdAbcPropertyNames->st) {
+                continue;
+            }
             if (names.size() >= 2 && names[0] == namespaceName) {
                 // Remove the namespace prefix.
                 names.erase(names.begin());
@@ -2773,9 +2777,12 @@ _WritePolyMesh(_PrimWriterContext* context)
     UsdSamples normals =
         context->ExtractSamples(UsdGeomTokens->normals,
                                 SdfValueTypeNames->Normal3fArray);
-    UsdSamples uv =
-        context->ExtractSamples(UsdAbcPropertyNames->uv,
-                                SdfValueTypeNames->Float2Array);
+    UsdSamples uv = context->ExtractSamples(UsdAbcPropertyNames->st,
+                                            SdfValueTypeNames->Float2Array);
+    if (uv.IsEmpty()) {
+        uv = context->ExtractSamples(UsdAbcPropertyNames->uv,
+                                     SdfValueTypeNames->Float2Array);
+    }
 
     // Adjust faceVertexIndices for winding order.
     _ReverseWindingOrder(context, &faceVertexIndices, faceVertexCounts);
@@ -2892,9 +2899,12 @@ _WriteSubD(_PrimWriterContext* context)
     UsdSamples creaseSharpnesses =
         context->ExtractSamples(UsdGeomTokens->creaseSharpnesses,
                                 SdfValueTypeNames->FloatArray);
-    UsdSamples uv =
-        context->ExtractSamples(UsdAbcPropertyNames->uv,
-                                SdfValueTypeNames->Float2Array);
+    UsdSamples uv = context->ExtractSamples(UsdAbcPropertyNames->st,
+                                            SdfValueTypeNames->Float2Array);
+    if (uv.IsEmpty()) {
+        uv = context->ExtractSamples(UsdAbcPropertyNames->uv,
+                                     SdfValueTypeNames->Float2Array);
+    }
 
     // Adjust faceVertexIndices for winding order.
     _ReverseWindingOrder(context, &faceVertexIndices, faceVertexCounts);
