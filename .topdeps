@@ -31,6 +31,7 @@ tg/simple_features/eulerFilter
 tg/simple_features/allow_custom_material_scope_names_in_katana
 tg/simple_features/maya_pref_export
 tg/simple_features/strip_namespaces
+tg/simple_features/dont_fallback_to_build_locations
 pr/InstancerTestMash_fix
 pr/check_resetsXform_before_assign
 pr/matrix_get_const
