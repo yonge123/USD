@@ -35,6 +35,7 @@ tg/simple_features/strip_namespaces
 tg/simple_features/dont_fallback_to_build_locations
 pr/InstancerTestMash_fix
 pr/check_resetsXform_before_assign
+pr/dont_load_same_plugin_twice
 pr/matrix_get_const
 pr/saveFlattenedAs
 pr/shadingModeExporter_pre_post_export
