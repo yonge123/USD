@@ -24,7 +24,7 @@
 #include "{{ libraryPath }}/{{ cls.GetHeaderFile() }}"
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/typed.h"
-{% if cls.isApi == "true" %}
+{% if cls.isApi %}
 #include "pxr/usd/usd/tokens.h"
 {% endif %}
 
@@ -41,7 +41,7 @@ TF_REGISTRY_FUNCTION(TfType)
     TfType::Define<{{ cls.cppClassName }},
         TfType::Bases< {{ cls.parentCppClassName }} > >();
     
-{% if cls.isConcrete == "true" %}
+{% if cls.isConcrete %}
     // Register the usd prim typename as an alias under UsdSchemaBase. This
     // enables one to call
     // TfType::Find<UsdSchemaBase>().FindDerivedByName("{{ cls.usdPrimTypeName }}")
@@ -67,7 +67,7 @@ TF_REGISTRY_FUNCTION(TfType)
     return {{ cls.cppClassName }}(stage->GetPrimAtPath(path));
 }
 
-{% if cls.isConcrete == "true" %}
+{% if cls.isConcrete %}
 /* static */
 {{ cls.cppClassName }}
 {{ cls.cppClassName }}::Define(
@@ -82,11 +82,23 @@ TF_REGISTRY_FUNCTION(TfType)
         stage->DefinePrim(path, usdPrimTypeName));
 }
 {% endif %}
-{% if cls.isApi == "true" %}
+{% if cls.isApi %}
 
 /* static */
 {{ cls.cppClassName }}
+{% if cls.isPrivateApply %}
+{% if not cls.isMultipleApply %}
+{{ cls.cppClassName }}::_Apply(const UsdStagePtr &stage, const SdfPath &path)
+{% else %}
+{{ cls.cppClassName }}::_Apply(const UsdStagePtr &stage, const SdfPath &path, const TfToken &name)
+{% endif %}
+{% else %}
+{% if not cls.isMultipleApply %}
 {{ cls.cppClassName }}::Apply(const UsdStagePtr &stage, const SdfPath &path)
+{% else %}
+{{ cls.cppClassName }}::Apply(const UsdStagePtr &stage, const SdfPath &path, const TfToken &name)
+{% endif %}
+{% endif %}
 {
     // Ensure we have a valid stage, path and prim
     if (!stage) {
@@ -105,7 +117,13 @@ TF_REGISTRY_FUNCTION(TfType)
         return {{ cls.cppClassName }}();
     }
 
+{% if cls.isMultipleApply %}
+    TfToken apiName(std::string("{{ cls.primName }}") 
+                    + std::string(":") 
+                    + name.GetString());
+{% else %}
     TfToken apiName("{{ cls.primName }}");  
+{% endif %}
 
     // Get the current listop at the edit target
     UsdEditTarget editTarget = stage->GetEditTarget();
