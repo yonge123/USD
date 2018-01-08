@@ -66,9 +66,6 @@ void wrapUsdCollectionAPI()
         .def("Get", &This::Get, (arg("stage"), arg("path")))
         .staticmethod("Get")
 
-        .def("Apply", &This::Apply, (arg("stage"), arg("path")))
-        .staticmethod("Apply")
-
         .def("IsConcrete",
             static_cast<bool (*)(void)>( [](){ return This::IsConcrete; }))
         .staticmethod("IsConcrete")
@@ -164,10 +161,10 @@ WRAP_CUSTOM {
         &This::ComputeMembershipQuery;
 
     scope collectionAPI = _class 
-        .def("AddCollection", &This::AddCollection, 
+        .def("ApplyCollection", &This::ApplyCollection, 
              (arg("prim"), arg("name"), 
               arg("expansionRule")=UsdTokens->expandPrims))
-            .staticmethod("AddCollection")
+            .staticmethod("ApplyCollection")
 
         .def("GetCollection", &This::GetCollection,
              (arg("prim"), arg("name")))
