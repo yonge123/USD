@@ -27,6 +27,8 @@
 
 #include "pxr/base/gf/gamma.h"
 #include "pxr/base/tf/hashmap.h"
+#include "pxr/base/tf/staticTokens.h"
+#include "pxr/base/tf/token.h"
 #include "pxr/usd/usdGeom/mesh.h"
 
 #include <maya/MAnimControl.h>
@@ -59,6 +61,18 @@
 #include <unordered_map>
 
 PXR_NAMESPACE_USING_DIRECTIVE
+
+
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+
+    ((OutColorPlugName, "outColor"))
+    ((ColorPlugName, "color"))
+
+    ((OutTransparencyPlugName, "outTransparency"))
+    ((TransparencyPlugName, "transparency"))
+    ((PresencePlugName, "presence"))
+);
 
 // return seconds per frame
 double PxrUsdMayaUtil::spf()
@@ -140,7 +154,7 @@ bool PxrUsdMayaUtil::isAncestorDescendentRelationship(const MDagPath & path1,
     unsigned int diff;
 
     if (length1 == length2 && !(path1 == path2))
-        return false; 
+        return false;
     MDagPath ancestor, descendent;
     if (length1 > length2)
     {
@@ -556,8 +570,8 @@ _getAttachedMayaShaderObjects(
     // only a subset of the object in it, we'll keep track of the assignments
     // for all components in assignmentIndices. We initialize all of the
     // assignments as unassigned using a value of -1.
-    if (numComponents > 1 && 
-            (setObjs.length() > 1 || 
+    if (numComponents > 1 &&
+            (setObjs.length() > 1 ||
              (setObjs.length() == 1 && !compObjs[0].isNull()))) {
         assignmentIndices->assign((size_t)numComponents, -1);
     }
@@ -600,81 +614,100 @@ _getAttachedMayaShaderObjects(
     return hasShader;
 }
 
-bool
-_GetColorAndTransparencyFromLambert(
-        const MObject& shaderObj,
-        GfVec3f* rgb,
-        float* alpha)
-{
-    MStatus status;
-    MFnLambertShader lambertFn(shaderObj, &status );
-    if (status == MS::kSuccess ) {
-        if (rgb) {
-            GfVec3f displayColor;
-            MColor color = lambertFn.color();
-            for (int j=0;j<3;j++) {
-                displayColor[j] = color[j];
-            }
-            *rgb = GfConvertDisplayToLinear(displayColor);
-        }
-        if (alpha) {
-            MColor trn = lambertFn.transparency();
-            // Assign Alpha as 1.0 - average of shader trasparency 
-            // and check if they are all the same
-            *alpha = 1.0 - ((trn[0] + trn[1] + trn[2]) / 3.0);
-        }
-        return true;
-    } 
-    
-    return false;
-}
-
+static
 bool
 _GetColorAndTransparencyFromDepNode(
         const MObject& shaderObj,
         GfVec3f* rgb,
         float* alpha)
 {
+    MColor shaderColor(1.0f, 1.0f, 1.0f);
+    MColor shaderTransparency(0.0f, 0.0f, 0.0f);
+
+    // First, we assume the shader is a lambert and try that API. If not, we
+    // try a few guesses at the output attribute names.
     MStatus status;
-    MFnDependencyNode d(shaderObj);
-    MPlug colorPlug = d.findPlug("color", &status);
-    if (!status) {
-        return false;
-    }
-    MPlug transparencyPlug = d.findPlug("transparency", &status);
-    if (!status) {
-        return false;
+    const MFnLambertShader lambertFn(shaderObj, &status);
+    if (status == MS::kSuccess) {
+        shaderColor = lambertFn.color();
+        shaderTransparency = lambertFn.transparency();
+    } else {
+        const MFnDependencyNode depFn(shaderObj, &status);
+        if (status != MS::kSuccess) {
+            return false;
+        }
+
+        MPlug colorPlug =
+            depFn.findPlug(_tokens->OutColorPlugName.GetText(), &status);
+        if (status != MS::kSuccess) {
+            colorPlug = depFn.findPlug(_tokens->ColorPlugName.GetText(),
+                                       &status);
+            if (status != MS::kSuccess) {
+                MGlobal::displayWarning(
+                    TfStringPrintf(
+                        "Could not find output color attribute for shader '%s'",
+                        depFn.name().asChar()).c_str());
+                return false;
+            }
+        }
+
+        MPlug transparencyPlug =
+            depFn.findPlug(_tokens->OutTransparencyPlugName.GetText(), &status);
+        if (status != MS::kSuccess) {
+            transparencyPlug =
+                depFn.findPlug(_tokens->TransparencyPlugName.GetText(),
+                               &status);
+            if (status != MS::kSuccess) {
+                transparencyPlug =
+                    depFn.findPlug(_tokens->PresencePlugName.GetText(),
+                                   &status);
+                if (status != MS::kSuccess) {
+                    MGlobal::displayWarning(
+                        TfStringPrintf(
+                            "Could not find output transparency attribute "
+                            "for shader '%s'",
+                            depFn.name().asChar()).c_str());
+                    return false;
+                }
+            }
+        }
+
+        shaderColor.r = colorPlug.child(0).asFloat();
+        shaderColor.g = colorPlug.child(1).asFloat();
+        shaderColor.b = colorPlug.child(2).asFloat();
+
+        shaderTransparency.r = transparencyPlug.child(0).asFloat();
+        shaderTransparency.g = transparencyPlug.child(1).asFloat();
+        shaderTransparency.b = transparencyPlug.child(2).asFloat();
     }
 
     if (rgb) {
-        GfVec3f displayColor;
-        for (int j=0; j<3; j++) {
-            colorPlug.child(j).getValue(displayColor[j]);
-        }
+        const GfVec3f displayColor(shaderColor.r,
+                                   shaderColor.g,
+                                   shaderColor.b);
         *rgb = GfConvertDisplayToLinear(displayColor);
     }
 
     if (alpha) {
-        float trans = 0.f;
-        for (int j=0; j<3; j++) {
-            float t = 0.f;
-            transparencyPlug.child(j).getValue(t);
-            trans += t/3.f;
-        }
-        (*alpha) = 1.f - trans;
+        const float transparency = (shaderTransparency.r +
+                                    shaderTransparency.g +
+                                    shaderTransparency.b) / 3.0f;
+        *alpha = 1.0f - transparency;
     }
+
     return true;
 }
 
-static void 
+static
+void
 _getMayaShadersColor(
-        const MObjectArray &shaderObjs, 
+        const MObjectArray &shaderObjs,
         VtArray<GfVec3f> *RGBData,
         VtArray<float> *AlphaData)
 {
     MStatus status;
 
-    if (shaderObjs.length() == 0) {
+    if (shaderObjs.length() == 0u) {
         return;
     }
 
@@ -688,12 +721,12 @@ _getMayaShadersColor(
     for (unsigned int i = 0; i < shaderObjs.length(); ++i) {
         // Initialize RGB and Alpha to (1,1,1,1)
         if (RGBData) {
-            (*RGBData)[i][0] = 1.0;
-            (*RGBData)[i][1] = 1.0;
-            (*RGBData)[i][2] = 1.0;
+            (*RGBData)[i][0] = 1.0f;
+            (*RGBData)[i][1] = 1.0f;
+            (*RGBData)[i][2] = 1.0f;
         }
         if (AlphaData) {
-            (*AlphaData)[i] = 1.0;
+            (*AlphaData)[i] = 1.0f;
         }
 
         if (shaderObjs[i].isNull()) {
@@ -703,23 +736,10 @@ _getMayaShadersColor(
             continue;
         }
 
-        // first, we assume the shader is a lambert and try that API.  if
-        // not, we try our next best guess.
-        bool gotValues = _GetColorAndTransparencyFromLambert(
-                shaderObjs[i],
-                RGBData ?  &(*RGBData)[i] : NULL,
-                AlphaData ?  &(*AlphaData)[i] : NULL)
-
-            || _GetColorAndTransparencyFromDepNode(
-                shaderObjs[i],
-                RGBData ?  &(*RGBData)[i] : NULL,
-                AlphaData ?  &(*AlphaData)[i] : NULL);
-
-        if (!gotValues) {
-            TF_DEBUG(PXRUSDMAYA_SHADER_COLOR).
-                Msg("Failed to get shaders colors at index: %d. Unable to retrieve ShaderBaseColor.",
-                    i);
-        }
+        _GetColorAndTransparencyFromDepNode(
+            shaderObjs[i],
+            RGBData ?  &(*RGBData)[i] : NULL,
+            AlphaData ?  &(*AlphaData)[i] : NULL);
     }
 }
 
@@ -900,8 +920,8 @@ PxrUsdMayaUtil::CompressFaceVaryingPrimvarIndices(
         TfToken *interpolation,
         VtArray<int>* assignmentIndices)
 {
-    if (!interpolation     || 
-        !assignmentIndices || 
+    if (!interpolation     ||
+        !assignmentIndices ||
          assignmentIndices->size() == 0) {
         return;
     }
@@ -1177,7 +1197,7 @@ _GetVec(
     T ret = val.UncheckedGet<T>();
     if (attr.GetRoleName() == SdfValueRoleNames->Color)  {
         return GfConvertLinearToDisplay(ret);
-    }   
+    }
     return ret;
 
 }
@@ -1253,10 +1273,10 @@ PxrUsdMayaUtil::createStringAttribute(
             MObject::kNullObj,
             &status);
     CHECK_MSTATUS_AND_RETURN(status, false);
-    
+
     status = depNode.addAttribute(attrObj);
     CHECK_MSTATUS_AND_RETURN(status, false);
-    
+
     return true;
 }
 
@@ -1274,9 +1294,48 @@ PxrUsdMayaUtil::createNumericAttribute(
             0,
             &status);
     CHECK_MSTATUS_AND_RETURN(status, false);
-    
+
     status = depNode.addAttribute(attrObj);
     CHECK_MSTATUS_AND_RETURN(status, false);
-    
+
     return true;
+}
+
+PxrUsdMayaUtil::MDataHandleHolder::MDataHandleHolder(
+    const MPlug& plug, MDataHandle dataHandle)
+    : _plug(plug), _dataHandle(dataHandle)
+{
+}
+
+PxrUsdMayaUtil::MDataHandleHolder::~MDataHandleHolder()
+{
+    if (!_plug.isNull()) {
+        _plug.destructHandle(_dataHandle);
+    }
+}
+
+TfRefPtr<PxrUsdMayaUtil::MDataHandleHolder>
+PxrUsdMayaUtil::MDataHandleHolder::New(const MPlug& plug)
+{
+    MStatus status;
+
+#if MAYA_API_VERSION >= 20180000
+    MDataHandle dataHandle = plug.asMDataHandle(&status);
+#else
+    MDataHandle dataHandle = plug.asMDataHandle(MDGContext::fsNormal, &status);
+#endif
+
+    if (!status.error()) {
+        return TfCreateRefPtr(
+                new PxrUsdMayaUtil::MDataHandleHolder(plug, dataHandle));
+    }
+    else {
+        return nullptr;
+    }
+}
+
+TfRefPtr<PxrUsdMayaUtil::MDataHandleHolder>
+PxrUsdMayaUtil::GetPlugDataHandle(const MPlug& plug)
+{
+    return PxrUsdMayaUtil::MDataHandleHolder::New(plug);
 }
