@@ -31,7 +31,6 @@
 #include "pxr/imaging/hd/drawItem.h"
 #include "pxr/imaging/hd/rprimSharedData.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
-#include "pxr/imaging/hd/shaderKey.h"
 #include "pxr/imaging/hd/types.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/base/gf/range3d.h"
@@ -45,10 +44,10 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class HdBufferSource;
 class HdDrawItem;
+class HdMaterial;
 class HdRenderIndex;
 class HdRepr;
 class HdRenderParam;
-class HdShader;
 
 typedef boost::shared_ptr<HdRepr> HdReprSharedPtr;
 typedef boost::shared_ptr<HdBufferSource> HdBufferSourceSharedPtr;
@@ -91,12 +90,14 @@ public:
     HD_API
     virtual void Finalize(HdRenderParam *renderParam);
 
-    /// Returns the draw items for the requested reprName, these draw items
-    /// should be constructed and cached beforehand by Sync().
+    /// Returns the draw items for the requested reprName, if any.
+    /// These draw items should be constructed and cached beforehand by Sync().
+    /// If no draw items exist, or reprName cannot be found, nullptr
+    /// will be returned.
     HD_API
-    std::vector<HdDrawItem>* GetDrawItems(HdSceneDelegate* delegate,
-                                          TfToken const &reprName,
-                                          bool forced);
+    const std::vector<HdDrawItem*>* GetDrawItems(HdSceneDelegate* delegate,
+                                                 TfToken const &reprName,
+                                                 bool forced);
 
     /// Returns the render tag associated to this rprim
     HD_API
@@ -231,10 +232,6 @@ protected:
     TfToken _GetReprName(HdSceneDelegate* delegate,
                          TfToken const &defaultReprName, bool forced,
                          HdDirtyBits *dirtyBits);
-
-    HD_API
-    virtual HdShaderCodeSharedPtr _GetShaderCode(HdSceneDelegate *delegate,
-                                                 HdShader const *shader) const;
 
     virtual HdDirtyBits _GetInitialDirtyBits() const = 0;
     virtual HdDirtyBits _PropagateDirtyBits(HdDirtyBits bits) const = 0;
