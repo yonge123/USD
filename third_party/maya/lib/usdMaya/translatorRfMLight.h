@@ -21,48 +21,45 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef HD_RESOURCE_GL_H
-#define HD_RESOURCE_GL_H
+#ifndef PXRUSDMAYA_TRANSLATOR_RFM_LIGHT_H
+#define PXRUSDMAYA_TRANSLATOR_RFM_LIGHT_H
+
+/// \file translatorRfMLight.h
 
 #include "pxr/pxr.h"
-#include "pxr/imaging/hd/api.h"
-#include "pxr/imaging/hd/version.h"
-#include "pxr/imaging/garch/gl.h"
-#include "pxr/imaging/hd/resource.h"
-#include "pxr/base/tf/token.h"
 
-#include <boost/shared_ptr.hpp>
+#include "usdMaya/api.h"
+#include "usdMaya/primReaderArgs.h"
+#include "usdMaya/primReaderContext.h"
+#include "usdMaya/primWriterArgs.h"
+#include "usdMaya/primWriterContext.h"
 
-#include <cstddef>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-typedef boost::shared_ptr<class HdResourceGL> HdResourceGLSharedPtr;
+struct PxrUsdMayaTranslatorRfMLight
+{
+    /// Exports a UsdLux schema prim when provided args and a context that
+    /// identify a RenderMan for Maya light.
+    ///
+    /// Returns true if this succeeds in creating a UsdLux schema prim.
+    PXRUSDMAYA_API
+    static bool Write(
+            const PxrUsdMayaPrimWriterArgs& args,
+            PxrUsdMayaPrimWriterContext* context);
 
-/// \class HdResourceGL
-///
-/// Base class for simple OpenGL resource objects.
-///
-class HdResourceGL : public HdResource {
-public:
-    HD_API
-    HdResourceGL(TfToken const & role);
-    HD_API
-    virtual ~HdResourceGL();
-
-    /// The OpenGL name/identifier for this resource and its size
-    HD_API
-    virtual void SetAllocation(GLuint id, size_t size);
-
-    /// Returns the id of the GPU resource
-    GLuint GetId() const { return _id; }
-
-private:
-    GLuint _id;
+    /// Imports a UsdLux schema prim as a RenderMan for Maya light.
+    ///
+    /// Returns true if this succeeds in creating a RenderMan for Maya light.
+    PXRUSDMAYA_API
+    static bool Read(
+            const PxrUsdMayaPrimReaderArgs& args,
+            PxrUsdMayaPrimReaderContext* context);
 };
 
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif //HD_RESOURCE_GL_H
+
+#endif // PXRUSDMAYA_TRANSLATOR_RFM_LIGHT_H

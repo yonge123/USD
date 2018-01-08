@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Pixar
+// Copyright 2017 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -21,41 +21,30 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/imaging/hd/package.h"
-
-#include "pxr/base/plug/plugin.h"
-#include "pxr/base/plug/thisPlugin.h"
-#include "pxr/base/tf/diagnostic.h"
-#include "pxr/base/tf/fileUtils.h"
-#include "pxr/base/tf/stringUtils.h"
+#include "pxr/imaging/glf/glew.h"
+#include "pxr/imaging/hdSt/resourceGL.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-static TfToken
-_GetShaderPath(char const * shader)
+HdStResourceGL::HdStResourceGL(TfToken const & role) 
+    : HdResource(role)
+    , _id(0)
 {
-    static PlugPluginPtr plugin = PLUG_THIS_PLUGIN;
-    const std::string path =
-        PlugFindPluginResource(plugin, TfStringCatPaths("shaders", shader));
-    TF_VERIFY(!path.empty(), "Could not find shader: %s\n", shader);
-
-    return TfToken(path);
+    /*NOTHING*/
 }
 
-TfToken
-HdPackageComputeShader()
+HdStResourceGL::~HdStResourceGL()
 {
-    static TfToken computeShader = _GetShaderPath("compute.glslfx");
-    return computeShader;
+    /*NOTHING*/
 }
 
-TfToken
-HdPackagePtexTextureShader()
+void
+HdStResourceGL::SetAllocation(GLuint id, size_t size)
 {
-    static TfToken s = _GetShaderPath("ptexTexture.glslfx");
-    return s;
+    _id = id;
+    HdResource::SetSize(size);
 }
+
 
 PXR_NAMESPACE_CLOSE_SCOPE
-

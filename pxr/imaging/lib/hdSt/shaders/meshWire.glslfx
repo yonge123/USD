@@ -25,7 +25,7 @@
 //
 
 --- This is what an import might look like.
---- #import $TOOLS/hd/shaders/meshWire.glslfx
+--- #import $TOOLS/hdSt/shaders/meshWire.glslfx
 
 --- --------------------------------------------------------------------------
 -- glsl MeshWire.Geometry.NoEdge
@@ -224,6 +224,27 @@ vec4 ApplyEdgeColor(vec4 Cfill, vec4 patchCoord)
     if (p < 0.5) discard;
 
     Cfill.a = 1.0; // edges ignore input opacity and are opaque.
+    return Cfill;
+}
+
+--- --------------------------------------------------------------------------
+-- glsl MeshWire.Fragment.HullEdgeOnlyNoBlend
+
+in EdgeData
+{
+    noperspective vec3 edgeDistance;
+} inEdgeData;
+
+vec4 ApplyEdgeColor(vec4 Cfill, vec4 patchCoord)
+{
+    vec3 edgeDistance = inEdgeData.edgeDistance;
+
+    float d = min(edgeDistance.x,
+                  min(edgeDistance.y,
+                      edgeDistance.z));
+    float p = exp2(-4 * d * d);
+    if (p < 0.5) discard;
+
     return Cfill;
 }
 
