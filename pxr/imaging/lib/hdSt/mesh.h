@@ -40,13 +40,16 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
+class HdStDrawItem;
 class HdSceneDelegate;
+class HdStMaterial;
 
 typedef boost::shared_ptr<class Hd_VertexAdjacency> Hd_VertexAdjacencySharedPtr;
 typedef boost::shared_ptr<class HdSt_MeshTopology> HdSt_MeshTopologySharedPtr;
 typedef boost::shared_ptr<class HdBufferSource> HdBufferSourceSharedPtr;
 typedef boost::shared_ptr<class HdStResourceRegistry>
     HdStResourceRegistrySharedPtr;
+typedef boost::shared_ptr<class HdStShaderCode> HdStShaderCodeSharedPtr;
 
 /// A subdivision surface or poly-mesh object.
 ///
@@ -80,10 +83,6 @@ protected:
                  TfToken const &reprName,
                  HdDirtyBits *dirtyBitsState) override;
 
-    virtual
-    HdShaderCodeSharedPtr _GetShaderCode(HdSceneDelegate *sceneDelegate,
-                                         HdShader const *shader) const override;
-
     HdBufferArrayRangeSharedPtr
     _GetSharedPrimvarRange(uint64_t primvarId,
                 HdBufferSpecVector const &bufferSpecs,
@@ -97,7 +96,7 @@ protected:
     bool _UsePtexIndices(const HdRenderIndex &renderIndex) const;
 
     void _UpdateDrawItem(HdSceneDelegate *sceneDelegate,
-                         HdDrawItem *drawItem,
+                         HdStDrawItem *drawItem,
                          HdDirtyBits *dirtyBits,
                          HdMeshReprDesc desc,
                          bool requireSmoothNormals);
@@ -107,28 +106,28 @@ protected:
                                     HdReprSharedPtr repr);
 
     void _UpdateDrawItemGeometricShader(HdSceneDelegate *sceneDelegate,
-                                        HdDrawItem *drawItem,
+                                        HdStDrawItem *drawItem,
                                         const HdMeshReprDesc &desc);
 
     void _PopulateTopology(HdSceneDelegate *sceneDelegate,
-                           HdDrawItem *drawItem,
+                           HdStDrawItem *drawItem,
                            HdDirtyBits *dirtyBits,
                            HdMeshReprDesc desc);
 
     void _PopulateAdjacency(HdStResourceRegistrySharedPtr const &resourceRegistry);
 
     void _PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
-                                 HdDrawItem *drawItem,
+                                 HdStDrawItem *drawItem,
                                  HdDirtyBits *dirtyBits,
                                  bool requireSmoothNormals);
 
     void _PopulateFaceVaryingPrimVars(HdSceneDelegate *sceneDelegate,
-                                      HdDrawItem *drawItem,
+                                      HdStDrawItem *drawItem,
                                       HdDirtyBits *dirtyBits,
                                       HdMeshReprDesc desc);
 
     void _PopulateElementPrimVars(HdSceneDelegate *sceneDelegate,
-                                  HdDrawItem *drawItem,
+                                  HdStDrawItem *drawItem,
                                   HdDirtyBits *dirtyBits,
                                   TfTokenVector const &primVarNames);
 
