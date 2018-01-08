@@ -25,6 +25,7 @@ pxr_library(hdSt
         computeShader
         copyComputation
         dispatchBuffer
+        drawItem
         drawItemInstance
         drawTarget
         drawTargetAttachmentDesc
@@ -34,11 +35,15 @@ pxr_library(hdSt
         extCompGpuComputationBufferSource
         extCompGpuComputationResource
         fallbackLightingShader
+        geometricShader
         glslfxShader
+        glslProgram
+        glUtils
         instancer
         interleavedMemoryManager
         light      
         lightingShader
+        material
         mesh
         mixinShaderCode
         package
@@ -48,10 +53,15 @@ pxr_library(hdSt
         renderPass
         renderPassShader
         renderPassState
+        resourceBinder
         resourceRegistry
-        shader
+        shaderCode
+        shaderKey
         smoothNormals
         surfaceShader
+        texture
+        textureResource
+        tokens
         unitTestGLDrawing
         vboMemoryManager
         vboSimpleMemoryManager
@@ -76,6 +86,7 @@ pxr_library(hdSt
         subdivision
         subdivision3
         triangulate
+        unitTestDelegate
         unitTestHelper
 
     RESOURCE_FILES
