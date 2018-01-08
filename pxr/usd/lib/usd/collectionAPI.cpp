@@ -58,7 +58,7 @@ UsdCollectionAPI::Get(const UsdStagePtr &stage, const SdfPath &path)
 
 /* static */
 UsdCollectionAPI
-UsdCollectionAPI::Apply(const UsdStagePtr &stage, const SdfPath &path)
+UsdCollectionAPI::_Apply(const UsdStagePtr &stage, const SdfPath &path, const TfToken &name)
 {
     // Ensure we have a valid stage, path and prim
     if (!stage) {
@@ -77,7 +77,9 @@ UsdCollectionAPI::Apply(const UsdStagePtr &stage, const SdfPath &path)
         return UsdCollectionAPI();
     }
 
-    TfToken apiName("CollectionAPI");  
+    TfToken apiName(std::string("CollectionAPI") 
+                    + std::string(":") 
+                    + name.GetString());
 
     // Get the current listop at the edit target
     UsdEditTarget editTarget = stage->GetEditTarget();
@@ -167,7 +169,7 @@ TF_DEFINE_PRIVATE_TOKENS(
 
 /* static */
 UsdCollectionAPI 
-UsdCollectionAPI::AddCollection(
+UsdCollectionAPI::ApplyCollection(
     const UsdPrim& prim, 
     const TfToken &name, 
     const TfToken &expansionRule /*=UsdTokens->expandPrims*/) 
@@ -181,6 +183,8 @@ UsdCollectionAPI::AddCollection(
             "schema property name.", name.GetText(), baseName.GetText());
         return UsdCollectionAPI();
     }
+
+    UsdCollectionAPI::_Apply(prim.GetStage(), prim.GetPath(), name);
     
     return UsdCollectionAPI(prim, name, expansionRule);
 }
