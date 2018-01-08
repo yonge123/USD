@@ -23,10 +23,10 @@
 //
 #include "pxr/imaging/hd/unitTestNullRenderDelegate.h"
 #include "pxr/imaging/hd/bufferArray.h"
+#include "pxr/imaging/hd/material.h"
 #include "pxr/imaging/hd/mesh.h"
 #include "pxr/imaging/hd/basisCurves.h"
 #include "pxr/imaging/hd/points.h"
-#include "pxr/imaging/hd/shader.h"
 #include "pxr/imaging/hd/texture.h"
 #include "pxr/imaging/hd/repr.h"
 #include "pxr/imaging/hd/resourceRegistry.h"
@@ -250,16 +250,16 @@ private:
     Hd_NullRprim &operator =(const Hd_NullRprim &) = delete;
 };
 
-class Hd_NullShader final : public HdShader {
+class Hd_NullMaterial final : public HdMaterial {
 public:
-    Hd_NullShader(SdfPath const& id) : HdShader(id) {}
-    virtual ~Hd_NullShader() = default;
+    Hd_NullMaterial(SdfPath const& id) : HdMaterial(id) {}
+    virtual ~Hd_NullMaterial() = default;
 
     virtual void Sync(HdSceneDelegate *sceneDelegate,
                       HdRenderParam   *renderParam,
                       HdDirtyBits     *dirtyBits) override
     {
-        *dirtyBits = HdShader::Clean;
+        *dirtyBits = HdMaterial::Clean;
     };
 
     virtual VtValue Get(TfToken const &token) const override {
@@ -267,20 +267,15 @@ public:
     }
 
     virtual HdDirtyBits GetInitialDirtyBitsMask() const override {
-        return HdShader::AllDirty;
+        return HdMaterial::AllDirty;
     }
 
     virtual void Reload() override {};
 
-    virtual HdShaderCodeSharedPtr GetShaderCode() const override {
-        static HdShaderCodeSharedPtr result;
-        return result;
-    }
-
 private:
-    Hd_NullShader()                                  = delete;
-    Hd_NullShader(const Hd_NullShader &)             = delete;
-    Hd_NullShader &operator =(const Hd_NullShader &) = delete;
+    Hd_NullMaterial()                                  = delete;
+    Hd_NullMaterial(const Hd_NullMaterial &)             = delete;
+    Hd_NullMaterial &operator =(const Hd_NullMaterial &) = delete;
 };
 
 const TfTokenVector Hd_UnitTestNullRenderDelegate::SUPPORTED_RPRIM_TYPES =
@@ -292,7 +287,7 @@ const TfTokenVector Hd_UnitTestNullRenderDelegate::SUPPORTED_RPRIM_TYPES =
 
 const TfTokenVector Hd_UnitTestNullRenderDelegate::SUPPORTED_SPRIM_TYPES =
 {
-    HdPrimTypeTokens->shader
+    HdPrimTypeTokens->material
 };
 
 const TfTokenVector Hd_UnitTestNullRenderDelegate::SUPPORTED_BPRIM_TYPES =
@@ -365,10 +360,10 @@ Hd_UnitTestNullRenderDelegate::DestroyRprim(HdRprim *rPrim)
 
 HdSprim *
 Hd_UnitTestNullRenderDelegate::CreateSprim(TfToken const& typeId,
-                                    SdfPath const& sprimId)
+                                           SdfPath const& sprimId)
 {
-    if (typeId == HdPrimTypeTokens->shader) {
-        return new Hd_NullShader(sprimId);
+    if (typeId == HdPrimTypeTokens->material) {
+        return new Hd_NullMaterial(sprimId);
     } else {
         TF_CODING_ERROR("Unknown Sprim Type %s", typeId.GetText());
     }
@@ -379,8 +374,8 @@ Hd_UnitTestNullRenderDelegate::CreateSprim(TfToken const& typeId,
 HdSprim *
 Hd_UnitTestNullRenderDelegate::CreateFallbackSprim(TfToken const& typeId)
 {
-    if (typeId == HdPrimTypeTokens->shader) {
-        return new Hd_NullShader(SdfPath::EmptyPath());
+    if (typeId == HdPrimTypeTokens->material) {
+        return new Hd_NullMaterial(SdfPath::EmptyPath());
     } else {
         TF_CODING_ERROR("Unknown Sprim Type %s", typeId.GetText());
     }
