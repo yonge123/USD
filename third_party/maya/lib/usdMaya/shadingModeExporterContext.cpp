@@ -53,12 +53,14 @@ PxrUsdMayaShadingModeExportContext::PxrUsdMayaShadingModeExportContext(
         bool mergeTransformAndShape,
         bool stripNamespaces,
         const PxrUsdMayaUtil::ShapeSet& bindableRoots,
-        SdfPath overrideRootPath) :
+        SdfPath overrideRootPath,
+        const PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type& dagPathToUsdMap) :
     _shadingEngine(shadingEngine),
     _stage(stage),
     _mergeTransformAndShape(mergeTransformAndShape),
     _stripNamespaces(stripNamespaces),
-    _overrideRootPath(overrideRootPath)
+    _overrideRootPath(overrideRootPath),
+    _dagPathToUsdMap(dagPathToUsdMap)
 {
     if (bindableRoots.empty()) {
         // if none specified, push back '/' which encompasses all
