@@ -139,7 +139,7 @@ HdSt_TestDriver::_Init(TfToken const &reprName)
     _renderIndex = HdRenderIndex::New(&_renderDelegate);
     TF_VERIFY(_renderIndex != nullptr);
 
-    _sceneDelegate = new Hd_UnitTestDelegate(_renderIndex,
+    _sceneDelegate = new HdSt_UnitTestDelegate(_renderIndex,
                                              SdfPath::AbsoluteRootPath());
 
     _reprName = reprName;
@@ -318,7 +318,7 @@ HdSt_TestLightingShader::SetCamera(GfMatrix4d const &worldToViewMatrix,
 
 /* virtual */
 void
-HdSt_TestLightingShader::BindResources(Hd_ResourceBinder const &binder,
+HdSt_TestLightingShader::BindResources(HdSt_ResourceBinder const &binder,
                                       int program)
 {
     binder.BindUniformf(_tokens->l0dir,   3, _lights[0].eyeDir.GetArray());
@@ -330,7 +330,7 @@ HdSt_TestLightingShader::BindResources(Hd_ResourceBinder const &binder,
 
 /* virtual */
 void
-HdSt_TestLightingShader::UnbindResources(Hd_ResourceBinder const &binder,
+HdSt_TestLightingShader::UnbindResources(HdSt_ResourceBinder const &binder,
                                         int program)
 {
 }
