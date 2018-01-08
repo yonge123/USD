@@ -479,8 +479,11 @@ UsdClipsAPI::GetClipTemplateStride(double* clipTemplateStride,
 bool 
 UsdClipsAPI::SetClipTemplateStride(const double clipTemplateStride)
 {
-    if (clipTemplateStride == 0) {
-        TF_CODING_ERROR("clipTemplateStride can not be set to 0.");
+    if (clipTemplateStride <= 0) {
+        TF_CODING_ERROR("Invalid clipTemplateStride %f for prim <%s>. "
+                        "clipTemplateStride must be greater than 0.",
+                        clipTemplateStride, 
+                        GetPrim().GetPath().GetText());
         return false;
     }
 
@@ -492,13 +495,48 @@ bool
 UsdClipsAPI::SetClipTemplateStride(const double clipTemplateStride, 
                                    const std::string& clipSet)
 {
-    if (clipTemplateStride == 0) {
-        TF_CODING_ERROR("clipTemplateStride can not be set to 0.");
+    if (clipTemplateStride <= 0) {
+        TF_CODING_ERROR("Invalid clipTemplateStride %f for prim <%s>. "
+                        "clipTemplateStride must be greater than 0.",
+                        clipTemplateStride, 
+                        GetPrim().GetPath().GetText());
         return false;
     }
 
     USD_CLIPS_API_CLIPSET_SETTER(SetClipTemplateStride,
         clipTemplateStride, clipSet, UsdClipsAPIInfoKeys->templateStride);
+}
+
+bool 
+UsdClipsAPI::GetClipTemplateActiveOffset(double* clipTemplateActiveOffset) const
+{
+    return GetClipTemplateActiveOffset(clipTemplateActiveOffset,
+                                       UsdClipsAPISetNames->default_.GetString());
+}
+
+bool 
+UsdClipsAPI::GetClipTemplateActiveOffset(double* clipTemplateActiveOffset,
+                                         const std::string& clipSet) const
+{
+    USD_CLIPS_API_CLIPSET_GETTER(GetClipTemplateActiveOffset,
+        clipTemplateActiveOffset, clipSet, 
+        UsdClipsAPIInfoKeys->templateActiveOffset);
+}
+
+bool
+UsdClipsAPI::SetClipTemplateActiveOffset(const double clipTemplateActiveOffset)
+{
+    return SetClipTemplateActiveOffset(clipTemplateActiveOffset,
+                                       UsdClipsAPISetNames->default_.GetString());
+}
+
+bool
+UsdClipsAPI::SetClipTemplateActiveOffset(const double clipTemplateActiveOffset,
+                                         const std::string& clipSet)
+{
+    USD_CLIPS_API_CLIPSET_SETTER(SetClipTemplateActiveOffset,
+        clipTemplateActiveOffset, clipSet, 
+        UsdClipsAPIInfoKeys->templateActiveOffset);
 }
 
 bool 
