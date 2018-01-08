@@ -60,7 +60,7 @@ PxrUsdMayaShadingModeExportContext::PxrUsdMayaShadingModeExportContext(
     _stage(stage),
     _mergeTransformAndShape(mergeTransformAndShape),
     _stripNamespaces(stripNamespaces),
-    _parentScope(parentScope),
+    _parentScope(parentScope), 
     _overrideRootPath(overrideRootPath),
     _dagPathToUsdMap(dagPathToUsdMap)
 {
