@@ -26,19 +26,19 @@
 #include "pxr/imaging/hdSt/commandBuffer.h"
 #include "pxr/imaging/hdSt/cullingShaderKey.h"
 #include "pxr/imaging/hdSt/drawItemInstance.h"
+#include "pxr/imaging/hdSt/geometricShader.h"
+#include "pxr/imaging/hdSt/glslProgram.h"
 #include "pxr/imaging/hdSt/indirectDrawBatch.h"
 #include "pxr/imaging/hdSt/renderPassState.h"
 #include "pxr/imaging/hdSt/resourceRegistry.h"
+#include "pxr/imaging/hdSt/shaderKey.h"
 
 #include "pxr/imaging/hd/binding.h"
 #include "pxr/imaging/hd/bufferArrayRangeGL.h"
 #include "pxr/imaging/hd/debugCodes.h"
-#include "pxr/imaging/hd/geometricShader.h"
-#include "pxr/imaging/hd/glslProgram.h"
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/renderContextCaps.h"
-#include "pxr/imaging/hd/shaderCode.h"
-#include "pxr/imaging/hd/shaderKey.h"
+#include "pxr/imaging/hdSt/shaderCode.h"
 #include "pxr/imaging/hd/tokens.h"
 
 #include "pxr/imaging/glf/diagnostic.h"
@@ -88,7 +88,7 @@ HdSt_IndirectDrawBatch::_Init(HdStDrawItemInstance * drawItemInstance)
     drawItemInstance->SetBatch(this);
 
     // remember buffer arrays version for dispatch buffer updating
-    HdDrawItem const* drawItem = drawItemInstance->GetDrawItem();
+    HdStDrawItem const* drawItem = drawItemInstance->GetDrawItem();
     _bufferArraysHash = drawItem->GetBufferArraysHash();
 
     // determine gpu culling program by the first drawitem
@@ -120,8 +120,8 @@ HdSt_IndirectDrawBatch::_GetCullingProgram(
                                       IsEnabledGPUCountVisibleInstances());
 
         // sharing the culling geometric shader for the same configuration.
-        Hd_GeometricShaderSharedPtr cullShader =
-            Hd_GeometricShader::Create(shaderKey, resourceRegistry);
+        HdSt_GeometricShaderSharedPtr cullShader =
+            HdSt_GeometricShader::Create(shaderKey, resourceRegistry);
         _cullingProgram.SetGeometricShader(cullShader);
 
         _cullingProgram.CompileShader(_drawItemInstances.front()->GetDrawItem(),
@@ -319,7 +319,7 @@ HdSt_IndirectDrawBatch::_CompileBatch(
     TF_DEBUG(HD_MDI).Msg(" - Processing Items:\n");
     for (size_t item = 0; item < numDrawItemInstances; ++item) {
         HdStDrawItemInstance const * instance = _drawItemInstances[item];
-        HdDrawItem const * drawItem = _drawItemInstances[item]->GetDrawItem();
+        HdStDrawItem const * drawItem = _drawItemInstances[item]->GetDrawItem();
 
         //
         // index buffer data
@@ -387,7 +387,7 @@ HdSt_IndirectDrawBatch::_CompileBatch(
         // shader parameter
         //
         HdBufferArrayRangeSharedPtr const &
-            shaderBar_ = drawItem->GetMaterial()->GetShaderData();
+            shaderBar_ = drawItem->GetMaterialShader()->GetShaderData();
         HdBufferArrayRangeGLSharedPtr shaderBar =
             boost::static_pointer_cast<HdBufferArrayRangeGL>(shaderBar_);
 
@@ -767,7 +767,7 @@ HdSt_IndirectDrawBatch::Validate(bool deepValidation)
     // since drawitems are aggregated and ensure that they are sharing
     // same buffer arrays.
 
-    HdDrawItem const* batchItem = _drawItemInstances.front()->GetDrawItem();
+    HdStDrawItem const* batchItem = _drawItemInstances.front()->GetDrawItem();
 
     size_t bufferArraysHash = batchItem->GetBufferArraysHash();
 
@@ -784,7 +784,7 @@ HdSt_IndirectDrawBatch::Validate(bool deepValidation)
 
         size_t numDrawItemInstances = _drawItemInstances.size();
         for (size_t item = 0; item < numDrawItemInstances; ++item) {
-            HdDrawItem const * drawItem
+            HdStDrawItem const * drawItem
                 = _drawItemInstances[item]->GetDrawItem();
 
             if (!TF_VERIFY(drawItem->GetGeometricShader())) {
@@ -812,10 +812,10 @@ HdSt_IndirectDrawBatch::_ValidateCompatibility(
             HdBufferArrayRangeGLSharedPtr const& instanceIndexBar,
             std::vector<HdBufferArrayRangeGLSharedPtr> const& instanceBars) const
 {
-    HdDrawItem const* failed = nullptr;
+    HdStDrawItem const* failed = nullptr;
 
     for (HdStDrawItemInstance const* itemInstance : _drawItemInstances) {
-        HdDrawItem const* itm = itemInstance->GetDrawItem();
+        HdStDrawItem const* itm = itemInstance->GetDrawItem();
 
         if (constantBar && !TF_VERIFY(constantBar 
                         ->IsAggregatedWith(itm->GetConstantPrimVarRange())))
@@ -877,7 +877,7 @@ HdSt_IndirectDrawBatch::PrepareDraw(
     if ((    _useDrawArrays && _numTotalVertices == 0) ||
         (!_useDrawArrays && _numTotalElements == 0)) return;
 
-    HdDrawItem const* batchItem = _drawItemInstances.front()->GetDrawItem();
+    HdStDrawItem const* batchItem = _drawItemInstances.front()->GetDrawItem();
 
     // Bypass freezeCulling if the command buffer is dirty.
     bool freezeCulling = TfDebug::IsEnabled(HD_FREEZE_CULL_FRUSTUM)
@@ -950,7 +950,7 @@ HdSt_IndirectDrawBatch::PrepareDraw(
                 continue;
             }
 
-            HdDrawItem const * drawItem = drawItemInstance->GetDrawItem();
+            HdStDrawItem const * drawItem = drawItemInstance->GetDrawItem();
 
             if (gpuCulling) {
                 GLint const *instanceCount =
@@ -1003,7 +1003,7 @@ HdSt_IndirectDrawBatch::ExecuteDraw(
 
     if (!TF_VERIFY(!_drawItemInstances.empty())) return;
 
-    HdDrawItem const* batchItem = _drawItemInstances.front()->GetDrawItem();
+    HdStDrawItem const* batchItem = _drawItemInstances.front()->GetDrawItem();
 
     if (!TF_VERIFY(batchItem)) return;
 
@@ -1021,7 +1021,7 @@ HdSt_IndirectDrawBatch::ExecuteDraw(
     _DrawingProgram & program = _GetDrawingProgram(renderPassState,
                                                    /*indirect=*/true,
                                                    resourceRegistry);
-    HdGLSLProgramSharedPtr const &glslProgram = program.GetGLSLProgram();
+    HdStGLSLProgramSharedPtr const &glslProgram = program.GetGLSLProgram();
     if (!TF_VERIFY(glslProgram)) return;
     if (!TF_VERIFY(glslProgram->Validate())) return;
 
@@ -1030,8 +1030,8 @@ HdSt_IndirectDrawBatch::ExecuteDraw(
 
     glUseProgram(programId);
 
-    const Hd_ResourceBinder &binder = program.GetBinder();
-    const HdShaderCodeSharedPtrVector &shaders = program.GetComposedShaders();
+    const HdSt_ResourceBinder &binder = program.GetBinder();
+    const HdStShaderCodeSharedPtrVector &shaders = program.GetComposedShaders();
 
     // XXX: for surfaces shader, we need to iterate all drawItems to
     //      make textures resident, instead of just the first batchItem
@@ -1108,7 +1108,7 @@ HdSt_IndirectDrawBatch::ExecuteDraw(
         HdBufferArrayRangeSharedPtr shaderBar_ = (*shader)->GetShaderData();
         shaderBar = boost::static_pointer_cast<HdBufferArrayRangeGL>(shaderBar_);
         if (shaderBar) {
-            binder.BindBuffer(HdTokens->surfaceShaderParams, 
+            binder.BindBuffer(HdTokens->materialParams, 
                               shaderBar->GetResource());
         }
     }
@@ -1172,7 +1172,7 @@ HdSt_IndirectDrawBatch::ExecuteDraw(
     binder.UnbindBufferArray(vertexBar);
     binder.UnbindBufferArray(dispatchBar);
     if(shaderBar) {
-        binder.UnbindBuffer(HdTokens->surfaceShaderParams, 
+        binder.UnbindBuffer(HdTokens->materialParams, 
                             shaderBar->GetResource());
     }
 
@@ -1193,7 +1193,7 @@ HdSt_IndirectDrawBatch::ExecuteDraw(
 
 void
 HdSt_IndirectDrawBatch::_GPUFrustumCulling(
-    HdDrawItem const *batchItem,
+    HdStDrawItem const *batchItem,
     HdStRenderPassStateSharedPtr const &renderPassState,
     HdStResourceRegistrySharedPtr const &resourceRegistry)
 {
@@ -1221,7 +1221,7 @@ HdSt_IndirectDrawBatch::_GPUFrustumCulling(
 
     _CullingProgram cullingProgram = _GetCullingProgram(resourceRegistry);
 
-    HdGLSLProgramSharedPtr const &
+    HdStGLSLProgramSharedPtr const &
         glslProgram = cullingProgram.GetGLSLProgram();
 
     if (!TF_VERIFY(glslProgram)) return;
@@ -1232,7 +1232,7 @@ HdSt_IndirectDrawBatch::_GPUFrustumCulling(
     // dispatch buffer to 0 for primitives that are culled, skipping
     // over other elements.
 
-    const Hd_ResourceBinder &binder = cullingProgram.GetBinder();
+    const HdSt_ResourceBinder &binder = cullingProgram.GetBinder();
 
     GLuint programId = glslProgram->GetProgram().GetId();
     glUseProgram(programId);
@@ -1343,7 +1343,7 @@ HdSt_IndirectDrawBatch::_GPUFrustumCulling(
 
 void
 HdSt_IndirectDrawBatch::_GPUFrustumCullingXFB(
-    HdDrawItem const *batchItem,
+    HdStDrawItem const *batchItem,
     HdStRenderPassStateSharedPtr const &renderPassState,
     HdStResourceRegistrySharedPtr const &resourceRegistry)
 {
@@ -1357,7 +1357,7 @@ HdSt_IndirectDrawBatch::_GPUFrustumCullingXFB(
 
     _CullingProgram &cullingProgram = _GetCullingProgram(resourceRegistry);
 
-    HdGLSLProgramSharedPtr const &
+    HdStGLSLProgramSharedPtr const &
         glslProgram = cullingProgram.GetGLSLProgram();
     if (!TF_VERIFY(glslProgram)) return;
     if (!TF_VERIFY(glslProgram->Validate())) return;
@@ -1370,7 +1370,7 @@ HdSt_IndirectDrawBatch::_GPUFrustumCullingXFB(
     GLuint programId = glslProgram->GetProgram().GetId();
     glUseProgram(programId);
 
-    const Hd_ResourceBinder &binder = cullingProgram.GetBinder();
+    const HdSt_ResourceBinder &binder = cullingProgram.GetBinder();
 
     // bind constant
     binder.BindConstantBuffer(constantBar);
@@ -1591,7 +1591,7 @@ HdSt_IndirectDrawBatch::_CullingProgram::_GetCustomBindings(
 /* virtual */
 bool
 HdSt_IndirectDrawBatch::_CullingProgram::_Link(
-        HdGLSLProgramSharedPtr const & glslProgram)
+        HdStGLSLProgramSharedPtr const & glslProgram)
 {
     if (!TF_VERIFY(glslProgram)) return false;
     if (!glTransformFeedbackVaryings) return false; // glew initialized

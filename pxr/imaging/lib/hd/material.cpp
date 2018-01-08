@@ -21,17 +21,17 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/imaging/hd/shader.h"
+#include "pxr/imaging/hd/material.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-HdShader::HdShader(SdfPath const& id)
+HdMaterial::HdMaterial(SdfPath const& id)
  : HdSprim(id)
 {
     // NOTHING
 }
 
-HdShader::~HdShader()
+HdMaterial::~HdMaterial()
 {
     // NOTHING
 }
@@ -41,9 +41,9 @@ HdShader::~HdShader()
 // VtValue Requirements
 // -------------------------------------------------------------------------- //
 
-std::ostream& operator<<(std::ostream& out, const HdMaterialNodes& pv)
+std::ostream& operator<<(std::ostream& out, const HdMaterialNetwork& pv)
 {
-    out << "HdMaterialNodes Params: (...) " ;
+    out << "HdMaterialNetwork Params: (...) " ;
     return out;
 }
 
@@ -68,13 +68,14 @@ bool operator==(const HdMaterialNode& lhs, const HdMaterialNode& rhs)
            lhs.parameters == rhs.parameters;
 }
 
-bool operator==(const HdMaterialNodes& lhs, const HdMaterialNodes& rhs) 
+bool operator==(const HdMaterialNetwork& lhs, const HdMaterialNetwork& rhs) 
 {
     return lhs.relationships           == rhs.relationships && 
-           lhs.nodes                   == rhs.nodes;
+           lhs.nodes                   == rhs.nodes &&
+           lhs.primvars                == rhs.primvars;
 }
 
-bool operator!=(const HdMaterialNodes& lhs, const HdMaterialNodes& rhs) 
+bool operator!=(const HdMaterialNetwork& lhs, const HdMaterialNetwork& rhs) 
 {
     return !(lhs == rhs);
 }
