@@ -11,6 +11,7 @@ pxr_shared_library(${PXR_PACKAGE}
         tf
         usd
         usdGeom
+        usdLux
         usdRi
         usdShade
         usdUtils
@@ -49,6 +50,7 @@ pxr_shared_library(${PXR_PACKAGE}
         translatorModelAssembly
         translatorNurbsPatch
         translatorPrim
+        translatorRfMLight
         translatorUtil
         translatorXformable
         roundTripUtil
@@ -160,7 +162,9 @@ pxr_test_scripts(
         testenv/testUsdExportOverImport.py
         testenv/testUsdExportPointInstancer.py
         testenv/testUsdExportRenderLayerMode.py
+        testenv/testUsdExportRfMLight.py
         testenv/testUsdExportSelection.py
+        testenv/testUsdExportShadingModeDisplayColor.py
         testenv/testUsdExportShadingModePxrRis.py
         testenv/testUsdExportUVSets.py
         testenv/testUsdImportAsAssemblies.py
@@ -168,7 +172,10 @@ pxr_test_scripts(
         testenv/testUsdImportColorSets.py
         testenv/testUsdImportFrameRange.py
         testenv/testUsdImportNestedAssemblyAnimation.py
+        testenv/testUsdImportRfMLight.py
         testenv/testUsdImportSessionLayer.py
+        testenv/testUsdImportShadingModeDisplayColor.py
+        testenv/testUsdImportShadingModePxrRis.py
         testenv/testUsdImportUVSets.py
         testenv/testUsdImportXforms.py
         testenv/testUsdMayaGetVariantSetSelections.py
@@ -280,7 +287,6 @@ pxr_register_test(testUsdExportInstances
         MAYA_DISABLE_CIP=1
 )
 
-
 pxr_install_test_dir(
     SRC testenv/UsdExportMeshTest
     DEST testUsdExportMesh
@@ -355,6 +361,22 @@ pxr_register_test(testUsdExportRenderLayerMode
         MAYA_ENABLE_LEGACY_RENDER_LAYERS=1
 )
 
+# XXX: This test is disabled by default since it requires the RenderMan for 
+# Maya plugin.
+# pxr_install_test_dir(
+#     SRC testenv/UsdExportRfMLightTest
+#     DEST testUsdExportRfMLight
+# )
+# pxr_register_test(testUsdExportRfMLight
+#     CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
+#     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdExportRfMLight"
+#     TESTENV testUsdExportRfMLight
+#     ENV
+#         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+#         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+#         MAYA_DISABLE_CIP=1
+# )
+
 pxr_install_test_dir(
     SRC testenv/UsdExportSelectionTest
     DEST testUsdExportSelection
@@ -368,6 +390,20 @@ pxr_register_test(testUsdExportSelection
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
         MAYA_APP_DIR=./maya_profile
+)
+
+pxr_install_test_dir(
+    SRC testenv/UsdExportShadingModeDisplayColor
+    DEST testUsdExportShadingModeDisplayColor
+)
+pxr_register_test(testUsdExportShadingModeDisplayColor
+    CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdExportShadingModeDisplayColor"
+    TESTENV testUsdExportShadingModeDisplayColor
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+        MAYA_DISABLE_CIP=1
 )
 
 pxr_install_test_dir(
@@ -474,6 +510,22 @@ pxr_register_test(testUsdImportNestedAssemblyAnimation
         MAYA_APP_DIR=./maya_profile
 )
 
+# XXX: This test is disabled by default since it requires the RenderMan for 
+# Maya plugin.
+# pxr_install_test_dir(
+#     SRC testenv/UsdImportRfMLightTest
+#     DEST testUsdImportRfMLight
+# )
+# pxr_register_test(testUsdImportRfMLight
+#     CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
+#     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdImportRfMLight"
+#     TESTENV testUsdImportRfMLight
+#     ENV
+#         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+#         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+#         MAYA_DISABLE_CIP=1
+# )
+
 pxr_install_test_dir(
     SRC testenv/UsdImportSessionLayerTest
     DEST testUsdImportSessionLayer
@@ -487,6 +539,34 @@ pxr_register_test(testUsdImportSessionLayer
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
         MAYA_APP_DIR=./maya_profile
+)
+
+pxr_install_test_dir(
+    SRC testenv/UsdImportShadingModeDisplayColor
+    DEST testUsdImportShadingModeDisplayColor
+)
+pxr_register_test(testUsdImportShadingModeDisplayColor
+    CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdImportShadingModeDisplayColor"
+    TESTENV testUsdImportShadingModeDisplayColor
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+        MAYA_DISABLE_CIP=1
+)
+
+pxr_install_test_dir(
+    SRC testenv/UsdImportShadingModePxrRis
+    DEST testUsdImportShadingModePxrRis
+)
+pxr_register_test(testUsdImportShadingModePxrRis
+    CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdImportShadingModePxrRis"
+    TESTENV testUsdImportShadingModePxrRis
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+        MAYA_DISABLE_CIP=1
 )
 
 pxr_install_test_dir(
