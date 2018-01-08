@@ -115,6 +115,16 @@ if (NOT PXR_HEADLESS_TEST_MODE)
         DEST testusdviewReloadReopen
     )
 
+    pxr_install_test_dir(
+        SRC testenv/testUsdviewNoPlugins
+        DEST testusdviewNoPlugins
+    )
+
+    pxr_install_test_dir(
+        SRC testenv/testUsdviewInterpreterNoRender
+        DEST testusdviewInterpreterNoRender
+    )
+
     pxr_register_test(testusdviewAlive                                               
         PRE_COMMAND "${PYTHON_EXECUTABLE} testUsdviewAliveSetup.py"
         PYTHON
@@ -244,6 +254,18 @@ if (NOT PXR_HEADLESS_TEST_MODE)
     pxr_register_test(testusdviewReloadReopen
         PYTHON
         COMMAND "${CMAKE_INSTALL_PREFIX}/bin/testusdview --testScript testUsdviewReloadReopen.py test.usda"
+        EXPECTED_RETURN_CODE 0
+    )
+    
+    pxr_register_test(testusdviewNoPlugins
+        PYTHON
+        COMMAND "${CMAKE_INSTALL_PREFIX}/bin/testusdview --testScript testUsdviewNoPlugins.py --noplugins test.usda"
+        EXPECTED_RETURN_CODE 0
+    )
+
+    pxr_register_test(testusdviewInterpreterNoRender
+        PYTHON
+        COMMAND "${CMAKE_INSTALL_PREFIX}/bin/testusdview --testScript testUsdviewInterpreterNoRender.py --norender test.usda"
         EXPECTED_RETURN_CODE 0
     )
 endif()
