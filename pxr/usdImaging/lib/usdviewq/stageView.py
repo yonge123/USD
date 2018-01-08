@@ -1766,38 +1766,7 @@ class StageView(QtOpenGL.QGLWidget):
         # force the bbox to refresh
         self._bbox = Gf.BBox3d()
 
-    # XXX Why aren't these @properties?
-    def setDisplayGuide(self, enabled):
-        self._displayGuide = enabled
-        self._updateBboxPurposes()
-
-    def setDisplayProxy(self, enabled):
-        self._displayProxy = enabled
-        self._updateBboxPurposes()
-
-    def setDisplayRender(self, enabled):
-        self._displayRender = enabled
-        self._updateBboxPurposes()
-
-    def setDisplayCameraOracles(self, enabled):
-        self._displayCameraOracles = enabled
-
-    def setDisplayPrimId(self, enabled):
-        self._displayPrimId = enabled
-
-    def setEnableHardwareShading(self, enabled):
-        self._enableHardwareShading = enabled
-
-    def setDisplayImagePlanes(self, enabled):
-        self._displayImagePlanes = enabled
-
-    def setCullBackfaces(self, enabled):
-        self._cullBackfaces = enabled
-        
-    def  setSelectedPrims(self, selectedPrims, frame, resetCam=False, 
-                 forceComputeBBox=False, frameFit=1.1):
-        '''Set the selected prims. resetCam = True causes the camera to reframe
-    
+    def recomputeBBox(self):
         selectedPrims = self._selectionDataModel.getLCDPrims()
         try:
             startTime = time()
