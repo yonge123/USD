@@ -21,30 +21,48 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/imaging/glf/glew.h"
-#include "pxr/imaging/hd/resourceGL.h"
+#ifndef HDST_RESOURCE_GL_H
+#define HDST_RESOURCE_GL_H
+
+#include "pxr/pxr.h"
+#include "pxr/imaging/hdSt/api.h"
+#include "pxr/imaging/hd/version.h"
+#include "pxr/imaging/garch/gl.h"
+#include "pxr/imaging/hd/resource.h"
+#include "pxr/base/tf/token.h"
+
+#include <boost/shared_ptr.hpp>
+
+#include <cstddef>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-HdResourceGL::HdResourceGL(TfToken const & role) 
-    : HdResource(role)
-    , _id(0)
-{
-    /*NOTHING*/
-}
+typedef boost::shared_ptr<class HdStResourceGL> HdStResourceGLSharedPtr;
 
-HdResourceGL::~HdResourceGL()
-{
-    /*NOTHING*/
-}
+/// \class HdStResourceGL
+///
+/// Base class for simple OpenGL resource objects.
+///
+class HdStResourceGL : public HdResource {
+public:
+    HDST_API
+    HdStResourceGL(TfToken const & role);
+    HDST_API
+    virtual ~HdStResourceGL();
 
-void
-HdResourceGL::SetAllocation(GLuint id, size_t size)
-{
-    _id = id;
-    HdResource::SetSize(size);
-}
+    /// The OpenGL name/identifier for this resource and its size
+    HDST_API
+    virtual void SetAllocation(GLuint id, size_t size);
+
+    /// Returns the id of the GPU resource
+    GLuint GetId() const { return _id; }
+
+private:
+    GLuint _id;
+};
 
 
 PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // HDST_RESOURCE_GL_H

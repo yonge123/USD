@@ -741,6 +741,21 @@ UsdGeomXformable::GetLocalTransformation(
     const UsdTimeCode time) const
 {
     TRACE_FUNCTION();
+
+    if (transform) {
+        *transform = GfMatrix4d(1.);
+    }
+    else {
+        TF_CODING_ERROR("transform is NULL.");
+        return false;
+    }
+
+    if (resetsXformStack) {
+        *resetsXformStack = false;
+    } else {
+        TF_CODING_ERROR("resetsXformStack is NULL.");
+        return false;
+    }
  
     VtTokenArray opOrderVec;
     if (!_GetXformOpOrderValue(&opOrderVec))
@@ -755,13 +770,9 @@ UsdGeomXformable::GetLocalTransformation(
                 return transformAttr.Get(transform, time);
             }
         }
-
-        transform->SetIdentity();
         return true;
     }
     
-    GfMatrix4d localXform(1.);
-    bool foundResetXformStack = false;
     for (VtTokenArray::reverse_iterator it = opOrderVec.rbegin() ; 
          it != opOrderVec.rend(); ++it) {
             
@@ -780,7 +791,7 @@ UsdGeomXformable::GetLocalTransformation(
         // If this is the special resetXformStack op, then the currently
         // accreted localXform is the local transformation of the prim.
         if (opName == UsdGeomXformOpTypes->resetXformStack) { 
-            foundResetXformStack = true;
+            *resetsXformStack = true;
             break;
         } else {
             bool isInverseOp = false;
@@ -792,7 +803,7 @@ UsdGeomXformable::GetLocalTransformation(
                     GfMatrix4d opTransform = op.GetOpTransform(time);
                     // Avoid multiplying by the identity matrix when possible.
                     if (opTransform != *_IDENTITY) {
-                        localXform *= opTransform;
+                        (*transform) *= opTransform;
                     }
                 }
             } else {
@@ -804,18 +815,6 @@ UsdGeomXformable::GetLocalTransformation(
                     opName.GetText(), GetPrim().GetPath().GetText());
             }
         }
-    }
-
-    if (transform) {
-        *transform = localXform;
-    } else {
-        TF_CODING_ERROR("'transform' pointer is NULL.");
-    }
-
-    if (resetsXformStack) {
-        *resetsXformStack = foundResetXformStack;
-    } else {
-        TF_CODING_ERROR("'resetsXformStack' pointer is NULL.");
     }
     
     return true;
