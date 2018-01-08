@@ -24,18 +24,20 @@
 #include "pxr/imaging/glf/glew.h"
 
 #include "pxr/imaging/hdSt/immediateDrawBatch.h"
+
 #include "pxr/imaging/hdSt/commandBuffer.h"
+#include "pxr/imaging/hdSt/drawItem.h"
 #include "pxr/imaging/hdSt/drawItemInstance.h"
+#include "pxr/imaging/hdSt/geometricShader.h"
+#include "pxr/imaging/hdSt/glslProgram.h"
 #include "pxr/imaging/hdSt/renderPassState.h"
 #include "pxr/imaging/hdSt/resourceRegistry.h"
 
 #include "pxr/imaging/hd/bufferArrayRangeGL.h"
 #include "pxr/imaging/hd/debugCodes.h"
-#include "pxr/imaging/hd/geometricShader.h"
-#include "pxr/imaging/hd/glslProgram.h"
 #include "pxr/imaging/hd/mesh.h"
 #include "pxr/imaging/hd/perfLog.h"
-#include "pxr/imaging/hd/shaderCode.h"
+#include "pxr/imaging/hdSt/shaderCode.h"
 #include "pxr/imaging/hd/tokens.h"
 
 #include "pxr/base/tf/diagnostic.h"
@@ -68,7 +70,7 @@ HdSt_ImmediateDrawBatch::Validate(bool deepValidation)
 {
     if (!TF_VERIFY(!_drawItemInstances.empty())) return false;
 
-    HdDrawItem const* batchItem = _drawItemInstances.front()->GetDrawItem();
+    HdStDrawItem const* batchItem = _drawItemInstances.front()->GetDrawItem();
 
     // immediate batch doesn't need to verify buffer array hash unlike indirect
     // batch.
@@ -77,7 +79,7 @@ HdSt_ImmediateDrawBatch::Validate(bool deepValidation)
 
         size_t numDrawItemInstances = _drawItemInstances.size();
         for (size_t item = 0; item < numDrawItemInstances; ++item) {
-            HdDrawItem const * drawItem
+            HdStDrawItem const * drawItem
                 = _drawItemInstances[item]->GetDrawItem();
 
             if (!TF_VERIFY(drawItem->GetGeometricShader())) {
@@ -125,12 +127,12 @@ HdSt_ImmediateDrawBatch::ExecuteDraw(
                                                    /*indirect=*/false,
                                                    resourceRegistry);
 
-    HdGLSLProgramSharedPtr const &glslProgram = program.GetGLSLProgram();
+    HdStGLSLProgramSharedPtr const &glslProgram = program.GetGLSLProgram();
     if (!TF_VERIFY(glslProgram)) return;
     if (!TF_VERIFY(glslProgram->Validate())) return;
 
-    const Hd_ResourceBinder &binder = program.GetBinder();
-    const HdShaderCodeSharedPtrVector &shaders = program.GetComposedShaders();
+    const HdSt_ResourceBinder &binder = program.GetBinder();
+    const HdStShaderCodeSharedPtrVector &shaders = program.GetComposedShaders();
 
     GLuint programId = glslProgram->GetProgram().GetId();
     TF_VERIFY(programId);
@@ -145,7 +147,7 @@ HdSt_ImmediateDrawBatch::ExecuteDraw(
 
     // Set up geometric shader states
     // all batch item should have the same geometric shader.
-    Hd_GeometricShaderSharedPtr const &geometricShader
+    HdSt_GeometricShaderSharedPtr const &geometricShader
         = program.GetGeometricShader();
     geometricShader->BindResources(binder, programId);
 
@@ -155,7 +157,7 @@ HdSt_ImmediateDrawBatch::ExecuteDraw(
             continue;
         }
 
-        HdDrawItem const * drawItem = (*drawItemIt)->GetDrawItem();
+        HdStDrawItem const * drawItem = (*drawItemIt)->GetDrawItem();
 
         ++numItemsDrawn;
         if (TfDebug::IsEnabled(HD_DRAWITEM_DRAWN)) {
@@ -291,13 +293,13 @@ HdSt_ImmediateDrawBatch::ExecuteDraw(
         HdBufferArrayRangeGLSharedPtr shaderBar =
             boost::static_pointer_cast<HdBufferArrayRangeGL> (shaderBar_);
 
-        // shaderBar isn't needed when the surfaceShader is overriden
+        // shaderBar isn't needed when the material is overriden
         if (shaderBar && (!shaderBar->IsAggregatedWith(shaderBarCurrent))) {
             if (shaderBarCurrent) {
-                binder.UnbindBuffer(HdTokens->surfaceShaderParams,
+                binder.UnbindBuffer(HdTokens->materialParams,
                                     shaderBarCurrent->GetResource());
             }
-            binder.BindBuffer(HdTokens->surfaceShaderParams,
+            binder.BindBuffer(HdTokens->materialParams,
                               shaderBar->GetResource());
             shaderBarCurrent = shaderBar;
         }
@@ -440,7 +442,7 @@ HdSt_ImmediateDrawBatch::ExecuteDraw(
     if (indexBarCurrent)
         binder.UnbindBufferArray(indexBarCurrent);
     if (shaderBarCurrent) {
-        binder.UnbindBuffer(HdTokens->surfaceShaderParams,
+        binder.UnbindBuffer(HdTokens->materialParams,
                             shaderBarCurrent->GetResource());
     }
 
