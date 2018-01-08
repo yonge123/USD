@@ -23,11 +23,11 @@
 //
 #include "pxr/imaging/glf/glew.h"
 #include "pxr/imaging/hd/bufferArrayRangeGL.h"
-#include "pxr/imaging/hd/glslProgram.h"
-#include "pxr/imaging/hd/glUtils.h"
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hdSt/codeGen.h"
 #include "pxr/imaging/hdSt/extCompGpuComputationResource.h"
+#include "pxr/imaging/hdSt/glslProgram.h"
+#include "pxr/imaging/hdSt/glUtils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -48,7 +48,7 @@ static size_t _Hash(HdBufferSpecVector const &specs) {
 HdStExtCompGpuComputationResource::HdStExtCompGpuComputationResource(
         HdBufferSpecVector const &outputBufferSpecs,
         HdStComputeShaderSharedPtr const &kernel,
-        HdResourceRegistrySharedPtr const &registry)
+        HdStResourceRegistrySharedPtr const &registry)
  : _outputBufferSpecs(outputBufferSpecs)
  , _kernel(kernel)
  , _registry(registry)
@@ -94,7 +94,7 @@ HdStExtCompGpuComputationResource::Resolve()
     // We save the kernel for future runs to not have to incur the
     // compilation cost each time.
     if (!_computeProgram || _shaderSourceHash != shaderSourceHash) {
-        HdShaderCodeSharedPtrVector shaders;
+        HdStShaderCodeSharedPtrVector shaders;
         shaders.push_back(_kernel);
         HdSt_CodeGen codeGen(shaders);
         
@@ -105,24 +105,24 @@ HdStExtCompGpuComputationResource::Resolve()
                                               shaders,
                                               codeGen.GetMetaData());
 
-        HdGLSLProgram::ID registryID = codeGen.ComputeHash();
+        HdStGLSLProgram::ID registryID = codeGen.ComputeHash();
 
         {
-            HdInstance<HdGLSLProgram::ID, HdGLSLProgramSharedPtr> programInstance;
+            HdInstance<HdStGLSLProgram::ID, HdStGLSLProgramSharedPtr> programInstance;
 
             // ask registry to see if there's already compiled program
             std::unique_lock<std::mutex> regLock =
                 _registry->RegisterGLSLProgram(registryID, &programInstance);
 
             if (programInstance.IsFirstInstance()) {
-                HdGLSLProgramSharedPtr glslProgram = codeGen.CompileComputeProgram();
+                HdStGLSLProgramSharedPtr glslProgram = codeGen.CompileComputeProgram();
                 if (!TF_VERIFY(glslProgram)) {
                     return false;
                 }
                 
                 if (!glslProgram->Link()) {
                     std::string logString;
-                    HdGLUtils::GetProgramLinkStatus(
+                    HdStGLUtils::GetProgramLinkStatus(
                         glslProgram->GetProgram().GetId(),
                         &logString);
                     TF_WARN("Failed to link compute shader:\n%s\n",
