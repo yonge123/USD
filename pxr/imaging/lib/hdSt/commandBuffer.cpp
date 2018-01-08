@@ -30,7 +30,7 @@
 
 #include "pxr/imaging/hd/bufferArrayRange.h"
 #include "pxr/imaging/hd/debugCodes.h"
-#include "pxr/imaging/hd/geometricShader.h"
+#include "pxr/imaging/hdSt/geometricShader.h"
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/renderContextCaps.h"
 #include "pxr/imaging/hd/tokens.h"
@@ -117,7 +117,7 @@ HdStCommandBuffer::ExecuteDraw(
 }
 
 void
-HdStCommandBuffer::SwapDrawItems(std::vector<HdDrawItem const*>* items,
+HdStCommandBuffer::SwapDrawItems(std::vector<HdStDrawItem const*>* items,
                                unsigned currentShaderBindingsVersion)
 {
     _drawItems.swap(*items);
@@ -164,9 +164,9 @@ HdStCommandBuffer::_RebuildDrawBatches()
     std::map<size_t, HdSt_DrawBatchSharedPtr> batchMap;
 
     for (size_t i = 0; i < _drawItems.size(); i++) {
-        HdDrawItem const * drawItem = _drawItems[i];
+        HdStDrawItem const * drawItem = _drawItems[i];
 
-        HdShaderCodeSharedPtr const &geometricShader
+        HdStShaderCodeSharedPtr const &geometricShader
             = drawItem->GetGeometricShader();
         if (!TF_VERIFY(geometricShader, "%s",
                        drawItem->GetRprimID().GetText())) {
@@ -180,11 +180,15 @@ HdStCommandBuffer::_RebuildDrawBatches()
         boost::hash_combine(key, drawItem->GetBufferArraysHash());
 
         if (!bindlessTexture) {
+            if (!TF_VERIFY(drawItem->GetMaterialShader(), "%s",
+                           drawItem->GetRprimID().GetText())) {
+                continue;
+            }
             // Geometric, RenderPass and Lighting shaders should never break
             // batches, however materials can. We consider the material 
             // parameters to be part of the batch key here for that reason.
-            boost::hash_combine(key, HdShaderParam::ComputeHash(
-                                    drawItem->GetMaterial()->GetParams()));
+            boost::hash_combine(key, HdMaterialParam::ComputeHash(
+                            drawItem->GetMaterialShader()->GetParams()));
         }
 
         TF_DEBUG(HD_DRAW_BATCH).Msg("%lu (%lu)\n", 
@@ -226,7 +230,7 @@ HdStCommandBuffer::SyncDrawItemVisibility(unsigned visChangeCount)
         end = std::min(end*N, _drawItemInstances.size());
         size_t& count = visCounts.local();
         for (size_t i = start; i < end; ++i) {
-            HdDrawItem const* item = _drawItemInstances[i].GetDrawItem();
+            HdStDrawItem const* item = _drawItemInstances[i].GetDrawItem();
 
             bool visible = item->GetVisible();
             // DrawItemInstance->SetVisible is not only an inline function but
@@ -271,7 +275,7 @@ HdStCommandBuffer::FrustumCull(GfMatrix4d const &viewProjMatrix)
         {
             for(size_t i = begin; i < end; i++) {
                 HdStDrawItemInstance& itemInstance = (*drawItemInstances)[i];
-                HdDrawItem const* item = itemInstance.GetDrawItem();
+                HdStDrawItem const* item = itemInstance.GetDrawItem();
                 bool visible = item->GetVisible() && 
                     item->IntersectsViewVolume(viewProjMatrix);
                 if ((itemInstance.IsVisible() != visible) || 
