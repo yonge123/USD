@@ -59,11 +59,10 @@ pxr_library(hd
         extCompPrimvarBufferSource
         extComputation
         extComputationContext
-        geometricShader
-        glslProgram
-        glUtils
         instancer
         instanceRegistry
+        material
+        materialParam
         mesh
         meshTopology
         meshUtil
@@ -80,7 +79,6 @@ pxr_library(hd
         renderPassState
         repr
         resource
-        resourceBinder
         resourceGL
         resourceRegistry
         rprim
@@ -88,10 +86,6 @@ pxr_library(hd
         rprimSharedData
         sceneDelegate
         sceneExtCompInputSource
-        shader
-        shaderCode
-        shaderKey
-        shaderParam
         smoothNormals
         sortedIds                   
         sprim
