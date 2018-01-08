@@ -88,6 +88,7 @@ class RootDataModel(QtCore.QObject):
         else:
             return self._authoredSamples
 
+    @property
     def currentFrame(self):
         """Get a Usd.TimeCode object which represents the current frame being
         considered in Usdview."""
