@@ -23,17 +23,17 @@
 //
 #include "pxr/imaging/glf/glew.h"
 #include "pxr/imaging/hdSt/codeGen.h"
+#include "pxr/imaging/hdSt/geometricShader.h"
+#include "pxr/imaging/hdSt/glslProgram.h"
 
 #include "pxr/imaging/hd/binding.h"
-#include "pxr/imaging/hd/geometricShader.h"
-#include "pxr/imaging/hd/glslProgram.h"
-#include "pxr/imaging/hd/glUtils.h"
+#include "pxr/imaging/hdSt/glUtils.h"
 #include "pxr/imaging/hd/instanceRegistry.h"
 #include "pxr/imaging/hd/package.h"
 #include "pxr/imaging/hd/renderContextCaps.h"
-#include "pxr/imaging/hd/resourceBinder.h"
+#include "pxr/imaging/hdSt/resourceBinder.h"
 #include "pxr/imaging/hd/resourceRegistry.h"
-#include "pxr/imaging/hd/shaderCode.h"
+#include "pxr/imaging/hdSt/shaderCode.h"
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
@@ -78,14 +78,14 @@ TF_DEFINE_PRIVATE_TOKENS(
     (samplerBuffer)
 );
 
-HdSt_CodeGen::HdSt_CodeGen(Hd_GeometricShaderPtr const &geometricShader,
-                       HdShaderCodeSharedPtrVector const &shaders)
+HdSt_CodeGen::HdSt_CodeGen(HdSt_GeometricShaderPtr const &geometricShader,
+                       HdStShaderCodeSharedPtrVector const &shaders)
     : _geometricShader(geometricShader), _shaders(shaders)
 {
     TF_VERIFY(geometricShader);
 }
 
-HdSt_CodeGen::HdSt_CodeGen(HdShaderCodeSharedPtrVector const &shaders)
+HdSt_CodeGen::HdSt_CodeGen(HdStShaderCodeSharedPtrVector const &shaders)
     : _geometricShader(), _shaders(shaders)
 {
 }
@@ -98,7 +98,7 @@ HdSt_CodeGen::ComputeHash() const
 
     ID hash = _geometricShader ? _geometricShader->ComputeHash() : 0;
     boost::hash_combine(hash, _metaData.ComputeHash());
-    boost::hash_combine(hash, HdShaderCode::ComputeHash(_shaders));
+    boost::hash_combine(hash, HdStShaderCode::ComputeHash(_shaders));
 
     return hash;
 }
@@ -322,7 +322,7 @@ namespace {
     }
 }
 
-HdGLSLProgramSharedPtr
+HdStGLSLProgramSharedPtr
 HdSt_CodeGen::Compile()
 {
     HD_TRACE_FUNCTION();
@@ -330,8 +330,8 @@ HdSt_CodeGen::Compile()
 
     // create GLSL program.
 
-    HdGLSLProgramSharedPtr glslProgram(
-        new HdGLSLProgram(HdTokens->drawingShader));
+    HdStGLSLProgramSharedPtr glslProgram(
+        new HdStGLSLProgram(HdTokens->drawingShader));
 
     // initialize autogen source buckets
     _genCommon.str(""); _genVS.str(""); _genTCS.str(""); _genTES.str("");
@@ -412,7 +412,7 @@ HdSt_CodeGen::Compile()
     std::stringstream declarations;
     std::stringstream accessors;
     TF_FOR_ALL(it, _metaData.customInterleavedBindings) {
-        // note: _constantData has been sorted by offset in Hd_ResourceBinder.
+        // note: _constantData has been sorted by offset in HdSt_ResourceBinder.
         // XXX: not robust enough, should consider padding and layouting rules
         // to match with the logic in HdInterleavedMemoryManager if we
         // want to use a layouting policy other than default padding.
@@ -528,8 +528,8 @@ HdSt_CodeGen::Compile()
     // geometry shader plumbing
     switch(_geometricShader->GetPrimitiveType())
     {
-        case Hd_GeometricShader::PrimitiveType::PRIM_MESH_REFINED_QUADS:
-        case Hd_GeometricShader::PrimitiveType::PRIM_MESH_PATCHES:
+        case HdSt_GeometricShader::PrimitiveType::PRIM_MESH_REFINED_QUADS:
+        case HdSt_GeometricShader::PrimitiveType::PRIM_MESH_PATCHES:
         {
             // patch interpolation
             _procGS << "vec4 GetPatchCoord(int index);\n"
@@ -538,7 +538,7 @@ HdSt_CodeGen::Compile()
             break;            
         }
 
-        case Hd_GeometricShader::PrimitiveType::PRIM_MESH_COARSE_QUADS:
+        case HdSt_GeometricShader::PrimitiveType::PRIM_MESH_COARSE_QUADS:
         {
             // quad interpolation
             _procGS  << "void ProcessPrimVars(int index) {\n"
@@ -546,8 +546,8 @@ HdSt_CodeGen::Compile()
             break;            
         }
 
-        case Hd_GeometricShader::PrimitiveType::PRIM_MESH_COARSE_TRIANGLES:
-        case Hd_GeometricShader::PrimitiveType::PRIM_MESH_REFINED_TRIANGLES:
+        case HdSt_GeometricShader::PrimitiveType::PRIM_MESH_COARSE_TRIANGLES:
+        case HdSt_GeometricShader::PrimitiveType::PRIM_MESH_REFINED_TRIANGLES:
         {
             // barycentric interpolation
              _procGS  << "void ProcessPrimVars(int index) {\n"
@@ -606,7 +606,7 @@ HdSt_CodeGen::Compile()
 
     // other shaders (renderpass, lighting, surface) first
     TF_FOR_ALL(it, _shaders) {
-        HdShaderCodeSharedPtr const &shader = *it;
+        HdStShaderCodeSharedPtr const &shader = *it;
         if (hasVS)
             _genVS  << shader->GetSource(HdShaderTokens->vertexShader);
         if (hasTCS)
@@ -661,21 +661,21 @@ HdSt_CodeGen::Compile()
     if (hasVS) {
         _vsSource = _genCommon.str() + _genVS.str();
         if (!glslProgram->CompileShader(GL_VERTEX_SHADER, _vsSource)) {
-            return HdGLSLProgramSharedPtr();
+            return HdStGLSLProgramSharedPtr();
         }
         shaderCompiled = true;
     }
     if (hasFS) {
         _fsSource = _genCommon.str() + _genFS.str();
         if (!glslProgram->CompileShader(GL_FRAGMENT_SHADER, _fsSource)) {
-            return HdGLSLProgramSharedPtr();
+            return HdStGLSLProgramSharedPtr();
         }
         shaderCompiled = true;
     }
     if (hasTCS) {
         _tcsSource = _genCommon.str() + _genTCS.str();
         if (!glslProgram->CompileShader(GL_TESS_CONTROL_SHADER, _tcsSource)) {
-            return HdGLSLProgramSharedPtr();
+            return HdStGLSLProgramSharedPtr();
         }
         shaderCompiled = true;
     }
@@ -683,26 +683,26 @@ HdSt_CodeGen::Compile()
         _tesSource = _genCommon.str() + _genTES.str();
         if (!glslProgram->CompileShader(
                     GL_TESS_EVALUATION_SHADER, _tesSource)) {
-            return HdGLSLProgramSharedPtr();
+            return HdStGLSLProgramSharedPtr();
         }
         shaderCompiled = true;
     }
     if (hasGS) {
         _gsSource = _genCommon.str() + _genGS.str();
         if (!glslProgram->CompileShader(GL_GEOMETRY_SHADER, _gsSource)) {
-            return HdGLSLProgramSharedPtr();
+            return HdStGLSLProgramSharedPtr();
         }
         shaderCompiled = true;
     }
 
     if (!shaderCompiled) {
-        return HdGLSLProgramSharedPtr();
+        return HdStGLSLProgramSharedPtr();
     }
 
     return glslProgram;
 }
 
-HdGLSLProgramSharedPtr
+HdStGLSLProgramSharedPtr
 HdSt_CodeGen::CompileComputeProgram()
 {
     HD_TRACE_FUNCTION();
@@ -808,7 +808,7 @@ HdSt_CodeGen::CompileComputeProgram()
     
     // other shaders (renderpass, lighting, surface) first
     TF_FOR_ALL(it, _shaders) {
-        HdShaderCodeSharedPtr const &shader = *it;
+        HdStShaderCodeSharedPtr const &shader = *it;
         _genCS  << shader->GetSource(HdShaderTokens->computeShader);
     }
 
@@ -819,8 +819,8 @@ HdSt_CodeGen::CompileComputeProgram()
     _genCS << "}\n";
     
     // create GLSL program.
-    HdGLSLProgramSharedPtr glslProgram(
-        new HdGLSLProgram(HdTokens->computeShader));
+    HdStGLSLProgramSharedPtr glslProgram(
+        new HdStGLSLProgram(HdTokens->computeShader));
     
     // compile shaders
     {
@@ -833,11 +833,11 @@ HdSt_CodeGen::CompileComputeProgram()
             glCompileShader(shader);
 
             std::string logString;
-            HdGLUtils::GetShaderCompileStatus(shader, &logString);
+            HdStGLUtils::GetShaderCompileStatus(shader, &logString);
             TF_WARN("Failed to compile compute shader:\n%s\n",
                     logString.c_str());
             glDeleteShader(shader);
-            return HdGLSLProgramSharedPtr();
+            return HdStGLSLProgramSharedPtr();
         }
     }
     
@@ -948,7 +948,7 @@ static void _EmitDeclaration(std::stringstream &str,
 
 static void _EmitDeclaration(
     std::stringstream &str,
-    Hd_ResourceBinder::MetaData::BindingDeclaration const &bindingDeclaration,
+    HdSt_ResourceBinder::MetaData::BindingDeclaration const &bindingDeclaration,
     int arraySize=0)
 {
     _EmitDeclaration(str,
@@ -1447,7 +1447,7 @@ HdSt_CodeGen::_GenerateConstantPrimVar()
     std::stringstream declarations;
     std::stringstream accessors;
     TF_FOR_ALL (it, _metaData.constantData) {
-        // note: _constantData has been sorted by offset in Hd_ResourceBinder.
+        // note: _constantData has been sorted by offset in HdSt_ResourceBinder.
         // XXX: not robust enough, should consider padding and layouting rules
         // to match with the logic in HdInterleavedMemoryManager if we
         // want to use a layouting policy other than default padding.
@@ -1720,8 +1720,8 @@ HdSt_CodeGen::_GenerateElementPrimVar()
         else if (_geometricShader->IsPrimTypeMesh()) {
             // GetPatchParam, GetEdgeFlag
             switch (_geometricShader->GetPrimitiveType()) {
-                case Hd_GeometricShader::PrimitiveType::PRIM_MESH_REFINED_QUADS:
-                case Hd_GeometricShader::PrimitiveType::PRIM_MESH_REFINED_TRIANGLES:
+                case HdSt_GeometricShader::PrimitiveType::PRIM_MESH_REFINED_QUADS:
+                case HdSt_GeometricShader::PrimitiveType::PRIM_MESH_REFINED_TRIANGLES:
                 {
                     // refined quads or tris (loop subdiv)
                     accessors
@@ -1736,7 +1736,7 @@ HdSt_CodeGen::_GenerateElementPrimVar()
                     break;
                 }
 
-                case Hd_GeometricShader::PrimitiveType::PRIM_MESH_PATCHES:
+                case HdSt_GeometricShader::PrimitiveType::PRIM_MESH_PATCHES:
                 {
                     // refined patches (tessellated triangles)
                     accessors
@@ -1752,7 +1752,7 @@ HdSt_CodeGen::_GenerateElementPrimVar()
                     break;
                 }
 
-                case Hd_GeometricShader::PrimitiveType::PRIM_MESH_COARSE_QUADS:
+                case HdSt_GeometricShader::PrimitiveType::PRIM_MESH_COARSE_QUADS:
                 {
                     // coarse quads (for ptex)
                     // put ptexIndex into the first element of PatchParam.
@@ -1768,7 +1768,7 @@ HdSt_CodeGen::_GenerateElementPrimVar()
                     break;
                 }
 
-                case Hd_GeometricShader::PrimitiveType::PRIM_MESH_COARSE_TRIANGLES:
+                case HdSt_GeometricShader::PrimitiveType::PRIM_MESH_COARSE_TRIANGLES:
                 {
                     // coarse triangles                
                     // note that triangulated meshes don't have ptexIndex.
@@ -1788,7 +1788,7 @@ HdSt_CodeGen::_GenerateElementPrimVar()
 
                 default:
                 {
-                    TF_CODING_ERROR("Hd_GeometricShader::PrimitiveType %d is "
+                    TF_CODING_ERROR("HdSt_GeometricShader::PrimitiveType %d is "
                       "unexpected in _GenerateElementPrimVar().",
                       _geometricShader->GetPrimitiveType());
                 }
@@ -1829,7 +1829,7 @@ HdSt_CodeGen::_GenerateElementPrimVar()
                 << "}\n";
         }
         else {
-            TF_CODING_ERROR("Hd_GeometricShader::PrimitiveType %d is "
+            TF_CODING_ERROR("HdSt_GeometricShader::PrimitiveType %d is "
                   "unexpected in _GenerateElementPrimVar().",
                   _geometricShader->GetPrimitiveType());
         }
@@ -2044,9 +2044,9 @@ HdSt_CodeGen::_GenerateVertexPrimVar()
 
         switch(_geometricShader->GetPrimitiveType())
         {
-            case Hd_GeometricShader::PrimitiveType::PRIM_MESH_COARSE_QUADS:
-            case Hd_GeometricShader::PrimitiveType::PRIM_MESH_REFINED_QUADS:
-            case Hd_GeometricShader::PrimitiveType::PRIM_MESH_PATCHES:            
+            case HdSt_GeometricShader::PrimitiveType::PRIM_MESH_COARSE_QUADS:
+            case HdSt_GeometricShader::PrimitiveType::PRIM_MESH_REFINED_QUADS:
+            case HdSt_GeometricShader::PrimitiveType::PRIM_MESH_PATCHES:            
             {
                 // linear interpolation within a quad.
                 _procGS << "   outPrimVars." << name
@@ -2058,8 +2058,8 @@ HdSt_CodeGen::_GenerateVertexPrimVar()
                 break;
             }
 
-            case Hd_GeometricShader::PrimitiveType::PRIM_MESH_REFINED_TRIANGLES:
-            case Hd_GeometricShader::PrimitiveType::PRIM_MESH_COARSE_TRIANGLES:
+            case HdSt_GeometricShader::PrimitiveType::PRIM_MESH_REFINED_TRIANGLES:
+            case HdSt_GeometricShader::PrimitiveType::PRIM_MESH_COARSE_TRIANGLES:
             {
                 // barycentric interpolation within a triangle.
                 _procGS << "   outPrimVars." << name
@@ -2069,7 +2069,7 @@ HdSt_CodeGen::_GenerateVertexPrimVar()
                 break;  
             }
 
-            case Hd_GeometricShader::PrimitiveType::PRIM_POINTS:
+            case HdSt_GeometricShader::PrimitiveType::PRIM_POINTS:
             {
                 // do nothing. 
                 // e.g. if a prim's geomstyle is points and it has valid
@@ -2080,7 +2080,7 @@ HdSt_CodeGen::_GenerateVertexPrimVar()
 
             default:
                 TF_CODING_ERROR("Face varing bindings for unexpected for" 
-                                " Hd_GeometricShader::PrimitiveType %d", 
+                                " HdSt_GeometricShader::PrimitiveType %d", 
                                 _geometricShader->GetPrimitiveType());
         }
     }

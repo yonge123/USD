@@ -332,7 +332,6 @@ class AppController(QtCore.QObject):
     def _configurePlugins(self):
         pluginsLoaded = False
 
-        self._plugCtx = PlugContext(self)
         with Timer() as t:
             try:
                 from pixar import UsdviewPlug
@@ -380,8 +379,8 @@ class AppController(QtCore.QObject):
             self._interpreter = None
             self._parserData = parserData
             self._noRender = parserData.noRender
+            self._noPlugins = parserData.noPlugins
             self._unloaded = parserData.unloaded
-            self._currentFrame = Usd.TimeCode.Default()
             self._updateBlock = 0
             self._debug = os.getenv('USDVIEW_DEBUG', False)
             self._printTiming = parserData.timing or self._debug
@@ -393,7 +392,6 @@ class AppController(QtCore.QObject):
                 self._statusFileName = 'state.%s'%QT_BINDING
                 self._deprecatedStatusFileNames = ('state', '.usdviewrc')
             self._mallocTags = parserData.mallocTagStats
-            self._bboxCache = None
             self._complexity = parserData.complexity
 
             self._playing = False
@@ -529,6 +527,14 @@ class AppController(QtCore.QObject):
             # Create action groups
             self._ui.threePointLights = QtWidgets.QActionGroup(self)
             self._ui.colorGroup = QtWidgets.QActionGroup(self)
+
+            # This timer is used to coalesce the primView resizes
+            # in certain cases. e.g. When you
+            # deactivate/activate a prim.
+            self._primViewResizeTimer = QtCore.QTimer(self)
+            self._primViewResizeTimer.setInterval(0)
+            self._primViewResizeTimer.setSingleShot(True)
+            self._primViewResizeTimer.timeout.connect(self._resizePrimView)
 
             self._primViewResetTimer = QtCore.QTimer(self)
             self._primViewResetTimer.setInterval(250)
@@ -999,8 +1005,10 @@ class AppController(QtCore.QObject):
 
             self._setupDebugMenu()
 
-            # configure plugins
-            self._configurePlugins()
+            # Setup plug context and optionally load plugins
+            self._plugCtx = PlugContext(self)
+            if not self._noPlugins:
+                self._configurePlugins()
 
             # timer for slider. when user stops scrubbing for 0.5s, update stuff.
             self._sliderTimer = QtCore.QTimer(self)
@@ -1028,16 +1036,14 @@ class AppController(QtCore.QObject):
         QtWidgets.QApplication.restoreOverrideCursor()
 
     def _drawFirstImage(self):
-        # _resetView is what triggers the first image to be drawn, so time it
         if self._stageView:
             self._stageView.setUpdatesEnabled(True)
-        with BusyContext(), Timer() as t:
+        with BusyContext():
             try:
                 self._resetView(self._initialSelectPrim)
             except Exception:
                 pass
-        if self._printTiming and self._stageView:
-            t.PrintTime("create first image")
+            QtWidgets.QApplication.processEvents()
 
         # configure render plugins after stageView initialized its renderer.
         self._configureRendererPlugins()
@@ -1058,7 +1064,8 @@ class AppController(QtCore.QObject):
         with Timer() as t:
             if self._stageView:
                 self._stageView.setSelectedPrims(self._prunedCurrentPrims,
-                      self._currentFrame, resetCam=False, forceComputeBBox=True)
+                      self._rootDataModel.currentFrame, resetCam=False,
+                      forceComputeBBox=True)
             self._refreshVars()
         if self._printTiming:
             t.PrintTime("'%s'" % msg)
@@ -1241,8 +1248,11 @@ class AppController(QtCore.QObject):
             self._ui.rangeEnd.setText(str(self._timeSamples[-1]))
 
         if not resetStageDataOnly:
-            self._currentFrame = self._timeSamples[0] if self._hasTimeSamples else 0.0
-            self._ui.frameField.setText(str(self._currentFrame))
+            self._rootDataModel.currentFrame = (
+                Usd.TimeCode(self._timeSamples[0])
+                if self._hasTimeSamples else Usd.TimeCode(0.0))
+            self._ui.frameField.setText(
+                str(self._rootDataModel.currentFrame.GetValue()))
 
         if self._playbackAvailable:
             if not resetStageDataOnly:
@@ -1257,28 +1267,14 @@ class AppController(QtCore.QObject):
         # Need to refresh selected items to refresh prims/view to new stage
         self._itemSelectionChanged()
 
-    def _refreshBBoxCache(self, useExtentsHint):
-        # Unfortunate that we must blow the entire BBoxCache, but we have no
-        # other alternative, currently.
-        if self._bboxCache and self._bboxCache.GetUseExtentsHint() == useExtentsHint:
-            self._bboxCache.Clear()
-        else:
-            self._bboxCache = UsdGeom.BBoxCache(self._currentFrame,
-                                                StageView.DefaultDataModel.BBOXPURPOSES,
-                                                useExtentsHint)
-
     def _clearCaches(self, preserveCamera=False):
         """Clears value and computation caches maintained by the controller.
         Does NOT initiate any GUI updates"""
 
-        self._valueCache = dict()
         self._geomCounts = dict()
 
-        # create new xform, bounding box, and camera caches. If there was an
-        # instance of the cache before, this will effectively clear the
-        # cache.
-        self._xformCache = UsdGeom.XformCache(self._currentFrame)
-        self._refreshBBoxCache(self._ui.useExtentsHint.isChecked())
+        self._rootDataModel._clearCaches()
+
         self._refreshCameraListAndMenu(preserveCurrCamera = preserveCamera)
 
 
@@ -1377,6 +1373,18 @@ class AppController(QtCore.QObject):
         if self._stageView:
             self._stageView.setFocus(QtCore.Qt.TabFocusReason)
             self._stageView.rolloverPicking = self._rolloverPrimInfo
+
+    def _scheduleResizePrimView(self):
+        """ Schedules a resize of the primView widget.
+            This will call _resizePrimView when the timer expires
+            (uses timer coalescing to prevent redundant resizes from occurring).
+        """
+        self._primViewResizeTimer.start(0)
+
+    def _resizePrimView(self):
+        """ Used to coalesce excess calls to resizeColumnToContents.
+        """
+        self._ui.primView.resizeColumnToContents(0)
 
     # This appears to be "reasonably" performant in normal sized pose caches.
     # If it turns out to be too slow, or if we want to do a better job of
@@ -1489,14 +1497,6 @@ class AppController(QtCore.QObject):
                 self._adjustClippingDlg.show()
             else:
                 self._adjustClippingDlg.close()
-
-    @property
-    def xformCache(self):
-        return self._xformCache
-
-    @property
-    def bboxCache(self):
-        return self._bboxCache
 
     @property
     def cameraMaskColor(self):
@@ -1855,7 +1855,8 @@ class AppController(QtCore.QObject):
             self.setFrame(indexOfFrame, forceUpdate=True)
             self._ui.frameSlider.setValue(indexOfFrame)
 
-        self._ui.frameField.setText(str(self._currentFrame))
+        self._ui.frameField.setText(
+            str(self._rootDataModel.currentFrame.GetValue()))
 
     def _sliderMoved(self, value):
         self._ui.frameField.setText(str(self._timeSamples[value]))
@@ -2002,8 +2003,8 @@ class AppController(QtCore.QObject):
         if self._stageView:
             # Save all the pertinent attribute values (for _toggleFramedView)
             self._storeAndReturnViewState() # ignore return val - we're stomping it
-            self._stageView.setSelectedPrims(self._prunedCurrentPrims, self._currentFrame,
-                                     True, True) # compute bbox on frame selection
+            self._stageView.setSelectedPrims(self._prunedCurrentPrims,
+                self._rootDataModel.currentFrame, True, True) # compute bbox on frame selection
 
     def _toggleFramedView(self):
         if self._stageView:
@@ -2161,7 +2162,7 @@ class AppController(QtCore.QObject):
             else:
                 self._stageView.setCameraPrim(self._startingPrimCamera)
                 self._stageView.setSelectedPrims(self._prunedCurrentPrims,
-                                                 self._currentFrame)
+                    self._rootDataModel.currentFrame)
 
     def _changeRenderMode(self, mode):
         self._renderMode = str(mode.text())
@@ -2245,7 +2246,7 @@ class AppController(QtCore.QObject):
         self._showBBoxPlayback = state
 
     def _setUseExtentsHint(self, state):
-        self._refreshBBoxCache(state)
+        self._rootDataModel.useExtentsHint = state
 
         self._updateAttributeView()
 
@@ -2277,7 +2278,7 @@ class AppController(QtCore.QObject):
         """Recompute and hide/show Bounding Box."""
         if self._stageView:
             self._stageView.setSelectedPrims(self._currentPrims,
-                                             self._currentFrame,
+                                             self._rootDataModel.currentFrame,
                                              forceComputeBBox=True)
 
     def _toggleDisplayGuide(self, checked):
@@ -2285,7 +2286,8 @@ class AppController(QtCore.QObject):
         self._updateAttributeView()
         if self._stageView:
             self._stageView.updateBboxPurposes()
-            self._stageView.setSelectedPrims(self._prunedCurrentPrims, self._currentFrame)
+            self._stageView.setSelectedPrims(self._prunedCurrentPrims,
+                self._rootDataModel.currentFrame)
             self._stageView.update()
 
     def _toggleDisplayProxy(self, checked):
@@ -2293,7 +2295,8 @@ class AppController(QtCore.QObject):
         self._updateAttributeView()
         if self._stageView:
             self._stageView.updateBboxPurposes()
-            self._stageView.setSelectedPrims(self._prunedCurrentPrims, self._currentFrame)
+            self._stageView.setSelectedPrims(self._prunedCurrentPrims,
+                self._rootDataModel.currentFrame)
             self._stageView.update()
 
     def _toggleDisplayRender(self, checked):
@@ -2301,7 +2304,8 @@ class AppController(QtCore.QObject):
         self._updateAttributeView()
         if self._stageView:
             self._stageView.updateBboxPurposes()
-            self._stageView.setSelectedPrims(self._prunedCurrentPrims, self._currentFrame)
+            self._stageView.setSelectedPrims(self._prunedCurrentPrims,
+                self._rootDataModel.currentFrame)
             self._stageView.update()
 
     def _toggleDisplayCameraOracles(self, checked):
@@ -2676,13 +2680,16 @@ class AppController(QtCore.QObject):
 
     def _propertyViewContextMenu(self, point):
         item = self._ui.propertyView.itemAt(point)
-        self.contextMenu = AttributeViewContextMenu(self._mainWindow, item, self)
-        self.contextMenu.exec_(QtGui.QCursor.pos())
+        if item:
+            self.contextMenu = AttributeViewContextMenu(self._mainWindow, 
+                                                        item, self)
+            self.contextMenu.exec_(QtGui.QCursor.pos())
 
     def _layerStackContextMenu(self, point):
         item = self._ui.layerStackView.itemAt(point)
-        self.contextMenu = LayerStackContextMenu(self._mainWindow, item)
-        self.contextMenu.exec_(QtGui.QCursor.pos())
+        if item:
+            self.contextMenu = LayerStackContextMenu(self._mainWindow, item)
+            self.contextMenu.exec_(QtGui.QCursor.pos())
 
     def _compositionTreeContextMenu(self, point):
         item = self._ui.compositionTreeWidget.itemAt(point)
@@ -2725,7 +2732,7 @@ class AppController(QtCore.QObject):
             self._ui.primView.expandToDepth(depth-1)
             if changed:
                 # Resize column.
-                self._ui.primView.resizeColumnToContents(0)
+                self._scheduleResizePrimView()
 
                 # Start pushing prim data to the UI during idle cycles.
                 # Qt doesn't need the data unless the item is actually
@@ -2744,7 +2751,7 @@ class AppController(QtCore.QObject):
         """Signal handler for expanded(index), facilitates lazy tree population
         """
         self._populateChildren(self._ui.primView.itemFromIndex(index))
-        self._ui.primView.resizeColumnToContents(0)
+        self._scheduleResizePrimView()
 
     def _toggleShowInactivePrims(self, checked):
         self._showInactivePrims = checked
@@ -3070,8 +3077,8 @@ class AppController(QtCore.QObject):
             self._updateHUDPrimStats()
             self._updateHUDGeomCounts()
             # recompute bbox on prim change
-            self._stageView.setSelectedPrims(self._prunedCurrentPrims, self._currentFrame,
-                                          resetCam=False, forceComputeBBox=True)
+            self._stageView.setSelectedPrims(self._prunedCurrentPrims,
+                self._rootDataModel.currentFrame, resetCam=False, forceComputeBBox=True)
 
         # Clear out any property searches when the selected prim changes
         # We can't hold onto the resulting Qt Widgets, as they are ephemeral.
@@ -3131,11 +3138,11 @@ class AppController(QtCore.QObject):
         self.contextMenu.exec_(QtGui.QCursor.pos())
 
     def setFrame(self, frameIndex, forceUpdate=False):
-        frameAtStart = self._currentFrame
+        frameAtStart = self._rootDataModel.currentFrame
         self._playbackFrameIndex = frameIndex
 
         frame = self._timeSamples[int(frameIndex)]
-        if self._currentFrame != frame:
+        if self._rootDataModel.currentFrame.GetValue() != frame:
             minDist = 1.0e30
             closestFrame = None
             for t in self._timeSamples:
@@ -3147,15 +3154,16 @@ class AppController(QtCore.QObject):
             if closestFrame is None:
                 return
 
-            self._currentFrame = closestFrame
+            self._rootDataModel.currentFrame = Usd.TimeCode(closestFrame)
 
         # XXX Why do we *always* update the widget, but only
         # conditionally update?  All this function should do, after
         # computing a new frame number, is emit a signal that the
         # time has changed.  Future work.
-        self._ui.frameField.setText(str(round(self._currentFrame,2)))
+        self._ui.frameField.setText(
+            str(round(self._rootDataModel.currentFrame.GetValue(), ndigits=2)))
 
-        if self._currentFrame != frameAtStart or forceUpdate:
+        if (self._rootDataModel.currentFrame != frameAtStart) or forceUpdate:
             # do not update HUD/BBOX if scrubbing or playing
             updateUI = forceUpdate or not (self._playing or
                                           self._ui.frameSlider.isSliderDown())
@@ -3163,9 +3171,6 @@ class AppController(QtCore.QObject):
 
     def _updateOnFrameChange(self, refreshUI = True):
         """Called when the frame changed, updates the renderer and such"""
-        # set the xformCache and bboxCache's time to the new time
-        self._xformCache.SetTime(self._currentFrame)
-        self._bboxCache.SetTime(self._currentFrame)
 
         if refreshUI: # slow stuff that we do only when not playing
             # topology might have changed, recalculate
@@ -3184,10 +3189,12 @@ class AppController(QtCore.QObject):
         if self._stageView:
             # this is the part that renders
             if self._playing:
-                self._stageView.updateForPlayback(self._currentFrame,
-                                 self._selHighlightMode == SelectionHighlightModes.ALWAYS)
+                self._stageView.updateForPlayback(
+                    self._rootDataModel.currentFrame,
+                    self._selHighlightMode == SelectionHighlightModes.ALWAYS)
             else:
-                self._stageView.setSelectedPrims(self._currentPrims, self._currentFrame)
+                self._stageView.setSelectedPrims(self._currentPrims,
+                    self._rootDataModel.currentFrame)
 
     def saveFrame(self, fileName):
         if self._stageView:
@@ -3203,7 +3210,7 @@ class AppController(QtCore.QObject):
 
         prim = self._currentPrims[0]
 
-        composed, rels = _GetCustomAttributes(prim, self._bboxCache, self._xformCache)
+        composed, rels = _GetCustomAttributes(prim, self._rootDataModel)
 
         attrs = prim.GetAttributes() + rels
         def cmpFunc(attrA, attrB):
@@ -3224,7 +3231,7 @@ class AppController(QtCore.QObject):
         return attributeDict
 
     def _updateAttributeViewInternal(self):
-        frame = self._currentFrame
+        frame = self._rootDataModel.currentFrame
         treeWidget = self._ui.propertyView
 
         previousSelection = treeWidget.selectedItems()
@@ -3689,9 +3696,7 @@ class AppController(QtCore.QObject):
 
             if path.IsPropertyPath():
                 prop = obj.GetPrim().GetProperty(path.name)
-                frameTime = (self._currentFrame if self._currentFrame
-                                                else Usd.TimeCode.Default())
-                specs = prop.GetPropertyStack(frameTime)
+                specs = prop.GetPropertyStack(self._rootDataModel.currentFrame)
                 c3 = "Value" if (len(specs) == 0 or
                                  isinstance(specs[0], Sdf.AttributeSpec)) else "Target Paths"
                 tableWidget.setHorizontalHeaderItem(2,
@@ -3713,7 +3718,8 @@ class AppController(QtCore.QObject):
                 tableWidget.setItem(i, 1, pathItem)
 
                 if path.IsPropertyPath():
-                    valStr = GetShortString(spec, self._currentFrame)
+                    valStr = GetShortString(
+                        spec, self._rootDataModel.currentFrame)
                     ttStr = valStr
                     valueItem = QtWidgets.QTableWidgetItem(valStr)
                     sampleBased = (spec.HasInfo('timeSamples') and
@@ -3857,7 +3863,7 @@ class AppController(QtCore.QObject):
             return
 
         # we get multiple geom dicts, if we have multiple prims selected
-        geomDicts = [self._getGeomCounts(n, self._currentFrame)
+        geomDicts = [self._getGeomCounts(n, self._rootDataModel.currentFrame)
                      for n in self._prunedCurrentPrims]
 
         for key in (HUDEntries.CV, HUDEntries.VERT, HUDEntries.FACE):
@@ -4134,9 +4140,6 @@ class AppController(QtCore.QObject):
                 primNames.append(item.name)
             self.editComplete("Unloaded %s." % primNames)
 
-    def onCurrentFrameChanged(self, currentFrame):
-        self._ui.frameField.setText(str(currentFrame))
-
     def onStageViewMouseDrag(self):
         return
 
@@ -4279,7 +4282,8 @@ class AppController(QtCore.QObject):
             if ptBased:
                 # XXX WBN to not have to read points in to get array size
                 # XXX2 Should try to determine varying topology
-                points = ptBased.GetPointsAttr().Get(self._currentFrame)
+                points = ptBased.GetPointsAttr().Get(
+                    self._rootDataModel.currentFrame)
                 propertyStr += "<br> -- %d points" % len(points)
             mesh = UsdGeom.Mesh(prim)
             if mesh:
@@ -4287,7 +4291,8 @@ class AppController(QtCore.QObject):
                     mesh.GetSubdivisionSchemeAttr().Get()
             pi = UsdGeom.PointInstancer(prim)
             if pi:
-                indices = pi.GetProtoIndicesAttr().Get(self._currentFrame)
+                indices = pi.GetProtoIndicesAttr().Get(
+                    self._rootDataModel.currentFrame)
                 propertyStr += "<br> -- <em>%d instances</em>" % len(indices)
                 protos = pi.GetPrototypesRel().GetForwardedTargets()
                 propertyStr += "<br> -- <em>%d unique prototypes</em>" % len(protos)
@@ -4326,7 +4331,7 @@ class AppController(QtCore.QObject):
             elif instanceIndex != -1:
                 instanceStr = "<hr><b>Instance Index:</b> %d" % instanceIndex
                 instanceId = GetInstanceIdForIndex(prim, instanceIndex,
-                                                   self._currentFrame)
+                    self._rootDataModel.currentFrame)
                 if instanceId is not None:
                     instanceStr += "<br><b>Instance Id:</b> %d" % instanceId
 
