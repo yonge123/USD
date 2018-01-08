@@ -25,7 +25,7 @@
 //
 
 --- This is what an import might look like.
---- #import $TOOLS/hd/shaders/terminals.glslfx
+--- #import $TOOLS/hdSt/shaders/terminals.glslfx
 
 --- --------------------------------------------------------------------------
 -- glsl Fragment.CommonTerminals
@@ -128,6 +128,18 @@ vec4 _ShadingTerminal(vec4 Peye, vec3 Neye, vec4 color, vec4 patchCoord)
 vec4 _ShadingTerminal(vec4 Peye, vec3 Neye, vec4 color, vec4 patchCoord)
 {
     return color;
+}
+
+--- --------------------------------------------------------------------------
+-- glsl Fragment.HullColor
+
+vec4 _ShadingTerminal(vec4 Peye, vec3 Neye, vec4 color, vec4 patchCoord)
+{
+#if defined(HD_HAS_hullColor)
+    return HdGet_hullColor();
+#else
+    return vec4(vec3(0.006), 0.218);
+#endif
 }
 
 --- --------------------------------------------------------------------------
