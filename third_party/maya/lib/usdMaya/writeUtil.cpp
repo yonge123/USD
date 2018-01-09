@@ -71,60 +71,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-TF_REGISTRY_FUNCTION_WITH_TAG(PxrUsdMayaUserAttributeWriterRegistry, usdRi) {
-    PxrUsdMayaUserAttributeWriterRegistry::RegisterWriter("usdRi", [](
-        const MPlug& attrPlug,
-        const UsdPrim& usdPrim,
-        const std::string& attrName,
-        const std::string& nameSpace,
-        const bool translateMayaDoubleToUsdSinglePrecision) -> UsdAttribute {
-        UsdAttribute usdAttr;
-
-        if (!usdPrim) {
-            return usdAttr;
-        }
-
-        MObject attrObj(attrPlug.attribute());
-
-        TfToken riAttrNameToken(attrName);
-        if (riAttrNameToken.IsEmpty()) {
-            MGlobal::displayError(
-                TfStringPrintf("Invalid UsdRi attribute name '%s' for Maya plug '%s'",
-                                attrName.c_str(),
-                                attrPlug.name().asChar()).c_str());
-            return usdAttr;
-        }
-
-        UsdRiStatements riStatements(usdPrim);
-        if (!riStatements) {
-            return usdAttr;
-        }
-
-        // See if a UsdRi attribute with this name already exists. If so, return it.
-        // XXX: There isn't currently API for looking for a specific UsdRi attribute
-        // by name, so we have to get them all and then see if one matches.
-        const std::vector<UsdProperty>& riAttrs = riStatements.GetRiAttributes(nameSpace);
-        TF_FOR_ALL(iter, riAttrs) {
-            if (iter->GetBaseName() == riAttrNameToken) {
-                // Re-get the attribute from the prim so we can return it as a
-                // UsdAttribute rather than a UsdProperty.
-                return usdPrim.GetAttribute(iter->GetName());
-            }
-        }
-
-        const SdfValueTypeName& typeName =
-            PxrUsdMayaWriteUtil::GetUsdTypeName(attrPlug,
-                                                translateMayaDoubleToUsdSinglePrecision);
-        if (typeName) {
-            usdAttr = riStatements.CreateRiAttribute(riAttrNameToken,
-                                                        typeName.GetType(),
-                                                        nameSpace);
-        }
-
-        return usdAttr;
-    });
-}
-
 static
 bool
 _GetMayaAttributeNumericTypedAndUnitDataTypes(
