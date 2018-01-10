@@ -34,7 +34,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_REGISTRY_FUNCTION(TfType)
 {
     TfType::Define<UsdSkelSkeleton,
-        TfType::Bases< UsdTyped > >();
+        TfType::Bases< UsdGeomImageable > >();
     
     // Register the usd prim typename as an alias under UsdSchemaBase. This
     // enables one to call
@@ -148,7 +148,7 @@ UsdSkelSkeleton::GetSchemaAttributeNames(bool includeInherited)
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
-            UsdTyped::GetSchemaAttributeNames(true),
+            UsdGeomImageable::GetSchemaAttributeNames(true),
             localNames);
 
     if (includeInherited)
@@ -167,3 +167,26 @@ PXR_NAMESPACE_CLOSE_SCOPE
 // 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
+
+
+#include "pxr/usd/usdSkel/utils.h"
+
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+
+bool
+UsdSkelSkeleton::GetJointOrder(SdfPathVector* targets) const
+{
+    return UsdSkelGetJointOrder(GetJointsRel(), targets);
+}
+
+
+bool
+UsdSkelSkeleton::SetJointOrder(const SdfPathVector& targets) const
+{
+    return UsdSkelSetJointOrder(GetJointsRel(), targets);
+}
+
+
+PXR_NAMESPACE_CLOSE_SCOPE
