@@ -21,7 +21,7 @@ pxr_shared_library(${PXR_PACKAGE}
         ${HOUDINI_OP1_LIBRARY}
         ${HOUDINI_SIM_LIBRARY}
         ${HOUDINI_GEO_LIBRARY}
-        ${HOUDINI_RPM_LIBRARY}
+        ${HOUDINI_PRM_LIBRARY}
         ${HOUDINI_UT_LIBRARY}
 
     INCLUDE_DIRS
