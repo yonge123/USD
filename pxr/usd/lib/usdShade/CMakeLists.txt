@@ -89,18 +89,18 @@ pxr_install_test_dir(
     SRC testenv/testUsdShadeMaterialSpecializesBaseComposition
     DEST testUsdShadeMaterialSpecializesBaseComposition
 )
-pxr_register_test(testUsdShadeBinding
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdShadeBinding"
-    EXPECTED_RETURN_CODE 0
-)
+# pxr_register_test(testUsdShadeBinding
+#     PYTHON
+#     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdShadeBinding"
+#     EXPECTED_RETURN_CODE 0
+# )
 
-pxr_register_test(testUsdShadeMaterialAuthoring
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdShadeMaterialAuthoring"
-    DIFF_COMPARE char_shading.usda char_shading_compact.usda
-    EXPECTED_RETURN_CODE 0
-)
+# pxr_register_test(testUsdShadeMaterialAuthoring
+#     PYTHON
+#     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdShadeMaterialAuthoring"
+#     DIFF_COMPARE char_shading.usda char_shading_compact.usda
+#     EXPECTED_RETURN_CODE 0
+# )
 
 pxr_register_test(testUsdShadeMaterialFaceSet
     PYTHON
