@@ -344,7 +344,7 @@ UsdRiStatementsAPI::SetCoordinateSystem(const std::string &coordSysName)
                 if (TF_VERIFY(rel)) {
                     // Order should not matter, since these are a set,
                     // but historically we have appended these.
-                    rel.AddTarget(GetPrim().GetPath(), UsdListPositionBack);
+                    rel.AddTarget(GetPrim().GetPath());
                 }
                 break;
             }
