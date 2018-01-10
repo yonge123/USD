@@ -393,7 +393,7 @@ UsdRiStatementsAPI::SetScopedCoordinateSystem(const std::string &coordSysName)
                     currPrim.CreateRelationship(_tokens->modelScopedCoordsys,
                                                 /* custom = */ false);
                 if (TF_VERIFY(rel)) {
-                    rel.AddTarget(GetPrim().GetPath(), UsdListPositionBack);
+                    rel.AddTarget(GetPrim().GetPath());
                 }
                 break;
             }
