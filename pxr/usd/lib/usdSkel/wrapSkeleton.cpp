@@ -62,7 +62,7 @@ void wrapUsdSkelSkeleton()
 {
     typedef UsdSkelSkeleton This;
 
-    class_<This, bases<UsdTyped> >
+    class_<This, bases<UsdGeomImageable> >
         cls("Skeleton");
 
     cls
@@ -133,9 +133,32 @@ void wrapUsdSkelSkeleton()
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
+
 namespace {
 
-WRAP_CUSTOM {
+
+SdfPathVector
+_GetJointOrder(const UsdSkelSkeleton& self)
+{
+    // XXX: We're just matching the behavior of the wrapper for
+    // UsdRelationship::GetTargets(), but it should be noted that we won't
+    // be able to distinguish betwen the cases of targets that were
+    // explicitly authored to an emtpy list, and unauthored (or blocked)
+    // targets.
+    SdfPathVector targets;
+    self.GetJointOrder(&targets);
+    return targets;
 }
 
+
+WRAP_CUSTOM {
+    using This = UsdSkelSkeleton;
+
+    _class
+        .def("GetJointOrder", &_GetJointOrder)
+
+        .def("SetJointOrder", &This::SetJointOrder)
+        ;
 }
+
+} // namespace
