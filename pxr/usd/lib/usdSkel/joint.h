@@ -52,6 +52,9 @@ class SdfAssetPath;
 /// \class UsdSkelJoint
 ///
 /// Describes a skeleton joint.
+/// 
+/// See the extened \ref UsdSkel_Joint "Joint Schema" documentation for
+/// more information.
 ///
 class UsdSkelJoint : public UsdTyped
 {
