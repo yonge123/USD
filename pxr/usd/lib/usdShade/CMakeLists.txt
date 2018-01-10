@@ -89,11 +89,11 @@ pxr_install_test_dir(
     SRC testenv/testUsdShadeMaterialSpecializesBaseComposition
     DEST testUsdShadeMaterialSpecializesBaseComposition
 )
-# vpxr_register_test(testUsdShadeBinding
-# v    PYTHON
-# v    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdShadeBinding"
-# v    EXPECTED_RETURN_CODE 0
-# v)
+# pxr_register_test(testUsdShadeBinding
+#     PYTHON
+#     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdShadeBinding"
+#     EXPECTED_RETURN_CODE 0
+# )
 
 # pxr_register_test(testUsdShadeMaterialAuthoring
 #     PYTHON
