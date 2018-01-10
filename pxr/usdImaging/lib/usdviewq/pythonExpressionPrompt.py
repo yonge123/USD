@@ -125,7 +125,7 @@ class Myconsole(interpreterView):
                 "    stage: the current Usd.Stage object\n"
                 "    frame: the current frame for playback\n"
                 "    selectedPrims: a list of all selected prims\n"
-                "    selectedInstances: a dictionary of selected prims to selected indices within\n"
+                "    selectedInstances: a dictionary of selected prims to selected instances\n"
                 "    prim: the first selected prim in the selectedPrims list\n"
                 "    property: the currently selected usd property (if any)\n"
                 "    spec: the currently selected sdf spec in the composition tree (if any)\n"
@@ -159,10 +159,13 @@ class Myconsole(interpreterView):
         self.locals()['plugCtx'] = appController._plugCtx
         self.locals()['stage'] = appController._rootDataModel.stage
         self.locals()['frame'] = appController._rootDataModel.currentFrame
-        self.locals()['selectedPrims'] = list(appController._currentPrims)
-        self.locals()['selectedInstances'] = appController._stageView._selectedInstances.copy() if appController._stageView else None
-        self.locals()['prim'] = appController._currentPrims[0] if \
-                                        appController._currentPrims else None
-        self.locals()['property'] = appController._currentProp
+        self.locals()['selectedPrims'] = (
+            appController._selectionDataModel.getPrims())
+        self.locals()['selectedInstances'] = (
+            appController._selectionDataModel.getPrimInstances())
+        self.locals()['prim'] = (
+            appController._selectionDataModel.getFocusPrim())
+        self.locals()['property'] = (
+            appController._selectionDataModel.getFocusProp())
         self.locals()['spec'] = appController._currentSpec
         self.locals()['layer'] = appController._currentLayer
