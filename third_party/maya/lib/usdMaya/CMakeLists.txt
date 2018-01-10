@@ -682,10 +682,24 @@ pxr_install_test_dir(
     SRC testenv/UsdMayaUserExportedAttributesTest
     DEST testUsdMayaUserExportedAttributes
 )
-pxr_register_test(testUsdMayaUserExportedAttributes
-    CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdMayaUserExportedAttributes"
-    TESTENV testUsdMayaUserExportedAttributes
+# pxr_register_test(testUsdMayaUserExportedAttributes
+#     CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
+#     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdMayaUserExportedAttributes"
+#     TESTENV testUsdMayaUserExportedAttributes
+#     ENV
+#         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+#         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+#         MAYA_DISABLE_CIP=1
+#         MAYA_APP_DIR=./maya_profile
+# )
+
+pxr_install_test_dir(
+    SRC testenv/UsdGeomAttributeConvertersTest
+    DEST testUsdGeomAttributeConverters
+)
+pxr_register_test(testUsdGeomAttributeConverters
+    COMMAND "${MAYA_BASE_DIR}/bin/mayapy ${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomAttributeConverters"
+    TESTENV testUsdGeomAttributeConverters
     ENV
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
