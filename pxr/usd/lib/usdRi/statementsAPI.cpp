@@ -342,6 +342,8 @@ UsdRiStatementsAPI::SetCoordinateSystem(const std::string &coordSysName)
                     currPrim.CreateRelationship(_tokens->modelCoordsys,
                                                 /* custom = */ false);
                 if (TF_VERIFY(rel)) {
+                    // Order should not matter, since these are a set,
+                    // but historically we have appended these.
                     rel.AddTarget(GetPrim().GetPath());
                 }
                 break;
