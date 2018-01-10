@@ -764,8 +764,12 @@ class AppController(QtCore.QObject):
             self._ui.currentPathWidget.editingFinished.connect(
                 self._currentPathChanged)
 
-            self._ui.primView.selectionModel().selectionChanged.connect(
-                self._selectionChanged)
+            # XXX:
+            # To avoid PYSIDE-79 (https://bugreports.qt.io/browse/PYSIDE-79)
+            # with Qt4/PySide, we must hold the prim view's selectionModel
+            # in a local variable before connecting its signals.
+            primViewSelModel = self._ui.primView.selectionModel()
+            primViewSelModel.selectionChanged.connect(self._selectionChanged)
 
             self._ui.primView.itemClicked.connect(self._itemClicked)
 
@@ -1110,8 +1114,9 @@ class AppController(QtCore.QObject):
 
     def _openStage(self, usdFilePath, populationMaskPaths):
         Ar.GetResolver().ConfigureResolverForAsset(usdFilePath)
+        fullAssetPath = Ar.GetResolver().Resolve(usdFilePath)
         self._pathResolverContext = \
-            Ar.GetResolver().CreateDefaultContextForAsset(usdFilePath)
+            Ar.GetResolver().CreateDefaultContextForAsset(fullAssetPath)
 
         def _GetFormattedError(reasons=[]):
             err = ("Error: Unable to open stage '{0}'\n".format(usdFilePath))
@@ -3230,10 +3235,18 @@ class AppController(QtCore.QObject):
         if self._stageView:
             # this is the part that renders
             if self._playing:
-                self._stageView.updateForPlayback(
-                    self._rootDataModel.currentFrame,
+                showHighlights = (
                     self._selHighlightMode == SelectionHighlightModes.ALWAYS)
+                if showHighlights:
+                    # We don't want to resend the selection to the renderer
+                    # every frame during playback unless we are actually going
+                    # to see the selection (which is only when highlight mode is
+                    # ALWAYS).
+                    self._stageView.updateSelection()
+                self._stageView.updateForPlayback(
+                    self._rootDataModel.currentFrame, showHighlights)
             else:
+                self._stageView.updateSelection()
                 self._stageView.updateView()
 
     def saveFrame(self, fileName):
@@ -4201,19 +4214,26 @@ class AppController(QtCore.QObject):
                     if self._pickMode != PickModes.INSTANCES:
                         instanceIndex = ALL_INSTANCES
 
+                    instance = instanceIndex
+                    if instanceIndex != ALL_INSTANCES:
+                        instanceId = GetInstanceIdForIndex(prim, instanceIndex,
+                            self._rootDataModel.currentFrame)
+                        if instanceId is not None:
+                            instance = instanceId
+
                     if shiftPressed:
                         # Clicking prim while holding shift adds it to the
                         # selection.
-                        self._selectionDataModel.addPrim(prim, instanceIndex)
+                        self._selectionDataModel.addPrim(prim, instance)
                     elif ctrlPressed:
                         # Clicking prim while holding ctrl toggles it in the
                         # selection.
-                        self._selectionDataModel.togglePrim(prim, instanceIndex)
+                        self._selectionDataModel.togglePrim(prim, instance)
                     else:
                         # Clicking prim with no modifiers sets it as the
                         # selection.
                         self._selectionDataModel.switchToPrimPath(
-                            prim.GetPath(), instanceIndex)
+                            prim.GetPath(), instance)
 
                 elif not shiftPressed and not ctrlPressed:
                     # Clicking the background with no modifiers clears the
