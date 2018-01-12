@@ -34,6 +34,7 @@
 #include "pxr/base/tf/fileUtils.h"
 #include "pxr/base/tf/hash.h"
 #include "pxr/base/tf/hashset.h"
+#include "pxr/base/tf/mallocTag.h"
 #include "pxr/base/tf/pathUtils.h"
 #include "pxr/base/tf/pyLock.h"
 #include "pxr/base/tf/scopeDescription.h"
@@ -244,6 +245,9 @@ PlugPlugin::GetDependencies()
 bool
 PlugPlugin::_Load()
 {
+    TfAutoMallocTag2 tag("PlugPlugin::_Load", 
+                         TfStringPrintf("Load %s", _name.c_str()));
+    
     TRACE_FUNCTION();
     TF_DESCRIBE_SCOPE("Loading plugin '%s'", TfGetBaseName(_name).c_str());
     TF_DEBUG(PLUG_LOAD).Msg("Loading plugin '%s'.\n", _name.c_str());
