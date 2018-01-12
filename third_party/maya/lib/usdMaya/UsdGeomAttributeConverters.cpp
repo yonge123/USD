@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Pixar
+// Copyright 2018 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -39,10 +39,10 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
-    (USDGeom_purpose)
+    (USD_purpose)
 );
 
-// USDGeom_purpose <-> UsdGeomImageable.GetPurposeAttr()
+// USD_purpose <-> UsdGeomImageable.GetPurposeAttr()
 TF_REGISTRY_FUNCTION(AttributeConverterRegistry) {
     FunctionalAttributeConverter* converter = new FunctionalAttributeConverter(
         [](const MFnDependencyNode& srcNode, UsdPrim& destPrim,
@@ -50,7 +50,7 @@ TF_REGISTRY_FUNCTION(AttributeConverterRegistry) {
             if (!destPrim.IsA<UsdGeomImageable>()) { return true; }
             MString purpose;
             if (PxrUsdMayaUtil::getPlugValue(srcNode,
-                        _tokens->USDGeom_purpose.GetText(), &purpose)) {
+                        _tokens->USD_purpose.GetText(), &purpose)) {
                 UsdGeomImageable imageable(destPrim);
                 if (imageable) {
                     TfToken purposeToken(purpose.asChar());
@@ -69,10 +69,10 @@ TF_REGISTRY_FUNCTION(AttributeConverterRegistry) {
             TfToken purpose;
             if (purposeAttr.Get(&purpose)) {
                 PxrUsdMayaUtil::createStringAttribute(destNode,
-                        _tokens->USDGeom_purpose.GetText());
+                        _tokens->USD_purpose.GetText());
                 MString purposeString(purpose.GetText());
                 PxrUsdMayaUtil::setPlugValue(destNode,
-                        _tokens->USDGeom_purpose.GetText(), purposeString);
+                        _tokens->USD_purpose.GetText(), purposeString);
             }
             return true;
         }

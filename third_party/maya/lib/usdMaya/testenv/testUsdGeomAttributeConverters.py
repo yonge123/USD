@@ -1,6 +1,6 @@
 #!/pxrpythonsubst
 #
-# Copyright 2016 Pixar
+# Copyright 2018 Pixar
 #
 # Licensed under the Apache License, Version 2.0 (the "Apache License")
 # with the following modification; you may not use this file except in
@@ -31,7 +31,7 @@ import unittest
 from pxr import Usd, UsdGeom
 
 
-class testUsdMetadataAttributeConverters(unittest.TestCase):
+class testUsdGeomAttributeConverters(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
@@ -47,16 +47,16 @@ class testUsdMetadataAttributeConverters(unittest.TestCase):
 
     def testImport(self):
         """
-        Tests that the built-in metadata attribute converters can import
-        hidden, instanceable, and kind metadata properly.
+        Tests that the built-in geom attribute converter can import
+        the purpose attribute properly.
         """
         # Testing for the different purpose attributes
-        self.assertEqual(cmds.getAttr('pCube1.USDGeom_purpose'), 'default')
-        self.assertEqual(cmds.getAttr('pCube2.USDGeom_purpose'), 'render')
-        self.assertEqual(cmds.getAttr('pCube3.USDGeom_purpose'), 'proxy')
+        self.assertEqual(cmds.getAttr('pCube1.USD_purpose'), 'default')
+        self.assertEqual(cmds.getAttr('pCube2.USD_purpose'), 'render')
+        self.assertEqual(cmds.getAttr('pCube3.USD_purpose'), 'proxy')
 
         # pCube4 does not have a purpose attribute
-        self.assertEqual(cmds.objExists('pCube4.USDGeom_purpose'), False)
+        self.assertFalse(cmds.objExists('pCube4.USD_purpose'))
     
     def testExport(self):
         """
@@ -77,7 +77,7 @@ class testUsdMetadataAttributeConverters(unittest.TestCase):
 
         # Testing that there is no authored attribute
         geom4 = UsdGeom.Imageable(newUsdStage.GetPrimAtPath('/World/pCube4'))
-        self.assertEqual(geom4.GetPurposeAttr().HasAuthoredValueOpinion(), False)
+        self.assertFalse(geom4.GetPurposeAttr().HasAuthoredValueOpinion())
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
