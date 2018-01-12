@@ -39,7 +39,7 @@ from pxr import UsdImagingGL
 from pxr import CameraUtil
 
 from common import (RenderModes, ShadedRenderModes, Timer,
-    GetInstanceIndicesForIds)
+    GetInstanceIndicesForIds, SelectionHighlightModes)
 from rootDataModel import RootDataModel
 from selectionDataModel import ALL_INSTANCES, SelectionDataModel
 
@@ -1260,14 +1260,6 @@ class StageView(QtOpenGL.QGLWidget):
         def highlightColor(self):
             return (1.0,1.0,0.0,0.8) # Yellow
 
-        @property
-        def drawSelHighlights(self):
-            return self._defaultDrawSelHighlights
-
-        @drawSelHighlights.setter
-        def drawSelHighlights(self, value):
-            self._defaultDrawSelHighlights = value
-
     ###########
     # Signals #
     ###########
@@ -1921,17 +1913,13 @@ class StageView(QtOpenGL.QGLWidget):
         """We override this virtual so that we can make it a no-op during
         playback.  The client driving playback at a particular rate should
         instead call updateForPlayback() to image the next frame."""
-        if not self._dataModel.playing:
+        if not self._rootDataModel.playing:
             super(StageView, self).updateGL()
 
-    def updateForPlayback(self, currentTime, showHighlights):
+    def updateForPlayback(self):
         """If playing, update the GL canvas.  Otherwise a no-op"""
-        if self._dataModel.playing:
-            self._rootDataModel.currentFrame = currentTime
-            drawHighlights = self._dataModel.drawSelHighlights
-            self._dataModel.drawSelHighlights = showHighlights
+        if self._rootDataModel.playing:
             super(StageView, self).updateGL()
-            self._dataModel.drawSelHighlights = drawHighlights
 
     def computeGfCameraForCurrentCameraPrim(self):
         if self._cameraPrim and self._cameraPrim.IsActive():
@@ -2232,8 +2220,20 @@ class StageView(QtOpenGL.QGLWidget):
                 GL.glDepthFunc(GL.GL_LEQUAL)
                 GL.glClear(GL.GL_COLOR_BUFFER_BIT)
 
-            self.renderSinglePass(self._renderModeDict[self._dataModel.renderMode],
-                                  self._dataModel.drawSelHighlights)
+            highlightMode = self._dataModel.selHighlightMode
+            if self._rootDataModel.playing:
+                # Highlight mode must be ALWAYS to draw highlights during playback.
+                drawSelHighlights = (
+                    highlightMode == SelectionHighlightModes.ALWAYS)
+            else:
+                # Highlight mode can be ONLY_WHEN_PAUSED or ALWAYS to draw
+                # highlights when paused.
+                drawSelHighlights = (
+                    highlightMode != SelectionHighlightModes.NEVER)
+
+            self.renderSinglePass(
+                self._renderModeDict[self._dataModel.renderMode],
+                drawSelHighlights)
 
             self.DrawAxis(viewProjectionMatrix)
 
@@ -2245,7 +2245,7 @@ class StageView(QtOpenGL.QGLWidget):
                 self.DrawCameraGuides(viewProjectionMatrix)
 
             if self._dataModel.showBBoxes and\
-                    (self._dataModel.showBBoxPlayback or not self._dataModel.playing):
+                    (self._dataModel.showBBoxPlayback or not self._rootDataModel.playing):
                 self.DrawBBox(viewProjectionMatrix)
         else:
             GL.glClear(GL.GL_COLOR_BUFFER_BIT)
@@ -2287,7 +2287,7 @@ class StageView(QtOpenGL.QGLWidget):
 
         GL.glDisable(GL_FRAMEBUFFER_SRGB_EXT)
 
-        if (not self._dataModel.playing) & (not renderer.IsConverged()):
+        if (not self._rootDataModel.playing) & (not renderer.IsConverged()):
             QtCore.QTimer.singleShot(5, self.update)
 
     def drawHUD(self, renderer):
@@ -2303,7 +2303,7 @@ class StageView(QtOpenGL.QGLWidget):
         col = Gf.ConvertDisplayToLinear(Gf.Vec3f(.733,.604,.333))
 
         # the subtree info does not update while animating, grey it out
-        if not self._dataModel.playing:
+        if not self._rootDataModel.playing:
             subtreeCol = col
         else:
             subtreeCol = Gf.ConvertDisplayToLinear(Gf.Vec3f(.6,.6,.6))
