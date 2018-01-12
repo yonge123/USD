@@ -106,6 +106,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         self._displayProxy = self.stateProperty("displayProxy", default=True)
         self._displayRender = self.stateProperty("displayRender", default=False)
         self._displayPrimId = self.stateProperty("displayPrimId", default=False)
+        self._displayImagePlanes = self.stateProperty("displayImagePlanes", default=True)
         self._enableHardwareShading = self.stateProperty("enableHardwareShading", default=True)
         self._cullBackfaces = self.stateProperty("cullBackfaces", default=False)
         self._showInactivePrims = self.stateProperty("showInactivePrims", default=True)
@@ -154,6 +155,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         state["displayProxy"] = self._displayProxy
         state["displayRender"] = self._displayRender
         state["displayPrimId"] = self._displayPrimId
+        state["displayImagePlanes"] = self._displayImagePlanes
         state["enableHardwareShading"] = self._enableHardwareShading
         state["cullBackfaces"] = self._cullBackfaces
         state["showInactivePrims"] = self._showInactivePrims
@@ -319,6 +321,14 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
     @displayPrimId.setter
     def displayPrimId(self, value):
         self._displayPrimId = value
+
+    @property
+    def displayImagePlanes(self):
+        return self._displayImagePlanes
+
+    @displayImagePlanes.setter
+    def displayImagePlanes(self, value):
+        self._displayImagePlanes = value
 
     @property
     def enableHardwareShading(self):
