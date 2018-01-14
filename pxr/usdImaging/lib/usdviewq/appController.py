@@ -1789,6 +1789,7 @@ class AppController(QtCore.QObject):
         self._ui.actionEnable_Hardware_Shading.setChecked(self._viewSettingsDataModel.enableHardwareShading)
 
         self._ui.actionCull_Backfaces.setChecked(self._viewSettingsDataModel.cullBackfaces)
+        self._ui.actionDisplay_Image_Planes.setChecked(self._viewSettingsDataModel.displayImagePlanes)
 
         self._ui.actionCameraMask_Full.setChecked(self._viewSettingsDataModel.cameraMaskMode == CameraMaskModes.FULL)
         self._ui.actionCameraMask_Partial.setChecked(self._viewSettingsDataModel.cameraMaskMode == CameraMaskModes.PARTIAL)
@@ -2054,6 +2055,7 @@ class AppController(QtCore.QObject):
     def _toggleCullBackfaces(self, checked):
         self._viewSettingsDataModel.cullBackfaces = checked
         if self._stageView:
+            self._stageView.updateView()
             self._stageView.update()
 
     def _showInterpreter(self):
