@@ -82,6 +82,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         self._defaultMaterialAmbient = self.stateProperty("defaultMaterialAmbient", default=DEFAULT_AMBIENT)
         self._defaultMaterialSpecular = self.stateProperty("defaultMaterialSpecular", default=DEFAULT_SPECULAR)
         self._redrawOnScrub = self.stateProperty("redrawOnScrub", default=True)
+        self._authoredStepsOnly = self.stateProperty("authoredStepsOnly", default=True)
         self._renderMode = self.stateProperty("renderMode", default=RenderModes.SMOOTH_SHADED)
         self._pickMode = self.stateProperty("pickMode", default=PickModes.PRIMS)
 
@@ -138,6 +139,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         state["defaultMaterialAmbient"] = self._defaultMaterialAmbient
         state["defaultMaterialSpecular"] = self._defaultMaterialSpecular
         state["redrawOnScrub"] = self._redrawOnScrub
+        state["authoredStepsOnly"] = self._authoredStepsOnly
         state["renderMode"] = self._renderMode
         state["pickMode"] = self._pickMode
         state["selectionHighlightMode"] = self._selHighlightMode
@@ -543,6 +545,14 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
     @redrawOnScrub.setter
     def redrawOnScrub(self, value):
         self._redrawOnScrub = value
+
+    @property
+    def authoredStepsOnly(self):
+        return self._authoredStepsOnly
+
+    @authoredStepsOnly.setter
+    def authoredStepsOnly(self, value):
+        self._authoredStepsOnly = value
 
     @property
     def freeCamera(self):
