@@ -75,6 +75,10 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
 }
 
 MayaImagePlaneWriter::~MayaImagePlaneWriter() {
+}
+
+// virtual override
+void MayaImagePlaneWriter::postExport() {
     UsdGeomImagePlane primSchema(mUsdPrim);
 
     if (primSchema) {

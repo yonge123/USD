@@ -16,7 +16,8 @@ class MayaImagePlaneWriter : public MayaPrimWriter {
 public:
     MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, usdWriteJobCtx& job);
     virtual ~MayaImagePlaneWriter();
-    
+
+    virtual void postExport() override;    
     virtual void write(const UsdTimeCode& usdTime) override;
     virtual bool isShapeAnimated() const override;
 
