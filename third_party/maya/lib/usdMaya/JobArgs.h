@@ -69,6 +69,8 @@ struct JobExportArgs
     bool exportInstances;
 
     bool exportAnimation;
+    bool exportAsClip;
+    UsdTimeCode clipStartTime;
     bool eulerFilter;
     bool excludeInvisible;
     bool exportDefaultCameras;
