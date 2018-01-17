@@ -23,15 +23,15 @@
 //
 #include "pxr/imaging/glf/glew.h"
 
+#include "pxr/imaging/hdSt/bufferArrayRangeGL.h"
+#include "pxr/imaging/hdSt/bufferResourceGL.h"
+#include "pxr/imaging/hdSt/glslProgram.h"
+#include "pxr/imaging/hdSt/renderContextCaps.h"
+#include "pxr/imaging/hdSt/resourceRegistry.h"
 #include "pxr/imaging/hdSt/smoothNormals.h"
+#include "pxr/imaging/hdSt/tokens.h"
 
-#include "pxr/imaging/hd/bufferArrayRangeGL.h"
-#include "pxr/imaging/hd/bufferResourceGL.h"
-#include "pxr/imaging/hd/glslProgram.h"
 #include "pxr/imaging/hd/perfLog.h"
-#include "pxr/imaging/hd/renderContextCaps.h"
-#include "pxr/imaging/hd/resourceRegistry.h"
-#include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/vertexAdjacency.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
@@ -84,43 +84,44 @@ HdSt_SmoothNormalsComputationGPU::Execute(
         _adjacency->GetAdjacencyRange();
     TF_VERIFY(adjacencyRange_);
 
-    HdBufferArrayRangeGLSharedPtr adjacencyRange =
-        boost::static_pointer_cast<HdBufferArrayRangeGL> (adjacencyRange_);
+    HdStBufferArrayRangeGLSharedPtr adjacencyRange =
+        boost::static_pointer_cast<HdStBufferArrayRangeGL> (adjacencyRange_);
 
     // select shader by datatype
     TfToken shaderToken;
     if (_srcDataType == GL_FLOAT) {
         if (_dstDataType == GL_FLOAT) {
-            shaderToken = HdGLSLProgramTokens->smoothNormalsFloatToFloat;
+            shaderToken = HdStGLSLProgramTokens->smoothNormalsFloatToFloat;
         } else if (_dstDataType == GL_DOUBLE) {
-            shaderToken = HdGLSLProgramTokens->smoothNormalsFloatToDouble;
+            shaderToken = HdStGLSLProgramTokens->smoothNormalsFloatToDouble;
         } else if (_dstDataType == GL_INT_2_10_10_10_REV) {
-            shaderToken = HdGLSLProgramTokens->smoothNormalsFloatToPacked;
+            shaderToken = HdStGLSLProgramTokens->smoothNormalsFloatToPacked;
         }
     } else if (_srcDataType == GL_DOUBLE) {
         if (_dstDataType == GL_FLOAT) {
-            shaderToken = HdGLSLProgramTokens->smoothNormalsDoubleToFloat;
+            shaderToken = HdStGLSLProgramTokens->smoothNormalsDoubleToFloat;
         } else if (_dstDataType == GL_DOUBLE) {
-            shaderToken = HdGLSLProgramTokens->smoothNormalsDoubleToDouble;
+            shaderToken = HdStGLSLProgramTokens->smoothNormalsDoubleToDouble;
         } else if (_dstDataType == GL_INT_2_10_10_10_REV) {
-            shaderToken = HdGLSLProgramTokens->smoothNormalsDoubleToPacked;
+            shaderToken = HdStGLSLProgramTokens->smoothNormalsDoubleToPacked;
         }
     }
     if (!TF_VERIFY(!shaderToken.IsEmpty())) return;
 
-    HdGLSLProgramSharedPtr computeProgram
-        = HdGLSLProgram::GetComputeProgram(shaderToken, resourceRegistry);
+    HdStGLSLProgramSharedPtr computeProgram
+        = HdStGLSLProgram::GetComputeProgram(shaderToken,
+            static_cast<HdStResourceRegistry*>(resourceRegistry));
     if (!computeProgram) return;
 
     GLuint program = computeProgram->GetProgram().GetId();
 
-    HdBufferArrayRangeGLSharedPtr range =
-        boost::static_pointer_cast<HdBufferArrayRangeGL> (range_);
+    HdStBufferArrayRangeGLSharedPtr range =
+        boost::static_pointer_cast<HdStBufferArrayRangeGL> (range_);
 
     // buffer resources for GPU computation
-    HdBufferResourceGLSharedPtr points = range->GetResource(_srcName);
-    HdBufferResourceGLSharedPtr normals = range->GetResource(_dstName);
-    HdBufferResourceGLSharedPtr adjacency = adjacencyRange->GetResource();
+    HdStBufferResourceGLSharedPtr points = range->GetResource(_srcName);
+    HdStBufferResourceGLSharedPtr normals = range->GetResource(_dstName);
+    HdStBufferResourceGLSharedPtr adjacency = adjacencyRange->GetResource();
 
     // prepare uniform buffer for GPU computation
     struct Uniform {
@@ -161,7 +162,7 @@ HdSt_SmoothNormalsComputationGPU::Execute(
 
     // transfer uniform buffer
     GLuint ubo = computeProgram->GetGlobalUniformBuffer().GetId();
-    HdRenderContextCaps const &caps = HdRenderContextCaps::GetInstance();
+    HdStRenderContextCaps const &caps = HdStRenderContextCaps::GetInstance();
     // XXX: workaround for 319.xx driver bug of glNamedBufferDataEXT on UBO
     // XXX: move this workaround to renderContextCaps
     if (false && caps.directStateAccessEnabled) {

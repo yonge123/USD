@@ -23,10 +23,7 @@
 //
 #include "pxr/imaging/hd/sceneDelegate.h"
 
-#include "pxr/imaging/glf/glslfx.h"
-
 #include "pxr/imaging/hd/tokens.h"
-#include "pxr/imaging/hd/package.h"
 
 #include "pxr/imaging/pxOsd/subdivTags.h"
 
@@ -210,31 +207,31 @@ HdSceneDelegate::GetPathForInstanceIndex(const SdfPath &protoPrimPath,
 
 /*virtual*/
 std::string
-HdSceneDelegate::GetSurfaceShaderSource(SdfPath const &shaderId)
+HdSceneDelegate::GetSurfaceShaderSource(SdfPath const &materialId)
 {
     return std::string("");
 }
 
 /*virtual*/
 std::string
-HdSceneDelegate::GetDisplacementShaderSource(SdfPath const &shaderId)
+HdSceneDelegate::GetDisplacementShaderSource(SdfPath const &materialId)
 {
     return std::string("");
 }
 
 /*virtual*/
 VtValue
-HdSceneDelegate::GetSurfaceShaderParamValue(SdfPath const &shaderId, 
-                              TfToken const &paramName)
+HdSceneDelegate::GetMaterialParamValue(SdfPath const &materialId, 
+                                       TfToken const &paramName)
 {
     return VtValue();
 }
 
 /*virtual*/
-HdShaderParamVector
-HdSceneDelegate::GetSurfaceShaderParams(SdfPath const &shaderId)
+HdMaterialParamVector
+HdSceneDelegate::GetMaterialParams(SdfPath const &materialId)
 {
-    return HdShaderParamVector();
+    return HdMaterialParamVector();
 }
 
 // -----------------------------------------------------------------------//
@@ -275,6 +272,12 @@ VtValue
 HdSceneDelegate::GetMaterialResource(SdfPath const &materialId)
 {
     return VtValue();
+}
+
+TfTokenVector 
+HdSceneDelegate::GetMaterialPrimvars(SdfPath const &materialId)
+{
+    return TfTokenVector();
 }
 
 // -----------------------------------------------------------------------//

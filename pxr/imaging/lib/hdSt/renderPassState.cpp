@@ -23,17 +23,16 @@
 //
 #include "pxr/imaging/glf/glew.h"
 
+#include "pxr/imaging/hdSt/bufferArrayRangeGL.h"
+#include "pxr/imaging/hdSt/drawItem.h"
 #include "pxr/imaging/hdSt/fallbackLightingShader.h"
-#include "pxr/imaging/hdSt/renderPassState.h"
 #include "pxr/imaging/hdSt/renderPassShader.h"
+#include "pxr/imaging/hdSt/renderPassState.h"
+#include "pxr/imaging/hdSt/shaderCode.h"
 
-#include "pxr/imaging/hd/bufferArrayRangeGL.h"
 #include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/imaging/hd/conversions.h"
-#include "pxr/imaging/hd/drawItem.h"
-#include "pxr/imaging/hd/glslProgram.h"
 #include "pxr/imaging/hd/resourceRegistry.h"
-#include "pxr/imaging/hd/shaderCode.h"
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
@@ -118,8 +117,8 @@ HdStRenderPassState::Sync(HdResourceRegistrySharedPtr const &resourceRegistry)
         _renderPassStateBar = resourceRegistry->AllocateUniformBufferArrayRange(
             HdTokens->drawingShader, bufferSpecs);
 
-        HdBufferArrayRangeGLSharedPtr _renderPassStateBar_ =
-            boost::static_pointer_cast<HdBufferArrayRangeGL> (_renderPassStateBar);
+        HdStBufferArrayRangeGLSharedPtr _renderPassStateBar_ =
+            boost::static_pointer_cast<HdStBufferArrayRangeGL> (_renderPassStateBar);
 
         // add buffer binding request
         _renderPassShader->AddBufferBinding(
@@ -200,8 +199,8 @@ HdStRenderPassState::SetRenderPassShader(HdStRenderPassShaderSharedPtr const &re
     _renderPassShader = renderPassShader;
     if (_renderPassStateBar) {
 
-        HdBufferArrayRangeGLSharedPtr _renderPassStateBar_ =
-            boost::static_pointer_cast<HdBufferArrayRangeGL> (_renderPassStateBar);
+        HdStBufferArrayRangeGLSharedPtr _renderPassStateBar_ =
+            boost::static_pointer_cast<HdStBufferArrayRangeGL> (_renderPassStateBar);
 
         _renderPassShader->AddBufferBinding(
             HdBindingRequest(HdBinding::UBO, _tokens->renderPassState,
@@ -210,15 +209,15 @@ HdStRenderPassState::SetRenderPassShader(HdStRenderPassShaderSharedPtr const &re
 }
 
 void 
-HdStRenderPassState::SetOverrideShader(HdShaderCodeSharedPtr const &overrideShader)
+HdStRenderPassState::SetOverrideShader(HdStShaderCodeSharedPtr const &overrideShader)
 {
     _overrideShader = overrideShader;
 }
 
-HdShaderCodeSharedPtrVector
+HdStShaderCodeSharedPtrVector
 HdStRenderPassState::GetShaders() const
 {
-    HdShaderCodeSharedPtrVector shaders;
+    HdStShaderCodeSharedPtrVector shaders;
     shaders.reserve(2);
     shaders.push_back(_lightingShader);
     shaders.push_back(_renderPassShader);

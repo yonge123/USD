@@ -121,7 +121,7 @@ class SdfAssetPath;
 /// 
 /// <b>Creating collections in C++</b>
 /// 
-/// \snippet examples.cpp AddCollections
+/// \snippet examples.cpp ApplyCollections
 /// 
 ///
 class UsdCollectionAPI : public UsdSchemaBase
@@ -179,6 +179,18 @@ public:
     static UsdCollectionAPI
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
+private:
+
+    /// Mark this schema class as applied to the prim at \p path in the 
+    /// current EditTarget along with the supplied \p name. This information 
+    /// is stored in the apiSchemas metadata on prims.  
+    /// Given a schema, FooAPI, and a name bar, the token stored
+    /// in the apiSchemas metadata would be 'FooAPI:bar'
+    ///
+    /// \sa UsdPrim::GetAppliedSchemas()
+    ///
+    static UsdCollectionAPI 
+    _Apply(const UsdStagePtr &stage, const SdfPath &path, const TfToken &name);
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -217,7 +229,7 @@ public:
     /// be the same as one of the core collection schema properties,
     /// i.e. should not be 'expansionRule' or 'includes' or 'excludes'.
     USD_API
-    static UsdCollectionAPI AddCollection(
+    static UsdCollectionAPI ApplyCollection(
         const UsdPrim& prim, 
         const TfToken &name, 
         const TfToken &expansionRule=UsdTokens->expandPrims);

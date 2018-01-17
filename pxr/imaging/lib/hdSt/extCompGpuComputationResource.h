@@ -27,17 +27,17 @@
 #include "pxr/pxr.h"
 #include "pxr/imaging/hdSt/api.h"
 #include "pxr/imaging/hd/bufferSource.h"
+#include "pxr/imaging/hdSt/resourceBinder.h"
 #include "pxr/imaging/hdSt/computeShader.h"
-#include "pxr/imaging/hd/resourceBinder.h"
-#include "pxr/imaging/hd/resourceRegistry.h"
+#include "pxr/imaging/hdSt/resourceRegistry.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 class HdStExtCompGpuComputationResource;
-class HdGLSLProgram;
+class HdStGLSLProgram;
 typedef boost::shared_ptr<class HdStExtCompGpuComputationResource> 
     HdStExtCompGpuComputationResourceSharedPtr;
-typedef boost::shared_ptr<class HdGLSLProgram> HdGLSLProgramSharedPtr;
+typedef boost::shared_ptr<class HdStGLSLProgram> HdStGLSLProgramSharedPtr;
 
 /// \class HdStExtCompGpuComputationResource
 ///
@@ -65,7 +65,7 @@ public:
     HdStExtCompGpuComputationResource(
         HdBufferSpecVector const &outputBufferSpecs,
         HdStComputeShaderSharedPtr const &kernel,
-        HdResourceRegistrySharedPtr const &registry
+        HdStResourceRegistrySharedPtr const &registry
     );
     
     virtual ~HdStExtCompGpuComputationResource() = default;
@@ -79,12 +79,12 @@ public:
     /// Gets the GPU program to run to execute the computation.
     /// This may have been shared with many other instances in the same
     /// registry.
-    HdGLSLProgramSharedPtr const &GetProgram() const {
+    HdStGLSLProgramSharedPtr const &GetProgram() const {
         return _computeProgram;
     }
     
     /// Gets the resource binder that matches the layout of the compute program.
-    Hd_ResourceBinder const &GetResourceBinder() const {
+    HdSt_ResourceBinder const &GetResourceBinder() const {
         return _resourceBinder;
     }
     
@@ -105,13 +105,13 @@ public:
     
 private:
     HdBufferSpecVector                    _outputBufferSpecs;
-    HdStComputeShaderSharedPtr              _kernel;
-    HdResourceRegistrySharedPtr           _registry;
+    HdStComputeShaderSharedPtr            _kernel;
+    HdStResourceRegistrySharedPtr         _registry;
     
     size_t                                _shaderSourceHash;
     HdBufferArrayRangeSharedPtr           _internalRange;  
-    HdGLSLProgramSharedPtr                _computeProgram;
-    Hd_ResourceBinder                     _resourceBinder;
+    HdStGLSLProgramSharedPtr                _computeProgram;
+    HdSt_ResourceBinder                     _resourceBinder;
     
     HdStExtCompGpuComputationResource()                = delete;
     HdStExtCompGpuComputationResource(
@@ -122,5 +122,5 @@ private:
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // HD_EXT_COMP_CPU_COMPUTATION_RESOURCE_H
+#endif // HDST_EXT_COMP_CPU_COMPUTATION_RESOURCE_H
 

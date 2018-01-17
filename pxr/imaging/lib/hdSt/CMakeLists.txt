@@ -20,11 +20,14 @@ pxr_library(hdSt
 
     PUBLIC_CLASSES
         basisCurves
+        bufferArrayRangeGL
+        bufferResourceGL
         camera
         commandBuffer
         computeShader
         copyComputation
         dispatchBuffer
+        drawItem
         drawItemInstance
         drawTarget
         drawTargetAttachmentDesc
@@ -34,24 +37,35 @@ pxr_library(hdSt
         extCompGpuComputationBufferSource
         extCompGpuComputationResource
         fallbackLightingShader
+        geometricShader
         glslfxShader
+        glslProgram
+        glUtils
         instancer
         interleavedMemoryManager
         light      
         lightingShader
+        material
         mesh
         mixinShaderCode
         package
         persistentBuffer
         points
+        renderContextCaps
         renderDelegate
         renderPass
         renderPassShader
         renderPassState
+        resourceBinder
+        resourceGL
         resourceRegistry
-        shader
+        shaderCode
+        shaderKey
         smoothNormals
         surfaceShader
+        texture
+        textureResource
+        tokens
         unitTestGLDrawing
         vboMemoryManager
         vboSimpleMemoryManager
@@ -76,17 +90,28 @@ pxr_library(hdSt
         subdivision
         subdivision3
         triangulate
+        unitTestDelegate
         unitTestHelper
 
     RESOURCE_FILES
         plugInfo.json
+        shaders/basisCurves.glslfx
+        shaders/compute.glslfx
         shaders/fallbackLighting.glslfx
         shaders/fallbackLightingShader.glslfx
         shaders/fallbackSurface.glslfx
+        shaders/frustumCull.glslfx
+        shaders/instancing.glslfx
         shaders/lighting.glslfx
         shaders/lightingIntegrationShader.glslfx
+        shaders/mesh.glslfx
+        shaders/meshNormal.glslfx
+        shaders/meshWire.glslfx
+        shaders/points.glslfx
+        shaders/ptexTexture.glslfx
         shaders/renderPass.glslfx
         shaders/renderPassShader.glslfx
+        shaders/terminals.glslfx
 )
 
 if (X11_FOUND OR APPLE)

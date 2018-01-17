@@ -21,13 +21,13 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef HD_COMPUTEHADER_H
-#define HD_COMPUTEHADER_H
+#ifndef HDST_COMPUTEHADER_H
+#define HDST_COMPUTEHADER_H
 
 #include "pxr/pxr.h"
-#include "pxr/imaging/hd/api.h"
+#include "pxr/imaging/hdSt/api.h"
 #include "pxr/imaging/hd/version.h"
-#include "pxr/imaging/hd/shaderCode.h"
+#include "pxr/imaging/hdSt/shaderCode.h"
 #include "pxr/imaging/hd/bufferSource.h"
 
 #include "pxr/imaging/garch/gl.h"
@@ -53,51 +53,51 @@ typedef boost::shared_ptr<class HdStComputeShader> HdStComputeShaderSharedPtr;
 /// can use this object to express these compute shaders in Hydra.
 /// In addition to the shader itself, a binding from the Computation Sprim
 /// to the ComputeShader must be expressed as well.
-class HdStComputeShader : public HdShaderCode {
+class HdStComputeShader : public HdStShaderCode {
 public:
-    HD_API
+    HDST_API
     HdStComputeShader();
-    HD_API
+    HDST_API
     virtual ~HdStComputeShader();
 
 
     // ---------------------------------------------------------------------- //
     /// \name HdShader Virtual Interface                                      //
     // ---------------------------------------------------------------------- //
-    HD_API
+    HDST_API
     virtual std::string GetSource(TfToken const &shaderStageKey) const;
-    HD_API
-    virtual HdShaderParamVector const& GetParams() const;
-    HD_API
+    HDST_API
+    virtual HdMaterialParamVector const& GetParams() const;
+    HDST_API
     virtual HdBufferArrayRangeSharedPtr const& GetShaderData() const;
-    HD_API
+    HDST_API
     virtual TextureDescriptorVector GetTextures() const;
-    HD_API
-    virtual void BindResources(Hd_ResourceBinder const &binder, int program);
-    HD_API
-    virtual void UnbindResources(Hd_ResourceBinder const &binder, int program);
-    HD_API
+    HDST_API
+    virtual void BindResources(HdSt_ResourceBinder const &binder, int program);
+    HDST_API
+    virtual void UnbindResources(HdSt_ResourceBinder const &binder, int program);
+    HDST_API
     virtual void AddBindings(HdBindingRequestVector *customBindings);
-    HD_API
+    HDST_API
     virtual ID ComputeHash() const;
 
     /// Setter method for prim
-    HD_API
+    HDST_API
     void SetComputeSource(const std::string &source);
 
     /// If the prim is based on asset, reload that asset.
-    HD_API
+    HDST_API
     virtual void Reload();
 
 protected:
-    HD_API
+    HDST_API
     void _SetSource(TfToken const &shaderStageKey, std::string const &source);
 
 private:
     std::string _computeSource;
 
     // Shader Parameters
-    HdShaderParamVector         _params;
+    HdMaterialParamVector       _params;
     HdBufferSpecVector          _paramSpec;
     HdBufferArrayRangeSharedPtr _paramArray;
 
@@ -111,4 +111,4 @@ private:
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif //HD_SURFACESHADER_H
+#endif // HDST_SURFACESHADER_H

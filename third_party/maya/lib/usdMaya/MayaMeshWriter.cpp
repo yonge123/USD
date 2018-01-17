@@ -66,7 +66,13 @@ MayaMeshWriter::MayaMeshWriter(
     TF_AXIOM(mUsdPrim);
 }
 
-MayaMeshWriter::~MayaMeshWriter() {
+MayaMeshWriter::~MayaMeshWriter()
+{
+}
+
+// virtual override
+void MayaMeshWriter::postExport()
+{
     UsdGeomMesh primSchema(mUsdPrim);
     bool keepSample(mWriteJobCtx.getArgs().exportAsClip);
     // TODO: Use TBB to run these tasks in parallel

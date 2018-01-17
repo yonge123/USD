@@ -24,17 +24,18 @@
 #include "pxr/pxr.h"
 #include "pxr/imaging/glf/glew.h"
 
-#include "pxr/imaging/hdSt/quadrangulate.h"
+#include "pxr/imaging/hdSt/bufferArrayRangeGL.h"
+#include "pxr/imaging/hdSt/bufferResourceGL.h"
+#include "pxr/imaging/hdSt/glslProgram.h"
 #include "pxr/imaging/hdSt/meshTopology.h"
+#include "pxr/imaging/hdSt/quadrangulate.h"
+#include "pxr/imaging/hdSt/renderContextCaps.h"
+#include "pxr/imaging/hdSt/resourceRegistry.h"
+#include "pxr/imaging/hdSt/tokens.h"
 
 #include "pxr/imaging/hd/bufferArrayRange.h"
-#include "pxr/imaging/hd/bufferArrayRangeGL.h"
-#include "pxr/imaging/hd/bufferResourceGL.h"
-#include "pxr/imaging/hd/glslProgram.h"
 #include "pxr/imaging/hd/meshUtil.h"
 #include "pxr/imaging/hd/perfLog.h"
-#include "pxr/imaging/hd/renderContextCaps.h"
-#include "pxr/imaging/hdSt/resourceRegistry.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 #include "pxr/imaging/glf/glslfx.h"
 
@@ -420,30 +421,32 @@ HdSt_QuadrangulateComputationGPU::Execute(
 
     // select shader by datatype
     TfToken shaderToken = (_dataType == GL_FLOAT ?
-                           HdGLSLProgramTokens->quadrangulateFloat :
-                           HdGLSLProgramTokens->quadrangulateDouble);
+                           HdStGLSLProgramTokens->quadrangulateFloat :
+                           HdStGLSLProgramTokens->quadrangulateDouble);
 
-    HdGLSLProgramSharedPtr computeProgram =
-        HdGLSLProgram::GetComputeProgram(shaderToken, resourceRegistry);
+    HdStGLSLProgramSharedPtr computeProgram =
+        HdStGLSLProgram::GetComputeProgram(shaderToken,
+            static_cast<HdStResourceRegistry*>(resourceRegistry));
+        
     if (!computeProgram) return;
 
     GLuint program = computeProgram->GetProgram().GetId();
 
-    HdBufferArrayRangeGLSharedPtr range_ =
-        boost::static_pointer_cast<HdBufferArrayRangeGL> (range);
+    HdStBufferArrayRangeGLSharedPtr range_ =
+        boost::static_pointer_cast<HdStBufferArrayRangeGL> (range);
 
     // buffer resources for GPU computation
     HdBufferResourceSharedPtr primVar_ = range_->GetResource(_name);
-    HdBufferResourceGLSharedPtr primVar =
-        boost::static_pointer_cast<HdBufferResourceGL> (primVar_);
+    HdStBufferResourceGLSharedPtr primVar =
+        boost::static_pointer_cast<HdStBufferResourceGL> (primVar_);
 
-    HdBufferArrayRangeGLSharedPtr quadrangulateTableRange_ =
-        boost::static_pointer_cast<HdBufferArrayRangeGL> (quadrangulateTableRange);
+    HdStBufferArrayRangeGLSharedPtr quadrangulateTableRange_ =
+        boost::static_pointer_cast<HdStBufferArrayRangeGL> (quadrangulateTableRange);
 
     HdBufferResourceSharedPtr quadrangulateTable_ =
         quadrangulateTableRange_->GetResource();
-    HdBufferResourceGLSharedPtr quadrangulateTable =
-        boost::static_pointer_cast<HdBufferResourceGL> (quadrangulateTable_);
+    HdStBufferResourceGLSharedPtr quadrangulateTable =
+        boost::static_pointer_cast<HdStBufferResourceGL> (quadrangulateTable_);
 
     // prepare uniform buffer for GPU computation
     struct Uniform {
@@ -475,7 +478,7 @@ HdSt_QuadrangulateComputationGPU::Execute(
 
     // transfer uniform buffer
     GLuint ubo = computeProgram->GetGlobalUniformBuffer().GetId();
-    HdRenderContextCaps const &caps = HdRenderContextCaps::GetInstance();
+    HdStRenderContextCaps const &caps = HdStRenderContextCaps::GetInstance();
     // XXX: workaround for 319.xx driver bug of glNamedBufferDataEXT on UBO
     // XXX: move this workaround to renderContextCaps
     if (false && caps.directStateAccessEnabled) {
