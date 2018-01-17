@@ -39,8 +39,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 class HdSceneDelegate;
 class HdExtComputation;
 class HdStExtCompGpuComputation;
-class HdGLSLProgram;
-typedef boost::shared_ptr<class HdGLSLProgram> HdGLSLProgramSharedPtr;
+class HdStGLSLProgram;
+typedef boost::shared_ptr<class HdStGLSLProgram> HdStGLSLProgramSharedPtr;
 
 typedef boost::shared_ptr<HdStExtCompGpuComputation>
                                 HdStExtCompGpuComputationSharedPtr;
@@ -152,4 +152,4 @@ void HdSt_GetExtComputationPrimVarsComputations(
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // HD_EXT_COMP_CPU_COMPUTATION_H
+#endif // HDST_EXT_COMP_CPU_COMPUTATION_H

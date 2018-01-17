@@ -27,9 +27,9 @@
 #include "pxr/imaging/hdSt/renderPassShader.h"
 #include "pxr/imaging/hdSt/renderPassState.h"
 
-#include "pxr/imaging/hd/drawItem.h"
-#include "pxr/imaging/hd/renderContextCaps.h"
-#include "pxr/imaging/hd/shaderCode.h"
+#include "pxr/imaging/hdSt/drawItem.h"
+#include "pxr/imaging/hdSt/renderContextCaps.h"
+#include "pxr/imaging/hdSt/shaderCode.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
 #include "pxr/base/gf/frustum.h"
@@ -113,7 +113,7 @@ HdSt_RenderPass::_PrepareCommandBuffer(
     // so iterate over each prim, cull it and schedule it to be drawn.
 
     HdChangeTracker const &tracker = GetRenderIndex()->GetChangeTracker();
-    HdRenderContextCaps const &caps = HdRenderContextCaps::GetInstance();
+    HdStRenderContextCaps const &caps = HdStRenderContextCaps::GetInstance();
     HdRprimCollection const &collection = GetRprimCollection();
 
     const int
@@ -163,8 +163,10 @@ HdSt_RenderPass::_PrepareCommandBuffer(
         _cmdBuffers.clear();
         for (HdRenderIndex::HdDrawItemView::iterator it = items.begin();
                                                     it != items.end(); it++ ) {
-            _cmdBuffers[it->first].SwapDrawItems(&it->second, 
-                                                 shaderBindingsVersion);
+            _cmdBuffers[it->first].SwapDrawItems(
+                // Downcast the HdDrawItem entries to HdStDrawItems:
+                reinterpret_cast<std::vector<HdStDrawItem const*>*>(&it->second),
+                shaderBindingsVersion);
             itemCount += _cmdBuffers[it->first].GetTotalSize();
         }
 

@@ -30,7 +30,6 @@
 #include "pxr/imaging/hd/extComputation.h"
 #include "pxr/imaging/hd/instancer.h"
 #include "pxr/imaging/hd/mesh.h"
-#include "pxr/imaging/hd/package.h"
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/points.h"
 #include "pxr/imaging/hd/primGather.h"
@@ -41,7 +40,6 @@
 #include "pxr/imaging/hd/sceneDelegate.h"
 #include "pxr/imaging/hd/sprim.h"
 #include "pxr/imaging/hd/task.h"
-#include "pxr/imaging/hd/texture.h"
 #include "pxr/imaging/hd/tokens.h"
 
 #include "pxr/base/work/arenaDispatcher.h"
@@ -1509,28 +1507,19 @@ HdRenderIndex::_AppendDrawItems(
 
             // Extract the draw items and assign them to the right command buffer
             // based on the tag
-            std::vector<HdDrawItem> *drawItems =
+            if (const std::vector<HdDrawItem*> *drawItems =
                           rprimInfo.rprim->GetDrawItems(rprimInfo.sceneDelegate,
                                                         reprName,
-                                                        forcedRepr);
-            if (drawItems != nullptr) {
+                                                        forcedRepr)) {
+
                 const TfToken &rprimTag = rprimInfo.rprim->GetRenderTag(
                                                         rprimInfo.sceneDelegate,
                                                         reprName);
 
                 HdDrawItemPtrVector &resultDrawItems = drawItemView[rprimTag];
 
-                // Loop over each draw item, taking it's address and pushing
-                // that into the results array.
-                resultDrawItems.reserve(resultDrawItems.size() +
-                                        drawItems->size());
-                typedef std::vector<HdDrawItem>::iterator HdDrawItemIt;
-                for (HdDrawItemIt diIt  = drawItems->begin();
-                                  diIt != drawItems->end();
-                                ++diIt) {
-                    HdDrawItem &drawItem = *diIt;
-                    resultDrawItems.push_back(&drawItem);
-                }
+                resultDrawItems.insert( resultDrawItems.end(),
+                                        drawItems->begin(), drawItems->end() );
             }
         }
     }

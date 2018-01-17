@@ -32,11 +32,9 @@
 #include "pxr/imaging/hd/bufferArrayRegistry.h"
 #include "pxr/imaging/hd/bufferSource.h"
 #include "pxr/imaging/hd/bufferSpec.h"
-#include "pxr/imaging/hd/glslProgram.h"
 #include "pxr/imaging/hd/instanceRegistry.h"
 #include "pxr/imaging/hd/meshTopology.h"
 #include "pxr/imaging/hd/perfLog.h"
-#include "pxr/imaging/hd/shaderKey.h"
 #include "pxr/imaging/hd/strategyBase.h"
 #include "pxr/imaging/hd/textureResource.h"
 
@@ -63,9 +61,7 @@ typedef boost::shared_ptr<class HdBasisCurvesTopology>
                                                  HdBasisCurvesTopologySharedPtr;
 typedef boost::weak_ptr<class HdBufferArrayRange> HdBufferArrayRangePtr;
 typedef boost::shared_ptr<class HdComputation> HdComputationSharedPtr;
-typedef boost::shared_ptr<class HdGLSLProgram> HdGLSLProgramSharedPtr;
 typedef boost::shared_ptr<class Hd_VertexAdjacency> Hd_VertexAdjacencySharedPtr;
-typedef boost::shared_ptr<class Hd_GeometricShader> Hd_GeometricShaderSharedPtr;
 typedef boost::shared_ptr<class HdResourceRegistry> HdResourceRegistrySharedPtr;
 
 /// \class HdResourceRegistry
@@ -226,17 +222,6 @@ public:
     std::unique_lock<std::mutex> RegisterPrimvarRange(HdTopology::ID id,
          HdInstance<HdTopology::ID, HdBufferArrayRangeSharedPtr> *pInstance);
 
-    /// Registere a geometric shader.
-    HD_API
-    std::unique_lock<std::mutex> RegisterGeometricShader(HdShaderKey::ID id,
-         HdInstance<HdShaderKey::ID, Hd_GeometricShaderSharedPtr> *pInstance);
-
-    /// Register a GLSL program into the program registry.
-    /// note: Currently no garbage collection enforced on the shader registry
-    HD_API
-    std::unique_lock<std::mutex> RegisterGLSLProgram(HdGLSLProgram::ID id,
-        HdInstance<HdGLSLProgram::ID, HdGLSLProgramSharedPtr> *pInstance);
-
     /// Register a texture into the texture registry.
     /// XXX garbage collection?
     HD_API
@@ -249,8 +234,9 @@ public:
          HdInstance<HdTextureResource::ID, HdTextureResourceSharedPtr> *instance, 
          bool *found);
 
+    /// Invalidate any shaders registered with this registry.
     HD_API
-    void InvalidateGeometricShaderRegistry();
+    virtual void InvalidateShaderRegistry();
 
     /// Debug dump
     HD_API
@@ -351,23 +337,11 @@ private:
         _PrimvarRangeInstance;
     HdInstanceRegistry<_PrimvarRangeInstance> _primvarRangeRegistry;
 
-    // geometric shader registry
-    typedef HdInstance<HdShaderKey::ID, Hd_GeometricShaderSharedPtr>
-         _GeometricShaderInstance;
-    HdInstanceRegistry<_GeometricShaderInstance> _geometricShaderRegistry;
-
-    // glsl shader program registry
-    typedef HdInstance<HdGLSLProgram::ID, HdGLSLProgramSharedPtr>
-        _GLSLProgramInstance;
-    HdInstanceRegistry<_GLSLProgramInstance> _glslProgramRegistry;
-
     // texture resource registry
     typedef HdInstance<HdTextureResource::ID, HdTextureResourceSharedPtr>
          _TextureResourceRegistry;
     HdInstanceRegistry<_TextureResourceRegistry> _textureResourceRegistry;
-
 };
-
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

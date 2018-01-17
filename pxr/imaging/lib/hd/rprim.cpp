@@ -30,13 +30,12 @@
 #include "pxr/imaging/hd/extComputation.h"
 #include "pxr/imaging/hd/instancer.h"
 #include "pxr/imaging/hd/instanceRegistry.h"
+#include "pxr/imaging/hd/material.h"
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/repr.h"
-#include "pxr/imaging/hd/renderContextCaps.h"
 #include "pxr/imaging/hd/renderIndex.h"
 #include "pxr/imaging/hd/resourceRegistry.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
-#include "pxr/imaging/hd/shader.h"
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
@@ -71,7 +70,7 @@ HdRprim::Finalize(HdRenderParam *renderParam)
 {
 }
 
-std::vector<HdDrawItem>* 
+const std::vector<HdDrawItem*>*
 HdRprim::GetDrawItems(HdSceneDelegate* delegate,
                       TfToken const &defaultReprName, bool forced)
 {
@@ -83,7 +82,7 @@ HdRprim::GetDrawItems(HdSceneDelegate* delegate,
     HdReprSharedPtr repr = _GetRepr(delegate, reprName, &dirtyBits);
 
     if (repr) {
-        return repr->GetDrawItems();
+        return &repr->GetDrawItems();
     } else {
         return nullptr;
     }
@@ -104,7 +103,7 @@ HdRprim::_Sync(HdSceneDelegate* delegate,
     // this rprim.
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
         VtValue materialId = 
-            delegate->Get(GetId(), HdShaderTokens->surfaceShader);
+            delegate->Get(GetId(), HdShaderTokens->material);
 
         if (materialId.IsHolding<SdfPath>()){
             _SetMaterialId(changeTracker, materialId.Get<SdfPath>());
@@ -269,12 +268,6 @@ HdRprim::GetInitialDirtyBitsMask() const
     return _GetInitialDirtyBits();
 }
 
-HdShaderCodeSharedPtr
-HdRprim::_GetShaderCode(HdSceneDelegate *delegate, HdShader const *shader) const
-{
-    return shader->GetShaderCode();
-}
-
 void
 HdRprim::_PopulateConstantPrimVars(HdSceneDelegate* delegate,
                                    HdDrawItem *drawItem,
@@ -287,20 +280,6 @@ HdRprim::_PopulateConstantPrimVars(HdSceneDelegate* delegate,
     HdRenderIndex &renderIndex = delegate->GetRenderIndex();
     HdResourceRegistrySharedPtr const &resourceRegistry = 
         renderIndex.GetResourceRegistry();
-
-    // XXX: this should be in a different method
-    // XXX: This should be in HdSt getting the HdSt Shader
-    const HdShader *shader = static_cast<const HdShader *>(
-                                  renderIndex.GetSprim(HdPrimTypeTokens->shader,
-                                                       _materialId));
-
-    if (shader == nullptr) {
-        shader = static_cast<const HdShader *>(
-                        renderIndex.GetFallbackSprim(HdPrimTypeTokens->shader));
-    }
-
-    _sharedData.material = _GetShaderCode(delegate, shader);
-
 
     // update uniforms
     HdBufferSourceVector sources;
@@ -390,27 +369,19 @@ HdRprim::_PopulateConstantPrimVars(HdSceneDelegate* delegate,
                 // XXX Hydra doesn't support string primvar yet
                 if (value.IsHolding<std::string>()) continue;
 
-                if (!value.IsEmpty()) {
+                if (value.IsArrayValued() && value.GetArraySize() == 0) {
+                    // A value holding an empty array does not count as an
+                    // empty value. Catch that case here.
+                    TF_WARN("Empty array value for constant primvar %s "
+                            "on Rprim %s",
+                            nameIt->GetText(), id.GetText());
+                } else if (!value.IsEmpty()) {
                     HdBufferSourceSharedPtr source(
-                        new HdVtBufferSource(*nameIt, value));
+                        new HdVtBufferSource(*nameIt, value,
+                            value.IsArrayValued()));
 
-                    // if it's an unacceptable type, skip it (e.g. std::string)
-                    if (source->GetNumComponents() > 0) {
-
-                        // Check that source data isn't an array.
-                        // (Note: we would have to pass true to the
-                        // staticArray param of the HdVtBufferSource in
-                        // order to accept an array here)
-                        if (source->GetNumElements() == 1) {
-                            // Ok: Everything is Good.  Add the source.
-                            sources.push_back(source);
-                        } else {
-                            TF_WARN(
-                              "Expected non-array value for "
-                              "constant primvar %s on Rprim %s",
-                              nameIt->GetText(), id.GetText());
-                        }
-                    }
+                    TF_VERIFY(source->GetNumComponents() > 0);
+                    sources.push_back(source);
                 }
             }
         }
