@@ -109,9 +109,9 @@ bool MayaCameraWriter::writeCameraAttrs(const UsdTimeCode &usdTime, UsdGeomCamer
         // Film offset and shake (when enabled) have the same effect on film back
         const double horizontalApertureOffset = PxrUsdMayaUtil::ConvertInchesToMM(
             (camFn.shakeEnabled() ?
-             camFn.horizontalFilmOffset() + camFn.horizontalShake(): camFn.horizontalFilmOffset()));
+             camFn.horizontalFilmOffset() + camFn.horizontalShake() : camFn.horizontalFilmOffset()));
         const double verticalApertureOffset = PxrUsdMayaUtil::ConvertInchesToMM(
-            (camFn.shakeEnabled() ? camFn.verticalFilmOffset() + camFn.verticalShake(): camFn.verticalFilmOffset()));
+            (camFn.shakeEnabled() ? camFn.verticalFilmOffset() + camFn.verticalShake() : camFn.verticalFilmOffset()));
 
         primSchema.GetHorizontalApertureAttr().Set(
             float(horizontalAperture), usdTime);
