@@ -652,8 +652,10 @@ private:
     // so we don't have to pay the cost of constructing that token per-Get().
     void _SetIdTargetRelName();
 
+public:
     // Gets or creates the indices attribute corresponding to the primvar.
     UsdAttribute _GetIndicesAttr(bool create) const;
+private:
 
     // Helper method for computing the flattened value of an indexed primvar.
     template<typename ScalarType>
