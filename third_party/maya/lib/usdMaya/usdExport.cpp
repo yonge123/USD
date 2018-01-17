@@ -74,6 +74,7 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-vis" , "-exportVisibility", MSyntax::kBoolean);
 
     syntax.addFlag("-fr" , "-frameRange"   , MSyntax::kDouble, MSyntax::kDouble);
+    syntax.addFlag("-ac" , "-asClip"   , MSyntax::kBoolean);
     syntax.addFlag("-pr" , "-preRoll"   , MSyntax::kDouble);
     syntax.addFlag("-fs" , "-frameSample", MSyntax::kDouble);
     syntax.makeFlagMultiUse("-frameSample");
@@ -276,6 +277,15 @@ try
         jobArgs.exportAnimation=true;
     } else {
         jobArgs.exportAnimation=false;
+    }
+
+    if (argData.isFlagSet("asClip")) {
+        argData.getFlagArgument("asClip", 0, jobArgs.exportAsClip);
+    }
+    jobArgs.clipStartTime = startTime;
+
+    if (argData.isFlagSet("eulerFilter")) {
+        argData.getFlagArgument("eulerFilter", 0, jobArgs.eulerFilter);
     }
 
     if (argData.isFlagSet("preRoll")) {

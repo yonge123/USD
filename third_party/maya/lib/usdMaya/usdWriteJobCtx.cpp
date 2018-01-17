@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "usdMaya/debugCodes.h"
 #include "usdMaya/usdWriteJobCtx.h"
 
 #include "usdMaya/MayaCameraWriter.h"
@@ -129,6 +130,21 @@ bool usdWriteJobCtx::needToTraverse(const MDagPath& curDag)
     }
 
     return true;
+}
+
+bool usdWriteJobCtx::shouldWriteSample(const UsdTimeCode &usdTime, bool isAnimated)
+{
+    if (mArgs.exportAsClip){
+        // If exporting for use as a value clip, we always write a sample on the start frame and on other frames
+        // if there is animation. Do not export a default sample.
+        if ((usdTime == mArgs.clipStartTime) || (isAnimated && !usdTime.IsDefault())){
+            return true;
+        }
+    // If there is no animation, then we only write a sample on the default. Otherwise we write them on each frame.
+    } else if (usdTime.IsDefault() != isAnimated){
+        return true;
+    }
+    return false;
 }
 
 SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool instanceSource /* = false */)

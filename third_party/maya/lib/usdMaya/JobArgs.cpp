@@ -48,6 +48,8 @@ JobExportArgs::JobExportArgs()
         mergeTransformAndShape(true),
         exportInstances(true),
         exportAnimation(false),
+        exportAsClip(false),
+        clipStartTime(UsdTimeCode::Default()),
         excludeInvisible(false),
         exportDefaultCameras(false),
         exportMeshUVs(true),
