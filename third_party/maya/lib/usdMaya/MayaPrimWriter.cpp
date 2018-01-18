@@ -114,7 +114,7 @@ MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime,
 
         TfToken const &visibilityTok = (isVisible ? UsdGeomTokens->inherited : 
                                         UsdGeomTokens->invisible);
-        if (usdTime.IsDefault() != isAnimated ) {
+        if (shouldWriteSample(usdTime, isAnimated)) {
             if (usdTime.IsDefault())
                 primSchema.CreateVisibilityAttr(VtValue(visibilityTok), true);
             else
@@ -152,15 +152,17 @@ MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime,
         // We want the node for the xform (depFnT).
         converter->MayaToUsd(depFnT, usdPrim, usdTime);
     }
-    
+
+    // Check if samples should be written at time if attr has no animation.
+    bool writeIfConstant = shouldWriteSample(usdTime, false);
     // Write user-tagged export attributes. Write attributes on the transform
     // first, and then attributes on the shape node. This means that attribute
     // name collisions will always be handled by taking the shape node's value
     // if we're merging transforms and shapes.
     if (dagT.isValid() && !(dagT == getDagPath())) {
-        PxrUsdMayaWriteUtil::WriteUserExportedAttributes(dagT, usdPrim, usdTime);
+        PxrUsdMayaWriteUtil::WriteUserExportedAttributes(dagT, usdPrim, usdTime, writeIfConstant);
     }
-    PxrUsdMayaWriteUtil::WriteUserExportedAttributes(getDagPath(), usdPrim, usdTime);
+    PxrUsdMayaWriteUtil::WriteUserExportedAttributes(getDagPath(), usdPrim, usdTime, writeIfConstant);
 
     return true;
 }
@@ -194,6 +196,11 @@ MayaPrimWriter::setExportsVisibility(bool exports)
     mExportsVisibility = exports;
 }
 
+bool
+MayaPrimWriter::shouldWriteSample(const UsdTimeCode& usdTime, bool isAnimated) const
+{
+    return mWriteJobCtx.shouldWriteSample(usdTime, isAnimated);
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
