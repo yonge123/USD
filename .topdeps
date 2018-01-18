@@ -43,3 +43,5 @@ pr/shadingModeExporter_pre_post_export
 pr/testusdviewNavigationKeys_RUN_SERIAL
 pseudo_root_warning
 ptex_prefer_static
+tg/simple_features/maya_export_for_clips
+tg/simple_features/maya_export_camera_shake
