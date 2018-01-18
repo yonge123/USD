@@ -6,6 +6,7 @@ tg/bugfixes/ubuntu_katana_build_fix
 tg/bugfixes/katana_instancer_infinite_recursion
 tg/bugfixes/katana_testsuite_precision
 tg/bugfixes/alembic_write_uvs
+tg/bugfixes/katana_instanced_mode
 tg/maya_particle_cache/initial
 tg/maya_particle/merge_instances
 tg/maya_instancer/initial
