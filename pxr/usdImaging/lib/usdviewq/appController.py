@@ -2084,7 +2084,7 @@ class AppController(QtCore.QObject):
             self._stageView.update()
 
     def _toggleDisplayImagePlanes(self, checked):
-        self._viewSettingsDataModel.displayImagePlanes = checked
+        self._dataModel.viewSettings.displayImagePlanes = checked
         if self._stageView:
             self._stageView.update()
 
