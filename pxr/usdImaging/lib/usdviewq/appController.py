@@ -1207,8 +1207,8 @@ class AppController(QtCore.QObject):
             else:
                 self._timeSamples = []
 
-        if self._viewSettingsDataModel.authoredStepsOnly:
-            samples = self._rootDataModel.authoredSamples
+        if self._dataModel.viewSettings.authoredStepsOnly:
+            samples = self._dataModel.authoredSamples
             if len(samples) > 0:
                 self._timeSamples = samples
             else:
@@ -1493,7 +1493,7 @@ class AppController(QtCore.QObject):
         self._ui.frameSlider.setTracking(self._dataModel.viewSettings.redrawOnScrub)
 
     def _authoredOptionToggled(self, checked):
-        self._viewSettingsDataModel.authoredStepsOnly = checked
+        self._dataModel.viewSettings.authoredStepsOnly = checked
         self._UpdateTimeSamples(resetStageDataOnly=False)
 
     # Frame-by-frame/Playback functionality ===================================
