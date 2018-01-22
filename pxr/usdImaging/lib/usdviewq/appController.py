@@ -1192,8 +1192,8 @@ class AppController(QtCore.QObject):
             else:
                 self._timeSamples = []
 
-        if self._viewSettingsDataModel.authoredStepsOnly:
-            samples = self._rootDataModel.authoredSamples
+        if self._dataModel.viewSettings.authoredStepsOnly:
+            samples = self._dataModel.authoredSamples
             if len(samples) > 0:
                 self._timeSamples = samples
             else:
