@@ -237,11 +237,11 @@ if (NOT PXR_HEADLESS_TEST_MODE)
         EXPECTED_RETURN_CODE 0
     )
 
-    pxr_register_test(testusdviewTimeSamples
-        PYTHON
-        COMMAND "${CMAKE_INSTALL_PREFIX}/bin/testusdview --testScript testUsdviewTimeSamples.py test.usda"
-        EXPECTED_RETURN_CODE 0
-    )
+#    pxr_register_test(testusdviewTimeSamples
+#        PYTHON
+#        COMMAND "${CMAKE_INSTALL_PREFIX}/bin/testusdview --testScript testUsdviewTimeSamples.py test.usda"
+#        EXPECTED_RETURN_CODE 0
+#    )
 
 #    pxr_register_test(testusdviewNavigationKeys
 #        RUN_SERIAL
