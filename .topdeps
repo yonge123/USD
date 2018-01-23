@@ -24,7 +24,6 @@ tg/simple_features/usdview_reload_shortcut
 tg/simple_features/maya_call_once_deadlock
 tg/simple_features/tests_set_maya_app_dir
 tg/simple_features/clear_writers_before_save
-tg/simple_features/linking_against_houdini_libs
 tg/simple_features/maya_primvar_export
 tg/simple_features/face_varying_in_katana
 tg/simple_features/export_parent_scope
