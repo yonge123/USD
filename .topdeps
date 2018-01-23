@@ -11,7 +11,6 @@ tg/maya_particle_cache/initial
 tg/maya_particle/merge_instances
 tg/maya_instancer/initial
 tg/simple_features/GetSessionLayerForVariantSelections_SdfPath
-tg/simple_features/convert_purpose_attribute
 tg/simple_features/export_root
 tg/simple_features/glsl_type_info
 tg/simple_features/iterating_maya_underworld
