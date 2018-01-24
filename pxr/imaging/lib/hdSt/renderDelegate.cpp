@@ -29,6 +29,7 @@
 #include "pxr/imaging/hdSt/drawTarget.h"
 #include "pxr/imaging/hdSt/glslfxShader.h"
 #include "pxr/imaging/hdSt/instancer.h"
+#include "pxr/imaging/hdSt/imagePlane.h"
 #include "pxr/imaging/hdSt/light.h"
 #include "pxr/imaging/hdSt/material.h"
 #include "pxr/imaging/hdSt/mesh.h"
@@ -50,7 +51,8 @@ const TfTokenVector HdStRenderDelegate::SUPPORTED_RPRIM_TYPES =
 {
     HdPrimTypeTokens->mesh,
     HdPrimTypeTokens->basisCurves,
-    HdPrimTypeTokens->points
+    HdPrimTypeTokens->points,
+    HdPrimTypeTokens->imagePlane,
 };
 
 const TfTokenVector HdStRenderDelegate::SUPPORTED_SPRIM_TYPES =
@@ -158,6 +160,8 @@ HdStRenderDelegate::CreateRprim(TfToken const& typeId,
         return new HdStBasisCurves(rprimId, instancerId);
     } else  if (typeId == HdPrimTypeTokens->points) {
         return new HdStPoints(rprimId, instancerId);
+    } else if (typeId == HdPrimTypeTokens->imagePlane) {
+        return new HdStImagePlane(rprimId, instancerId);
     } else {
         TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
     }
