@@ -1,6 +1,5 @@
 tg/ar_resolver_fixes/maya_usdImport
 tg/bugfixes/katana_material_binding_crash_fix
-tg/bugfixes/maya_opposite_attr_fix
 tg/bugfixes/oiio_read_with_asserts
 tg/bugfixes/ubuntu_katana_build_fix
 tg/bugfixes/katana_instancer_infinite_recursion
@@ -9,7 +8,6 @@ tg/bugfixes/alembic_write_uvs
 tg/bugfixes/katana_instanced_mode
 tg/maya_particle_cache/initial
 tg/maya_particle/merge_instances
-tg/maya_instancer/initial
 tg/simple_features/GetSessionLayerForVariantSelections_SdfPath
 tg/simple_features/export_root
 tg/simple_features/glsl_type_info
@@ -36,7 +34,6 @@ pr/check_resetsXform_before_assign
 pr/dont_load_same_plugin_twice
 pr/saveFlattenedAs
 pr/testusdviewNavigationKeys_RUN_SERIAL
-pseudo_root_warning
 ptex_prefer_static
 tg/simple_features/maya_export_for_clips
 tg/simple_features/maya_export_camera_shake
