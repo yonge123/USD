@@ -35,3 +35,4 @@ ptex_prefer_static
 tg/simple_features/maya_export_for_clips
 tg/simple_features/maya_export_camera_shake
 pr/usdview_yAxisUp
+pr/linking_against_houdini_libs
