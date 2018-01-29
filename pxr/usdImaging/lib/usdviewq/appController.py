@@ -63,9 +63,11 @@ from common import (UIBaseColors, UIPropertyValueSourceColors, UIFonts, GetAttri
 
 import settings2
 from settings2 import StateSource
-from plugContext import PlugContext
+from usdviewApi import UsdviewApi
 from rootDataModel import RootDataModel
 from viewSettingsDataModel import ViewSettingsDataModel
+import plugin
+from pythonInterpreter import Myconsole
 
 SETTINGS_VERSION = "1"
 
@@ -277,20 +279,12 @@ class AppController(QtCore.QObject):
         print 'INFO: Settings restored to default.'
 
     def _configurePlugins(self):
-        pluginsLoaded = False
 
         with Timer() as t:
-            try:
-                from pixar import UsdviewPlug
-                UsdviewPlug.ConfigureView(self._plugCtx, self)
-                pluginsLoaded = True
+            self._plugRegistry = plugin.loadPlugins(
+                self._usdviewApi, self._mainWindow)
 
-            except ImportError:
-                # Fails silently if UsdviewPlug is found but a sub-module is not.
-                # See bug 152226
-                pass
-
-        if self._printTiming and pluginsLoaded:
+        if self._printTiming:
             t.PrintTime("configure and load plugins.")
 
     def _openSettings2(self, defaultSettings):
@@ -961,8 +955,9 @@ class AppController(QtCore.QObject):
 
             self._setupDebugMenu()
 
-            # Setup plug context and optionally load plugins
-            self._plugCtx = PlugContext(self)
+            # Setup Usdview API and optionally load plugins
+            self._plugRegistry = None
+            self._usdviewApi = UsdviewApi(self)
             if not self._noPlugins:
                 self._configurePlugins()
 
@@ -1038,9 +1033,6 @@ class AppController(QtCore.QObject):
         Ar.DefaultResolver.SetDefaultSearchPath(sorted(list(resourcePaths)))
 
         Ar.GetResolver().ConfigureResolverForAsset(usdFilePath)
-        fullAssetPath = Ar.GetResolver().Resolve(usdFilePath)
-        self._pathResolverContext = \
-            Ar.GetResolver().CreateDefaultContextForAsset(fullAssetPath)
 
         def _GetFormattedError(reasons=[]):
             err = ("Error: Unable to open stage '{0}'\n".format(usdFilePath))
@@ -1073,11 +1065,9 @@ class AppController(QtCore.QObject):
             if popMask:
                 for p in populationMaskPaths:
                     popMask.Add(p)
-                stage = Usd.Stage.OpenMasked(
-                    layer, self._pathResolverContext, popMask, preloadSet)
+                stage = Usd.Stage.OpenMasked(layer, popMask, preloadSet)
             else:
-                stage = Usd.Stage.Open(
-                    layer, self._pathResolverContext, preloadSet)
+                stage = Usd.Stage.Open(layer, preloadSet)
 
             # no point in optimizing for editing if we're not redrawing
             if stage and not self._noRender:
@@ -1122,11 +1112,9 @@ class AppController(QtCore.QObject):
 
                 if popMask:
                     stage2 = Usd.Stage.OpenMasked(
-                        layer, sl, self._pathResolverContext,
-                        popMask, loadSet)
+                        layer, sl, popMask, loadSet)
                 else:
-                    stage2 = Usd.Stage.Open(
-                        layer, sl, self._pathResolverContext, loadSet)
+                    stage2 = Usd.Stage.Open(layer, sl, loadSet)
                 stage = stage2
 
         if not stage:
@@ -2096,12 +2084,10 @@ class AppController(QtCore.QObject):
             self._stageView.update()
 
     def _showInterpreter(self):
-        from pythonExpressionPrompt import Myconsole
-
         if self._interpreter is None:
             self._interpreter = QtWidgets.QDialog(self._mainWindow)
             self._interpreter.setObjectName("Interpreter")
-            self._console = Myconsole(self._interpreter)
+            self._console = Myconsole(self._interpreter, self._usdviewApi)
             self._interpreter.setFocusProxy(self._console) # this is important!
             lay = QtWidgets.QVBoxLayout()
             lay.addWidget(self._console)
@@ -2112,18 +2098,9 @@ class AppController(QtCore.QObject):
                                self._mainWindow.y())
         self._interpreter.resize(600, self._mainWindow.size().height()/2)
 
-        self._updateInterpreter()
         self._interpreter.show()
         self._interpreter.activateWindow()
         self._interpreter.setFocus()
-
-    def _updateInterpreter(self):
-        from pythonExpressionPrompt import Myconsole
-
-        if self._console is None:
-            return
-
-        self._console.reloadConsole(self)
 
     # Screen capture functionality ===========================================
 
@@ -2200,20 +2177,39 @@ class AppController(QtCore.QObject):
 
             self._mainWindow.setWindowTitle(filename)
 
+    def _getSaveFileName(self, caption, recommendedFilename):
+        (saveName, _) = QtWidgets.QFileDialog.getSaveFileName(
+            self._mainWindow,
+            caption,
+            './' + recommendedFilename,
+            'USD Files (*.usd)'
+            ';;USD ASCII Files (*.usda)'
+            ';;USD Crate Files (*.usdc)'
+            ';;Any USD File (*.usd *.usda *.usdc)',
+            'Any USD File (*.usd *.usda *.usdc)')
+
+        if len(saveName) == 0:
+            return ''
+
+        _, ext = os.path.splitext(saveName)
+        if ext not in ('.usd', '.usda', '.usdc'):
+            saveName += '.usd'
+        
+        return saveName
+
     def _saveOverridesAs(self):
         recommendedFilename = self._parserData.usdFile.rsplit('.', 1)[0]
         recommendedFilename += '_overrides.usd'
-        (saveName, _) = QtWidgets.QFileDialog.getSaveFileName(self._mainWindow,
-                                                     "Save file (*.usd)",
-                                                     "./" + recommendedFilename,
-                                                     'Usd Files (*.usd)')
-        if len(saveName) <= 0:
+
+        saveName = self._getSaveFileName(
+            'Save Overrides As', recommendedFilename)
+        if len(saveName) == 0:
             return
 
-        if (saveName.rsplit('.')[-1] != 'usd'):
-            saveName += '.usd'
+        if not self._dataModel.stage:
+            return
 
-        if self._dataModel.stage:
+        with BusyContext():
             # In the future, we may allow usdview to be brought up with no file,
             # in which case it would create an in-memory root layer, to which
             # all edits will be targeted.  In order to future proof
@@ -2223,7 +2219,8 @@ class AppController(QtCore.QObject):
             # the stage root file as a sublayer.
             rootLayer = self._dataModel.stage.GetRootLayer()
             if not rootLayer.anonymous:
-                self._dataModel.stage.GetSessionLayer().Export(saveName, 'Created by UsdView')
+                self._dataModel.stage.GetSessionLayer().Export(
+                    saveName, 'Created by UsdView')
                 targetLayer = Sdf.Layer.FindOrOpen(saveName)
                 UsdUtils.CopyLayerMetadata(rootLayer, targetLayer,
                                            skipSublayers=True)
@@ -2241,26 +2238,20 @@ class AppController(QtCore.QObject):
                 targetLayer.RemoveInertSceneDescription()
                 targetLayer.Save()
             else:
-                self._dataModel.stage.GetRootLayer().Export(saveName, 'Created by UsdView')
+                self._dataModel.stage.GetRootLayer().Export(
+                    saveName, 'Created by UsdView')
 
     def _saveFlattenedAs(self):
         recommendedFilename = self._parserData.usdFile.rsplit('.', 1)[0]
         recommendedFilename += '_flattened.usd'
-        (saveName, _) = QtWidgets.QFileDialog.getSaveFileName(self._mainWindow,
-                                                     "Save file (*.usd)",
-                                                     "./" + recommendedFilename,
-                                                     'Usd Files (*.usd)'
-                                                        ';;Usd Ascii Files (*.usda)'
-                                                        ';;Usd Crate Files (*.usdc)'
-                                                        ';;Any Usd File (*.usd *.usda *.usdc)',
-                                                     'Any Usd File (*.usd *.usda *.usdc)')
-        if len(saveName) <= 0:
+
+        saveName = self._getSaveFileName(
+            'Save Flattened As', recommendedFilename)
+        if len(saveName) == 0:
             return
 
-        if (saveName.rsplit('.')[-1] not in ('usd', 'usda', 'usdc')):
-            saveName += '.usd'
-            
-        self._dataModel.stage.Export(saveName)
+        with BusyContext():
+            self._dataModel.stage.Export(saveName)
 
     def _reopenStage(self):
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.BusyCursor)
@@ -2488,8 +2479,6 @@ class AppController(QtCore.QObject):
     def _onCompositionSelectionChanged(self, curr=None, prev=None):
         self._currentSpec = getattr(curr, 'spec', None)
         self._currentLayer = getattr(curr, 'layer', None)
-        if self._console:
-            self._console.reloadConsole(self)
 
     def _updateAttributeInspector(self, index=None, obj=None):
         # index must be the first parameter since this method is used as
@@ -2788,7 +2777,6 @@ class AppController(QtCore.QObject):
             obj=self._dataModel.selection.getFocusPrim())
         self._updateAttributeView()
         self._refreshAttributeValue()
-        self._updateInterpreter()
 
     def _getPrimsFromPaths(self, paths):
         """Get all prims from a list of paths."""

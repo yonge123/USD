@@ -33,19 +33,12 @@
 
 #include "pxr/imaging/glf/glslfx.h"
 
-#include "pxr/base/tf/staticTokens.h"
-
 #include <boost/functional/hash.hpp>
 
 #include <string>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-
-TF_DEFINE_PRIVATE_TOKENS(
-    _tokens,
-    ((_uint, "uint"))
-);
 
 HdStRenderPassShader::HdStRenderPassShader()
     : HdStShaderCode()
@@ -88,7 +81,6 @@ HdStRenderPassShader::ComputeHash() const
     // of down stream clients.
     TF_FOR_ALL(it, _customBuffers) {
         boost::hash_combine(_hash, it->second.ComputeHash());
-        boost::hash_combine(_hash, 0);
     }
     _hashValid = true;
 
@@ -185,7 +177,8 @@ HdStRenderPassShader::AddBindings(HdBindingRequestVector *customBindings)
     // typed binding to emit declaration and accessor.
     customBindings->push_back(
         HdBindingRequest(HdBinding::UNIFORM,
-                         HdShaderTokens->cullStyle, _tokens->_uint));
+                         HdShaderTokens->cullStyle,
+                         HdTypeUInt32));
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
