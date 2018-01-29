@@ -39,11 +39,14 @@ PXR_NAMESPACE_OPEN_SCOPE
 namespace {
 
 const char* pathEnvVarName      = BOOST_PP_STRINGIZE(PXR_PLUGINPATH_NAME);
-#ifdef PXR_PLUGS_FALLBACK_TO_INSTALL_PREFIX
+#ifdef PXR_PLUGS_LOADING_FALLBACK
 const char* buildLocation       = BOOST_PP_STRINGIZE(PXR_BUILD_LOCATION);
 const char* pluginBuildLocation = BOOST_PP_STRINGIZE(PXR_PLUGIN_BUILD_LOCATION);
-const char* installLocation     = BOOST_PP_STRINGIZE(PXR_INSTALL_LOCATION);
-#endif
+
+#ifdef PXR_INSTALL_LOCATION
+const char* installLocation     = BOOST_PP_STRINGIZE(PXR_INSTALL_LOCATION); 
+#endif // PXR_INSTALL_LOCATION
+#endif // PXR_PLUGS_LOADING_FALLBACK
 
 void
 _AppendPathList(
@@ -85,12 +88,15 @@ ARCH_CONSTRUCTOR(Plug_InitConfig, 2, void)
     // Environment locations.
     _AppendPathList(&result, TfGetenv(pathEnvVarName), sharedLibPath);
 
-#ifdef PXR_PLUGS_FALLBACK_TO_INSTALL_PREFIX
+#ifdef PXR_PLUGS_LOADING_FALLBACK
     // Fallback locations.
     _AppendPathList(&result, buildLocation, sharedLibPath);
     _AppendPathList(&result, pluginBuildLocation, sharedLibPath);
+
+#ifdef PXR_INSTALL_LOCATION
     _AppendPathList(&result, installLocation, sharedLibPath);
-#endif
+#endif // PXR_INSTALL_LOCATION
+#endif // PXR_PLUGS_LOADING_FALLBACK
 
     Plug_SetPaths(result);
 }
