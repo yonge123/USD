@@ -47,6 +47,8 @@ const char* pluginBuildLocation = BOOST_PP_STRINGIZE(PXR_PLUGIN_BUILD_LOCATION);
 const char* installLocation     = BOOST_PP_STRINGIZE(PXR_INSTALL_LOCATION); 
 #endif // PXR_INSTALL_LOCATION
 
+#endif // PXR_PLUGS_FALLBACK_TO_INSTALL_PREFIX
+
 void
 _AppendPathList(
     std::vector<std::string>* result, 
