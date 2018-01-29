@@ -146,10 +146,14 @@ void main()
     MAT4 transform = HdGet_transform();
     MAT4 toClip = GetCullMatrix() * transform;
 
+#if defined(HD_HAS_bboxLocalMin) && defined(HD_HAS_bboxLocalMax)
     vec4 localMin = HdGet_bboxLocalMin();
     vec4 localMax = HdGet_bboxLocalMax();
 
     bool isVisible = FrustumCullIsVisible(toClip, localMin, localMax);
+#else
+    bool isVisible = true;
+#endif
 
     // Set the resulting instance count to 0 if the primitive is culled
     // otherwise pass through the original incoming instance count.
@@ -238,12 +242,16 @@ void main()
     // precondition: drawCommand.instanceCount has to be reset in the separate
     // invocation unit.
 
+#if defined(HD_HAS_bboxLocalMin) && defined(HD_HAS_bboxLocalMax)
     vec4 localMin = HdGet_bboxLocalMin();
     vec4 localMax = HdGet_bboxLocalMax();
 
     MAT4 toClip = GetCullMatrix() * ApplyInstanceTransform(HdGet_transform());
 
     bool isVisible = FrustumCullIsVisible(toClip, localMin, localMax);
+#else
+    bool isVisible = true;
+#endif
 
     if (isVisible) {
         // increment the instance count and store instanceIndex to culledInstanceIndices.

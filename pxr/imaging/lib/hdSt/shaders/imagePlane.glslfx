@@ -1,0 +1,22 @@
+-- glslfx version 0.1
+
+--- This is what an import might look like.
+--- #import $TOOLS/hdSt/shaders/imagePlane.glslfx
+
+#import $TOOLS/hdSt/shaders/terminals.glslfx
+
+--- --------------------------------------------------------------------------
+-- glsl ImagePlane.Vertex
+
+void main(void)
+{
+    gl_Position = vec4(HdGet_points().xy, 0.999999, 1);
+}
+
+--- --------------------------------------------------------------------------
+-- glsl ImagePlane.Fragment
+
+void main(void)
+{
+    RenderColor(vec4(1.0, 0.0, 0.0, 1.0));
+}

@@ -52,6 +52,7 @@
 #include <cstddef>
 #include <iostream>
 #include <vector>
+#include <initializer_list>
 
 #include <boost/functional/hash.hpp>
 
@@ -169,6 +170,13 @@ class VtArray {
     explicit VtArray(unsigned int n)
     {
         resize(n);
+    }
+
+    VtArray(std::initializer_list<ElementType> l) {
+        reserve(l.size());
+        for (const auto& v: l) {
+            push_back(v);
+        }
     }
 
     /// \addtogroup STL_API
