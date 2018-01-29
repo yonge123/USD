@@ -1,5 +1,5 @@
 tg/luma/pull_requests
-tg/image_plane/translatorImagePlane
+tg/image_plane/hydra
 tg/customization/non_crazy_default_uv
 tg/customization/disable_threadlimit_tests
 tg/customization/no_maya_errors_for_shader_color
