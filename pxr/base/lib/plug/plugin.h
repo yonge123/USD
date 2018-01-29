@@ -44,6 +44,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DECLARE_WEAK_AND_REF_PTRS(PlugPlugin);
 
+class Plug_RegistrationMetadata;
 class TfType;
 
 /// \class PlugPlugin
@@ -145,6 +146,14 @@ private:
     PLUG_LOCAL
     static PlugPluginPtrVector _GetAllPlugins();
 
+    template <class PluginMap>
+    PLUG_LOCAL
+    static std::pair<PlugPluginPtr, bool>
+    _NewPlugin(const Plug_RegistrationMetadata &metadata,
+               _Type pluginType,
+               const std::string& pluginCreationPath,
+               PluginMap *allPluginsByNamePtr);
+
     PLUG_LOCAL
     static std::pair<PlugPluginPtr, bool>
     _NewPlugin(const Plug_RegistrationMetadata &metadata,
@@ -186,6 +195,9 @@ private:
 
     PLUG_LOCAL
     static void _UpdatePluginMaps( const TfType & baseType );
+
+    PLUG_LOCAL
+    static constexpr char const *_GetPluginTypeDisplayName(_Type type);
 
 private:
     std::string _name;
