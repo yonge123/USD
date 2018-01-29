@@ -20,7 +20,6 @@ tg/simple_features/usdRender
 tg/simple_features/usdview_reload_shortcut
 tg/simple_features/maya_call_once_deadlock
 tg/simple_features/tests_set_maya_app_dir
-tg/simple_features/clear_writers_before_save
 tg/simple_features/maya_primvar_export
 tg/simple_features/face_varying_in_katana
 tg/simple_features/export_parent_scope
@@ -30,7 +29,6 @@ tg/simple_features/allow_custom_material_scope_names_in_katana
 tg/simple_features/maya_pref_export
 tg/simple_features/strip_namespaces
 tg/simple_features/dont_fallback_to_build_locations
-pr/dont_load_same_plugin_twice
 ptex_prefer_static
 tg/simple_features/maya_export_for_clips
 tg/simple_features/maya_export_camera_shake
