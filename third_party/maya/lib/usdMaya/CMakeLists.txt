@@ -157,6 +157,7 @@ pxr_test_scripts(
         testenv/testUsdExportMesh.py
         testenv/testUsdExportNurbsCurve.py
         testenv/testUsdExportOverImport.py
+        testenv/testUsdExportParticles.py
         testenv/testUsdExportPointInstancer.py
         testenv/testUsdExportRenderLayerMode.py
         testenv/testUsdExportRfMLight.py
@@ -319,7 +320,7 @@ pxr_install_test_dir(
 )
 pxr_register_test(testUsdExportParticles
     CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
-    COMMAND "${CMAKE_INSTALL_PREFIX}/test/testUsdExportParticles"
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdExportParticles"
     TESTENV testUsdExportParticles
     ENV
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
