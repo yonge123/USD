@@ -26,11 +26,9 @@
 
 #include "pxr/pxr.h"
 #include "pxr/base/plug/api.h"
-#include "pxr/base/plug/info.h"
 
 #include "pxr/base/js/types.h"
 #include "pxr/base/tf/declarePtrs.h"
-#include "pxr/base/tf/hashmap.h"
 #include "pxr/base/tf/refPtr.h"
 #include "pxr/base/tf/weakPtr.h"
 
@@ -60,8 +58,6 @@ class TfType;
 ///
 class PlugPlugin : public TfRefBase, public TfWeakBase {
 public:
-    typedef TfHashMap< std::string, PlugPluginRefPtr, TfHash > PluginMap;
-
     PLUG_API virtual ~PlugPlugin();
 
     /// Loads the plugin.
@@ -153,15 +149,6 @@ private:
                _Type pluginType,
                const std::string& pluginCreationPath,
                PluginMap *allPluginsByNamePtr);
-
-    PLUG_LOCAL
-    static std::pair<PlugPluginPtr, bool>
-    _NewPlugin(const Plug_RegistrationMetadata &metadata,
-               _Type pluginType,
-               const char* pluginTypeName,
-               const std::string& pluginCreationPath,
-               PluginMap& allPluginsByName,
-               PluginMap* allPluginsByCreationPath=nullptr);
 
     PLUG_LOCAL
     static std::pair<PlugPluginPtr, bool> 
