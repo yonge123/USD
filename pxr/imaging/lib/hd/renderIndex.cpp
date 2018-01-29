@@ -28,6 +28,7 @@
 #include "pxr/imaging/hd/drawItem.h"
 #include "pxr/imaging/hd/enums.h"
 #include "pxr/imaging/hd/extComputation.h"
+#include "pxr/imaging/hd/imagePlane.h"
 #include "pxr/imaging/hd/instancer.h"
 #include "pxr/imaging/hd/mesh.h"
 #include "pxr/imaging/hd/perfLog.h"
@@ -686,6 +687,19 @@ HdRenderIndex::_ConfigureReprs()
                             HdPointsGeomStylePoints);
     HdPoints::ConfigureRepr(HdTokens->refinedWireOnSurf,
                             HdPointsGeomStylePoints);
+
+    HdImagePlane::ConfigureRepr(HdTokens->hull,
+                                HdImagePlaneGeomStyleTextured);
+    HdImagePlane::ConfigureRepr(HdTokens->smoothHull,
+                                HdImagePlaneGeomStyleTextured);
+    HdImagePlane::ConfigureRepr(HdTokens->wire,
+                                HdImagePlaneGeomStyleTextured);
+    HdImagePlane::ConfigureRepr(HdTokens->refined,
+                                HdImagePlaneGeomStyleTextured);
+    HdImagePlane::ConfigureRepr(HdTokens->refinedWire,
+                                HdImagePlaneGeomStyleTextured);
+    HdImagePlane::ConfigureRepr(HdTokens->refinedWireOnSurf,
+                                HdImagePlaneGeomStyleTextured);
 }
 // -------------------------------------------------------------------------- //
 /// \name Draw Item Handling

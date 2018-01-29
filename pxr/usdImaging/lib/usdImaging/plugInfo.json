@@ -109,6 +109,13 @@
                         "isInternal": true,
                         "primTypeName": "HydraPbsSurface"
                     },
+                    "UsdImagingImagePlaneAdapter": {
+                      "bases": [
+                        "UsdImagingGprimAdapter"
+                      ],
+                      "isInternal": true,
+                      "primTypeName": "ImagePlane"
+                    },
                     "UsdImagingDomeLightAdapter": {
                         "bases": [
                             "UsdImagingLightAdapter"

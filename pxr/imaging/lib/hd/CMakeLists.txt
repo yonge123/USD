@@ -57,6 +57,7 @@ pxr_library(hd
         extCompPrimvarBufferSource
         extComputation
         extComputationContext
+        imagePlane
         instancer
         instanceRegistry
         material
