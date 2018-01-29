@@ -1,9 +1,16 @@
 #include "pxr/usdImaging/usdImaging/imagePlaneAdapter.h"
 
+#include "pxr/base/tf/getenv.h"
+#include "pxr/base/tf/envSetting.h"
+
 #include "pxr/usdImaging/usdImaging/delegate.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+TF_DEFINE_ENV_SETTING(USD_IMAGING_ENABLE_IMAGEPLANES, false,
+        "Enables/disables the use of image planes in hydra until the code matures enough.");
+
 
 TF_REGISTRY_FUNCTION(TfType)
 {
@@ -21,8 +28,8 @@ UsdImagingImagePlaneAdapter::Populate(
     const UsdPrim& prim,
     UsdImagingIndexProxy* index,
     const UsdImagingInstancerContext* instancerContext /*= nullptr*/){
-    return _AddRprim(HdPrimTypeTokens->imagePlane,
-                     prim, index, GetMaterialId(prim), instancerContext);
+    return TfGetEnvSetting(USD_IMAGING_ENABLE_IMAGEPLANES) ? _AddRprim(HdPrimTypeTokens->imagePlane,
+                     prim, index, GetMaterialId(prim), instancerContext) : SdfPath();
 }
 
 void
