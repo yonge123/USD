@@ -1193,14 +1193,12 @@ function(_pxr_library NAME)
     endif()
 
     # Names and paths passed to the compile via macros.  Paths should be
-    # relative to facilitate relocating the build.  installLocation is
-    # absolute but the client can override with any path, including a
-    # relative one.
+    # relative to facilitate relocating the build.
     _get_python_module_name(${NAME} pythonModuleName)
     string(TOUPPER ${NAME} uppercaseName)
-    set(installLocation "${CMAKE_INSTALL_PREFIX}/share/usd/plugins")
     if(PXR_INSTALL_LOCATION)
-        file(TO_CMAKE_PATH "${PXR_INSTALL_LOCATION}" installLocation)
+        file(TO_CMAKE_PATH "${PXR_INSTALL_LOCATION}" pxrInstallLocation)
+        set(pxrInstallLocation "PXR_INSTALL_LOCATION=${pxrInstallLocation}")
     endif()
 
     # API macros.
@@ -1285,15 +1283,15 @@ function(_pxr_library NAME)
             MFB_PACKAGE_NAME=${PXR_PACKAGE}
             MFB_ALT_PACKAGE_NAME=${PXR_PACKAGE}
             MFB_PACKAGE_MODULE=${pythonModuleName}
-            "PXR_BUILD_LOCATION=../share/usd/plugins"
-            "PXR_PLUGIN_BUILD_LOCATION=../plugin/usd"
-            "PXR_INSTALL_LOCATION=${installLocation}"
+            PXR_BUILD_LOCATION=../share/usd/plugins
+            PXR_PLUGIN_BUILD_LOCATION=../plugin/usd
+            ${pxrInstallLocation}
             ${pythonModulesEnabled}
             ${apiPrivate}
     )
 
-    if (PXR_PLUGS_FALLBACK_TO_INSTALL_PREFIX)
-        target_compile_definitions(${NAME} PRIVATE "PXR_PLUGS_FALLBACK_TO_INSTALL_PREFIX")
+    if (PXR_PLUGS_LOADING_FALLBACK)
+        target_compile_definitions(${NAME} PRIVATE "PXR_PLUGS_LOADING_FALLBACK")
     endif ()
 
     # Copy headers to the build directory and include from there and from
