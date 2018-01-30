@@ -94,6 +94,10 @@ struct UsdHydraTokensType {
     /// 
     /// Special token for the usdHydra library.
     const TfToken HwPtexTexture_1;
+    /// \brief "HwUdimTexture_1"
+    /// 
+    /// Special token for the usdHydra library.
+    const TfToken HwUdimTexture_1;
     /// \brief "HwUvTexture_1"
     /// 
     /// Special token for the usdHydra library.

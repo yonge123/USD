@@ -16,6 +16,7 @@ over "GLOBAL" (
             //
             dictionary HwUvTexture_1 = { }
             dictionary HwPtexTexture_1 = { }
+            dictionary HwUdimTexture_1 = { }
             dictionary HwPrimvar_1 = { }
 
             //
