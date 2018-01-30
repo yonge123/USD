@@ -33,6 +33,7 @@ TF_WRAP_MODULE
     TF_WRAP(UsdHydraShader); 
     TF_WRAP(UsdHydraTexture);
     TF_WRAP(UsdHydraSampledTexture);
+    TF_WRAP(UsdHydraUdimTexture);
     TF_WRAP(UsdHydraUvTexture); 
     TF_WRAP(UsdHydraPtexTexture); 
     TF_WRAP(UsdHydraTokens); 
