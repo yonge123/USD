@@ -612,24 +612,17 @@ UsdImagingHydraMaterialAdapter::_GetSurfaceShaderTextures(UsdPrim const &prim) c
                     " Looking for connected textures at <%s>\n",
                     shader.GetPath().GetText());
 
-            if (shader.GetIdAttr().Get(&t))
+            if (shader.GetIdAttr().Get(&t) &&
+                (t == UsdHydraTokens->HwUvTexture_1 ||
+                 t == UsdHydraTokens->HwPtexTexture_1 ||
+                 t == UsdHydraTokens->HwUdimTexture_1))
             {
-                if (t == UsdHydraTokens->HwUvTexture_1 ||
-                    t == UsdHydraTokens->HwPtexTexture_1) {
-                    TF_DEBUG(USDIMAGING_TEXTURES).Msg(
-                             "  found texture: <%s>\n",
-                             shader.GetPath().GetText());
-                    SdfPath connection = UsdHydraTexture(shader).GetFilenameAttr()
-                        .GetPath();
-                    textureIDs.push_back(connection);
-                } else if (t == UsdHydraTokens->HwUdimTexture_1) {
-                    TF_DEBUG(USDIMAGING_TEXTURES).Msg(
-                             "  found UDIM texture: <%s>\n",
-                             shader.GetPath().GetText());
-                    SdfPath connection = UsdHydraTexture(shader).GetFilenameAttr()
-                        .GetPath();
-                    textureIDs.push_back(connection);
-                }
+                TF_DEBUG(USDIMAGING_TEXTURES).Msg(
+                         "  found texture: <%s>\n",
+                         shader.GetPath().GetText());
+                SdfPath connection = UsdHydraTexture(shader).GetFilenameAttr()
+                    .GetPath();
+                textureIDs.push_back(connection);
             }
             for (UsdShadeInput shaderInput: shader.GetInputs()) {
                 if (_IsTextureOrPrimvarInput(shaderInput)) {

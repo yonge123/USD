@@ -30,6 +30,7 @@
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
 #include "pxr/imaging/glf/ptexTexture.h"
+#include "pxr/imaging/glf/udimTexture.h"
 #include "pxr/imaging/glf/textureHandle.h"
 #include "pxr/imaging/glf/textureRegistry.h"
 
@@ -2939,21 +2940,23 @@ UsdImagingDelegate::GetTextureResourceID(SdfPath const &textureId)
     if (filePath.IsEmpty())
         filePath = TfToken(asset.GetAssetPath());
 
-    bool isPtex = GlfIsSupportedPtexTexture(filePath);
-    
-    if (!TfPathExists(filePath)) {
-        if (isPtex) {
-            TF_WARN("Unable to find Texture '%s' with path '%s'. Fallback " 
-                    "textures are not supported for ptex", 
-                    filePath.GetText(), usdPath.GetText());
+    if (filePath.GetString().find("<udim>") == std::string::npos) {
+        bool isPtex = GlfIsSupportedPtexTexture(filePath);
 
-            return HdTextureResource::ComputeFallbackPtexHash(); 
-        } else {
-            TF_WARN("Unable to find Texture '%s' with path '%s'. A black " 
-                    "texture will be substituted in its place.", 
-                    filePath.GetText(), usdPath.GetText());
+        if (!TfPathExists(filePath)) {
+            if (isPtex) {
+                TF_WARN("Unable to find Texture '%s' with path '%s'. Fallback "
+                            "textures are not supported for ptex",
+                        filePath.GetText(), usdPath.GetText());
 
-            return HdTextureResource::ComputeFallbackUVHash();
+                return HdTextureResource::ComputeFallbackPtexHash();
+            } else {
+                TF_WARN("Unable to find Texture '%s' with path '%s'. A black "
+                            "texture will be substituted in its place.",
+                        filePath.GetText(), usdPath.GetText());
+
+                return HdTextureResource::ComputeFallbackUVHash();
+            }
         }
     }
 
@@ -2986,6 +2989,7 @@ UsdImagingDelegate::GetTextureResource(SdfPath const &textureId)
         filePath = TfToken(asset.GetAssetPath());
 
     bool isPtex = GlfIsSupportedPtexTexture(filePath);
+    bool isUdim = isPtex ? false : GlfIsSupportedUdimTexture(filePath);
 
     TfToken wrapS = UsdHydraTokens->repeat;
     TfToken wrapT = UsdHydraTokens->repeat;
@@ -2999,22 +3003,35 @@ UsdImagingDelegate::GetTextureResource(SdfPath const &textureId)
         UsdAttribute attr = UsdHydraTexture(shader).GetTextureMemoryAttr();
         if (attr) attr.Get(&memoryLimit);
         if (!isPtex) {
-            UsdHydraUvTexture uvt(shader);
-            attr = uvt.GetWrapSAttr();
-            if (attr) attr.Get(&wrapS);
-            attr = uvt.GetWrapTAttr();
-            if (attr) attr.Get(&wrapT);
-            attr = uvt.GetMinFilterAttr();
+            UsdHydraSampledTexture st(shader);
+            attr = st.GetMinFilterAttr();
             if (attr) attr.Get(&minFilter);
-            attr = uvt.GetMagFilterAttr();
+            attr = st.GetMagFilterAttr();
             if (attr) attr.Get(&magFilter);
+            if (!isUdim) {
+                UsdHydraUvTexture uvt(shader);
+                attr = uvt.GetWrapSAttr();
+                if (attr) attr.Get(&wrapS);
+                attr = uvt.GetWrapTAttr();
+                if (attr) attr.Get(&wrapT);
+            }
         }
     }
 
     TF_DEBUG(USDIMAGING_TEXTURES).Msg(
-            "Loading texture: id(%s), isPtex(%s)\n",
+            "Loading texture: id(%s), isPtex(%s), isUdim(%s)\n",
             usdPath.GetText(),
-            isPtex ? "true" : "false");
+            isPtex ? "true" : "false",
+            isUdim ? "true" : "false");
+
+    if (isUdim) {
+        const auto udimTiles = GlfGetUdimTiles(filePath);
+        std::cerr << "Searching for udim tiles" << std::endl;
+        for (const auto& p: udimTiles) {
+            std::cerr << "Udim file found: " << std::get<0>(p) << " -- " << std::get<1>(p) << std::endl;
+        }
+        return HdTextureResourceSharedPtr();
+    }
  
     if (!TfPathExists(filePath)) {
         TF_WARN("Unable to find Texture '%s' with path '%s'.", 
