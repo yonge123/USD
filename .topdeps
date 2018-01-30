@@ -29,6 +29,7 @@ tg/simple_features/allow_custom_material_scope_names_in_katana
 tg/simple_features/maya_pref_export
 tg/simple_features/strip_namespaces
 tg/simple_features/dont_fallback_to_build_locations
+tg/simple_features/udim_for_hydra
 ptex_prefer_static
 tg/simple_features/maya_export_for_clips
 tg/simple_features/maya_export_camera_shake
