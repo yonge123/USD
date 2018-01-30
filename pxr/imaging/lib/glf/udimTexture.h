@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Pixar
+// Copyright 2018 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -21,20 +21,36 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#ifndef GLF_UDIMTEXTURE_H
+#define GLF_UDIMTEXTURE_H
+
+/// \file glf/udimTexture.h
+
 #include "pxr/pxr.h"
-#include "pxr/base/tf/pyModule.h"
+#include "pxr/imaging/glf/api.h"
 
-PXR_NAMESPACE_USING_DIRECTIVE
+#include <string>
+#include <vector>
+#include <tuple>
 
-TF_WRAP_MODULE
-{
-    TF_WRAP(UsdHydraLookAPI); 
-    TF_WRAP(UsdHydraPrimvar); 
-    TF_WRAP(UsdHydraShader); 
-    TF_WRAP(UsdHydraTexture);
-    TF_WRAP(UsdHydraSampledTexture);
-    TF_WRAP(UsdHydraUvTexture); 
-    TF_WRAP(UsdHydraPtexTexture);
-    TF_WRAP(UsdHydraUdimTexture);
-    TF_WRAP(UsdHydraTokens); 
-}
+PXR_NAMESPACE_OPEN_SCOPE
+
+/// Returns true if the file given by \p imageFilePath represents a udim file,
+/// and false otherwise.
+///
+/// This function simply checks the existence of the <udim> tag in the file name and does not
+/// otherwise guarantee that the file is in any way valid for reading.
+///
+GLF_API bool GlfIsSupportedUdimTexture(const std::string& imageFilePath);
+
+/// Returns the list of udim tiles on the disk if the file given by \p imageFilePath represents a udim file,
+/// and an empty vector otherwise.
+///
+/// This function simply replaces the <udim> or <UDIM> tag in the filepath
+/// and checks for the existence of the standard 100 UDIM tiles.
+///
+GLF_API std::vector<std::tuple<int, std::string>> GlfGetUdimTiles(const std::string& imageFilePath);
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // GLF_UDIMTEXTURE_H

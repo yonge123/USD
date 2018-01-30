@@ -496,7 +496,8 @@ UsdImagingHydraMaterialAdapter::_GetMaterialParams(UsdPrim const& prim) const
                 if (UsdAttribute attr = sourceShader.GetIdAttr()) {
                     TfToken id;
                     if (attr.Get(&id)) {
-                        if (id == UsdHydraTokens->HwUvTexture_1) {
+                        if (id == UsdHydraTokens->HwUvTexture_1 ||
+                            id == UsdHydraTokens->HwUdimTexture_1) {
                             connection = UsdHydraTexture(sourceShader).
                                 GetFilenameAttr().GetPath();
                             TF_DEBUG(USDIMAGING_SHADERS).Msg(
@@ -521,7 +522,7 @@ UsdImagingHydraMaterialAdapter::_GetMaterialParams(UsdPrim const& prim) const
                         } else if (id == UsdHydraTokens->HwPtexTexture_1) {
                             isPtex = true;
                             TF_DEBUG(USDIMAGING_SHADERS).Msg(
-                                        "\t connected to Ptex texture\n");
+                                    "\t connected to Ptex texture\n");
                             connection = UsdHydraTexture(sourceShader).
                                 GetFilenameAttr().GetPath();
                             // Ptex doesn't need explicit sampler params
@@ -611,12 +612,14 @@ UsdImagingHydraMaterialAdapter::_GetSurfaceShaderTextures(UsdPrim const &prim) c
                     " Looking for connected textures at <%s>\n",
                     shader.GetPath().GetText());
 
-            if (shader.GetIdAttr().Get(&t)
-                    && (t == UsdHydraTokens->HwUvTexture_1
-                        || t == UsdHydraTokens->HwPtexTexture_1)) {
+            if (shader.GetIdAttr().Get(&t) &&
+                (t == UsdHydraTokens->HwUvTexture_1 ||
+                 t == UsdHydraTokens->HwPtexTexture_1 ||
+                 t == UsdHydraTokens->HwUdimTexture_1))
+            {
                 TF_DEBUG(USDIMAGING_TEXTURES).Msg(
-                    "  found texture: <%s>\n",
-                    shader.GetPath().GetText());
+                         "  found texture: <%s>\n",
+                         shader.GetPath().GetText());
                 SdfPath connection = UsdHydraTexture(shader).GetFilenameAttr()
                     .GetPath();
                 textureIDs.push_back(connection);

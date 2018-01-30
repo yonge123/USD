@@ -13,8 +13,10 @@ pxr_library(usdHydra
         primvar
         shader
         texture
+        sampledTexture
         uvTexture
         ptexTexture
+        udimTexture
         tokens
 
     PUBLIC_HEADERS
@@ -29,7 +31,9 @@ pxr_library(usdHydra
         wrapPrimvar.cpp
         wrapShader.cpp
         wrapTexture.cpp
+        wrapSampledTexture.cpp
         wrapUvTexture.cpp
+        wrapUdimTexture.cpp
         wrapPtexTexture.cpp
         wrapTokens.cpp
 
