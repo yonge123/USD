@@ -21,17 +21,16 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef USDHYDRA_GENERATED_UVTEXTURE_H
-#define USDHYDRA_GENERATED_UVTEXTURE_H
+#ifndef USDHYDRA_GENERATED_UDIMTEXTURE_H
+#define USDHYDRA_GENERATED_UDIMTEXTURE_H
 
-/// \file usdHydra/uvTexture.h
+/// \file usdHydra/udimTexture.h
 
 #include "pxr/pxr.h"
 #include "pxr/usd/usdHydra/api.h"
 #include "pxr/usd/usdHydra/sampledTexture.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
-#include "pxr/usd/usdHydra/tokens.h"
 
 #include "pxr/base/vt/value.h"
 
@@ -47,17 +46,13 @@ PXR_NAMESPACE_OPEN_SCOPE
 class SdfAssetPath;
 
 // -------------------------------------------------------------------------- //
-// UVTEXTURE                                                                  //
+// UDIMTEXTURE                                                                //
 // -------------------------------------------------------------------------- //
 
-/// \class UsdHydraUvTexture
+/// \class UsdHydraUdimTexture
 ///
-/// For any described attribute \em Fallback \em Value or \em Allowed \em Values below
-/// that are text/tokens, the actual token is published and defined in \ref UsdHydraTokens.
-/// So to set an attribute to the value "rightHanded", use UsdHydraTokens->rightHanded
-/// as the value.
 ///
-class UsdHydraUvTexture : public UsdHydraSampledTexture
+class UsdHydraUdimTexture : public UsdHydraSampledTexture
 {
 public:
     /// Compile-time constant indicating whether or not this class corresponds
@@ -71,26 +66,26 @@ public:
     /// UsdPrim.
     static const bool IsTyped = true;
 
-    /// Construct a UsdHydraUvTexture on UsdPrim \p prim .
-    /// Equivalent to UsdHydraUvTexture::Get(prim.GetStage(), prim.GetPath())
+    /// Construct a UsdHydraUdimTexture on UsdPrim \p prim .
+    /// Equivalent to UsdHydraUdimTexture::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
-    explicit UsdHydraUvTexture(const UsdPrim& prim=UsdPrim())
+    explicit UsdHydraUdimTexture(const UsdPrim& prim=UsdPrim())
         : UsdHydraSampledTexture(prim)
     {
     }
 
-    /// Construct a UsdHydraUvTexture on the prim held by \p schemaObj .
-    /// Should be preferred over UsdHydraUvTexture(schemaObj.GetPrim()),
+    /// Construct a UsdHydraUdimTexture on the prim held by \p schemaObj .
+    /// Should be preferred over UsdHydraUdimTexture(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
-    explicit UsdHydraUvTexture(const UsdSchemaBase& schemaObj)
+    explicit UsdHydraUdimTexture(const UsdSchemaBase& schemaObj)
         : UsdHydraSampledTexture(schemaObj)
     {
     }
 
     /// Destructor.
     USDHYDRA_API
-    virtual ~UsdHydraUvTexture();
+    virtual ~UsdHydraUdimTexture();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
@@ -99,17 +94,17 @@ public:
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
-    /// Return a UsdHydraUvTexture holding the prim adhering to this
+    /// Return a UsdHydraUdimTexture holding the prim adhering to this
     /// schema at \p path on \p stage.  If no prim exists at \p path on
     /// \p stage, or if the prim at that path does not adhere to this schema,
     /// return an invalid schema object.  This is shorthand for the following:
     ///
     /// \code
-    /// UsdHydraUvTexture(stage->GetPrimAtPath(path));
+    /// UsdHydraUdimTexture(stage->GetPrimAtPath(path));
     /// \endcode
     ///
     USDHYDRA_API
-    static UsdHydraUvTexture
+    static UsdHydraUdimTexture
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
 
@@ -124,50 +119,6 @@ private:
     // override SchemaBase virtuals.
     USDHYDRA_API
     virtual const TfType &_GetTfType() const;
-
-public:
-    // --------------------------------------------------------------------- //
-    // WRAPS 
-    // --------------------------------------------------------------------- //
-    /// Specifies the wrap mode for this texture.
-    ///
-    /// \n  C++ Type: TfToken
-    /// \n  Usd Type: SdfValueTypeNames->Token
-    /// \n  Variability: SdfVariabilityUniform
-    /// \n  Fallback Value: No Fallback
-    /// \n  \ref UsdHydraTokens "Allowed Values": [clamp, repeat, mirror, black]
-    USDHYDRA_API
-    UsdAttribute GetWrapSAttr() const;
-
-    /// See GetWrapSAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    USDHYDRA_API
-    UsdAttribute CreateWrapSAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
-
-public:
-    // --------------------------------------------------------------------- //
-    // WRAPT 
-    // --------------------------------------------------------------------- //
-    /// Specifies the wrap mode for this texture.
-    ///
-    /// \n  C++ Type: TfToken
-    /// \n  Usd Type: SdfValueTypeNames->Token
-    /// \n  Variability: SdfVariabilityUniform
-    /// \n  Fallback Value: No Fallback
-    /// \n  \ref UsdHydraTokens "Allowed Values": [clamp, repeat, mirror, black]
-    USDHYDRA_API
-    UsdAttribute GetWrapTAttr() const;
-
-    /// See GetWrapTAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    USDHYDRA_API
-    UsdAttribute CreateWrapTAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // ===================================================================== //

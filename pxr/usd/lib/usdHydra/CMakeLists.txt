@@ -13,6 +13,7 @@ pxr_library(usdHydra
         primvar
         shader
         texture
+        sampledTexture
         uvTexture
         ptexTexture
         tokens
@@ -29,6 +30,7 @@ pxr_library(usdHydra
         wrapPrimvar.cpp
         wrapShader.cpp
         wrapTexture.cpp
+        wrapSampledTexture.cpp
         wrapUvTexture.cpp
         wrapPtexTexture.cpp
         wrapTokens.cpp

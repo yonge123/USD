@@ -112,23 +112,23 @@ struct UsdHydraTokensType {
     const TfToken infoVarname;
     /// \brief "linear"
     /// 
-    /// A weighted linear blend of nearest adjacent samples. , Possible value for UsdHydraUvTexture::GetMinFilterAttr(), Possible value for UsdHydraUvTexture::GetMagFilterAttr()
+    /// A weighted linear blend of nearest adjacent samples. , Possible value for UsdHydraSampledTexture::GetMinFilterAttr(), Possible value for UsdHydraSampledTexture::GetMagFilterAttr()
     const TfToken linear;
     /// \brief "linearMipmapLinear"
     /// 
-    /// See https://www.opengl.org/wiki/Sampler_Object , Possible value for UsdHydraUvTexture::GetMinFilterAttr()
+    /// See https://www.opengl.org/wiki/Sampler_Object , Possible value for UsdHydraSampledTexture::GetMinFilterAttr()
     const TfToken linearMipmapLinear;
     /// \brief "linearMipmapNearest"
     /// 
-    /// See https://www.opengl.org/wiki/Sampler_Object , Possible value for UsdHydraUvTexture::GetMinFilterAttr()
+    /// See https://www.opengl.org/wiki/Sampler_Object , Possible value for UsdHydraSampledTexture::GetMinFilterAttr()
     const TfToken linearMipmapNearest;
     /// \brief "magFilter"
     /// 
-    /// UsdHydraUvTexture
+    /// UsdHydraSampledTexture
     const TfToken magFilter;
     /// \brief "minFilter"
     /// 
-    /// UsdHydraUvTexture
+    /// UsdHydraSampledTexture
     const TfToken minFilter;
     /// \brief "mirror"
     /// 
@@ -136,15 +136,15 @@ struct UsdHydraTokensType {
     const TfToken mirror;
     /// \brief "nearest"
     /// 
-    /// Selects the nearest sample for the given coordinate , Possible value for UsdHydraUvTexture::GetMinFilterAttr(), Possible value for UsdHydraUvTexture::GetMagFilterAttr()
+    /// Selects the nearest sample for the given coordinate , Possible value for UsdHydraSampledTexture::GetMinFilterAttr(), Possible value for UsdHydraSampledTexture::GetMagFilterAttr()
     const TfToken nearest;
     /// \brief "nearestMipmapLinear"
     /// 
-    /// See https://www.opengl.org/wiki/Sampler_Object , Possible value for UsdHydraUvTexture::GetMinFilterAttr()
+    /// See https://www.opengl.org/wiki/Sampler_Object , Possible value for UsdHydraSampledTexture::GetMinFilterAttr()
     const TfToken nearestMipmapLinear;
     /// \brief "nearestMipmapNearest"
     /// 
-    /// See https://www.opengl.org/wiki/Sampler_Object , Possible value for UsdHydraUvTexture::GetMinFilterAttr()
+    /// See https://www.opengl.org/wiki/Sampler_Object , Possible value for UsdHydraSampledTexture::GetMinFilterAttr()
     const TfToken nearestMipmapNearest;
     /// \brief "repeat"
     /// 
@@ -156,7 +156,7 @@ struct UsdHydraTokensType {
     const TfToken textureMemory;
     /// \brief "uv"
     /// 
-    /// UsdHydraUvTexture
+    /// UsdHydraSampledTexture
     const TfToken uv;
     /// \brief "wrapS"
     /// 

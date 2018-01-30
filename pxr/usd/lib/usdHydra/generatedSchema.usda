@@ -66,6 +66,39 @@ class Shader "Texture"
     )
 }
 
+class Shader "SampledTexture"
+{
+    double frame (
+        doc = "The frame offset for animated textures."
+    )
+    uniform asset info:filename = @@ (
+        doc = "Asset path to the file containg the image data."
+    )
+    uniform token info:id (
+        doc = """The id is an identifier for the type or purpose of the 
+        shader. E.g.: Texture or FractalFloat.
+        The use of this id will depend on the render target: some will turn it
+        into an actual shader path, some will use it to generate dynamically
+        a shader source code.
+        """
+    )
+    uniform token magFilter (
+        allowedTokens = ["nearest", "linear"]
+        doc = "Specifies the magnification filter mode for this texture."
+    )
+    uniform token minFilter (
+        allowedTokens = ["nearest", "linear", "linearMipmapLinear", "linearMipmapNearest", "nearestMipmapLinear", "nearestMipmapNearest"]
+        doc = "Specifies the minification filter mode for this texture."
+    )
+    uniform float textureMemory (
+        doc = """Amount of memory used to store the texture (in Mb). A value of 
+        zero specifies the native resolution."""
+    )
+    float2 uv (
+        doc = "The uv coordinates at which to sample the texture."
+    )
+}
+
 class Shader "UvTexture"
 {
     double frame (
@@ -104,6 +137,39 @@ class Shader "UvTexture"
     uniform token wrapT (
         allowedTokens = ["clamp", "repeat", "mirror", "black"]
         doc = "Specifies the wrap mode for this texture."
+    )
+}
+
+class Shader "UdimTexture"
+{
+    double frame (
+        doc = "The frame offset for animated textures."
+    )
+    uniform asset info:filename = @@ (
+        doc = "Asset path to the file containg the image data."
+    )
+    uniform token info:id (
+        doc = """The id is an identifier for the type or purpose of the 
+        shader. E.g.: Texture or FractalFloat.
+        The use of this id will depend on the render target: some will turn it
+        into an actual shader path, some will use it to generate dynamically
+        a shader source code.
+        """
+    )
+    uniform token magFilter (
+        allowedTokens = ["nearest", "linear"]
+        doc = "Specifies the magnification filter mode for this texture."
+    )
+    uniform token minFilter (
+        allowedTokens = ["nearest", "linear", "linearMipmapLinear", "linearMipmapNearest", "nearestMipmapLinear", "nearestMipmapNearest"]
+        doc = "Specifies the minification filter mode for this texture."
+    )
+    uniform float textureMemory (
+        doc = """Amount of memory used to store the texture (in Mb). A value of 
+        zero specifies the native resolution."""
+    )
+    float2 uv (
+        doc = "The uv coordinates at which to sample the texture."
     )
 }
 
