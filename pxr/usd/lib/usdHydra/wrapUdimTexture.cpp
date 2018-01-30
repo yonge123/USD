@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdHydra/uvTexture.h"
+#include "pxr/usd/usdHydra/udimTexture.h"
 #include "pxr/usd/usd/schemaBase.h"
 
 #include "pxr/usd/sdf/primSpec.h"
@@ -48,29 +48,15 @@ namespace {
 // fwd decl.
 WRAP_CUSTOM;
 
-        
-static UsdAttribute
-_CreateWrapSAttr(UsdHydraUvTexture &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateWrapSAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
-}
-        
-static UsdAttribute
-_CreateWrapTAttr(UsdHydraUvTexture &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateWrapTAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
-}
 
 } // anonymous namespace
 
-void wrapUsdHydraUvTexture()
+void wrapUsdHydraUdimTexture()
 {
-    typedef UsdHydraUvTexture This;
+    typedef UsdHydraUdimTexture This;
 
     class_<This, bases<UsdHydraSampledTexture> >
-        cls("UvTexture");
+        cls("UdimTexture");
 
     cls
         .def(init<UsdPrim>(arg("prim")))
@@ -100,20 +86,6 @@ void wrapUsdHydraUvTexture()
 
         .def(!self)
 
-        
-        .def("GetWrapSAttr",
-             &This::GetWrapSAttr)
-        .def("CreateWrapSAttr",
-             &_CreateWrapSAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
-        .def("GetWrapTAttr",
-             &This::GetWrapTAttr)
-        .def("CreateWrapTAttr",
-             &_CreateWrapTAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
 
     ;
 
@@ -144,4 +116,4 @@ namespace {
 WRAP_CUSTOM {
 }
 
-} // anonymous namespace
+}
