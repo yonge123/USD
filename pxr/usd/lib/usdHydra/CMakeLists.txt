@@ -16,6 +16,7 @@ pxr_library(usdHydra
         sampledTexture
         uvTexture
         ptexTexture
+        udimTexture
         tokens
 
     PUBLIC_HEADERS
@@ -32,6 +33,7 @@ pxr_library(usdHydra
         wrapTexture.cpp
         wrapSampledTexture.cpp
         wrapUvTexture.cpp
+        wrapUdimTexture.cpp
         wrapPtexTexture.cpp
         wrapTokens.cpp
 
