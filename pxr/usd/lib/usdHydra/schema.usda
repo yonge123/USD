@@ -16,6 +16,7 @@ over "GLOBAL" (
             //
             dictionary HwUvTexture_1 = { }
             dictionary HwPtexTexture_1 = { }
+            dictionary HwUdimTexture_1 = { }
             dictionary HwPrimvar_1 = { }
 
             //
@@ -145,24 +146,16 @@ class "Texture" (
     )
 }
 
-class "UvTexture" (
+class "SampledTexture" (
     inherits = [</Texture>]
     customData = {
-        string className = "UvTexture"
+        string className = "SampledTexture"
     }
 ) {
     float2 uv (
         doc = "The uv coordinates at which to sample the texture."
     )
 
-    uniform token wrapS (
-        allowedTokens = ["clamp", "repeat", "mirror", "black"]
-        doc = "Specifies the wrap mode for this texture."
-    )
-    uniform token wrapT (
-        allowedTokens = ["clamp", "repeat", "mirror", "black"]
-        doc = "Specifies the wrap mode for this texture."
-    )
     uniform token minFilter (
         allowedTokens = ["nearest", "linear",
                          "linearMipmapLinear", "linearMipmapNearest",
@@ -173,7 +166,30 @@ class "UvTexture" (
         allowedTokens = ["nearest", "linear"]
         doc = "Specifies the magnification filter mode for this texture."
     )
+}
 
+class "UvTexture" (
+    inherits = [</SampledTexture>]
+    customData = {
+        string className = "UvTexture"
+    }
+) {
+    uniform token wrapS (
+        allowedTokens = ["clamp", "repeat", "mirror", "black"]
+        doc = "Specifies the wrap mode for this texture."
+    )
+    uniform token wrapT (
+        allowedTokens = ["clamp", "repeat", "mirror", "black"]
+        doc = "Specifies the wrap mode for this texture."
+    )
+}
+
+class "UdimTexture" (
+    inherits = [</SampledTexture>]
+    customData = {
+        string className = "UdimTexture"
+    }
+) {
 }
 
 class "PtexTexture" (

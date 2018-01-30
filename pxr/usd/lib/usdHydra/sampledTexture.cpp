@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdHydra/uvTexture.h"
+#include "pxr/usd/usdHydra/sampledTexture.h"
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/typed.h"
 
@@ -33,39 +33,39 @@ PXR_NAMESPACE_OPEN_SCOPE
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
-    TfType::Define<UsdHydraUvTexture,
-        TfType::Bases< UsdHydraSampledTexture > >();
+    TfType::Define<UsdHydraSampledTexture,
+        TfType::Bases< UsdHydraTexture > >();
     
 }
 
 /* virtual */
-UsdHydraUvTexture::~UsdHydraUvTexture()
+UsdHydraSampledTexture::~UsdHydraSampledTexture()
 {
 }
 
 /* static */
-UsdHydraUvTexture
-UsdHydraUvTexture::Get(const UsdStagePtr &stage, const SdfPath &path)
+UsdHydraSampledTexture
+UsdHydraSampledTexture::Get(const UsdStagePtr &stage, const SdfPath &path)
 {
     if (!stage) {
         TF_CODING_ERROR("Invalid stage");
-        return UsdHydraUvTexture();
+        return UsdHydraSampledTexture();
     }
-    return UsdHydraUvTexture(stage->GetPrimAtPath(path));
+    return UsdHydraSampledTexture(stage->GetPrimAtPath(path));
 }
 
 
 /* static */
 const TfType &
-UsdHydraUvTexture::_GetStaticTfType()
+UsdHydraSampledTexture::_GetStaticTfType()
 {
-    static TfType tfType = TfType::Find<UsdHydraUvTexture>();
+    static TfType tfType = TfType::Find<UsdHydraSampledTexture>();
     return tfType;
 }
 
 /* static */
 bool 
-UsdHydraUvTexture::_IsTypedSchema()
+UsdHydraSampledTexture::_IsTypedSchema()
 {
     static bool isTyped = _GetStaticTfType().IsA<UsdTyped>();
     return isTyped;
@@ -73,21 +73,38 @@ UsdHydraUvTexture::_IsTypedSchema()
 
 /* virtual */
 const TfType &
-UsdHydraUvTexture::_GetTfType() const
+UsdHydraSampledTexture::_GetTfType() const
 {
     return _GetStaticTfType();
 }
 
 UsdAttribute
-UsdHydraUvTexture::GetWrapSAttr() const
+UsdHydraSampledTexture::GetUvAttr() const
 {
-    return GetPrim().GetAttribute(UsdHydraTokens->wrapS);
+    return GetPrim().GetAttribute(UsdHydraTokens->uv);
 }
 
 UsdAttribute
-UsdHydraUvTexture::CreateWrapSAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdHydraSampledTexture::CreateUvAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdHydraTokens->wrapS,
+    return UsdSchemaBase::_CreateAttr(UsdHydraTokens->uv,
+                       SdfValueTypeNames->Float2,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdHydraSampledTexture::GetMinFilterAttr() const
+{
+    return GetPrim().GetAttribute(UsdHydraTokens->minFilter);
+}
+
+UsdAttribute
+UsdHydraSampledTexture::CreateMinFilterAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdHydraTokens->minFilter,
                        SdfValueTypeNames->Token,
                        /* custom = */ false,
                        SdfVariabilityUniform,
@@ -96,15 +113,15 @@ UsdHydraUvTexture::CreateWrapSAttr(VtValue const &defaultValue, bool writeSparse
 }
 
 UsdAttribute
-UsdHydraUvTexture::GetWrapTAttr() const
+UsdHydraSampledTexture::GetMagFilterAttr() const
 {
-    return GetPrim().GetAttribute(UsdHydraTokens->wrapT);
+    return GetPrim().GetAttribute(UsdHydraTokens->magFilter);
 }
 
 UsdAttribute
-UsdHydraUvTexture::CreateWrapTAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdHydraSampledTexture::CreateMagFilterAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdHydraTokens->wrapT,
+    return UsdSchemaBase::_CreateAttr(UsdHydraTokens->magFilter,
                        SdfValueTypeNames->Token,
                        /* custom = */ false,
                        SdfVariabilityUniform,
@@ -126,15 +143,16 @@ _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
 
 /*static*/
 const TfTokenVector&
-UsdHydraUvTexture::GetSchemaAttributeNames(bool includeInherited)
+UsdHydraSampledTexture::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdHydraTokens->wrapS,
-        UsdHydraTokens->wrapT,
+        UsdHydraTokens->uv,
+        UsdHydraTokens->minFilter,
+        UsdHydraTokens->magFilter,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
-            UsdHydraSampledTexture::GetSchemaAttributeNames(true),
+            UsdHydraTexture::GetSchemaAttributeNames(true),
             localNames);
 
     if (includeInherited)
