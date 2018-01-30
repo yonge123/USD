@@ -72,6 +72,7 @@ void wrapUsdHydraTokens()
     _AddToken(cls, "frame", UsdHydraTokens->frame);
     _AddToken(cls, "HwPrimvar_1", UsdHydraTokens->HwPrimvar_1);
     _AddToken(cls, "HwPtexTexture_1", UsdHydraTokens->HwPtexTexture_1);
+    _AddToken(cls, "HwUdimTexture_1", UsdHydraTokens->HwUdimTexture_1);
     _AddToken(cls, "HwUvTexture_1", UsdHydraTokens->HwUvTexture_1);
     _AddToken(cls, "infoFilename", UsdHydraTokens->infoFilename);
     _AddToken(cls, "infoVarname", UsdHydraTokens->infoVarname);

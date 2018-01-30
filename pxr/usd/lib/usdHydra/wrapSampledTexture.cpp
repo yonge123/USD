@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdHydra/uvTexture.h"
+#include "pxr/usd/usdHydra/sampledTexture.h"
 #include "pxr/usd/usd/schemaBase.h"
 
 #include "pxr/usd/sdf/primSpec.h"
@@ -50,27 +50,34 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
-_CreateWrapSAttr(UsdHydraUvTexture &self,
+_CreateUvAttr(UsdHydraSampledTexture &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreateWrapSAttr(
+    return self.CreateUvAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float2), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateMinFilterAttr(UsdHydraSampledTexture &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateMinFilterAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
 }
         
 static UsdAttribute
-_CreateWrapTAttr(UsdHydraUvTexture &self,
+_CreateMagFilterAttr(UsdHydraSampledTexture &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreateWrapTAttr(
+    return self.CreateMagFilterAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
 }
 
 } // anonymous namespace
 
-void wrapUsdHydraUvTexture()
+void wrapUsdHydraSampledTexture()
 {
-    typedef UsdHydraUvTexture This;
+    typedef UsdHydraSampledTexture This;
 
-    class_<This, bases<UsdHydraSampledTexture> >
-        cls("UvTexture");
+    class_<This, bases<UsdHydraTexture> >
+        cls("SampledTexture");
 
     cls
         .def(init<UsdPrim>(arg("prim")))
@@ -101,17 +108,24 @@ void wrapUsdHydraUvTexture()
         .def(!self)
 
         
-        .def("GetWrapSAttr",
-             &This::GetWrapSAttr)
-        .def("CreateWrapSAttr",
-             &_CreateWrapSAttr,
+        .def("GetUvAttr",
+             &This::GetUvAttr)
+        .def("CreateUvAttr",
+             &_CreateUvAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
-        .def("GetWrapTAttr",
-             &This::GetWrapTAttr)
-        .def("CreateWrapTAttr",
-             &_CreateWrapTAttr,
+        .def("GetMinFilterAttr",
+             &This::GetMinFilterAttr)
+        .def("CreateMinFilterAttr",
+             &_CreateMinFilterAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetMagFilterAttr",
+             &This::GetMagFilterAttr)
+        .def("CreateMagFilterAttr",
+             &_CreateMagFilterAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 
@@ -144,4 +158,4 @@ namespace {
 WRAP_CUSTOM {
 }
 
-} // anonymous namespace
+}

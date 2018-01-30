@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdHydra/uvTexture.h"
+#include "pxr/usd/usdHydra/udimTexture.h"
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/typed.h"
 
@@ -33,39 +33,39 @@ PXR_NAMESPACE_OPEN_SCOPE
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
-    TfType::Define<UsdHydraUvTexture,
+    TfType::Define<UsdHydraUdimTexture,
         TfType::Bases< UsdHydraSampledTexture > >();
     
 }
 
 /* virtual */
-UsdHydraUvTexture::~UsdHydraUvTexture()
+UsdHydraUdimTexture::~UsdHydraUdimTexture()
 {
 }
 
 /* static */
-UsdHydraUvTexture
-UsdHydraUvTexture::Get(const UsdStagePtr &stage, const SdfPath &path)
+UsdHydraUdimTexture
+UsdHydraUdimTexture::Get(const UsdStagePtr &stage, const SdfPath &path)
 {
     if (!stage) {
         TF_CODING_ERROR("Invalid stage");
-        return UsdHydraUvTexture();
+        return UsdHydraUdimTexture();
     }
-    return UsdHydraUvTexture(stage->GetPrimAtPath(path));
+    return UsdHydraUdimTexture(stage->GetPrimAtPath(path));
 }
 
 
 /* static */
 const TfType &
-UsdHydraUvTexture::_GetStaticTfType()
+UsdHydraUdimTexture::_GetStaticTfType()
 {
-    static TfType tfType = TfType::Find<UsdHydraUvTexture>();
+    static TfType tfType = TfType::Find<UsdHydraUdimTexture>();
     return tfType;
 }
 
 /* static */
 bool 
-UsdHydraUvTexture::_IsTypedSchema()
+UsdHydraUdimTexture::_IsTypedSchema()
 {
     static bool isTyped = _GetStaticTfType().IsA<UsdTyped>();
     return isTyped;
@@ -73,69 +73,18 @@ UsdHydraUvTexture::_IsTypedSchema()
 
 /* virtual */
 const TfType &
-UsdHydraUvTexture::_GetTfType() const
+UsdHydraUdimTexture::_GetTfType() const
 {
     return _GetStaticTfType();
 }
 
-UsdAttribute
-UsdHydraUvTexture::GetWrapSAttr() const
-{
-    return GetPrim().GetAttribute(UsdHydraTokens->wrapS);
-}
-
-UsdAttribute
-UsdHydraUvTexture::CreateWrapSAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdHydraTokens->wrapS,
-                       SdfValueTypeNames->Token,
-                       /* custom = */ false,
-                       SdfVariabilityUniform,
-                       defaultValue,
-                       writeSparsely);
-}
-
-UsdAttribute
-UsdHydraUvTexture::GetWrapTAttr() const
-{
-    return GetPrim().GetAttribute(UsdHydraTokens->wrapT);
-}
-
-UsdAttribute
-UsdHydraUvTexture::CreateWrapTAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdHydraTokens->wrapT,
-                       SdfValueTypeNames->Token,
-                       /* custom = */ false,
-                       SdfVariabilityUniform,
-                       defaultValue,
-                       writeSparsely);
-}
-
-namespace {
-static inline TfTokenVector
-_ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
-{
-    TfTokenVector result;
-    result.reserve(left.size() + right.size());
-    result.insert(result.end(), left.begin(), left.end());
-    result.insert(result.end(), right.begin(), right.end());
-    return result;
-}
-}
-
 /*static*/
 const TfTokenVector&
-UsdHydraUvTexture::GetSchemaAttributeNames(bool includeInherited)
+UsdHydraUdimTexture::GetSchemaAttributeNames(bool includeInherited)
 {
-    static TfTokenVector localNames = {
-        UsdHydraTokens->wrapS,
-        UsdHydraTokens->wrapT,
-    };
+    static TfTokenVector localNames;
     static TfTokenVector allNames =
-        _ConcatenateAttributeNames(
-            UsdHydraSampledTexture::GetSchemaAttributeNames(true),
-            localNames);
+        UsdHydraSampledTexture::GetSchemaAttributeNames(true);
 
     if (includeInherited)
         return allNames;
