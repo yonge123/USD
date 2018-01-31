@@ -1,4 +1,3 @@
-tg/ar_resolver_fixes/maya_usdImport
 tg/bugfixes/katana_material_binding_crash_fix
 tg/bugfixes/oiio_read_with_asserts
 tg/bugfixes/ubuntu_katana_build_fix
