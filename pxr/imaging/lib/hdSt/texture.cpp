@@ -62,7 +62,7 @@ HdStTexture::_GetTextureResource( HdSceneDelegate *sceneDelegate,
             GlfTextureRegistry::GetInstance().GetTextureHandle(texPtr);
         texture->AddMemoryRequest(0); 
         return HdTextureResourceSharedPtr(
-            new HdStSimpleTextureResource(texture, false));
+            new HdStSimpleTextureResource(texture, false, false));
     } else if (texID == HdTextureResource::ComputeFallbackPtexHash()) {
         return sceneDelegate->GetTextureResource(sceneID);
         // Hacky Ptex Fallback Implementation (nonfunctional)

@@ -65,9 +65,9 @@ public:
 class HdStSimpleTextureResource : public HdStTextureResource {
 public:
     HDST_API
-    HdStSimpleTextureResource(GlfTextureHandleRefPtr const &textureHandle, bool isPtex);
+    HdStSimpleTextureResource(GlfTextureHandleRefPtr const &textureHandle, bool isPtex, bool isUdim);
     HDST_API
-    HdStSimpleTextureResource(GlfTextureHandleRefPtr const &textureHandle, bool isPtex, 
+    HdStSimpleTextureResource(GlfTextureHandleRefPtr const &textureHandle, bool isPtex, bool isUdim,
         HdWrap wrapS, HdWrap wrapT, HdMinFilter minFilter, HdMagFilter magFilter);
     HDST_API
     virtual ~HdStSimpleTextureResource();
@@ -88,6 +88,7 @@ private:
     float _maxAnisotropy;
     GLuint _sampler;
     bool _isPtex;
+    bool _isUdim;
 };
 
 
