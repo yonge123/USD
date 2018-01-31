@@ -38,8 +38,8 @@ HdStTextureResource::~HdStTextureResource()
 }
 
 HdStSimpleTextureResource::HdStSimpleTextureResource(
-    GlfTextureHandleRefPtr const &textureHandle, bool isPtex):
-        HdStSimpleTextureResource(textureHandle, isPtex, 
+    GlfTextureHandleRefPtr const &textureHandle, bool isPtex, bool isUdim):
+        HdStSimpleTextureResource(textureHandle, isPtex, isUdim,
         /*wrapS*/ HdWrapUseMetaDict, /*wrapT*/ HdWrapUseMetaDict, 
         /*minFilter*/ HdMinFilterNearestMipmapLinear, 
         /*magFilter*/ HdMagFilterLinear)
@@ -47,7 +47,7 @@ HdStSimpleTextureResource::HdStSimpleTextureResource(
 }
 
 HdStSimpleTextureResource::HdStSimpleTextureResource(
-    GlfTextureHandleRefPtr const &textureHandle, bool isPtex, 
+    GlfTextureHandleRefPtr const &textureHandle, bool isPtex, bool isUdim,
         HdWrap wrapS, HdWrap wrapT, 
         HdMinFilter minFilter, HdMagFilter magFilter)
             : _textureHandle(textureHandle)
@@ -56,6 +56,7 @@ HdStSimpleTextureResource::HdStSimpleTextureResource(
             , _maxAnisotropy(16.0)
             , _sampler(0)
             , _isPtex(isPtex)
+            , _isUdim(isUdim)
 {
     if (!glGenSamplers) { // GL initialization guard for headless unit test
         return;
