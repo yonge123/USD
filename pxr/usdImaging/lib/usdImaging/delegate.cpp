@@ -3023,17 +3023,8 @@ UsdImagingDelegate::GetTextureResource(SdfPath const &textureId)
             usdPath.GetText(),
             isPtex ? "true" : "false",
             isUdim ? "true" : "false");
-
-    if (isUdim) {
-        const auto udimTiles = GlfGetUdimTiles(filePath);
-        std::cerr << "Searching for udim tiles" << std::endl;
-        for (const auto& p: udimTiles) {
-            std::cerr << "Udim file found: " << std::get<0>(p) << " -- " << std::get<1>(p) << std::endl;
-        }
-        return HdTextureResourceSharedPtr();
-    }
  
-    if (!TfPathExists(filePath)) {
+    if (!isUdim && !TfPathExists(filePath)) {
         TF_WARN("Unable to find Texture '%s' with path '%s'.", 
             filePath.GetText(), usdPath.GetText());
         return HdTextureResourceSharedPtr();
@@ -3070,7 +3061,7 @@ UsdImagingDelegate::GetTextureResource(SdfPath const &textureId)
                  : HdMinFilterLinear; 
 
     texResource = HdTextureResourceSharedPtr(
-        new HdStSimpleTextureResource(texture, isPtex, wrapShd, wrapThd,
+        new HdStSimpleTextureResource(texture, isPtex, isUdim, wrapShd, wrapThd,
                                       minFilterHd, magFilterHd));
     timer.Stop();
 
