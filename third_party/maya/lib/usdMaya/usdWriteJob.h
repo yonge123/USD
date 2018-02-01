@@ -35,6 +35,8 @@
 
 #include "usdMaya/usdWriteJobCtx.h"
 
+#include "pxr/base/tf/hashmap.h"
+
 #include <maya/MObjectHandle.h>
 
 #include <string>
@@ -82,7 +84,8 @@ class usdWriteJob
 
     PxrUsdMayaUtil::MDagPathMap<SdfPath>::Type mDagPathToUsdPathMap;
 
-    SdfPathSet mPrimPaths;
+    // Currently only used if stripNamespaces is on, to ensure we don't have clashes
+    TfHashMap<SdfPath, MDagPath, SdfPath::Hash> mUsdPathToDagPathMap;
 
     PxrUsdMayaChaserRefPtrVector mChasers;
 
