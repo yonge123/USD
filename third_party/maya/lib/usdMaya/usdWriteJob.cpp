@@ -284,13 +284,18 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
 
                 // Write out data (non-animated/default values).
                 if (const auto& usdPrim = primWriter->getPrim()) {
-                    if (mJobCtx.mArgs.stripNamespaces && mPrimPaths.find(usdPrim.GetPath()) != mPrimPaths.end()){
-                        std::string error = TfStringPrintf("Multiple dag nodes map to the same prim path after "
-                                                           "stripping namespaces: %s", usdPrim.GetPath().GetText());
-                        MGlobal::displayError(MString(error.c_str()));
-                        return false;
+                    if (mJobCtx.mArgs.stripNamespaces) {
+                        auto foundPair = mUsdPathToDagPathMap.find(usdPrim.GetPath());
+                        if (foundPair != mUsdPathToDagPathMap.end()){
+                            std::string error = TfStringPrintf("Multiple dag nodes map to the same prim path after "
+                                                               "stripping namespaces: %s - %s",
+                                                               foundPair->second.fullPathName().asChar(),
+                                                               primWriter->getDagPath().fullPathName().asChar());
+                            MGlobal::displayError(MString(error.c_str()));
+                            return false;
+                        }
+                        mUsdPathToDagPathMap[usdPrim.GetPath()] = primWriter->getDagPath();
                     }
-                    mPrimPaths.insert(usdPrim.GetPath());
 
                     primWriter->write(UsdTimeCode::Default());
 
