@@ -25,6 +25,7 @@
 
 #include "pxr/usdImaging/usdImaging/delegate.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
+#include "pxr/usdImaging/usdImaging/debugCodes.h"
 
 #include "pxr/imaging/hd/basisCurves.h"
 #include "pxr/imaging/hd/perfLog.h"
@@ -237,7 +238,7 @@ UsdImagingBasisCurvesAdapter::_GetPoints(UsdPrim const& prim,
 {
     HD_TRACE_FUNCTION();
     if (!prim.GetAttribute(UsdGeomTokens->points).Get(value, time)) {
-        TF_WARN("Points could not be read from prim: <%s>",
+        TF_DEBUG(USDIMAGING_PRIM_ACCESS).Msg("Points could not be read from prim: <%s>\n",
                 prim.GetPath().GetText());
         *value = VtVec3fArray();
     }
