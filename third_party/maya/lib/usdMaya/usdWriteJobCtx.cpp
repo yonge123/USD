@@ -25,6 +25,7 @@
 
 #include "usdMaya/MayaCameraWriter.h"
 #include "usdMaya/MayaInstancerWriter.h"
+#include "usdMaya/MayaImagePlaneWriter.h"
 #include "usdMaya/MayaMeshWriter.h"
 #include "usdMaya/MayaNurbsCurveWriter.h"
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
@@ -277,6 +278,11 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         const SdfPath cameraWritePath = usdPath.IsEmpty() ?
                 getUsdPathFromDagPath(curDag, false) : usdPath;
         MayaCameraWriterPtr primPtr(new MayaCameraWriter(curDag, cameraWritePath, *this));
+        if (primPtr->isValid()) {
+            return primPtr;
+        }
+    } else if (ob.hasFn(MFn::kImagePlane)) {
+        MayaImagePlaneWriterPtr primPtr(new MayaImagePlaneWriter(curDag, writePath, instanceSource, *this));
         if (primPtr->isValid()) {
             return primPtr;
         }
