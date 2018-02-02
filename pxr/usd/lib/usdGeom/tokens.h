@@ -66,6 +66,10 @@ struct UsdGeomTokensType {
     /// 
     /// Possible value for UsdGeomMesh::GetFaceVaryingLinearInterpolationAttr()
     const TfToken all;
+    /// \brief "alphaGain"
+    /// 
+    /// UsdGeomImagePlane
+    const TfToken alphaGain;
     /// \brief "angularVelocities"
     /// 
     /// UsdGeomPointInstancer
@@ -198,6 +202,10 @@ struct UsdGeomTokensType {
     /// 
     /// Possible value for UsdGeomModelAPI::GetModelDrawModeAttr(), Possible value for UsdGeomImageable::GetPurposeAttr(), Default value for UsdGeomImageable::GetPurposeAttr()
     const TfToken default_;
+    /// \brief "depth"
+    /// 
+    /// UsdGeomImagePlane
+    const TfToken depth;
     /// \brief "doubleSided"
     /// 
     /// UsdGeomGprim
@@ -274,6 +282,14 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomImagePlane
     const TfToken frame;
+    /// \brief "frameCache"
+    /// 
+    /// UsdGeomImagePlane
+    const TfToken frameCache;
+    /// \brief "frameOffset"
+    /// 
+    /// UsdGeomImagePlane
+    const TfToken frameOffset;
     /// \brief "fromTexture"
     /// 
     /// Possible value for UsdGeomModelAPI::GetModelCardGeometryAttr()
@@ -288,7 +304,7 @@ struct UsdGeomTokensType {
     const TfToken guide;
     /// \brief "height"
     /// 
-    /// UsdGeomCone, UsdGeomCapsule, UsdGeomCylinder
+    /// UsdGeomCone, UsdGeomCapsule, UsdGeomCylinder, UsdGeomImagePlane
     const TfToken height;
     /// \brief "hermite"
     /// 
@@ -562,6 +578,10 @@ struct UsdGeomTokensType {
     /// 
     /// Possible value for UsdGeomMesh::GetTriangleSubdivisionRuleAttr()
     const TfToken smooth;
+    /// \brief "squeezeCorrection"
+    /// 
+    /// UsdGeomImagePlane
+    const TfToken squeezeCorrection;
     /// \brief "stereoRole"
     /// 
     /// UsdGeomCamera
@@ -638,6 +658,10 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomNurbsPatch
     const TfToken uRange;
+    /// \brief "useFrameExtension"
+    /// 
+    /// UsdGeomImagePlane
+    const TfToken useFrameExtension;
     /// \brief "uVertexCount"
     /// 
     /// UsdGeomNurbsPatch
@@ -690,6 +714,10 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomNurbsPatch
     const TfToken vVertexCount;
+    /// \brief "width"
+    /// 
+    /// UsdGeomImagePlane
+    const TfToken width;
     /// \brief "widths"
     /// 
     /// UsdGeomPoints, UsdGeomCurves
