@@ -119,6 +119,7 @@ void wrapUsdGeomTokens()
     _AddToken(cls, "focalLength", UsdGeomTokens->focalLength);
     _AddToken(cls, "focusDistance", UsdGeomTokens->focusDistance);
     _AddToken(cls, "frame", UsdGeomTokens->frame);
+    _AddToken(cls, "frameCache", UsdGeomTokens->frameCache);
     _AddToken(cls, "frameOffset", UsdGeomTokens->frameOffset);
     _AddToken(cls, "fromTexture", UsdGeomTokens->fromTexture);
     _AddToken(cls, "fStop", UsdGeomTokens->fStop);
