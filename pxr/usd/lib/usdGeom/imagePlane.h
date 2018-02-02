@@ -28,7 +28,7 @@
 
 #include "pxr/pxr.h"
 #include "pxr/usd/usdGeom/api.h"
-#include "pxr/usd/usdGeom/imageable.h"
+#include "pxr/usd/usdGeom/boundable.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usdGeom/tokens.h"
@@ -61,7 +61,7 @@ class SdfAssetPath;
 /// So to set an attribute to the value "rightHanded", use UsdGeomTokens->rightHanded
 /// as the value.
 ///
-class UsdGeomImagePlane : public UsdGeomImageable
+class UsdGeomImagePlane : public UsdGeomBoundable
 {
 public:
     /// Compile-time constant indicating whether or not this class corresponds
@@ -80,7 +80,7 @@ public:
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
     explicit UsdGeomImagePlane(const UsdPrim& prim=UsdPrim())
-        : UsdGeomImageable(prim)
+        : UsdGeomBoundable(prim)
     {
     }
 
@@ -88,7 +88,7 @@ public:
     /// Should be preferred over UsdGeomImagePlane(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
     explicit UsdGeomImagePlane(const UsdSchemaBase& schemaObj)
-        : UsdGeomImageable(schemaObj)
+        : UsdGeomBoundable(schemaObj)
     {
     }
 
