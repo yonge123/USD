@@ -282,6 +282,10 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomImagePlane
     const TfToken frame;
+    /// \brief "frameCache"
+    /// 
+    /// UsdGeomImagePlane
+    const TfToken frameCache;
     /// \brief "frameOffset"
     /// 
     /// UsdGeomImagePlane
