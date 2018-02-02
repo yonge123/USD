@@ -40,21 +40,16 @@ class testUsdExportShadingModePxrRis(unittest.TestCase):
     def setUpClass(cls):
         standalone.initialize('usd')
 
-        cmds.loadPlugin('pxrUsd')
+        mayaFile = os.path.abspath('MarbleCube.ma')
+        cmds.file(mayaFile, open=True, force=True)
 
-        def openStage(name):
-            mayaFile = os.path.abspath(name + '.ma')
-            cmds.file(mayaFile, open=True, force=True)
-    
-            # Export to USD.
-            usdFilePath = os.path.abspath(name + '.usda')
-            cmds.usdExport(mergeTransformAndShape=True, file=usdFilePath,
-                shadingMode='pxrRis')
-            
-            return Usd.Stage.Open(usdFilePath)
-    
-        cls._cubeStage = openStage('MarbleCube')
-        cls._cubePlanePrismStage = openStage('CubePlanePrism')
+        # Export to USD.
+        usdFilePath = os.path.abspath('MarbleCube.usda')
+        cmds.loadPlugin('pxrUsd')
+        cmds.usdExport(mergeTransformAndShape=True, file=usdFilePath,
+            shadingMode='pxrRis')
+
+        cls._stage = Usd.Stage.Open(usdFilePath)
 
     @classmethod
     def tearDownClass(cls):
@@ -64,15 +59,14 @@ class testUsdExportShadingModePxrRis(unittest.TestCase):
         """
         Tests that the USD stage was opened successfully.
         """
-        self.assertTrue(self._cubeStage)
-        self.assertTrue(self._cubePlanePrismStage)
+        self.assertTrue(self._stage)
 
     def testExportPxrRisShading(self):
         """
         Tests that exporting a Maya mesh with a simple Maya shading setup
         results in the correct shading on the USD mesh.
         """
-        cubePrim = self._cubeStage.GetPrimAtPath('/MarbleCube/Geom/Cube')
+        cubePrim = self._stage.GetPrimAtPath('/MarbleCube/Geom/Cube')
         self.assertTrue(cubePrim)
 
         # Validate the Material prim bound to the Mesh prim.
@@ -123,7 +117,7 @@ class testUsdExportShadingModePxrRis(unittest.TestCase):
         Tests that only the attributes authored in Maya are exported to USD.
         """
         shaderPrimPath = '/MarbleCube/Looks/MarbleCubeSG/MarbleShader'
-        shaderPrim = self._cubeStage.GetPrimAtPath(shaderPrimPath)
+        shaderPrim = self._stage.GetPrimAtPath(shaderPrimPath)
         self.assertTrue(shaderPrim)
 
         shader = UsdShade.Shader(shaderPrim)
@@ -148,41 +142,6 @@ class testUsdExportShadingModePxrRis(unittest.TestCase):
 
         shaderOutputs = shader.GetOutputs()
         self.assertEqual(len(shaderOutputs), 1)
-        
-    def testShaderAssignmentWithMergedShapes(self):
-        stage = self._cubePlanePrismStage
-        # The MarbleCube should NOT be merged, as it has other transforms w/ shapes below it
-        cubePrim = stage.GetPrimAtPath('/Geom/MarbleCube/MarbleCubeShape')
-        cubeXformPrim = stage.GetPrimAtPath('/Geom/MarbleCube')
-        # The other two should be merged
-        planePrim = stage.GetPrimAtPath('/Geom/MarbleCube/CheckerPlane')
-        prismPrim = stage.GetPrimAtPath('/Geom/MarbleCube/NoTexturePrism')
-        
-        meshes = (cubePrim, planePrim, prismPrim)
-        
-        for mesh in meshes:
-            self.assertTrue(mesh.IsValid())
-            self.assertEqual(mesh.GetTypeName(), 'Mesh')
-        self.assertTrue(cubeXformPrim)
-        self.assertEqual(cubeXformPrim.GetTypeName(), 'Xform')
-        
-        # The xform shouldn't have anything assigned to it!    
-        xformMat = UsdShade.Material.GetBoundMaterial(cubeXformPrim)
-        self.assertFalse(xformMat)
-        
-        # the cube should have the marble assigned to it...
-        marble = UsdShade.Material.GetBoundMaterial(cubePrim)
-        self.assertTrue(marble)
-        self.assertEqual(marble.GetPath().name, "MarbleCubeSG")
-
-        # the plane should have the checker assigned to it...
-        checker = UsdShade.Material.GetBoundMaterial(planePrim)
-        self.assertTrue(checker)
-        self.assertEqual(checker.GetPath().name, "CheckerPlaneSG")
-        
-        # ...and the prism shouldn't have a material
-        prismMat = UsdShade.Material.GetBoundMaterial(prismPrim)
-        self.assertFalse(prismMat)
 
 
 if __name__ == '__main__':
