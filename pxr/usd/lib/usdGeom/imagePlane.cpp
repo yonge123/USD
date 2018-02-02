@@ -34,7 +34,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_REGISTRY_FUNCTION(TfType)
 {
     TfType::Define<UsdGeomImagePlane,
-        TfType::Bases< UsdGeomImageable > >();
+        TfType::Bases< UsdGeomBoundable > >();
     
     // Register the usd prim typename as an alias under UsdSchemaBase. This
     // enables one to call
@@ -268,6 +268,23 @@ UsdGeomImagePlane::CreateFrameOffsetAttr(VtValue const &defaultValue, bool write
 }
 
 UsdAttribute
+UsdGeomImagePlane::GetFrameCacheAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->frameCache);
+}
+
+UsdAttribute
+UsdGeomImagePlane::CreateFrameCacheAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->frameCache,
+                       SdfValueTypeNames->Int,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
 UsdGeomImagePlane::GetWidthAttr() const
 {
     return GetPrim().GetAttribute(UsdGeomTokens->width);
@@ -392,6 +409,7 @@ UsdGeomImagePlane::GetSchemaAttributeNames(bool includeInherited)
         UsdGeomTokens->coverageOrigin,
         UsdGeomTokens->useFrameExtension,
         UsdGeomTokens->frameOffset,
+        UsdGeomTokens->frameCache,
         UsdGeomTokens->width,
         UsdGeomTokens->height,
         UsdGeomTokens->alphaGain,
@@ -400,7 +418,7 @@ UsdGeomImagePlane::GetSchemaAttributeNames(bool includeInherited)
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
-            UsdGeomImageable::GetSchemaAttributeNames(true),
+            UsdGeomBoundable::GetSchemaAttributeNames(true),
             localNames);
 
     if (includeInherited)
