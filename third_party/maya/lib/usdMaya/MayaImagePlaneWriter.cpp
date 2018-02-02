@@ -2,6 +2,7 @@
 
 #include "pxr/usd/usdGeom/tokens.h"
 #include "pxr/usd/usdGeom/imagePlane.h"
+#include <maya/MBoundingBox.h>
 #include <maya/MFnDependencyNode.h>
 
 #include "writeUtil.h"
@@ -183,7 +184,14 @@ bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdG
         return true;
     }
 
-    MFnDependencyNode dnode(getDagPath().node());
+    // Write extent
+    MFnDagNode dnode(getDagPath());
+    VtArray<GfVec3f> extent(2);
+    auto boundingBox = dnode.boundingBox();
+    extent[0] = GfVec3f(boundingBox.min().x, boundingBox.min().y, boundingBox.min().z);
+    extent[1] = GfVec3f(boundingBox.max().x, boundingBox.max().y, boundingBox.max().z);
+    primSchema.CreateExtentAttr().Set(extent, usdTime);
+
     const auto sizePlug = dnode.findPlug("size");
     primSchema.GetFilenameAttr().Set(SdfAssetPath(std::string(dnode.findPlug("imageName").asString().asChar())));
     const auto fit = dnode.findPlug("fit").asShort();
