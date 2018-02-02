@@ -65,6 +65,7 @@ void wrapUsdGeomTokens()
     boost::python::class_<UsdGeomTokensType, boost::noncopyable>
         cls("Tokens", boost::python::no_init);
     _AddToken(cls, "all", UsdGeomTokens->all);
+    _AddToken(cls, "alphaGain", UsdGeomTokens->alphaGain);
     _AddToken(cls, "angularVelocities", UsdGeomTokens->angularVelocities);
     _AddToken(cls, "axis", UsdGeomTokens->axis);
     _AddToken(cls, "basis", UsdGeomTokens->basis);
@@ -98,6 +99,7 @@ void wrapUsdGeomTokens()
     _AddToken(cls, "cubic", UsdGeomTokens->cubic);
     _AddToken(cls, "curveVertexCounts", UsdGeomTokens->curveVertexCounts);
     _AddToken(cls, "default_", UsdGeomTokens->default_);
+    _AddToken(cls, "depth", UsdGeomTokens->depth);
     _AddToken(cls, "doubleSided", UsdGeomTokens->doubleSided);
     _AddToken(cls, "edgeAndCorner", UsdGeomTokens->edgeAndCorner);
     _AddToken(cls, "edgeOnly", UsdGeomTokens->edgeOnly);
@@ -117,6 +119,8 @@ void wrapUsdGeomTokens()
     _AddToken(cls, "focalLength", UsdGeomTokens->focalLength);
     _AddToken(cls, "focusDistance", UsdGeomTokens->focusDistance);
     _AddToken(cls, "frame", UsdGeomTokens->frame);
+    _AddToken(cls, "frameCache", UsdGeomTokens->frameCache);
+    _AddToken(cls, "frameOffset", UsdGeomTokens->frameOffset);
     _AddToken(cls, "fromTexture", UsdGeomTokens->fromTexture);
     _AddToken(cls, "fStop", UsdGeomTokens->fStop);
     _AddToken(cls, "guide", UsdGeomTokens->guide);
@@ -189,6 +193,7 @@ void wrapUsdGeomTokens()
     _AddToken(cls, "shutterOpen", UsdGeomTokens->shutterOpen);
     _AddToken(cls, "size", UsdGeomTokens->size);
     _AddToken(cls, "smooth", UsdGeomTokens->smooth);
+    _AddToken(cls, "squeezeCorrection", UsdGeomTokens->squeezeCorrection);
     _AddToken(cls, "stereoRole", UsdGeomTokens->stereoRole);
     _AddToken(cls, "subdivisionScheme", UsdGeomTokens->subdivisionScheme);
     _AddToken(cls, "toSize", UsdGeomTokens->toSize);
@@ -208,6 +213,7 @@ void wrapUsdGeomTokens()
     _AddToken(cls, "uOrder", UsdGeomTokens->uOrder);
     _AddToken(cls, "upAxis", UsdGeomTokens->upAxis);
     _AddToken(cls, "uRange", UsdGeomTokens->uRange);
+    _AddToken(cls, "useFrameExtension", UsdGeomTokens->useFrameExtension);
     _AddToken(cls, "uVertexCount", UsdGeomTokens->uVertexCount);
     _AddToken(cls, "varying", UsdGeomTokens->varying);
     _AddToken(cls, "velocities", UsdGeomTokens->velocities);
@@ -221,6 +227,7 @@ void wrapUsdGeomTokens()
     _AddToken(cls, "vOrder", UsdGeomTokens->vOrder);
     _AddToken(cls, "vRange", UsdGeomTokens->vRange);
     _AddToken(cls, "vVertexCount", UsdGeomTokens->vVertexCount);
+    _AddToken(cls, "width", UsdGeomTokens->width);
     _AddToken(cls, "widths", UsdGeomTokens->widths);
     _AddToken(cls, "wrap", UsdGeomTokens->wrap);
     _AddToken(cls, "x", UsdGeomTokens->x);

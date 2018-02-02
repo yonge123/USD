@@ -104,6 +104,62 @@ _CreateCoverageOriginAttr(UsdGeomImagePlane &self,
     return self.CreateCoverageOriginAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Int2), writeSparsely);
 }
+        
+static UsdAttribute
+_CreateUseFrameExtensionAttr(UsdGeomImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateUseFrameExtensionAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateFrameOffsetAttr(UsdGeomImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateFrameOffsetAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Int), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateFrameCacheAttr(UsdGeomImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateFrameCacheAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Int), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateWidthAttr(UsdGeomImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateWidthAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateHeightAttr(UsdGeomImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateHeightAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateAlphaGainAttr(UsdGeomImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateAlphaGainAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateDepthAttr(UsdGeomImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateDepthAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateSqueezeCorrectionAttr(UsdGeomImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateSqueezeCorrectionAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
+}
 
 } // anonymous namespace
 
@@ -199,6 +255,62 @@ void wrapUsdGeomImagePlane()
              &This::GetCoverageOriginAttr)
         .def("CreateCoverageOriginAttr",
              &_CreateCoverageOriginAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetUseFrameExtensionAttr",
+             &This::GetUseFrameExtensionAttr)
+        .def("CreateUseFrameExtensionAttr",
+             &_CreateUseFrameExtensionAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetFrameOffsetAttr",
+             &This::GetFrameOffsetAttr)
+        .def("CreateFrameOffsetAttr",
+             &_CreateFrameOffsetAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetFrameCacheAttr",
+             &This::GetFrameCacheAttr)
+        .def("CreateFrameCacheAttr",
+             &_CreateFrameCacheAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetWidthAttr",
+             &This::GetWidthAttr)
+        .def("CreateWidthAttr",
+             &_CreateWidthAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetHeightAttr",
+             &This::GetHeightAttr)
+        .def("CreateHeightAttr",
+             &_CreateHeightAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetAlphaGainAttr",
+             &This::GetAlphaGainAttr)
+        .def("CreateAlphaGainAttr",
+             &_CreateAlphaGainAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetDepthAttr",
+             &This::GetDepthAttr)
+        .def("CreateDepthAttr",
+             &_CreateDepthAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetSqueezeCorrectionAttr",
+             &This::GetSqueezeCorrectionAttr)
+        .def("CreateSqueezeCorrectionAttr",
+             &_CreateSqueezeCorrectionAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 

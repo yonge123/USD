@@ -658,6 +658,9 @@ class ImagePlane "ImagePlane" (
     """
 )
 {
+    float alphaGain = 1 (
+        doc = "Alpha Gain"
+    )
     rel camera (
         doc = "Link to the camera from where aperture sizes are queried."
     )
@@ -666,6 +669,9 @@ class ImagePlane "ImagePlane" (
     )
     int2 coverageOrigin = (0, 0) (
         doc = "Coverage origin in pixels. Clamped to -image's size and image's size."
+    )
+    float depth = 100 (
+        doc = "Depth"
     )
     float3[] extent (
         doc = """Extent is a three dimensional range measuring the geometric
@@ -686,6 +692,15 @@ class ImagePlane "ImagePlane" (
     )
     double frame = 0 (
         doc = "The frame offset for animated textures."
+    )
+    int frameCache = 45 (
+        doc = "Precached frame count"
+    )
+    int frameOffset = 0 (
+        doc = "Frame offset"
+    )
+    float height = 0 (
+        doc = "Height"
     )
     asset info:filename = @@ (
         doc = "Asset path to the file containg the image data."
@@ -759,6 +774,12 @@ class ImagePlane "ImagePlane" (
     float2 size = (-1, -1) (
         doc = "Image plane size in inches. Less than zero means equal to the camera aperture size."
     )
+    float squeezeCorrection = 1 (
+        doc = "Squeeze Correction"
+    )
+    bool useFrameExtension = 0 (
+        doc = "Using frame extension"
+    )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
         doc = '''Visibility is meant to be the simplest form of "pruning" 
@@ -767,6 +788,9 @@ class ImagePlane "ImagePlane" (
         segment of a shot, and absent from others; unlike the action of 
         deactivating geometry prims, invisible geometry is still 
         available for inspection, for positioning, for defining volumes, etc.'''
+    )
+    float width = 0 (
+        doc = "Width"
     )
     uniform token[] xformOpOrder (
         doc = """Encodes the sequence of transformation operations in the
