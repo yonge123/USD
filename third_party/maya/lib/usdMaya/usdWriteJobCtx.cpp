@@ -27,6 +27,7 @@
 #include "usdMaya/MayaCameraWriter.h"
 #include "usdMaya/MayaImagePlaneWriter.h"
 #include "usdMaya/MayaInstancerWriter.h"
+#include "usdMaya/MayaImagePlaneWriter.h"
 #include "usdMaya/MayaMeshWriter.h"
 #include "usdMaya/MayaNurbsCurveWriter.h"
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
@@ -336,7 +337,7 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
             return primPtr;
         }
     } else if (ob.hasFn(MFn::kImagePlane)) {
-        MayaImagePlaneWriterPtr primPtr(new MayaImagePlaneWriter(curDag, getUsdPathFromDagPath(curDag, false), *this));
+        MayaImagePlaneWriterPtr primPtr(new MayaImagePlaneWriter(curDag, writePath, instanceSource, *this));
         if (primPtr->isValid()) {
             return primPtr;
         }

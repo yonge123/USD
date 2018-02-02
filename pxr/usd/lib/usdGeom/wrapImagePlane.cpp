@@ -120,6 +120,13 @@ _CreateFrameOffsetAttr(UsdGeomImagePlane &self,
 }
         
 static UsdAttribute
+_CreateFrameCacheAttr(UsdGeomImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateFrameCacheAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Int), writeSparsely);
+}
+        
+static UsdAttribute
 _CreateWidthAttr(UsdGeomImagePlane &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateWidthAttr(
@@ -160,7 +167,7 @@ void wrapUsdGeomImagePlane()
 {
     typedef UsdGeomImagePlane This;
 
-    class_<This, bases<UsdGeomImageable> >
+    class_<This, bases<UsdGeomBoundable> >
         cls("ImagePlane");
 
     cls
@@ -262,6 +269,13 @@ void wrapUsdGeomImagePlane()
              &This::GetFrameOffsetAttr)
         .def("CreateFrameOffsetAttr",
              &_CreateFrameOffsetAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetFrameCacheAttr",
+             &This::GetFrameCacheAttr)
+        .def("CreateFrameCacheAttr",
+             &_CreateFrameCacheAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
