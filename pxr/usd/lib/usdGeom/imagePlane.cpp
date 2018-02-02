@@ -34,7 +34,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_REGISTRY_FUNCTION(TfType)
 {
     TfType::Define<UsdGeomImagePlane,
-        TfType::Bases< UsdGeomImageable > >();
+        TfType::Bases< UsdGeomBoundable > >();
     
     // Register the usd prim typename as an alias under UsdSchemaBase. This
     // enables one to call
@@ -274,7 +274,7 @@ UsdGeomImagePlane::GetSchemaAttributeNames(bool includeInherited)
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
-            UsdGeomImageable::GetSchemaAttributeNames(true),
+            UsdGeomBoundable::GetSchemaAttributeNames(true),
             localNames);
 
     if (includeInherited)
