@@ -44,12 +44,12 @@ TF_WRAP_MODULE
     // Generated schema.  Base classes must precede derived classes.
     // Indentation shows class hierarchy.
     TF_WRAP(UsdGeomImageable);
-        TF_WRAP(UsdGeomImagePlane);
         TF_WRAP(UsdGeomScope);
         TF_WRAP(UsdGeomXformable);
             TF_WRAP(UsdGeomXform);
             TF_WRAP(UsdGeomCamera);
             TF_WRAP(UsdGeomBoundable);
+                TF_WRAP(UsdGeomImagePlane);
                 TF_WRAP(UsdGeomGprim);
                     TF_WRAP(UsdGeomCapsule);
                     TF_WRAP(UsdGeomCone);
