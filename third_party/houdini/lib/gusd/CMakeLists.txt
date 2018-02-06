@@ -39,7 +39,7 @@ pxr_shared_library(${PXR_PACKAGE}
         purpose
         refiner
         scopeWrapper
-        shaderOutputRegistry
+        shadingModeRegistry
         shaderWrapper
         stageCache
         stageEdit
@@ -70,7 +70,6 @@ pxr_shared_library(${PXR_PACKAGE}
         defaultArray.h
         gusd.h
         GU_USD.h
-        shaderOutput.h
         stageOpts.h
         USD_PropertyMap.h
         USD_TraverseSimple.h

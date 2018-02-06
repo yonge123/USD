@@ -156,7 +156,7 @@ getTemplates()
     static PRM_Name enableShadersName("enableshaders", "Output Shaders");
     static vector<PRM_Name> shadingModes;
     if (shadingModes.empty()) {
-        const auto shaderOutputs = GusdShaderOutputRegistry::getInstance().listOutputs();
+        const auto shaderOutputs = GusdShadingModeRegistry::getInstance().listOutputs();
         shadingModes.reserve(shaderOutputs.size() + 1);
         for (const auto& shaderOutput: shaderOutputs) {
             shadingModes.emplace_back(std::get<0>(shaderOutput).GetText(), std::get<1>(shaderOutput).GetText());
@@ -1449,7 +1449,7 @@ renderFrame(fpreal time,
     //
     // Store maps of per-prim assignments for both shader types.
     UsdRefShaderMap usdRefShaderMap;
-    GusdShaderOutput::HouMaterialMap houMaterialMap;
+    GusdShadingModeRegistry::HouMaterialMap houMaterialMap;
 
     // Sort the refined prim array by primitive paths. This ensures parents
     // will be written before their children.
@@ -1809,7 +1809,7 @@ renderFrame(fpreal time,
 
 ROP_RENDER_CODE GusdROP_usdoutput::
 bindAndWriteShaders(UsdRefShaderMap& usdRefShaderMap,
-                    GusdShaderOutput::HouMaterialMap& houMaterialMap)
+                    GusdShadingModeRegistry::HouMaterialMap& houMaterialMap)
 {
     //
     // This ROP supports binding shaders from 2 different sources:
@@ -1897,17 +1897,14 @@ bindAndWriteShaders(UsdRefShaderMap& usdRefShaderMap,
     UT_String shadingMode;
     evalString(shadingMode, "shadingmode", 0, 0);
 
-    auto shaderOutputCreator = GusdShaderOutputRegistry::getInstance().getShaderOutputCreator(TfToken(shadingMode.toStdString()));
-    if (shaderOutputCreator != nullptr) {
-        auto shaderOutput = shaderOutputCreator();
-        if (shaderOutput != nullptr) {
-            shaderOutput->bindAndWriteShaders(
-                this,
-                m_usdStage,
-                looksPath,
-                houMaterialMap,
-                shaderOutDir.toStdString());
-        }
+    auto shaderExpoter = GusdShadingModeRegistry::getInstance().getShaderOutputCreator(TfToken(shadingMode.toStdString()));
+    if (shaderExpoter != nullptr) {
+        shaderExpoter(
+            this,
+            m_usdStage,
+            looksPath,
+            houMaterialMap,
+            shaderOutDir.toStdString());
     }
 
     return ROP_CONTINUE_RENDER;

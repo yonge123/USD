@@ -21,40 +21,63 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef __GUSD_SHADEROUTPUT_H__
-#define __GUSD_SHADEROUTPUT_H__
+#ifndef __GUSD_SHADEROUTPUTREGISTRY_H__
+#define __GUSD_SHADEROUTPUTREGISTRY_H__
 
 #include <pxr/pxr.h>
+
+#include <pxr/base/tf/declarePtrs.h>
+#include <pxr/base/tf/registryManager.h>
+#include <pxr/base/tf/token.h>
+#include <pxr/base/tf/singleton.h>
+#include <pxr/base/tf/weakPtr.h>
+
+#include "gusd/api.h"
+
 #include <pxr/usd/sdf/path.h>
 #include <pxr/usd/usd/stage.h>
 
 #include <UT/UT_Map.h>
 #include <OP/OP_Node.h>
 
-#include "gusd/api.h"
-
-#include <functional>
-#include <memory>
 #include <vector>
+#include <tuple>
+#include <functional>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class GusdShaderOutput {
+TF_DECLARE_WEAK_PTRS(GusdShaderOutputRegistry);
+class GusdShadingModeRegistry : public TfWeakBase
+{
+private:
+    GusdShadingModeRegistry() = default;
+    ~GusdShadingModeRegistry() = default;
+
 public:
     using HouMaterialMap = UT_Map<std::string, std::vector<SdfPath>>;
+    using ExporterFn = std::function<
+        void(OP_Node*, const UsdStagePtr&, const SdfPath&,
+             const HouMaterialMap&, const std::string&)>;
+    using ShaderOutputList = std::vector<std::tuple<TfToken, TfToken>>;
 
     GUSD_API
-    virtual void bindAndWriteShaders(
-        OP_Node* opNode,
-        const UsdStagePtr& stage,
-        const SdfPath& looksPath,
-        const HouMaterialMap& houMaterialMap,
-        const std::string& shaderOutDir) = 0;
-};
+    static GusdShadingModeRegistry& getInstance();
 
-using GusdShaderOutputPtr = std::shared_ptr<GusdShaderOutput>;
-using GusdShaderOutputCreator = std::function<GusdShaderOutputPtr()>;
+    GUSD_API
+    bool registerExporter(
+        const std::string& name,
+        const std::string& label,
+        ExporterFn fn);
+
+    GUSD_API
+    ExporterFn getShaderOutputCreator(const TfToken& name);
+
+    GUSD_API
+    ShaderOutputList listOutputs();
+private:
+    friend class TfSingleton<GusdShadingModeRegistry>;
+};
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // __GUSD_SHADEROUTPUT_H__
+#endif // __GUSD_SHADEROUTPUTREGISTRY_H__

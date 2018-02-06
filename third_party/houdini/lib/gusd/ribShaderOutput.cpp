@@ -21,8 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "shaderOutput.h"
-#include "shaderOutputRegistry.h"
+#include "shadingModeRegistry.h"
 #include "shaderWrapper.h"
 
 #include <OP/OP_Node.h>
@@ -31,38 +30,30 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class GusdRibShaderOutput : public GusdShaderOutput {
-public:
-    void bindAndWriteShaders(
-        OP_Node* opNode,
-        const UsdStagePtr& stage,
-        const SdfPath& looksPath,
-        const GusdShaderOutput::HouMaterialMap& houMaterialMap,
-        const std::string& shaderOutDir) override {
-        for (const auto& assignment: houMaterialMap) {
-            VOP_Node* materialVop = opNode->findVOPNode(assignment.first.c_str());
-            if (materialVop == nullptr ||
-                strcmp(materialVop->getRenderMask(), "RIB") != 0) {
-                continue;
+TF_REGISTRY_FUNCTION_WITH_TAG(GusdShadingModeRegistry, rib) {
+    GusdShadingModeRegistry::getInstance().registerExporter(
+        "rib", "RIB", [](OP_Node* opNode,
+                         const UsdStagePtr& stage,
+                         const SdfPath& looksPath,
+                         const GusdShadingModeRegistry::HouMaterialMap& houMaterialMap,
+                         const std::string& shaderOutDir) {
+            for (const auto& assignment: houMaterialMap) {
+                VOP_Node* materialVop = opNode->findVOPNode(assignment.first.c_str());
+                if (materialVop == nullptr ||
+                    strcmp(materialVop->getRenderMask(), "RIB") != 0) {
+                    continue;
+                }
+
+                UT_String vopPath(materialVop->getFullPath());
+                vopPath.forceAlphaNumeric();
+                SdfPath path = looksPath.AppendPath(SdfPath(vopPath.toStdString()));
+
+                GusdShaderWrapper shader(materialVop, stage, path.GetString(), shaderOutDir);
+                for (const auto& primPath: assignment.second) {
+                    UsdPrim prim = stage->GetPrimAtPath(primPath);
+                    shader.bind(prim);
+                }
             }
-
-            UT_String vopPath(materialVop->getFullPath());
-            vopPath.forceAlphaNumeric();
-            SdfPath path = looksPath.AppendPath(SdfPath(vopPath.toStdString()));
-
-            GusdShaderWrapper shader(materialVop, stage, path.GetString(), shaderOutDir);
-            for (const auto& primPath: assignment.second) {
-                UsdPrim prim = stage->GetPrimAtPath(primPath);
-                shader.bind(prim);
-            }
-        }
-    }
-};
-
-TF_REGISTRY_FUNCTION_WITH_TAG(GusdShaderOutput, rib) {
-    GusdShaderOutputRegistry::getInstance().registerShaderOutput(
-        "rib", "RIB", []() -> GusdShaderOutputPtr {
-            return GusdShaderOutputPtr(new GusdRibShaderOutput());
         });
 }
 

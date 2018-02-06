@@ -36,7 +36,7 @@
 #include <UT/UT_Map.h>
 
 #include "gusd/GT_Utils.h"
-#include "gusd/shaderOutput.h"
+#include "gusd/shadingModeRegistry.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -76,7 +76,7 @@ private:
     ROP_RENDER_CODE closeStage(fpreal tend);
 
     ROP_RENDER_CODE bindAndWriteShaders(UsdRefShaderMap& usdRefShaderMap,
-                                        GusdShaderOutput::HouMaterialMap& houMaterialMap);
+                                        GusdShadingModeRegistry::HouMaterialMap& houMaterialMap);
     void resetState();
 
     ROP_RENDER_CODE abort(const std::string& errorMessage);

@@ -22,7 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 
-#include "shaderOutputRegistry.h"
+#include "shadingModeRegistry.h"
 
 #include <pxr/base/tf/instantiateSingleton.h>
 
@@ -30,32 +30,32 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-using _OutputRegistryElem = std::tuple<GusdShaderOutputCreator, TfToken>;
+using _OutputRegistryElem = std::tuple<GusdShadingModeRegistry::ExporterFn, TfToken>;
 using _OutputRegistry = std::map<TfToken, _OutputRegistryElem>;
 static _OutputRegistry _outputRegistry;
 
 bool
-GusdShaderOutputRegistry::registerShaderOutput(
+GusdShadingModeRegistry::registerExporter(
     const std::string& name,
     const std::string& label,
-    GusdShaderOutputCreator creator) {
+    GusdShadingModeRegistry::ExporterFn creator) {
     auto insertStatus = _outputRegistry.insert(
         {TfToken(name), _OutputRegistryElem{creator, TfToken(label)}}
     );
     return insertStatus.second;
 }
 
-GusdShaderOutputCreator
-GusdShaderOutputRegistry::getShaderOutputCreator(const TfToken& name) {
-    TfRegistryManager::GetInstance().SubscribeTo<GusdShaderOutput>();
+GusdShadingModeRegistry::ExporterFn
+GusdShadingModeRegistry::getShaderOutputCreator(const TfToken& name) {
+    TfRegistryManager::GetInstance().SubscribeTo<GusdShadingModeRegistry>();
     const auto it = _outputRegistry.find(name);
     return it == _outputRegistry.end() ? nullptr : std::get<0>(it->second);
 }
 
-GusdShaderOutputRegistry::ShaderOutputList
-GusdShaderOutputRegistry::listOutputs() {
-    TfRegistryManager::GetInstance().SubscribeTo<GusdShaderOutput>();
-    ShaderOutputList ret;
+GusdShadingModeRegistry::ShaderOutputList
+GusdShadingModeRegistry::listOutputs() {
+    TfRegistryManager::GetInstance().SubscribeTo<GusdShadingModeRegistry>();
+    GusdShadingModeRegistry::ShaderOutputList ret;
     ret.reserve(_outputRegistry.size());
     for (const auto& it: _outputRegistry) {
         ret.emplace_back(it.first, std::get<1>(it.second));
@@ -63,11 +63,11 @@ GusdShaderOutputRegistry::listOutputs() {
     return ret;
 }
 
-TF_INSTANTIATE_SINGLETON(GusdShaderOutputRegistry);
+TF_INSTANTIATE_SINGLETON(GusdShadingModeRegistry);
 
-GusdShaderOutputRegistry&
-GusdShaderOutputRegistry::getInstance() {
-    return TfSingleton<GusdShaderOutputRegistry>::GetInstance();
+GusdShadingModeRegistry&
+GusdShadingModeRegistry::getInstance() {
+    return TfSingleton<GusdShadingModeRegistry>::GetInstance();
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
