@@ -39,6 +39,7 @@ pxr_shared_library(${PXR_PACKAGE}
         purpose
         refiner
         scopeWrapper
+        shaderOutputRegistry
         shaderWrapper
         stageCache
         stageEdit
@@ -69,6 +70,7 @@ pxr_shared_library(${PXR_PACKAGE}
         defaultArray.h
         gusd.h
         GU_USD.h
+        shaderOutput.h
         stageOpts.h
         USD_PropertyMap.h
         USD_TraverseSimple.h
@@ -85,6 +87,7 @@ pxr_shared_library(${PXR_PACKAGE}
 
     CPPFILES
         plugin.cpp
+        ribShaderOutput.cpp
 
     PRIVATE_CLASSES
         GEO_IOTranslator
