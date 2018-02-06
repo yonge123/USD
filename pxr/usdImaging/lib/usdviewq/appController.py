@@ -2423,7 +2423,7 @@ class AppController(QtCore.QObject):
         """
         self._updateAttributeViewSelection()
         self._populateAttributeInspector()
-        self._updateMetadataView()
+        self._updateAttributeInspector()
 
     def _populateAttributeInspector(self):
 
