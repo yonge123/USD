@@ -75,7 +75,7 @@
 #include "gusd/UT_Gf.h"
 #include "gusd/UT_Version.h"
 #include "gusd/context.h"
-#include "gusd/shaderOutputRegistry.h"
+#include "gusd/shadingModeRegistry.h"
 
 #include "boost/foreach.hpp"
 
