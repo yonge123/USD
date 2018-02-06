@@ -86,7 +86,7 @@ pxr_shared_library(${PXR_PACKAGE}
 
     CPPFILES
         plugin.cpp
-        ribShaderOutput.cpp
+        ribShadingExporter.cpp
 
     PRIVATE_CLASSES
         GEO_IOTranslator

@@ -30,34 +30,34 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-using _OutputRegistryElem = std::tuple<GusdShadingModeRegistry::ExporterFn, TfToken>;
-using _OutputRegistry = std::map<TfToken, _OutputRegistryElem>;
-static _OutputRegistry _outputRegistry;
+using _ExporterRegistryElem = std::tuple<GusdShadingModeRegistry::ExporterFn, TfToken>;
+using _ExporterRegistry = std::map<TfToken, _ExporterRegistryElem>;
+static _ExporterRegistry _exporterRegistry;
 
 bool
 GusdShadingModeRegistry::registerExporter(
     const std::string& name,
     const std::string& label,
     GusdShadingModeRegistry::ExporterFn creator) {
-    auto insertStatus = _outputRegistry.insert(
-        {TfToken(name), _OutputRegistryElem{creator, TfToken(label)}}
+    auto insertStatus = _exporterRegistry.insert(
+        {TfToken(name), _ExporterRegistryElem{creator, TfToken(label)}}
     );
     return insertStatus.second;
 }
 
 GusdShadingModeRegistry::ExporterFn
-GusdShadingModeRegistry::getShaderOutputCreator(const TfToken& name) {
+GusdShadingModeRegistry::getExporter(const TfToken& name) {
     TfRegistryManager::GetInstance().SubscribeTo<GusdShadingModeRegistry>();
-    const auto it = _outputRegistry.find(name);
-    return it == _outputRegistry.end() ? nullptr : std::get<0>(it->second);
+    const auto it = _exporterRegistry.find(name);
+    return it == _exporterRegistry.end() ? nullptr : std::get<0>(it->second);
 }
 
-GusdShadingModeRegistry::ShaderOutputList
-GusdShadingModeRegistry::listOutputs() {
+GusdShadingModeRegistry::ExporterList
+GusdShadingModeRegistry::listExporters() {
     TfRegistryManager::GetInstance().SubscribeTo<GusdShadingModeRegistry>();
-    GusdShadingModeRegistry::ShaderOutputList ret;
-    ret.reserve(_outputRegistry.size());
-    for (const auto& it: _outputRegistry) {
+    GusdShadingModeRegistry::ExporterList ret;
+    ret.reserve(_exporterRegistry.size());
+    for (const auto& it: _exporterRegistry) {
         ret.emplace_back(it.first, std::get<1>(it.second));
     }
     return ret;

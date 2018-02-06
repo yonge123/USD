@@ -51,14 +51,12 @@ class GusdShadingModeRegistry : public TfWeakBase
 {
 private:
     GusdShadingModeRegistry() = default;
-    ~GusdShadingModeRegistry() = default;
-
 public:
     using HouMaterialMap = UT_Map<std::string, std::vector<SdfPath>>;
     using ExporterFn = std::function<
         void(OP_Node*, const UsdStagePtr&, const SdfPath&,
              const HouMaterialMap&, const std::string&)>;
-    using ShaderOutputList = std::vector<std::tuple<TfToken, TfToken>>;
+    using ExporterList = std::vector<std::tuple<TfToken, TfToken>>;
 
     GUSD_API
     static GusdShadingModeRegistry& getInstance();
@@ -70,10 +68,10 @@ public:
         ExporterFn fn);
 
     GUSD_API
-    ExporterFn getShaderOutputCreator(const TfToken& name);
+    ExporterFn getExporter(const TfToken& name);
 
     GUSD_API
-    ShaderOutputList listOutputs();
+    ExporterList listExporters();
 private:
     friend class TfSingleton<GusdShadingModeRegistry>;
 };

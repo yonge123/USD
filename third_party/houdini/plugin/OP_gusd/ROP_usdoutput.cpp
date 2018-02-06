@@ -156,10 +156,10 @@ getTemplates()
     static PRM_Name enableShadersName("enableshaders", "Output Shaders");
     static vector<PRM_Name> shadingModes;
     if (shadingModes.empty()) {
-        const auto shaderOutputs = GusdShadingModeRegistry::getInstance().listOutputs();
-        shadingModes.reserve(shaderOutputs.size() + 1);
-        for (const auto& shaderOutput: shaderOutputs) {
-            shadingModes.emplace_back(std::get<0>(shaderOutput).GetText(), std::get<1>(shaderOutput).GetText());
+        const auto exporters = GusdShadingModeRegistry::getInstance().listExporters();
+        shadingModes.reserve(exporters.size() + 1);
+        for (const auto& exporter: exporters) {
+            shadingModes.emplace_back(std::get<0>(exporter).GetText(), std::get<1>(exporter).GetText());
         }
         shadingModes.emplace_back();
     }
@@ -1897,7 +1897,7 @@ bindAndWriteShaders(UsdRefShaderMap& usdRefShaderMap,
     UT_String shadingMode;
     evalString(shadingMode, "shadingmode", 0, 0);
 
-    auto shaderExpoter = GusdShadingModeRegistry::getInstance().getShaderOutputCreator(TfToken(shadingMode.toStdString()));
+    auto shaderExpoter = GusdShadingModeRegistry::getInstance().getExporter(TfToken(shadingMode.toStdString()));
     if (shaderExpoter != nullptr) {
         shaderExpoter(
             this,
