@@ -46,14 +46,14 @@ GusdShadingModeRegistry::registerExporter(
 }
 
 GusdShadingModeRegistry::ExporterFn
-GusdShadingModeRegistry::getExporter(const TfToken& name) {
+GusdShadingModeRegistry::_getExporter(const TfToken& name) {
     TfRegistryManager::GetInstance().SubscribeTo<GusdShadingModeRegistry>();
     const auto it = _exporterRegistry.find(name);
     return it == _exporterRegistry.end() ? nullptr : std::get<0>(it->second);
 }
 
 GusdShadingModeRegistry::ExporterList
-GusdShadingModeRegistry::listExporters() {
+GusdShadingModeRegistry::_listExporters() {
     TfRegistryManager::GetInstance().SubscribeTo<GusdShadingModeRegistry>();
     GusdShadingModeRegistry::ExporterList ret;
     ret.reserve(_exporterRegistry.size());
