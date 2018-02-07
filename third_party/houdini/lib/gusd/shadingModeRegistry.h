@@ -58,6 +58,16 @@ public:
              const HouMaterialMap&, const std::string&)>;
     using ExporterList = std::vector<std::tuple<TfToken, TfToken>>;
 
+    static ExporterFn
+    getExporter(const TfToken& name) {
+        return getInstance()._getExporter(name);
+    }
+
+    static ExporterList
+    listExporters() {
+        return getInstance()._listExporters();
+    }
+
     GUSD_API
     static GusdShadingModeRegistry& getInstance();
 
@@ -66,14 +76,11 @@ public:
         const std::string& name,
         const std::string& label,
         ExporterFn fn);
-
-    GUSD_API
-    ExporterFn getExporter(const TfToken& name);
-
-    GUSD_API
-    ExporterList listExporters();
 private:
     friend class TfSingleton<GusdShadingModeRegistry>;
+
+    ExporterFn _getExporter(const TfToken& name);
+    ExporterList _listExporters();
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
