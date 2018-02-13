@@ -1897,9 +1897,9 @@ bindAndWriteShaders(UsdRefShaderMap& usdRefShaderMap,
     UT_String shadingMode;
     evalString(shadingMode, "shadingmode", 0, 0);
 
-    auto shaderExpoter = GusdShadingModeRegistry::getExporter(TfToken(shadingMode.toStdString()));
-    if (shaderExpoter != nullptr) {
-        shaderExpoter(
+    auto shaderExporter = GusdShadingModeRegistry::getExporter(TfToken(shadingMode.toStdString()));
+    if (shaderExporter != nullptr) {
+        shaderExporter(
             this,
             m_usdStage,
             looksPath,
