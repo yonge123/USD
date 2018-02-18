@@ -55,6 +55,7 @@ JobExportArgs::JobExportArgs()
         normalizeMeshUVs(false),
         exportMaterialCollections(false),
         materialCollectionsPath(""),
+        exportCollectionBasedBindings(false),
         normalizeNurbs(false),
         exportNurbsExplicitUV(true),
         nurbsExplicitUVType(PxUsdExportJobArgsTokens->Uniform),

@@ -79,6 +79,7 @@ struct JobExportArgs
     
     bool exportMaterialCollections;
     std::string materialCollectionsPath;
+    bool exportCollectionBasedBindings;
 
     bool normalizeNurbs;
     bool exportNurbsExplicitUV;
