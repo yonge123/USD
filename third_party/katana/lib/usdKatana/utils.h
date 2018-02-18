@@ -109,7 +109,9 @@ struct PxrUsdKatanaUtils {
     static std::string _ConvertUsdPathToKatLocation(
             const SdfPath &path,
             const std::string &isolatePathString,
-            const std::string &rootPathString);
+            const std::string &rootPathString,
+            const std::string& sessionLocation,
+            bool allowOutsideIsolation = false);
     static std::string ConvertUsdPathToKatLocation(
             const SdfPath &path,
             const PxrUsdKatanaUsdInPrivateData& data,
