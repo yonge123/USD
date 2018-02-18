@@ -39,6 +39,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (surfaceShader)              \
     (surfaceShaderUnlit)         \
     (surfaceShaderSheer)         \
+    (surfaceShaderOutline)       \
     (constantColor)              \
     (hullColor)
 
@@ -54,12 +55,14 @@ struct HdMeshReprDesc {
                    HdCullStyle cullStyle = HdCullStyleDontCare,
                    TfToken shadingTerminal = HdMeshReprDescTokens->surfaceShader,
                    bool smoothNormals = false,
-                   bool blendWireframeColor = true)
+                   bool blendWireframeColor = true,
+                   float lineWidth = 0)
         : geomStyle(geomStyle)
         , cullStyle(cullStyle)
         , shadingTerminal(shadingTerminal)
         , smoothNormals(smoothNormals)
         , blendWireframeColor(blendWireframeColor)
+        , lineWidth(lineWidth)
         {}
 
     HdMeshGeomStyle geomStyle;
@@ -67,6 +70,7 @@ struct HdMeshReprDesc {
     TfToken         shadingTerminal;
     bool            smoothNormals;
     bool            blendWireframeColor;
+    float           lineWidth;
 };
 
 /// Hydra Schema for a subdivision surface or poly-mesh object.
@@ -84,12 +88,14 @@ public:
     inline VtValue     GetShadingStyle(HdSceneDelegate* delegate)  const;
 
     ///
-    /// Topology
+    /// Topological accessors via the scene delegate
     ///
     inline HdMeshTopology  GetMeshTopology(HdSceneDelegate* delegate) const;
     inline int             GetRefineLevel(HdSceneDelegate* delegate)  const;
     inline PxOsdSubdivTags GetSubdivTags(HdSceneDelegate* delegate)   const;
 
+    /// Topology getter
+    virtual HdMeshTopologySharedPtr  GetTopology() const;
 
     ///
     /// Primvars Accessors
@@ -162,6 +168,12 @@ inline PxOsdSubdivTags
 HdMesh::GetSubdivTags(HdSceneDelegate* delegate) const
 {
     return delegate->GetSubdivTags(GetId());
+}
+
+inline HdMeshTopologySharedPtr
+HdMesh::GetTopology() const
+{
+    return HdMeshTopologySharedPtr();
 }
 
 inline VtValue
