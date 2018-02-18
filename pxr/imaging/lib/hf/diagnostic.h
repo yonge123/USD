@@ -1,5 +1,5 @@
 //
-// Copyright 2017 Pixar
+// Copyright 2018 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -21,19 +21,28 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef USDIMAGING_PACKAGE_H
-#define USDIMAGING_PACKAGE_H
+#ifndef HF_DIAGNOSTIC_H
+#define HF_DIAGNOSTIC_H
 
 #include "pxr/pxr.h"
-#include "pxr/usdImaging/usdImaging/api.h"
-#include "pxr/usdImaging/usdImaging/version.h"
-#include "pxr/base/tf/token.h"
+#include "pxr/base/tf/diagnostic.h"
+#include "pxr/base/tf/stringUtils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-USDIMAGING_API
-TfToken UsdImagingPackageDrawModeShader();
+
+///
+/// Issues a warning with a message.  This differs from just calling TF_WARN
+/// in that it tags the warning as actually needing to be a validation error,
+/// and a place holder for when we develop a true validation system where we
+/// can plumb this information back to the application.
+///
+#define HF_VALIDATION_WARN(id, ...) \
+    TF_WARN("Invalid Hydra prim '%s': %s", \
+            id.GetText(), \
+            TfStringPrintf(__VA_ARGS__).c_str())
+
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // USDIMAGING_PACKAGE_H
+#endif // HF_DIAGNOSTIC_H
