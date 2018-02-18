@@ -29,7 +29,7 @@
 #include "pxrUsdMayaGL/shapeAdapter.h"
 #include "usdMaya/proxyShape.h"
 
-#include "pxr/base/gf/vec3d.h"
+#include "pxr/base/gf/vec3f.h"
 #include "pxr/base/gf/vec4f.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/usd/prim.h"
@@ -60,51 +60,31 @@ UsdMayaProxyShapeUI::creator()
     return new UsdMayaProxyShapeUI();
 }
 
-static
-PxrMayaHdShapeAdapter*
-_GetShapeAdapter(
+bool
+UsdMayaProxyShapeUI::_SyncShapeAdapter(
         UsdMayaProxyShape* shape,
         const MDagPath& objPath,
-        const bool prepareForQueue)
+        const M3dView::DisplayStyle displayStyle,
+        const M3dView::DisplayStatus displayStatus) const
 {
     if (!shape) {
-        return nullptr;
+        return false;
     }
 
-    UsdPrim usdPrim;
-    SdfPathVector excludePaths;
-    UsdTimeCode timeCode;
-    int subdLevel;
-    bool showGuides, showRenderGuides;
-    bool tint;
-    GfVec4f tintColor;
-    if (!shape->GetAllRenderAttributes(&usdPrim,
-                                       &excludePaths,
-                                       &subdLevel,
-                                       &timeCode,
-                                       &showGuides,
-                                       &showRenderGuides,
-                                       &tint,
-                                       &tintColor)) {
-        return nullptr;
-    }
+    // XXX: Note that for now we must populate the properties on the shape
+    // adapter that will be used to compute its delegateId *before* we call
+    // AddShapeAdapter(), since adding the shape adapter the first time will
+    // invoke its Init() method. See the comment in the implementation of
+    // PxrMayaHdShapeAdapter::Init() for more detail.
+    const UsdPrim usdPrim = shape->usdPrim();
+    const SdfPathVector excludedPrimPaths = shape->getExcludePrimPaths();
+    _shapeAdapter._shapeDagPath = objPath;
+    _shapeAdapter._rootPrim = usdPrim;
+    _shapeAdapter._excludedPrimPaths = excludedPrimPaths;
 
-    PxrMayaHdShapeAdapter* outShapeAdapter =
-        UsdMayaGLBatchRenderer::Get().GetShapeAdapter(
-            objPath,
-            usdPrim,
-            excludePaths);
+    UsdMayaGLBatchRenderer::GetInstance().AddShapeAdapter(&_shapeAdapter);
 
-    if (prepareForQueue) {
-        outShapeAdapter->PrepareForQueue(timeCode,
-                                         subdLevel,
-                                         showGuides,
-                                         showRenderGuides,
-                                         tint,
-                                         tintColor);
-    }
-
-    return outShapeAdapter;
+    return _shapeAdapter.Sync(shape, displayStyle, displayStatus);
 }
 
 /* virtual */
@@ -119,20 +99,21 @@ UsdMayaProxyShapeUI::getDrawRequests(
     const MDagPath shapeDagPath = drawInfo.multiPath();
     UsdMayaProxyShape* shape =
         UsdMayaProxyShape::GetShapeAtDagPath(shapeDagPath);
-    PxrMayaHdShapeAdapter* shapeAdapter =
-        _GetShapeAdapter(shape,
-                         shapeDagPath,
-                         /*prepareForQueue= */ true);
-    if (!shapeAdapter) {
+    if (!shape) {
         return;
     }
 
-    bool drawShape, drawBoundingBox;
+    if (!_SyncShapeAdapter(shape,
+                           shapeDagPath,
+                           drawInfo.displayStyle(),
+                           drawInfo.displayStatus())) {
+        return;
+    }
+
+    bool drawShape;
+    bool drawBoundingBox;
     PxrMayaHdRenderParams params =
-        shapeAdapter->GetRenderParams(drawInfo.displayStyle(),
-                                      drawInfo.displayStatus(),
-                                      &drawShape,
-                                      &drawBoundingBox);
+        _shapeAdapter.GetRenderParams(&drawShape, &drawBoundingBox);
 
     // Only query bounds if we're drawing bounds...
     //
@@ -140,8 +121,8 @@ UsdMayaProxyShapeUI::getDrawRequests(
         const MBoundingBox bounds = shape->boundingBox();
 
         // Note that drawShape is still passed through here.
-        UsdMayaGLBatchRenderer::Get().QueueShapeForDraw(
-            shapeAdapter,
+        UsdMayaGLBatchRenderer::GetInstance().QueueShapeForDraw(
+            &_shapeAdapter,
             this,
             request,
             params,
@@ -151,8 +132,8 @@ UsdMayaProxyShapeUI::getDrawRequests(
     //
     // Like above but with no bounding box...
     else if (drawShape) {
-        UsdMayaGLBatchRenderer::Get().QueueShapeForDraw(
-            shapeAdapter,
+        UsdMayaGLBatchRenderer::GetInstance().QueueShapeForDraw(
+            &_shapeAdapter,
             this,
             request,
             params,
@@ -177,7 +158,7 @@ UsdMayaProxyShapeUI::draw(const MDrawRequest& request, M3dView& view) const
 {
     view.beginGL();
 
-    UsdMayaGLBatchRenderer::Get().Draw(request, view);
+    UsdMayaGLBatchRenderer::GetInstance().Draw(request, view);
 
     view.endGL();
 }
@@ -196,31 +177,25 @@ UsdMayaProxyShapeUI::select(
         return false;
     }
 
+    M3dView view = selectInfo.view();
+
     // Note that we cannot use UsdMayaProxyShape::GetShapeAtDagPath() here.
     // selectInfo.selectPath() returns the dag path to the assembly node, not
     // the shape node, so we don't have the shape node's path readily available.
     UsdMayaProxyShape* shape = static_cast<UsdMayaProxyShape*>(surfaceShape());
 
-    PxrMayaHdShapeAdapter* shapeAdapter =
-        _GetShapeAdapter(shape,
-                         selectInfo.selectPath(),
-                         /*prepareForQueue= */ false);
-    if (!shapeAdapter) {
+    if (!_SyncShapeAdapter(shape,
+                           selectInfo.selectPath(),
+                           view.displayStyle(),
+                           view.displayStatus(selectInfo.selectPath()))) {
         return false;
     }
 
-    // object selection
-    M3dView view = selectInfo.view();
-
-    // We will miss very small objects with this setting, but it's faster.
-    const unsigned int selectRes = 256;
-
-    GfVec3d hitPoint;
+    GfVec3f hitPoint;
     const bool didHit =
-        UsdMayaGLBatchRenderer::Get().TestIntersection(
-            shapeAdapter,
+        UsdMayaGLBatchRenderer::GetInstance().TestIntersection(
+            &_shapeAdapter,
             view,
-            selectRes,
             selectInfo.singleSelection(),
             &hitPoint);
 
@@ -252,8 +227,9 @@ UsdMayaProxyShapeUI::UsdMayaProxyShapeUI() : MPxSurfaceShapeUI()
 }
 
 /* virtual */
-UsdMayaProxyShapeUI::~UsdMayaProxyShapeUI() {
-    // empty
+UsdMayaProxyShapeUI::~UsdMayaProxyShapeUI()
+{
+    UsdMayaGLBatchRenderer::GetInstance().RemoveShapeAdapter(&_shapeAdapter);
 }
 
 
