@@ -55,9 +55,6 @@ typedef boost::shared_ptr<class HdStRenderPassState> HdStRenderPassStateSharedPt
 
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfDrawTarget);
 
-HDX_API
-void HdxNoDepthMask();
-
 class HdxIntersector {
 public:
     struct Params;
@@ -95,18 +92,27 @@ public:
     /// selection.
     typedef std::function<void(void)> DepthMaskCallback;
 
+    enum PickMode {
+        PickPrimsAndInstances = 1 << 0,
+        PickFaces             = 1 << 1,
+        PickEdges             = 1 << 2,
+        PickPoints            = 1 << 3
+    };
+
     struct Params {
         Params() 
             : hitMode(HitFirst)
+            , pickMode(PickPrimsAndInstances)
             , projectionMatrix(1)
             , viewMatrix(1)
             , alphaThreshold(0.0f)
             , cullStyle(HdCullStyleNothing)
-            , depthMaskCallback(HdxNoDepthMask)
+            , depthMaskCallback(nullptr)
             , renderTags()
         {}
 
         HitMode hitMode;
+        PickMode pickMode;
         GfMatrix4d projectionMatrix;
         GfMatrix4d viewMatrix;
         float alphaThreshold;
@@ -122,6 +128,7 @@ public:
         SdfPath instancerId;
         int instanceIndex;
         int elementIndex;
+        int edgeIndex;
         GfVec3f worldSpaceHitPoint;
         float ndcDepth;
 
@@ -129,6 +136,7 @@ public:
             return !objectId.IsEmpty();
         }
 
+        HDX_API
         size_t GetHash() const;
         struct Hash {
             inline size_t operator()(Hit const& hit) const {
@@ -142,13 +150,15 @@ public:
         HDX_API
         bool operator==(Hit const& lhs) const;
 
-        // Depth and position are ignored, used for object/element/instance
+        // Depth and position are ignored, used for object/instance/subprimitive
         // aggregation.
         struct HitSetHash {
+            HDX_API
             size_t operator()(Hit const& hit) const;
         };
         // Equality ignores depth and position.
         struct HitSetEq{
+            HDX_API
             bool operator()(Hit const& a, Hit const& b) const;
         };
     };
@@ -164,6 +174,7 @@ public:
         Result(std::unique_ptr<unsigned char[]> primIds,
                std::unique_ptr<unsigned char[]> instanceIds,
                std::unique_ptr<unsigned char[]> elementIds,
+               std::unique_ptr<unsigned char[]> edgeIds,
                std::unique_ptr<float[]> depths,
                HdRenderIndex const *index,
                Params params,
@@ -204,6 +215,7 @@ public:
         std::unique_ptr<unsigned char[]> _primIds;
         std::unique_ptr<unsigned char[]> _instanceIds;
         std::unique_ptr<unsigned char[]> _elementIds;
+        std::unique_ptr<unsigned char[]> _edgeIds;
         std::unique_ptr<float[]> _depths;
         HdRenderIndex const *_index;
         Params _params;
@@ -212,11 +224,15 @@ public:
 
 private:
     void _Init(GfVec2i const&);
+    void _ConditionStencilWithGLCallback(DepthMaskCallback callback);
 
-    // Create a shared render pass for pickables and unpickables
+    // Create a shared render pass each for pickables and unpickables
     HdRenderPassSharedPtr _pickableRenderPass;
     HdRenderPassSharedPtr _unpickableRenderPass;
 
+    // Having separate render pass states allows us to queue up the tasks
+    // corresponding to each of the above render passes. It also lets us use
+    // different shader mixins if we choose to (we don't currently.)
     HdStRenderPassStateSharedPtr _pickableRenderPassState;
     HdStRenderPassStateSharedPtr _unpickableRenderPassState;
 
