@@ -1,5 +1,5 @@
 //
-// Copyright 2017 Pixar
+// Copyright 2018 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -21,32 +21,27 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usdImaging/usdImaging/package.h"
+#ifndef USDSKELIMAGING_API_H
+#define USDSKELIMAGING_API_H
 
-#include "pxr/base/plug/plugin.h"
-#include "pxr/base/plug/thisPlugin.h"
-#include "pxr/base/tf/diagnostic.h"
-#include "pxr/base/tf/fileUtils.h"
-#include "pxr/base/tf/stringUtils.h"
+#include "pxr/base/arch/export.h"
 
-PXR_NAMESPACE_OPEN_SCOPE
+#if defined(PXR_STATIC)
+#   define USDSKELIMAGING_API
+#   define USDSKELIMAGING_API_TEMPLATE_CLASS(...)
+#   define USDSKELIMAGING_API_TEMPLATE_STRUCT(...)
+#   define USDSKELIMAGING_LOCAL
+#else
+#   if defined(USDSKELIMAGING_EXPORTS)
+#       define USDSKELIMAGING_API ARCH_EXPORT
+#       define USDSKELIMAGING_API_TEMPLATE_CLASS(...) ARCH_EXPORT_TEMPLATE(class, __VA_ARGS__)
+#       define USDSKELIMAGING_API_TEMPLATE_STRUCT(...) ARCH_EXPORT_TEMPLATE(struct, __VA_ARGS__)
+#   else
+#       define USDSKELIMAGING_API ARCH_IMPORT
+#       define USDSKELIMAGING_API_TEMPLATE_CLASS(...) ARCH_IMPORT_TEMPLATE(class, __VA_ARGS__)
+#       define USDSKELIMAGING_API_TEMPLATE_STRUCT(...) ARCH_IMPORT_TEMPLATE(struct, __VA_ARGS__)
+#   endif
+#   define USDSKELIMAGING_LOCAL ARCH_HIDDEN
+#endif
 
-static TfToken
-_GetShaderPath(char const * shader)
-{
-    static PlugPluginPtr plugin = PLUG_THIS_PLUGIN;
-    const std::string path =
-        PlugFindPluginResource(plugin, TfStringCatPaths("shaders", shader));
-    TF_VERIFY(!path.empty(), "Could not find shader: %s\n", shader);
-
-    return TfToken(path);
-}
-
-TfToken
-UsdImagingPackageDrawModeShader()
-{
-    static TfToken drawModeShader = _GetShaderPath("drawMode.glslfx");
-    return drawModeShader;
-}
-
-PXR_NAMESPACE_CLOSE_SCOPE
+#endif // USDSKELIMAGING_API_H

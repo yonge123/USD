@@ -67,7 +67,9 @@ HdxIntersector::_Init(GfVec2i const& size)
         boost::make_shared<HdStRenderPassShader>(HdxPackageRenderPassIdShader()));
 
     // Turn off color writes for the unpickables (we only want to condition the
-    // depth buffer)
+    // depth buffer).
+    // XXX: This is a quick alternative to using a different  shader mixin for
+    // the unpickables.
     _unpickableRenderPassState = boost::make_shared<HdStRenderPassState>(
         boost::make_shared<HdStRenderPassShader>(HdxPackageRenderPassIdShader()));
     _unpickableRenderPassState->SetColorMaskUseDefault(false);
@@ -99,26 +101,13 @@ HdxIntersector::_Init(GfVec2i const& size)
         _drawTarget->AddAttachment(
             "elementId", GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA8);
         _drawTarget->AddAttachment(
+            "edgeId", GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA8);
+        _drawTarget->AddAttachment(
             "depth", GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, GL_DEPTH24_STENCIL8);
             //"depth", GL_DEPTH_COMPONENT, GL_FLOAT, GL_DEPTH_COMPONENT32F);
 
         _drawTarget->Unbind();
     }
-}
-
-void HdxNoDepthMask()
-{
-    // The depth mask is expected to render something, which is used to
-    // condition the stencil buffer -- whatever gets rendered is available for
-    // picking. Here, we want everything to be available for picking, so we
-    // could render a full-screen primitive, but clearing the stencil buffer is
-    // much simpler.
-    
-    // Clear the stencil buffer to 1.0 to enable all following stencil tests to
-    // pass.
-    glClearStencil(1);
-    glClear(GL_STENCIL_BUFFER_BIT);
-    glClearStencil(0);
 }
 
 void
@@ -150,6 +139,54 @@ HdxIntersector::SetResolution(GfVec2i const& widthHeight)
         _drawTarget->Bind();
         _drawTarget->SetSize(widthHeight);
         _drawTarget->Unbind();
+    }
+}
+
+void
+HdxIntersector::_ConditionStencilWithGLCallback(DepthMaskCallback maskCallback)
+{
+    // Setup stencil state and prevent writes to color buffer.
+    // We don't use the pickable/unpickable render pass state below, since
+    // the callback uses immediate mode GL, and doesn't conform to Hydra's
+    // command buffer based execution philosophy.
+    {
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        glEnable(GL_STENCIL_TEST);
+        glStencilFunc(GL_ALWAYS, 1, 1);
+        glStencilOp(GL_KEEP,     // stencil failed
+                    GL_KEEP,     // stencil passed, depth failed
+                    GL_REPLACE); // stencil passed, depth passed
+    }
+    
+    //
+    // Condition the stencil buffer.
+    //
+    maskCallback();
+
+    // We expect any GL state changes are restored.
+    {
+        // Clear depth incase the depthMaskCallback pollutes the depth buffer.
+        glClear(GL_DEPTH_BUFFER_BIT);
+        // Restore color outputs & setup state for rendering
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        glDisable(GL_CULL_FACE);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glFrontFace(GL_CCW);
+    }
+    
+    // Update the stencil state for the render passes
+    {
+        HdRenderPassStateSharedPtr states[] = {_pickableRenderPassState,
+                                               _unpickableRenderPassState};
+        for (auto& state : states) {
+            state->SetStencilEnabled(true);
+            state->SetStencil(HdCmpFuncLess,
+                            /*ref=*/0,
+                            /*mask=*/1,
+                            /*sFail*/HdStencilOpKeep,
+                            /*sPassZFail*/HdStencilOpKeep,
+                            /*sPassZPass*/HdStencilOpKeep);
+        }
     }
 }
 
@@ -224,27 +261,13 @@ HdxIntersector::Query(HdxIntersector::Params const& params,
         // context, which may not be the case at constructon time.
         _Init(GfVec2i(128,128));
     }
-
-    GfVec2i size(_drawTarget->GetSize());
-    GfVec4i viewport(0, 0, size[0], size[1]);
-
     if (!TF_VERIFY(_pickableRenderPass) || 
         !TF_VERIFY(_unpickableRenderPass)) {
         return false;
     }
 
-    // Setup state based on incoming params.
-    _pickableRenderPassState->SetAlphaThreshold(params.alphaThreshold);
-    _pickableRenderPassState->SetClipPlanes(params.clipPlanes);
-    _pickableRenderPassState->SetCullStyle(params.cullStyle);
-    _pickableRenderPassState->SetCamera(params.viewMatrix, params.projectionMatrix, viewport);
-    _pickableRenderPassState->SetLightingEnabled(false);
-
-    _unpickableRenderPassState->SetAlphaThreshold(params.alphaThreshold);
-    _unpickableRenderPassState->SetClipPlanes(params.clipPlanes);
-    _unpickableRenderPassState->SetCullStyle(params.cullStyle);
-    _unpickableRenderPassState->SetCamera(params.viewMatrix, params.projectionMatrix, viewport);
-    _unpickableRenderPassState->SetLightingEnabled(false);
+    GfVec2i size(_drawTarget->GetSize());
+    GfVec4i viewport(0, 0, size[0], size[1]);
 
     // Use a separate drawTarget (framebuffer object) for each GL context
     // that uses this renderer, but the drawTargets share attachments/textures.
@@ -259,11 +282,13 @@ HdxIntersector::Query(HdxIntersector::Params const& params,
     //
     // Setup GL raster state
     //
-
-    GLenum drawBuffers[3] = { GL_COLOR_ATTACHMENT0,
+    // XXX: We should use the pickMode param to bind only the attachments
+    // that are necessary. This should affect the shader code generated as well.
+    GLenum drawBuffers[4] = { GL_COLOR_ATTACHMENT0,
                               GL_COLOR_ATTACHMENT1,
-                              GL_COLOR_ATTACHMENT2 };
-    glDrawBuffers(3, drawBuffers);
+                              GL_COLOR_ATTACHMENT2,
+                              GL_COLOR_ATTACHMENT3};
+    glDrawBuffers(4, drawBuffers);
     
     glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
     glDisable(GL_BLEND);
@@ -287,30 +312,28 @@ HdxIntersector::Query(HdxIntersector::Params const& params,
         GLuint vao;
         glGenVertexArrays(1, &vao);
         glBindVertexArray(vao);
-        // Setup stencil state and prevent writes to color buffer.
-        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-        glEnable(GL_STENCIL_TEST);
-        glStencilFunc(GL_ALWAYS, 1, 1);
-        glStencilOp(GL_KEEP,     // stencil failed
-                    GL_KEEP,     // stencil passed, depth failed
-                    GL_REPLACE); // stencil passed, depth passed
 
-        //
-        // Condition the stencil buffer.
-        //
-        params.depthMaskCallback();
-        // we expect any GL state changes are restored.
+        bool needStencilConditioning = (params.depthMaskCallback != nullptr);
 
-        // Disable stencil updates and setup the stencil test.
-        glStencilFunc(GL_LESS, 0, 1);
-        glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-        // Clear depth incase the depthMaskCallback pollutes the depth buffer.
-        glClear(GL_DEPTH_BUFFER_BIT);
-        // Restore color outputs & setup state for rendering
-        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-        glDisable(GL_CULL_FACE);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glFrontFace(GL_CCW);
+        if (needStencilConditioning) {
+            _ConditionStencilWithGLCallback(params.depthMaskCallback);
+        } else {
+            // disable stencil
+            _pickableRenderPassState->SetStencilEnabled(false);
+            _unpickableRenderPassState->SetStencilEnabled(false);
+        }
+        
+
+        // Update render pass states based on incoming params.
+        HdRenderPassStateSharedPtr states[] = {_pickableRenderPassState,
+                                               _unpickableRenderPassState};
+        for (auto& state : states) {
+            state->SetAlphaThreshold(params.alphaThreshold);
+            state->SetClipPlanes(params.clipPlanes);
+            state->SetCullStyle(params.cullStyle);
+            state->SetCamera(params.viewMatrix, params.projectionMatrix, viewport);
+            state->SetLightingEnabled(false);
+        }
 
         //
         // Enable conservative rasterization, if available.
@@ -374,6 +397,7 @@ HdxIntersector::Query(HdxIntersector::Params const& params,
     std::unique_ptr<unsigned char[]> primId(new unsigned char[len*4]);
     std::unique_ptr<unsigned char[]> instanceId(new unsigned char[len*4]);
     std::unique_ptr<unsigned char[]> elementId(new unsigned char[len*4]);
+    std::unique_ptr<unsigned char[]> edgeId(new unsigned char[len*4]);
     std::unique_ptr<float[]> depths(new float[len]);
 
     glBindTexture(GL_TEXTURE_2D,
@@ -389,6 +413,10 @@ HdxIntersector::Query(HdxIntersector::Params const& params,
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, &elementId[0]);
 
     glBindTexture(GL_TEXTURE_2D,
+        drawTarget->GetAttachments().at("edgeId")->GetGlTextureName());
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, &edgeId[0]);
+
+    glBindTexture(GL_TEXTURE_2D,
         drawTarget->GetAttachments().at("depth")->GetGlTextureName());
     glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT,
                     &depths[0]);
@@ -400,7 +428,7 @@ HdxIntersector::Query(HdxIntersector::Params const& params,
     if (result) {
         *result = HdxIntersector::Result(
             std::move(primId), std::move(instanceId), std::move(elementId),
-            std::move(depths), _index, params, viewport);
+            std::move(edgeId), std::move(depths), _index, params, viewport);
     }
 
     drawTarget->Unbind();
@@ -418,6 +446,7 @@ HdxIntersector::Result::Result()
 HdxIntersector::Result::Result(std::unique_ptr<unsigned char[]> primIds,
                         std::unique_ptr<unsigned char[]> instanceIds,
                         std::unique_ptr<unsigned char[]> elementIds,
+                        std::unique_ptr<unsigned char[]> edgeIds,
                         std::unique_ptr<float[]> depths,
                         HdRenderIndex const *index,
                         HdxIntersector::Params params,
@@ -425,6 +454,7 @@ HdxIntersector::Result::Result(std::unique_ptr<unsigned char[]> primIds,
     : _primIds(std::move(primIds))
     , _instanceIds(std::move(instanceIds))
     , _elementIds(std::move(elementIds))
+    , _edgeIds(std::move(edgeIds))
     , _depths(std::move(depths))
     , _index(index)
     , _params(params)
@@ -450,6 +480,7 @@ HdxIntersector::Result::_ResolveHit(int index, int x, int y, float z,
     unsigned char const* primIds = _primIds.get();
     unsigned char const* instanceIds = _instanceIds.get();
     unsigned char const* elementIds = _elementIds.get();
+    unsigned char const* edgeIds = _edgeIds.get();
 
     GfVec3d hitPoint(0,0,0);
     gluUnProject(x, y, z,
@@ -473,6 +504,8 @@ HdxIntersector::Result::_ResolveHit(int index, int x, int y, float z,
             &instanceIds[idIndex]);
     int elementIndex = HdxRenderSetupTask::DecodeIDRenderColor(
             &elementIds[idIndex]);
+    int edgeIndex = HdxRenderSetupTask::DecodeIDRenderColor(
+            &edgeIds[idIndex]);
 
     bool rprimValid = _index->GetSceneDelegateAndInstancerIds(hit->objectId,
                                                            &(hit->delegateId),
@@ -486,6 +519,7 @@ HdxIntersector::Result::_ResolveHit(int index, int x, int y, float z,
     hit->ndcDepth = float(z);
     hit->instanceIndex = instanceIndex;
     hit->elementIndex = elementIndex; 
+    hit->edgeIndex = edgeIndex; 
 
     if (TfDebug::IsEnabled(HDX_INTERSECT)) {
         std::cout << *hit << std::endl;
@@ -500,6 +534,7 @@ HdxIntersector::Result::_GetHash(int index) const
     unsigned char const* primIds = _primIds.get();
     unsigned char const* instanceIds = _instanceIds.get();
     unsigned char const* elementIds = _elementIds.get();
+    unsigned char const* edgeIds = _edgeIds.get();
 
     int idIndex = index*4;
 
@@ -509,11 +544,14 @@ HdxIntersector::Result::_GetHash(int index) const
             &instanceIds[idIndex]);
     int elementIndex = HdxRenderSetupTask::DecodeIDRenderColor(
             &elementIds[idIndex]);
+    int edgeIndex = HdxRenderSetupTask::DecodeIDRenderColor(
+            &edgeIds[idIndex]);
 
     size_t hash = 0;
     boost::hash_combine(hash, primId);
     boost::hash_combine(hash, instanceIndex);
     boost::hash_combine(hash, elementIndex);
+    boost::hash_combine(hash, size_t(edgeIndex));
 
     return hash;
 }
@@ -636,6 +674,7 @@ HdxIntersector::Hit::GetHash() const
     boost::hash_combine(hash, instancerId);
     boost::hash_combine(hash, instanceIndex);
     boost::hash_combine(hash, elementIndex);
+    boost::hash_combine(hash, edgeIndex);
     boost::hash_combine(hash, worldSpaceHitPoint[0]);
     boost::hash_combine(hash, worldSpaceHitPoint[1]);
     boost::hash_combine(hash, worldSpaceHitPoint[2]);
@@ -654,6 +693,7 @@ HdxIntersector::Hit::HitSetHash::operator()(Hit const& hit) const
     boost::hash_combine(hash, hit.instancerId.GetHash());
     boost::hash_combine(hash, hit.instanceIndex);
     boost::hash_combine(hash, hit.elementIndex);
+    boost::hash_combine(hash, hit.edgeIndex);
 
     return hash;
 }
@@ -665,7 +705,8 @@ HdxIntersector::Hit::HitSetEq::operator()(Hit const& a, Hit const& b) const
        && a.objectId == b.objectId
        && a.instancerId == b.instancerId
        && a.instanceIndex == b.instanceIndex
-       && a.elementIndex == b.elementIndex;
+       && a.elementIndex == b.elementIndex
+       && a.edgeIndex == b.edgeIndex;
 }
 
 bool
@@ -682,6 +723,7 @@ HdxIntersector::Hit::operator==(Hit const& lhs) const
        && instancerId == lhs.instancerId
        && instanceIndex == lhs.instanceIndex
        && elementIndex == lhs.elementIndex
+       && edgeIndex == lhs.edgeIndex
        && worldSpaceHitPoint == lhs.worldSpaceHitPoint
        && ndcDepth == lhs.ndcDepth;
 }
@@ -694,6 +736,7 @@ operator<<(std::ostream& out, HdxIntersector::Hit const & h)
         << "Instancer: <" << h.instancerId << "> "
         << "Instance: [" << h.instanceIndex << "] "
         << "Element: [" << h.elementIndex << "] "
+        << "Edge: [" << h.edgeIndex  << "] "
         << "HitPoint: (" << h.worldSpaceHitPoint << ") "
         << "Depth: (" << h.ndcDepth << ") ";
     return out;
