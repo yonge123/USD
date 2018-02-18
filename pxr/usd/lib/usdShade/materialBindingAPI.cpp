@@ -506,7 +506,7 @@ UsdShadeMaterialBindingAPI::RemovePrimFromBindingCollection(
             materialPurpose)) {
         auto collBinding = GetCollectionBinding(collBindingRel);
         if (collBinding.collection) {
-            return collBinding.collection.RemovePrim(prim);
+            return collBinding.collection.ExcludePath(prim.GetPath());
         }
     }
 
@@ -523,7 +523,7 @@ UsdShadeMaterialBindingAPI::AddPrimToBindingCollection(
             materialPurpose)) {
         auto collBinding = GetCollectionBinding(collBindingRel);
         if (collBinding.collection) {
-            return collBinding.collection.AddPrim(prim);
+            return collBinding.collection.IncludePath(prim.GetPath());
         }
     }
 
@@ -548,7 +548,7 @@ UsdShadeMaterialBindingAPI::ComputeBoundMaterial(
         materialPurposes.push_back(UsdShadeTokens->allPurpose);
     }
 
-    for (auto const&purpose : materialPurposes) {
+    for (auto const & purpose : materialPurposes) {
         UsdShadeMaterial boundMaterial;
         UsdRelationship winningBindingRel;
         for (UsdPrim p = GetPrim(); !p.IsPseudoRoot(); p = p.GetParent())
@@ -571,7 +571,7 @@ UsdShadeMaterialBindingAPI::ComputeBoundMaterial(
             // We may want to cache all collectionBindings at every ancestor.
             std::vector<UsdRelationship> collBindingRels;
             std::vector<CollectionBinding> collBindings = 
-                pBindingAPI.GetCollectionBindings(materialPurpose,
+                pBindingAPI.GetCollectionBindings(purpose,
                                                   &collBindingRels);
 
             if (!TF_VERIFY(collBindings.size() == collBindingRels.size(), 
@@ -606,6 +606,7 @@ UsdShadeMaterialBindingAPI::ComputeBoundMaterial(
                         (GetMaterialBindingStrength(collBindingRel) == 
                             UsdShadeTokens->strongerThanDescendants)) {
                         boundMaterial = collBindings[i].material;
+                        winningBindingRel = collBindingRel;
 
                         // The first collection binding we match will be the 
                         // one we care about.
