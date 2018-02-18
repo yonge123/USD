@@ -31,24 +31,33 @@
 #include "pxrUsdMayaGL/api.h"
 #include "pxrUsdMayaGL/renderParams.h"
 
-#include "pxr/base/gf/vec4f.h"
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/imaging/hd/renderIndex.h"
 #include "pxr/imaging/hd/rprimCollection.h"
+#include "pxr/base/tf/debug.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/usd/prim.h"
-#include "pxr/usd/usd/timeCode.h"
 #include "pxr/usdImaging/usdImaging/delegate.h"
 
 #include <maya/M3dView.h>
 #include <maya/MColor.h>
 #include <maya/MDagPath.h>
 #include <maya/MHWGeometryUtilities.h>
+#include <maya/MPxSurfaceShape.h>
 
 #include <memory>
 
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+
+TF_DEBUG_CODES(
+    PXRUSDMAYAGL_SHAPE_ADAPTER_LIFECYCLE
+);
+
+
+class UsdMayaProxyDrawOverride;
+class UsdMayaProxyShapeUI;
 
 
 /// Class to manage translation of Maya shape node data and viewport state for
@@ -57,51 +66,39 @@ class PxrMayaHdShapeAdapter
 {
     public:
 
-        /// Construct a new uninitialized \c PxrMayaHdShapeAdapter.
-        PXRUSDMAYAGL_API
-        PxrMayaHdShapeAdapter(
-                const MDagPath& shapeDagPath,
-                const UsdPrim& rootPrim,
-                const SdfPathVector& excludedPrimPaths);
-
-        PXRUSDMAYAGL_API
-        size_t GetHash() const;
-
+        /// Initialize the shape adapter using the given \p renderIndex.
+        ///
+        /// This method is called back by the batch renderer when the shape
+        /// adapter is added to it so that the batch renderer can pass in its
+        /// render index. The shape adapter will then use that render index to
+        /// construct its delegate.
         PXRUSDMAYAGL_API
         void Init(HdRenderIndex* renderIndex);
 
-        /// Prepare the shape adapter for being added to the batch renderer's
-        /// queues.
+        /// Update the shape adapter's state from the given \c MPxSurfaceShape
+        /// and the legacy viewport display state.
         PXRUSDMAYAGL_API
-        void PrepareForQueue(
-                const UsdTimeCode time,
-                const uint8_t refineLevel,
-                const bool showGuides,
-                const bool showRenderGuides,
-                const bool tint,
-                const GfVec4f& tintColor);
+        bool Sync(
+                MPxSurfaceShape* surfaceShape,
+                const M3dView::DisplayStyle legacyDisplayStyle,
+                const M3dView::DisplayStatus legacyDisplayStatus);
 
-        /// Get a set of render params from the legacy viewport's display state.
-        ///
-        /// Sets \p drawShape and \p drawBoundingBox depending on whether shape
-        /// and/or bounding box rendering is indicated from the state.
+        /// Update the shape adapter's state from the given \c MPxSurfaceShape
+        /// and the Viewport 2.0 display state.
         PXRUSDMAYAGL_API
-        PxrMayaHdRenderParams GetRenderParams(
-                const M3dView::DisplayStyle displayStyle,
-                const M3dView::DisplayStatus displayStatus,
-                bool* drawShape,
-                bool* drawBoundingBox);
-
-        /// Get a set of render params from the Viewport 2.0 display state.
-        ///
-        /// Sets \p drawShape and \p drawBoundingBox depending on whether shape
-        /// and/or bounding box rendering is indicated from the state.
-        PXRUSDMAYAGL_API
-        PxrMayaHdRenderParams GetRenderParams(
+        bool Sync(
+                MPxSurfaceShape* surfaceShape,
                 const unsigned int displayStyle,
-                const MHWRender::DisplayStatus displayStatus,
+                const MHWRender::DisplayStatus displayStatus);
+
+        /// Get a set of render params from the shape adapter's current state.
+        ///
+        /// Sets \p drawShape and \p drawBoundingBox depending on whether shape
+        /// and/or bounding box rendering is indicated from the state.
+        PXRUSDMAYAGL_API
+        PxrMayaHdRenderParams GetRenderParams(
                 bool* drawShape,
-                bool* drawBoundingBox);
+                bool* drawBoundingBox) const;
 
         PXRUSDMAYAGL_API
         const HdRprimCollection& GetRprimCollection() const {
@@ -111,16 +108,20 @@ class PxrMayaHdShapeAdapter
         PXRUSDMAYAGL_API
         const GfMatrix4d& GetRootXform() const { return _rootXform; }
 
-        /// Returns base params as set previously by \c PrepareForQueue().
         PXRUSDMAYAGL_API
-        const PxrMayaHdRenderParams& GetBaseParams() const {
-            return _baseParams;
-        }
-
-        PXRUSDMAYAGL_API
-        const SdfPath& GetSharedId() const { return _sharedId; }
+        const SdfPath& GetDelegateID() const;
 
     private:
+
+        /// Construct a new uninitialized PxrMayaHdShapeAdapter.
+        ///
+        /// Note that only friends of this class are able to construct
+        /// instances of this class.
+        PXRUSDMAYAGL_API
+        PxrMayaHdShapeAdapter();
+
+        PXRUSDMAYAGL_API
+        virtual ~PxrMayaHdShapeAdapter();
 
         /// Private helper for getting the wireframe color of the shape.
         ///
@@ -137,13 +138,25 @@ class PxrMayaHdShapeAdapter
         SdfPathVector _excludedPrimPaths;
         GfMatrix4d _rootXform;
 
-        PxrMayaHdRenderParams _baseParams;
-
-        SdfPath _sharedId;
-        bool _isPopulated;
         std::shared_ptr<UsdImagingDelegate> _delegate;
+        bool _isPopulated;
 
         HdRprimCollection _rprimCollection;
+
+        PxrMayaHdRenderParams _renderParams;
+        bool _drawShape;
+        bool _drawBoundingBox;
+
+        /// The classes that maintain ownership of and are responsible for
+        /// updating the shape adapter for their shape are made friends of
+        /// PxrMayaHdShapeAdapter so that they alone can set properties on the
+        /// shape adapter.
+        ///
+        /// XXX: Eventually, each type of shape that is imaged by Hydra will
+        /// have its own derived class of PxrMayaHdShapeAdapter so that we do
+        /// not end up with a single master list here.
+        friend class UsdMayaProxyDrawOverride;
+        friend class UsdMayaProxyShapeUI;
 };
 
 
