@@ -1189,9 +1189,11 @@ PxrUsdKatanaUtils::FindLightPaths(const UsdStageRefPtr& stage)
 }
 
 std::string
-PxrUsdKatanaUtils::ConvertUsdPathToKatLocation(
-        const SdfPath& path,
-        const PxrUsdKatanaUsdInArgsRefPtr &usdInArgs,
+PxrUsdKatanaUtils::_ConvertUsdPathToKatLocation(
+        const SdfPath &path,
+        const std::string &isolatePathString,
+        const std::string &rootPathString,
+        const std::string& sessionLocation,
         bool allowOutsideIsolation)
 {
     if (!TF_VERIFY(path.IsAbsolutePath())) {
@@ -1200,8 +1202,7 @@ PxrUsdKatanaUtils::ConvertUsdPathToKatLocation(
 
     // Convert to the corresponding katana location by stripping
     // off the leading rootPath and prepending rootLocation.
-    std::string isolatePathString = usdInArgs->GetIsolatePath();
-
+    //
     // absolute path: starts with '/'
     std::string pathString = path.GetString(); 
     if (!isolatePathString.empty()) {
@@ -1213,7 +1214,6 @@ PxrUsdKatanaUtils::ConvertUsdPathToKatLocation(
             if (allowOutsideIsolation) {
                 // So we are returning the path using the session location
                 // For materials.
-                const auto sessionLocation = usdInArgs->GetSessionLocationPath();
                 if (sessionLocation.empty() && pathString.empty()) {
                     return "/";
                 }
@@ -1227,17 +1227,29 @@ PxrUsdKatanaUtils::ConvertUsdPathToKatLocation(
         }
     }
 
-    // this expected to be an absolute path or empty string
-    std::string rootKatanaLocation = usdInArgs->GetRootLocationPath();
-    // minimum expected path is "/"
-    if (rootKatanaLocation.empty() && pathString.empty()) { 
+    // The rootPath is expected to be an absolute path or empty string.
+    //
+    // minimum expected path is '/'
+    if (rootPathString.empty() && pathString.empty()) { 
         return "/";
     }
 
-    std::string resultKatanaLocation = rootKatanaLocation;
+    std::string resultKatanaLocation = rootPathString;
     resultKatanaLocation += pathString;
    
     return resultKatanaLocation;
+}
+
+std::string
+PxrUsdKatanaUtils::ConvertUsdPathToKatLocation(
+        const SdfPath& path,
+        const PxrUsdKatanaUsdInArgsRefPtr &usdInArgs,
+        bool allowOutsideIsolation)
+{
+    return _ConvertUsdPathToKatLocation(path, usdInArgs->GetIsolatePath(),
+                                        usdInArgs->GetRootLocationPath(),
+                                        usdInArgs->GetSessionLocationPath(),
+                                        allowOutsideIsolation);
 }
 
 std::string
