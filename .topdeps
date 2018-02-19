@@ -31,6 +31,7 @@ tg/simple_features/dont_fallback_to_build_locations
 tg/simple_features/udim_for_hydra
 tg/simple_features/curve_issues_in_usdview
 tg/simple_features/houdini_shader_output_registry
+tg/simple_features/separate_third_party_builds
 ptex_prefer_static
 tg/simple_features/maya_export_for_clips
 tg/simple_features/maya_export_camera_shake
