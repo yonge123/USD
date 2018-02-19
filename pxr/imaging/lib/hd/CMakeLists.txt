@@ -43,8 +43,10 @@ pxr_library(hd
         extComputation
         extComputationContext
         imagePlane
+        geomSubset
         instancer
         instanceRegistry
+        light
         material
         materialParam
         mesh
