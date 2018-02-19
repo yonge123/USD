@@ -1,2 +1,2 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/simple_features/separate_third_party_builds
+Subject: [USD] Allowing separate build of third party libraries.
