@@ -21,8 +21,8 @@ void HdStImagePlane::Sync(
     bool forcedRepr) {
     HdRprim::_Sync(delegate, reprName, forcedRepr, dirtyBits);
 
-    auto calcReprName = _GetReprName(delegate, reprName, forcedRepr, dirtyBits);
-    _GetRepr(delegate, calcReprName, dirtyBits);
+    auto calcReprName = _GetReprName(reprName, forcedRepr);
+    _UpdateRepr(delegate, calcReprName, dirtyBits);
     *dirtyBits &= ~HdChangeTracker::AllSceneDirtyBits;
 }
 
@@ -229,20 +229,16 @@ HdStImagePlane::_PopulateTopology(
     }
 }
 
-const HdReprSharedPtr&
-HdStImagePlane::_GetRepr(
+void
+HdStImagePlane::_UpdateRepr(
     HdSceneDelegate* sceneDelegate,
     const TfToken& reprName,
     HdDirtyBits* dirtyBits) {
-    //auto descs = _GetReprDesc(reprName);
     if (_reprs.empty()) {
         TF_CODING_ERROR("_InitRepr() should be called for repr %s.",
                         reprName.GetText());
-        static const HdReprSharedPtr ERROR_RETURN;
-        return ERROR_RETURN;
+        return;
     }
-    auto it = _reprs.begin();
-
     if (HdChangeTracker::IsDirty(*dirtyBits)) {
         auto* drawItem = static_cast<HdStDrawItem*>(_reprs[0].second->GetDrawItem(0));
         _UpdateDrawItem(
@@ -251,7 +247,6 @@ HdStImagePlane::_GetRepr(
             dirtyBits);
         *dirtyBits &= ~HdChangeTracker::NewRepr;
     }
-    return it->second;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
