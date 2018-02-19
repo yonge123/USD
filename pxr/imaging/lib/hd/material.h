@@ -83,21 +83,6 @@ bool operator==(const HdMaterialRelationship& lhs,
                 const HdMaterialRelationship& rhs);
 
 
-/// \struct HdValueAndRole
-///
-/// A pair of (value, role).  The role value comes from SdfValueRoleNames
-/// and indicates the intended interpretation.  For example, the role
-/// indicates whether a GfVec3f value should be interpreted as a color,
-/// point, vector, or normal.
-struct HdValueAndRole {
-    VtValue value;
-    TfToken role;
-};
-
-// VtValue requirements
-bool operator==(const HdValueAndRole& lhs,
-                const HdValueAndRole& rhs);
-
 /// \struct HdMaterialNode
 ///
 /// Describes a material node which is made of a path, a type and
@@ -105,7 +90,7 @@ bool operator==(const HdValueAndRole& lhs,
 struct HdMaterialNode {
     SdfPath path;
     TfToken type;
-    std::map<TfToken, HdValueAndRole> parameters;
+    std::map<TfToken, VtValue> parameters;
 };
 
 // VtValue requirements
@@ -123,6 +108,13 @@ struct HdMaterialNetwork {
     TfTokenVector primvars;
 };
 
+/// \struct HdMaterialNetworkMap
+///
+/// Describes a map from network type to network.
+struct HdMaterialNetworkMap {
+    std::map<TfToken, HdMaterialNetwork> map;
+};
+
 // VtValue requirements
 HD_API
 std::ostream& operator<<(std::ostream& out, const HdMaterialNetwork& pv);
@@ -130,6 +122,16 @@ HD_API
 bool operator==(const HdMaterialNetwork& lhs, const HdMaterialNetwork& rhs);
 HD_API
 bool operator!=(const HdMaterialNetwork& lhs, const HdMaterialNetwork& rhs);
+
+HD_API
+std::ostream& operator<<(std::ostream& out,
+                         const HdMaterialNetworkMap& pv);
+HD_API
+bool operator==(const HdMaterialNetworkMap& lhs,
+                const HdMaterialNetworkMap& rhs);
+HD_API
+bool operator!=(const HdMaterialNetworkMap& lhs,
+                const HdMaterialNetworkMap& rhs);
 
 
 PXR_NAMESPACE_CLOSE_SCOPE

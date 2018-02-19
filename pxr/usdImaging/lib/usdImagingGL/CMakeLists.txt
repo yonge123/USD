@@ -39,9 +39,12 @@ pxr_library(usdImagingGL
         ${TBB_INCLUDE_DIRS}
 
     PUBLIC_CLASSES
+        drawModeAdapter
         engine
         gl
         hdEngine
+        hydraMaterialAdapter
+        package
         refEngine
 
     PUBLIC_HEADERS
@@ -60,6 +63,10 @@ pxr_library(usdImagingGL
 
     PYMODULE_FILES
         __init__.py
+
+    RESOURCE_FILES
+        plugInfo.json
+        shaders/drawMode.glslfx
 )
 
 if (X11_FOUND OR APPLE)
