@@ -59,7 +59,7 @@ from common import (UIBaseColors, UIPropertyValueSourceColors, UIFonts, GetAttri
                     PickModes, SelectionHighlightModes, CameraMaskModes,
                     PropTreeWidgetTypeIsRel, PrimNotFoundException,
                     GetRootLayerStackInfo, HasSessionVis, GetEnclosingModelPrim,
-                    GetPrimsLoadability, GetClosestBoundMaterial)
+                    GetPrimsLoadability, GetClosestBoundMaterial, Complexities)
 
 import settings2
 from settings2 import StateSource
@@ -391,7 +391,16 @@ class AppController(QtCore.QObject):
                     'Ignoring...' % parserData.primPath
                 self._initialSelectPrim = None
 
-            self._dataModel.viewSettings.complexity = parserData.complexity
+            try:
+                self._dataModel.viewSettings.complexity = Complexities.fromId(
+                    parserData.complexity)
+            except ValueError:
+                fallback = Complexities.LOW
+                sys.stderr.write(("Error: Invalid complexity '{}'. "
+                    "Using fallback '{}' instead.\n").format(
+                        parserData.complexity, fallback.id))
+                self._dataModel.viewSettings.complexity = fallback
+
 
             self._timeSamples = None
             self._stageView = None
@@ -755,7 +764,15 @@ class AppController(QtCore.QObject):
 
             self._ui.actionAdjust_FOV.triggered.connect(self._adjustFOV)
 
-            self._ui.actionComplexity.triggered.connect(self._adjustComplexity)
+            self._ui.complexityGroup = QtWidgets.QActionGroup(self._mainWindow)
+            self._ui.complexityGroup.setExclusive(True)
+            for action in (self._ui.actionLow,
+                           self._ui.actionMedium,
+                           self._ui.actionHigh,
+                           self._ui.actionVery_High):
+                self._ui.complexityGroup.addAction(action)
+            self._updateComplexityMenu()
+            self._ui.complexityGroup.triggered.connect(self._changeComplexity)
 
             self._ui.actionDisplay_Guide.toggled.connect(self._toggleDisplayGuide)
 
@@ -1407,26 +1424,37 @@ class AppController(QtCore.QObject):
 
     # Option windows ==========================================================
 
-    def _incrementComplexity(self):
-        self._dataModel.viewSettings.complexity += .1
+    def _updateComplexityMenu(self):
+        """Update the complexity menu so the current complexity setting is
+        checked.
+        """
+        complexityName = self._dataModel.viewSettings.complexity.name
+        for action in (self._ui.actionLow,
+                       self._ui.actionMedium,
+                       self._ui.actionHigh,
+                       self._ui.actionVery_High):
+            action.setChecked(str(action.text()) == complexityName)
+
+    def _setComplexity(self, complexity):
+        """Set the complexity and update the UI."""
+        self._dataModel.viewSettings.complexity = complexity
+        self._updateComplexityMenu()
         if self._stageView:
             self._stageView.update()
+
+    def _incrementComplexity(self):
+        """Jump up to the next level of complexity."""
+        self._setComplexity(Complexities.next(
+            self._dataModel.viewSettings.complexity))
 
     def _decrementComplexity(self):
-        self._dataModel.viewSettings.complexity -= .1
-        if self._stageView:
-            self._stageView.update()
+        """Jump back to the previous level of complexity."""
+        self._setComplexity(Complexities.prev(
+            self._dataModel.viewSettings.complexity))
 
-    def _adjustComplexity(self):
-        complexity= QtWidgets.QInputDialog.getDouble(self._mainWindow,
-            "Adjust complexity", "Enter a value between 1 and 2.\n\n"
-            "You can also use ctrl+ or ctrl- to adjust the\n"
-            "complexity without invoking this dialog.\n",
-            self._dataModel.viewSettings.complexity, 1.0,2.0,2)
-        if complexity[1]:
-            self._dataModel.viewSettings.complexity = complexity[0]
-            if self._stageView:
-                self._stageView.update()
+    def _changeComplexity(self, action):
+        """Update the complexity from a selected QAction."""
+        self._setComplexity(Complexities.fromName(action.text()))
 
     def _adjustFOV(self):
         fov = QtWidgets.QInputDialog.getDouble(self._mainWindow, "Adjust FOV",
@@ -3857,21 +3885,50 @@ class AppController(QtCore.QObject):
             # It is sadly much much faster to regenerate the entire view
             self._resetPrimView()
 
-    def activateSelectedPrims(self):
+    def _setSelectedPrimsActivation(self, active):
+        """Activate or deactivate all selected prims."""
+
         with BusyContext():
-            primNames=[]
+
+            # We can only activate/deactivate prims which are not in a master.
+            paths = []
             for item in self.getSelectedItems():
-                item.setActive(True)
-                primNames.append(item.name)
-            self.editComplete("Activated %s." % primNames)
+                if item.prim.IsPseudoRoot():
+                    print("WARNING: Cannot change activation of pseudoroot.")
+                elif item.isInMaster:
+                    print("WARNING: The prim <" + str(item.prim.GetPrimPath()) +
+                        "> is in a master. Cannot change activation.")
+                else:
+                    paths.append(item.prim.GetPrimPath())
+
+            # If we are deactivating prims, clear the selection so it doesn't
+            # hold onto paths from inactive prims.
+            if not active:
+                self._dataModel.selection.clear()
+
+            # If we try to deactivate prims one at a time in Usd, some may have
+            # become invalid by the time we get to them. Instead, we set the
+            # active state all at once through Sdf.
+            layer = self._dataModel.stage.GetEditTarget().GetLayer()
+            with Sdf.ChangeBlock():
+                for path in paths:
+                    sdfPrim = Sdf.CreatePrimInLayer(layer, path)
+                    sdfPrim.active = active
+
+            # Refresh primView to support the stage changes.
+            self.updateGUI()
+
+            pathNames = ", ".join(path.name for path in paths)
+            if active:
+                self.editComplete("Deactivated {}.".format(pathNames))
+            else:
+                self.editComplete("Activated {}.".format(pathNames))
+
+    def activateSelectedPrims(self):
+        self._setSelectedPrimsActivation(True)
 
     def deactivateSelectedPrims(self):
-        with BusyContext():
-            primNames=[]
-            for item in self.getSelectedItems():
-                item.setActive(False)
-                primNames.append(item.name)
-            self.editComplete("Deactivated %s." % primNames)
+        self._setSelectedPrimsActivation(False)
 
     def loadSelectedPrims(self):
         with BusyContext():
