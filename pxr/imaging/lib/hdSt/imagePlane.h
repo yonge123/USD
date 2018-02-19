@@ -29,12 +29,11 @@ public:
 
     void _InitRepr(TfToken const &reprName, HdDirtyBits *dirtyBits) override;
 
-    const HdReprSharedPtr&
-    _GetRepr(
+    void
+    _UpdateRepr(
         HdSceneDelegate* sceneDelegate,
         const TfToken& reprName,
         HdDirtyBits* dirtyBits) override;
-
 private:
     void
     _UpdateDrawItem(
