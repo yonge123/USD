@@ -49,10 +49,21 @@ set(CMAKE_CXX_FLAGS "${_PXR_CXX_FLAGS} ${CMAKE_CXX_FLAGS}")
 
 include(Public)
 
-pxr_toplevel_prologue()
+if (PXR_BUILD_USD)
+    pxr_toplevel_core_prologue()
+endif ()
 
-add_subdirectory(pxr)
-add_subdirectory(extras)
+pxr_setup_targets()
+
+if (PXR_BUILD_USD)
+    add_subdirectory(pxr)
+    add_subdirectory(extras)
+# We are not building USD libraries, so we need to find them.
+else ()
+    find_package(USD REQUIRED)
+    include_directories(${USD_INCLUDE_DIR})
+    link_directories(${USD_LIBRARY_DIR})
+endif ()
 
 function(_addIfExists pkg pkgCmakeLists)
     if (EXISTS ${pkgCmakeLists})
@@ -143,4 +154,6 @@ if (${PXR_BUILD_DOCUMENTATION})
     )
 endif()   
 
-pxr_toplevel_epilogue()
+if (PXR_BUILD_USD)
+    pxr_toplevel_core_epilogue()
+endif ()
