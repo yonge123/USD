@@ -131,6 +131,12 @@ struct HdxRenderTaskParams : public HdTaskParams
         , depthBiasConstantFactor(0.0f)
         , depthBiasSlopeFactor(1.0f)
         , depthFunc(HdCmpFuncLEqual)
+        , stencilFunc(HdCmpFuncAlways)
+        , stencilRef(0)
+        , stencilMask(~0)
+        , stencilFailOp(HdStencilOpKeep)
+        , stencilZFailOp(HdStencilOpKeep)
+        , stencilZPassOp(HdStencilOpKeep)
         , cullStyle(HdCullStyleBackUnlessDoubleSided)
         , geomStyle(HdGeomStylePolygons)
         , complexity(HdComplexityLow)
@@ -163,6 +169,15 @@ struct HdxRenderTaskParams : public HdTaskParams
     float depthBiasSlopeFactor;
 
     HdCompareFunction depthFunc;
+
+    // Stencil
+    HdCompareFunction stencilFunc;
+    int stencilRef;
+    int stencilMask;
+    HdStencilOp stencilFailOp;
+    HdStencilOp stencilZFailOp;
+    HdStencilOp stencilZPassOp;
+    bool stencilEnable;
 
     // Viewer's Render Style
     HdCullStyle cullStyle;
