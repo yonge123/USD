@@ -61,7 +61,7 @@ struct PxrUsdMayaExportParams {
     /// exported.  If \p bindableRoots is empty, it will export all.
     PxrUsdMayaUtil::ShapeSet bindableRoots;
 
-    /// Parent scope path for shaders.
+    /// Sets up the parentScope for creating materials.
     SdfPath parentScope;
 };
 
