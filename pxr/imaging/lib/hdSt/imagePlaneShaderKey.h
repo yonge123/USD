@@ -23,10 +23,10 @@ struct HdSt_ImagePlaneShaderKey {
     bool IsCullingPass() const { return false; }
     HdCullStyle GetCullStyle() const { return HdCullStyleDontCare; }
     HdPolygonMode GetPolygonMode() const { return HdPolygonModeFill; }
+    float GetLineWidth() const { return 0.0f; }
     HdSt_GeometricShader::PrimitiveType GetPrimitiveType() const {
         return HdSt_GeometricShader::PrimitiveType::PRIM_MESH_COARSE_TRIANGLES;
     }
-
     bool IsFaceVarying() const { return false; }
 
     TfToken glslfx;
