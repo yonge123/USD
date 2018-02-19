@@ -120,6 +120,9 @@ UsdImagingDelegate::UsdImagingDelegate(
     , _visCache(GetTime(), GetRootCompensation())
     , _drawModeCache(UsdTimeCode::EarliestTime(), GetRootCompensation())
     , _displayGuides(true)
+    , _hasDrawModeAdapter( UsdImagingAdapterRegistry::GetInstance()
+                           .HasAdapter(UsdImagingAdapterKeyTokens
+                                       ->drawModeAdapterKey) )
 {
 }
 
@@ -208,7 +211,7 @@ UsdImagingDelegate::_AdapterLookup(UsdPrim const& prim, bool ignoreInstancing)
     TfToken adapterKey;
     if (!ignoreInstancing && prim.IsInstance()) {
         adapterKey = UsdImagingAdapterKeyTokens->instanceAdapterKey;
-    } else if (_IsDrawModeApplied(prim)) {
+    } else if (_hasDrawModeAdapter && _IsDrawModeApplied(prim)) {
         adapterKey = UsdImagingAdapterKeyTokens->drawModeAdapterKey;
     } else {
         adapterKey = prim.GetTypeName();
@@ -522,6 +525,13 @@ UsdImagingIndexProxy::RefreshInstancer(SdfPath const& instancerPath)
     MarkInstancerDirty(instancerPath, HdChangeTracker::AllDirty);
 }
 
+bool
+UsdImagingIndexProxy::HasRprim(SdfPath const &cachePath)
+{
+    return _delegate->GetRenderIndex().HasRprim(
+        _delegate->GetPathForIndex(cachePath));
+}
+
 void
 UsdImagingIndexProxy::MarkRprimDirty(SdfPath const& cachePath,
                                      HdDirtyBits dirtyBits)
@@ -712,7 +722,7 @@ UsdImagingDelegate::SyncAll(bool includeUnvarying)
 
         if (TF_VERIFY(adapter, "%s\n", usdPath.GetText())) {
             TF_DEBUG(USDIMAGING_UPDATES).Msg(
-                      "[Sync] PREP: <%s> dirtyFlags: %d [%s]\n",
+                      "[Sync] PREP: <%s> dirtyFlags: 0x%x [%s]\n",
                       usdPath.GetText(), 
                       primInfo.dirtyBits,
                       HdChangeTracker::StringifyDirtyBits(
@@ -759,7 +769,7 @@ UsdImagingDelegate::Sync(HdSyncRequestVector* request)
         _AdapterSharedPtr &adapter = primInfo->adapter;
         if (TF_VERIFY(adapter, "%s\n", usdPath.GetText())) {
             TF_DEBUG(USDIMAGING_UPDATES).Msg(
-                    "[Sync] PREP: <%s> dirtyFlags: 0x%d [%s]\n",
+                    "[Sync] PREP: <%s> dirtyFlags: 0x%x [%s]\n",
                     usdPath.GetText(), 
                     primInfo->dirtyBits,
                     HdChangeTracker::StringifyDirtyBits(primInfo->dirtyBits).c_str());
@@ -786,7 +796,7 @@ UsdImagingDelegate::Sync(HdSyncRequestVector* request)
         _AdapterSharedPtr &adapter = primInfo->adapter;
         if (TF_VERIFY(adapter, "%s\n", usdPath.GetText())) {
             TF_DEBUG(USDIMAGING_UPDATES).Msg(
-                    "[Sync] PREP Instancer: <%s> dirtyFlags: %d [%s]\n",
+                    "[Sync] PREP Instancer: <%s> dirtyFlags: 0x%x [%s]\n",
                     usdPath.GetText(),
                     primInfo->dirtyBits,
                     HdChangeTracker::StringifyDirtyBits(
@@ -1408,11 +1418,27 @@ UsdImagingDelegate::_ResyncPrim(SdfPath const& rootPath,
                 // The prim wasn't in the _primInfoMap, this could happen
                 // because the prim just came into existence.
 
-                const _AdapterSharedPtr &adapter = _AdapterLookup(*iter);
+                _AdapterSharedPtr adapter = _AdapterLookup(*iter);
                 if (!adapter) {
-                    // This prim has no prim adapter, continue traversing
-                    // descendants.    
-                    continue;
+                    // Special case for adding UsdGeomSubset prims
+                    // (which do not get an adapter); resync the
+                    // containing mesh.
+                    if (UsdGeomSubset(*iter)) {
+                        UsdPrim parentPrim = iter->GetParent();
+                        adapter = _AdapterLookup(parentPrim);
+                        TF_DEBUG(USDIMAGING_CHANGES)
+                            .Msg("[Resync Prim]: Populating <%s> on behalf "
+                                 "of subset <%s>\n",
+                                 parentPrim.GetPath().GetText(),
+                                 iter->GetPath().GetText());
+                        proxy->Repopulate(parentPrim.GetPath());
+                        iter.PruneChildren();
+                        continue;
+                    } else {
+                        // This prim has no prim adapter, continue traversing
+                        // descendants.    
+                        continue;
+                    }
                 }
 
                 // This prim has an adapter, but wasn't in our adapter map, so
