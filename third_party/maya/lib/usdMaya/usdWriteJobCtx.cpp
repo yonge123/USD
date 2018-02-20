@@ -219,11 +219,8 @@ bool usdWriteJobCtx::openFile(const std::string& filename, bool append)
         }
     }
 
-    if (!mArgs.parentScope.empty()) {
-        if (mArgs.parentScope[0] != '/') {
-            mArgs.parentScope = "/" + mArgs.parentScope;
-        }
-        mParentScopePath = SdfPath(mArgs.parentScope);
+    if (!mArgs.getParentScope().IsEmpty()) {
+        mParentScopePath = mArgs.getParentScope();
         // Note that we only need to create the parentScope prim if we're not
         // using a usdModelRootOverridePath - if we ARE using
         // usdModelRootOverridePath, then IT will take the name of our parent

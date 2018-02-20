@@ -32,6 +32,7 @@
 
 #include "pxr/base/tf/staticTokens.h"
 #include "pxr/base/tf/token.h"
+#include "pxr/usd/sdf/path.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -101,7 +102,6 @@ struct JobExportArgs
     std::string melPostCallback;
     std::string pythonPerFrameCallback;
     std::string pythonPostCallback;
-    std::string parentScope;
 
     PxrUsdMayaUtil::ShapeSet dagPaths;
 
@@ -121,6 +121,15 @@ struct JobExportArgs
     SdfPath exportRootSdfPath;
 
     TfToken rootKind;
+
+    PXRUSDMAYA_API
+    void setParentScope(const std::string& ps);
+
+    const SdfPath& getParentScope() const {
+        return parentScope;
+    }
+private:
+    SdfPath parentScope;
 };
 
 struct JobImportArgs
