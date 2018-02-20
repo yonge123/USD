@@ -67,10 +67,17 @@ JobExportArgs::JobExportArgs()
         exportVisibility(true),
         stripNamespaces(false),
         exportRootPath(""),
-        exportRootSdfPath(SdfPath())
+        exportRootSdfPath(SdfPath()),
+        parentScope(SdfPath())
 {
 }
 
+void JobExportArgs::setParentScope(const std::string& ps) {
+    // Otherwise this is a malformed sdfpath.
+    if (!ps.empty()) {
+        parentScope = ps[0] == '/' ? SdfPath(ps) : SdfPath("/" + ps);
+    }
+}
 
 JobImportArgs::JobImportArgs()
     :

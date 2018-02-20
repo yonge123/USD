@@ -182,7 +182,7 @@ usdTranslatorExport::writer(const MFileObject &file,
                 jobArgs.exportRootPath = theOption[1].asChar();
             }
             if (theOption[0] == MString("parentScope")) {
-                jobArgs.parentScope = theOption[1].asChar();
+                jobArgs.setParentScope(theOption[1].asChar());
             }            
         }
         // Now resync start and end frame based on animation mode

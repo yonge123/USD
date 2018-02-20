@@ -274,7 +274,7 @@ try
         MString stringVal;
         argData.getFlagArgument("parentScope", 0,
                                 stringVal);
-        jobArgs.parentScope = stringVal.asChar();
+        jobArgs.setParentScope(stringVal.asChar());
     }
 
     bool append = false;
