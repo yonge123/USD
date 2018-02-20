@@ -281,7 +281,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
             mJobCtx.mArgs.exportCollectionBasedBindings;
     exportParams.overrideRootPath = mJobCtx.mArgs.usdModelRootOverridePath;
     exportParams.bindableRoots = mJobCtx.mArgs.dagPaths;
-    exportParams.parentScope = mJobCtx.mArgs.parentScope.empty() ? SdfPath() : SdfPath(mJobCtx.mArgs.parentScope);
+    exportParams.parentScope = mJobCtx.mArgs.getParentScope();
 
     // Writing Materials/Shading
     exportParams.materialCollectionsPath = 
