@@ -38,11 +38,13 @@
 #include <pxr/usd/usd/stage.h>
 
 #include <UT/UT_Map.h>
-#include <OP/OP_Node.h>
 
 #include <vector>
 #include <tuple>
 #include <functional>
+
+class OP_Node;
+class OP_OperatorTable;
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -76,6 +78,9 @@ public:
         const std::string& name,
         const std::string& label,
         ExporterFn fn);
+
+    GUSD_API
+    static void loadPlugins(OP_OperatorTable* table);
 private:
     friend class TfSingleton<GusdShadingModeRegistry>;
 
