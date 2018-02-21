@@ -23,12 +23,106 @@
 //
 
 #include "shadingModeRegistry.h"
+#include "debugCodes.h"
 
-#include <pxr/base/tf/instantiateSingleton.h>
+#include "pxr/base/plug/plugin.h"
+#include "pxr/base/plug/registry.h"
+
+#include "pxr/base/tf/debug.h"
+#include "pxr/base/tf/instantiateSingleton.h"
+#include "pxr/base/tf/scriptModuleLoader.h"
+#include "pxr/base/tf/staticTokens.h"
+#include "pxr/base/tf/stl.h"
+#include "pxr/base/tf/token.h"
+
+#include <OP/OP_Node.h>
+#include <OP/OP_OperatorTable.h>
 
 #include <map>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+TF_DEFINE_PRIVATE_TOKENS(_tokens,
+    (houdiniPlugin)
+    (UsdHoudini)
+    (ShadingModePlugin)
+);
+
+namespace {
+
+template <typename T> bool
+_GetData(const JsValue& any, T& val)
+{
+    if (!any.Is<T>()) {
+        TF_CODING_ERROR("Bad plugInfo.json");
+        return false;
+    }
+
+    val = any.Get<T>();
+    return true;
+}
+
+bool
+_ReadNestedDict(
+        const JsObject& data,
+        const std::vector<TfToken>& keys,
+        JsObject& dict)
+{
+    JsObject currDict = data;
+    for (const auto& currKey: keys) {
+        JsValue any;
+        if (!TfMapLookup(currDict, currKey, &any)) {
+            return false;
+        }
+
+        if (!any.IsObject()) {
+            TF_CODING_ERROR("Bad plugInfo data.");
+            return false;
+        }
+        currDict = any.GetJsObject();
+    }
+    dict = currDict;
+    return true;
+}
+
+bool
+_HasPlugin(
+    const PlugPluginPtr& plug,
+    const std::vector<TfToken>& scope)
+{
+    JsObject metadata = plug->GetMetadata();
+    JsObject houdiniMetadata;
+    if (!_ReadNestedDict(metadata, scope, houdiniMetadata)) {
+        return false;
+    }
+
+    JsValue any;
+    if (TfMapLookup(houdiniMetadata, _tokens->houdiniPlugin, &any)) {
+        bool hasPlugin = false;
+        return _GetData(any, hasPlugin) & hasPlugin;
+    }
+
+    return false;
+}
+
+void
+_LoadAllPlugins(std::once_flag& once_flag, const std::vector<TfToken>& scope, OP_OperatorTable* table) {
+    std::call_once(once_flag, [&scope, &table](){
+        for (const auto& plug: PlugRegistry::GetInstance().GetAllPlugins()) {
+            if (_HasPlugin(plug, scope)) {
+                TF_DEBUG(PXRUSDHOUDINI_REGISTRY).Msg(
+                    "Found UsdHoudini plugin %s: Loading from: %s",
+                    plug->GetName().c_str(),
+                    plug->GetPath().c_str());
+                if (!table->loadDSO(plug->GetPath().c_str())) {
+                    TF_CODING_ERROR("Failed to load usdHoudini plugin.");
+                }
+            }
+        }
+    });
+}
+
+}
 
 using _ExporterRegistryElem = std::tuple<GusdShadingModeRegistry::ExporterFn, TfToken>;
 using _ExporterRegistry = std::map<TfToken, _ExporterRegistryElem>;
@@ -61,6 +155,13 @@ GusdShadingModeRegistry::_listExporters() {
         ret.emplace_back(it.first, std::get<1>(it.second));
     }
     return ret;
+}
+
+void
+GusdShadingModeRegistry::loadPlugins(OP_OperatorTable* table) {
+    static std::once_flag _shadingModesLoaded;
+    static std::vector<TfToken> scope = {_tokens->UsdHoudini, _tokens->ShadingModePlugin};
+    _LoadAllPlugins(_shadingModesLoaded, scope, table);
 }
 
 TF_INSTANTIATE_SINGLETON(GusdShadingModeRegistry);

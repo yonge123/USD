@@ -749,6 +749,7 @@ getVariablePair()
 void GusdROP_usdoutput::
 Register(OP_OperatorTable* table)
 {
+    GusdShadingModeRegistry::loadPlugins(table);
     OP_Operator* usdOutROP = new OP_Operator(
             "pixar::usdoutput",
             "USD Output",
