@@ -97,6 +97,7 @@ pxr_shared_library(${PXR_PACKAGE}
         packedUsdWrapper
         pointsWrapper
         instancerWrapper
+        debugCodes
 )
 
 file(GLOB ICON_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "site/icons/*")
