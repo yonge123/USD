@@ -29,6 +29,7 @@
 
 #include "pxr/imaging/glf/glslfx.h"
 #include "pxr/imaging/glf/ptexTexture.h"
+#include "pxr/imaging/glf/udimTexture.h"
 #include "pxr/imaging/glf/textureHandle.h"
 #include "pxr/imaging/glf/textureRegistry.h"
 
@@ -114,6 +115,7 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
         filePath = TfToken(asset.GetAssetPath());
 
     const bool isPtex = GlfIsSupportedPtexTexture(filePath);
+    bool isUdim = isPtex ? false : GlfIsSupportedUdimTexture(filePath);
 
     TfToken wrapS = UsdHydraTokens->repeat;
     TfToken wrapT = UsdHydraTokens->repeat;
@@ -128,10 +130,12 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
         if (attr) attr.Get(&memoryLimit);
         if (!isPtex) {
             UsdHydraUvTexture uvt(shader);
-            attr = uvt.GetWrapSAttr();
-            if (attr) attr.Get(&wrapS);
-            attr = uvt.GetWrapTAttr();
-            if (attr) attr.Get(&wrapT);
+            if (!isUdim) {
+                attr = uvt.GetWrapSAttr();
+                if (attr) attr.Get(&wrapS);
+                attr = uvt.GetWrapTAttr();
+                if (attr) attr.Get(&wrapT);
+            }
             attr = uvt.GetMinFilterAttr();
             if (attr) attr.Get(&minFilter);
             attr = uvt.GetMagFilterAttr();
@@ -140,11 +144,12 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
     }
 
     TF_DEBUG(USDIMAGING_TEXTURES).Msg(
-            "Loading texture: id(%s), isPtex(%s)\n",
+            "Loading texture: id(%s), isPtex(%s), isUdim(%s)\n",
             usdPath.GetText(),
-            isPtex ? "true" : "false");
+            isPtex ? "true" : "false",
+            isUdim ? "true" : "false");
  
-    if (!TfPathExists(filePath)) {
+    if (!isUdim && !TfPathExists(filePath)) {
         TF_DEBUG(USDIMAGING_TEXTURES).Msg(
                 "File does not exist, returning nullptr");
         TF_WARN("Unable to find Texture '%s' with path '%s'.", 
@@ -181,7 +186,7 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
                  : HdMinFilterLinear; 
 
     texResource = HdTextureResourceSharedPtr(
-        new HdStSimpleTextureResource(texture, isPtex, wrapShd, wrapThd,
+        new HdStSimpleTextureResource(texture, isPtex, isUdim, wrapShd, wrapThd,
                                       minFilterHd, magFilterHd));
     timer.Stop();
 
