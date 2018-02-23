@@ -60,9 +60,14 @@ TF_DEFINE_PRIVATE_TOKENS(
     ((edgeIdNoneGS,            "EdgeId.Geometry.None"))
     ((edgeIdBaryGS,            "EdgeId.Geometry.Bary"))
     ((edgeIdRectGS,            "EdgeId.Geometry.Rect"))
-    ((edgeIdBaryDefFS,         "EdgeId.Fragment.BaryDefault"))
+    ((edgeIdBaryFallbackFS,    "EdgeId.Fragment.BaryFallback"))
     ((edgeIdBaryFS,            "EdgeId.Fragment.Bary"))
     ((edgeIdRectFS,            "EdgeId.Fragment.Rect"))
+
+    // point id mixins (for point picking & selection)
+    ((pointIdVS,               "PointId.Vertex"))
+    ((pointIdFS,               "PointId.Fragment.Points"))
+    ((pointIdFallbackFS,       "PointId.Fragment.Fallback"))
 
     // main for all the shader stages
     ((mainVS,                  "Mesh.Vertex"))
@@ -73,6 +78,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     ((mainQuadGS,              "Mesh.Geometry.Quad"))
     ((mainFS,                  "Mesh.Fragment"))
 
+    // instancing related mixins
     ((instancing,              "Instancing.Transform"))
 
     // terminals
@@ -84,6 +90,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     ((surfaceOutlineFS,        "Fragment.SurfaceOutline"))
     ((constantColorFS,         "Fragment.ConstantColor"))
     ((hullColorFS,             "Fragment.HullColor"))
+    ((pointsColorFS,           "Fragment.PointsColor"))
 );
 
 HdSt_MeshShaderKey::HdSt_MeshShaderKey(
@@ -113,8 +120,9 @@ HdSt_MeshShaderKey::HdSt_MeshShaderKey(
     VS[0] = _tokens->instancing;
     VS[1] = (smoothNormals ? _tokens->smooth
                            : _tokens->flat);
-    VS[2] = _tokens->mainVS;
-    VS[3] = TfToken();
+    VS[2] = _tokens->pointIdVS;
+    VS[3] = _tokens->mainVS;
+    VS[4] = TfToken();
 
     // tessellation control shader
     const bool isPrimTypePatches = 
@@ -226,6 +234,8 @@ HdSt_MeshShaderKey::HdSt_MeshShaderKey(
         terminalFS = _tokens->constantColorFS;
     } else if (shadingTerminal == HdMeshReprDescTokens->hullColor) {
         terminalFS = _tokens->hullColorFS;
+    } else if (shadingTerminal == HdMeshReprDescTokens->pointsColor) {
+        terminalFS = _tokens->pointsColorFS;
     } else if (!shadingTerminal.IsEmpty()) {
         terminalFS = shadingTerminal;
     } else {
@@ -235,24 +245,38 @@ HdSt_MeshShaderKey::HdSt_MeshShaderKey(
     FS[4] = terminalFS;
     FS[5] = _tokens->commonFS;
 
-    // edge id (emit the relevant mixin only if we don't disable the GS stage)
+    // edge id
     uint8_t fsIndex = 6;
     if (!GS[0].IsEmpty()) {
         if (isPrimTypeCoarseTris) {
             FS[fsIndex++] = _tokens->edgeIdBaryFS;
              TF_VERIFY(gsEdgeIdMixin == _tokens->edgeIdBaryGS);
         } else {
+            // XXX: loop uses this path, and we still call it "rectangular
+            // parametrization". need a better name.
             FS[fsIndex++] = _tokens->edgeIdRectFS;
             TF_VERIFY(gsEdgeIdMixin == _tokens->edgeIdRectGS);
         }
     } else {
-        // no GS stage => emit nothing, except for coarse triangles, since
-        // codeGen expects GetTriangleEdgeId to be defined.
-        if (isPrimTypeCoarseTris) {
-            FS[fsIndex++] = _tokens->edgeIdBaryDefFS;
+        // the GS stage is skipped if we're dealing with points or triangles.
+        // (see "Optimization" above)
+
+        // for triangles, emit the fallback version.
+        if (HdSt_GeometricShader::IsPrimTypeTriangles(primType)) {
+            FS[fsIndex++] = _tokens->edgeIdBaryFallbackFS;
         }
+
+        // for points, it isn't so simple. we don't know if the 'edgeIndices'
+        // buffer was bound.
+        // if the points repr alone is used, then it won't be generated.
+        // (see GetPointsIndexBuilderComputation)
+        // if any other *IndexBuilderComputation was used, and we then use the
+        // points repr, the binding will exist.
+        // we handle this scenario in hdStCodeGen since it has the binding info.
     }
 
+    FS[fsIndex++] = isPrimTypePoints? _tokens->pointIdFS :
+                                      _tokens->pointIdFallbackFS;
     FS[fsIndex++] = _tokens->mainFS;
     FS[fsIndex] = TfToken();
 }
