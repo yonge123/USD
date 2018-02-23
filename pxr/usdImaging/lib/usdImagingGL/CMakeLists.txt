@@ -51,6 +51,9 @@ pxr_library(usdImagingGL
         api.h
         version.h
 
+    PRIVATE_CLASSES
+        textureUtils
+
     PRIVATE_HEADERS
         unitTestGLDrawing.h
 
