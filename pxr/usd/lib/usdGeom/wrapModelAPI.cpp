@@ -136,7 +136,7 @@ void wrapUsdGeomModelAPI()
         .def("Get", &This::Get, (arg("stage"), arg("path")))
         .staticmethod("Get")
 
-        .def("Apply", &This::Apply, (arg("stage"), arg("path")))
+        .def("Apply", &This::Apply, (arg("prim")))
         .staticmethod("Apply")
 
         .def("IsConcrete",
@@ -301,6 +301,8 @@ WRAP_CUSTOM {
         .def("CreateConstraintTarget", &UsdGeomModelAPI::CreateConstraintTarget)
         .def("GetConstraintTargets", &UsdGeomModelAPI::GetConstraintTargets,
             return_value_policy<TfPySequenceToList>())
+
+        .def("ComputeModelDrawMode", &UsdGeomModelAPI::ComputeModelDrawMode)
     ;
 }
 
