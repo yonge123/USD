@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdShade/look.h"
+#include "pxr/usd/usd/apiSchemaBase.h"
 #include "pxr/usd/usd/schemaBase.h"
 
 #include "pxr/usd/sdf/primSpec.h"
@@ -51,12 +51,12 @@ WRAP_CUSTOM;
 
 } // anonymous namespace
 
-void wrapUsdShadeLook()
+void wrapUsdAPISchemaBase()
 {
-    typedef UsdShadeLook This;
+    typedef UsdAPISchemaBase This;
 
-    class_<This, bases<UsdShadeMaterial> >
-        cls("Look");
+    class_<This, bases<UsdSchemaBase> >
+        cls("APISchemaBase");
 
     cls
         .def(init<UsdPrim>(arg("prim")))
@@ -65,9 +65,6 @@ void wrapUsdShadeLook()
 
         .def("Get", &This::Get, (arg("stage"), arg("path")))
         .staticmethod("Get")
-
-        .def("Define", &This::Define, (arg("stage"), arg("path")))
-        .staticmethod("Define")
 
         .def("IsConcrete",
             static_cast<bool (*)(void)>( [](){ return This::IsConcrete; }))
@@ -114,62 +111,9 @@ void wrapUsdShadeLook()
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
-#include "pxr/usd/usd/editContext.h"
-#include "pxr/usd/usd/pyEditContext.h"
-
 namespace {
 
-static UsdPyEditContext
-_GetEditContextForVariant(const UsdShadeLook &self,
-                          const TfToken &lookVariantName,
-                          const SdfLayerHandle layer) {
-    return UsdPyEditContext(
-        self.GetEditContextForVariant(lookVariantName, layer));
-}
-
 WRAP_CUSTOM {
-    _class
-        .def("Bind", &UsdShadeLook::Bind)
-        .def("Unbind", &UsdShadeLook::Unbind)
-        .staticmethod("Unbind")
-        .def("GetBindingRel", &UsdShadeLook::GetBindingRel)
-        .staticmethod("GetBindingRel")
-        .def("GetBoundLook", &UsdShadeLook::GetBoundLook)
-        .staticmethod("GetBoundLook")
-        .def("GetLookVariant", &UsdShadeLook::GetLookVariant)
-        .def("CreateMasterLookVariant",
-             &UsdShadeLook::CreateMasterLookVariant,
-             (arg("masterPrim"), arg("lookPrims"),
-              arg("masterVariantSetName")=TfToken()))
-        .staticmethod("CreateMasterLookVariant")
-        .def("GetEditContextForVariant", _GetEditContextForVariant,
-             (arg("lookVariantName"), arg("layer")=SdfLayerHandle()))
-
-        .def("GetBaseLookPath",
-             &UsdShadeLook::GetBaseLookPath)
-         .def("GetBaseLook",
-              &UsdShadeLook::GetBaseLook)
-        .def("SetBaseLookPath",
-             &UsdShadeLook::SetBaseLookPath,
-             (arg("baseLookPath")))
-         .def("SetBaseLook",
-              &UsdShadeLook::SetBaseLook,
-              (arg("baseLook")))
-        .def("ClearBaseLook",
-             &UsdShadeLook::ClearBaseLook)
-        .def("HasBaseLook",
-             &UsdShadeLook::HasBaseLook)
-
-        .def("CreateLookFaceSet", &UsdShadeLook::CreateLookFaceSet)
-            .staticmethod("CreateLookFaceSet")
-
-        .def("GetLookFaceSet", &UsdShadeLook::GetLookFaceSet)
-            .staticmethod("GetLookFaceSet")
-
-        .def("HasLookFaceSet", &UsdShadeLook::HasLookFaceSet)
-            .staticmethod("HasLookFaceSet")
-
-        ;
 }
 
-} // anonymous namespace
+}
