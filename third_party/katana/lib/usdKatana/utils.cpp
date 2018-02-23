@@ -1193,7 +1193,7 @@ PxrUsdKatanaUtils::_ConvertUsdPathToKatLocation(
         const SdfPath &path,
         const std::string &isolatePathString,
         const std::string &rootPathString,
-        const std::string& sessionLocation,
+        const std::string &sessionPathString,
         bool allowOutsideIsolation)
 {
     if (!TF_VERIFY(path.IsAbsolutePath())) {
@@ -1214,10 +1214,10 @@ PxrUsdKatanaUtils::_ConvertUsdPathToKatLocation(
             if (allowOutsideIsolation) {
                 // So we are returning the path using the session location
                 // For materials.
-                if (sessionLocation.empty() && pathString.empty()) {
+                if (sessionPathString.empty() && pathString.empty()) {
                     return "/";
                 }
-                return sessionLocation + pathString;
+                return sessionPathString + pathString;
             } else {
                 std::cerr << "UsdIn: Failed to compute katana path for"
                 " usd path: " << path << " with given isolatePath: " <<
@@ -1272,7 +1272,8 @@ PxrUsdKatanaUtils::ConvertUsdPathToKatLocation(
             data.GetMasterPath(), data.GetInstancePath());
     }
 
-    return ConvertUsdPathToKatLocation(nonMasterPath, data.GetUsdInArgs(), allowOutsideIsolation);
+    return ConvertUsdPathToKatLocation(nonMasterPath, data.GetUsdInArgs(), 
+                                       allowOutsideIsolation);
 }
 
 std::string
