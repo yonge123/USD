@@ -2183,10 +2183,12 @@ UsdStage::FindLoadable(const SdfPath& rootPath)
 void
 UsdStage::SetPopulationMask(UsdStagePopulationMask const &mask)
 {
-    // For now just set the mask and recompose everything at the Usd level.
+    // For now just set the mask and recompose everything.
     _populationMask = mask;
-    SdfPathSet absRoot = { SdfPath::AbsoluteRootPath() };
-    _Recompose(PcpChanges(), &absRoot);
+
+    PcpChanges changes;
+    changes.DidChangeSignificantly(_cache.get(), SdfPath::AbsoluteRootPath());
+    _Recompose(changes, nullptr);
 }
 
 void
@@ -3626,21 +3628,12 @@ UsdStage::_RecomposePrims(const PcpChanges &changes,
         const PcpCacheChanges &ourChanges = cacheChanges.begin()->second;
 
         for (const auto& path : ourChanges.didChangeSignificantly) {
-            // Translate the real path from Pcp into a stage-relative path
             pathsToRecompose->insert(path);
             TF_DEBUG(USD_CHANGES).Msg("Did Change Significantly: %s\n",
                                       path.GetText());
         }
 
-        for (const auto& path : ourChanges.didChangeSpecs) {
-            // Translate the real path from Pcp into a stage-relative path
-            pathsToRecompose->insert(path);
-            TF_DEBUG(USD_CHANGES).Msg("Did Change Spec: %s\n",
-                                      path.GetText());
-        }
-
         for (const auto& path : ourChanges.didChangePrims) {
-            // Translate the real path from Pcp into a stage-relative path
             pathsToRecompose->insert(path);
             TF_DEBUG(USD_CHANGES).Msg("Did Change Prim: %s\n",
                                       path.GetText());
