@@ -66,15 +66,6 @@ class PxrMayaHdShapeAdapter
 {
     public:
 
-        /// Initialize the shape adapter using the given \p renderIndex.
-        ///
-        /// This method is called back by the batch renderer when the shape
-        /// adapter is added to it so that the batch renderer can pass in its
-        /// render index. The shape adapter will then use that render index to
-        /// construct its delegate.
-        PXRUSDMAYAGL_API
-        void Init(HdRenderIndex* renderIndex);
-
         /// Update the shape adapter's state from the given \c MPxSurfaceShape
         /// and the legacy viewport display state.
         PXRUSDMAYAGL_API
@@ -90,6 +81,20 @@ class PxrMayaHdShapeAdapter
                 MPxSurfaceShape* surfaceShape,
                 const unsigned int displayStyle,
                 const MHWRender::DisplayStatus displayStatus);
+
+        /// Update the shape adapter's visibility state from the display status
+        /// of its shape.
+        ///
+        /// When a Maya shape is made invisible, it may no longer be included
+        /// in the "prepare" phase of a viewport render (i.e. we get no
+        /// getDrawRequests() or prepareForDraw() callbacks for that shape).
+        /// This method can be called on demand to ensure that the shape
+        /// adapter is updated with the current visibility state of the shape.
+        ///
+        /// Returns true if the visibility state was changed, or false
+        /// otherwise.
+        PXRUSDMAYAGL_API
+        bool UpdateVisibility();
 
         /// Get a set of render params from the shape adapter's current state.
         ///
@@ -123,14 +128,27 @@ class PxrMayaHdShapeAdapter
         PXRUSDMAYAGL_API
         virtual ~PxrMayaHdShapeAdapter();
 
+        /// Initialize the shape adapter using the given \p renderIndex.
+        ///
+        /// This method is called automatically during Sync() when the shape
+        /// adapter's "identity" changes. This happens when the delegateId or
+        /// the rprim collection name computed from the shape adapter's shape
+        /// is different than what is currently stored in the shape adapter.
+        /// The shape adapter will then query the batch renderer for its render
+        /// index and use that to re-create its delegate and re-add its rprim
+        /// collection, if necessary.
+        PXRUSDMAYAGL_API
+        bool _Init(HdRenderIndex* renderIndex);
+
         /// Private helper for getting the wireframe color of the shape.
         ///
         /// Determining the wireframe color may involve inspecting the soft
         /// selection, for which the batch renderer manages a helper. This
         /// class is made a friend of the batch renderer class so that it can
         /// access the soft selection info.
-        bool _GetWireframeColor(
+        static bool _GetWireframeColor(
                 const MHWRender::DisplayStatus displayStatus,
+                const MDagPath& shapeDagPath,
                 MColor* mayaWireColor);
 
         MDagPath _shapeDagPath;
@@ -139,7 +157,6 @@ class PxrMayaHdShapeAdapter
         GfMatrix4d _rootXform;
 
         std::shared_ptr<UsdImagingDelegate> _delegate;
-        bool _isPopulated;
 
         HdRprimCollection _rprimCollection;
 

@@ -1300,10 +1300,10 @@ HdStMesh::_UpdateDrawItemGeometricShader(HdSceneDelegate *sceneDelegate,
     const HdStMaterial *material = static_cast<const HdStMaterial *>(
         renderIndex.GetSprim(HdPrimTypeTokens->material, GetMaterialId()));
     if (material) {
-        const std::string & displacementShader = 
-            material->GetDisplacementShaderSource(sceneDelegate);
-        if (!displacementShader.empty()) {
-            hasCustomDisplacementTerminal = true;
+        HdStShaderCodeSharedPtr shaderCode = material->GetShaderCode();
+        if (shaderCode) {
+            hasCustomDisplacementTerminal =
+                !(shaderCode->GetSource(HdShaderTokens->geometryShader).empty());
         }
     }
 
@@ -1352,6 +1352,15 @@ HdStMesh::_PropagateDirtyBits(HdDirtyBits bits) const
         // dirty
         bits |= HdChangeTracker::DirtySubdivTags |
                 HdChangeTracker::DirtyRefineLevel;
+    }
+
+    // A change of material means that the Quadrangulate state may have
+    // changed.
+    if (bits & HdChangeTracker::DirtyMaterialId) {
+        bits |= (HdChangeTracker::DirtyPoints   |
+                HdChangeTracker::DirtyNormals  |
+                HdChangeTracker::DirtyPrimVar  |
+                HdChangeTracker::DirtyTopology);
     }
 
     // If points or topology changed, recompute smooth normals.
