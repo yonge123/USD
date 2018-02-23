@@ -50,8 +50,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 namespace {
 
-template <typename T> bool
-_GetData(const JsValue& any, T& val)
+template <typename T> bool inline
+getData(const JsValue& any, T& val)
 {
     if (!any.Is<T>()) {
         TF_CODING_ERROR("Bad plugInfo.json");
@@ -62,8 +62,8 @@ _GetData(const JsValue& any, T& val)
     return true;
 }
 
-bool
-_ReadNestedDict(
+bool inline
+readNestedDict(
         const JsObject& data,
         const std::vector<TfToken>& keys,
         JsObject& dict)
@@ -85,31 +85,32 @@ _ReadNestedDict(
     return true;
 }
 
-bool
-_HasPlugin(
+bool inline
+hasPlugin(
     const PlugPluginPtr& plug,
-    const std::vector<TfToken>& scope)
+    const std::vector<TfToken>& scope,
+    const TfToken& pluginType)
 {
     JsObject metadata = plug->GetMetadata();
     JsObject houdiniMetadata;
-    if (!_ReadNestedDict(metadata, scope, houdiniMetadata)) {
+    if (!readNestedDict(metadata, scope, houdiniMetadata)) {
         return false;
     }
 
     JsValue any;
-    if (TfMapLookup(houdiniMetadata, _tokens->houdiniPlugin, &any)) {
+    if (TfMapLookup(houdiniMetadata, pluginType, &any)) {
         bool hasPlugin = false;
-        return _GetData(any, hasPlugin) & hasPlugin;
+        return getData(any, hasPlugin) & hasPlugin;
     }
 
     return false;
 }
 
-void
-_LoadAllPlugins(std::once_flag& once_flag, const std::vector<TfToken>& scope, OP_OperatorTable* table) {
-    std::call_once(once_flag, [&scope, &table](){
+void inline
+loadAllPlugins(std::once_flag& once_flag, const std::vector<TfToken>& scope, const TfToken& pluginType, OP_OperatorTable* table) {
+    std::call_once(once_flag, [&scope, &table, &pluginType](){
         for (const auto& plug: PlugRegistry::GetInstance().GetAllPlugins()) {
-            if (_HasPlugin(plug, scope)) {
+            if (hasPlugin(plug, scope, pluginType)) {
                 TF_DEBUG(PXRUSDHOUDINI_REGISTRY).Msg(
                     "Found UsdHoudini plugin %s: Loading from: %s",
                     plug->GetName().c_str(),
@@ -160,8 +161,8 @@ GusdShadingModeRegistry::_listExporters() {
 void
 GusdShadingModeRegistry::loadPlugins(OP_OperatorTable* table) {
     static std::once_flag _shadingModesLoaded;
-    static std::vector<TfToken> scope = {_tokens->UsdHoudini, _tokens->ShadingModePlugin};
-    _LoadAllPlugins(_shadingModesLoaded, scope, table);
+    static std::vector<TfToken> scope = {_tokens->UsdHoudini};
+    loadAllPlugins(_shadingModesLoaded, scope, _tokens->ShadingModePlugin, table);
 }
 
 TF_INSTANTIATE_SINGLETON(GusdShadingModeRegistry);
