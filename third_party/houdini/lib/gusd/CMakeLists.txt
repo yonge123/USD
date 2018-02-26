@@ -39,6 +39,7 @@ pxr_shared_library(${PXR_PACKAGE}
         purpose
         refiner
         scopeWrapper
+        shadingModeRegistry
         shaderWrapper
         stageCache
         stageEdit
@@ -85,6 +86,7 @@ pxr_shared_library(${PXR_PACKAGE}
 
     CPPFILES
         plugin.cpp
+        ribShadingExporter.cpp
 
     PRIVATE_CLASSES
         GEO_IOTranslator
@@ -94,6 +96,7 @@ pxr_shared_library(${PXR_PACKAGE}
         packedUsdWrapper
         pointsWrapper
         instancerWrapper
+        debugCodes
 )
 
 file(GLOB ICON_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "site/icons/*")
