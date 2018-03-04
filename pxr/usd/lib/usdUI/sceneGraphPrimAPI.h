@@ -75,6 +75,11 @@ public:
     /// UsdPrim.
     static const bool IsTyped = false;
 
+    /// Compile-time constant indicating whether or not this class represents a 
+    /// multiple-apply API schema. Mutiple-apply API schemas can be applied 
+    /// to the same prim multiple times with different instance names. 
+    static const bool IsMultipleApply = false;
+
     /// Construct a UsdUISceneGraphPrimAPI on UsdPrim \p prim .
     /// Equivalent to UsdUISceneGraphPrimAPI::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
@@ -174,7 +179,7 @@ public:
     // --------------------------------------------------------------------- //
     /// When publishing a nodegraph or a material, it can be useful to
     /// provide an optional display group, for organizational purposes and 
-    /// readability. This is because often the usd shading hiearchy is rather 
+    /// readability. This is because often the usd shading hierarchy is rather
     /// flat while we want to display it in organized groups.
     /// 
     ///
