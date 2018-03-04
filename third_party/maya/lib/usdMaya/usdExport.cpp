@@ -74,6 +74,7 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-dms" , "-defaultMeshScheme", MSyntax::kString);
     syntax.addFlag("-vis" , "-exportVisibility", MSyntax::kBoolean);
     syntax.addFlag("-sn" , "-stripNamespaces", MSyntax::kBoolean);
+    syntax.addFlag("-skn" , "-exportSkin", MSyntax::kString);
 
     syntax.addFlag("-fr" , "-frameRange"   , MSyntax::kDouble, MSyntax::kDouble);
     syntax.addFlag("-pr" , "-preRoll"   , MSyntax::kDouble);
@@ -238,6 +239,29 @@ try
 
     if (argData.isFlagSet("stripNamespaces")) {
         argData.getFlagArgument("stripNamespaces", 0, jobArgs.stripNamespaces);
+    }
+
+    if (argData.isFlagSet("exportSkin")) {
+        MString stringVal;
+
+        argData.getFlagArgument("exportSkin", 0, stringVal);
+        if (stringVal == "none") {
+            jobArgs.exportSkin = false;
+        }
+        else if (stringVal == "auto") {
+            jobArgs.exportSkin = true;
+            jobArgs.autoSkelRoots = true;
+        }
+        else if (stringVal == "explicit") {
+            jobArgs.exportSkin = true;
+            jobArgs.autoSkelRoots = false;
+        }
+        else {
+            MGlobal::displayWarning(
+                    "Incorrect value for -exportSkin flag; assuming "
+                    "'-exportSkin none'");
+            jobArgs.exportSkin = false;
+        }
     }
 
     bool append = false;
