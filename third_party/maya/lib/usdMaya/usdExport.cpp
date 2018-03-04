@@ -78,6 +78,7 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-sn" , "-stripNamespaces", MSyntax::kBoolean);
     syntax.addFlag("-rt" , "-root", MSyntax::kString);
     syntax.addFlag("-psc", "-parentScope", MSyntax::kString);
+    syntax.addFlag("-rt" , "-root", MSyntax::kString);
     syntax.addFlag("-skn" , "-exportSkin", MSyntax::kString);
 
     syntax.addFlag("-fr" , "-frameRange"   , MSyntax::kDouble, MSyntax::kDouble);
