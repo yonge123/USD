@@ -78,6 +78,8 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-sn" , "-stripNamespaces", MSyntax::kBoolean);
     syntax.addFlag("-rt" , "-root", MSyntax::kString);
     syntax.addFlag("-psc", "-parentScope", MSyntax::kString);
+    syntax.addFlag("-rt" , "-root", MSyntax::kString);
+    syntax.addFlag("-skn" , "-exportSkin", MSyntax::kString);
 
     syntax.addFlag("-fr" , "-frameRange"   , MSyntax::kDouble, MSyntax::kDouble);
     syntax.addFlag("-ac" , "-asClip"   , MSyntax::kBoolean);
@@ -271,11 +273,35 @@ try
             }
         }
     }
+
     if (argData.isFlagSet("parentScope")) {
         MString stringVal;
         argData.getFlagArgument("parentScope", 0,
                                 stringVal);
         jobArgs.setParentScope(stringVal.asChar());
+    }
+
+    if (argData.isFlagSet("exportSkin")) {
+        MString stringVal;
+
+        argData.getFlagArgument("exportSkin", 0, stringVal);
+        if (stringVal == "none") {
+            jobArgs.exportSkin = false;
+        }
+        else if (stringVal == "auto") {
+            jobArgs.exportSkin = true;
+            jobArgs.autoSkelRoots = true;
+        }
+        else if (stringVal == "explicit") {
+            jobArgs.exportSkin = true;
+            jobArgs.autoSkelRoots = false;
+        }
+        else {
+            MGlobal::displayWarning(
+                    "Incorrect value for -exportSkin flag; assuming "
+                    "'-exportSkin none'");
+            jobArgs.exportSkin = false;
+        }
     }
 
     bool append = false;

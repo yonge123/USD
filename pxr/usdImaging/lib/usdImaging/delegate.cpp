@@ -115,8 +115,10 @@ UsdImagingDelegate::UsdImagingDelegate(
     , _reprFallback()
     , _cullStyleFallback(HdCullStyleDontCare)
     , _xformCache(GetTime(), GetRootCompensation())
-    , _materialBindingCache(GetTime(), GetRootCompensation())
-    , _materialNetworkBindingCache(GetTime(), GetRootCompensation())
+    , _materialBindingCache(GetTime(), GetRootCompensation(), 
+                            &_matBindingSupplCache)
+    , _materialNetworkBindingCache(GetTime(), GetRootCompensation(),
+                                   &_matBindingSupplCache)
     , _visCache(GetTime(), GetRootCompensation())
     , _drawModeCache(UsdTimeCode::EarliestTime(), GetRootCompensation())
     , _displayGuides(true)
@@ -1104,6 +1106,7 @@ UsdImagingDelegate::_ProcessChangesForTimeUpdate(UsdTimeCode time)
         // Need to invalidate all caches if any stage objects have changed. This
         // invalidation is overly conservative, but correct.
         _xformCache.Clear();
+        _matBindingSupplCache.Clear();
         _materialBindingCache.Clear();
         _materialNetworkBindingCache.Clear();
         _visCache.Clear();
@@ -1267,7 +1270,7 @@ UsdImagingDelegate::SetTimes(const std::vector<UsdImagingDelegate*>& delegates,
 // -------------------------------------------------------------------------- //
 void 
 UsdImagingDelegate::_OnObjectsChanged(UsdNotice::ObjectsChanged const& notice,
-                                UsdStageWeakPtr const& sender)
+                                      UsdStageWeakPtr const& sender)
 {
     if (!sender || !TF_VERIFY(sender == _stage))
         return;
@@ -1275,10 +1278,12 @@ UsdImagingDelegate::_OnObjectsChanged(UsdNotice::ObjectsChanged const& notice,
                             "from stage with root layer @%s@\n",
                         sender->GetRootLayer()->GetIdentifier().c_str());
 
+    using PathRange = UsdNotice::ObjectsChanged::PathRange;
+
     // These paths are subtree-roots representing entire subtrees that may have
     // changed. In this case, we must dump all cached data below these points
     // and repopulate those trees.
-    SdfPathVector const& pathsToResync = notice.GetResyncedPaths();
+    const PathRange pathsToResync = notice.GetResyncedPaths();
     _pathsToResync.insert(_pathsToResync.end(), 
                           pathsToResync.begin(), pathsToResync.end());
     
@@ -1286,9 +1291,16 @@ UsdImagingDelegate::_OnObjectsChanged(UsdNotice::ObjectsChanged const& notice,
     // non-structural way, for example setting a value. These paths may be paths
     // to prims or properties, in which case we should sparsely invalidate
     // cached data associated with the path.
-    SdfPathVector const& pathsToUpdate = notice.GetChangedInfoOnlyPaths();
-    _pathsToUpdate.insert(_pathsToUpdate.end(), 
-                          pathsToUpdate.begin(), pathsToUpdate.end());
+    const PathRange pathsToUpdate = notice.GetChangedInfoOnlyPaths();
+    for (PathRange::const_iterator it = pathsToUpdate.begin(); 
+         it != pathsToUpdate.end(); ++it) {
+        // Ignore all changes to prims that have not changed any field values, 
+        // since these changes cannot affect any composed values consumed by 
+        // the adapters.
+        if (!it->IsAbsoluteRootOrPrimPath() || it.HasChangedFields()) {
+            _pathsToUpdate.push_back(*it);
+        }
+    }
 
     if (TfDebug::IsEnabled(USDIMAGING_CHANGES)) {
         TF_FOR_ALL(it, pathsToResync) {
