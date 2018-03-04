@@ -76,6 +76,8 @@ struct JobExportArgs
     bool eulerFilter;
     bool excludeInvisible;
     bool exportDefaultCameras;
+    bool exportSkin;
+    bool autoSkelRoots;
 
     bool exportMeshUVs;
     bool normalizeMeshUVs;
