@@ -252,7 +252,7 @@ public:
     ///
     /// This function is to provide easy authoring of extent for usd authoring
     /// tools, hence it is static and acts outside a specific prim (as in 
-    /// attribute based methods). 
+    /// attribute based methods).
     USDGEOM_API
     static bool ComputeExtent(const VtVec3fArray& points, VtVec3fArray* extent);
 
@@ -284,6 +284,12 @@ public:
         UsdTimeCode baseTime,
         float velocityScale = 1.0f,
         VtVec3fArray* velocities = nullptr) const;
+
+    /// \overload
+    /// Computes the extent as if the matrix \p transform was first applied.
+    USDGEOM_API
+    static bool ComputeExtent(const VtVec3fArray& points,
+        const GfMatrix4d& transform, VtVec3fArray* extent);
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

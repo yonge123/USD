@@ -124,6 +124,7 @@ pxr_test_scripts(
     testenv/testUsdGeomSubset.py
     testenv/testUsdGeomXformable.py
     testenv/testUsdGeomXformCommonAPI.py
+    testenv/testUsdGeomExtentTransform.py
 )
 
 pxr_build_test(testUsdGeomXformCache
@@ -204,6 +205,11 @@ pxr_install_test_dir(
 pxr_install_test_dir(
     SRC testenv/testUsdGeomBBoxCache
     DEST testUsdGeomBBoxCache
+)
+
+pxr_install_test_dir(
+    SRC testenv/testUsdGeomExtentTransform
+    DEST testUsdGeomExtentTransform
 )
 
 pxr_register_test(testUsdGeomBasisCurves
@@ -331,5 +337,11 @@ pxr_register_test(testUsdGeomXformCache
 pxr_register_test(testUsdGeomXformCommonAPI
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomXformCommonAPI"
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdGeomExtentTransform
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomExtentTransform"
     EXPECTED_RETURN_CODE 0
 )
