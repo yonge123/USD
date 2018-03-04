@@ -74,6 +74,8 @@ struct JobExportArgs
     UsdTimeCode clipStartTime;
     bool excludeInvisible;
     bool exportDefaultCameras;
+    bool exportSkin;
+    bool autoSkelRoots;
 
     bool exportMeshUVs;
     bool normalizeMeshUVs;
