@@ -256,7 +256,6 @@ try
         MString stringVal;
         argData.getFlagArgument("root", 0, stringVal);
         std::string rootPath = stringVal.asChar();
-
         if (!rootPath.empty()) {
             MDagPath rootDagPath;
             PxrUsdMayaUtil::GetDagPathByName(rootPath, rootDagPath);
