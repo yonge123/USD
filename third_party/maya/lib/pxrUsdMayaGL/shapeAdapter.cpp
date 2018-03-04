@@ -106,29 +106,35 @@ PxrMayaHdShapeAdapter::_Init(HdRenderIndex* renderIndex)
         return false;
     }
 
-    // Create a simple string to put into a flat SdfPath "hierarchy". This is
-    // much faster than more complicated pathing schemes.
+    const SdfPath delegatePrefix =
+        UsdMayaGLBatchRenderer::GetInstance().GetDelegatePrefix(_isViewport2);
+
+    // Create a simple "name" for this shape adapter to insert into the batch
+    // renderer's SdfPath hierarchy.
     //
     // XXX: For as long as we're using the MAYA_VP2_USE_VP1_SELECTION
     // environment variable, we need to be able to pass responsibility back and
     // forth between the MPxDrawOverride's shape adapter for drawing and the
     // MPxSurfaceShapeUI's shape adapter for selection. This requires both
-    // shape adapters to have the same delegate ID, which forces us to build it
+    // shape adapters to have the same "name", which forces us to build it
     // from data on the shape that will be common to both classes, as we do
     // below. When we remove MAYA_VP2_USE_VP1_SELECTION and can trust that a
     // single shape adapter handles both drawing and selection, we can do
     // something even simpler instead like using the shape adapter's memory
-    // address as the ID:
-    //
-    // const std::string idString = TfStringPrintf("/PxrMayaHdShapeAdapter_%p",
-    //                                             this);
-    //
+    // address as the "name".
     size_t shapeHash(MObjectHandle(_shapeDagPath.transform()).hashCode());
     boost::hash_combine(shapeHash, _rootPrim);
     boost::hash_combine(shapeHash, _excludedPrimPaths);
 
-    const std::string idString = TfStringPrintf("/x%zx", shapeHash);
-    const SdfPath delegateId(idString);
+    // We prepend the Maya type name to the beginning of the delegate name to
+    // ensure that there are no name collisions between shape adapters of
+    // shapes with different Maya types.
+    const TfToken delegateName(
+        TfStringPrintf("%s_%zx",
+                       PxrUsdMayaProxyShapeTokens->MayaTypeName.GetText(),
+                       shapeHash));
+
+    const SdfPath delegateId = delegatePrefix.AppendChild(delegateName);
 
     if (_delegate &&
             delegateId == GetDelegateID() &&
@@ -275,6 +281,9 @@ PxrMayaHdShapeAdapter::Sync(
         const M3dView::DisplayStyle legacyDisplayStyle,
         const M3dView::DisplayStatus legacyDisplayStatus)
 {
+    // Legacy viewport implementation.
+    _isViewport2 = false;
+
     const unsigned int displayStyle =
         _ToMFrameContextDisplayStyle(legacyDisplayStyle);
     const MHWRender::DisplayStatus displayStatus =
@@ -284,7 +293,7 @@ PxrMayaHdShapeAdapter::Sync(
         "Synchronizing PxrMayaHdShapeAdapter for legacy viewport: %p\n",
         this);
 
-    const bool success = Sync(surfaceShape, displayStyle, displayStatus);
+    const bool success = _Sync(surfaceShape, displayStyle, displayStatus);
 
     if (success) {
         // The legacy viewport does not support color management, so we roll
@@ -292,7 +301,7 @@ PxrMayaHdShapeAdapter::Sync(
         // need to pre-linearize the wireframe color from Maya.
         //
         // The default value for wireframeColor is 0.0f for all four values and
-        // if we need a wireframe color, we expect Sync() to have set the
+        // if we need a wireframe color, we expect _Sync() to have set the
         // values and put 1.0f in for alpha, so inspect the alpha value to
         // determine whether we need to linearize rather than calling
         // _GetWireframeColor() again.
@@ -308,6 +317,23 @@ PxrMayaHdShapeAdapter::Sync(
 
 bool
 PxrMayaHdShapeAdapter::Sync(
+        MPxSurfaceShape* surfaceShape,
+        const unsigned int displayStyle,
+        const MHWRender::DisplayStatus displayStatus)
+{
+    // Viewport 2.0 implementation.
+    _isViewport2 = true;
+
+    TF_DEBUG(PXRUSDMAYAGL_SHAPE_ADAPTER_LIFECYCLE).Msg(
+        "Synchronizing PxrMayaHdShapeAdapter for Viewport 2.0: %p\n",
+        this);
+
+    return _Sync(surfaceShape, displayStyle, displayStatus);
+}
+
+/* virtual */
+bool
+PxrMayaHdShapeAdapter::_Sync(
         MPxSurfaceShape* surfaceShape,
         const unsigned int displayStyle,
         const MHWRender::DisplayStatus displayStatus)
@@ -363,10 +389,6 @@ PxrMayaHdShapeAdapter::Sync(
             return false;
         }
     }
-
-    TF_DEBUG(PXRUSDMAYAGL_SHAPE_ADAPTER_LIFECYCLE).Msg(
-        "Synchronizing PxrMayaHdShapeAdapter: %p\n",
-        this);
 
     // Reset _renderParams to the defaults.
     PxrMayaHdRenderParams renderParams;
@@ -530,6 +552,16 @@ PxrMayaHdShapeAdapter::GetRenderParams(
     return _renderParams;
 }
 
+void
+PxrMayaHdShapeAdapter::SetRootXform(const GfMatrix4d& transform)
+{
+    _rootXform = transform;
+
+    if (_delegate) {
+        _delegate->SetRootTransform(_rootXform);
+    }
+}
+
 const SdfPath&
 PxrMayaHdShapeAdapter::GetDelegateID() const
 {
@@ -538,6 +570,12 @@ PxrMayaHdShapeAdapter::GetDelegateID() const
     }
 
     return SdfPath::EmptyPath();
+}
+
+bool
+PxrMayaHdShapeAdapter::IsViewport2() const
+{
+    return _isViewport2;
 }
 
 
