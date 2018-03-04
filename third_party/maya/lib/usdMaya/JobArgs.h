@@ -73,6 +73,8 @@ struct JobExportArgs
     bool exportAnimation;
     bool excludeInvisible;
     bool exportDefaultCameras;
+    bool exportSkin;
+    bool autoSkelRoots;
 
     bool exportMeshUVs;
     bool normalizeMeshUVs;
