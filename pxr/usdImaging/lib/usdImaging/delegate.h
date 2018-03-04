@@ -24,6 +24,8 @@
 #ifndef USDIMAGING_DELEGATE_H
 #define USDIMAGING_DELEGATE_H
 
+/// \file usdImaging/delegate.h
+
 #include "pxr/pxr.h"
 #include "pxr/usdImaging/usdImaging/api.h"
 #include "pxr/usdImaging/usdImaging/valueCache.h"
@@ -600,6 +602,7 @@ private:
     SdfPathVector _pathsToUpdate;
 
     UsdImaging_XformCache _xformCache;
+    UsdImaging_MaterialBindingSupplementalCache _matBindingSupplCache;
     UsdImaging_MaterialBindingCache _materialBindingCache;
     UsdImaging_MaterialNetworkBindingCache _materialNetworkBindingCache;
     UsdImaging_VisCache _visCache;
