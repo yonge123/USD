@@ -49,6 +49,27 @@ class OP_OperatorTable;
 PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DECLARE_WEAK_PTRS(GusdShaderOutputRegistry);
+
+/// Class for registering and querying shader exporters.
+/// To make sure the plugins will be loaded before creating
+/// the user interface for USD Output, the plugin registry
+/// loads registered plugins.
+/// Add the following snippet to plugInfo.json to tell the registry which
+/// plugin to load.
+/// "Info" : {
+///     "UsdHoudini" : {
+///         "ShadingModePlugin" : true
+///     }
+/// },
+/// Plugin loads happen via Houdini, so the library needs to be a valid
+/// Houdini plugin. Example:
+/// #include <SYS/SYS_Version.h>
+/// #include <UT/UT_DSOVersion.h>
+/// #include <OP/OP_OperatorTable.h>
+/// 
+/// extern "C" {
+///     void newDriverOperator(OP_OperatorTable* operators) { }
+/// }
 class GusdShadingModeRegistry : public TfWeakBase
 {
 private:
