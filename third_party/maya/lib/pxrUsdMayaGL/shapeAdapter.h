@@ -32,9 +32,9 @@
 #include "pxrUsdMayaGL/renderParams.h"
 
 #include "pxr/base/gf/matrix4d.h"
+#include "pxr/base/tf/debug.h"
 #include "pxr/imaging/hd/renderIndex.h"
 #include "pxr/imaging/hd/rprimCollection.h"
-#include "pxr/base/tf/debug.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usdImaging/usdImaging/delegate.h"
@@ -114,7 +114,37 @@ class PxrMayaHdShapeAdapter
         const GfMatrix4d& GetRootXform() const { return _rootXform; }
 
         PXRUSDMAYAGL_API
+        void SetRootXform(const GfMatrix4d& transform);
+
+        PXRUSDMAYAGL_API
         const SdfPath& GetDelegateID() const;
+
+        /// Get whether this shape adapter is for use with Viewport 2.0.
+        ///
+        /// The shape adapter gets its viewport renderer affiliation from the
+        /// version of Sync() that is used to populate it.
+        ///
+        /// Returns true if the shape adapter should be used for batched
+        /// drawing/selection in Viewport 2.0, or false if it should be used
+        /// in the legacy viewport.
+        PXRUSDMAYAGL_API
+        bool IsViewport2() const;
+
+    protected:
+
+        /// Update the shape adapter's state from the given \c MPxSurfaceShape
+        /// and display state.
+        ///
+        /// This method should be called by both public versions of Sync() and
+        /// should perform shape data updates that are common to both the
+        /// legacy viewport and Viewport 2.0. The legacy viewport Sync() method
+        /// "promotes" the display state parameters to their Viewport 2.0
+        /// equivalents before calling this method.
+        PXRUSDMAYAGL_API
+        virtual bool _Sync(
+                MPxSurfaceShape* surfaceShape,
+                const unsigned int displayStyle,
+                const MHWRender::DisplayStatus displayStatus);
 
     private:
 
@@ -163,6 +193,8 @@ class PxrMayaHdShapeAdapter
         PxrMayaHdRenderParams _renderParams;
         bool _drawShape;
         bool _drawBoundingBox;
+
+        bool _isViewport2;
 
         /// The classes that maintain ownership of and are responsible for
         /// updating the shape adapter for their shape are made friends of
