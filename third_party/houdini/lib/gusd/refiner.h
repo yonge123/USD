@@ -28,6 +28,7 @@
 
 #include <GT/GT_Refine.h>
 #include <GT/GT_RefineParms.h>
+#include <GT/GT_PrimVDB.h>
 #include <GU/GU_DetailHandle.h>
 #include <UT/UT_SharedPtr.h>
 
@@ -224,6 +225,8 @@ public:
         const TfToken &             purpose,
         const GusdWriteCtrlFlags&   writeCtrlFlags );
 
+    void addVDB(GT_PrimitiveHandle prim);
+
     /// Add a prim to be added to a point instancer during finish
     void addInstPrim( const SdfPath& path, GT_PrimitiveHandle p, int index=0 );
 
@@ -237,6 +240,9 @@ public:
 
     // The results of the refine
     GusdRefiner::GprimArray m_gprims;
+
+    // VDB Data
+    std::vector<GT_PrimitiveHandle> m_vdbs;
 
     // Map used to generate unique names for each prim
     std::map<SdfPath,NameInfo> m_names;
