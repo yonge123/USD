@@ -165,6 +165,7 @@ public:
     std::string createPrimPath( const std::string& primName);
 
     /////////////////////////////////////////////////////////////////////////////
+
 private:
 
     // Place to collect refined prims
