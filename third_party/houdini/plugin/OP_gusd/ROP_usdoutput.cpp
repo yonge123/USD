@@ -181,8 +181,20 @@ getTemplates()
     static PRM_Name instanceRefsName("usdinstancing","Enable USD Instancing");
     static PRM_Name authorVariantSelName("authorvariantselection", "Author Variant Selections");
 
+    static vector<PRM_Name> vdbCompressionModes;
+    if (vdbCompressionModes.empty()) {
+        vdbCompressionModes.emplace_back("none", "None");
+        vdbCompressionModes.emplace_back("zip", "ZIP");
+#ifdef OPENVDB_USE_BLOSC
+        vdbCompressionModes.emplace_back("blosc", "Blosc");
+#endif
+        vdbCompressionModes.emplace_back();
+    }
+    static PRM_ChoiceList vdbCompressionModeMenu(PRM_CHOICELIST_SINGLE,
+                                                 vdbCompressionModes.data());
     static PRM_Name volumeHeadingName("volumeheading", "Volumes");
     static PRM_Name enableVdbOutputName("enablevdbout", "Enable VDB Output");
+    static PRM_Name vdbCompressionModeName("vdbcompression", "VDB Compression");
     static PRM_Name vdbOutputName("vdbout", "VDB Output");
     static PRM_Conditional vdbConditional("{ enablevdbout == 0 }");
 
@@ -373,6 +385,19 @@ getTemplates()
             0, // paramgroup (leave default)
             "Enable writing out VDB to a file.", // help string
             0), // disable rules
+
+        PRM_Template(
+            PRM_ORD,
+            1,
+            &vdbCompressionModeName,
+            nullptr,
+            &vdbCompressionModeMenu,
+            0, // range
+            0, // callback
+            0, // thespareptr
+            0, // parmgroup
+            "Compression for the VDB file. (Currently disabled)", // help string
+            &vdbConditional), // disable rules
 
         PRM_Template(
             PRM_STRING,
@@ -1517,6 +1542,29 @@ renderFrame(fpreal time,
         }
         if (vdbPath.isstring() && !refinerCollector.m_vdbs.empty()) {
             openvdb::io::File vdbFile(vdbPath.c_str());
+
+            UT_String compressionMode;
+            evalString(compressionMode, "vdbcompression", 0, 0);
+            // Following the logic in the official openvdb repository.
+#ifdef OPENVDB_USE_BLOSC
+            auto compressionFlags = vdbFile.compression();
+            if (compressionMode == "none") {
+                compressionFlags &= ~(openvdb::io::COMPRESS_ZIP | openvdb::io::COMPRESS_BLOSC);
+            } else if (compresisonMode == "zip") {
+                compressionFlags |= openvdb::io::COMPRESS_ZIP;
+                compressionFlags &= ~openvdb::io::COMPRESS_BLOSC
+            } else if (compressionMode == "blosc") {
+                compressionFlags &= ~openvdb::io::COMPRESS_ZIP;
+                compressionFlags |= openvdb::io::COMPRESS_BLOSC;
+            }
+#else
+            uint32_t compressionFlags = openvdb::io::COMPRESS_ACTIVE_MASK;
+            if (compressionMode == "zip") {
+                compressionFlags |= openvdb::io::COMPRESS_ZIP;
+            }
+#endif
+            // vdbFile.setCompression(compressionFlags);
+
             openvdb::GridCPtrVec outGrids;
             for (auto vdbHandle: refinerCollector.m_vdbs) {
                 auto* vdb = dynamic_cast<GT_PrimVDB*>(vdbHandle.get());
