@@ -78,6 +78,7 @@
 #include "gusd/shadingModeRegistry.h"
 
 #include "boost/foreach.hpp"
+#include "../../lib/gusd/refiner.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -177,6 +178,11 @@ getTemplates()
     static PRM_Name geometryHeadingName("geometryheading", "Geometry");
     static PRM_Name instanceRefsName("usdinstancing","Enable USD Instancing");
     static PRM_Name authorVariantSelName("authorvariantselection", "Author Variant Selections");
+
+    static PRM_Name volumeHeadingName("volumeheading", "Volumes");
+    static PRM_Name enableVdbOutputName("enablevdbout", "Enable VDB Output");
+    static PRM_Name vdbOutputName("vdbout", "VDB Output");
+    static PRM_Conditional vdbConditional("{ enablevdbout == 0 }");
 
     static PRM_Name overlayHeadingName( "overlayheading", "Overlay");
     static PRM_Name overlayName("overlay", "Overlay Existing Geometry");
@@ -339,6 +345,45 @@ getTemplates()
             "explicity set when the packed prim was created. This is useful "
             "when writing prototypes for point instancers.",
             0), // disable rules
+
+        PRM_Template(
+            PRM_HEADING,
+            1,
+            &volumeHeadingName,
+            0, // default
+            0, // menu choices
+            0, // range
+            0, // callback
+            0, // thespareptr (leave default)
+            0, // paramgroup (leave default)
+            0, // help string
+            0), // disable rules
+
+        PRM_Template(
+            PRM_TOGGLE,
+            1,
+            &enableVdbOutputName,
+            PRMzeroDefaults,
+            0, // menu choices
+            0, // range
+            0, // callback
+            0, // thespareptr (leave default)
+            0, // paramgroup (leave default)
+            "Enable writing out VDB to a file.", // help string
+            0), // disable rules
+
+        PRM_Template(
+            PRM_STRING,
+            1,
+            &vdbOutputName,
+            0, // default
+            0, // menu choices
+            0, // range
+            0, // callback
+            0, // thespareptr (leave default)
+            0, // paramgroup (leave default)
+            "File path where the VDB is going to be written.", // help string
+            &vdbConditional), // disable rules
 
         PRM_Template(
             PRM_HEADING,
@@ -1463,6 +1508,24 @@ renderFrame(fpreal time,
     UT_Set<SdfPath> gprimsProcessedThisFrame;
     GusdSimpleXformCache xformCache;
     bool needToUpdateModelExtents = false;
+    if (evalInt("enablevdbout", 0, 0) != 0) {
+        UT_String vdbPath;
+        if (!evalParameterOrProperty("vdbout", 0, time, vdbPath)) {
+            objNode->evalParameterOrProperty("vdbout", 0, time, vdbPath);
+        }
+        if (vdbPath.isstring() && !refinerCollector.m_vdbs.empty()) {
+            openvdb::io::File vdbFile(vdbPath.c_str());
+            openvdb::GridCPtrVec outGrids;
+            for (auto vdbHandle: refinerCollector.m_vdbs) {
+                auto* vdb = dynamic_cast<GT_PrimVDB*>(vdbHandle.get());
+                if (vdb == nullptr) { continue; }
+                // TODO: can we avoid copying the grid?
+                outGrids.push_back(openvdb::GridBase::ConstPtr(vdb->getGrid()->copyGrid()));
+            }
+            vdbFile.write(outGrids);
+            vdbFile.close();
+        }
+    }
 
     // Iterate over the refined prims and write
     for( auto& gtPrim : gPrims ) {
