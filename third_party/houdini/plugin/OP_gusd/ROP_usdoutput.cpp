@@ -43,6 +43,8 @@
 #include "pxr/usd/sdf/fileFormat.h"
 #include "pxr/usd/sdf/primSpec.h"
 
+#include <pxr/usd/usdAi/aiVolume.h>
+
 #include <CH/CH_Manager.h>
 #include <GA/GA_Range.h>
 #include <GT/GT_GEODetail.h>
@@ -1524,6 +1526,9 @@ renderFrame(fpreal time,
             }
             vdbFile.write(outGrids);
             vdbFile.close();
+
+            UsdAiVolume volume = UsdAiVolume::Define(m_usdStage, SdfPath(refiner.createPrimPath("volume")));
+            volume.CreateFilenameAttr().Set(SdfAssetPath(vdbPath.c_str()), ctxt.time);
         }
     }
 
