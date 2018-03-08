@@ -1565,17 +1565,26 @@ renderFrame(fpreal time,
 #endif
             // vdbFile.setCompression(compressionFlags);
 
+            const SdfPath volumePath(refiner.createPrimPath("volume"));
+            auto materialFound = false;
             openvdb::GridCPtrVec outGrids;
             for (auto vdbHandle: refinerCollector.m_vdbs) {
                 auto* vdb = dynamic_cast<GT_PrimVDB*>(vdbHandle.get());
                 if (vdb == nullptr) { continue; }
                 // TODO: can we avoid copying the grid?
                 outGrids.push_back(openvdb::GridBase::ConstPtr(vdb->getGrid()->copyGrid()));
+                if (!materialFound) {
+                    auto materialPath = getStringUniformOrDetailAttribute(vdbHandle, "shop_materialpath");
+                    if (!materialPath.empty()) {
+                        addShaderToMap(materialPath, volumePath, houMaterialMap);
+                    }
+                    materialFound = true;
+                }
             }
             vdbFile.write(outGrids);
             vdbFile.close();
 
-            UsdAiVolume volume = UsdAiVolume::Define(m_usdStage, SdfPath(refiner.createPrimPath("volume")));
+            UsdAiVolume volume = UsdAiVolume::Define(m_usdStage, volumePath);
             volume.CreateFilenameAttr().Set(SdfAssetPath(vdbPath.c_str()), ctxt.time);
         }
     }
