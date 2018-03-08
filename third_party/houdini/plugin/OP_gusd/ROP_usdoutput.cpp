@@ -1568,10 +1568,14 @@ renderFrame(fpreal time,
             const SdfPath volumePath(refiner.createPrimPath("volume"));
             auto materialFound = false;
             openvdb::GridCPtrVec outGrids;
+            UT_BoundingBox houdiniBounds(
+                SYS_FP32_MAX, SYS_FP32_MAX, SYS_FP32_MAX,
+                SYS_FP32_MIN, SYS_FP32_MIN, SYS_FP32_MIN);
             for (auto vdbHandle: refinerCollector.m_vdbs) {
                 auto* vdb = dynamic_cast<GT_PrimVDB*>(vdbHandle.get());
                 if (vdb == nullptr) { continue; }
                 // TODO: can we avoid copying the grid?
+                vdbHandle->enlargeRenderBounds(&houdiniBounds, 1);
                 outGrids.push_back(openvdb::GridBase::ConstPtr(vdb->getGrid()->copyGrid()));
                 if (!materialFound) {
                     auto materialPath = getStringUniformOrDetailAttribute(vdbHandle, "shop_materialpath");
@@ -1580,12 +1584,17 @@ renderFrame(fpreal time,
                     }
                     materialFound = true;
                 }
+                GusdGT_Utils::getExtentsArray(vdbHandle);
             }
             vdbFile.write(outGrids);
             vdbFile.close();
 
             UsdAiVolume volume = UsdAiVolume::Define(m_usdStage, volumePath);
             volume.CreateFilenameAttr().Set(SdfAssetPath(vdbPath.c_str()), ctxt.time);
+            VtArray<GfVec3f> bounds(2);
+            bounds[0].Set(houdiniBounds.minvec().data());
+            bounds[1].Set(houdiniBounds.maxvec().data());
+            volume.CreateExtentAttr().Set(bounds, ctxt.time);
         }
     }
 
