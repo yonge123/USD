@@ -472,8 +472,7 @@ MayaMeshWriter::postExport()
             PxrUsdMayaWriteUtil::CleanupPrimvarKeys(primvar);
         }
     }
-    
-    UsdGeomMesh primSchema(mUsdPrim);
+
     writeSkinningRels(primSchema);
 }
 
