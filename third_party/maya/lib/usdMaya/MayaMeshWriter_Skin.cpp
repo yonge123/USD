@@ -356,7 +356,7 @@ MayaMeshWriter::writeSkinningData(UsdGeomMesh& primSchema)
     // Get joint name tokens how MayaSkeletonWriter would generate them.
     // We don't need to check that they actually exist.
     VtTokenArray jointNames = MayaSkeletonWriter::GetJointNames(
-            jointDagPaths, rootJoint);
+            jointDagPaths, rootJoint, getArgs().stripNamespaces);
 
     // The data in the skinCluster is essentially already in the same format 
     // as UsdSkel expects, but we're going to compress it by only outputting
@@ -417,11 +417,11 @@ MayaMeshWriter::writeSkinningRels(UsdGeomMesh& primSchema)
         return;
     }
     const UsdSkelBindingAPI bindingAPI(primSchema);
-    SdfPath skeletonPath = MayaSkeletonWriter::GetSkeletonPath(_skelRootJoint);
+    SdfPath skeletonPath = MayaSkeletonWriter::GetSkeletonPath(_skelRootJoint, getArgs().stripNamespaces);
     if (getUsdStage()->GetPrimAtPath(skeletonPath)) {
         bindingAPI.CreateSkeletonRel().AddTarget(skeletonPath);
     }
-    SdfPath animPath = MayaSkeletonWriter::GetAnimationPath(_skelRootJoint);
+    SdfPath animPath = MayaSkeletonWriter::GetAnimationPath(_skelRootJoint, getArgs().stripNamespaces);
     if (getUsdStage()->GetPrimAtPath(animPath)) {
         bindingAPI.CreateAnimationSourceRel().AddTarget(animPath);
     }
