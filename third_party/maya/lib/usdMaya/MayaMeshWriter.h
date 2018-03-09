@@ -49,8 +49,6 @@ class MayaMeshWriter : public MayaTransformWriter
                    usdWriteJobCtx& jobCtx);
     virtual ~MayaMeshWriter();
 
-    void postExport() override;
-
     virtual void write(const UsdTimeCode &usdTime) override;
     virtual void postExport() override;
     virtual bool exportsGprims() const override;
