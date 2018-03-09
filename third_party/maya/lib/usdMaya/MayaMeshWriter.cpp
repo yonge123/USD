@@ -287,7 +287,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             colorSetNames[i] == "v") {
             _writeMotionVector(primSchema,
                                usdTime,
-                               lMesh,
+                               finalMesh,
                                colorSetNames[i]);
             continue;
         }
