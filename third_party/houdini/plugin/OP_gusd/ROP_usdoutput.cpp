@@ -82,6 +82,8 @@
 #include "boost/foreach.hpp"
 #include "../../lib/gusd/refiner.h"
 
+#define OPENVDB_USE_BLOSC
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 using std::cout;
@@ -1550,9 +1552,9 @@ renderFrame(fpreal time,
             auto compressionFlags = vdbFile.compression();
             if (compressionMode == "none") {
                 compressionFlags &= ~(openvdb::io::COMPRESS_ZIP | openvdb::io::COMPRESS_BLOSC);
-            } else if (compresisonMode == "zip") {
+            } else if (compressionMode == "zip") {
                 compressionFlags |= openvdb::io::COMPRESS_ZIP;
-                compressionFlags &= ~openvdb::io::COMPRESS_BLOSC
+                compressionFlags &= ~openvdb::io::COMPRESS_BLOSC;
             } else if (compressionMode == "blosc") {
                 compressionFlags &= ~openvdb::io::COMPRESS_ZIP;
                 compressionFlags |= openvdb::io::COMPRESS_BLOSC;
@@ -1563,7 +1565,7 @@ renderFrame(fpreal time,
                 compressionFlags |= openvdb::io::COMPRESS_ZIP;
             }
 #endif
-            // vdbFile.setCompression(compressionFlags);
+            vdbFile.setCompression(compressionFlags);
 
             const SdfPath volumePath(refiner.createPrimPath("volume"));
             auto materialFound = false;
