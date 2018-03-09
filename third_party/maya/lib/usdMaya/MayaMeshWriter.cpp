@@ -110,29 +110,6 @@ MayaMeshWriter::~MayaMeshWriter()
 {
 }
 
-// virtual override
-void MayaMeshWriter::postExport()
-{
-    UsdGeomMesh primSchema(mUsdPrim);
-    bool keepSample(mWriteJobCtx.getArgs().exportAsClip);
-    // TODO: Use TBB to run these tasks in parallel
-    if (primSchema) {
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetPointsAttr(), keepSample);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetNormalsAttr(), keepSample);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetVelocitiesAttr(), keepSample);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexCountsAttr(), keepSample, UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexIndicesAttr(), keepSample, UsdInterpolationTypeHeld);
-    }
-
-    UsdGeomGprim gprimSchema(mUsdPrim);
-    if (gprimSchema) {
-        // All created primvars are authored at this point
-        for (const auto& primvar : gprimSchema.GetPrimvars()) {
-            PxrUsdMayaWriteUtil::CleanupPrimvarKeys(primvar, keepSample);
-        }
-    }
-}
-
 //virtual 
 void MayaMeshWriter::write(const UsdTimeCode &usdTime)
 {
@@ -193,7 +170,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
     // Note that isShapeAnimated() as computed by MayaTransformWriter is
     // whether the finalMesh is animated.
     bool isAnimated = _skelInputMesh.isNull() ? isShapeAnimated() : false;
-    if (usdTime.IsDefault() == isAnimated) {
+    if (!shouldWriteSample(usdTime, isAnimated)) {
         // skip shape as the usdTime does not match if shape isAnimated value
         return true; 
     }
@@ -355,7 +332,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             colorSetNames[i] == "v") {
             _writeMotionVector(primSchema,
                                usdTime,
-                               lMesh,
+                               finalMesh,
                                colorSetNames[i]);
             continue;
         }
@@ -524,6 +501,24 @@ void
 MayaMeshWriter::postExport()
 {
     UsdGeomMesh primSchema(mUsdPrim);
+    const auto keepSample = mWriteJobCtx.getArgs().exportAsClip;
+    // TODO: Use TBB to run these tasks in parallel
+    if (primSchema) {
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetPointsAttr(), keepSample);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetNormalsAttr(), keepSample);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetVelocitiesAttr(), keepSample);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexCountsAttr(), keepSample, UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexIndicesAttr(), keepSample, UsdInterpolationTypeHeld);
+    }
+
+    UsdGeomGprim gprimSchema(mUsdPrim);
+    if (gprimSchema) {
+        // All created primvars are authored at this point
+        for (const auto& primvar : gprimSchema.GetPrimvars()) {
+            PxrUsdMayaWriteUtil::CleanupPrimvarKeys(primvar, keepSample);
+        }
+    }
+
     writeSkinningRels(primSchema);
 }
 
