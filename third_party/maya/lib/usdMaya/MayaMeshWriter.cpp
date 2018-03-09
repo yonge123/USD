@@ -70,29 +70,6 @@ MayaMeshWriter::~MayaMeshWriter()
 {
 }
 
-// virtual override
-void MayaMeshWriter::postExport()
-{
-    UsdGeomMesh primSchema(mUsdPrim);
-    bool keepSample(mWriteJobCtx.getArgs().exportAsClip);
-    // TODO: Use TBB to run these tasks in parallel
-    if (primSchema) {
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetPointsAttr(), keepSample);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetNormalsAttr(), keepSample);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetVelocitiesAttr(), keepSample);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexCountsAttr(), keepSample, UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexIndicesAttr(), keepSample, UsdInterpolationTypeHeld);
-    }
-
-    UsdGeomGprim gprimSchema(mUsdPrim);
-    if (gprimSchema) {
-        // All created primvars are authored at this point
-        for (const auto& primvar : gprimSchema.GetPrimvars()) {
-            PxrUsdMayaWriteUtil::CleanupPrimvarKeys(primvar, keepSample);
-        }
-    }
-}
-
 //virtual 
 void MayaMeshWriter::write(const UsdTimeCode &usdTime)
 {
@@ -478,6 +455,24 @@ MayaMeshWriter::exportsGprims() const
 void
 MayaMeshWriter::postExport()
 {
+    UsdGeomMesh primSchema(mUsdPrim);
+    // TODO: Use TBB to run these tasks in parallel
+    if (primSchema) {
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetPointsAttr());
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetNormalsAttr());
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetVelocitiesAttr());
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexCountsAttr(), UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexIndicesAttr(), UsdInterpolationTypeHeld);
+    }
+
+    UsdGeomGprim gprimSchema(mUsdPrim);
+    if (gprimSchema) {
+        // All created primvars are authored at this point
+        for (const auto& primvar : gprimSchema.GetPrimvars()) {
+            PxrUsdMayaWriteUtil::CleanupPrimvarKeys(primvar);
+        }
+    }
+    
     UsdGeomMesh primSchema(mUsdPrim);
     writeSkinningRels(primSchema);
 }
