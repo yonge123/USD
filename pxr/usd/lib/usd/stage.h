@@ -393,6 +393,16 @@ public:
     /// Note that reloading anonymous layers clears their content, so
     /// invoking Reload() on a stage constructed via CreateInMemory()
     /// will clear its root layer.
+    ///
+    /// \note This method is considered a mutation, which has potentially
+    /// global effect!  Unlike the various Load() methods whose actions
+    /// affect only **this stage**, Reload() may cause layers to change their
+    /// contents, and because layers are global resources shared by
+    /// potentially many Stages, calling Reload() on one stage may result in
+    /// a mutation to any number of stages.  In general, unless you are
+    /// highly confident your stage is the only consumer of its layers, you
+    /// should only call Reload() when you are assured no other threads may
+    /// be reading from any Stages.
     USD_API
     void Reload();
 
@@ -612,17 +622,20 @@ public:
     void SetPopulationMask(UsdStagePopulationMask const &mask);
 
     /// Expand this stage's population mask to include the targets of all
-    /// relationships that pass \p pred, recursively.  If \p pred is null,
-    /// include all relationship targets.
+    /// relationships that pass \p relPred and connections to all attributes
+    /// that pass \p attrPred recursively.  If \p relPred is null, include all
+    /// relationship targets; if \p attrPred is null, include all connections.
     ///
     /// This function can be used, for example, to expand a population mask for
     /// a given prim to include bound materials, if those bound materials are
-    /// expressed as relationships.
+    /// expressed as relationships or attribute connections.
     ///
-    /// See also UsdPrim::FindAllRelationshipTargetPaths().
+    /// See also UsdPrim::FindAllRelationshipTargetPaths() and
+    /// UsdPrim::FindAllAttributeConnectionPaths().
     USD_API
     void ExpandPopulationMask(
-        std::function<bool (UsdRelationship const &)> const &pred = nullptr);
+        std::function<bool (UsdRelationship const &)> const &relPred = nullptr,
+        std::function<bool (UsdAttribute const &)> const &attrPred = nullptr);
     
     /// @}
 
