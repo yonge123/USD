@@ -24,7 +24,7 @@
 #ifndef PXRUSDMAYAGL_BATCH_RENDERER_H
 #define PXRUSDMAYAGL_BATCH_RENDERER_H
 
-/// \file batchRenderer.h
+/// \file pxrUsdMayaGL/batchRenderer.h
 
 #include "pxr/pxr.h"
 #include "pxrUsdMayaGL/api.h"
@@ -36,10 +36,10 @@
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/gf/vec3f.h"
 #include "pxr/base/gf/vec4d.h"
-#include "pxr/base/tf/debug.h"
 #include "pxr/base/tf/singleton.h"
 #include "pxr/imaging/hd/engine.h"
 #include "pxr/imaging/hd/renderIndex.h"
+#include "pxr/imaging/hd/rprimCollection.h"
 #include "pxr/imaging/hdSt/renderDelegate.h"
 #include "pxr/imaging/hdx/intersector.h"
 #include "pxr/imaging/hdx/selectionTracker.h"
@@ -62,12 +62,6 @@
 
 
 PXR_NAMESPACE_OPEN_SCOPE
-
-
-TF_DEBUG_CODES(
-    PXRUSDMAYAGL_QUEUE_INFO,
-    PXRUSDMAYAGL_SHAPE_ADAPTER_BUCKETING
-);
 
 
 /// UsdMayaGLBatchRenderer is a singleton that shapes can use to get consistent
@@ -345,6 +339,21 @@ private:
     /// map of shape adapters we should use to compute the selection.
     bool _viewport2UsesLegacySelection;
 
+    /// Gets the vector of rprim collections to use for intersection testing.
+    ///
+    /// As an optimization for the single selection case of intersection
+    /// testing, we use a single HdRprimCollection that includes all shape
+    /// adapters/delegates registered with the batch renderer for the active
+    /// viewport renderer (legacy viewport or Viewport 2.0), since we're only
+    /// interested in the single nearest hit. This is much faster than testing
+    /// against each shape adapter's collection individually. In the
+    /// non-single/area selection case, we fall back to testing each shape
+    /// adapter collection individually so that occluded shapes will be
+    /// included in the selection.
+    HdRprimCollectionVector _GetIntersectionRprimCollections(
+            _ShapeAdapterBucketsMap& bucketsMap,
+            const bool singleSelection) const;
+
     /// Populates the selection results using the given parameters by
     /// performing intersection tests against all of the shapes in the given
     /// \p bucketsMap.
@@ -388,6 +397,11 @@ private:
     SdfPath _rootId;
     SdfPath _legacyViewportPrefix;
     SdfPath _viewport2Prefix;
+
+    /// The batch renderer maintains a collection per viewport renderer that
+    /// includes all shape adapters registered for that renderer.
+    HdRprimCollection _legacyViewportRprimCollection;
+    HdRprimCollection _viewport2RprimCollection;
 
     PxrMayaHdSceneDelegateSharedPtr _taskDelegate;
 
