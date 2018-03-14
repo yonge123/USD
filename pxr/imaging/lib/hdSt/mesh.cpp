@@ -27,7 +27,9 @@
 #include "pxr/imaging/hdSt/bufferArrayRangeGL.h"
 #include "pxr/imaging/hdSt/bufferResourceGL.h"
 #include "pxr/imaging/hdSt/drawItem.h"
+#include "pxr/imaging/hdSt/extCompGpuComputation.h"
 #include "pxr/imaging/hdSt/geometricShader.h"
+#include "pxr/imaging/hdSt/glUtils.h"
 #include "pxr/imaging/hdSt/instancer.h"
 #include "pxr/imaging/hdSt/material.h"
 #include "pxr/imaging/hdSt/mesh.h"
@@ -35,7 +37,6 @@
 #include "pxr/imaging/hdSt/meshTopology.h"
 #include "pxr/imaging/hdSt/package.h"
 #include "pxr/imaging/hdSt/quadrangulate.h"
-#include "pxr/imaging/hdSt/renderContextCaps.h"
 #include "pxr/imaging/hdSt/resourceRegistry.h"
 #include "pxr/imaging/hdSt/smoothNormals.h"
 #include "pxr/imaging/hdSt/surfaceShader.h"
@@ -240,7 +241,7 @@ HdStMesh::_PopulateTopology(HdSceneDelegate *sceneDelegate,
                     // Quadrangulate preprocessing
                     HdSt_QuadInfoBuilderComputationSharedPtr quadInfoBuilder =
                         topology->GetQuadInfoBuilderComputation(
-                            HdStRenderContextCaps::GetInstance().gpuComputeEnabled,
+                            HdStGLUtils::IsGpuComputeEnabled(),
                             id, resourceRegistry.get());
                     resourceRegistry->AddSource(quadInfoBuilder);
                 }
@@ -365,7 +366,7 @@ HdStMesh::_PopulateAdjacency(HdStResourceRegistrySharedPtr const &resourceRegist
 
         resourceRegistry->AddSource(adjacencyComputation);
 
-        if (HdStRenderContextCaps::GetInstance().gpuComputeEnabled) {
+        if (HdStGLUtils::IsGpuComputeEnabled()) {
             // also send adjacency table to gpu
             HdBufferSourceSharedPtr adjacencyForGpuComputation =
                 adjacency->GetAdjacencyBuilderForGPUComputation();
@@ -396,7 +397,7 @@ _QuadrangulatePrimVar(HdBufferSourceSharedPtr const &source,
 {
     if (!TF_VERIFY(computations)) return source;
 
-    if (!HdStRenderContextCaps::GetInstance().gpuComputeEnabled) {
+    if (!HdStGLUtils::IsGpuComputeEnabled()) {
         // CPU quadrangulation
         // set quadrangulation as source instead of original source.
         HdBufferSourceSharedPtr quadsource =
@@ -466,7 +467,7 @@ _RefinePrimVar(HdBufferSourceSharedPtr const &source,
 {
     if (!TF_VERIFY(computations)) return source;
 
-    if (!HdStRenderContextCaps::GetInstance().gpuComputeEnabled) {
+    if (!HdStGLUtils::IsGpuComputeEnabled()) {
         // CPU subdivision
         // note: if the topology is empty, the source will be returned
         //       without change. We still need the type of buffer
@@ -516,14 +517,15 @@ HdStMesh::_PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
                         varyingNames.begin(), varyingNames.end());
 
     HdBufferSourceVector sources;
-    sources.reserve(primVarNames.size());
+    HdBufferSourceVector reserveOnlySources;
+    HdBufferSourceVector separateComputationSources;
     HdComputationVector computations;
+    sources.reserve(primVarNames.size());
 
     int numPoints = _topology ? _topology->GetNumPoints() : 0;
     int refineLevel = _topology ? _topology->GetRefineLevel() : 0;
 
-    bool cpuSmoothNormals =
-        (!HdStRenderContextCaps::GetInstance().gpuComputeEnabled);
+    bool cpuSmoothNormals = (!HdStGLUtils::IsGpuComputeEnabled());
 
     // Don't call _GetRefineLevelForDesc(desc) instead of GetRefineLevel(). Why?
     //
@@ -555,7 +557,34 @@ HdStMesh::_PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
     // and optimize if necessary.
     //
 
+    HdSt_GetExtComputationPrimVarsComputations(
+        id,
+        sceneDelegate,
+        HdInterpolationVertex,
+        *dirtyBits,
+        &sources,
+        &reserveOnlySources,
+        &separateComputationSources,
+        &computations);
+    
     HdBufferSourceSharedPtr points;
+
+    // See if points are being produced by gpu computations
+    for (HdBufferSourceSharedPtr const & source: reserveOnlySources) {
+        HdBufferSourceSharedPtr compSource; 
+        if (refineLevel > 0) {
+            compSource = _RefinePrimVar(source, false, // Should support varying
+                                    &computations, _topology);
+        } else if (_UseQuadIndices(renderIndex, _topology)) {
+            compSource = _QuadrangulatePrimVar(source, &computations, _topology,
+                                           GetId(), resourceRegistry);
+        }
+        // Don't schedule compSource for commit
+
+        if (source->GetName() == HdTokens->points) {
+            points = source;
+        }
+    }
 
     // Track index to identify varying primvars.
     int i = 0;
@@ -622,14 +651,21 @@ HdStMesh::_PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
                 source = _QuadrangulatePrimVar(source, &computations, _topology,
                                                GetId(), resourceRegistry);
             }
-            sources.push_back(source);
 
             // Special handling of points primvar.
             // We need to capture state about the points primvar
             // for use with smooth normal computation.
             if (*nameIt == HdTokens->points) {
+                if (!TF_VERIFY(points == nullptr)) {
+                    HF_VALIDATION_WARN(id, 
+                        "'points' specified as both computed and authored primvar."
+                        " Skipping authored value.");
+                    continue;
+                }
                 points = source; // For CPU Smooth Normals
             }
+
+            sources.push_back(source);
         }
     }
 
@@ -780,6 +816,7 @@ HdStMesh::_PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
     // new buffer specs
     HdBufferSpecVector bufferSpecs;
     HdBufferSpec::AddBufferSpecs(&bufferSpecs, sources);
+    HdBufferSpec::AddBufferSpecs(&bufferSpecs, reserveOnlySources);
     HdBufferSpec::AddBufferSpecs(&bufferSpecs, computations);
 
     HdBufferArrayRangeSharedPtr const &bar = drawItem->GetVertexPrimVarRange();
@@ -897,6 +934,11 @@ HdStMesh::_PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
         TF_FOR_ALL(it, computations) {
             resourceRegistry->AddComputation(
                 drawItem->GetVertexPrimVarRange(), *it);
+        }
+    }
+    if (!separateComputationSources.empty()) {
+        TF_FOR_ALL(it, separateComputationSources) {
+            resourceRegistry->AddSource(*it);
         }
     }
 }
@@ -1388,8 +1430,7 @@ HdStMesh::_PropagateDirtyBits(HdDirtyBits bits) const
     // then the smooth normals computation needs the Points primVar
     // so mark Points as dirty, so that the scene delegate will provide
     // the data.
-    if ((bits & DirtySmoothNormals) &&
-        (!HdStRenderContextCaps::GetInstance().gpuComputeEnabled)) {
+    if ((bits & DirtySmoothNormals) && !HdStGLUtils::IsGpuComputeEnabled()) {
         bits |= HdChangeTracker::DirtyPoints;
     }
 
