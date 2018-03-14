@@ -729,9 +729,9 @@ class AppController(QtCore.QObject):
 
             self._ui.showInterpreter.triggered.connect(self._showInterpreter)
 
-            self._ui.redrawOnScrub.triggered.connect(self._redrawOptionToggled)
+            self._ui.redrawOnScrub.toggled.connect(self._redrawOptionToggled)
 
-            self._ui.authoredStepsOnly.triggered.connect(self._authoredOptionToggled)
+            self._ui.authoredStepsOnly.toggled.connect(self._authoredOptionToggled)
 
             if self._stageView:
                 self._ui.actionRecompute_Clipping_Planes.triggered.connect(
