@@ -100,6 +100,7 @@ struct JobExportArgs
     TfToken defaultMeshScheme;
 
     bool exportVisibility;
+    bool stripNamespaces;
 
     std::string melPerFrameCallback;
     std::string melPostCallback;
