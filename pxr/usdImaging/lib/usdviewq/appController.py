@@ -1942,22 +1942,15 @@ class AppController(QtCore.QObject):
         self._dataModel.viewSettings.enableHardwareShading = (
             self._ui.actionEnable_Hardware_Shading.isChecked())
 
-<<<<<<< tg/image_plane/usdGeom
     def _toggleDisplayImagePlanes(self, checked):
         self._dataModel.viewSettings.displayImagePlanes = checked
         if self._stageView:
-            self._stageView.update()
-
-    def _toggleCullBackfaces(self, checked):
-        self._dataModel.viewSettings.cullBackfaces = checked
-        if self._stageView:
             self._stageView.updateView()
             self._stageView.update()
-=======
+
     def _toggleCullBackfaces(self):
         self._dataModel.viewSettings.cullBackfaces = (
             self._ui.actionCull_Backfaces.isChecked())
->>>>>>> top-bases/tg/image_plane/usdGeom
 
     def _showInterpreter(self):
         if self._interpreter is None:
