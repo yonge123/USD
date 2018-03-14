@@ -69,28 +69,6 @@ MayaMeshWriter::~MayaMeshWriter()
 {
 }
 
-// virtual override
-void MayaMeshWriter::postExport()
-{
-    UsdGeomMesh primSchema(mUsdPrim);
-    // TODO: Use TBB to run these tasks in parallel
-    if (primSchema) {
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetPointsAttr());
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetNormalsAttr());
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetVelocitiesAttr());
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexCountsAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexIndicesAttr(), UsdInterpolationTypeHeld);
-    }
-
-    UsdGeomGprim gprimSchema(mUsdPrim);
-    if (gprimSchema) {
-        // All created primvars are authored at this point
-        for (const auto& primvar : gprimSchema.GetPrimvars()) {
-            PxrUsdMayaWriteUtil::CleanupPrimvarKeys(primvar);
-        }
-    }
-}
-
 //virtual 
 void MayaMeshWriter::write(const UsdTimeCode &usdTime)
 {
@@ -308,7 +286,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             colorSetNames[i] == "v") {
             _writeMotionVector(primSchema,
                                usdTime,
-                               lMesh,
+                               finalMesh,
                                colorSetNames[i]);
             continue;
         }
@@ -477,6 +455,23 @@ void
 MayaMeshWriter::postExport()
 {
     UsdGeomMesh primSchema(mUsdPrim);
+    // TODO: Use TBB to run these tasks in parallel
+    if (primSchema) {
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetPointsAttr());
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetNormalsAttr());
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetVelocitiesAttr());
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexCountsAttr(), UsdInterpolationTypeHeld);
+        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexIndicesAttr(), UsdInterpolationTypeHeld);
+    }
+
+    UsdGeomGprim gprimSchema(mUsdPrim);
+    if (gprimSchema) {
+        // All created primvars are authored at this point
+        for (const auto& primvar : gprimSchema.GetPrimvars()) {
+            PxrUsdMayaWriteUtil::CleanupPrimvarKeys(primvar);
+        }
+    }
+
     writeSkinningRels(primSchema);
 }
 
