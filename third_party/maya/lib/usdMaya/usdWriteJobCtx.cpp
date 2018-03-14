@@ -25,9 +25,11 @@
 
 #include "usdMaya/MayaCameraWriter.h"
 #include "usdMaya/MayaInstancerWriter.h"
+#include "usdMaya/MayaLocatorWriter.h"
 #include "usdMaya/MayaMeshWriter.h"
 #include "usdMaya/MayaNurbsCurveWriter.h"
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
+#include "usdMaya/MayaParticleWriter.h"
 #include "usdMaya/MayaSkeletonWriter.h"
 #include "usdMaya/MayaTransformWriter.h"
 #include "usdMaya/primWriterRegistry.h"
@@ -278,7 +280,7 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         if (primPtr->isValid()) {
             return primPtr;
         }
-    } else if (ob.hasFn(MFn::kTransform) || ob.hasFn(MFn::kLocator)) {
+    } else if (ob.hasFn(MFn::kTransform)) {
         MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, writePath, instanceSource, *this));
         if (primPtr->isValid()) {
             return primPtr;
@@ -298,6 +300,11 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         if (primPtr->isValid()) {
             return primPtr;
         }
+    } else if (ob.hasFn(MFn::kParticle) || ob.hasFn(MFn::kNParticle)) {
+        MayaParticleWriterPtr primPtr(new MayaParticleWriter(curDag, writePath, instanceSource, *this));
+        if (primPtr->isValid()) {
+            return primPtr;
+        }
     } else if (ob.hasFn(MFn::kCamera)) {
         const SdfPath cameraWritePath = usdPath.IsEmpty() ?
                 getUsdPathFromDagPath(curDag, false) : usdPath;
@@ -305,9 +312,15 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         if (primPtr->isValid()) {
             return primPtr;
         }
+    } else if (ob.hasFn(MFn::kLocator)) {
+        MayaLocatorWriterPtr primPtr(new MayaLocatorWriter(curDag, writePath, instanceSource, *this));
+        if (primPtr->isValid()) {
+            return primPtr;
+        }
     }
 
     return nullptr;
 }
+
 
 PXR_NAMESPACE_CLOSE_SCOPE
