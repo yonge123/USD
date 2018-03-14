@@ -70,6 +70,10 @@ pxr_shared_library(${PXR_PACKAGE}
         MayaPrimWriter
         MayaTransformWriter
         FunctorPrimWriter
+
+        primReader
+        functorPrimReader
+
         JobArgs
         usdReadJob
         usdWriteJob
@@ -87,7 +91,7 @@ pxr_shared_library(${PXR_PACKAGE}
 
         Chaser
         ChaserRegistry
-       
+
         AttributeConverter
         AttributeConverterRegistry
 
@@ -99,6 +103,7 @@ pxr_shared_library(${PXR_PACKAGE}
         MayaCameraWriter
         MayaImagePlaneWriter
         MayaInstancerWriter
+        MayaLocatorWriter
         MayaMeshWriter
         MayaNurbsCurveWriter
         MayaNurbsSurfaceWriter
@@ -165,6 +170,7 @@ pxr_test_scripts(
         testenv/testUsdExportDisplayColor.py
         testenv/testUsdExportFrameOffset.py
         testenv/testUsdExportInstances.py
+        testenv/testUsdExportLocator.py
         testenv/testUsdExportMesh.py
         testenv/testUsdExportNurbsCurve.py
         testenv/testUsdExportOverImport.py
@@ -314,6 +320,20 @@ pxr_register_test(testUsdExportInstances
 )
 
 pxr_install_test_dir(
+    SRC testenv/UsdExportLocatorTest
+    DEST testUsdExportLocator
+)
+pxr_register_test(testUsdExportLocator
+    CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdExportLocator"
+    TESTENV testUsdExportLocator
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+        MAYA_DISABLE_CIP=1
+)
+
+pxr_install_test_dir(
     SRC testenv/UsdExportMeshTest
     DEST testUsdExportMesh
 )
@@ -415,7 +435,7 @@ pxr_register_test(testUsdExportRenderLayerMode
         MAYA_ENABLE_LEGACY_RENDER_LAYERS=1
 )
 
-# XXX: This test is disabled by default since it requires the RenderMan for 
+# XXX: This test is disabled by default since it requires the RenderMan for
 # Maya plugin.
 # pxr_install_test_dir(
 #     SRC testenv/UsdExportRfMLightTest
@@ -578,7 +598,7 @@ pxr_register_test(testUsdImportNestedAssemblyAnimation
         MAYA_APP_DIR=./maya_profile
 )
 
-# XXX: This test is disabled by default since it requires the RenderMan for 
+# XXX: This test is disabled by default since it requires the RenderMan for
 # Maya plugin.
 # pxr_install_test_dir(
 #     SRC testenv/UsdImportRfMLightTest

@@ -25,7 +25,7 @@
 #include "pxr/imaging/hdSt/renderDelegate.h"
 
 #include "pxr/imaging/hdSt/basisCurves.h"
-#include "pxr/imaging/hdSt/camera.h"
+#include "pxr/imaging/hd/camera.h"
 #include "pxr/imaging/hdSt/drawTarget.h"
 #include "pxr/imaging/hdSt/glslfxShader.h"
 #include "pxr/imaging/hdSt/instancer.h"
@@ -42,6 +42,8 @@
 
 #include "pxr/imaging/hd/perfLog.h"
 
+#include "pxr/imaging/glf/contextCaps.h"
+#include "pxr/imaging/glf/diagnostic.h"
 #include "pxr/imaging/glf/glslfx.h"
 
 
@@ -182,7 +184,7 @@ HdStRenderDelegate::CreateSprim(TfToken const& typeId,
                                     SdfPath const& sprimId)
 {
     if (typeId == HdPrimTypeTokens->camera) {
-        return new HdStCamera(sprimId);
+        return new HdCamera(sprimId);
     } else if (typeId == HdPrimTypeTokens->simpleLight) {
         return new HdStLight(sprimId, HdPrimTypeTokens->simpleLight);
     } else if (typeId == HdPrimTypeTokens->sphereLight) {
@@ -204,7 +206,7 @@ HdSprim *
 HdStRenderDelegate::CreateFallbackSprim(TfToken const& typeId)
 {
     if (typeId == HdPrimTypeTokens->camera) {
-        return new HdStCamera(SdfPath::EmptyPath());
+        return new HdCamera(SdfPath::EmptyPath());
     } else if (typeId == HdPrimTypeTokens->simpleLight) {
         return new HdStLight(SdfPath::EmptyPath(),
                              HdPrimTypeTokens->simpleLight);
@@ -280,6 +282,8 @@ HdStRenderDelegate::_CreateFallbackMaterialPrim()
 void
 HdStRenderDelegate::CommitResources(HdChangeTracker *tracker)
 {
+    GLF_GROUP_FUNCTION();
+    
     // --------------------------------------------------------------------- //
     // RESOLVE, COMPUTE & COMMIT PHASE
     // --------------------------------------------------------------------- //
@@ -301,6 +305,12 @@ HdStRenderDelegate::CommitResources(HdChangeTracker *tracker)
     // see bug126621. currently dispatch buffers need to be released
     //                more frequently than we expect.
     _resourceRegistry->GarbageCollectDispatchBuffers();
+}
+
+bool
+HdStRenderDelegate::IsSupported()
+{
+    return (GlfContextCaps::GetInstance().glVersion >= 400);
 }
 
 
