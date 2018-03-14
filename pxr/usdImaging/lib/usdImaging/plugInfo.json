@@ -104,6 +104,13 @@
                         "isInternal": true,
                         "primTypeName": "Sphere"
                     },
+                    "UsdImagingImagePlaneAdapter": {
+                      "bases": [
+                        "UsdImagingGprimAdapter"
+                      ],
+                      "isInternal": true,
+                      "primTypeName": "ImagePlane"
+                    },
                     "UsdImagingDomeLightAdapter": {
                         "bases": [
                             "UsdImagingLightAdapter"

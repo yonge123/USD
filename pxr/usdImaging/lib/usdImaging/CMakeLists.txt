@@ -57,6 +57,7 @@ pxr_library(usdImaging
         rectLightAdapter
         sphereAdapter
         sphereLightAdapter
+        imagePlaneAdapter
 
     PUBLIC_HEADERS
         api.h
