@@ -70,7 +70,7 @@ bool MayaNurbsCurveWriter::writeNurbsCurveAttrs(const UsdTimeCode &usdTime, UsdG
     writeTransformAttrs(usdTime, primSchema);
 
     // Return if usdTime does not match if shape is animated
-    if (usdTime.IsDefault() == isShapeAnimated() ) {
+    if (!shouldWriteSample(usdTime, isShapeAnimated())) {
         // skip shape as the usdTime does not match if shape isAnimated value
         return true; 
     }
