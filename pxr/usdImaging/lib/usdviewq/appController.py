@@ -729,9 +729,9 @@ class AppController(QtCore.QObject):
 
             self._ui.showInterpreter.triggered.connect(self._showInterpreter)
 
-            self._ui.redrawOnScrub.toggled.connect(self._redrawOptionToggled)
+            self._ui.redrawOnScrub.triggered.connect(self._redrawOptionToggled)
 
-            self._ui.authoredStepsOnly.toggled.connect(self._authoredOptionToggled)
+            self._ui.authoredStepsOnly.triggered.connect(self._authoredOptionToggled)
 
             if self._stageView:
                 self._ui.actionRecompute_Clipping_Planes.triggered.connect(
@@ -4170,6 +4170,7 @@ class AppController(QtCore.QObject):
         self._refreshSelectionHighlightingMenu()
         self._refreshSelectionHighlightColorMenu()
         self._refreshImagePlane()
+        self._refreshAuthoredStepsOnly()
 
     def _refreshRenderModeMenu(self):
         for action in self._renderModeActions:
@@ -4301,6 +4302,10 @@ class AppController(QtCore.QObject):
     def _refreshImagePlane(self):
         self._ui.actionDisplay_Image_Planes.setChecked(
             self._dataModel.viewSettings.displayImagePlanes)
+
+    def _refreshAuthoredStepsOnly(self):
+        self._ui.authoredStepsOnly.setChecked(
+            self._dataModel.viewSettings.authoredStepsOnly)
 
     def _displayPurposeChanged(self):
         self._updateAttributeView()
