@@ -797,7 +797,8 @@ class AppController(QtCore.QObject):
             self._ui.actionEnable_Hardware_Shading.triggered.connect(
                 self._toggleEnableHardwareShading)
 
-            self._ui.actionDisplay_Image_Planes.triggered.connect(self._toggleDisplayImagePlanes)
+            self._ui.actionDisplay_Image_Planes.triggered.connect(
+                self._toggleDisplayImagePlanes)
 
             self._ui.actionCull_Backfaces.triggered.connect(
                 self._toggleCullBackfaces)
@@ -1972,8 +1973,9 @@ class AppController(QtCore.QObject):
         self._dataModel.viewSettings.enableHardwareShading = (
             self._ui.actionEnable_Hardware_Shading.isChecked())
 
-    def _toggleDisplayImagePlanes(self, checked):
-        self._dataModel.viewSettings.displayImagePlanes = checked
+    def _toggleDisplayImagePlanes(self):
+        self._dataModel.viewSettings.displayImagePlanes = (
+            self._ui.actionDisplay_Image_Planes.isChecked())
         if self._stageView:
             self._stageView.updateView()
             self._stageView.update()
