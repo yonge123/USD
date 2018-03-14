@@ -10,7 +10,6 @@ endif()
 
 pxr_library(hdSt
     LIBRARIES
-        cameraUtil
         garch
         glf
         hd
@@ -27,7 +26,6 @@ pxr_library(hdSt
         basisCurves
         bufferArrayRangeGL
         bufferResourceGL
-        camera
         commandBuffer
         computeShader
         copyComputation
@@ -41,6 +39,7 @@ pxr_library(hdSt
         extCompGpuComputation
         extCompGpuComputationBufferSource
         extCompGpuComputationResource
+        extCompGpuPrimvarBufferSource
         fallbackLightingShader
         geometricShader
         glConversions
@@ -57,7 +56,6 @@ pxr_library(hdSt
         package
         persistentBuffer
         points
-        renderContextCaps
         renderDelegate
         renderPass
         renderPassShader
