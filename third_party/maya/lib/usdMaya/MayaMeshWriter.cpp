@@ -66,10 +66,6 @@ MayaMeshWriter::MayaMeshWriter(
     TF_AXIOM(mUsdPrim);
 }
 
-MayaMeshWriter::~MayaMeshWriter()
-{
-}
-
 //virtual 
 void MayaMeshWriter::write(const UsdTimeCode &usdTime)
 {
