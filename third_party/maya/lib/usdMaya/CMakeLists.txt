@@ -60,6 +60,7 @@ pxr_shared_library(${PXR_PACKAGE}
         shadingModeImporter
         shadingModeRegistry
         userAttributeWriterRegistry
+        skelBindingsWriter
         util
         usdPrimProvider
         writeUtil
