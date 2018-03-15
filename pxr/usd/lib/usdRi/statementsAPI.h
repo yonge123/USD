@@ -68,6 +68,11 @@ public:
     /// UsdPrim.
     static const bool IsTyped = false;
 
+    /// Compile-time constant indicating whether or not this class represents a 
+    /// multiple-apply API schema. Mutiple-apply API schemas can be applied 
+    /// to the same prim multiple times with different instance names. 
+    static const bool IsMultipleApply = false;
+
     /// Construct a UsdRiStatementsAPI on UsdPrim \p prim .
     /// Equivalent to UsdRiStatementsAPI::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
@@ -206,22 +211,6 @@ public:
     CreateRiAttribute(
         const TfToken &name, 
         const TfType &tfType,
-        const std::string &nameSpace = "user");
-
-    // --------------------------------------------------------------------- //
-    // CreateRiAttributeAsRel
-    // --------------------------------------------------------------------- //
-    /// The purpose of this type of rib attribute is to emit an identifier for 
-    /// an object in the scenegraph, which might be a prim or a property.  
-    /// We identify objects by targetting them with a relationship, which is 
-    /// why this method creates a UsdRelationship.  In RenderMan, strings make 
-    /// the best identifiers, so clients will likely want to transform the 
-    /// target's identity into a string for RenderMan, although it is up to 
-    /// your pipeline to choose.
-    USDRI_API
-    UsdRelationship
-    CreateRiAttributeAsRel(
-        const TfToken &name, 
         const std::string &nameSpace = "user");
 
     // --------------------------------------------------------------------- //

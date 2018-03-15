@@ -67,7 +67,7 @@ public:
         return true;
     }
 
-    virtual bool IsNativeInstanceable(UsdPrim const& prim) { return true; }
+    virtual bool CanPopulateMaster() { return true; }
 
     // ---------------------------------------------------------------------- //
     /// \name Parallel Setup and Resolve
@@ -129,6 +129,11 @@ protected:
                              UsdImagingIndexProxy* index);
 
 private:
+    // For cards rendering, check if we're rendering any faces with 0 area;
+    // if so, issue a warning.
+    void _SanityCheckFaceSizes(SdfPath const& cachePath,
+                               GfRange3d const& extents, uint8_t axes_mask);
+
     // Check whether the given cachePath is a path to the draw mode material.
     bool _IsMaterialPath(SdfPath const& path);
     // Check whether the given cachePath is a path to a draw mode texture.
@@ -174,6 +179,11 @@ private:
     // Generate texture coordinates for cards "cross"/"box" mode.
     void _GenerateTextureCoordinates(VtValue* uv, VtValue* assign,
                                      uint8_t axes_mask);
+
+    // Map from cachePath to what drawMode it was populated as.
+    typedef TfHashMap<SdfPath, TfToken, SdfPath::Hash>
+        _DrawModeMap;
+    _DrawModeMap _drawModeMap;
 };
 
 

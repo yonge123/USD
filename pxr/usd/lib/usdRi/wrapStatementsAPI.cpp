@@ -84,6 +84,10 @@ void wrapUsdRiStatementsAPI()
             static_cast<bool (*)(void)>( [](){ return This::IsTyped; } ))
         .staticmethod("IsTyped")
 
+        .def("IsMultipleApply", 
+            static_cast<bool (*)(void)>( [](){ return This::IsMultipleApply; } ))
+        .staticmethod("IsMultipleApply")
+
         .def("GetSchemaAttributeNames",
              &This::GetSchemaAttributeNames,
              arg("includeInherited")=true,
@@ -158,8 +162,6 @@ WRAP_CUSTOM {
                  const TfToken &, const std::string &, const std::string &))
              &UsdRiStatementsAPI::CreateRiAttribute,
              (arg("name"), arg("riType"), arg("nameSpace")="user"))
-        .def("CreateRiAttributeAsRel", &UsdRiStatementsAPI::CreateRiAttributeAsRel,
-             (arg("name"), arg("nameSpace")="user"))
         .def("GetRiAttributes", &UsdRiStatementsAPI::GetRiAttributes,
              (arg("nameSpace")=""),
              return_value_policy<TfPySequenceToList>())

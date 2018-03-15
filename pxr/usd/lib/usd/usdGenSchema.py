@@ -43,7 +43,7 @@ from collections import namedtuple
 from jinja2 import Environment, FileSystemLoader
 from jinja2.exceptions import TemplateNotFound, TemplateSyntaxError
 
-from pxr import Plug, Sdf, Usd, Tf
+from pxr import Plug, Sdf, Usd, Vt, Tf
 
 #------------------------------------------------------------------------------#
 # Parsed Objects                                                               #
@@ -300,13 +300,12 @@ class ClassInfo(object):
             (parentUsdName, parentClassName,
              self.parentCppClassName, self.parentBaseFileName) = \
              _ExtractNames(parentPrim, parentCustomData)
-        elif self.cppClassName == "UsdTyped" or \
-             self.cppClassName == 'UsdAPISchemaBase':
+        # Only Typed and APISchemaBase are allowed to have no inherits, since 
+        # these are the core base types for all the typed and API schemas 
+        # respectively.
+        elif self.cppClassName in ["UsdTyped", 'UsdAPISchemaBase']:
             self.parentCppClassName = "UsdSchemaBase"
             self.parentBaseFileName = "schemaBase"
-        else:
-            self.parentCppClassName = "UsdAPISchemaBase"
-            self.parentBaseFileName = "apiSchemaBase"
 
         # Extra Class Metadata
         self.doc = _SanitizeDoc(sdfPrim.documentation, '\n/// ')
@@ -338,10 +337,15 @@ class ClassInfo(object):
             raise Exception(errorMsg('Schema classes must either inherit '
                                      'Typed(IsA), or neither inherit typed '
                                      'nor provide a typename(API).'))
-        
+
         if self.isApi and sdfPrim.path.name != "APISchemaBase" and \
             not sdfPrim.path.name.endswith('API'):
-            raise Exception(errorMsg('API schemas must named with an API suffix.'))
+            raise Exception(errorMsg('API schemas must be named with an API suffix.'))
+        
+        if self.isApi and sdfPrim.path.name != "APISchemaBase" and \
+            (not self.parentCppClassName):
+            raise Exception(errorMsg("API schemas must explicitly inherit from "
+                    "UsdAPISchemaBase."))
 
         if not self.isApi and self.isMultipleApply:
             raise Exception(errorMsg('Non API schemas cannot be marked with '
@@ -543,7 +547,8 @@ def _AddToken(tokenDict, tokenId, val, desc):
     # 'interface' is not a reserved word but is a macro on Windows when using
     # COM so we treat it as reserved.
     reserved = set(['class', 'default', 'def', 'case', 'switch', 'break',
-                    'if', 'else', 'struct', 'template', 'interface'])
+                    'if', 'else', 'struct', 'template', 'interface',
+                    'float', 'double', 'int', 'char', 'long', 'short'])
     if tokenId in reserved:
         tokenId = tokenId + '_'
     if tokenId in tokenDict:
@@ -812,7 +817,11 @@ def GenerateRegistry(codeGenPath, filePath, classes, validate, env):
     primsToKeep = set(cls.usdPrimTypeName for cls in classes)
     if not flatStage.RemovePrim('/GLOBAL'):
         print "WARNING: Could not remove GLOBAL prim."
+    allMultipleApplyAPISchemas = []
     for p in flatStage.GetPseudoRoot().GetAllChildren():
+        if p.GetName() in primsToKeep and \
+           p.GetCustomDataByKey('isMultipleApply' ) == True:
+            allMultipleApplyAPISchemas.append(p.GetName())
         p.ClearCustomData()
         for myproperty in p.GetAuthoredProperties():
             myproperty.ClearCustomData()
@@ -824,6 +833,10 @@ def GenerateRegistry(codeGenPath, filePath, classes, validate, env):
     # Set layer's comment to indicate that the file is generated.
     flatLayer.comment = 'WARNING: THIS FILE IS GENERATED.  DO NOT EDIT.'
 
+    # Add the list of all multiple-apply API schemas.
+    if len(allMultipleApplyAPISchemas) > 0:
+        flatLayer.customLayerData = {'multipleApplyAPISchemas' : 
+                                     Vt.StringArray(allMultipleApplyAPISchemas)}
     #
     # Generate Schematics
     #

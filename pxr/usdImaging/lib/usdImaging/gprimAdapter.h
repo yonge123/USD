@@ -24,6 +24,8 @@
 #ifndef USDIMAGING_GPRIM_ADAPTER_H
 #define USDIMAGING_GPRIM_ADAPTER_H
 
+/// \file usdImaging/gprimAdapter.h
+
 #include "pxr/pxr.h"
 #include "pxr/usdImaging/usdImaging/api.h"
 #include "pxr/usdImaging/usdImaging/primAdapter.h"
@@ -157,9 +159,6 @@ private:
     /// Returns the UsdGeomImagable "purpose" for this prim, including any
     /// inherited purpose. Inherited values are strongest.
     TfToken _GetPurpose(UsdPrim const & prim, UsdTimeCode time);
-
-    /// Returns the path to the material used by this prim
-    SdfPath _GetMaterialId(UsdPrim const& prim);
 };
 
 

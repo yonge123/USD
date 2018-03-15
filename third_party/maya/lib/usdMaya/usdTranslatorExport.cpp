@@ -163,6 +163,17 @@ usdTranslatorExport::writer(const MFileObject &file,
             if (theOption[0] == MString("stripNamespaces")) {
                 jobArgs.stripNamespaces = theOption[1].asInt();
             }
+            if (theOption[0] == MString("exportSkin")) {
+                if (theOption[1] == "All (Automatically Create SkelRoots)") {
+                    jobArgs.exportSkin = true;
+                    jobArgs.autoSkelRoots = true;
+                } else if (theOption[1] == "Only Under SkelRoots") {
+                    jobArgs.exportSkin = true;
+                    jobArgs.autoSkelRoots = false;
+                } else {
+                    jobArgs.exportSkin = false;
+                }
+            }
             if (theOption[0] == MString("animation")) {
                 jobArgs.exportAnimation = theOption[1].asInt();
             }
@@ -216,18 +227,23 @@ usdTranslatorExport::writer(const MFileObject &file,
     }
     
     if (jobArgs.dagPaths.size()) {
-        MTime oldCurTime = MAnimControl::currentTime();
         usdWriteJob writeJob(jobArgs);
         if (writeJob.beginJob(fileName, append, startTime, endTime)) {
-            for (double i=startTime;i<(endTime+1);i++) {
-                for (double sampleTime : frameSamples) {
-                    double actualTime = i + sampleTime;
-                    MGlobal::viewFrame(actualTime);
-                    writeJob.evalJob(actualTime);
+            if (jobArgs.exportAnimation) {
+                const MTime oldCurTime = MAnimControl::currentTime();
+                for (double i = startTime; i < (endTime + 1.0); ++i) {
+                    for (double sampleTime : frameSamples) {
+                        const double actualTime = i + sampleTime;
+                        MGlobal::viewFrame(actualTime);
+                        writeJob.evalJob(actualTime);
+                    }
                 }
+
+                // Set the time back.
+                MGlobal::viewFrame(oldCurTime);
             }
+
             writeJob.endJob();
-            MGlobal::viewFrame(oldCurTime);
         } else {
             return MS::kFailure;
         }
