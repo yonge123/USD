@@ -518,8 +518,6 @@ MayaMeshWriter::postExport()
             PxrUsdMayaWriteUtil::CleanupPrimvarKeys(primvar, keepSample);
         }
     }
-
-    writeSkinningRels(primSchema);
 }
 
 
