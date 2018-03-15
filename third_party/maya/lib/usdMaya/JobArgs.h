@@ -77,6 +77,7 @@ struct JobExportArgs
     bool exportInstances;
 
     bool exportAnimation;
+    bool eulerFilter;
     bool excludeInvisible;
     bool exportDefaultCameras;
     bool exportSkin;
