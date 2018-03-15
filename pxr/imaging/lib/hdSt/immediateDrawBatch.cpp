@@ -22,6 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/imaging/glf/glew.h"
+#include "pxr/imaging/glf/diagnostic.h"
 
 #include "pxr/imaging/hdSt/immediateDrawBatch.h"
 
@@ -108,6 +109,7 @@ HdSt_ImmediateDrawBatch::ExecuteDraw(
     HdStResourceRegistrySharedPtr const &resourceRegistry)
 {
     HD_TRACE_FUNCTION();
+    GLF_GROUP_FUNCTION();
 
     HdStBufferArrayRangeGLSharedPtr indexBarCurrent;
     HdStBufferArrayRangeGLSharedPtr elementBarCurrent;
@@ -293,7 +295,7 @@ HdSt_ImmediateDrawBatch::ExecuteDraw(
         HdStBufferArrayRangeGLSharedPtr shaderBar =
             boost::static_pointer_cast<HdStBufferArrayRangeGL> (shaderBar_);
 
-        // shaderBar isn't needed when the material is overriden
+        // shaderBar isn't needed when the material is overridden
         if (shaderBar && (!shaderBar->IsAggregatedWith(shaderBarCurrent))) {
             if (shaderBarCurrent) {
                 binder.UnbindBuffer(HdTokens->materialParams,

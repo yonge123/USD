@@ -300,6 +300,7 @@ class Shader "Shader" (
 
 class "ConnectableAPI"
 (
+    inherits = </APISchemaBase>
     doc = """UsdShadeConnectableAPI is an API schema that provides a common
     interface for creating outputs and making connections between shading 
     parameters and outputs. The interface is common to all UsdShade schemas
@@ -332,6 +333,7 @@ class "ConnectableAPI"
 
 class "MaterialBindingAPI"
 (
+    inherits = </APISchemaBase>
     doc = """UsdShadeMaterialBindingAPI is an API schema that provides an 
     interface for binding materials to prims or collections of prims 
     (represented by UsdCollectionAPI objects). 
@@ -417,6 +419,10 @@ class "MaterialBindingAPI"
     not authored (i.e. empty) on a binding-relationship, the default behavior 
     matches UsdShadeTokens->weakerThanDescendants.
 
+    \\note If a material binding relationship is a built-in property defined as 
+    part of a typed prim's schema, a fallback value should not be provided for 
+    it. This is because the "material resolution" algorithm only conisders 
+    <i>authored</i> properties.
     """ 
     customData = {
         string extraIncludes = """
@@ -424,7 +430,7 @@ class "MaterialBindingAPI"
 #include "pxr/usd/usdGeom/subset.h"
 #include "pxr/usd/usdShade/material.h"
 #include "pxr/usd/usdShade/tokens.h"
-    """
+#include <tbb/concurrent_unordered_map.h>"""
     }
 )
 {

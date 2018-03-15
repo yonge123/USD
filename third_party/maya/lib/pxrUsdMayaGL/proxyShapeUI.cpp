@@ -26,7 +26,7 @@
 
 #include "pxrUsdMayaGL/batchRenderer.h"
 #include "pxrUsdMayaGL/renderParams.h"
-#include "pxrUsdMayaGL/shapeAdapter.h"
+#include "pxrUsdMayaGL/usdProxyShapeAdapter.h"
 #include "usdMaya/proxyShape.h"
 
 #include "pxr/base/gf/vec3f.h"
@@ -89,40 +89,27 @@ UsdMayaProxyShapeUI::getDrawRequests(
     PxrMayaHdRenderParams params =
         _shapeAdapter.GetRenderParams(&drawShape, &drawBoundingBox);
 
-    // Only query bounds if we're drawing bounds...
-    //
-    if (drawBoundingBox) {
-        const MBoundingBox bounds = shape->boundingBox();
-
-        // Note that drawShape is still passed through here.
-        UsdMayaGLBatchRenderer::GetInstance().QueueShapeForDraw(
-            &_shapeAdapter,
-            this,
-            request,
-            params,
-            drawShape,
-            &bounds);
-    }
-    //
-    // Like above but with no bounding box...
-    else if (drawShape) {
-        UsdMayaGLBatchRenderer::GetInstance().QueueShapeForDraw(
-            &_shapeAdapter,
-            this,
-            request,
-            params,
-            drawShape,
-            nullptr);
-    }
-    else
-    {
-        // we weren't asked to do anything.
+    if (!drawBoundingBox && !drawShape) {
+        // We weren't asked to do anything.
         return;
     }
 
-    //
-    // add the request to the queue
-    //
+    MBoundingBox bounds;
+    MBoundingBox* boundsPtr = nullptr;
+    if (drawBoundingBox) {
+        // Only query for the bounding box if we're drawing it.
+        bounds = shape->boundingBox();
+        boundsPtr = &bounds;
+    }
+
+    UsdMayaGLBatchRenderer::GetInstance().CreateBatchDrawData(
+        this,
+        request,
+        params,
+        drawShape,
+        boundsPtr);
+
+    // Add the request to the queue.
     requests.add(request);
 }
 
@@ -166,8 +153,6 @@ UsdMayaProxyShapeUI::select(
                             view.displayStatus(selectInfo.selectPath()))) {
         return false;
     }
-
-    UsdMayaGLBatchRenderer::GetInstance().AddShapeAdapter(&_shapeAdapter);
 
     GfVec3f hitPoint;
     const bool didHit =

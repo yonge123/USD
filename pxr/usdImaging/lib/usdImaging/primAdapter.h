@@ -24,6 +24,8 @@
 #ifndef USDIMAGING_PRIM_ADAPTER_H
 #define USDIMAGING_PRIM_ADAPTER_H
 
+/// \file usdImaging/primAdapter.h
+
 #include "pxr/pxr.h"
 #include "pxr/usdImaging/usdImaging/api.h"
 #include "pxr/usdImaging/usdImaging/version.h"
@@ -92,10 +94,12 @@ public:
     USDIMAGING_API
     virtual bool IsInstancerAdapter();
 
-    // Indicates whether the prim bound to this adapter is native-instanceable.
-    // By default, NI should only work on prims without bound adapters (like
-    // Xforms), but this doesn't take proxy objects (like cards) into account.
-    virtual bool IsNativeInstanceable(UsdPrim const& prim) { return false; }
+    // Indicates whether this adapter can populate a master prim. By policy,
+    // you can't directly instance a gprim, but you can directly instance proxy
+    // objects (like cards). Note: masters don't have attributes, so an adapter
+    // opting in here needs to check if prims it's populating are master prims,
+    // and if so find a copy of the instancing prim.
+    virtual bool CanPopulateMaster() { return false; }
 
     // Indicates that this adapter populates the render index only when
     // directed by the population of another prim, e.g. materials are
@@ -148,7 +152,22 @@ public:
     /// \name Change Processing 
     // ---------------------------------------------------------------------- //
 
-    /// Returns a bit mask of attributes to be udpated, or
+    /// Returns a bit mask of attributes to be updated, or
+    /// HdChangeTracker::AllDirty if the entire prim must be resynchronized.
+    ///
+    /// \p changedFields contains a list of changed scene description fields
+    /// for this prim. This may be empty in certain cases, like the addition
+    /// of an inert prim spec for the given \p prim.
+    ///
+    /// The default implementation returns HdChangeTracker::AllDirty if any of
+    /// the changed fields are plugin metadata fields, HdChangeTracker::Clean
+    /// otherwise.
+    USDIMAGING_API
+    virtual HdDirtyBits ProcessPrimChange(UsdPrim const& prim,
+                                          SdfPath const& cachePath,
+                                          TfTokenVector const& changedFields);
+
+    /// Returns a bit mask of attributes to be updated, or
     /// HdChangeTracker::AllDirty if the entire prim must be resynchronized.
     virtual HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
                                               SdfPath const& cachePath,
@@ -366,6 +385,15 @@ protected:
     USDIMAGING_API
     const UsdImagingPrimAdapterSharedPtr& 
     _GetPrimAdapter(UsdPrim const& prim, bool ignoreInstancing = false);
+
+    // XXX: Transitional API
+    // Returns the instance proxy prim path for a USD-instanced prim, given the
+    // instance chain leading to that prim. The paths are sorted from more to
+    // less local; the first path is the prim path (possibly in master), then
+    // instance paths (possibly in master); the last path is the prim or
+    // instance path in the scene.
+    USDIMAGING_API
+    SdfPath _GetPrimPathFromInstancerChain(SdfPathVector const& instancerChain);
 
     // Determines if an attribute is varying and if so, sets the given
     // \p dirtyFlag in the \p dirtyFlags and increments a perf counter. Returns

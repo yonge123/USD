@@ -24,6 +24,8 @@
 #ifndef USDIMAGING_POINT_INSTANCER_ADAPTER_H
 #define USDIMAGING_POINT_INSTANCER_ADAPTER_H
 
+/// \file usdImaging/pointInstancerAdapter.h
+
 #include "pxr/pxr.h"
 #include "pxr/usdImaging/usdImaging/version.h"
 #include "pxr/usdImaging/usdImaging/primAdapter.h"
@@ -218,6 +220,9 @@ private:
     // Gets the associated _ProtoRprim for the given instancer and cache path.
     _ProtoRprim const& _GetProtoRprim(SdfPath const& instancerPath, 
                                       SdfPath const& cachePath) const;
+
+    // Gets the UsdPrim to use from the given _ProtoRprim.
+    const UsdPrim _GetProtoUsdPrim(_ProtoRprim const& proto);
 
     // Takes the transform in the value cache (this must exist before calling
     // this method) and applies a corrective transform to 1) remove any
