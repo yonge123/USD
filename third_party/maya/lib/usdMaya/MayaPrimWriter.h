@@ -53,6 +53,12 @@ class MayaPrimWriter
     ///
     /// Base implementation returns \c false, so gprim/shape-derived classes
     /// should override.
+
+
+    /// Does this PrimWriter directly create one or more gprims on the UsdStage?
+    ///
+    /// Base implementation returns \c false, so gprim/shape-derived classes
+    /// should override.
     PXRUSDMAYA_API
     virtual bool exportsGprims() const;
     
@@ -85,6 +91,8 @@ public:
 
     bool getExportsVisibility() const { return mExportsVisibility; }
     void setExportsVisibility(bool exports);
+
+    bool shouldWriteSample(const UsdTimeCode &usdTime, bool isAnimated) const;
 
 protected:
     void setValid(bool isValid) { mIsValid = isValid;};
