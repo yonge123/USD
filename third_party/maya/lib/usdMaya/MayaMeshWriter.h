@@ -50,6 +50,7 @@ class MayaMeshWriter : public MayaTransformWriter
     virtual ~MayaMeshWriter();
 
     virtual void write(const UsdTimeCode &usdTime) override;
+    virtual void postExport() override;
     virtual bool exportsGprims() const override;
 
   protected:
