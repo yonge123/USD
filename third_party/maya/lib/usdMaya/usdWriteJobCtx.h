@@ -27,6 +27,7 @@
 #include "pxr/pxr.h"
 #include "pxr/usd/sdf/path.h"
 #include "usdMaya/api.h"
+#include "usdMaya/skelBindingsWriter.h"
 #include "usdMaya/JobArgs.h"
 
 #include <maya/MDagPath.h>
@@ -71,6 +72,11 @@ public:
     bool needToTraverse(const MDagPath& curDag);
     // Whether data should be written at this time code based on animation and whether this will be used as a value clip
     bool shouldWriteSample(const UsdTimeCode& usdTime, bool isAnimated);
+    PXRUSDMAYA_API
+    PxrUsdMaya_SkelBindingsWriter& getSkelBindingsWriter()
+    {
+        return mSkelBindingsWriter;
+    }
 protected:
     PXRUSDMAYA_API
     bool openFile(const std::string& filename, bool append);
@@ -99,6 +105,7 @@ private:
             bool instanceSource);
     UsdPrim mInstancesPrim;
     bool mNoInstances;
+    PxrUsdMaya_SkelBindingsWriter mSkelBindingsWriter;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
