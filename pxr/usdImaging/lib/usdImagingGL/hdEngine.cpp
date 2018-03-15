@@ -471,6 +471,7 @@ UsdImagingGLHdEngine::_MakeHydraRenderParams(
     }
 
     params.enableHardwareShading = renderParams.enableHardwareShading;
+    params.displayImagePlanes = renderParams.displayImagePlanes;
 
     // Leave default values for:
     // - params.geomStyle

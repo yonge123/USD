@@ -795,6 +795,8 @@ class AppController(QtCore.QObject):
             self._ui.actionEnable_Hardware_Shading.triggered.connect(
                 self._toggleEnableHardwareShading)
 
+            self._ui.actionDisplay_Image_Planes.triggered.connect(self._toggleDisplayImagePlanes)
+
             self._ui.actionCull_Backfaces.triggered.connect(
                 self._toggleCullBackfaces)
 
@@ -1939,6 +1941,12 @@ class AppController(QtCore.QObject):
     def _toggleEnableHardwareShading(self):
         self._dataModel.viewSettings.enableHardwareShading = (
             self._ui.actionEnable_Hardware_Shading.isChecked())
+
+    def _toggleDisplayImagePlanes(self, checked):
+        self._dataModel.viewSettings.displayImagePlanes = checked
+        if self._stageView:
+            self._stageView.updateView()
+            self._stageView.update()
 
     def _toggleCullBackfaces(self):
         self._dataModel.viewSettings.cullBackfaces = (
@@ -4163,6 +4171,7 @@ class AppController(QtCore.QObject):
         self._refreshRolloverPrimInfoMenu()
         self._refreshSelectionHighlightingMenu()
         self._refreshSelectionHighlightColorMenu()
+        self._refreshImagePlane()
 
     def _refreshRenderModeMenu(self):
         for action in self._renderModeActions:
@@ -4290,6 +4299,10 @@ class AppController(QtCore.QObject):
             action.setChecked(
                 str(action.text())
                 == self._dataModel.viewSettings.highlightColorName)
+
+    def _refreshImagePlane(self):
+        self._ui.actionDisplay_Image_Planes.setChecked(
+            self._dataModel.viewSettings.displayImagePlanes)
 
     def _displayPurposeChanged(self):
         self._updateAttributeView()
