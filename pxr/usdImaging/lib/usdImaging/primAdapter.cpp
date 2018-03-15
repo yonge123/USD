@@ -28,6 +28,8 @@
 #include "pxr/usdImaging/usdImaging/inheritedCache.h"
 #include "pxr/usdImaging/usdImaging/instancerContext.h"
 
+#include "pxr/usd/sdf/schema.h"
+
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/renderDelegate.h"
 
@@ -89,6 +91,27 @@ UsdImagingPrimAdapter::IsPopulatedIndirectly()
 {
     // By default, do not delay population.
     return false;
+}
+
+/*virtual*/
+HdDirtyBits 
+UsdImagingPrimAdapter::ProcessPrimChange(UsdPrim const& prim,
+                                         SdfPath const& cachePath,
+                                         TfTokenVector const& changedFields)
+{
+    // By default, resync the prim if there are any changes to non-plugin
+    // fields and ignore changes to built-in fields. Schemas typically register
+    // their own plugin metadata fields instead of relying on built-in fields.
+    const SdfSchema& schema = SdfSchema::GetInstance();
+    for (const TfToken& field : changedFields) {
+        const SdfSchema::FieldDefinition* fieldDef = 
+            schema.GetFieldDefinition(field);
+        if (fieldDef && fieldDef->IsPlugin()) {
+            return HdChangeTracker::AllDirty;
+        }
+    }
+
+    return HdChangeTracker::Clean;
 }
 
 /*virtual*/
@@ -265,9 +288,55 @@ UsdImagingPrimAdapter::_GetPrim(SdfPath const& usdPath) const
 }
 
 const UsdImagingPrimAdapterSharedPtr& 
-UsdImagingPrimAdapter::_GetPrimAdapter(UsdPrim const& prim, bool ignoreInstancing)
+UsdImagingPrimAdapter::_GetPrimAdapter(UsdPrim const& prim,
+                                       bool ignoreInstancing)
 {
     return _delegate->_AdapterLookup(prim, ignoreInstancing);
+}
+
+SdfPath
+UsdImagingPrimAdapter::_GetPrimPathFromInstancerChain(
+                                            SdfPathVector const& instancerChain)
+{
+    // The instancer chain is stored more-to-less local.  For example:
+    //
+    // ProtoCube   <----+
+    //   +-- cube       | (native instance)
+    // ProtoA           |  <--+
+    //   +-- ProtoCube--+     | (native instance)
+    // PointInstancer         |
+    //   +-- ProtoA ----------+
+    //
+    // paths = 
+    //    /__Master__1/cube
+    //    /__Master__2/ProtoCube
+    //    /PointInstancer/ProtoA
+    //
+    // This function uses the path chain to recreate the instance path:
+    //    /PointInstancer/ProtoA/ProtoCube/cube
+
+    if (instancerChain.size() == 0) {
+        return SdfPath();
+    }
+
+    SdfPath primPath = instancerChain[0];
+
+    // Every path except the last path should be a path in master.  The idea is
+    // to replace the master path with the instance path that comes next in the
+    // chain, and continue until we're back at scene scope.
+    for (size_t i = 1; i < instancerChain.size(); ++i)
+    {
+        UsdPrim prim = _GetPrim(primPath);
+        TF_VERIFY(prim.IsInMaster());
+
+        UsdPrim master = prim;
+        while (!master.IsMaster()) {
+            master = master.GetParent();
+        }
+        primPath = primPath.ReplacePrefix(master.GetPath(), instancerChain[i]);
+    }
+
+    return primPath;
 }
 
 void 

@@ -602,6 +602,8 @@ _GetMaterialAttr(
     // ARNOLD SECTION
     /////////////////
 
+    // TODO: we should share code between functions!
+    auto arnoldSurfaceSet = false;
     static const TfToken _aiSurface("ai:surface");
     // look for surface
     if (UsdRelationship surfaceRel = materialPrim.GetRelationship(_aiSurface)) {
@@ -624,9 +626,39 @@ _GetMaterialAttr(
                                          FnKat::StringAttribute(handle));
                     terminalsBuilder.set("arnoldSurfacePort",
                                          FnKat::StringAttribute("out"));
+                    arnoldSurfaceSet = true;
                 } else {
                     FnLogWarn("Surface shader does not exist at:" << 
                               targetPath.GetString());
+                }
+            }
+        }
+    }
+
+    if (!arnoldSurfaceSet) {
+        static const TfToken _aiVolume("ai:volume");
+        if (UsdRelationship volumeRel = materialPrim.GetRelationship(_aiVolume)) {
+            if (!PxrUsdKatana_AreRelTargetsFromBaseMaterial(volumeRel)) {
+                SdfPathVector targetPaths;
+                volumeRel.GetForwardedTargets(&targetPaths);
+                if (targetPaths.size() > 1) {
+                    FnLogWarn("Multiple surface sources detected on "
+                            "material:" << materialPrim.GetPath());
+                }
+                if (targetPaths.size() > 0) {
+                    const SdfPath targetPath = targetPaths[0];
+                    if (UsdPrim volumePrim = stage->GetPrimAtPath(targetPath)) {
+                        std::string handle = _CreateShadingNode(
+                            volumePrim, currentTime,
+                            nodesBuilder, interfaceBuilder, "arnold", flatten);
+                        terminalsBuilder.set("arnoldSurface",
+                                            FnKat::StringAttribute(handle));
+                        terminalsBuilder.set("arnoldSurfacePort",
+                                            FnKat::StringAttribute("out"));
+                    } else {
+                        FnLogWarn("Surface shader does not exist at:" << 
+                                targetPath.GetString());
+                    }
                 }
             }
         }
@@ -830,7 +862,7 @@ _UnrollInterfaceFromPrim(const UsdPrim& prim,
                     true);
         }
 
-        // USD's group delimeter is :, whereas Katana's is .
+        // USD's group delimiter is :, whereas Katana's is .
         std::string page = TfStringReplace(
                 interfaceInput.GetDisplayGroup(), ":", ".");
         if (!page.empty()) {

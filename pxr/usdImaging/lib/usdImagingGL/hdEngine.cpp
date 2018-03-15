@@ -22,6 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/imaging/glf/glew.h"
+#include "pxr/imaging/glf/contextCaps.h"
 
 #include "pxr/usdImaging/usdImagingGL/hdEngine.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
@@ -31,7 +32,6 @@
 #include "pxr/imaging/hd/resourceRegistry.h"
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/version.h"
-#include "pxr/imaging/hdSt/renderContextCaps.h"
 #include "pxr/imaging/hdx/intersector.h"
 #include "pxr/imaging/hdx/rendererPluginRegistry.h"
 #include "pxr/imaging/hdx/tokens.h"
@@ -180,7 +180,7 @@ UsdImagingGLHdEngine::_PostSetTime(const UsdPrim& root, const RenderParams& para
         return;
 
     // The delegate may have been populated from somewhere other than
-    // where we are drawing. This applys a compensating transformation that
+    // where we are drawing. This applies a compensating transformation that
     // cancels out any accumulated transformation from the population root.
     _delegate->SetRootCompensation(root.GetPath());
 }
@@ -540,12 +540,6 @@ UsdImagingGLHdEngine::TestIntersection(
     int *outHitInstanceIndex,
     int *outHitElementIndex)
 {
-    if (!HdStRenderContextCaps::GetInstance().SupportsHydra()) {
-        TF_CODING_ERROR("Current GL context doesn't support Hydra");
-
-       return false;
-    }
-
     SdfPath rootPath = _delegate->GetPathForIndex(root.GetPath());
     SdfPathVector roots(1, rootPath);
     _UpdateHydraCollection(&_intersectCollection, roots, params, &_renderTags);
@@ -605,11 +599,6 @@ UsdImagingGLHdEngine::TestIntersectionBatch(
     PathTranslatorCallback pathTranslator,
     HitBatch *outHit)
 {
-    if (!HdStRenderContextCaps::GetInstance().SupportsHydra()) {
-        TF_CODING_ERROR("Current GL context doesn't support Hydra");
-       return false;
-    }
-
     _UpdateHydraCollection(&_intersectCollection, paths, params, &_renderTags);
 
     static const HdCullStyle USD_2_HD_CULL_STYLE[] =
@@ -665,19 +654,21 @@ UsdImagingGLHdEngine::TestIntersectionBatch(
 void
 UsdImagingGLHdEngine::Render(RenderParams params)
 {
-    // User is responsible for initalizing GL contenxt and glew
-    if (!HdStRenderContextCaps::GetInstance().SupportsHydra()) {
-        TF_CODING_ERROR("Current GL context doesn't support Hydra");
-        return;
-    }
+    // User is responsible for initializing GL context and glew
+    bool isCoreProfileContext = GlfContextCaps::GetInstance().coreProfile;
 
-    // XXX: HdEngine should do this.
     GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-    glBindVertexArray(0);
-
-    glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT | GL_DEPTH_BUFFER_BIT);
+    if (isCoreProfileContext) {
+        // We must bind a VAO (Vertex Array Object) because core profile 
+        // contexts do not have a default vertex array object. VAO objects are 
+        // container objects which are not shared between contexts, so we create
+        // and bind a VAO here so that core rendering code does not have to 
+        // explicitly manage per-GL context state.
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+    } else {
+        glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT | GL_DEPTH_BUFFER_BIT);
+    }
 
     // hydra orients all geometry during topological processing so that
     // front faces have ccw winding. We disable culling because culling
@@ -722,8 +713,6 @@ UsdImagingGLHdEngine::Render(RenderParams params)
         }
     }
 
-    glBindVertexArray(vao);
-
     VtValue selectionValue(_selTracker);
     _engine.SetTaskContextData(HdxTokens->selectionState, selectionValue);
     VtValue renderTags(_renderTags);
@@ -733,13 +722,20 @@ UsdImagingGLHdEngine::Render(RenderParams params)
         HdxTaskSetTokens->idRender : HdxTaskSetTokens->colorRender;
     _engine.Execute(*_renderIndex, _taskController->GetTasks(renderMode));
 
-    glBindVertexArray(0);
+    if (isCoreProfileContext) {
 
-    glPopAttrib(); // GL_ENABLE_BIT | GL_POLYGON_BIT | GL_DEPTH_BUFFER_BIT
+        glBindVertexArray(0);
+        // XXX: We should not delete the VAO on every draw call, but we 
+        // currently must because it is GL Context state and we do not control 
+        // the context.
+        glDeleteVertexArrays(1, &vao);
 
-    // XXX: We should not delete the VAO on every draw call, but we currently
-    // must because it is GL Context state and we do not control the context.
-    glDeleteVertexArrays(1, &vao);
+    } else {
+
+        glPopAttrib(); // GL_ENABLE_BIT | GL_POLYGON_BIT | GL_DEPTH_BUFFER_BIT
+
+    }
+
 }
 
 /*virtual*/
@@ -792,8 +788,7 @@ UsdImagingGLHdEngine::SetLightingStateFromOpenGL()
     }
     _lightingContextForOpenGLState->SetStateFromOpenGL();
 
-    // Don't use the bypass lighting task.
-    _taskController->SetLightingState(_lightingContextForOpenGLState, false);
+    _taskController->SetLightingState(_lightingContextForOpenGLState);
 }
 
 /* virtual */
@@ -812,19 +807,14 @@ UsdImagingGLHdEngine::SetLightingState(GlfSimpleLightVector const &lights,
     _lightingContextForOpenGLState->SetSceneAmbient(sceneAmbient);
     _lightingContextForOpenGLState->SetUseLighting(lights.size() > 0);
 
-    // Don't use the bypass lighting task.
-    _taskController->SetLightingState(_lightingContextForOpenGLState, false);
+    _taskController->SetLightingState(_lightingContextForOpenGLState);
 }
 
 /* virtual */
 void
 UsdImagingGLHdEngine::SetLightingState(GlfSimpleLightingContextPtr const &src)
 {
-    // Use the bypass lighting task; leave all lighting plumbing work to
-    // the incoming lighting context.
-    // XXX: the bypass lighting task will be removed when Phd takes over
-    // all imaging in Presto.
-    _taskController->SetLightingState(src, true);
+    _taskController->SetLightingState(src);
 }
 
 /* virtual */
@@ -935,7 +925,7 @@ UsdImagingGLHdEngine::IsDefaultPluginAvailable()
 {
     HfPluginDescVector descs;
     HdxRendererPluginRegistry::GetInstance().GetPluginDescs(&descs);
-    return descs.size() > 0;
+    return !descs.empty();
 }
 
 /* virtual */
@@ -960,6 +950,11 @@ UsdImagingGLHdEngine::SetRendererPlugin(TfToken const &id)
         // It's a no-op to load the same plugin twice.
         HdxRendererPluginRegistry::GetInstance().ReleasePlugin(plugin);
         return true;
+    } else if (!plugin->IsSupported()) {
+        // Don't do anything if the plugin isn't supported on the running
+        // system, just return that we're not able to set it.
+        HdxRendererPluginRegistry::GetInstance().ReleasePlugin(plugin);
+        return false;
     }
 
     // Pull old delegate/task controller state.

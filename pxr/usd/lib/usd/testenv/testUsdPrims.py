@@ -510,13 +510,23 @@ class TestUsdPrim(unittest.TestCase):
             return list(x for x in chars)
 
         for fmt in allFormats:
-            s = Usd.Stage.CreateInMemory('PropertyReorder.'+fmt)
+            sl = Sdf.Layer.CreateAnonymous(fmt)
+            s = Usd.Stage.CreateInMemory('PropertyReorder.'+fmt, sl)
             f = s.OverridePrim('/foo')
 
-            for name in reversed(l('abcdefg')):
+            s.SetEditTarget(s.GetRootLayer())
+            for name in reversed(l('abcd')):
+                f.CreateAttribute(name, Sdf.ValueTypeNames.Int)
+
+            s.SetEditTarget(s.GetSessionLayer())
+            for name in reversed(l('defg')):
                 f.CreateAttribute(name, Sdf.ValueTypeNames.Int)
 
             self.assertEqual(f.GetPropertyNames(), l('abcdefg'))
+
+            pred = lambda tok : tok in ['a', 'd', 'f']
+            self.assertEqual(f.GetPropertyNames(predicate=pred),
+                             l('adf'))
 
             f.SetPropertyOrder(l('edc'))
             self.assertEqual(f.GetPropertyNames(), l('edcabfg'))
@@ -532,6 +542,9 @@ class TestUsdPrim(unittest.TestCase):
 
             f.SetPropertyOrder(l('d'))
             self.assertEqual(f.GetPropertyNames(), l('dabcefg'))
+
+            self.assertEqual(f.GetPropertyNames(predicate=pred),
+                             l('daf'))
 
             f.SetPropertyOrder(l('xyz'))
             self.assertEqual(f.GetPropertyNames(), l('abcdefg'))
@@ -769,6 +782,20 @@ class TestUsdPrim(unittest.TestCase):
             root = rootModelAPI.GetPrim()
             self.assertTrue(root)
 
+            self.assertTrue(root.HasAPI(Usd.ModelAPI))
+
+            # The schemaType that's passed into HasAPI must derive from 
+            # UsdAPISchemaBase and must not be UsdAPISchemaBase.
+            with self.assertRaises(RuntimeError):
+                root.HasAPI(Usd.Typed)
+            with self.assertRaises(RuntimeError):
+                root.HasAPI(Usd.APISchemaBase)
+
+            # Try calling HasAPI a random TfType that isn't a derivative of 
+            # SchemaBase.
+            with self.assertRaises(RuntimeError):
+                root.HasAPI(Sdf.ListOpType)
+
             self.assertEqual(['ModelAPI'], root.GetAppliedSchemas())
 
             # Switch the edit target to the session layer and test bug 156929
@@ -776,6 +803,8 @@ class TestUsdPrim(unittest.TestCase):
             sessionClipsAPI = Usd.ClipsAPI.Apply(root)
             self.assertTrue(sessionClipsAPI)
             self.assertEqual(['ClipsAPI', 'ModelAPI'], root.GetAppliedSchemas())
+
+            self.assertTrue(root.HasAPI(Usd.ClipsAPI))
 
             # Ensure duplicates aren't picked up
             anotherSessionClipsAPI = Usd.ClipsAPI.Apply(root)

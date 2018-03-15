@@ -134,7 +134,7 @@ SDF_DECLARE_HANDLES(SdfLayer);
 /// considered as permanent mutations to be recorded upon export.  A very 
 /// common use of session layers is to make variant selections, to pick a
 /// specific LOD or shading variation, for example.  The session layer is
-/// also freqenuently used to perform interactive vising/invsning of geometry 
+/// also frequently used to perform interactive vising/invsning of geometry
 /// and assets in the scene.   A session layer, if present, contributes to a 
 /// UsdStage's identity, for purposes of stage-caching, etc.
 ///
@@ -148,7 +148,7 @@ public:
     // --------------------------------------------------------------------- //
 
     /// Create a new stage with root layer \p identifier, destroying
-    /// potentially existing files with that identifer; it is considered an
+    /// potentially existing files with that identifier; it is considered an
     /// error if an existing, open layer is present with this identifier.
     ///
     /// \sa SdfLayer::CreateNew()
@@ -393,6 +393,16 @@ public:
     /// Note that reloading anonymous layers clears their content, so
     /// invoking Reload() on a stage constructed via CreateInMemory()
     /// will clear its root layer.
+    ///
+    /// \note This method is considered a mutation, which has potentially
+    /// global effect!  Unlike the various Load() methods whose actions
+    /// affect only **this stage**, Reload() may cause layers to change their
+    /// contents, and because layers are global resources shared by
+    /// potentially many Stages, calling Reload() on one stage may result in
+    /// a mutation to any number of stages.  In general, unless you are
+    /// highly confident your stage is the only consumer of its layers, you
+    /// should only call Reload() when you are assured no other threads may
+    /// be reading from any Stages.
     USD_API
     void Reload();
 
@@ -612,17 +622,20 @@ public:
     void SetPopulationMask(UsdStagePopulationMask const &mask);
 
     /// Expand this stage's population mask to include the targets of all
-    /// relationships that pass \p pred, recursively.  If \p pred is null,
-    /// include all relationship targets.
+    /// relationships that pass \p relPred and connections to all attributes
+    /// that pass \p attrPred recursively.  If \p relPred is null, include all
+    /// relationship targets; if \p attrPred is null, include all connections.
     ///
     /// This function can be used, for example, to expand a population mask for
     /// a given prim to include bound materials, if those bound materials are
-    /// expressed as relationships.
+    /// expressed as relationships or attribute connections.
     ///
-    /// See also UsdPrim::FindAllRelationshipTargetPaths().
+    /// See also UsdPrim::FindAllRelationshipTargetPaths() and
+    /// UsdPrim::FindAllAttributeConnectionPaths().
     USD_API
     void ExpandPopulationMask(
-        std::function<bool (UsdRelationship const &)> const &pred = nullptr);
+        std::function<bool (UsdRelationship const &)> const &relPred = nullptr,
+        std::function<bool (UsdAttribute const &)> const &attrPred = nullptr);
     
     /// @}
 
@@ -778,7 +791,7 @@ public:
     /// If a prim at \p path is already defined on this stage and \p typeName is
     /// empty or equal to the existing prim's typeName, return that prim.
     /// Otherwise author an \a SdfPrimSpec with \a specifier ==
-    /// \a SdfSpecifierDef and \p typeName for the the prim at \p path at the
+    /// \a SdfSpecifierDef and \p typeName for the prim at \p path at the
     /// current EditTarget.  Author \a SdfPrimSpec s with \p specifier ==
     /// \a SdfSpecifierDef and empty typeName at the current EditTarget for any
     /// nonexistent, or existing but not \a Defined ancestors.
@@ -914,7 +927,7 @@ public:
 
     /// Return a UsdEditTarget for editing the given local \a layer.
     /// If the given layer appears more than once in the layer stack,
-    /// the time offset to the first occurence will be used.
+    /// the time offset to the first occurrence will be used.
     USD_API
     UsdEditTarget GetEditTargetForLocalLayer(const SdfLayerHandle &layer);
 
@@ -1026,7 +1039,7 @@ public:
     /// scene.
     ///
     /// Specifically, this function removes **most** composition metadata and
-    /// authors the resolved values for each object directly into the flattend
+    /// authors the resolved values for each object directly into the flattened
     /// layer.
     ///
     /// All VariantSets are removed and only the currently selected variants
@@ -1034,12 +1047,12 @@ public:
     ///
     /// Class prims will still exist, however all inherits arcs will have
     /// been removed and the inherited data will be copied onto each child
-    /// object. Composition arcs authored on the class itself will be flattend
+    /// object. Composition arcs authored on the class itself will be flattened
     /// into the class.
     ///
     /// Flatten preserves 
     /// \ref Usd_Page_ScenegraphInstancing "scenegraph instancing" by creating 
-    /// indepedent roots for each master currently composed on this stage, and 
+    /// independent roots for each master currently composed on this stage, and
     /// adding a single internal reference arc on each instance prim to its 
     /// corresponding master.
     ///
@@ -1068,7 +1081,7 @@ public:
     /// resolution is session layer, followed by root layer, else fallback to
     /// the SdfSchema.
     ///
-    /// \return true if we succesfully retrieved a value of the requested type;
+    /// \return true if we successfully retrieved a value of the requested type;
     /// false if \p key is not allowed as layer metadata or no value was found.
     /// Generates a coding error if we retrieved a stored value of a type other
     /// than the requested type
@@ -1133,7 +1146,7 @@ public:
     /// accessing them element-wise using this method can be much less
     /// expensive than fetching the entire dictionary with GetMetadata(key).
     ///
-    /// \return true if we succesfully retrieved a value of the requested type;
+    /// \return true if we successfully retrieved a value of the requested type;
     /// false if \p key is not allowed as layer metadata or no value was found.
     /// Generates a coding error if we retrieved a stored value of a type other
     /// than the requested type
@@ -1328,7 +1341,7 @@ public:
     /// is set as token-valued metadata 'colorSpace' on the attribute. For 
     /// color or texture attributes that don't have an authored 'colorSpace'
     /// value, the fallback color-space is gleaned from the color configuration 
-    /// orcale. This is usually the config's <b>scene_linear</b> role 
+    /// oracle. This is usually the config's <b>scene_linear</b> role
     /// color-space.
     /// 
     /// Here's the pseudo-code for determining an attribute's color-space.
@@ -1688,12 +1701,12 @@ private:
                                      const TfToken &propName) const;
 
     // Helper to apply Pcp changes and recompose the scenegraph accordingly,
-    // ignoring deactivatedPaths and given an optional initial set of paths to
-    // recompose.
-    void _Recompose(const PcpChanges &changes,
-                    SdfPathSet *initialPathsToRecompose);
-    void _RecomposePrims(const PcpChanges &changes,
-                         SdfPathSet *pathsToRecompose);
+    // given an optional initial set of paths to recompose.
+    void _Recompose(const PcpChanges &changes);
+    template <class T>
+    void _Recompose(const PcpChanges &changes, T *pathsToRecompose);
+    template <class T>
+    void _RecomposePrims(const PcpChanges &changes, T *pathsToRecompose);
 
     // Helper for _Recompose to find the subtrees that need to be
     // fully recomposed and to recompose the name children of the

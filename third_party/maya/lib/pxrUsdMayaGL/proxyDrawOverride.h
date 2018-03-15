@@ -24,16 +24,17 @@
 #ifndef PXRUSDMAYAGL_PROXY_DRAW_OVERRIDE_H
 #define PXRUSDMAYAGL_PROXY_DRAW_OVERRIDE_H
 
-/// \file proxyDrawOverride.h
+/// \file pxrUsdMayaGL/proxyDrawOverride.h
 
 #include "pxr/pxr.h"
 #include "pxrUsdMayaGL/api.h"
-#include "pxrUsdMayaGL/shapeAdapter.h"
+#include "pxrUsdMayaGL/usdProxyShapeAdapter.h"
 
 #include <maya/MBoundingBox.h>
 #include <maya/MDagPath.h>
 #include <maya/MDrawContext.h>
 #include <maya/MFrameContext.h>
+#include <maya/MMatrix.h>
 #include <maya/MObject.h>
 #include <maya/MPoint.h>
 #include <maya/MPxDrawOverride.h>
@@ -62,6 +63,11 @@ class UsdMayaProxyDrawOverride : public MHWRender::MPxDrawOverride
 
         PXRUSDMAYAGL_API
         virtual MHWRender::DrawAPI supportedDrawAPIs() const override;
+
+        PXRUSDMAYAGL_API
+        virtual MMatrix transform(
+                const MDagPath& objPath,
+                const MDagPath& cameraPath) const override;
 
         PXRUSDMAYAGL_API
         virtual MBoundingBox boundingBox(
@@ -100,7 +106,7 @@ class UsdMayaProxyDrawOverride : public MHWRender::MPxDrawOverride
     private:
         UsdMayaProxyDrawOverride(const MObject& obj);
 
-        PxrMayaHdShapeAdapter _shapeAdapter;
+        PxrMayaHdUsdProxyShapeAdapter _shapeAdapter;
 };
 
 
