@@ -350,7 +350,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
         return false;
     }
 
-    if (!mJobCtx.getSkelBindingsWriter().WriteSkelBindings(mJobCtx.mStage)) {
+    if (!mJobCtx.getSkelBindingsWriter().WriteSkelBindings(mJobCtx.mStage,
+        mJobCtx.mArgs.stripNamespaces)) {
         return false;
     }
 
