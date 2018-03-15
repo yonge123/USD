@@ -4,6 +4,8 @@
 --- #import $TOOLS/hdSt/shaders/imagePlane.glslfx
 
 #import $TOOLS/hdSt/shaders/terminals.glslfx
+#import $TOOLS/hdSt/shaders/edgeId.glslfx
+#import $TOOLS/hdSt/shaders/pointId.glslfx
 
 --- --------------------------------------------------------------------------
 -- glsl ImagePlane.Vertex

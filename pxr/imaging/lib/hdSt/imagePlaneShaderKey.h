@@ -31,7 +31,7 @@ struct HdSt_ImagePlaneShaderKey {
 
     TfToken glslfx;
     TfToken VS[3];
-    TfToken FS[4];
+    TfToken FS[6];
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
