@@ -10,6 +10,8 @@ TF_DEFINE_PRIVATE_TOKENS(
     ((mainVS,          "ImagePlane.Vertex"))
     ((commonFS,        "Fragment.CommonTerminals"))
     ((surfaceFS,       "Fragment.Surface"))
+    ((primitiveIdFs,   "EdgeId.Fragment.BaryFallback"))
+    ((pointIdFs,       "PointId.Fragment.Fallback"))
     ((mainFS,          "ImagePlane.Fragment"))
 );
 
@@ -21,7 +23,9 @@ HdSt_ImagePlaneShaderKey::HdSt_ImagePlaneShaderKey()
     FS[0] = _tokens->surfaceFS;
     FS[1] = _tokens->commonFS;
     FS[2] = _tokens->mainFS;
-    FS[3] = TfToken();
+    FS[3] = _tokens->primitiveIdFs;
+    FS[4] = _tokens->pointIdFs;
+    FS[5] = TfToken();
 }
 
 HdSt_ImagePlaneShaderKey::~HdSt_ImagePlaneShaderKey() {
