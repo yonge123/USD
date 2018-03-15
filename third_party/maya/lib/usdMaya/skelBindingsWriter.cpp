@@ -141,7 +141,8 @@ _GetRootBoundPaths(
 }
 
 bool
-PxrUsdMaya_SkelBindingsWriter::WriteSkelBindings(const UsdStagePtr& stage
+PxrUsdMaya_SkelBindingsWriter::WriteSkelBindings(
+    const UsdStagePtr& stage,
     bool stripNamespaces) const
 {
     for (const auto& skelRootPathAndData : _skelRootMap) {
