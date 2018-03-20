@@ -31,20 +31,21 @@ void HdStImagePlane::Sync(
 
     HdTextureResource::ID texID = delegate->GetTextureResourceID(id);
     {
-        /*HdInstance<HdTextureResource::ID, HdTextureResourceSharedPtr> 
+        HdInstance<HdTextureResource::ID, HdTextureResourceSharedPtr> 
             texInstance;
-
+        const HdResourceRegistrySharedPtr& resourceRegistry = 
+            delegate->GetRenderIndex().GetResourceRegistry();
         std::unique_lock<std::mutex> regLock =
-            resourceRegistry->RegisterTextureResource(texID, &texInstance);*/
+            resourceRegistry->RegisterTextureResource(texID, &texInstance);
 
-        //if (texInstance.IsFirstInstance()) {
-            //_textureResource = delegate->GetTextureResource(texID);
-            //texInstance.SetValue(_textureResource);
-        //} else {
+        if (texInstance.IsFirstInstance()) {
+            _textureResource = delegate->GetTextureResource(id);
+            texInstance.SetValue(_textureResource);
+        } else {
             // Take a reference to the texture to ensure it lives as long
             // as this class.
-            //_textureResource = texInstance.GetValue();
-        //}
+            _textureResource = texInstance.GetValue();
+        }
     }
 
     *dirtyBits &= ~HdChangeTracker::AllSceneDirtyBits;
