@@ -146,7 +146,6 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
         if (attr) attr.Get(&outMemoryLimit);
 
         if (!isPtex) {
-            UsdHydraUvTexture uvt(shader);
             if (!isUdim) {
                 attr = shader.GetInput(_tokens->wrapS);
                 if (attr) attr.Get(&outWrapS);
