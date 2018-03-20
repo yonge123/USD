@@ -242,7 +242,7 @@ global proc int usdTranslatorExport (string $parent,
                         $curText = (string) $frameSample;
                     }
                     textFieldGrp -e -text $curText frameSamplesField;
-                }else if ($optionBreakDown[0] == "asClip") {
+                } else if ($optionBreakDown[0] == "asClip") {
                     usdTranslatorExport_SetCheckbox($optionBreakDown[1], "asClipCheckBox");
                 } else if ($optionBreakDown[0] == "parentScope") {
                     usdTranslatorExport_SetTextField($optionBreakDown[1], "parentScopeField");
