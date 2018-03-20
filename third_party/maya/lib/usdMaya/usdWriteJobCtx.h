@@ -104,6 +104,7 @@ private:
             const SdfPath& usdPath,
             bool instanceSource);
     UsdPrim mInstancesPrim;
+    SdfPath mParentScopePath;
     bool mNoInstances;
     PxrUsdMaya_SkelBindingsWriter mSkelBindingsWriter;
 };
