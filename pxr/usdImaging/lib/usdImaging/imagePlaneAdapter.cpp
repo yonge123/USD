@@ -117,8 +117,18 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
     }
 }
 
-bool UsdImagingImagePlaneAdapter::IsSupported(const UsdImagingIndexProxy* index) const {
+bool
+UsdImagingImagePlaneAdapter::IsSupported(const UsdImagingIndexProxy* index) const {
     return index->IsRprimTypeSupported(HdPrimTypeTokens->imagePlane);
+}
+
+HdTextureResource::ID
+UsdImagingImagePlaneAdapter::GetTextureResourceID(
+    UsdPrim const& usdPrim, SdfPath const &id,
+    UsdTimeCode time, size_t salt) const {
+    std::cerr << "Getting texture resource id for " << usdPrim.GetPrimPath() << " on " << time << std::endl;
+    return HdTextureResource::ID(-1);
+    //return UsdImagingGL_GetTextureResourceID(usdPrim, id, time, salt);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
