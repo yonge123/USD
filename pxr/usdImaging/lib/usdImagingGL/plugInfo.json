@@ -12,6 +12,13 @@
                         "bases": ["UsdImagingPrimAdapter"],
                         "isInternal": true,
                         "primTypeName": "HydraPbsSurface"
+                    },
+                    "UsdImagingGLImagePlaneAdapter": {
+                      "bases": [
+                        "UsdImagingImagePlaneAdapter"
+                      ],
+                      "isInternal": true,
+                      "primTypeName": "ImagePlane"
                     }
                 }
             },
