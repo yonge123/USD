@@ -122,7 +122,8 @@ operator <<(std::ostream& out, const JobExportArgs& exportArgs)
         << "exportColorSets: " << _StringifyBool(exportArgs.exportColorSets) << std::endl
         << "renderLayerMode: " << exportArgs.renderLayerMode << std::endl
         << "defaultMeshScheme: " << exportArgs.defaultMeshScheme << std::endl
-        << "exportVisibility: " << _StringifyBool(exportArgs.exportVisibility) << std::endl;
+        << "exportVisibility: " << _StringifyBool(exportArgs.exportVisibility) << std::endl
+        << "parentScope: " << exportArgs.getParentScope() << std::endl;
 
     out << "melPerFrameCallback: " << exportArgs.melPerFrameCallback << std::endl
         << "melPostCallback: " << exportArgs.melPostCallback << std::endl
@@ -156,6 +157,12 @@ operator <<(std::ostream& out, const JobExportArgs& exportArgs)
     return out;
 }
 
+void JobExportArgs::setParentScope(const std::string& ps) {
+    // Otherwise this is a malformed sdfpath.
+    if (!ps.empty()) {
+        parentScope = ps[0] == '/' ? SdfPath(ps) : SdfPath("/" + ps);
+    }
+}
 
 JobImportArgs::JobImportArgs()
     :
