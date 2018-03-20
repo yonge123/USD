@@ -27,6 +27,7 @@
 #include "pxr/base/gf/ostreamHelpers.h"
 #include "pxr/base/gf/plane.h"
 #include "pxr/base/gf/range3d.h"
+#include "pxr/base/gf/vec4d.h"
 
 #include "pxr/base/tf/type.h"
 
@@ -54,25 +55,35 @@ GfPlane::Set(const GfVec3d &p0, const GfVec3d &p1, const GfVec3d &p2)
     _distance = GfDot(_normal, p0);
 }
 
+void
+GfPlane::Set(const GfVec4d &eqn)
+{
+    for (size_t i = 0; i < 3; i++) {
+        _normal[i] = eqn[i];
+    }
+    _distance = -eqn[3];
+
+    const double l = _normal.Normalize();
+    if (l != 0.0) {
+        _distance /= l;
+    }
+}
+
+GfVec4d
+GfPlane::GetEquation() const
+ {
+     return GfVec4d(_normal[0], _normal[1], _normal[2], -_distance);
+ }
+
 GfPlane &
 GfPlane::Transform(const GfMatrix4d &matrix) 
 {
-    // Compute the point on the plane along the normal from the origin.
-    GfVec3d pointOnPlane = _distance * _normal;
-
-    // Transform the plane normal by the adjoint of the matrix to get
-    // the new normal.  The adjoint (inverse transpose) is used to
-    // multiply normals so they are not scaled incorrectly.
-    GfMatrix4d adjoint = matrix.GetInverse().GetTranspose();
-    _normal = adjoint.TransformDir(_normal).GetNormalized();
-
-    // Transform the point on the plane by the matrix.
-    pointOnPlane = matrix.Transform(pointOnPlane);
-
-    // The new distance is the projected distance of the vector to the
-    // transformed point onto the (unit) transformed normal. This is
-    // just a dot product.
-    _distance = GfDot(pointOnPlane, _normal);
+    // Transform the coefficients of the plane equation by the adjoint
+    // of the matrix to get the new normal.  The adjoint (inverse
+    // transpose) is also used to multiply so they are not scaled
+    // incorrectly.
+    const GfMatrix4d adjoint = matrix.GetInverse().GetTranspose();
+    Set(GetEquation() * adjoint);
 
     return *this;
 }
