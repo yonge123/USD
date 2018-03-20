@@ -11,12 +11,11 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DEFINE_ENV_SETTING(USD_IMAGING_ENABLE_IMAGEPLANES, false,
         "Enables/disables the use of image planes in hydra until the code matures enough.");
 
-
 TF_REGISTRY_FUNCTION(TfType)
 {
     typedef UsdImagingImagePlaneAdapter Adapter;
-    TfType t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter> >();
-    t.SetFactory< UsdImagingPrimAdapterFactory<Adapter> >();
+    /*TfType t = */TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter> >();
+    //t.SetFactory< UsdImagingPrimAdapterFactory<Adapter> >();
 }
 
 UsdImagingImagePlaneAdapter::~UsdImagingImagePlaneAdapter() {
@@ -120,15 +119,6 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
 bool
 UsdImagingImagePlaneAdapter::IsSupported(const UsdImagingIndexProxy* index) const {
     return index->IsRprimTypeSupported(HdPrimTypeTokens->imagePlane);
-}
-
-HdTextureResource::ID
-UsdImagingImagePlaneAdapter::GetTextureResourceID(
-    UsdPrim const& usdPrim, SdfPath const &id,
-    UsdTimeCode time, size_t salt) const {
-    std::cerr << "Getting texture resource id for " << usdPrim.GetPrimPath() << " on " << time << std::endl;
-    return HdTextureResource::ID(-1);
-    //return UsdImagingGL_GetTextureResourceID(usdPrim, id, time, salt);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
