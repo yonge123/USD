@@ -42,11 +42,6 @@ public:
                                   const SdfPath& cachePath,
                                   HdDirtyBits* timeVaryingBits,
                                   const UsdImagingInstancerContext* instancerContext) override;
-
-    USDIMAGING_API
-    virtual HdTextureResource::ID
-    GetTextureResourceID(UsdPrim const& usdPrim, SdfPath const &id,
-                         UsdTimeCode time, size_t salt) const override;
 };
 
 
