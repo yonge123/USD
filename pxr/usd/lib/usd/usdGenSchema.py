@@ -178,12 +178,26 @@ def _CamelCase(aString):
 Token = namedtuple('Token', ['id', 'value', 'desc'])
 
 class PropInfo(object):
+    class CodeGen:
+        """Specifies how code gen constructs get methods for a property
+        
+        - generated: Auto generate the full Public API
+        - custom: Generate the header only. User responsible for implementation.
+        
+        See documentation on Generating Schemas for more information.
+        """
+        Generated = 'generated'
+        Custom = 'custom'
+        
     def __init__(self, sdfProp):
         # Allow user to specify custom naming through customData metadata.
         self.customData = dict(sdfProp.customData)
 
         self.name       = _CamelCase(sdfProp.name)
         self.apiName    = self.customData.get('apiName', self.name)
+        self.apiGet     = self.customData.get('apiGetImplementation', self.CodeGen.Generated)
+        if self.apiGet not in [self.CodeGen.Generated, self.CodeGen.Custom]:
+            print ("Token '%s' is not valid." % self.apiGet)
         self.rawName    = sdfProp.name
         self.doc        = _SanitizeDoc(sdfProp.documentation, '\n    /// ')
         self.custom     = sdfProp.custom
@@ -254,19 +268,36 @@ def _IsTyped(p):
 
 class ClassInfo(object):
     def __init__(self, usdPrim, sdfPrim):
+        # Error handling
+        errorPrefix = ('Invalid schema definition at ' 
+                       + '<' + str(sdfPrim.path) + '>')
+        errorSuffix = ('See '
+                       'https://graphics.pixar.com/usd/docs/api/'
+                       '_usd__page__generating_schemas.html '
+                       'for more information.\n')
+        errorMsg = lambda s: errorPrefix + '\n' + s + '\n' + errorSuffix
+
         # First validate proper class naming...
         if (sdfPrim.typeName != sdfPrim.path.name and
             sdfPrim.typeName != ''):
-            raise Exception("Code generation requires that every instantiable "
-                            "class's name must match its declared type "
-                            "('%s' and '%s' do not match.)" % 
-                            (sdfPrim.typeName, sdfPrim.path.name))
+            raise Exception(errorMsg("Code generation requires that every instantiable "
+                                     "class's name must match its declared type "
+                                     "('%s' and '%s' do not match.)" % 
+                                     (sdfPrim.typeName, sdfPrim.path.name)))
         
         # NOTE: usdPrim should ONLY be used for querying information regarding
         # the class's parent in order to avoid duplicating class members during
         # code generation.
         inherits = usdPrim.GetMetadata('inheritPaths') 
         inheritsList = _ListOpToList(inherits)
+
+        # We do not allow multiple inheritance 
+        numInherits = len(inheritsList)
+        if numInherits > 1:
+            raise Exception(errorMsg(('Schemas can only inherit from one other schema '
+                                      'at most. This schema inherits from %d (%s).' 
+                                      % (numInherits, 
+                                         ', '.join(map(str, inheritsList))))))
 
         # Allow user to specify custom naming through customData metadata.
         self.customData = dict(sdfPrim.customData)
@@ -324,14 +355,6 @@ class ClassInfo(object):
         self.isApi = not self.isTyped and not self.isConcrete
         self.isMultipleApply = self.customData.get('isMultipleApply', False)
         self.isPrivateApply = self.customData.get('isPrivateApply', False)
-
-        errorPrefix = ('Invalid schema definition at ' 
-                       + '<' + str(sdfPrim.path) + '>')
-        errorSuffix = ('       See '
-                       'https://graphics.pixar.com/usd/docs/api/'
-                       '_usd__page__generating_schemas.html#Usd_IsAVsAPISchemas '
-                       'for more information.\n')
-        errorMsg = lambda s: errorPrefix + s + '\n' + errorSuffix
 
         if self.isConcrete and not self.isTyped:
             raise Exception(errorMsg('Schema classes must either inherit '
