@@ -103,6 +103,8 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
         }
     }
 
+    boost::hash_combine(hash, filePath.GetText());
+
     return HdTextureResource::ID(hash);
 }
 
