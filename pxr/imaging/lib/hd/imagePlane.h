@@ -25,6 +25,9 @@ public:
     static void ConfigureRepr(
         const TfToken& reprName,
         const HdImagePlaneReprDesc& desc);
+
+    HD_API
+    static bool IsEnabled();
 protected:
     HD_API
     HdImagePlane(
