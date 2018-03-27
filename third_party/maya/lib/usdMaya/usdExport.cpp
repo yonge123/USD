@@ -77,7 +77,6 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-vis" , "-exportVisibility", MSyntax::kBoolean);
     syntax.addFlag("-sn" , "-stripNamespaces", MSyntax::kBoolean);
     syntax.addFlag("-rt" , "-root", MSyntax::kString);
-    syntax.addFlag("-psc", "-parentScope", MSyntax::kString);
     syntax.addFlag("-rt" , "-root", MSyntax::kString);
     syntax.addFlag("-skn" , "-exportSkin", MSyntax::kString);
     syntax.addFlag("-psc" , "-parentScope", MSyntax::kString);
@@ -272,13 +271,6 @@ try
                 return MS::kFailure;
             }
         }
-    }
-
-    if (argData.isFlagSet("parentScope")) {
-        MString stringVal;
-        argData.getFlagArgument("parentScope", 0,
-                                stringVal);
-        jobArgs.setParentScope(stringVal.asChar());
     }
 
     if (argData.isFlagSet("exportSkin")) {
