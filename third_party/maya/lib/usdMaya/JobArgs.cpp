@@ -74,13 +74,6 @@ JobExportArgs::JobExportArgs()
 {
 }
 
-void JobExportArgs::setParentScope(const std::string& ps) {
-    // Otherwise this is a malformed sdfpath.
-    if (!ps.empty()) {
-        parentScope = ps[0] == '/' ? SdfPath(ps) : SdfPath("/" + ps);
-    }
-}
-
 static
 std::string
 _StringifyBool(const bool value)
