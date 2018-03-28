@@ -36,3 +36,4 @@ tg/simple_features/houdini_st_uv_translation
 ptex_prefer_static
 tg/simple_features/maya_export_for_clips
 tg/simple_features/maya_export_camera_shake
+houdini_variant_selection_fix
