@@ -36,6 +36,7 @@
 #include "pxr/usd/usd/primRange.h"
 #include "pxr/usd/usdGeom/pointInstancer.h"
 #include "pxr/usd/usdGeom/imageable.h"
+#include "pxr/usd/usdGeom/tokens.h"
 
 #include "pxr/base/tf/staticTokens.h"
 #include "pxr/base/tf/stringUtils.h"
@@ -425,7 +426,7 @@ UsdImagingPointInstancerAdapter::TrackVariability(UsdPrim const& prim,
                                   SdfPath const& cachePath,
                                   HdDirtyBits* timeVaryingBits,
                                   UsdImagingInstancerContext const* 
-                                      instancerContext)
+                                      instancerContext) const
 {
     UsdImagingValueCache* valueCache = _GetValueCache();
 
@@ -760,7 +761,7 @@ UsdImagingPointInstancerAdapter::UpdateForTime(UsdPrim const& prim,
                                UsdTimeCode time,
                                HdDirtyBits requestedBits,
                                UsdImagingInstancerContext const* 
-                                   instancerContext)
+                                   instancerContext) const
 {
     UsdImagingValueCache* valueCache = _GetValueCache();
     if (IsChildPath(cachePath)) {
@@ -1297,7 +1298,8 @@ UsdImagingPointInstancerAdapter::_GetProtoRprim(SdfPath const& instrPath,
 }
 
 const UsdPrim
-UsdImagingPointInstancerAdapter::_GetProtoUsdPrim(_ProtoRprim const& proto)
+UsdImagingPointInstancerAdapter::_GetProtoUsdPrim(
+    _ProtoRprim const& proto) const
 {
     // proto.paths.front() is the most local path for the rprim.
     // If it's not native-instanced, proto.paths will be size 1.
@@ -1320,7 +1322,7 @@ UsdImagingPointInstancerAdapter::_GetProtoUsdPrim(_ProtoRprim const& proto)
 
 bool
 UsdImagingPointInstancerAdapter::_GetInstancerVisible(
-    SdfPath const &instancerPath, UsdTimeCode time)
+    SdfPath const &instancerPath, UsdTimeCode time) const
 {
     bool visible = UsdImagingPrimAdapter::GetVisible(
         _GetPrim(instancerPath.GetPrimPath()), time);
@@ -1424,6 +1426,7 @@ UsdImagingPointInstancerAdapter::_UpdateInstanceMap(
 
 int
 UsdImagingPointInstancerAdapter::_UpdateDirtyBits(UsdPrim const& instancerPrim)
+    const
 {
     // We expect the instancerData entry for this instancer to be established
     // before this method is called. This map should also never be accessed and
@@ -1514,7 +1517,7 @@ UsdImagingPointInstancerAdapter::_CorrectTransform(UsdPrim const& instancer,
                                                    UsdPrim const& protoRoot,
                                                    SdfPath const& cachePath,
                                                    SdfPathVector const& protoPathChain,
-                                                   UsdTimeCode time)
+                                                   UsdTimeCode time) const
 {
     // Subtract out the parent transform from prototypes (in prototype time).
     //
@@ -1582,7 +1585,7 @@ UsdImagingPointInstancerAdapter::_ComputeProtoVisibility(
                                  UsdPrim const& protoRoot,
                                  UsdPrim const& protoGprim,
                                  UsdTimeCode time,
-                                 bool* vis)
+                                 bool* vis) const
 {
     if (!TF_VERIFY(vis)) { return; }
     if (!protoGprim.GetPath().HasPrefix(protoGprim.GetPath())) {
@@ -1625,7 +1628,7 @@ void
 UsdImagingPointInstancerAdapter::_ComputeProtoPurpose(
                                  UsdPrim const& protoRoot,
                                  UsdPrim const& protoGprim,
-                                 TfToken* purpose)
+                                 TfToken* purpose) const
 {
     if (!TF_VERIFY(purpose)) { return; }
     if (!protoGprim.GetPath().HasPrefix(protoGprim.GetPath())) {
@@ -1765,6 +1768,71 @@ UsdImagingPointInstancerAdapter::GetPathForInstanceIndex(
 }
 
 /*virtual*/
+size_t
+UsdImagingPointInstancerAdapter::SampleInstancerTransform(
+    UsdPrim const& instancerPrim,
+    SdfPath const& instancerPath,
+    UsdTimeCode time,
+    const std::vector<float>& configuredSampleTimes,
+    size_t maxSampleCount,
+    float *times,
+    GfMatrix4d *samples)
+{
+    // This code must match how UpdateForTime() computes instancerTransform.
+    _InstancerDataMap::iterator inst = _instancerData.find(instancerPath);
+    if (!TF_VERIFY(inst != _instancerData.end(),
+                   "Unknown instancer %s", instancerPath.GetText())) {
+        return 0;
+    }
+    size_t numSamples = std::min(maxSampleCount, configuredSampleTimes.size());
+    SdfPath parentInstancerPath = inst->second.parentInstancerPath;
+    if (!parentInstancerPath.IsEmpty()) {
+        // if nested, double transformation should be avoided.
+        UsdImagingPrimAdapterSharedPtr adapter =
+            _GetPrimAdapter(_GetPrim(parentInstancerPath));
+
+        // parentInstancer doesn't necessarily be UsdGeomPointInstancer.
+        // lookup and delegate adapter to compute the instancer transform.
+        for (size_t i=0; i < numSamples; ++i) {
+            times[i] = configuredSampleTimes[i];
+            samples[i] = adapter->GetRelativeInstancerTransform(
+                parentInstancerPath, instancerPath, configuredSampleTimes[i]);
+        }
+    } else {
+        // if not nested, simply put the transform of the instancer.
+        for (size_t i=0; i < numSamples; ++i) {
+            UsdTimeCode sceneTime =
+                _delegate->GetTimeWithOffset(configuredSampleTimes[i]);
+            times[i] = configuredSampleTimes[i];
+            samples[i] = GetRelativeInstancerTransform(
+                parentInstancerPath, instancerPath, sceneTime);
+        }
+    }
+    return numSamples;
+}
+
+size_t
+UsdImagingPointInstancerAdapter::SamplePrimvar(
+    UsdPrim const& usdPrim,
+    SdfPath const& cachePath,
+    TfToken const& key,
+    UsdTimeCode time, const std::vector<float>& configuredSampleTimes,
+    size_t maxNumSamples, float *times, VtValue *samples)
+{
+    TfToken usdKey = key;
+    if (key == _tokens->translate) {
+        usdKey = UsdGeomTokens->positions;
+    } else if (key == _tokens->scale) {
+        usdKey = UsdGeomTokens->scales;
+    } else if (key == _tokens->rotate) {
+        usdKey = UsdGeomTokens->orientations;
+    }
+    return UsdImagingPrimAdapter::SamplePrimvar(
+        usdPrim, cachePath, usdKey, time, configuredSampleTimes,
+        maxNumSamples, times, samples);
+}
+
+/*virtual*/
 bool
 UsdImagingPointInstancerAdapter::PopulateSelection(
     HdxSelectionHighlightMode const& highlightMode,
@@ -1840,7 +1908,7 @@ UsdImagingPointInstancerAdapter::GetInstanceIndices(
 GfMatrix4d
 UsdImagingPointInstancerAdapter::GetRelativeInstancerTransform(
     SdfPath const &parentInstancerPath, SdfPath const &cachePath,
-    UsdTimeCode time)
+    UsdTimeCode time) const
 {
     GfMatrix4d transformRoot(1); // target to world.
 
