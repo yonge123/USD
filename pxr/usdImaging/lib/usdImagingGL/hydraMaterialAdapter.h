@@ -66,7 +66,7 @@ public:
                                   SdfPath const& cachePath,
                                   HdDirtyBits* timeVaryingBits,
                                   UsdImagingInstancerContext const* 
-                                      instancerContext = NULL);
+                                      instancerContext = NULL) const;
 
 
     /// Thread Safe.
@@ -76,7 +76,7 @@ public:
                                UsdTimeCode time,
                                HdDirtyBits requestedBits,
                                UsdImagingInstancerContext const* 
-                                   instancerContext = NULL);
+                                   instancerContext = NULL) const;
 
     // ---------------------------------------------------------------------- //
     /// \name Change Processing 
@@ -123,32 +123,42 @@ private:
     std::string _GetShaderSource(UsdPrim const& prim,
                                  TfToken const& shaderType) const;
 
-    /// \brief Returns the information in the material graph
-    /// (identified by \c SdfPath objects) that this \p prim uses.
-    void _GatherMaterialData(
-        UsdPrim const& prim,
+    /// \brief Returns the root "surface" shader prim for the material, by 
+    /// traversing which the entire hydra shading network can be discovered.
+    /// 
+    /// Returns an invalid prim if the material does not have a 'surface' 
+    /// shader.
+    UsdPrim _GetSurfaceShaderPrim(const UsdShadeMaterial &material) const;
+
+    /// \brief Populates the information in the material graph
+    /// (identified by \c SdfPath objects) that this \p materialPrim uses.
+    /// 
+    /// Returns false if the material prim has an invalid material graph.
+    bool _GatherMaterialData(
+        UsdPrim const& materialPrim,
+        UsdPrim *shaderPrim,
         SdfPathVector *textureIDs,
         TfTokenVector *primvars,
         HdMaterialParamVector *materialParams) const;
 
     /// \brief Returns the information in the material graph
-    /// (identified by \c SdfPath objects) that this \p prim uses.
+    /// (identified by \c SdfPath objects) that this \p shaderPrim uses.
     void _WalkShaderNetwork(
-        UsdPrim const& prim,
+        UsdPrim const& shaderPrim,
         SdfPathVector *textureIDs,
         TfTokenVector *primvars,
         HdMaterialParamVector *materialParams) const;
 
     /// \brief Returns the information in a legacy material graph
-    /// (identified by \c SdfPath objects) that this \p prim uses.
+    /// (identified by \c SdfPath objects) that this \p shaderPrim uses.
     void _WalkShaderNetworkDeprecated(
-        UsdPrim const &prim,
+        UsdPrim const &shaderPrim,
         SdfPathVector *textureIDs,
         TfTokenVector *primvars,
         HdMaterialParamVector *materialParams) const;
 
-    /// \brief Returns the value of param \p paramName for \p prim.
-    VtValue _GetMaterialParamValue(UsdPrim const& prim,
+    /// \brief Returns the value of param \p paramName for \p shaderPrim.
+    VtValue _GetMaterialParamValue(UsdPrim const& shaderPrim,
                                    TfToken const& paramName,
                                    UsdTimeCode time) const;
 };
