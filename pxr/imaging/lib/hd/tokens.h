@@ -51,6 +51,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (cullStyle)                                 \
     (doubleSided)                               \
     (dispatchBuffer)                            \
+    (dispatchCount)                             \
     (drawDispatch)                              \
     (drawCommandIndex)                          \
     (drawIndirect)                              \
@@ -212,6 +213,8 @@ PXR_NAMESPACE_OPEN_SCOPE
     (domeLight)                                 \
     (rectLight)                                 \
     (sphereLight)                               \
+    /* Sprims ExtComputations */                \
+    (extComputation)                            \
                                                 \
     /* Bprims */                                \
     (texture)
