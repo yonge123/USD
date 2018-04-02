@@ -127,7 +127,7 @@ public:
                                   SdfPath const& cachePath,
                                   HdDirtyBits* timeVaryingBits,
                                   UsdImagingInstancerContext const* 
-                                      instancerContext = NULL) = 0;
+                                      instancerContext = NULL) const = 0;
 
     /// Prepare local state and \p cache entries for parallel UpdateForTime().
     virtual void UpdateForTimePrep(UsdPrim const& prim,
@@ -146,7 +146,7 @@ public:
                                UsdTimeCode time,
                                HdDirtyBits requestedBits,
                                UsdImagingInstancerContext const* 
-                                   instancerContext = NULL) = 0;
+                                   instancerContext = NULL) const = 0;
 
     // ---------------------------------------------------------------------- //
     /// \name Change Processing 
@@ -242,6 +242,30 @@ public:
     USDIMAGING_API
     virtual SdfPath GetInstancer(SdfPath const &instancePath);
 
+    /// Sample the instancer transform for the given prim.
+    /// \see HdSceneDelegate::SampleInstancerTransform()
+    USDIMAGING_API
+    virtual size_t
+    SampleInstancerTransform(UsdPrim const& instancerPrim,
+                             SdfPath const& instancerPath,
+                             UsdTimeCode time,
+                             const std::vector<float>& configuredSampleTimes,
+                             size_t maxSampleCount,
+                             float *times,
+                             GfMatrix4d *samples);
+
+    /// Sample the primvar for the given prim.
+    /// \see HdSceneDelegate::SamplePrimvar()
+    USDIMAGING_API
+    virtual size_t
+    SamplePrimvar(UsdPrim const& usdPrim,
+                  SdfPath const& cachePath,
+                  TfToken const& key,
+                  UsdTimeCode time,
+                  const std::vector<float>& configuredSampleTimes,
+                  size_t maxNumSamples, float *times,
+                  VtValue *samples);
+
     // ---------------------------------------------------------------------- //
     /// \name Nested instancing support
     // ---------------------------------------------------------------------- //
@@ -273,7 +297,7 @@ public:
     virtual GfMatrix4d GetRelativeInstancerTransform(
         SdfPath const &instancerPath,
         SdfPath const &protoInstancerPath,
-        UsdTimeCode time);
+        UsdTimeCode time) const;
 
     // ---------------------------------------------------------------------- //
     /// \name Selection
@@ -317,19 +341,19 @@ public:
     /// visibility values. Inherited values are strongest, Usd has no notion of
     /// "super vis/invis".
     USDIMAGING_API
-    bool GetVisible(UsdPrim const& prim, UsdTimeCode time);
+    bool GetVisible(UsdPrim const& prim, UsdTimeCode time) const;
 
     /// Fetches the transform for the given prim at the given time from a
     /// pre-computed cache of prim transforms. Requesting transforms at
     /// incoherent times is currently inefficient.
     USDIMAGING_API
     GfMatrix4d GetTransform(UsdPrim const& prim, UsdTimeCode time,
-                            bool ignoreRootTransform = false);
+                            bool ignoreRootTransform = false) const;
 
     /// Gets the material path for the given prim, walking up namespace if
     /// necessary.  
     USDIMAGING_API
-    SdfPath GetMaterialId(UsdPrim const& prim);
+    SdfPath GetMaterialId(UsdPrim const& prim) const; 
 
     /// Gets the instancer ID for the given prim and instancerContext.
     USDIMAGING_API
@@ -360,7 +384,8 @@ protected:
     typedef UsdImagingValueCache::Key Keys;
 
     template <typename T>
-    T _Get(UsdPrim const& prim, TfToken const& attrToken, UsdTimeCode time) {
+    T _Get(UsdPrim const& prim, TfToken const& attrToken, 
+           UsdTimeCode time) const {
         T value;
         prim.GetAttribute(attrToken).Get<T>(&value, time);
         return value;
@@ -368,12 +393,12 @@ protected:
 
     template <typename T>
     void _GetPtr(UsdPrim const& prim, TfToken const& key, UsdTimeCode time,
-                 T* out) {
+                 T* out) const {
         prim.GetAttribute(key).Get<T>(out, time);
     }
 
     USDIMAGING_API
-    UsdImagingValueCache* _GetValueCache();
+    UsdImagingValueCache* _GetValueCache() const;
 
     USDIMAGING_API
     UsdPrim _GetPrim(SdfPath const& usdPath) const;
@@ -384,7 +409,7 @@ protected:
     // be looked up based on \p prim's type.
     USDIMAGING_API
     const UsdImagingPrimAdapterSharedPtr& 
-    _GetPrimAdapter(UsdPrim const& prim, bool ignoreInstancing = false);
+    _GetPrimAdapter(UsdPrim const& prim, bool ignoreInstancing = false) const;
 
     // XXX: Transitional API
     // Returns the instance proxy prim path for a USD-instanced prim, given the
@@ -401,7 +426,7 @@ protected:
     USDIMAGING_API
     bool _IsVarying(UsdPrim prim, TfToken const& attrName, 
            HdDirtyBits dirtyFlag, TfToken const& perfToken,
-           HdDirtyBits* dirtyFlags, bool isInherited);
+           HdDirtyBits* dirtyFlags, bool isInherited) const;
 
     // Determines if the prim's transform (CTM) is varying and if so, sets the 
     // given \p dirtyFlag in the \p dirtyFlags and increments a perf counter. 
@@ -410,11 +435,11 @@ protected:
     bool _IsTransformVarying(UsdPrim prim,
                              HdDirtyBits dirtyFlag,
                              TfToken const& perfToken,
-                             HdDirtyBits* dirtyFlags);
+                             HdDirtyBits* dirtyFlags) const;
 
     USDIMAGING_API
     void _MergePrimvar(UsdImagingValueCache::PrimvarInfo const& primvar, 
-                       PrimvarInfoVector* vec);
+                       PrimvarInfoVector* vec) const;
 
     virtual void _RemovePrim(SdfPath const& cachePath,
                              UsdImagingIndexProxy* index) = 0;
