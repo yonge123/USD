@@ -309,6 +309,10 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
                 mDagPathToUsdPathMap,
                 exportParams);
 
+    // We shouldn't be creating new instance masters after this point, and we
+    // want to cleanup the InstanceSources prim before writing model hierarchy.
+    mJobCtx.processInstances();
+
     if (!mModelKindWriter.MakeModelHierarchy(mJobCtx.mStage)) {
         return false;
     }
@@ -362,7 +366,6 @@ void usdWriteJob::evalJob(double iFrame)
 
 void usdWriteJob::endJob()
 {
-    mJobCtx.processInstances();
     UsdPrimSiblingRange usdRootPrims = mJobCtx.mStage->GetPseudoRoot().GetChildren();
 
     // Write Variants (to first root prim path)
