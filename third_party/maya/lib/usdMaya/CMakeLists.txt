@@ -52,6 +52,7 @@ pxr_shared_library(${PXR_PACKAGE}
         translatorNurbsPatch
         translatorPrim
         translatorRfMLight
+        translatorSkel
         translatorUtil
         translatorXformable
         roundTripUtil
@@ -120,6 +121,7 @@ pxr_shared_library(${PXR_PACKAGE}
         primReaderMesh.cpp
         primReaderNurbsCurves.cpp
         primReaderNurbsPatch.cpp
+        primReaderSkel.cpp
         primReaderXform.cpp
         shadingModeDisplayColor.cpp
         shadingModePxrRis.cpp
@@ -187,6 +189,7 @@ pxr_test_scripts(
         testenv/testUsdImportSessionLayer.py
         testenv/testUsdImportShadingModeDisplayColor.py
         testenv/testUsdImportShadingModePxrRis.py
+        testenv/testUsdImportSkeleton.py
         testenv/testUsdImportUVSets.py
         testenv/testUsdImportXforms.py
         testenv/testUsdMayaGetVariantSetSelections.py
@@ -440,6 +443,7 @@ pxr_register_test(testUsdExportShadingModeDisplayColor
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        USD_RI_WRITE_BXDF_OUTPUT=0
 )
 
 pxr_install_test_dir(
@@ -454,6 +458,7 @@ pxr_register_test(testUsdExportShadingModePxrRis
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
         MAYA_DISABLE_CIP=1
+        USD_RI_WRITE_BXDF_OUTPUT=0
 )
 
 pxr_install_test_dir(
@@ -606,6 +611,20 @@ pxr_register_test(testUsdImportShadingModePxrRis
     CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdImportShadingModePxrRis"
     TESTENV testUsdImportShadingModePxrRis
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+        MAYA_DISABLE_CIP=1
+)
+
+pxr_install_test_dir(
+    SRC testenv/UsdImportSkeleton
+    DEST testUsdImportSkeleton
+)
+pxr_register_test(testUsdImportSkeleton
+    CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdImportSkeleton"
+    TESTENV testUsdImportSkeleton
     ENV
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
