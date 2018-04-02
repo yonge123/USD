@@ -79,6 +79,8 @@ TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
     (instance)
     (texturePath)
+    (Material)
+    (HydraPbsSurface)
 );
 
 // This environment variable matches a set of similar ones in
@@ -88,16 +90,6 @@ TF_DEFINE_ENV_SETTING(USDIMAGING_ENABLE_DRAWMODE_CACHE, 1,
 static bool _IsEnabledDrawModeCache() {
     static bool _v = TfGetEnvSetting(USDIMAGING_ENABLE_DRAWMODE_CACHE) == 1;
     return _v;
-}
-
-// Apply a relative offset to the given timecode.
-// This has no effect in the case of the default timecode.
-static UsdTimeCode
-_OffsetTime(UsdTimeCode basis, float offset)
-{
-    return basis.IsNumeric()
-        ? UsdTimeCode(basis.GetValue() + offset)
-        : basis;
 }
 
 // -------------------------------------------------------------------------- //
@@ -118,10 +110,11 @@ UsdImagingDelegate::UsdImagingDelegate(
     , _reprFallback()
     , _cullStyleFallback(HdCullStyleDontCare)
     , _xformCache(GetTime(), GetRootCompensation())
+    , _materialBindingImplData(parentIndex->GetRenderDelegate()->
+            CanComputeMaterialNetworks() ? UsdShadeTokens->full 
+                                         : UsdShadeTokens->preview)
     , _materialBindingCache(GetTime(), GetRootCompensation(), 
-                            &_matBindingSupplCache)
-    , _materialNetworkBindingCache(GetTime(), GetRootCompensation(),
-                                   &_matBindingSupplCache)
+                            &_materialBindingImplData)
     , _visCache(GetTime(), GetRootCompensation())
     , _drawModeCache(UsdTimeCode::EarliestTime(), GetRootCompensation())
     , _displayGuides(true)
@@ -180,7 +173,7 @@ UsdImagingDelegate::_IsDrawModeApplied(UsdPrim const& prim)
     UsdAttribute attr;
     if (model.GetKind(&kind) && KindRegistry::IsA(kind, KindTokens->component))
         applyDrawMode = true;
-    else if (attr = model.GetModelApplyDrawModeAttr())
+    else if ((attr = model.GetModelApplyDrawModeAttr()))
         attr.Get(&applyDrawMode);
 
     if (!applyDrawMode)
@@ -232,14 +225,8 @@ UsdImagingDelegate::_AdapterLookup(UsdPrim const& prim, bool ignoreInstancing)
         // for backwards compatibility.
         bool useMaterialNetworks = GetRenderIndex().
             GetRenderDelegate()->CanComputeMaterialNetworks();
-        if (useMaterialNetworks) {
-            if (adapterKey == TfToken("Look")) {
-                adapterKey = TfToken("Material");
-            }
-        } else {
-            if (adapterKey == TfToken("Shader")) {
-                adapterKey = TfToken("HydraPbsSurface");
-            }
+        if (!useMaterialNetworks && adapterKey == _tokens->Material) {
+            adapterKey = _tokens->HydraPbsSurface;
         }
     }
 
@@ -909,15 +896,6 @@ namespace {
             materialBindingCache->GetValue(primToBind);
         }
     };
-    struct _PopulateMaterialNetworkBindingCache {
-        UsdPrim primToBind;
-        UsdImaging_MaterialNetworkBindingCache const* materialBindingCache;
-        void operator()() const {
-            // Just calling GetValue will populate the cache for this prim and
-            // potentially all ancestors.
-            materialBindingCache->GetValue(primToBind);
-        }
-    };
 };
 
 void
@@ -933,11 +911,6 @@ UsdImagingDelegate::_Populate(UsdImagingIndexProxy* proxy)
     // Force initialization of SchemaRegistry (doing this in parallel causes all
     // threads to block).
     UsdSchemaRegistry::GetInstance();
-
-    // If we are using material networks the correct binding cache with
-    // the correct binding strategy needs to be updated.
-    bool useMaterialNetworks = GetRenderIndex().
-        GetRenderDelegate()->CanComputeMaterialNetworks();
 
     // Build a TfHashSet of excluded prims for fast rejection.
     TfHashSet<SdfPath, SdfPath::Hash> excludedSet;
@@ -991,15 +964,9 @@ UsdImagingDelegate::_Populate(UsdImagingIndexProxy* proxy)
                 // If we are using full networks, we will populate the 
                 // binding cache that has the strategy to compute the correct
                 // bindings.
-                if (useMaterialNetworks) {
-                    _PopulateMaterialNetworkBindingCache wu = 
-                        { *iter, &_materialNetworkBindingCache};
-                    bindingDispatcher.Run(wu);    
-                } else {
-                    _PopulateMaterialBindingCache wu = 
-                        { *iter, &_materialBindingCache};
-                    bindingDispatcher.Run(wu);
-                }
+                _PopulateMaterialBindingCache wu = 
+                    { *iter, &_materialBindingCache};
+                 bindingDispatcher.Run(wu);
                 
                 leafPaths.push_back(std::make_pair(*iter, adapter));
                 if (adapter->ShouldCullChildren(*iter)) {
@@ -1114,9 +1081,8 @@ UsdImagingDelegate::_ProcessChangesForTimeUpdate(UsdTimeCode time)
         // Need to invalidate all caches if any stage objects have changed. This
         // invalidation is overly conservative, but correct.
         _xformCache.Clear();
-        _matBindingSupplCache.Clear();
+        _materialBindingImplData.ClearCaches();
         _materialBindingCache.Clear();
-        _materialNetworkBindingCache.Clear();
         _visCache.Clear();
         _drawModeCache.Clear();
     }
@@ -1278,6 +1244,12 @@ UsdImagingDelegate::SetTimes(const std::vector<UsdImagingDelegate*>& delegates,
             delegates[i]->_ApplyTimeVaryingState();
         }
     }
+}
+
+UsdTimeCode
+UsdImagingDelegate::GetTimeWithOffset(float offset) const
+{
+    return _time.IsNumeric() ? UsdTimeCode(_time.GetValue() + offset) : _time;
 }
 
 // -------------------------------------------------------------------------- //
@@ -2043,7 +2015,6 @@ UsdImagingDelegate::_ComputeRootCompensation(SdfPath const & usdPath)
     _compensationPath = usdPath;
     _xformCache.SetRootPath(usdPath);
     _materialBindingCache.SetRootPath(usdPath);
-    _materialNetworkBindingCache.SetRootPath(usdPath);
     _visCache.SetRootPath(usdPath);
     _drawModeCache.SetRootPath(usdPath);
 
@@ -2453,24 +2424,11 @@ UsdImagingDelegate::PopulateSelection(
         return adapter->PopulateSelection(highlightMode, usdPath,
                                           instanceIndices, result);
     } else {
-        // Select rprims that are part of the path subtree. Exclude proto paths 
-        // since they will be added later in this function when iterating 
-        // through the different instances.
-        SdfPathVector const& rprimPaths = GetRenderIndex().GetRprimSubtree(path);
-        TF_FOR_ALL (rprimPath, rprimPaths) {
-            if ((*rprimPath).IsPropertyPath()) {
-                continue;
-            }
-            result->AddRprim(highlightMode, *rprimPath);
-            added = true;
-        }
 
-        // Iterate the adapter map to figure out if there is (at least) one
-        // instancer under the selected path, and then populate the selection
-
+        // Select prims that are part of the path subtree. Exclude prototypes
+        // since they are handled by their instancers' PopulateSelection calls.
         SdfPathVector affectedPrims;
         HdPrimGather gather;
-
         gather.Subtree(_usdIds.GetIds(), usdPath, &affectedPrims);
 
         size_t numPrims = affectedPrims.size();
@@ -2488,19 +2446,20 @@ UsdImagingDelegate::PopulateSelection(
             }
 
             _AdapterSharedPtr const &adapter = primInfo->adapter;
-            
-            // Check if the there is an instancer associated to that path
-            // if so, let's populate the selection to that instance.
-            SdfPath instancerPath = adapter->GetInstancer(primPath);
-            if (!instancerPath.IsEmpty()) {                
-                // We don't need to take into account specific indices when 
-                // doing subtree selections.
-                added |= adapter->PopulateSelection(highlightMode,
-                                                    usdPath,
-                                                    VtIntArray(), 
-                                                    result);
-                break;
+
+            // PopulateSelection works as expected on un-instanced rprims.
+            // For PointInstancers, PopulateSelection adds all of their
+            // children. For native instances, PopulateSelection will add
+            // selections for all of the prims/instances that are logically
+            // below primPath.
+            //
+            // This means that if we run across a property path (instanced
+            // rprim), we should skip it so the instance adapters can work.
+            if (primPath.IsPropertyPath()) {
+                continue;
             }
+            added |= adapter->PopulateSelection(highlightMode, primPath,
+                                                VtIntArray(), result);
         }
     }
     return added;
@@ -2577,7 +2536,7 @@ UsdImagingDelegate::SampleTransform(SdfPath const & id, size_t maxNumSamples,
     // up in profiling real usage.
     UsdGeomXformCache xformCache(0.0);
     for (size_t i=0; i < numSamples; ++i) {
-        xformCache.SetTime(_OffsetTime(_time, _timeSampleOffsets[i]));
+        xformCache.SetTime(GetTimeWithOffset(_timeSampleOffsets[i]));
         bool resetXformStack;
         times[i] = _timeSampleOffsets[i];
         samples[i] = xformCache
@@ -2730,45 +2689,13 @@ UsdImagingDelegate::SamplePrimvar(SdfPath const& id, TfToken const& key,
 {
     SdfPath usdPath = GetPathForUsd(id);
     UsdPrim usdPrim = _GetPrim(usdPath);
-
-    // Try as USD primvar.
-    if (UsdGeomPrimvar pv = UsdGeomGprim(usdPrim).GetPrimvar(key)) {
-        if (pv.ValueMightBeTimeVarying()) {
-            size_t numSamples = std::min(maxNumSamples,
-                                         _timeSampleOffsets.size());
-            for (size_t i=0; i < numSamples; ++i) {
-                times[i] = _timeSampleOffsets[i];
-                pv.Get(&samples[i], _OffsetTime(_time, _timeSampleOffsets[i]));
-            }
-            return numSamples;
-        } else {
-            // Return a single sample for non-varying primvars
-            times[0] = 0;
-            pv.Get(samples, _time);
-            return 1;
-        }
+    _PrimInfo *primInfo = GetPrimInfo(usdPath);
+    if (TF_VERIFY(primInfo)) {
+        return primInfo->adapter
+            ->SamplePrimvar(usdPrim, usdPath, key,
+                            _time, _timeSampleOffsets,
+                            maxNumSamples, times, samples);
     }
-
-    // Try as USD attribute.  This handles cases like "points" that
-    // are considered primvars by Hydra but non-primvar attributes by USD.
-    if (UsdAttribute attr = usdPrim.GetAttribute(key)) {
-        if (attr.ValueMightBeTimeVarying()) {
-            size_t numSamples = std::min(maxNumSamples,
-                                         _timeSampleOffsets.size());
-            for (size_t i=0; i < numSamples; ++i) {
-                times[i] = _timeSampleOffsets[i];
-                attr.Get(&samples[i],
-                         _OffsetTime(_time, _timeSampleOffsets[i]));
-            }
-            return numSamples;
-        } else {
-            // Return a single sample for non-varying primvars
-            times[0] = 0;
-            attr.Get(samples, _time);
-            return 1;
-        }
-    }
-
     return 0;
 }
 
@@ -2935,6 +2862,25 @@ UsdImagingDelegate::GetInstancerTransform(SdfPath const &instancerId,
     }
 
     return ctm;
+}
+
+/*virtual*/
+size_t
+UsdImagingDelegate::SampleInstancerTransform(SdfPath const &instancerId,
+                                             SdfPath const &prototypeId,
+                                             size_t maxSampleCount,
+                                             float *times,
+                                             GfMatrix4d *samples)
+{
+    SdfPath usdPath = GetPathForUsd(instancerId);
+    _PrimInfo *primInfo = GetPrimInfo(usdPath);
+    if (TF_VERIFY(primInfo)) {
+        return primInfo->adapter
+            ->SampleInstancerTransform(primInfo->usdPrim, usdPath,
+                                       _time, _timeSampleOffsets,
+                                       maxSampleCount, times, samples);
+    }
+    return 0;
 }
 
 /*virtual*/
