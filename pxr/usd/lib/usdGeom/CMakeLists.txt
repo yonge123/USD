@@ -115,6 +115,7 @@ pxr_test_scripts(
     testenv/testUsdGeomConsts.py
     testenv/test_UsdGeomCurves.py
     testenv/testUsdGeomFaceSetAPI.py
+    testenv/testUsdGeomMesh.py
     testenv/testUsdGeomMotionAPI.py
     testenv/testUsdGeomNoPlugLoad.py
     testenv/testUsdGeomPointInstancer.py
@@ -125,7 +126,7 @@ pxr_test_scripts(
     testenv/testUsdGeomXformable.py
     testenv/testUsdGeomXformCommonAPI.py
     testenv/testUsdGeomExtentTransform.py
-    testenv/testUsdGeomComputeInstanceTransformsAtTime.py
+    testenv/testUsdGeomComputeAtTime.py
 )
 
 pxr_build_test(testUsdGeomXformCache
@@ -206,8 +207,8 @@ pxr_install_test_dir(
 )
 
 pxr_install_test_dir(
-    SRC testenv/testUsdGeomComputeInstanceTransformsAtTime
-    DEST testUsdGeomComputeInstanceTransformsAtTime
+    SRC testenv/testUsdGeomComputeAtTime
+    DEST testUsdGeomComputeAtTime
 )
 
 pxr_register_test(testUsdGeomBasisCurves
@@ -263,6 +264,12 @@ pxr_register_test(testUsdGeomCurves
 pxr_register_test(testUsdGeomFaceSetAPI
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomFaceSetAPI"
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdGeomMesh
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomMesh"
     EXPECTED_RETURN_CODE 0
 )
 
@@ -339,8 +346,8 @@ pxr_register_test(testUsdGeomExtentTransform
     EXPECTED_RETURN_CODE 0
 )
 
-pxr_register_test(testUsdGeomComputeInstanceTransformsAtTime
+pxr_register_test(testUsdGeomComputeAtTime
     PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomComputeInstanceTransformsAtTime"
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomComputeAtTime"
     EXPECTED_RETURN_CODE 0
 )
