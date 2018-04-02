@@ -69,8 +69,8 @@ void
 UsdImagingBasisCurvesAdapter::TrackVariability(UsdPrim const& prim,
                                                SdfPath const& cachePath,
                                                HdDirtyBits* timeVaryingBits,
-                                               UsdImagingInstancerContext const* 
-                                                   instancerContext)
+                                               UsdImagingInstancerContext const*
+                                                   instancerContext) const
 {
     BaseAdapter::TrackVariability(
         prim, cachePath, timeVaryingBits, instancerContext);
@@ -112,7 +112,7 @@ UsdImagingBasisCurvesAdapter::UpdateForTime(UsdPrim const& prim,
                                UsdTimeCode time,
                                HdDirtyBits requestedBits,
                                UsdImagingInstancerContext const* 
-                                   instancerContext)
+                                   instancerContext) const
 {
     BaseAdapter::UpdateForTime(
         prim, cachePath, time, requestedBits, instancerContext);
@@ -167,7 +167,7 @@ UsdImagingBasisCurvesAdapter::UpdateForTime(UsdPrim const& prim,
 void
 UsdImagingBasisCurvesAdapter::_GetBasisCurvesTopology(UsdPrim const& prim, 
                                          VtValue* topo,
-                                         UsdTimeCode time)
+                                         UsdTimeCode time) const
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -234,7 +234,7 @@ UsdImagingBasisCurvesAdapter::_GetBasisCurvesTopology(UsdPrim const& prim,
 void
 UsdImagingBasisCurvesAdapter::_GetPoints(UsdPrim const& prim, 
                                    VtValue* value, 
-                                   UsdTimeCode time)
+                                   UsdTimeCode time) const
 {
     HD_TRACE_FUNCTION();
     if (!prim.GetAttribute(UsdGeomTokens->points).Get(value, time)) {
