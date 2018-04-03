@@ -6,11 +6,7 @@
                 "Types": {                                                                  
                     "Glf_OIIOImage" : {
                         "bases": ["GlfImage"],
-<<<<<<< Updated upstream
-                        "imageTypes": ["bmp", "exr", "jpg", "png", "tif", "zfile"],
-=======
                         "imageTypes": ["bmp", "exr", "jpg", "png", "tif", "zfile", "tx", "tga"],
->>>>>>> Stashed changes
                         "precedence": 0
                     },
                     "GlfPtexTexture" : {
