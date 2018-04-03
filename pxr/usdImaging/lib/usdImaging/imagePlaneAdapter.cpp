@@ -35,7 +35,7 @@ UsdImagingImagePlaneAdapter::TrackVariability(
     const UsdPrim& prim,
     const SdfPath& cachePath,
     HdDirtyBits* timeVaryingBits,
-    const UsdImagingInstancerContext* instancerContext) {
+    const UsdImagingInstancerContext* instancerContext) const {
     BaseAdapter::TrackVariability(
         prim, cachePath, timeVaryingBits, instancerContext);
 
@@ -67,7 +67,7 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
     UsdTimeCode time,
     HdDirtyBits requestedBits,
     UsdImagingInstancerContext const*
-    instancerContext /*= nullptr*/) {
+    instancerContext /*= nullptr*/) const {
     BaseAdapter::UpdateForTime(prim, cachePath, time, requestedBits, instancerContext);
 
     UsdImagingValueCache* valueCache = _GetValueCache();
