@@ -360,6 +360,9 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         }
     } else if (ob.hasFn(MFn::kLocator)) {
         MayaLocatorWriterPtr primPtr(new MayaLocatorWriter(curDag, writePath, instanceSource, *this));
+        if (primPtr->isValid()) {
+            return primPtr;
+        }
     } else if (ob.hasFn(MFn::kImagePlane)) {
         MayaImagePlaneWriterPtr primPtr(new MayaImagePlaneWriter(curDag, writePath, instanceSource, *this));
         if (primPtr->isValid()) {
