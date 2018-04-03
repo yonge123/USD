@@ -526,7 +526,7 @@ public:
                     }
                     
                     katanaPath = "Masters/" + katanaPath;
-                    
+
                     std::string leafName =
                             FnGeolibUtil::Path::GetLeafName(katanaPath);
                     std::string locationParent =
@@ -1132,22 +1132,21 @@ public:
                     {
                         nameToUse = primName;
                     }
-                }
 
-                // XXX In order for the prim's material hierarchy to get built
-                // out correctly via the PxrUsdInCore_LooksGroupOp, we'll need
-                // to override the original 'rootLocation' and 'isolatePath'
-                // UsdIn args.
-                //
-                ArgsBuilder ab;
-                ab.update(usdInArgs);
-                ab.rootLocation =
+                    // XXX In order for the prim's material hierarchy to get built
+                    // out correctly via the PxrUsdInCore_LooksGroupOp, we'll need
+                    // to override the original 'rootLocation' and 'isolatePath'
+                    // UsdIn args.
+                    //
+                    ArgsBuilder ab;
+                    ab.update(usdInArgs);
+                    ab.rootLocation =
                         interface.getOutputLocationPath() + "/" + nameToUse;
-                ab.isolatePath = primPath;
+                    ab.isolatePath = primPath;
 
-                // Build the prim using PxrUsdIn.
-                //
-                interface.createChild(
+                    // Build the prim using PxrUsdIn.
+                    //
+                    interface.createChild(
                         nameToUse,
                         "PxrUsdIn",
                         FnKat::GroupBuilder()
@@ -1156,8 +1155,9 @@ public:
                             .build(),
                         FnKat::GeolibCookInterface::ResetRootFalse,
                         new PxrUsdKatanaUsdInPrivateData(prim, ab.build(),
-                                privateData),
+                                                         privateData),
                         PxrUsdKatanaUsdInPrivateData::Delete);
+                }
             }
         }
         else
