@@ -98,6 +98,8 @@ protected:
     PXRUSDMAYA_API
     bool isInstance() const;
 
+    static bool isInstance(const MDagPath& dagPath);
+
 private:
     MDagPath mXformDagPath;
     bool mIsShapeAnimated;

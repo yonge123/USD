@@ -180,118 +180,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
                                         defaultLayer.name(), false, false);
     }
 
-    // Pre-process the argument dagPath path names into two sets. One set
-    // contains just the arg dagPaths, and the other contains all parents of
-    // arg dagPaths all the way up to the world root. Partial path names are
-    // enough because Maya guarantees them to still be unique, and they require
-    // less work to hash and compare than full path names.
-    TfHashSet<std::string, TfHash> argDagPaths;
-    TfHashSet<std::string, TfHash> argDagPathParents;
-    PxrUsdMayaUtil::ShapeSet::const_iterator end = mJobCtx.mArgs.dagPaths.end();
-    for (PxrUsdMayaUtil::ShapeSet::const_iterator it = mJobCtx.mArgs.dagPaths.begin();
-            it != end; ++it) {
-        MDagPath curDagPath = *it;
-        MStatus status;
-        bool curDagPathIsValid = curDagPath.isValid(&status);
-        if (status != MS::kSuccess || !curDagPathIsValid) {
-            continue;
-        }
-
-        std::string curDagPathStr(curDagPath.partialPathName(&status).asChar());
-        if (status != MS::kSuccess) {
-            continue;
-        }
-
-        argDagPaths.insert(curDagPathStr);
-
-        status = curDagPath.pop();
-        if (status != MS::kSuccess) {
-            continue;
-        }
-        curDagPathIsValid = curDagPath.isValid(&status);
-
-        while (status == MS::kSuccess && curDagPathIsValid) {
-            curDagPathStr = curDagPath.partialPathName(&status).asChar();
-            if (status != MS::kSuccess) {
-                break;
-            }
-
-            if (argDagPathParents.find(curDagPathStr) != argDagPathParents.end()) {
-                // We've already traversed up from this path.
-                break;
-            }
-            argDagPathParents.insert(curDagPathStr);
-
-            status = curDagPath.pop();
-            if (status != MS::kSuccess) {
-                break;
-            }
-            curDagPathIsValid = curDagPath.isValid(&status);
-        }
-    }
-
-    // Now do a depth-first traversal of the Maya DAG from the world root.
-    // We keep a reference to arg dagPaths as we encounter them.
-    MDagPath curLeafDagPath;
-    MItDag itDag(MItDag::kDepthFirst, MFn::kInvalid);
-    itDag.traverseUnderWorld(true);
-    for (; !itDag.isDone(); itDag.next()) {
-        MDagPath curDagPath;
-        itDag.getPath(curDagPath);
-        std::string curDagPathStr(curDagPath.partialPathName().asChar());
-
-        if (argDagPathParents.find(curDagPathStr) != argDagPathParents.end()) {
-            // This dagPath is a parent of one of the arg dagPaths. It should
-            // be included in the export, but not necessarily all of its
-            // children should be, so we continue to traverse down.
-        } else if (argDagPaths.find(curDagPathStr) != argDagPaths.end()) {
-            // This dagPath IS one of the arg dagPaths. It AND all of its
-            // children should be included in the export.
-            curLeafDagPath = curDagPath;
-        } else if (!_HasParent(curDagPath, curLeafDagPath)) {
-            // This dagPath is not a child (or in the underworld of a child) of one of the arg dagPaths, so prune
-            itDag.prune();
-            continue;
-        }
-
-        if (!needToTraverse(curDagPath) &&
-            curDagPath.length() > 0) {
-            // This dagPath and all of its children should be pruned.
-            itDag.prune();
-        } else {
-            MayaPrimWriterPtr primWriter = mJobCtx.createPrimWriter(curDagPath);
-
-            if (primWriter) {
-                mJobCtx.mMayaPrimWriterList.push_back(primWriter);
-
-                // Write out data (non-animated/default values).
-                if (const auto& usdPrim = primWriter->getPrim()) {
-                    primWriter->write(UsdTimeCode::Default());
-
-                    MDagPath dag = primWriter->getDagPath();
-                    mDagPathToUsdPathMap[dag] = usdPrim.GetPath();
-
-                    // If we are merging transforms and the object derives from
-                    // MayaTransformWriter but isn't actually a transform node, we
-                    // need to add its parent.
-                    if (mJobCtx.mArgs.mergeTransformAndShape) {
-                        MayaTransformWriterPtr xformWriter =
-                            std::dynamic_pointer_cast<MayaTransformWriter>(primWriter);
-                        if (xformWriter) {
-                            MDagPath xformDag = xformWriter->getTransformDagPath();
-                            mDagPathToUsdPathMap[xformDag] = usdPrim.GetPath();
-                        }
-                    }
-
-                     mModelKindWriter.OnWritePrim(usdPrim, primWriter);
-                }
-
-                if (primWriter->shouldPruneChildren()) {
-                    itDag.prune();
-                }
-            }
-        }
-    }
+    bool success = traverseDag(MDagPath(), mJobCtx.mArgs.dagPaths);
+    if (!success) return false;
 
     PxrUsdMayaExportParams exportParams;
     exportParams.mergeTransformAndShape = mJobCtx.mArgs.mergeTransformAndShape;
@@ -346,6 +236,154 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
         }
     }
 
+    return true;
+}
+
+bool usdWriteJob::traverseDag(const MDagPath& rootDagPath, const PxrUsdMayaUtil::ShapeSet& wantedPaths)
+{
+    bool startedInUnderWorld = rootDagPath.isValid() && rootDagPath.pathCount() > 1;
+
+    // Pre-process the argument dagPath path names into two sets. One set
+    // contains just the arg dagPaths, and the other contains all parents of
+    // arg dagPaths all the way up to the world root. Partial path names are
+    // enough because Maya guarantees them to still be unique, and they require
+    // less work to hash and compare than full path names.
+    TfHashSet<std::string, TfHash> argDagPaths;
+    TfHashSet<std::string, TfHash> argDagPathParents;
+    PxrUsdMayaUtil::ShapeSet::const_iterator end = wantedPaths.end();
+    for (PxrUsdMayaUtil::ShapeSet::const_iterator it = wantedPaths.begin();
+            it != end; ++it) {
+        MDagPath curDagPath = *it;
+        MStatus status;
+        bool curDagPathIsValid = curDagPath.isValid(&status);
+        if (status != MS::kSuccess || !curDagPathIsValid) {
+            continue;
+        }
+
+        std::string curDagPathStr(curDagPath.partialPathName(&status).asChar());
+        if (status != MS::kSuccess) {
+            continue;
+        }
+
+        argDagPaths.insert(curDagPathStr);
+
+        status = curDagPath.pop();
+        if (status != MS::kSuccess) {
+            continue;
+        }
+        curDagPathIsValid = curDagPath.isValid(&status);
+
+        while (status == MS::kSuccess && curDagPathIsValid) {
+            curDagPathStr = curDagPath.partialPathName(&status).asChar();
+            if (status != MS::kSuccess) {
+                break;
+            }
+
+            if (argDagPathParents.find(curDagPathStr) != argDagPathParents.end()) {
+                // We've already traversed up from this path.
+                break;
+            }
+            argDagPathParents.insert(curDagPathStr);
+
+            status = curDagPath.pop();
+            if (status != MS::kSuccess) {
+                break;
+            }
+            curDagPathIsValid = curDagPath.isValid(&status);
+        }
+    }
+
+    // Now do a depth-first traversal of the Maya DAG from the root.
+    // We keep a reference to arg dagPaths as we encounter them.
+    MDagPath curLeafDagPath;
+    MItDag itDag(MItDag::kDepthFirst, MFn::kInvalid);
+    itDag.traverseUnderWorld(true);
+
+    if (rootDagPath.isValid()) {
+        // If a root is specified, start iteration there
+        itDag.reset(rootDagPath, MItDag::kDepthFirst, MFn::kInvalid);
+    }
+
+    for (; !itDag.isDone(); itDag.next()) {
+        MDagPath curDagPath;
+        itDag.getPath(curDagPath);
+        std::string curDagPathStr(curDagPath.partialPathName().asChar());
+
+        if (argDagPathParents.find(curDagPathStr) != argDagPathParents.end()) {
+            // This dagPath is a parent of one of the arg dagPaths. It should
+            // be included in the export, but not necessarily all of its
+            // children should be, so we continue to traverse down.
+        } else if (argDagPaths.find(curDagPathStr) != argDagPaths.end()) {
+            // This dagPath IS one of the arg dagPaths. It AND all of its
+            // children should be included in the export.
+            curLeafDagPath = curDagPath;
+        } else if (!_HasParent(curDagPath, curLeafDagPath)) {
+            // This dagPath is not a child (or in the underworld of a child) of one of the arg dagPaths, so prune
+            itDag.prune();
+            continue;
+        }
+
+        if (!needToTraverse(curDagPath) && curDagPath.length() > 0) {
+            // This dagPath and all of its children should be pruned.
+            itDag.prune();
+        } else if (!startedInUnderWorld && curDagPath.pathCount() > 1) {
+            // If we've entered the underworld, we only care about certain nodes
+            // (just image paths, for now). To deal with filtering by only certain
+            // nodes and their direct parents, we just call this function recursively
+
+            // First, need to find the list of nodes we care about...
+            PxrUsdMayaUtil::ShapeSet wantedUnderNodes;
+            MItDag itUnder;
+            itUnder.traverseUnderWorld(true);
+            itUnder.reset(curDagPath, MItDag::kDepthFirst, MFn::kImagePlane);
+            MDagPath underDagPath;
+            for (; !itUnder.isDone(); itUnder.next()) {
+                itUnder.getPath(underDagPath);
+                wantedUnderNodes.insert(underDagPath);
+            }
+
+            // Ok, we've got the nodes we care about, call recursively to filter by
+            // that list (and parents)
+            if (wantedUnderNodes.size() > 0) {
+                bool success = traverseDag(curDagPath, wantedUnderNodes);
+                if (!success) return false;
+            }
+            // Prune here, since traversing was handled in the recursive call...
+            itDag.prune();
+        } else {
+            MayaPrimWriterPtr primWriter = mJobCtx.createPrimWriter(curDagPath);
+
+            if (primWriter) {
+                mJobCtx.mMayaPrimWriterList.push_back(primWriter);
+
+                // Write out data (non-animated/default values).
+                if (const auto& usdPrim = primWriter->getPrim()) {
+                    primWriter->write(UsdTimeCode::Default());
+
+                    MDagPath dag = primWriter->getDagPath();
+                    mDagPathToUsdPathMap[dag] = usdPrim.GetPath();
+
+                    // If we are merging transforms and the object derives from
+                    // MayaTransformWriter but isn't actually a transform node, we
+                    // need to add its parent.
+                    if (mJobCtx.mArgs.mergeTransformAndShape) {
+                        MayaTransformWriterPtr xformWriter =
+                            std::dynamic_pointer_cast<MayaTransformWriter>(primWriter);
+                        if (xformWriter) {
+                            MDagPath xformDag = xformWriter->getTransformDagPath();
+                            mDagPathToUsdPathMap[xformDag] = usdPrim.GetPath();
+                        }
+                    }
+
+                     mModelKindWriter.OnWritePrim(usdPrim, primWriter);
+                }
+
+                if (primWriter->shouldPruneChildren()) {
+                    itDag.prune();
+                }
+            }
+        }
+    }
     return true;
 }
 

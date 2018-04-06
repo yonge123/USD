@@ -300,7 +300,8 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
             return primPtr;
         }
     // Then deal with instances before others because they're special.
-    } else if (mArgs.exportInstances && curDag.isInstanced() && !instanceSource) {
+    } else if (mArgs.exportInstances && curDag.isInstanced() && !instanceSource
+            && curDag.pathCount() == 1) {
         MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, writePath, instanceSource, *this));
         if (primPtr->isValid()) {
             return primPtr;

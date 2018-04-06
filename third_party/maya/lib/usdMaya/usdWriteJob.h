@@ -69,6 +69,7 @@ class usdWriteJob
     void perFrameCallback(double iFrame);
     void postCallback();
     bool needToTraverse(const MDagPath& curDag);
+    bool traverseDag(const MDagPath& rootDagPath, const PxrUsdMayaUtil::ShapeSet& wantedPaths);
     
   private:
     // Name of the created/appended USD file
