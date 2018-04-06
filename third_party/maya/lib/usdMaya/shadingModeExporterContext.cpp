@@ -131,6 +131,11 @@ PxrUsdMayaShadingModeExportContext::GetAssignments() const
         if (!dagNode.getPath(dagPath))
             continue;
 
+        // For now, skip anything in the underworld - we only export image planes from
+        // there right now, and they don't need a material
+        if (dagPath.pathCount() > 1)
+            continue;
+
         SdfPath usdPath = PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, 
             _exportParams.mergeTransformAndShape);
 
