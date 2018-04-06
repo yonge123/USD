@@ -72,19 +72,23 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
     static
-    bool _HasParent(const MDagPath& curDagPath, const MDagPath& curLeafDagPath) {
+    bool _HasParent(const MDagPath& curDagPath, const MDagPath& possibleParent) {
+        if (!curDagPath.isValid() || !possibleParent.isValid()) return false;
+
+        auto parentPathCount = possibleParent.pathCount();
+        // If the parent is deeper in the underworld, it's defintely not a parent
+        if (parentPathCount > curDagPath.pathCount()) return false;
+
         MFnDagNode dagNode(curDagPath);
-        if (dagNode.inUnderWorld()) {
-            for (auto dagPathCopy = curDagPath; dagPathCopy.pathCount(); dagPathCopy.pop()) {
-                MFnDagNode dagNodeCopy(dagPathCopy);
-                if (!dagNodeCopy.inUnderWorld()) {
-                    return dagNodeCopy.hasParent(curLeafDagPath.node());
-                }
+        // If it's higher in the underworld, pop until we have the same path count
+        if (parentPathCount < curDagPath.pathCount()) {
+            MDagPath dagPathCopy(curDagPath);
+            while (parentPathCount < dagPathCopy.pathCount()) {
+                dagPathCopy.pop();
             }
-            return false;
-        } else {
-            return dagNode.hasParent(curLeafDagPath.node());
+            dagNode.setObject(dagPathCopy);
         }
+        return dagNode.hasParent(possibleParent.node());
     }
 }
 
