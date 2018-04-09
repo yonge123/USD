@@ -268,7 +268,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
             // children should be included in the export.
             curLeafDagPath = curDagPath;
         } else if (!_HasParent(curDagPath, curLeafDagPath)) {
-            // The lowest-level, non-underworld dagNode from the dagPath is not one of the arg dagPaths, so prune
+            // This dagPath is not a child (or in the underworld of a child) of one of the arg dagPaths, so prune
             itDag.prune();
             continue;
         }
