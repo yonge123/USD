@@ -283,6 +283,16 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         return nullptr;
     }
 
+    if (curDag.pathCount() > 1) {
+        MDagPath underworldLeafPath;
+        curDag.getPath(underworldLeafPath, curDag.pathCount() - 1);
+        if (underworldLeafPath.length() == 0)
+        {
+            // This is an underworld "root" node - also skip
+            return nullptr;
+        }
+    }
+
     MObject ob = curDag.node();
     const SdfPath writePath = usdPath.IsEmpty() ?
             getUsdPathFromDagPath(curDag, instanceSource) : usdPath;
@@ -308,14 +318,23 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         }
     }
 
-    // Deal with instances first because they're special.
-    // Then the rest of the checks need to occur with derived classes
-    // coming before base classes (e.g. instancer before transform).
-    if (mArgs.exportInstances && curDag.isInstanced() && !instanceSource) {
+    // Do cameras first, because they don't support instancing,
+    // because they may have exportable underworld nodes
+    if (ob.hasFn(MFn::kCamera)) {
+        const SdfPath cameraWritePath = usdPath.IsEmpty() ?
+                getUsdPathFromDagPath(curDag, false) : usdPath;
+        MayaCameraWriterPtr primPtr(new MayaCameraWriter(curDag, cameraWritePath, *this));
+        if (primPtr->isValid()) {
+            return primPtr;
+        }
+    // Then deal with instances before others because they're special.
+    } else if (mArgs.exportInstances && curDag.isInstanced() && !instanceSource) {
         MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, writePath, instanceSource, *this));
         if (primPtr->isValid()) {
             return primPtr;
         }
+    // Then the rest of the checks need to occur with derived classes
+    // coming before base classes (e.g. instancer before transform).
     } else if (ob.hasFn(MFn::kJoint)) {
         MayaSkeletonWriterPtr primPtr(new MayaSkeletonWriter(curDag, writePath, *this));
         if (primPtr->isValid()) {
@@ -348,13 +367,6 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         }
     } else if (ob.hasFn(MFn::kParticle) || ob.hasFn(MFn::kNParticle)) {
         MayaParticleWriterPtr primPtr(new MayaParticleWriter(curDag, writePath, instanceSource, *this));
-        if (primPtr->isValid()) {
-            return primPtr;
-        }
-    } else if (ob.hasFn(MFn::kCamera)) {
-        const SdfPath cameraWritePath = usdPath.IsEmpty() ?
-                getUsdPathFromDagPath(curDag, false) : usdPath;
-        MayaCameraWriterPtr primPtr(new MayaCameraWriter(curDag, cameraWritePath, *this));
         if (primPtr->isValid()) {
             return primPtr;
         }
