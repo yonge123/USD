@@ -181,13 +181,13 @@ public:
     ///
     /// Primvar Query
     ///
-    inline TfTokenVector GetPrimVarVertexNames(HdSceneDelegate* delegate)      const;
-    inline TfTokenVector GetPrimVarVaryingNames(HdSceneDelegate* delegate)     const;
-    inline TfTokenVector GetPrimVarFacevaryingNames(HdSceneDelegate* delegate) const;
-    inline TfTokenVector GetPrimVarUniformNames(HdSceneDelegate* delegate)     const;
-    inline TfTokenVector GetPrimVarConstantNames(HdSceneDelegate* delegate)    const;
+    inline TfTokenVector GetPrimvarVertexNames(HdSceneDelegate* delegate)      const;
+    inline TfTokenVector GetPrimvarVaryingNames(HdSceneDelegate* delegate)     const;
+    inline TfTokenVector GetPrimvarFacevaryingNames(HdSceneDelegate* delegate) const;
+    inline TfTokenVector GetPrimvarUniformNames(HdSceneDelegate* delegate)     const;
+    inline TfTokenVector GetPrimvarConstantNames(HdSceneDelegate* delegate)    const;
 
-    inline VtValue GetPrimVar(HdSceneDelegate* delegate, const TfToken &name)  const;
+    inline VtValue GetPrimvar(HdSceneDelegate* delegate, const TfToken &name)  const;
 
 protected:
     /// Update objects representation based on dirty bits.
@@ -211,7 +211,7 @@ protected:
     /// since we're tracking dirtiness in a single bit (e.g. DirtyTransform)
     /// unlike vertex primvars (DirtyPoints-DirtyRefinedPoints)
     HD_API
-    void _PopulateConstantPrimVars(HdSceneDelegate *sceneDelegate,
+    void _PopulateConstantPrimvars(HdSceneDelegate *sceneDelegate,
                                    HdDrawItem *drawItem,
                                    HdDirtyBits *dirtyBits);
 
@@ -310,37 +310,37 @@ HdRprim::GetExtent(HdSceneDelegate* delegate) const
 }
 
 inline TfTokenVector
-HdRprim::GetPrimVarVertexNames(HdSceneDelegate* delegate) const
+HdRprim::GetPrimvarVertexNames(HdSceneDelegate* delegate) const
 {
-    return delegate->GetPrimVarVertexNames(GetId());
+    return delegate->GetPrimvarVertexNames(GetId());
 }
 
 inline TfTokenVector
-HdRprim::GetPrimVarVaryingNames(HdSceneDelegate* delegate) const
+HdRprim::GetPrimvarVaryingNames(HdSceneDelegate* delegate) const
 {
-    return delegate->GetPrimVarVaryingNames(GetId());
+    return delegate->GetPrimvarVaryingNames(GetId());
 }
 
 inline TfTokenVector
-HdRprim::GetPrimVarFacevaryingNames(HdSceneDelegate* delegate) const
+HdRprim::GetPrimvarFacevaryingNames(HdSceneDelegate* delegate) const
 {
-    return delegate->GetPrimVarFacevaryingNames(GetId());
+    return delegate->GetPrimvarFacevaryingNames(GetId());
 }
 
 inline TfTokenVector
-HdRprim::GetPrimVarUniformNames(HdSceneDelegate* delegate) const
+HdRprim::GetPrimvarUniformNames(HdSceneDelegate* delegate) const
 {
-    return delegate->GetPrimVarUniformNames(GetId());
+    return delegate->GetPrimvarUniformNames(GetId());
 }
 
 inline TfTokenVector
-HdRprim::GetPrimVarConstantNames(HdSceneDelegate* delegate) const
+HdRprim::GetPrimvarConstantNames(HdSceneDelegate* delegate) const
 {
-    return delegate->GetPrimVarConstantNames(GetId());
+    return delegate->GetPrimvarConstantNames(GetId());
 }
 
 inline VtValue
-HdRprim::GetPrimVar(HdSceneDelegate* delegate, const TfToken &name) const
+HdRprim::GetPrimvar(HdSceneDelegate* delegate, const TfToken &name) const
 {
     return delegate->Get(GetId(), name);
 }
