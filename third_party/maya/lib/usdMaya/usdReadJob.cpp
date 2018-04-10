@@ -99,31 +99,7 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
         return false;
     }
 
-    SdfPath primSdfPath;
-
-    if (mPrimPath.empty()) {
-        TfToken rootName = UsdUtilsGetModelNameFromRootLayer(rootLayer);
-        primSdfPath = SdfPath(rootName);
-        if (primSdfPath.IsEmpty()) {
-            std::string errorMsg = TfStringPrintf(
-                "Default prim \"%s\" was not a valid prim path",
-                rootName.GetText());
-            MGlobal::displayError(errorMsg.c_str());
-            return false;
-        }
-    }
-    else {
-        primSdfPath = SdfPath(mPrimPath);
-        if (primSdfPath.IsEmpty()) {
-            std::string errorMsg = TfStringPrintf(
-                "Given root prim \"%s\" is not a valid prim path",
-                mPrimPath.c_str());
-            MGlobal::displayError(errorMsg.c_str());
-            return false;
-        }
-    }
-
-    primSdfPath = primSdfPath.MakeAbsolutePath(SdfPath::AbsoluteRootPath()).GetAbsoluteRootOrPrimPath();
+    TfToken modelName = UsdUtilsGetModelNameFromRootLayer(rootLayer);
 
     std::vector<std::pair<std::string, std::string> > varSelsVec;
     TF_FOR_ALL(iter, mVariants) {
@@ -134,7 +110,7 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
     }
 
     SdfLayerRefPtr sessionLayer =
-        UsdUtilsStageCache::GetSessionLayerForVariantSelections(primSdfPath,
+        UsdUtilsStageCache::GetSessionLayerForVariantSelections(modelName,
                                                                 varSelsVec);
 
     // Layer and Stage used to Read in the USD file
@@ -178,7 +154,7 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
 
     // Use the primPath to get the root usdNode
     UsdPrim usdRootPrim = mPrimPath.empty() ? stage->GetDefaultPrim() :
-        stage->GetPrimAtPath(primSdfPath);
+        stage->GetPrimAtPath(SdfPath(mPrimPath));
     if (!usdRootPrim && !(mPrimPath.empty() || mPrimPath == "/")) {
         std::string errorMsg = TfStringPrintf(
             "Unable to set root prim to \"%s\" for USD file \"%s\" - using pseudo-root \"/\" instead",
@@ -197,11 +173,6 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
         return false;
     }
 
-    SdfPrimSpecHandle usdRootPrimSpec =
-        SdfCreatePrimInLayer(sessionLayer, usdRootPrim.GetPrimPath());
-    if (!usdRootPrimSpec) {
-        return false;
-    }
     // Set the variants on the usdRootPrim
     for (std::map<std::string, std::string>::iterator it=mVariants.begin(); it!=mVariants.end(); ++it) {
         usdRootPrim.GetVariantSet(it->first).SetVariantSelection(it->second);
