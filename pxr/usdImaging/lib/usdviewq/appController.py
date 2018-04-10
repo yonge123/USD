@@ -378,6 +378,8 @@ class AppController(QtCore.QObject):
             self._primViewSelectionBlocker = Blocker()
             self._propertyViewSelectionBlocker = Blocker()
 
+            self._dataModel.selection.signalPointSelectionChanged.connect(
+                self._pointSelectionChanged)
             self._dataModel.selection.signalPrimSelectionChanged.connect(
                 self._primSelectionChanged)
             self._dataModel.selection.signalPropSelectionChanged.connect(
@@ -1293,6 +1295,7 @@ class AppController(QtCore.QObject):
                 self._stageView.fpsHUDInfo = self._fpsHUDInfo
                 self._stageView.fpsHUDKeys = self._fpsHUDKeys
 
+                self._stageView.signalPointSelected.connect(self.onPointSelected)
                 self._stageView.signalPrimSelected.connect(self.onPrimSelected)
                 self._stageView.signalPrimRollover.connect(self.onRollover)
                 self._stageView.signalMouseDrag.connect(self.onStageViewMouseDrag)
@@ -2684,6 +2687,10 @@ class AppController(QtCore.QObject):
         ### from registering /Canopies/Twig as prefix
         return commonPrefix.rsplit('/', 1)[0]
 
+    def _pointSelectionChanged(self, point):
+        if self._stageView:
+            self._stageView.updateView()
+
     def _primSelectionChanged(self, added, removed):
         """Called when the prim selection is updated in the data model. Updates
         any UI that depends on the state of the selection.
@@ -3883,6 +3890,10 @@ class AppController(QtCore.QObject):
             self.editComplete("Unloaded %s." % primNames)
 
     def onStageViewMouseDrag(self):
+        return
+
+    def onPointSelected(self, point, button, modifiers):
+        self._dataModel.selection.setPoint(point)
         return
 
     def onPrimSelected(self, path, instanceIndex, button, modifiers):
