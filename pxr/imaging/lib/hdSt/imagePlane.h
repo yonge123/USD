@@ -42,7 +42,7 @@ private:
         HdDirtyBits* dirtyBits);
 
     void
-    _PopulateVertexPrimVars(
+    _PopulateVertexPrimvars(
         const SdfPath& id,
         HdSceneDelegate *sceneDelegate,
         HdStDrawItem *drawItem,
