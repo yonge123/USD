@@ -504,14 +504,14 @@ HdStMesh::_PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
         renderIndex.GetResourceRegistry());
 
     // The "points" attribute is expected to be in this list.
-    TfTokenVector primVarNames = GetPrimVarVertexNames(sceneDelegate);
+    TfTokenVector primVarNames = GetPrimvarVertexNames(sceneDelegate);
 
     // Track the last vertex index to distinguish between vertex and varying
     // while processing.
     int vertexPartitionIndex = int(primVarNames.size()-1);
 
     // Add varying primvars.
-    TfTokenVector const& varyingNames = GetPrimVarVaryingNames(sceneDelegate);
+    TfTokenVector const& varyingNames = GetPrimvarVaryingNames(sceneDelegate);
     primVarNames.reserve(primVarNames.size() + varyingNames.size());
     primVarNames.insert(primVarNames.end(),
                         varyingNames.begin(), varyingNames.end());
@@ -599,7 +599,7 @@ HdStMesh::_PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
         // TODO: We don't need to pull primvar metadata every time a
         // value changes, but we need support from the delegate.
 
-        VtValue value =  GetPrimVar(sceneDelegate, *nameIt);
+        VtValue value =  GetPrimvar(sceneDelegate, *nameIt);
 
         if (!value.IsEmpty()) {
             HdBufferSourceSharedPtr source(
@@ -953,7 +953,7 @@ HdStMesh::_PopulateFaceVaryingPrimVars(HdSceneDelegate *sceneDelegate,
     HF_MALLOC_TAG_FUNCTION();
 
     SdfPath const& id = GetId();
-    TfTokenVector primVarNames = GetPrimVarFacevaryingNames(sceneDelegate);
+    TfTokenVector primVarNames = GetPrimvarFacevaryingNames(sceneDelegate);
     if (primVarNames.empty()) return;
 
     HdStResourceRegistrySharedPtr const& resourceRegistry = 
@@ -972,7 +972,7 @@ HdStMesh::_PopulateFaceVaryingPrimVars(HdSceneDelegate *sceneDelegate,
             continue;
         }
 
-        VtValue value = GetPrimVar(sceneDelegate, *nameIt);
+        VtValue value = GetPrimvar(sceneDelegate, *nameIt);
         if (!value.IsEmpty()) {
 
             HdBufferSourceSharedPtr source(new HdVtBufferSource(
@@ -1055,7 +1055,7 @@ HdStMesh::_PopulateElementPrimVars(HdSceneDelegate *sceneDelegate,
         if (!HdChangeTracker::IsPrimVarDirty(*dirtyBits, id, *nameIt))
             continue;
 
-        VtValue value = GetPrimVar(sceneDelegate, *nameIt);
+        VtValue value = GetPrimvar(sceneDelegate, *nameIt);
         if (!value.IsEmpty()) {
             HdBufferSourceSharedPtr source(new HdVtBufferSource(
                                                *nameIt,
@@ -1114,11 +1114,8 @@ HdStMesh::_UseQuadIndices(
                         renderIndex.GetFallbackSprim(HdPrimTypeTokens->material));
     }
 
-    HdStShaderCodeSharedPtr ss = material->GetShaderCode();
-
-    TF_FOR_ALL(it, ss->GetParams()) {
-        if (it->IsPtex())
-            return true;
+    if (material->HasPtex()) {
+        return true;
     }
 
     // Fallback to the environment variable, which allows forcing of
@@ -1200,7 +1197,7 @@ HdStMesh::_UpdateDrawItem(HdSceneDelegate *sceneDelegate,
     _UpdateVisibility(sceneDelegate, dirtyBits);
 
     /* CONSTANT PRIMVARS */
-    _PopulateConstantPrimVars(sceneDelegate, drawItem, dirtyBits);
+    _PopulateConstantPrimvars(sceneDelegate, drawItem, dirtyBits);
 
     /* INSTANCE PRIMVARS */
     if (!GetInstancerId().IsEmpty()) {
@@ -1259,7 +1256,7 @@ HdStMesh::_UpdateDrawItem(HdSceneDelegate *sceneDelegate,
     /* ELEMENT PRIMVARS */
     if (HdChangeTracker::IsAnyPrimVarDirty(*dirtyBits, id)) {
         TfTokenVector uniformPrimVarNames =
-                                         GetPrimVarUniformNames(sceneDelegate);
+                                         GetPrimvarUniformNames(sceneDelegate);
         if (!uniformPrimVarNames.empty()) {
             _PopulateElementPrimVars(sceneDelegate, drawItem, dirtyBits,
                                      uniformPrimVarNames);
