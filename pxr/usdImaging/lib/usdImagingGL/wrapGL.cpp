@@ -172,6 +172,7 @@ void wrapGL()
             .def_readwrite("clipPlanes", &Params::clipPlanes)
             .def_readwrite("highlight", &Params::highlight)
             .def_readwrite("enableHardwareShading", &Params::enableHardwareShading)
+            .def_readwrite("enableUsdDrawModes", &Params::enableUsdDrawModes)
             .def_readwrite("displayImagePlanes", &Params::displayImagePlanes)
         ;
 
