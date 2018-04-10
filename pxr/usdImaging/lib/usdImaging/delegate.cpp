@@ -123,6 +123,7 @@ UsdImagingDelegate::UsdImagingDelegate(
     , _visCache(GetTime(), GetRootCompensation())
     , _drawModeCache(UsdTimeCode::EarliestTime(), GetRootCompensation())
     , _displayGuides(true)
+    , _enableUsdDrawModes(true)
     , _hasDrawModeAdapter( UsdImagingAdapterRegistry::GetInstance()
                            .HasAdapter(UsdImagingAdapterKeyTokens
                                        ->drawModeAdapterKey) )
@@ -219,7 +220,8 @@ UsdImagingDelegate::_AdapterLookup(UsdPrim const& prim, bool ignoreInstancing)
     TfToken adapterKey;
     if (!ignoreInstancing && prim.IsInstance()) {
         adapterKey = UsdImagingAdapterKeyTokens->instanceAdapterKey;
-    } else if (_hasDrawModeAdapter && _IsDrawModeApplied(prim)) {
+    } else if (_hasDrawModeAdapter && _enableUsdDrawModes &&
+               _IsDrawModeApplied(prim)) {
         adapterKey = UsdImagingAdapterKeyTokens->drawModeAdapterKey;
     } else {
         adapterKey = prim.GetTypeName();
@@ -1694,6 +1696,19 @@ UsdImagingDelegate::SetDisplayGuides(bool displayGuides)
     GetRenderIndex().GetChangeTracker().MarkAllCollectionsDirty();
 }
 
+void
+UsdImagingDelegate::SetUsdDrawModesEnabled(bool enableUsdDrawModes)
+{
+    if (_enableUsdDrawModes != enableUsdDrawModes) {
+        if (_primInfoMap.size() > 0) {
+            TF_CODING_ERROR("SetUsdDrawModesEnabled() was called after "
+                            "population; this is currently unsupported...");
+        } else {
+            _enableUsdDrawModes = enableUsdDrawModes;
+        }
+    }
+}
+
 /*virtual*/
 TfToken
 UsdImagingDelegate::GetRenderTag(SdfPath const& id, TfToken const& reprName)
@@ -1835,6 +1850,18 @@ UsdImagingDelegate::GetDoubleSided(SdfPath const& id)
 HdCullStyle
 UsdImagingDelegate::GetCullStyle(SdfPath const &id)
 {
+    // XXX: Cull style works a bit weirdly. Most adapters aren't
+    // expected to use cullstyle, so: if it's there, use it, but otherwise
+    // just use the fallback value.
+    //
+    // This way, prims that don't care about it don't need to pay the price
+    // of populating it in the value cache.
+    HdCullStyle cullStyle = HdCullStyleDontCare;
+    SdfPath usdPath = GetPathForUsd(id);
+    if (_valueCache.ExtractCullStyle(usdPath, &cullStyle)) {
+        return cullStyle;
+    }
+
     return _cullStyleFallback;
 }
 
@@ -2693,11 +2720,10 @@ UsdImagingDelegate::SamplePrimvar(SdfPath const& id, TfToken const& key,
                                   float *times, VtValue *samples)
 {
     SdfPath usdPath = GetPathForUsd(id);
-    UsdPrim usdPrim = _GetPrim(usdPath);
     _PrimInfo *primInfo = GetPrimInfo(usdPath);
     if (TF_VERIFY(primInfo)) {
         return primInfo->adapter
-            ->SamplePrimvar(usdPrim, usdPath, key,
+            ->SamplePrimvar(primInfo->usdPrim, usdPath, key,
                             _time, _timeSampleOffsets,
                             maxNumSamples, times, samples);
     }
@@ -2743,7 +2769,7 @@ UsdImagingDelegate::_GetPrimvarNames(SdfPath const& usdPath,
 
 /* virtual */
 TfTokenVector
-UsdImagingDelegate::GetPrimVarVertexNames(SdfPath const& id)
+UsdImagingDelegate::GetPrimvarVertexNames(SdfPath const& id)
 {
     HD_TRACE_FUNCTION();
     SdfPath usdPath = GetPathForUsd(id);
@@ -2752,7 +2778,7 @@ UsdImagingDelegate::GetPrimVarVertexNames(SdfPath const& id)
 
 /* virtual */
 TfTokenVector
-UsdImagingDelegate::GetPrimVarVaryingNames(SdfPath const& id)
+UsdImagingDelegate::GetPrimvarVaryingNames(SdfPath const& id)
 {
     HD_TRACE_FUNCTION();
     SdfPath usdPath = GetPathForUsd(id);
@@ -2761,7 +2787,7 @@ UsdImagingDelegate::GetPrimVarVaryingNames(SdfPath const& id)
 
 /* virtual */
 TfTokenVector
-UsdImagingDelegate::GetPrimVarFacevaryingNames(SdfPath const& id)
+UsdImagingDelegate::GetPrimvarFacevaryingNames(SdfPath const& id)
 {
     HD_TRACE_FUNCTION();
     SdfPath usdPath = GetPathForUsd(id);
@@ -2770,7 +2796,7 @@ UsdImagingDelegate::GetPrimVarFacevaryingNames(SdfPath const& id)
 
 /* virtual */
 TfTokenVector
-UsdImagingDelegate::GetPrimVarUniformNames(SdfPath const& id)
+UsdImagingDelegate::GetPrimvarUniformNames(SdfPath const& id)
 {
     HD_TRACE_FUNCTION();
     SdfPath usdPath = GetPathForUsd(id);
@@ -2779,7 +2805,7 @@ UsdImagingDelegate::GetPrimVarUniformNames(SdfPath const& id)
 
 /* virtual */
 TfTokenVector
-UsdImagingDelegate::GetPrimVarConstantNames(SdfPath const& id)
+UsdImagingDelegate::GetPrimvarConstantNames(SdfPath const& id)
 {
     HD_TRACE_FUNCTION();
     SdfPath usdPath = GetPathForUsd(id);
@@ -2788,7 +2814,7 @@ UsdImagingDelegate::GetPrimVarConstantNames(SdfPath const& id)
 
 /* virtual */
 TfTokenVector
-UsdImagingDelegate::GetPrimVarInstanceNames(SdfPath const& id)
+UsdImagingDelegate::GetPrimvarInstanceNames(SdfPath const& id)
 {
     HD_TRACE_FUNCTION();
     SdfPath usdPath = GetPathForUsd(id);
