@@ -105,7 +105,7 @@ HdStBasisCurves::_UpdateDrawItem(HdSceneDelegate *sceneDelegate,
     _UpdateVisibility(sceneDelegate, dirtyBits);
 
     /* CONSTANT PRIMVARS, TRANSFORM AND EXTENT */
-    _PopulateConstantPrimVars(sceneDelegate, drawItem, dirtyBits);
+    _PopulateConstantPrimvars(sceneDelegate, drawItem, dirtyBits);
 
     /* INSTANCE PRIMVARS */
     if (!GetInstancerId().IsEmpty()) {
@@ -521,8 +521,8 @@ HdStBasisCurves::_PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
         sceneDelegate->GetRenderIndex().GetResourceRegistry());
 
     // The "points" attribute is expected to be in this list.
-    TfTokenVector primVarNames = GetPrimVarVertexNames(sceneDelegate);
-    TfTokenVector const& vars = GetPrimVarVaryingNames(sceneDelegate);
+    TfTokenVector primVarNames = GetPrimvarVertexNames(sceneDelegate);
+    TfTokenVector const& vars = GetPrimvarVaryingNames(sceneDelegate);
     // XXX: It's sort of a waste to do basis width interpolation by default, 
     // but in testImagingComputation there seems to be a way to initialize this
     // shader with cubic widths where widths doesn't appear in the vertex 
@@ -564,7 +564,7 @@ HdStBasisCurves::_PopulateVertexPrimVars(HdSceneDelegate *sceneDelegate,
         // changes, but we need support from the delegate.
 
         //assert name not in range.bufferArray.GetResources()
-        VtValue value = GetPrimVar(sceneDelegate, *nameIt);
+        VtValue value = GetPrimvar(sceneDelegate, *nameIt);
         if (!value.IsEmpty()) {
             if (*nameIt == HdTokens->points) {
                 // We want to validate the topology by making sure the number of
@@ -655,7 +655,7 @@ HdStBasisCurves::_PopulateElementPrimVars(HdSceneDelegate *sceneDelegate,
         boost::static_pointer_cast<HdStResourceRegistry>(
         sceneDelegate->GetRenderIndex().GetResourceRegistry());
 
-    TfTokenVector primVarNames = GetPrimVarUniformNames(sceneDelegate);
+    TfTokenVector primVarNames = GetPrimvarUniformNames(sceneDelegate);
 
     HdBufferSourceVector sources;
     sources.reserve(primVarNames.size());
@@ -664,7 +664,7 @@ HdStBasisCurves::_PopulateElementPrimVars(HdSceneDelegate *sceneDelegate,
         if (!HdChangeTracker::IsPrimVarDirty(*dirtyBits, id, *nameIt))
             continue;
 
-        VtValue value = GetPrimVar(sceneDelegate, *nameIt);
+        VtValue value = GetPrimvar(sceneDelegate, *nameIt);
         if (!value.IsEmpty()) {
             sources.push_back(HdBufferSourceSharedPtr(
                               new HdVtBufferSource(*nameIt, value)));
