@@ -110,6 +110,8 @@ public:
         float alphaThreshold; // threshold < 0 implies automatic
         ClipPlanesVector clipPlanes;
         bool enableHardwareShading;
+        // Respect USD's model:drawMode attribute...
+        bool enableUsdDrawModes;
         bool displayImagePlanes;
 
         RenderParams() : 
@@ -133,6 +135,7 @@ public:
             alphaThreshold(-1),
             clipPlanes(),
             enableHardwareShading(true),
+            enableUsdDrawModes(true),
             displayImagePlanes(true)
         {
         }
@@ -158,6 +161,7 @@ public:
                 && alphaThreshold              == other.alphaThreshold
                 && clipPlanes                  == other.clipPlanes
                 && enableHardwareShading       == other.enableHardwareShading
+                && enableUsdDrawModes          == other.enableUsdDrawModes
                 && displayImagePlanes          == other.displayImagePlanes;
         }
         bool operator!=(const RenderParams &other) const {
