@@ -279,7 +279,7 @@ HdRprim::GetInitialDirtyBitsMask() const
 }
 
 void
-HdRprim::_PopulateConstantPrimVars(HdSceneDelegate* delegate,
+HdRprim::_PopulateConstantPrimvars(HdSceneDelegate* delegate,
                                    HdDrawItem *drawItem,
                                    HdDirtyBits *dirtyBits)
 {
@@ -371,7 +371,7 @@ HdRprim::_PopulateConstantPrimVars(HdSceneDelegate* delegate,
     }
 
     if (HdChangeTracker::IsAnyPrimVarDirty(*dirtyBits, id)) {
-        TfTokenVector primVarNames = delegate->GetPrimVarConstantNames(id);
+        TfTokenVector primVarNames = delegate->GetPrimvarConstantNames(id);
         sources.reserve(sources.size()+primVarNames.size());
         for (const TfToken& name: primVarNames) {
             if (HdChangeTracker::IsPrimVarDirty(*dirtyBits, id, name)) {
