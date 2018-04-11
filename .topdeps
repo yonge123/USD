@@ -8,7 +8,6 @@ tg/simple_features/eulerFilter
 tg/simple_features/strip_namespaces
 tg/simple_features/maya_primvar_export
 tg/simple_features/maya_export_camera_shake
-tg/bugfixes/katana_instancer_infinite_recursion
 tg/bugfixes/katana_material_binding_crash_fix
 tg/bugfixes/oiio_read_with_asserts
 tg/bugfixes/ubuntu_katana_build_fix
