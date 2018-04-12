@@ -1,2 +1,2 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/bugfixes/houdini_python_module
+Subject: [usdHoudini] Fixing treeview on usd import and not installing the gusd pymodule files twice.
