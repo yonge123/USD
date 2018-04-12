@@ -62,7 +62,7 @@
 #include "pxr/usd/sdf/schema.h"
 #include "pxr/usd/sdf/types.h" 
 
-#include "pxr/base/tracelite/trace.h"
+#include "pxr/base/trace/trace.h"
 #include "pxr/usd/ar/resolver.h"
 #include "pxr/usd/ar/resolverContext.h"
 #include "pxr/usd/ar/resolverContextBinder.h"
@@ -626,36 +626,13 @@ _CreateNewLayer(const std::string &identifier)
 
 /* static */
 UsdStageRefPtr
-UsdStage::CreateNew(const std::string& identifier)
-{
-    TfAutoMallocTag2 tag("Usd", _StageTag(identifier));
-
-    if (SdfLayerRefPtr layer = _CreateNewLayer(identifier))
-        return Open(layer, _CreateAnonymousSessionLayer(layer));
-    return TfNullPtr;
-}
-
-/* static */
-UsdStageRefPtr
 UsdStage::CreateNew(const std::string& identifier,
-                    const SdfLayerHandle& sessionLayer)
+                    InitialLoadSet load)
 {
     TfAutoMallocTag2 tag("Usd", _StageTag(identifier));
 
     if (SdfLayerRefPtr layer = _CreateNewLayer(identifier))
-        return Open(layer, sessionLayer);
-    return TfNullPtr;
-}
-
-/* static */
-UsdStageRefPtr
-UsdStage::CreateNew(const std::string& identifier,
-                    const ArResolverContext& pathResolverContext)
-{
-    TfAutoMallocTag2 tag("Usd", _StageTag(identifier));
-
-    if (SdfLayerRefPtr layer = _CreateNewLayer(identifier))
-        return Open(layer, pathResolverContext);
+        return Open(layer, _CreateAnonymousSessionLayer(layer), load);
     return TfNullPtr;
 }
 
@@ -663,70 +640,103 @@ UsdStage::CreateNew(const std::string& identifier,
 UsdStageRefPtr
 UsdStage::CreateNew(const std::string& identifier,
                     const SdfLayerHandle& sessionLayer,
-                    const ArResolverContext& pathResolverContext)
+                    InitialLoadSet load)
 {
     TfAutoMallocTag2 tag("Usd", _StageTag(identifier));
 
     if (SdfLayerRefPtr layer = _CreateNewLayer(identifier))
-        return Open(layer, sessionLayer, pathResolverContext);
+        return Open(layer, sessionLayer, load);
     return TfNullPtr;
 }
 
 /* static */
 UsdStageRefPtr
-UsdStage::CreateInMemory()
+UsdStage::CreateNew(const std::string& identifier,
+                    const ArResolverContext& pathResolverContext,
+                    InitialLoadSet load)
+{
+    TfAutoMallocTag2 tag("Usd", _StageTag(identifier));
+
+    if (SdfLayerRefPtr layer = _CreateNewLayer(identifier))
+        return Open(layer, pathResolverContext, load);
+    return TfNullPtr;
+}
+
+/* static */
+UsdStageRefPtr
+UsdStage::CreateNew(const std::string& identifier,
+                    const SdfLayerHandle& sessionLayer,
+                    const ArResolverContext& pathResolverContext,
+                    InitialLoadSet load)
+{
+    TfAutoMallocTag2 tag("Usd", _StageTag(identifier));
+
+    if (SdfLayerRefPtr layer = _CreateNewLayer(identifier))
+        return Open(layer, sessionLayer, pathResolverContext, load);
+    return TfNullPtr;
+}
+
+/* static */
+UsdStageRefPtr
+UsdStage::CreateInMemory(InitialLoadSet load)
 {
     // Use usda file format if an identifier was not provided.
     //
     // In regards to "tmp.usda" below, SdfLayer::CreateAnonymous always
     // prefixes the identifier with the layer's address in memory, so using the
     // same identifier multiple times still produces unique layers.
-    return CreateInMemory("tmp.usda");
-}
-
-/* static */
-UsdStageRefPtr
-UsdStage::CreateInMemory(const std::string& identifier)
-{
-    return Open(SdfLayer::CreateAnonymous(identifier));
+    return CreateInMemory("tmp.usda", load);
 }
 
 /* static */
 UsdStageRefPtr
 UsdStage::CreateInMemory(const std::string& identifier,
-                         const ArResolverContext& pathResolverContext)
+                         InitialLoadSet load)
 {
-    // CreateAnonymous() will transform 'identifier', so don't bother
-    // using it as a tag
-    TfAutoMallocTag tag("Usd");
-    
-    return Open(SdfLayer::CreateAnonymous(identifier), pathResolverContext);
+    return Open(SdfLayer::CreateAnonymous(identifier), load);
 }
 
 /* static */
 UsdStageRefPtr
 UsdStage::CreateInMemory(const std::string& identifier,
-                         const SdfLayerHandle &sessionLayer)
+                         const ArResolverContext& pathResolverContext,
+                         InitialLoadSet load)
 {
     // CreateAnonymous() will transform 'identifier', so don't bother
     // using it as a tag
     TfAutoMallocTag tag("Usd");
     
-    return Open(SdfLayer::CreateAnonymous(identifier), sessionLayer);
+    return Open(SdfLayer::CreateAnonymous(identifier), 
+                pathResolverContext, load);
 }
 
 /* static */
 UsdStageRefPtr
 UsdStage::CreateInMemory(const std::string& identifier,
                          const SdfLayerHandle &sessionLayer,
-                         const ArResolverContext& pathResolverContext)
+                         InitialLoadSet load)
+{
+    // CreateAnonymous() will transform 'identifier', so don't bother
+    // using it as a tag
+    TfAutoMallocTag tag("Usd");
+    
+    return Open(SdfLayer::CreateAnonymous(identifier), 
+                sessionLayer, load);
+}
+
+/* static */
+UsdStageRefPtr
+UsdStage::CreateInMemory(const std::string& identifier,
+                         const SdfLayerHandle &sessionLayer,
+                         const ArResolverContext& pathResolverContext,
+                         InitialLoadSet load)
 {
     // CreateAnonymous() will transform 'identifier', so don't bother
     // using it as a tag
     TfAutoMallocTag tag("Usd");
     
     return Open(SdfLayer::CreateAnonymous(identifier),
-                sessionLayer, pathResolverContext);
+                sessionLayer, pathResolverContext, load);
 }
 
 static
@@ -1293,7 +1303,7 @@ UsdStage::_CreatePropertySpecForEditing(const UsdProperty &prop)
         for (Usd_Resolver r(&prim.GetPrimIndex()); r.IsValid(); r.NextLayer()) {
             if (SdfPropertySpecHandle propSpec = r.GetLayer()->
                 GetPropertyAtPath(r.GetLocalPath().AppendProperty(propName))) {
-                if (specToCopy = TfDynamic_cast<TypedSpecHandle>(propSpec))
+                if ((specToCopy = TfDynamic_cast<TypedSpecHandle>(propSpec)))
                     break;
                 // Type mismatch.
                 TF_RUNTIME_ERROR("Spec type mismatch.  Failed to create %s for "
@@ -1637,8 +1647,10 @@ _IsPrivateFieldKey(const TfToken& fieldKey)
         ignoredKeys.insert(SdfFieldKeys->VariantSelection);
         ignoredKeys.insert(SdfFieldKeys->VariantSetNames);
         // Clip keys.
-        ignoredKeys.insert(UsdTokens->allTokens.begin(),
-                           UsdTokens->allTokens.end());
+        {
+            auto clipFields = UsdGetClipRelatedFields();
+            ignoredKeys.insert(clipFields.begin(), clipFields.end());
+        }
         // Value keys.
         ignoredKeys.insert(SdfFieldKeys->Default);
         ignoredKeys.insert(SdfFieldKeys->TimeSamples);
@@ -1776,7 +1788,7 @@ UsdStage::_IsValidForLoad(const SdfPath& path) const
         // Lets see if any ancestor exists, if so it's safe to attempt to load.
         SdfPath parentPath = path;
         while (parentPath != SdfPath::AbsoluteRootPath()) {
-            if (curPrim = GetPrimAtPath(parentPath)) {
+            if ((curPrim = GetPrimAtPath(parentPath))) {
                 break;
             }
             parentPath = parentPath.GetParentPath();
@@ -2177,7 +2189,8 @@ UsdStage::SetPopulationMask(UsdStagePopulationMask const &mask)
 
 void
 UsdStage::ExpandPopulationMask(
-    std::function<bool (UsdRelationship const &)> const &pred)
+    std::function<bool (UsdRelationship const &)> const &relPred,
+    std::function<bool (UsdAttribute const &)> const &attrPred)
 {
     if (GetPopulationMask().IncludesSubtree(SdfPath::AbsoluteRootPath()))
         return;
@@ -2186,20 +2199,30 @@ UsdStage::ExpandPopulationMask(
     // include them in the mask.  If the mask changes, call SetPopulationMask()
     // and redo.  Continue until the mask ceases expansion.  
     while (true) {
-        SdfPathVector tgtPaths =
-            GetPseudoRoot().FindAllRelationshipTargetPaths(pred, false);
+        auto root = GetPseudoRoot();
+        SdfPathVector
+            tgtPaths = root.FindAllRelationshipTargetPaths(relPred, false),
+            connPaths = root.FindAllAttributeConnectionPaths(attrPred, false);
         
         tgtPaths.erase(remove_if(tgtPaths.begin(), tgtPaths.end(),
                                  [this](SdfPath const &path) {
                                      return _populationMask.Includes(path);
                                  }),
                        tgtPaths.end());
+        connPaths.erase(remove_if(connPaths.begin(), connPaths.end(),
+                                 [this](SdfPath const &path) {
+                                     return _populationMask.Includes(path);
+                                 }),
+                       connPaths.end());
         
-        if (tgtPaths.empty())
+        if (tgtPaths.empty() && connPaths.empty())
             break;
 
         auto popMask = GetPopulationMask();
         for (auto const &path: tgtPaths) {
+            popMask.Add(path.GetPrimPath());
+        }
+        for (auto const &path: connPaths) {
             popMask.Add(path.GetPrimPath());
         }
         SetPopulationMask(popMask);
@@ -3269,8 +3292,7 @@ UsdStage::Traverse(const Usd_PrimFlagsPredicate &predicate)
 UsdPrimRange
 UsdStage::TraverseAll()
 {
-    return UsdPrimRange::Stage(UsdStagePtr(this),
-                                  Usd_PrimFlagsPredicate::Tautology());
+    return UsdPrimRange::Stage(UsdStagePtr(this), UsdPrimAllPrimsPredicate);
 }
 
 bool
@@ -3598,6 +3620,38 @@ UsdStage::_HandleLayersDidChange(
 
     _Recompose(changes, &recomposeChanges);
 
+    // Filter out all changes to objects beneath instances and remap
+    // them to the corresponding object in the instance's master. Do this
+    // after _Recompose so that the instancing cache is up-to-date.
+    auto remapChangesToMasters = [this](_PathsToChangesMap* changes) {
+        std::vector<_PathsToChangesMap::value_type> masterChanges;
+        for (auto it = changes->begin(); it != changes->end(); ) {
+            if (_IsObjectDescendantOfInstance(it->first)) {
+                const SdfPath primIndexPath = 
+                    it->first.GetAbsoluteRootOrPrimPath();
+                for (const SdfPath& pathInMaster :
+                     _instanceCache->GetPrimsInMastersUsingPrimIndexPath(
+                         primIndexPath)) {
+                    masterChanges.emplace_back(
+                        it->first.ReplacePrefix(primIndexPath, pathInMaster), 
+                        it->second);
+                }
+                it = changes->erase(it);
+                continue;
+            }
+            ++it;
+        }
+
+        for (const auto& entry : masterChanges) {
+            auto& value = (*changes)[entry.first];
+            value.insert(value.end(), entry.second.begin(), entry.second.end());
+        }
+    };
+
+    remapChangesToMasters(&recomposeChanges);
+    remapChangesToMasters(&otherResyncChanges);
+    remapChangesToMasters(&otherInfoChanges);
+
     // Add in all other paths that are marked as resynced.
     if (recomposeChanges.empty()) {
         recomposeChanges.swap(otherResyncChanges);
@@ -3608,14 +3662,6 @@ UsdStage::_HandleLayersDidChange(
         for (auto& entry : otherResyncChanges) {
             recomposeChanges[entry.first] = std::move(entry.second);
         }
-    }
-
-    for (auto it = recomposeChanges.begin(); it != recomposeChanges.end(); ) {
-        if (_IsObjectDescendantOfInstance(it->first)) {
-            it = recomposeChanges.erase(it);
-            continue;
-        }
-        ++it;
     }
 
     // Collect the paths in otherChangedPaths that aren't under paths that
@@ -3632,14 +3678,6 @@ UsdStage::_HandleLayersDidChange(
     // Now we want to remove all elements of otherInfoChanges that are
     // prefixed by elements in recomposeChanges or beneath instances.
     _MergeAndRemoveDescendentEntries(&recomposeChanges, &otherInfoChanges);
-
-    for (auto it = otherInfoChanges.begin(); it != otherInfoChanges.end(); ) {
-        if (_IsObjectDescendantOfInstance(it->first)) {
-            it = otherInfoChanges.erase(it);
-            continue;
-        }
-        ++it;
-    }
 
     UsdStageWeakPtr self(this);
 
@@ -3689,22 +3727,6 @@ UsdStage::_Recompose(const PcpChanges &changes,
     }
 }
 
-// Inserts entry into changedPaths at dstPath and merges in any values from
-// entry at srcPath.
-template <class ChangedPaths>
-static void 
-_MergeEntry(ChangedPaths* changedPaths, 
-            const SdfPath& dstPath, const SdfPath& srcPath)
-{
-    auto& dstValue = (*changedPaths)[dstPath];
-
-    auto srcIt = changedPaths->find(srcPath);
-    if (srcIt != changedPaths->end()) {
-        const auto& srcValue = srcIt->second;
-        dstValue.insert(dstValue.end(), srcValue.begin(), srcValue.end());
-    }
-}
-
 template <class T>
 void 
 UsdStage::_RecomposePrims(const PcpChanges &changes,
@@ -3712,8 +3734,25 @@ UsdStage::_RecomposePrims(const PcpChanges &changes,
 {
     changes.Apply();
 
-    const PcpChanges::CacheChanges &cacheChanges = changes.GetCacheChanges();
+    // Process layer stack changes.
+    //
+    // Pcp recomputes layer stacks immediately upon the call to 
+    // PcpChanges::Apply, which causes composition errors that occur
+    // during this process to not be reported in _ComposePrimIndexesInParallel.
+    // Walk through all modified layer stacks and report their errors here.
+    const PcpChanges::LayerStackChanges &layerStackChanges = 
+        changes.GetLayerStackChanges();
 
+    for (const auto& layerStackChange : layerStackChanges) {
+        const PcpLayerStackPtr& layerStack = layerStackChange.first;
+        const PcpErrorVector& errors = layerStack->GetLocalErrors();
+        if (!errors.empty()) {
+            _ReportPcpErrors(errors, "Recomposing stage");
+        }
+    }
+
+    // Process composed prim changes.
+    const PcpChanges::CacheChanges &cacheChanges = changes.GetCacheChanges();
     if (!cacheChanges.empty()) {
         const PcpCacheChanges &ourChanges = cacheChanges.begin()->second;
 
@@ -3788,7 +3827,7 @@ UsdStage::_RecomposePrims(const PcpChanges &changes,
     _ComposePrimIndexesInParallel(
         primPathsToRecompose, _IncludeNewPayloadsIfAncestorWasIncluded,
         "Recomposing stage", &instanceChanges);
-
+    
     // Determine what instance master prims on this stage need to
     // be recomposed due to instance prim index changes.
     typedef TfHashMap<SdfPath, SdfPath, SdfPath::Hash> _MasterToPrimIndexMap;
@@ -3800,24 +3839,20 @@ UsdStage::_RecomposePrims(const PcpChanges &changes,
         for (const SdfPath& masterPath :
                  _instanceCache->GetPrimsInMastersUsingPrimIndexPath(path)) {
             masterToPrimIndexMap[masterPath] = path;
-            _MergeEntry(pathsToRecompose, masterPath, path);
+            (*pathsToRecompose)[masterPath];
         }
     }
 
     for (size_t i = 0; i != instanceChanges.newMasterPrims.size(); ++i) {
         masterToPrimIndexMap[instanceChanges.newMasterPrims[i]] =
             instanceChanges.newMasterPrimIndexes[i];
-        _MergeEntry(pathsToRecompose, 
-            instanceChanges.newMasterPrims[i], 
-            instanceChanges.newMasterPrimIndexes[i]);
+        (*pathsToRecompose)[instanceChanges.newMasterPrims[i]];
     }
 
     for (size_t i = 0; i != instanceChanges.changedMasterPrims.size(); ++i) {
         masterToPrimIndexMap[instanceChanges.changedMasterPrims[i]] =
             instanceChanges.changedMasterPrimIndexes[i];
-        _MergeEntry(pathsToRecompose, 
-            instanceChanges.changedMasterPrims[i], 
-            instanceChanges.changedMasterPrimIndexes[i]);
+        (*pathsToRecompose)[instanceChanges.changedMasterPrims[i]];
     }
 
     if (pathsToRecompose->size() != origNumPathsToRecompose) {

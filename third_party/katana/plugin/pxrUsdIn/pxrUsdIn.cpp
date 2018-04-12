@@ -274,24 +274,6 @@ public:
             }
 
             //
-            // Pass along the prim's velocityScale; if it isn't authored, let the
-            // inherited value flow through.
-            //
-
-            float velocityScale = FnKat::FloatAttribute(
-                opArgs.getChildByName("velocityScale")).getValue(1.0f, false);
-            auto motionAPI = UsdGeomMotionAPI(prim);
-            UsdAttribute velocityScaleAttr = motionAPI.GetVelocityScaleAttr();
-            if (velocityScaleAttr and velocityScaleAttr.HasAuthoredValueOpinion() and
-                velocityScaleAttr.Get(&velocityScale, privateData->GetCurrentTime()))
-            {
-                opArgs = FnKat::GroupBuilder()
-                    .update(opArgs)
-                    .set("velocityScale", FnKat::FloatAttribute(velocityScale))
-                    .build();
-            }
-
-            //
             // Compute and set the 'bound' attribute.
             //
             // Note, bound computation is handled here because bounding
@@ -519,12 +501,15 @@ public:
             if (masterMapping.isValid() && masterMapping.getNumberOfChildren())
             {
                 FnGeolibServices::StaticSceneCreateOpArgsBuilder sscb(false);
-
-                // By default there are collisions between the locations where the masters
-                // are written, so we are collecting them into a map based on the location parent.
-                // Where the first element is the list of prim paths and the second one is the
-                // list of prim names. So creating an array of strings will be simpler.
-                std::map<std::string, std::pair<std::vector<std::string>, std::vector<std::string>>> locationParents;
+                
+                struct usdPrimInfo
+                {
+                    std::vector<std::string> usdPrimPathValues;
+                    std::vector<std::string> usdPrimNameValues;
+                };
+                
+                std::map<std::string, usdPrimInfo> primInfoPerLocation;
+                
                 for (size_t i = 0, e = masterMapping.getNumberOfChildren();
                         i != e; ++i)
                 {
@@ -546,19 +531,22 @@ public:
                             FnGeolibUtil::Path::GetLeafName(katanaPath);
                     std::string locationParent =
                             FnGeolibUtil::Path::GetLocationParent(katanaPath);
-
-                    auto& elem = locationParents[locationParent];
-                    elem.first.push_back(masterName);
-                    elem.second.push_back(leafName);
+                    
+                    auto & entry = primInfoPerLocation[locationParent];
+                    
+                    entry.usdPrimPathValues.push_back(masterName);
+                    entry.usdPrimNameValues.push_back(leafName);
                 }
-
-                for (const auto& locationParent: locationParents) {
-                    const auto& elem = locationParent.second;
-
-                    sscb.setAttrAtLocation(locationParent.first, "usdPrimPath",
-                        FnKat::StringAttribute(elem.first, 1));
-                    sscb.setAttrAtLocation(locationParent.first, "usdPrimName",
-                        FnKat::StringAttribute(elem.second, 1));
+                
+                for (const auto & I : primInfoPerLocation)
+                {
+                    const auto & locationParent = I.first;
+                    const auto & entry = I.second;
+                    
+                    sscb.setAttrAtLocation(locationParent, "usdPrimPath",
+                            FnKat::StringAttribute(entry.usdPrimPathValues));
+                    sscb.setAttrAtLocation(locationParent, "usdPrimName",
+                            FnKat::StringAttribute(entry.usdPrimNameValues));
                 }
                 
                 FnKat::GroupAttribute childAttrs =
@@ -1114,35 +1102,35 @@ public:
                 .del("usdPrimName")
                 .build();
 
-            // In case of instane masters the prims and prim names parameter can
-            // hold multiple values.
-            const auto prims = primPathAttr.getNearestSample(0.0f);
-            const auto primNames = primNameAttr.getNearestSample(0.0f);
-
-            const auto primCount = prims.size();
-            const auto primNameCount = primNames.size();
-
-            for (auto primId = decltype(primCount){0}; primId < primCount; ++primId)
+            
+            auto usdPrimPathValues = primPathAttr.getNearestSample(0);
+            
+            
+            for (size_t i = 0; i < usdPrimPathValues.size(); ++i)
             {
-                std::string primPath = prims[primId];
-
-                if (!primPath.empty())
+                std::string primPath(usdPrimPathValues[i]);
+                if (usdPrimPathValues.empty())
                 {
-                    // Get the usd prim at the given source path.
-                    //
-                    UsdPrim prim = usdInArgs->GetStage()->GetPrimAtPath(
+                    continue;
+                }
+                
+                // Get the usd prim at the given source path.
+                //
+                UsdPrim prim = usdInArgs->GetStage()->GetPrimAtPath(
                         SdfPath(primPath));
 
-                    // Get the desired name for the usd prim; if one isn't provided,
-                    // ask the prim directly.
-                    //
-                    std::string nameToUse = prim.GetName();
-                    if (primId < primNameCount) {
-                        std::string primName = primNames[primId];
-                        if (!primName.empty())
-                        {
-                            nameToUse = primName;
-                        }
+                // Get the desired name for the usd prim; if one isn't provided,
+                // ask the prim directly.
+                //
+                std::string nameToUse = prim.GetName();
+                if (primNameAttr.getNumberOfValues() > static_cast<int64_t>(i))
+                {
+                    auto primNameAttrValues = primNameAttr.getNearestSample(0);
+                    
+                    std::string primName = primNameAttrValues[i];
+                    if (!primName.empty())
+                    {
+                        nameToUse = primName;
                     }
 
                     // XXX In order for the prim's material hierarchy to get built

@@ -23,6 +23,31 @@ void HdStImagePlane::Sync(
 
     auto calcReprName = _GetReprName(reprName, forcedRepr);
     _UpdateRepr(delegate, calcReprName, dirtyBits);
+
+    // Loading the texture
+    SdfPath const& id = GetId();
+    //HdResourceRegistrySharedPtr const &resourceRegistry = 
+    //    delegate->GetRenderIndex().GetResourceRegistry();
+
+    HdTextureResource::ID texID = delegate->GetTextureResourceID(id);
+    {
+        HdInstance<HdTextureResource::ID, HdTextureResourceSharedPtr> 
+            texInstance;
+        const HdResourceRegistrySharedPtr& resourceRegistry = 
+            delegate->GetRenderIndex().GetResourceRegistry();
+        std::unique_lock<std::mutex> regLock =
+            resourceRegistry->RegisterTextureResource(texID, &texInstance);
+
+        if (texInstance.IsFirstInstance()) {
+            _textureResource = delegate->GetTextureResource(id);
+            texInstance.SetValue(_textureResource);
+        } else {
+            // Take a reference to the texture to ensure it lives as long
+            // as this class.
+            _textureResource = texInstance.GetValue();
+        }
+    }
+
     *dirtyBits &= ~HdChangeTracker::AllSceneDirtyBits;
 }
 
@@ -72,7 +97,7 @@ HdStImagePlane::_UpdateDrawItem(
 
     _UpdateVisibility(sceneDelegate, dirtyBits);
     // TODO: replace this, since we have quite special needs.
-    _PopulateConstantPrimVars(sceneDelegate, drawItem, dirtyBits);
+    _PopulateConstantPrimvars(sceneDelegate, drawItem, dirtyBits);
     // TODO: we need to figure out what's required here
     // essentially we don't need any materials here, imagePlane.glslfx should
     // be able to handle everything.
@@ -90,19 +115,19 @@ HdStImagePlane::_UpdateDrawItem(
     // to control the texture mapping.
     const auto& id = GetId();
     if (HdChangeTracker::IsAnyPrimVarDirty(*dirtyBits, id)) {
-        _PopulateVertexPrimVars(id, sceneDelegate, drawItem, dirtyBits);
+        _PopulateVertexPrimvars(id, sceneDelegate, drawItem, dirtyBits);
     }
 
     if (*dirtyBits & HdChangeTracker::DirtyTopology) {
         _PopulateTopology(id, sceneDelegate, drawItem, dirtyBits);
     }
 
-    // VertexPrimVar may be null, if there are no points in the prim.
+    // VertexPrimvar may be null, if there are no points in the prim.
     TF_VERIFY(drawItem->GetConstantPrimVarRange());
 }
 
 void
-HdStImagePlane::_PopulateVertexPrimVars(
+HdStImagePlane::_PopulateVertexPrimvars(
     const SdfPath& id,
     HdSceneDelegate* sceneDelegate,
     HdStDrawItem* drawItem,
@@ -112,8 +137,8 @@ HdStImagePlane::_PopulateVertexPrimVars(
         boost::static_pointer_cast<HdStResourceRegistry>(
             sceneDelegate->GetRenderIndex().GetResourceRegistry());
 
-    TfTokenVector primVarNames = GetPrimVarVertexNames(sceneDelegate);
-    const TfTokenVector& vars = GetPrimVarVaryingNames(sceneDelegate);
+    TfTokenVector primVarNames = GetPrimvarVertexNames(sceneDelegate);
+    const TfTokenVector& vars = GetPrimvarVaryingNames(sceneDelegate);
     primVarNames.insert(primVarNames.end(), vars.begin(), vars.end());
 
     HdBufferSourceVector sources;
@@ -126,7 +151,7 @@ HdStImagePlane::_PopulateVertexPrimVars(
             continue;
         }
 
-        auto value = GetPrimVar(sceneDelegate, nameIt);
+        auto value = GetPrimvar(sceneDelegate, nameIt);
 
         if (!value.IsEmpty()) {
             if (nameIt == HdTokens->points) {

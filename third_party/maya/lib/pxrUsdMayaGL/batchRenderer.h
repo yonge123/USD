@@ -24,7 +24,7 @@
 #ifndef PXRUSDMAYAGL_BATCH_RENDERER_H
 #define PXRUSDMAYAGL_BATCH_RENDERER_H
 
-/// \file batchRenderer.h
+/// \file pxrUsdMayaGL/batchRenderer.h
 
 #include "pxr/pxr.h"
 #include "pxrUsdMayaGL/api.h"
@@ -36,10 +36,10 @@
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/gf/vec3f.h"
 #include "pxr/base/gf/vec4d.h"
-#include "pxr/base/tf/debug.h"
 #include "pxr/base/tf/singleton.h"
 #include "pxr/imaging/hd/engine.h"
 #include "pxr/imaging/hd/renderIndex.h"
+#include "pxr/imaging/hd/rprimCollection.h"
 #include "pxr/imaging/hdSt/renderDelegate.h"
 #include "pxr/imaging/hdx/intersector.h"
 #include "pxr/imaging/hdx/selectionTracker.h"
@@ -49,6 +49,7 @@
 #include <maya/MBoundingBox.h>
 #include <maya/MDrawContext.h>
 #include <maya/MDrawRequest.h>
+#include <maya/MObjectHandle.h>
 #include <maya/MPxSurfaceShapeUI.h>
 #include <maya/MSelectionContext.h>
 #include <maya/MTypes.h>
@@ -62,12 +63,6 @@
 
 
 PXR_NAMESPACE_OPEN_SCOPE
-
-
-TF_DEBUG_CODES(
-    PXRUSDMAYAGL_QUEUE_INFO,
-    PXRUSDMAYAGL_SHAPE_ADAPTER_BUCKETING
-);
 
 
 /// UsdMayaGLBatchRenderer is a singleton that shapes can use to get consistent
@@ -186,6 +181,18 @@ public:
     PXRUSDMAYAGL_API
     static void Reset();
 
+    /// Replaces the contents of the given \p collection with \p dagPath, if
+    /// a shape adapter for \p dagPath has already been batched. Returns true
+    /// if successful. Otherwise, does not modify the \p collection, and returns
+    /// false.
+    /// Note that the VP2 shape adapters are searched first, followed by the
+    /// Legacy shape adapters. You cannot rely on the shape adapters being
+    /// associated with a specific viewport.
+    PXRUSDMAYAGL_API
+    bool PopulateCustomCollection(
+            const MDagPath& dagPath,
+            HdRprimCollection& collection);
+
     /// Render batch or bounds in the legacy viewport based on \p request
     PXRUSDMAYAGL_API
     void Draw(const MDrawRequest& request, M3dView& view);
@@ -195,6 +202,19 @@ public:
     void Draw(
             const MHWRender::MDrawContext& context,
             const MUserData* userData);
+
+    /// Render the contents of the given custom collection (previously obtained
+    /// via PopulateCustomCollection).
+    /// The caller is responsible for ensuring that an appropriate OpenGL
+    /// context is available; this function is not appropriate for drawing into
+    /// the native Maya viewport.
+    PXRUSDMAYAGL_API
+    void DrawCustomCollection(
+            const HdRprimCollection& collection,
+            const GfMatrix4d& viewMatrix,
+            const GfMatrix4d& projectionMatrix,
+            const GfVec4d& viewport,
+            const PxrMayaHdRenderParams& params = PxrMayaHdRenderParams());
 
     /// Tests the object from the given shape adapter for intersection with
     /// a given view using the legacy viewport.
@@ -221,6 +241,22 @@ public:
             const bool singleSelection,
             GfVec3f* hitPoint);
 
+    /// Tests the contents of the given custom collection (previously obtained
+    /// via PopulateCustomCollection) for intersection with the current OpenGL
+    /// context.
+    /// The caller is responsible for ensuring that an appropriate OpenGL
+    /// context is available; this function is not appropriate for interesecting
+    /// using the Maya viewport.
+    ///
+    /// \p hitPoint yields the point of intersection if \c true is returned.
+    ///
+    PXRUSDMAYAGL_API
+    bool TestIntersectionCustomCollection(
+            const HdRprimCollection& collection,
+            const GfMatrix4d& viewMatrix,
+            const GfMatrix4d& projectionMatrix,
+            GfVec3d* hitPoint);
+
 private:
 
     friend class TfSingleton<UsdMayaGLBatchRenderer>;
@@ -240,6 +276,19 @@ private:
     /// Allow shape adapters access to the soft selection helper.
     friend PxrMayaHdShapeAdapter;
 
+    typedef std::pair<PxrMayaHdRenderParams, HdRprimCollectionVector>
+            _RenderItem;
+
+    /// Private helper function to render the given list of render items.
+    /// Note that this doesn't set lighting, so if you need to update the
+    /// lighting from the scene, you need to do that beforehand.
+    void _Render(
+            const GfMatrix4d& worldToViewMatrix,
+            const GfMatrix4d& projectionMatrix,
+            const GfVec4d& viewport,
+            const std::vector<_RenderItem>& items,
+            const bool gammaCorrect = false);
+
     /// Call to render all queued batches. May be called safely without
     /// performance hit when no batches are queued.
     void _RenderBatches(
@@ -247,6 +296,16 @@ private:
             const GfMatrix4d& worldToViewMatrix,
             const GfMatrix4d& projectionMatrix,
             const GfVec4d& viewport);
+
+    /// Private helper function for testing intersection on a single collection
+    /// only.
+    /// \returns True if there was at least one hit. All hits are returned in
+    /// the outHitSet.
+    bool _TestIntersection(
+            const HdRprimCollection& rprimCollection,
+            HdxIntersector::Params queryParams,
+            const bool singleSelection,
+            HdxIntersector::HitSet* outHitSet);
 
     /// Handler for Maya Viewport 2.0 end render notifications.
     ///
@@ -336,6 +395,22 @@ private:
 
     _ShapeAdapterBucketsMap _legacyShapeAdapterBuckets;
 
+    /// Mapping of Maya object handles to their shape adapters.
+    /// This is a "secondary" container for storing shape adapters.
+    struct _MObjectHandleHash {
+        unsigned long operator()(const MObjectHandle& handle) const {
+            return handle.hashCode();
+        }
+    };
+    typedef std::unordered_map<MObjectHandle, PxrMayaHdShapeAdapter*,
+            _MObjectHandleHash> _ShapeAdapterHandleMap;
+
+    /// We maintain separate object handle path maps for Viewport 2.0 and the
+    /// legacy viewport.
+    _ShapeAdapterHandleMap _shapeAdapterHandleMap;
+
+    _ShapeAdapterHandleMap _legacyShapeAdapterHandleMap;
+
     /// We detect and store whether Viewport 2.0 is using the legacy
     /// viewport-based selection mechanism (i.e. whether the
     /// MAYA_VP2_USE_VP1_SELECTION environment variable is enabled) when the
@@ -344,6 +419,22 @@ private:
     /// M3dView in which the selection is occurring to determine which bucket
     /// map of shape adapters we should use to compute the selection.
     bool _viewport2UsesLegacySelection;
+
+    /// Gets the vector of rprim collections to use for intersection testing.
+    ///
+    /// As an optimization for when we do not need to do intersection testing
+    /// against all objects in depth (i.e. with single selections or when the
+    /// PXRMAYAHD_ENABLE_DEPTH_SELECTION env setting is disabled), we use a
+    /// single HdRprimCollection that includes all shape adapters/delegates
+    /// registered with the batch renderer for the active viewport renderer
+    /// (legacy viewport or Viewport 2.0), since we're only interested in the
+    /// single nearest hit in depth for a particular pixel. This is much faster
+    /// than testing against each shape adapter's collection individually.
+    /// Otherwise, we test each shape adapter's collection individually so that
+    /// occluded shapes will be included in the selection.
+    HdRprimCollectionVector _GetIntersectionRprimCollections(
+            _ShapeAdapterBucketsMap& bucketsMap,
+            const bool useDepthSelection) const;
 
     /// Populates the selection results using the given parameters by
     /// performing intersection tests against all of the shapes in the given
@@ -388,6 +479,11 @@ private:
     SdfPath _rootId;
     SdfPath _legacyViewportPrefix;
     SdfPath _viewport2Prefix;
+
+    /// The batch renderer maintains a collection per viewport renderer that
+    /// includes all shape adapters registered for that renderer.
+    HdRprimCollection _legacyViewportRprimCollection;
+    HdRprimCollection _viewport2RprimCollection;
 
     PxrMayaHdSceneDelegateSharedPtr _taskDelegate;
 

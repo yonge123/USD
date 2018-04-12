@@ -125,8 +125,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
     // Make sure the file name is a valid one with a proper USD extension.
     const std::string iFileExtension = TfStringGetSuffix(iFileName, '.');
     if (SdfLayer::IsAnonymousLayerIdentifier(iFileName) ||
-            iFileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault || 
-            iFileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionASCII || 
+            iFileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionDefault ||
+            iFileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionASCII ||
             iFileExtension == PxrUsdMayaTranslatorTokens->UsdFileExtensionCrate) {
         mFileName = iFileName;
     } else {
@@ -152,7 +152,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
     // Set time range for the USD file
     mJobCtx.mStage->SetStartTimeCode(startTime);
     mJobCtx.mStage->SetEndTimeCode(endTime);
-    
+
     mModelKindWriter.Reset();
 
     // Setup the requested render layer mode:
@@ -268,7 +268,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
             // children should be included in the export.
             curLeafDagPath = curDagPath;
         } else if (!_HasParent(curDagPath, curLeafDagPath)) {
-            // The lowest-level, non-underworld dagNode from the dagPath is not one of the arg dagPaths, so prune
+            // This dagPath is not a child (or in the underworld of a child) of one of the arg dagPaths, so prune
             itDag.prune();
             continue;
         }
@@ -327,7 +327,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
 
     PxrUsdMayaExportParams exportParams;
     exportParams.mergeTransformAndShape = mJobCtx.mArgs.mergeTransformAndShape;
-    exportParams.exportCollectionBasedBindings = 
+    exportParams.exportCollectionBasedBindings =
             mJobCtx.mArgs.exportCollectionBasedBindings;
     exportParams.stripNamespaces = mJobCtx.mArgs.stripNamespaces;
     exportParams.overrideRootPath = mJobCtx.mArgs.usdModelRootOverridePath;
@@ -335,9 +335,9 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
     exportParams.parentScope = mJobCtx.mArgs.getParentScope();
 
     // Writing Materials/Shading
-    exportParams.materialCollectionsPath = 
-            mJobCtx.mArgs.exportMaterialCollections ? 
-            SdfPath(mJobCtx.mArgs.materialCollectionsPath) : 
+    exportParams.materialCollectionsPath =
+            mJobCtx.mArgs.exportMaterialCollections ?
+            SdfPath(mJobCtx.mArgs.materialCollectionsPath) :
             SdfPath::EmptyPath();
 
     PxrUsdMayaTranslatorMaterial::ExportShadingEngines(
@@ -346,7 +346,16 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
                 mDagPathToUsdPathMap,
                 exportParams);
 
+    // We shouldn't be creating new instance masters after this point, and we
+    // want to cleanup the InstanceSources prim before writing model hierarchy.
+    mJobCtx.processInstances();
+
     if (!mModelKindWriter.MakeModelHierarchy(mJobCtx.mStage)) {
+        return false;
+    }
+
+    if (!mJobCtx.getSkelBindingsWriter().WriteSkelBindings(mJobCtx.mStage,
+        mJobCtx.mArgs.stripNamespaces)) {
         return false;
     }
 
@@ -354,7 +363,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
     mChasers.clear();
     PxrUsdMayaChaserRegistry::FactoryContext ctx(mJobCtx.mStage, mDagPathToUsdPathMap, mJobCtx.mArgs);
     for (const std::string& chaserName : mJobCtx.mArgs.chaserNames) {
-        if (PxrUsdMayaChaserRefPtr fn = 
+        if (PxrUsdMayaChaserRefPtr fn =
                 PxrUsdMayaChaserRegistry::GetInstance().Create(chaserName, ctx)) {
             mChasers.push_back(fn);
         }
@@ -374,25 +383,26 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
     return true;
 }
 
-//
-// Inputs: 
-//  Frame to process
 void usdWriteJob::evalJob(double iFrame)
 {
-    for ( MayaPrimWriterPtr const & primWriter :  mJobCtx.mMayaPrimWriterList) {
-        UsdTimeCode usdTime(iFrame);
-        primWriter->write(usdTime);
+    const UsdTimeCode usdTime(iFrame);
+
+    for (const MayaPrimWriterPtr& primWriter : mJobCtx.mMayaPrimWriterList) {
+        const UsdPrim& usdPrim = primWriter->getPrim();
+        if (usdPrim) {
+            primWriter->write(usdTime);
+        }
     }
-    for (PxrUsdMayaChaserRefPtr& chaser: mChasers) {
+
+    for (PxrUsdMayaChaserRefPtr& chaser : mChasers) {
         chaser->ExportFrame(iFrame);
     }
+
     perFrameCallback(iFrame);
 }
 
-
 void usdWriteJob::endJob()
 {
-    mJobCtx.processInstances();
     UsdPrimSiblingRange usdRootPrims = mJobCtx.mStage->GetPseudoRoot().GetChildren();
 
     // Write Variants (to first root prim path)
@@ -408,7 +418,7 @@ void usdWriteJob::endJob()
         !mJobCtx.mArgs.usdModelRootOverridePath.IsEmpty()) {
             // Get RenderLayers
             //   mArgs.usdModelRootOverridePath:
-            //     Require mArgs.usdModelRootOverridePath to be set so that 
+            //     Require mArgs.usdModelRootOverridePath to be set so that
             //     the variants are put under a UsdPrim that references a BaseModel
             //     prim that has all of the geometry, transforms, and other details.
             //     This needs to be done since "local" values have stronger precedence
@@ -425,7 +435,7 @@ void usdWriteJob::endJob()
     }
 
     postCallback();
-    
+
     // Unfortunately, MGlobal::isZAxisUp() is merely session state that does
     // not get recorded in Maya files, so we cannot rely on it being set
     // properly.  Since "Y" is the more common upAxis, we'll just use
@@ -528,12 +538,12 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
         // Determine default variant. Currently unsupported
         //MPlug renderLayerDisplayOrderPlug = renderLayerFn.findPlug("displayOrder", true);
         //int renderLayerDisplayOrder = renderLayerDisplayOrderPlug.asShort();
-                    
+
         // The Maya default RenderLayer is also the default modeling variant
         if (mRenderLayerObjs[ir] == MFnRenderLayer::defaultRenderLayer()) {
             defaultModelingVariant=variantName;
         }
-        
+
         // Make the renderlayer being looped the current one
         MGlobal::executeCommand(MString("editRenderLayerGlobals -currentRenderLayer ")+
                                         renderLayerName, false, false);
@@ -551,7 +561,7 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
             MDagPath dagPath;
             dagFn.getPath(dagPath);
             dagPath.extendToShape();
-            SdfPath usdPrimPath; 
+            SdfPath usdPrimPath;
             if (!TfMapLookup(mDagPathToUsdPathMap, dagPath, &usdPrimPath)) {
                 continue;
             }
@@ -592,7 +602,7 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
                         }
                     }
                 }
-                // Now deactivate the prims (done outside of the UsdPrimRange 
+                // Now deactivate the prims (done outside of the UsdPrimRange
                 // so not to modify the iterator while in the loop)
                 for ( UsdPrim const& prim : primsToDeactivate ) {
                     prim.SetActive(false);

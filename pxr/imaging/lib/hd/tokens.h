@@ -45,12 +45,12 @@ PXR_NAMESPACE_OPEN_SCOPE
     (color)                                     \
     (collection)                                \
     (computeShader)                             \
-    (constantPrimVars)                          \
     (cubic)                                     \
     (culledInstanceIndices)                     \
     (cullStyle)                                 \
     (doubleSided)                               \
     (dispatchBuffer)                            \
+    (dispatchCount)                             \
     (drawDispatch)                              \
     (drawCommandIndex)                          \
     (drawIndirect)                              \
@@ -74,7 +74,6 @@ PXR_NAMESPACE_OPEN_SCOPE
     (instancer)                                 \
     (instancerTransform)                        \
     (instancerTransformInverse)                 \
-    (instancePrimVars)                          \
     (instanceCountInput)                        \
     (instanceIndices)                           \
     (instanceIndexBase)                         \
@@ -212,6 +211,8 @@ PXR_NAMESPACE_OPEN_SCOPE
     (domeLight)                                 \
     (rectLight)                                 \
     (sphereLight)                               \
+    /* Sprims ExtComputations */                \
+    (extComputation)                            \
                                                 \
     /* Bprims */                                \
     (texture)

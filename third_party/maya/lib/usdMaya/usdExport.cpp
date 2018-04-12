@@ -77,9 +77,9 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-vis" , "-exportVisibility", MSyntax::kBoolean);
     syntax.addFlag("-sn" , "-stripNamespaces", MSyntax::kBoolean);
     syntax.addFlag("-rt" , "-root", MSyntax::kString);
-    syntax.addFlag("-psc", "-parentScope", MSyntax::kString);
     syntax.addFlag("-rt" , "-root", MSyntax::kString);
     syntax.addFlag("-skn" , "-exportSkin", MSyntax::kString);
+    syntax.addFlag("-psc" , "-parentScope", MSyntax::kString);
 
     syntax.addFlag("-fr" , "-frameRange"   , MSyntax::kDouble, MSyntax::kDouble);
     syntax.addFlag("-ac" , "-asClip"   , MSyntax::kBoolean);
@@ -274,13 +274,6 @@ try
         }
     }
 
-    if (argData.isFlagSet("parentScope")) {
-        MString stringVal;
-        argData.getFlagArgument("parentScope", 0,
-                                stringVal);
-        jobArgs.setParentScope(stringVal.asChar());
-    }
-
     if (argData.isFlagSet("exportSkin")) {
         MString stringVal;
 
@@ -302,6 +295,13 @@ try
                     "'-exportSkin none'");
             jobArgs.exportSkin = false;
         }
+    }
+
+    if (argData.isFlagSet("parentScope")) {
+        MString stringVal;
+        argData.getFlagArgument("parentScope", 0,
+                                stringVal);
+        jobArgs.setParentScope(stringVal.asChar());
     }
 
     bool append = false;
@@ -496,10 +496,10 @@ try
     // Create stage and process static data
     if (usdWriteJob.beginJob(fileName, append, startTime, endTime)) {
         if (jobArgs.exportAnimation) {
-            MTime oldCurTime = MAnimControl::currentTime();
-            for (double i=startTime;i<(endTime+1);i++) {
+            const MTime oldCurTime = MAnimControl::currentTime();
+            for (double i = startTime; i < (endTime + 1.0); ++i) {
                 for (double sampleTime : frameSamples) {
-                    double actualTime = i + sampleTime;
+                    const double actualTime = i + sampleTime;
                     if (verbose) {
                         MString info;
                         info = actualTime;
@@ -513,7 +513,8 @@ try
                     }
                 }
             }
-            // set the time back
+
+            // Set the time back.
             MGlobal::viewFrame(oldCurTime);
         }
 

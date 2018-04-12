@@ -22,11 +22,12 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/imaging/glf/glew.h"
+#include "pxr/imaging/glf/contextCaps.h"
+
 #include "pxr/imaging/hdSt/resourceBinder.h"
 #include "pxr/imaging/hdSt/glConversions.h"
 #include "pxr/imaging/hdSt/bufferArrayRangeGL.h"
 #include "pxr/imaging/hdSt/bufferResourceGL.h"
-#include "pxr/imaging/hdSt/renderContextCaps.h"
 #include "pxr/imaging/hdSt/resourceGL.h"
 #include "pxr/imaging/hdSt/shaderCode.h"
 #include "pxr/imaging/hdSt/drawItem.h"
@@ -54,6 +55,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     (ivec2)
     (ivec3)
     (ivec4)
+    (constantPrimvars)
     (primitiveParam)
 );
 
@@ -75,6 +77,8 @@ namespace {
             case HdBinding::SSBO:
                 return HdBinding(HdBinding::SSBO, ssboLocation++);
                 break;
+            case HdBinding::BINDLESS_SSBO_RANGE:
+                return HdBinding(HdBinding::BINDLESS_SSBO_RANGE, uniformLocation++);
             case HdBinding::TBO:
                 return HdBinding(HdBinding::TBO, uniformLocation++, textureUnit++);
                 break;
@@ -140,11 +144,11 @@ HdSt_ResourceBinder::ResolveBindings(HdStDrawItem const *drawItem,
 
     // GL context caps
     const bool ssboEnabled
-        = HdStRenderContextCaps::GetInstance().shaderStorageBufferEnabled;
+        = GlfContextCaps::GetInstance().shaderStorageBufferEnabled;
     const bool bindlessUniformEnabled
-        = HdStRenderContextCaps::GetInstance().bindlessBufferEnabled;
+        = GlfContextCaps::GetInstance().bindlessBufferEnabled;
     const bool bindlessTextureEnabled
-        = HdStRenderContextCaps::GetInstance().bindlessTextureEnabled;
+        = GlfContextCaps::GetInstance().bindlessTextureEnabled;
 
     HdBinding::Type arrayBufferBindingType = HdBinding::TBO;  // 3.0
     if (bindlessUniformEnabled) {
@@ -187,7 +191,7 @@ HdSt_ResourceBinder::ResolveBindings(HdStDrawItem const *drawItem,
     // constant primvar (per-object)
     HdBinding constantPrimVarBinding =
                 locator.GetBinding(structBufferBindingType,
-                                   HdTokens->constantPrimVars);
+                                   _tokens->constantPrimvars);
 
     if (HdBufferArrayRangeSharedPtr constantBar_ =
         drawItem->GetConstantPrimVarRange()) {
@@ -195,7 +199,7 @@ HdSt_ResourceBinder::ResolveBindings(HdStDrawItem const *drawItem,
         HdStBufferArrayRangeGLSharedPtr constantBar =
             boost::static_pointer_cast<HdStBufferArrayRangeGL>(constantBar_);
 
-        MetaData::StructBlock sblock(HdTokens->constantPrimVars);
+        MetaData::StructBlock sblock(_tokens->constantPrimvars);
         TF_FOR_ALL (it, constantBar->GetResources()) {
             HdTupleType valueType = it->second->GetTupleType();
             TfToken glType = HdStGLConversions::GetGLSLTypename(valueType.type);
@@ -216,7 +220,7 @@ HdSt_ResourceBinder::ResolveBindings(HdStDrawItem const *drawItem,
     }
 
      // constant primvars are interleaved into single struct.
-    _bindingMap[HdTokens->constantPrimVars] = constantPrimVarBinding;
+    _bindingMap[_tokens->constantPrimvars] = constantPrimVarBinding;
 
     // instance primvar (per-instance)
     int instancerNumLevels = drawItem->GetInstancePrimVarNumLevels();
@@ -613,6 +617,11 @@ HdSt_ResourceBinder::ResolveComputeBindings(
         return;
     }
 
+    // GL context caps
+    HdBinding::Type bindingType =
+        (GlfContextCaps::GetInstance().bindlessBufferEnabled
+         ? HdBinding::BINDLESS_SSBO_RANGE : HdBinding::SSBO);
+
     // binding assignments
     BindingLocator locator;
 
@@ -621,7 +630,7 @@ HdSt_ResourceBinder::ResolveComputeBindings(
     
     // read-write per prim data
     for (HdBufferSpec const& spec: readWriteBufferSpecs) {
-        HdBinding binding = locator.GetBinding(HdBinding::SSBO, spec.name);
+        HdBinding binding = locator.GetBinding(bindingType, spec.name);
         _bindingMap[spec.name] = binding;
         metaDataOut->computeReadWriteData[binding] =
             MetaData::PrimVar(spec.name,
@@ -631,7 +640,7 @@ HdSt_ResourceBinder::ResolveComputeBindings(
     
     // read-only per prim data
     for (HdBufferSpec const& spec: readOnlyBufferSpecs) {
-        HdBinding binding = locator.GetBinding(HdBinding::SSBO, spec.name);
+        HdBinding binding = locator.GetBinding(bindingType, spec.name);
         _bindingMap[spec.name] = binding;
         metaDataOut->computeReadOnlyData[binding] =
             MetaData::PrimVar(spec.name,
@@ -738,6 +747,14 @@ HdSt_ResourceBinder::BindBuffer(TfToken const &name,
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, loc,
                          buffer->GetId());
         break;
+    case HdBinding::BINDLESS_SSBO_RANGE:
+        // at least in nvidia driver 346.59, this query call doesn't show
+        // any pipeline stall.
+        if (!glIsNamedBufferResidentNV(buffer->GetId())) {
+            glMakeNamedBufferResidentNV(buffer->GetId(), GL_READ_WRITE);
+        }
+        glUniformui64NV(loc, buffer->GetGPUAddress()+offset);
+        break;
     case HdBinding::DISPATCH:
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, buffer->GetId());
         break;
@@ -811,6 +828,11 @@ HdSt_ResourceBinder::UnbindBuffer(TfToken const &name,
     case HdBinding::SSBO:
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, loc, 0);
         break;
+    case HdBinding::BINDLESS_SSBO_RANGE:
+        if (glIsNamedBufferResidentNV(buffer->GetId())) {
+            glMakeNamedBufferNonResidentNV(buffer->GetId());
+        }
+        break;
     case HdBinding::DISPATCH:
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
         break;
@@ -841,7 +863,7 @@ HdSt_ResourceBinder::BindConstantBuffer(
     if (!constantBar) return;
 
     // constant buffer is interleaved. we just need to bind a buffer.
-    BindBuffer(HdTokens->constantPrimVars, constantBar->GetResource());
+    BindBuffer(_tokens->constantPrimvars, constantBar->GetResource());
 }
 
 void
@@ -850,7 +872,7 @@ HdSt_ResourceBinder::UnbindConstantBuffer(
 {
     if (!constantBar) return;
 
-    UnbindBuffer(HdTokens->constantPrimVars, constantBar->GetResource());
+    UnbindBuffer(_tokens->constantPrimvars, constantBar->GetResource());
 }
 
 void
@@ -1086,7 +1108,7 @@ HdSt_ResourceBinder::BindUniformf(TfToken const &name,
 void
 HdSt_ResourceBinder::IntrospectBindings(HdStResourceGL const & programResource)
 {
-    HdStRenderContextCaps const &caps = HdStRenderContextCaps::GetInstance();
+    GlfContextCaps const &caps = GlfContextCaps::GetInstance();
 
     GLuint program = programResource.GetId();
 

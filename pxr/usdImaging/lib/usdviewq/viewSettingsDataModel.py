@@ -23,21 +23,17 @@
 #
 
 from qt import QtCore
+from pxr import UsdGeom, Sdf
 
 from common import (RenderModes, PickModes, SelectionHighlightModes,
-    CameraMaskModes, Complexities)
+    CameraMaskModes, Complexities, PrintWarning)
 
 import settings2
 from settings2 import StateSource
 from constantGroup import ConstantGroup
+from freeCamera import FreeCamera
+from common import ClearColors, HighlightColors
 
-
-class ClearColors(ConstantGroup):
-    """Names of available background colors."""
-    BLACK = "Black"
-    DARK_GREY = "Grey (Dark)"
-    LIGHT_GREY = "Grey (Light)"
-    WHITE = "White"
 
 # Map of clear color names to rgba color tuples.
 _CLEAR_COLORS_DICT = {
@@ -46,12 +42,6 @@ _CLEAR_COLORS_DICT = {
     ClearColors.LIGHT_GREY:  (0.7, 0.7, 0.7, 0.0),
     ClearColors.WHITE:       (1.0, 1.0, 1.0, 0.0)}
 
-
-class HighlightColors(ConstantGroup):
-    """Names of available highlight colors for selected objects."""
-    WHITE = "White"
-    YELLOW = "Yellow"
-    CYAN = "Cyan"
 
 # Map of highlight color names to rgba color tuples.
 _HIGHLIGHT_COLORS_DICT = {
@@ -65,17 +55,42 @@ DEFAULT_AMBIENT = 0.2
 DEFAULT_SPECULAR = 0.1
 
 
+def visibleViewSetting(f):
+    def wrapper(self, *args, **kwargs):
+        f(self, *args, **kwargs)
+        # If f raises an exception, the signal is not emitted.
+        self.signalVisibleSettingChanged.emit()
+        self.signalSettingChanged.emit()
+    return wrapper
+
+
+def invisibleViewSetting(f):
+    def wrapper(self, *args, **kwargs):
+        f(self, *args, **kwargs)
+        # If f raises an exception, the signal is not emitted.
+        self.signalSettingChanged.emit()
+    return wrapper
+
+
 class ViewSettingsDataModel(QtCore.QObject, StateSource):
     """Data model containing settings related to the rendered view of a USD
     file.
     """
 
+    # emitted when any view setting changes
+    signalSettingChanged = QtCore.Signal()
+
+    # emitted when any view setting which may affect the rendered image changes
+    signalVisibleSettingChanged = QtCore.Signal()
+
     # emitted when any aspect of the defaultMaterial changes
     signalDefaultMaterialChanged = QtCore.Signal()
 
-    def __init__(self, parent):
+    def __init__(self, rootDataModel, parent):
         QtCore.QObject.__init__(self)
         StateSource.__init__(self, parent, "model")
+
+        self._rootDataModel = rootDataModel
 
         self._cameraMaskColor = tuple(self.stateProperty("cameraMaskColor", default=[0.1, 0.1, 0.1, 1.0]))
         self._cameraReticlesColor = tuple(self.stateProperty("cameraReticlesColor", default=[0.0, 0.7, 1.0, 1.0]))
@@ -133,6 +148,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
 
         self._complexity = Complexities.LOW
         self._freeCamera = None
+        self._cameraPath = None
 
     def onSaveState(self, state):
         state["cameraMaskColor"] = list(self._cameraMaskColor)
@@ -182,6 +198,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._cameraMaskColor
 
     @cameraMaskColor.setter
+    @visibleViewSetting
     def cameraMaskColor(self, color):
         self._cameraMaskColor = color
 
@@ -190,6 +207,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._cameraReticlesColor
 
     @cameraReticlesColor.setter
+    @visibleViewSetting
     def cameraReticlesColor(self, color):
         self._cameraReticlesColor = color
 
@@ -198,6 +216,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._defaultMaterialAmbient
 
     @defaultMaterialAmbient.setter
+    @visibleViewSetting
     def defaultMaterialAmbient(self, value):
         if value != self._defaultMaterialAmbient:
             self._defaultMaterialAmbient = value
@@ -208,11 +227,13 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._defaultMaterialSpecular
 
     @defaultMaterialSpecular.setter
+    @visibleViewSetting
     def defaultMaterialSpecular(self, value):
         if value != self._defaultMaterialSpecular:
             self._defaultMaterialSpecular = value
             self.signalDefaultMaterialChanged.emit()
 
+    @visibleViewSetting
     def setDefaultMaterial(self, ambient, specular):
         if (ambient != self._defaultMaterialAmbient
                 or specular != self._defaultMaterialSpecular):
@@ -228,6 +249,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._complexity
 
     @complexity.setter
+    @visibleViewSetting
     def complexity(self, value):
         if value not in Complexities:
             raise ValueError("Expected Complexity, got: '{}'.".format(value))
@@ -238,6 +260,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._renderMode
 
     @renderMode.setter
+    @visibleViewSetting
     def renderMode(self, value):
         self._renderMode = value
 
@@ -246,6 +269,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._pickMode
 
     @pickMode.setter
+    @invisibleViewSetting
     def pickMode(self, value):
         self._pickMode = value
 
@@ -254,6 +278,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._showAABBox
 
     @showAABBox.setter
+    @visibleViewSetting
     def showAABBox(self, value):
         self._showAABBox = value
 
@@ -262,6 +287,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._showOBBox
 
     @showOBBox.setter
+    @visibleViewSetting
     def showOBBox(self, value):
         self._showOBBox = value
 
@@ -270,6 +296,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._showBBoxes
 
     @showBBoxes.setter
+    @visibleViewSetting
     def showBBoxes(self, value):
         self._showBBoxes = value
 
@@ -278,6 +305,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._showBBoxPlayback
 
     @showBBoxPlayback.setter
+    @visibleViewSetting
     def showBBoxPlayback(self, value):
         self._showBBoxPlayback = value
 
@@ -286,6 +314,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._displayGuide
 
     @displayGuide.setter
+    @visibleViewSetting
     def displayGuide(self, value):
         self._displayGuide = value
 
@@ -294,6 +323,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._displayProxy
 
     @displayProxy.setter
+    @visibleViewSetting
     def displayProxy(self, value):
         self._displayProxy = value
 
@@ -302,6 +332,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._displayRender
 
     @displayRender.setter
+    @visibleViewSetting
     def displayRender(self, value):
         self._displayRender = value
 
@@ -310,6 +341,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._displayCameraOracles
 
     @displayCameraOracles.setter
+    @visibleViewSetting
     def displayCameraOracles(self, value):
         self._displayCameraOracles = value
 
@@ -318,6 +350,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._displayPrimId
 
     @displayPrimId.setter
+    @visibleViewSetting
     def displayPrimId(self, value):
         self._displayPrimId = value
 
@@ -334,6 +367,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._enableHardwareShading
 
     @enableHardwareShading.setter
+    @visibleViewSetting
     def enableHardwareShading(self, value):
         self._enableHardwareShading = value
 
@@ -342,6 +376,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._cullBackfaces
 
     @cullBackfaces.setter
+    @visibleViewSetting
     def cullBackfaces(self, value):
         self._cullBackfaces = value
 
@@ -350,6 +385,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._showInactivePrims
 
     @showInactivePrims.setter
+    @invisibleViewSetting
     def showInactivePrims(self, value):
         self._showInactivePrims = value
 
@@ -358,6 +394,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._showAllMasterPrims
 
     @showAllMasterPrims.setter
+    @invisibleViewSetting
     def showAllMasterPrims(self, value):
         self._showAllMasterPrims = value
 
@@ -366,6 +403,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._showUndefinedPrims
 
     @showUndefinedPrims.setter
+    @invisibleViewSetting
     def showUndefinedPrims(self, value):
         self._showUndefinedPrims = value
 
@@ -374,6 +412,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._showAbstractPrims
 
     @showAbstractPrims.setter
+    @invisibleViewSetting
     def showAbstractPrims(self, value):
         self._showAbstractPrims = value
 
@@ -382,6 +421,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._rolloverPrimInfo
 
     @rolloverPrimInfo.setter
+    @invisibleViewSetting
     def rolloverPrimInfo(self, value):
         self._rolloverPrimInfo = value
 
@@ -390,6 +430,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._cameraMaskMode
 
     @cameraMaskMode.setter
+    @visibleViewSetting
     def cameraMaskMode(self, value):
         self._cameraMaskMode = value
 
@@ -406,6 +447,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._showMask_Outline
 
     @showMask_Outline.setter
+    @visibleViewSetting
     def showMask_Outline(self, value):
         self._showMask_Outline = value
 
@@ -414,6 +456,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._showReticles_Inside
 
     @showReticles_Inside.setter
+    @visibleViewSetting
     def showReticles_Inside(self, value):
         self._showReticles_Inside = value
 
@@ -422,6 +465,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._showReticles_Outside
 
     @showReticles_Outside.setter
+    @visibleViewSetting
     def showReticles_Outside(self, value):
         self._showReticles_Outside = value
 
@@ -430,6 +474,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._showHUD
 
     @showHUD.setter
+    @visibleViewSetting
     def showHUD(self, value):
         self._showHUD = value
 
@@ -438,6 +483,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._showHUD_Info
 
     @showHUD_Info.setter
+    @visibleViewSetting
     def showHUD_Info(self, value):
         self._showHUD_Info = value
 
@@ -446,6 +492,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._showHUD_Complexity
 
     @showHUD_Complexity.setter
+    @visibleViewSetting
     def showHUD_Complexity(self, value):
         self._showHUD_Complexity = value
 
@@ -454,6 +501,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._showHUD_Performance
 
     @showHUD_Performance.setter
+    @visibleViewSetting
     def showHUD_Performance(self, value):
         self._showHUD_Performance = value
 
@@ -462,6 +510,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._showHUD_GPUstats
 
     @showHUD_GPUstats.setter
+    @visibleViewSetting
     def showHUD_GPUstats(self, value):
         self._showHUD_GPUstats = value
 
@@ -470,6 +519,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._ambientLightOnly
 
     @ambientLightOnly.setter
+    @visibleViewSetting
     def ambientLightOnly(self, value):
         self._ambientLightOnly = value
 
@@ -478,6 +528,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._keyLightEnabled
 
     @keyLightEnabled.setter
+    @visibleViewSetting
     def keyLightEnabled(self, value):
         self._keyLightEnabled = value
 
@@ -486,6 +537,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._fillLightEnabled
 
     @fillLightEnabled.setter
+    @visibleViewSetting
     def fillLightEnabled(self, value):
         self._fillLightEnabled = value
 
@@ -494,6 +546,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._backLightEnabled
 
     @backLightEnabled.setter
+    @visibleViewSetting
     def backLightEnabled(self, value):
         self._backLightEnabled = value
 
@@ -502,6 +555,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._clearColorText
 
     @clearColorText.setter
+    @visibleViewSetting
     def clearColorText(self, value):
         if value not in ClearColors:
             raise ValueError("Unknown clear color: '{}'".format(value))
@@ -516,6 +570,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._highlightColorName
 
     @highlightColorName.setter
+    @visibleViewSetting
     def highlightColorName(self, value):
         if value not in HighlightColors:
             raise ValueError("Unknown highlight color: '{}'".format(value))
@@ -530,6 +585,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._selHighlightMode
 
     @selHighlightMode.setter
+    @visibleViewSetting
     def selHighlightMode(self, value):
         if value not in SelectionHighlightModes:
             raise ValueError("Unknown highlight mode: '{}'".format(value))
@@ -540,6 +596,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._redrawOnScrub
 
     @redrawOnScrub.setter
+    @visibleViewSetting
     def redrawOnScrub(self, value):
         self._redrawOnScrub = value
 
@@ -556,5 +613,39 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         return self._freeCamera
 
     @freeCamera.setter
+    @visibleViewSetting
     def freeCamera(self, value):
+        if not isinstance(value, FreeCamera):
+            raise TypeError("Free camera must be a FreeCamera object.")
         self._freeCamera = value
+
+    @property
+    def cameraPath(self):
+        return self._cameraPath
+
+    @cameraPath.setter
+    @visibleViewSetting
+    def cameraPath(self, value):
+        if ((not isinstance(value, Sdf.Path) or not value.IsPrimPath())
+                and value is not None):
+            raise TypeError("Expected prim path, got: {}".format(value))
+        self._cameraPath = value
+
+    @property
+    def cameraPrim(self):
+        if self.cameraPath is not None and self._rootDataModel.stage is not None:
+            return self._rootDataModel.stage.GetPrimAtPath(self.cameraPath)
+        else:
+            return None
+
+    @cameraPrim.setter
+    def cameraPrim(self, value):
+        if value is not None:
+            if value.IsA(UsdGeom.Camera):
+                self.cameraPath = value.GetPrimPath()
+            else:
+                PrintWarning("Incorrect Prim Type",
+                    "Attempted to view the scene using the prim '%s', but "
+                    "the prim is not a UsdGeom.Camera." % (value.GetName()))
+        else:
+            self.cameraPath = None
