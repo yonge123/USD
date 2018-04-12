@@ -29,15 +29,13 @@
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
 #include "pxr/imaging/hd/perfLog.h"
+#include "pxr/imaging/hd/renderDelegate.h"
 
 #include "pxr/usd/usdGeom/gprim.h"
 
 #include "pxr/usd/usdShade/connectableAPI.h"
 #include "pxr/usd/usdShade/material.h"
 #include "pxr/usd/usdShade/shader.h"
-
-#include "pxr/usd/usdHydra/shader.h"
-#include "pxr/usd/usdHydra/primvar.h"
 
 #include "pxr/base/tf/type.h"
 
@@ -127,7 +125,7 @@ UsdImagingGprimAdapter::TrackVariability(UsdPrim const& prim,
                                          SdfPath const& cachePath,
                                          HdDirtyBits* timeVaryingBits,
                                          UsdImagingInstancerContext const* 
-                                             instancerContext)
+                                             instancerContext) const
 {
     // WARNING: This method is executed from multiple threads, the value cache
     // has been carefully pre-populated to avoid mutating the underlying
@@ -198,32 +196,26 @@ void
 UsdImagingGprimAdapter::_ComputeAndMergePrimvar(
     UsdGeomGprim const& gprim,
     SdfPath const& cachePath,
-    TfToken const& primvarName,
+    UsdGeomPrimvar const& primvar,
     UsdTimeCode time,
-    UsdImagingValueCache* valueCache)
+    UsdImagingValueCache* valueCache) const
 {
-    UsdGeomPrimvar primvarAttr = gprim.GetPrimvar(primvarName);
-
-    if (!primvarAttr) {
-        return;
-    }
-
     VtValue v;
-    if (primvarAttr.ComputeFlattened(&v, time)) {
+    if (primvar.ComputeFlattened(&v, time)) {
 
         TF_DEBUG(USDIMAGING_SHADERS).Msg("Found primvar %s\n",
-            primvarName.GetText());
+            primvar.GetPrimvarName().GetText());
 
-        UsdImagingValueCache::PrimvarInfo primvar;
-        primvar.name = primvarName;
-        primvar.interpolation = primvarAttr.GetInterpolation();
-        valueCache->GetPrimvar(cachePath, primvar.name) = v;
-        _MergePrimvar(primvar, &valueCache->GetPrimvars(cachePath));
+        UsdImagingValueCache::PrimvarInfo pvInfo;
+        pvInfo.name = primvar.GetPrimvarName();
+        pvInfo.interpolation = primvar.GetInterpolation();
+        valueCache->GetPrimvar(cachePath, pvInfo.name) = v;
+        _MergePrimvar(pvInfo, &valueCache->GetPrimvars(cachePath));
 
     } else {
 
         TF_DEBUG(USDIMAGING_SHADERS).Msg( "\t\t No primvar on <%s> named %s\n",
-            gprim.GetPath().GetText(), primvarName.GetText());
+            gprim.GetPath().GetText(), primvar.GetPrimvarName().GetText());
     }
 }
 
@@ -233,9 +225,22 @@ UsdImagingGprimAdapter::UpdateForTime(UsdPrim const& prim,
                                UsdTimeCode time,
                                HdDirtyBits requestedBits,
                                UsdImagingInstancerContext const* 
-                                   instancerContext)
+                                   instancerContext) const
 {
     UsdImagingValueCache* valueCache = _GetValueCache();
+
+    SdfPath usdMaterialPath;
+    if (requestedBits & (HdChangeTracker::DirtyPrimVar |
+                         HdChangeTracker::DirtyMaterialId)) {
+        usdMaterialPath = GetMaterialId(prim);
+
+        // If we're processing this gprim on behalf of an instancer,
+        // use the material binding specified by the instancer if we
+        // aren't able to find a material binding for this prim itself.
+        if (instancerContext && usdMaterialPath.IsEmpty()) {
+            usdMaterialPath = instancerContext->instanceMaterialId;
+        }
+    }
 
     if (requestedBits & HdChangeTracker::DirtyPrimVar) {
         // XXX: need to validate gprim schema
@@ -245,29 +250,41 @@ UsdImagingGprimAdapter::UpdateForTime(UsdPrim const& prim,
                         GetColorAndOpacity(prim, &primvar, time);
         _MergePrimvar(primvar, &valueCache->GetPrimvars(cachePath));
 
-        // Collect material required primvars
-        SdfPath usdMaterialPath = GetMaterialId(prim);
-
-        // If we're processing this gprim on behalf of an instancer,
-        // use the material binding specified by the instancer if we
-        // aren't able to find a material binding for this prim itself.
-        if (instancerContext && usdMaterialPath.IsEmpty()) {
-            usdMaterialPath = instancerContext->instanceMaterialId;
-        }
-
-        TF_DEBUG(USDIMAGING_SHADERS).Msg("Shader for <%s> is <%s>\n",
-                prim.GetPath().GetText(), usdMaterialPath.GetText());
-
         if (!usdMaterialPath.IsEmpty()) {
-            // Obtain the primvars used in the material bound to this prim
-            // and check if they are in this prim, if so, add them to the 
-            // primvars descriptions.
-            TfTokenVector matPrimvars = 
-                _delegate->GetMaterialPrimvars(usdMaterialPath);
-
-            for (auto const &p : matPrimvars) {
-                _ComputeAndMergePrimvar(
-                    gprim, cachePath, p, time, valueCache);
+            // XXX:HACK: Currently GetMaterialPrimvars() does not return
+            // correct results, so in the meantime let's just ask USD
+            // for the list of primvars.
+            if (_delegate->GetRenderIndex().
+                GetRenderDelegate()->CanComputeMaterialNetworks()) {
+                if (UsdGeomImageable imageable = UsdGeomImageable(prim)) {
+                    // Local (non-inherited) primvars
+                    for (auto const &pv: imageable.GetPrimvars()) {
+                        _ComputeAndMergePrimvar(
+                            gprim, cachePath, pv, time, valueCache);
+                    }
+                    // Inherited primvars
+                    for (auto const &pv: imageable.FindInheritedPrimvars()) {
+                        _ComputeAndMergePrimvar(
+                            gprim, cachePath, pv, time, valueCache);
+                    }
+                }
+            } else {
+                // Obtain the primvars used in the material bound to this prim
+                // and check if they are in this prim, if so, add them to the 
+                // primvars descriptions.
+                TfTokenVector matPrimvarNames = 
+                    _delegate->GetMaterialPrimvars(usdMaterialPath);
+                for (auto const &pvName : matPrimvarNames) {
+                    UsdGeomPrimvar pv = gprim.GetPrimvar(pvName);
+                    if (!pv) {
+                        // If not found, try as inherited primvar.
+                        pv = gprim.FindInheritedPrimvar(pvName);
+                    }
+                    if (pv) {
+                        _ComputeAndMergePrimvar(
+                            gprim, cachePath, pv, time, valueCache);
+                    }
+                }
             }
         }
     }
@@ -289,7 +306,11 @@ UsdImagingGprimAdapter::UpdateForTime(UsdPrim const& prim,
     }
 
     if (requestedBits & HdChangeTracker::DirtyMaterialId){
-        valueCache->GetMaterialId(cachePath) = _GetMaterialId(prim);
+        valueCache->GetMaterialId(cachePath) = usdMaterialPath;
+
+        TF_DEBUG(USDIMAGING_SHADERS).Msg("Shader for <%s> is <%s>\n",
+                prim.GetPath().GetText(), usdMaterialPath.GetText());
+
     }
 }
 
@@ -368,7 +389,7 @@ UsdImagingGprimAdapter::MarkVisibilityDirty(UsdPrim const& prim,
 // -------------------------------------------------------------------------- //
 
 GfRange3d 
-UsdImagingGprimAdapter::_GetExtent(UsdPrim const& prim, UsdTimeCode time)
+UsdImagingGprimAdapter::_GetExtent(UsdPrim const& prim, UsdTimeCode time) const
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -638,6 +659,14 @@ UsdImagingGprimAdapter::GetColorAndOpacity(UsdPrim const& prim,
         }
     }
 
+    // If the interpolation we're passing back is constant, truncate the array
+    // if necessary so that we don't have an array-valued color in the shader.
+    // We will have already warned above about one or both of the primvars
+    // having constant interpolation but multiple values.
+    if (colorInterp == UsdGeomTokens->constant && result.size() > 1) {
+        result.resize(1);
+    }
+
     if (primvarInfo) {
         primvarInfo->name = HdTokens->color;
         primvarInfo->interpolation = colorInterp;
@@ -646,7 +675,7 @@ UsdImagingGprimAdapter::GetColorAndOpacity(UsdPrim const& prim,
 }
 
 TfToken
-UsdImagingGprimAdapter::_GetPurpose(UsdPrim const& prim, UsdTimeCode time)
+UsdImagingGprimAdapter::_GetPurpose(UsdPrim const& prim, UsdTimeCode time) const
 {
     HD_TRACE_FUNCTION();
     // PERFORMANCE: Make this more efficient, see http://bug/90497
@@ -654,7 +683,7 @@ UsdImagingGprimAdapter::_GetPurpose(UsdPrim const& prim, UsdTimeCode time)
 }
 
 bool 
-UsdImagingGprimAdapter::_GetDoubleSided(UsdPrim const& prim)
+UsdImagingGprimAdapter::_GetDoubleSided(UsdPrim const& prim) const
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -664,15 +693,6 @@ UsdImagingGprimAdapter::_GetDoubleSided(UsdPrim const& prim)
         return false;
 
     return _Get<bool>(prim, UsdGeomTokens->doubleSided, UsdTimeCode::Default());
-}
-
-SdfPath 
-UsdImagingGprimAdapter::_GetMaterialId(UsdPrim const& prim)
-{
-    HD_TRACE_FUNCTION();
-    HF_MALLOC_TAG_FUNCTION();
-
-    return GetMaterialId(prim);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

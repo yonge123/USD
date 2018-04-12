@@ -228,7 +228,7 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
 
     _strVecPairVec<GfVec3f> vectors;
     _strVecPairVec<float> floats;
-    _strVecPairVec<long> ints;
+    _strVecPairVec<int> ints;
 
     MVectorArray mayaVectors;
     MDoubleArray mayaDoubles;
@@ -239,7 +239,7 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
     particleSys.velocity(mayaVectors);
     auto velocities = _convertVectorArray<GfVec3f>(mayaVectors);
     particleSys.particleIds(mayaInts);
-    auto ids = _convertArray<long>(mayaInts);
+    auto ids = _convertArray<int64_t>(mayaInts);
     particleSys.radius(mayaDoubles);
     auto radii = _convertArray<float>(mayaDoubles);
     particleSys.mass(mayaDoubles);
@@ -271,7 +271,7 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
         case PER_PARTICLE_INT:
             particleSys.getPerParticleAttribute(std::get<1>(attr), mayaInts, &status);
             if (status) {
-                ints.emplace_back(std::get<0>(attr), _convertArray<long>(mayaInts));
+                ints.emplace_back(std::get<0>(attr), _convertArray<int>(mayaInts));
             }
             break;
         case PER_PARTICLE_DOUBLE:

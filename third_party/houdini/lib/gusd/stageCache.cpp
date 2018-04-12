@@ -24,7 +24,7 @@
 #include "gusd/stageCache.h"
 
 #include <DEP/DEP_MicroNode.h>
-#include <UI/UI_Object.h>
+#include <OP/OP_Director.h>
 #include <UT/UT_ConcurrentHashMap.h>
 #include <UT/UT_Exit.h>
 #include <UT/UT_Interrupt.h>
@@ -42,6 +42,8 @@
 #include "pxr/base/tf/envSetting.h"
 #include "pxr/base/tf/notice.h"
 #include "pxr/usd/ar/resolver.h"
+#include "pxr/usd/ar/resolverContext.h"
+#include "pxr/usd/ar/resolverContextBinder.h"
 #include "pxr/usd/kind/registry.h"
 #include "pxr/usd/sdf/changeBlock.h"
 #include "pxr/usd/usd/modelAPI.h"
@@ -55,8 +57,18 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 TF_DEFINE_ENV_SETTING(GUSD_STAGEMASK_EXPANDRELS, true,
-                      "Expand maked stage loads to include targets "
-                      "of relationships.");
+                      "Expand stage masks to include targets of relationships. "
+                      "It may be possible to disable this option, which may "
+                      "provide performance gains, but correctness cannot be "
+                      "guaranteed when doing so.");
+
+
+TF_DEFINE_ENV_SETTING(GUSD_STAGEMASK_ENABLE, true,
+                      "Enable use of stage masks when accessing prims from "
+                      "the cache. Note that disabling this feature may "
+                      "be very detrimental to performance when separately "
+                      "querying many prims with variant selections "
+                      "(or other types of stage edits).");
 
 
 namespace {
@@ -91,8 +103,10 @@ public:
         // This should only occur on the main event queue, as happens
         // with stage reloads on the GusdStageCache.
         if(UT_Thread::isMainThread()) {
-            propagateDirty([](const DEP_MicroNode& node,
-                              const DEP_MicroNode& src) {});
+            OP_Node* node = OPgetDirector();
+            node->propagateDirtyMicroNode(*this, OP_INPUT_CHANGED,
+                                          /*data*/ nullptr, 
+                                          /*send_root_event*/ false);
         } else {
             TF_WARN("Change notification received for stage @%s@ outside of "
                     "the main event queue. This may indicate unsafe mutation "
@@ -115,155 +129,37 @@ private:
 };
 
 
-/// UI object that serves as an event queue for stage changes that are unsafe
-/// outside of the main event queue.
-class _EventQueue final : public UI_Object
-{
-public:
-    static _EventQueue&  GetInstance();
-
-    _EventQueue() : UI_Object() {}
-    virtual ~_EventQueue();
-
-    /// Event handler, called on the event queue.
-    /// This does the actual work of processing changes.
-    virtual void        handleEvent(UI_Event* event) override;
-
-    virtual const char* className() const override
-                        { return "GusdStageCache::_EventQueue"; }
-
-    /// Add stages to the reload queue.
-    void                ReloadStages(const UT_Set<UsdStagePtr>& stages);
-
-    /// Add layers to the reload queue.
-    void                ReloadLayers(const UT_Set<SdfLayerHandle>& layers);
-    
-    /// Add a micro node that was evicted from the cache.
-    /// The event queue takes ownership of the node.
-    void                AppendEvictedNode(_StageChangeMicroNode* node);
-
-private:
-    /// Mark the state dirty, setting an event on the event queue to
-    /// process reloads.
-    void                _MarkDirty();
-
-private:
-    bool                                _dirty;
-    UT_Lock                             _lock;
-    std::set<UsdStagePtr>               _stagesToReload;
-    std::set<SdfLayerHandle>            _layersToReload;
-    std::set<_StageChangeMicroNode*>    _evictedNodes;
-};
-
-
-_EventQueue::~_EventQueue()
-{
-    for(auto* microNode : _evictedNodes)
-        delete microNode;
-}
-
-
-_EventQueue&
-_EventQueue::GetInstance()
-{
-    static _EventQueue queue;
-    return queue;
-}
-
-
-void
-_EventQueue::_MarkDirty()
-{
-    if(!_dirty) {
-        // Haven't queued up an event yet. Send one.
-        generateEvent(UI_EVENT_REFRESH, this);
-    }
-    _dirty = true;
-}
-
-
-void
-_EventQueue::handleEvent(UI_Event* event)
-{
-    UT_AutoLock lock(_lock);
-
-    if(_dirty) {
-        {
-            // Use a change block so that layer change
-            // notifications will be batch-processed by stages.
-            SdfChangeBlock changeBlock;
-            for(const auto& layer : _layersToReload) {
-                if(layer)
-                    layer->Reload();
-            }
-            _layersToReload.clear();
-        }
-        for(const auto& stage : _stagesToReload) {
-            if(stage)
-                stage->Reload();
-        }
-        _stagesToReload.clear();
-
-        for(auto* microNode : _evictedNodes) {
-            UT_ASSERT_P(microNode);
-            microNode->SetDirty();
-
-            // The event queue takes ownership of the micro node. Kill it.
-            delete microNode;
-        }
-        _evictedNodes.clear();
-
-        _dirty = false;
-    }
-}
-
-
-void
-_EventQueue::ReloadLayers(const UT_Set<SdfLayerHandle>& layers)
-{
-    if(layers.size() > 0) {
-        UT_AutoLock lock(_lock);
-        _layersToReload.insert(layers.begin(), layers.end());
-        _MarkDirty();
-    }
-}
-
-
-void
-_EventQueue::ReloadStages(const UT_Set<UsdStagePtr>& stages)
-{
-    if(stages.size() > 0) {
-        UT_AutoLock lock(_lock);
-        _stagesToReload.insert(stages.begin(), stages.end());
-        _MarkDirty();
-    }
-}
-
-
-void
-_EventQueue::AppendEvictedNode(_StageChangeMicroNode* node)
-{
-    UT_ASSERT_P(node);
-    UT_AutoLock lock(_lock);
-    _evictedNodes.insert(node);
-    _MarkDirty();
-}
-
-
 } /*namespace*/
 
 
 void
 GusdStageCache::ReloadStages(const UT_Set<UsdStagePtr>& stages)
 {
-    _EventQueue::GetInstance().ReloadStages(stages);
+    if(!UT_Thread::isMainThread()) {
+        TF_WARN("Reloading USD stages on a secondary thread. "
+                "Beware that stage reloading is not thread-safe, and reloading "
+                "a stage may affect other stages, including stages for which a "
+                "reload request was not made! To ensure safety of reload "
+                "operations, stages should only be reloaded from within "
+                "Houdini's main thread.");
+    }
+    for(const auto& stage : stages)
+        stage->Reload();
 }
 
 
 void
 GusdStageCache::ReloadLayers(const UT_Set<SdfLayerHandle>& layers)
 {
-    _EventQueue::GetInstance().ReloadLayers(layers);
+    if(!UT_Thread::isMainThread()) {
+        TF_WARN("Reloading USD layers on a secondary thread. "
+                "Beware that layer reloading is not thread-safe, and reloading "
+                "a layer may affect any USD stages that reference that layer! "
+                "To ensure safety of reload operations, stages should only be "
+                "reloaded from within Houdini's main thread.");
+    }
+    for(const auto& layer : layers)
+        layer->Reload();
 }
 
 
@@ -332,9 +228,12 @@ struct _SdfPathHashCmp
 };
 
 
+} /*namespace*/
+
+
 /// Cache holding stages for different sets of masked prims.
 /// These caches are created for a common set of stage options.
-class _MaskedStageCache
+class GusdStageCache::_MaskedStageCache
 {
 public:
     _MaskedStageCache(GusdStageCache::_Impl& stageCache, const _StageKey& key)
@@ -362,9 +261,6 @@ private:
     _StageMap               _map;
     const _StageKey         _stageKey;
 };
-
-
-} /*namespace*/
 
 
 /// Primary internal cache implementation.
@@ -418,8 +314,8 @@ public:
     /// Methods accessible to GusdStageCacheWriter.
     /// These require an exclusive lock to the stage.
 
-    void            Clear();
-    void            Clear(const UT_StringSet& paths);
+    void            Clear(bool propagateDirty=false);
+    void            Clear(const UT_StringSet& paths, bool propagateDirty=false);
 
     void            AddDataCache(GusdUSD_DataCache& cache)
                     {
@@ -446,9 +342,10 @@ private:
     using _StageMap = UT_ConcurrentHashMap<_StageKey,UsdStageRefPtr,
                                            _StageKeyHashCmp>;
 
-    using _MaskedStageCacheMap = UT_ConcurrentHashMap<_StageKey,
-                                                      _MaskedStageCache*,
-                                                      _StageKeyHashCmp>;
+    using _MaskedStageCacheMap =
+        UT_ConcurrentHashMap<_StageKey,
+                             GusdStageCache::_MaskedStageCache*,
+                             _StageKeyHashCmp>;
 
     struct _StageHashCmp
     {
@@ -460,9 +357,10 @@ private:
     };
 
 
-    using _MicroNodeMap = UT_ConcurrentHashMap<UsdStagePtr,
-                                               _StageChangeMicroNode*,
-                                               _StageHashCmp>;
+    using _MicroNodeMap =
+        UT_ConcurrentHashMap<UsdStagePtr,
+                             std::shared_ptr<_StageChangeMicroNode>,
+                             _StageHashCmp>;
 
     /// Mutex around the concurrent maps.
     /// An exclusive lock must be acquired when iterating over the maps.
@@ -486,12 +384,9 @@ private:
 
 GusdStageCache::_Impl::~_Impl()
 {
-    // Clear() entries, so that micro nodes are dirtied as expected. 
-    // Don't let this happen if Houdini is undergoing shutdown,
-    // though, as the UI queue may have already expired.
-    if(!UT_Exit::isExiting()) {
-        Clear();
-    }
+    // Clear entries, but don't propagate dirty states, as we
+    // cannot guarantee that state propagation is safe.
+    Clear(/*propagateDirty*/ false);
 }
 
 
@@ -504,6 +399,11 @@ GusdStageCache::_Impl::OpenNewStage(const UT_StringRef& path,
 {
     // Catch Tf errors.
     GusdUT_TfErrorScope errorScope(err);
+
+    // TODO: Should consider including the context as a member of the
+    // stage opts, so that it can be reconfigured across different hip files.
+    ArResolverContext resolverContext = ArGetResolver().GetCurrentContext();
+    ArResolverContextBinder binder(resolverContext);
 
     // The root layer is shared, and not modified.
     if(SdfLayerRefPtr rootLayer = FindOrOpenLayer(path, err)) {
@@ -518,11 +418,10 @@ GusdStageCache::_Impl::OpenNewStage(const UT_StringRef& path,
 
         UsdStageRefPtr stage =
             mask ? UsdStage::OpenMasked(rootLayer, sessionLayer,
-                                        ArGetResolver().GetCurrentContext(),
+                                        resolverContext,
                                         *mask, opts.GetLoadSet())
             : UsdStage::Open(rootLayer, sessionLayer,
-                             ArGetResolver().GetCurrentContext(),
-                             opts.GetLoadSet());
+                             resolverContext, opts.GetLoadSet());
 
         if(stage) {
             if(edit) {
@@ -580,11 +479,21 @@ GusdStageCache::_Impl::_ExpandStageMask(UsdStageRefPtr& stage)
 
     if(!expandAtKind.IsEmpty()) {
         auto popMask = stage->GetPopulationMask();
-        bool changed = false;
+        bool foundAncestorToExpand = false;
 
-        UsdPrimRange range = stage->TraverseAll();
+        const auto modelSearchPredicate =
+            UsdPrimIsDefined && UsdPrimIsModel
+            && UsdPrimIsActive && !UsdPrimIsAbstract;
+
+        // Iterate over ancestor prims at each masked path,
+        // looking for possible points at which to expand the mask.
+        UsdPrimRange range = stage->Traverse(modelSearchPredicate);
         for(auto it = range.begin(); it != range.end(); ++it) {
+
             if(popMask.IncludesSubtree(it->GetPath())) {
+                // Don't traverse beneath the masking points, because
+                // masking guarantees that subtrees of the masking points
+                // are fully expanded and present.
                 it.PruneChildren();
                 continue;
             }
@@ -594,12 +503,41 @@ GusdStageCache::_Impl::_ExpandStageMask(UsdStageRefPtr& stage)
                KindRegistry::IsA(kind, expandAtKind)) {
 
                 popMask.Add(it->GetPath());
-                changed = true;
+
+                foundAncestorToExpand = true;
                 it.PruneChildren();
             }
         }
-        if(changed)
+        if(foundAncestorToExpand) {
             stage->SetPopulationMask(popMask);
+        } else  if(!foundAncestorToExpand) {
+            // Couldn't find a reasonable enclosing model to expand to.
+            // This might mean that the kinds of prims we want to expand to are
+            // descendants of the masking point. Find out if that's the case.
+            // (Note that unlike the previous traversal, this traversal
+            // iterates *beneath* the masking sites)
+            bool havePrimsWithExpansionKind = false;
+            for(const auto& prim : stage->Traverse(modelSearchPredicate)) {
+                TfToken kind;
+                if(UsdModelAPI(prim).GetKind(&kind) &&
+                   KindRegistry::IsA(kind, expandAtKind)) {
+                    havePrimsWithExpansionKind = true;
+                    break;
+                }
+            }
+
+            if(!havePrimsWithExpansionKind) {
+                // No prims matching the target expandAtKind were found.
+                // This can happen if a stage isn't encoding appropriate
+                // kinds in its model hierarchy, or if a stage is using a
+                // non-standard kind hierarchy.
+                // Rather than risking creating a stage per leaf-prim queried
+                // from the cache, it's better to just expand to include the
+                // full stage.
+                stage->SetPopulationMask(UsdStagePopulationMask::All());
+                return;
+            }
+        }
     }
 
     if(TfGetEnvSetting(GUSD_STAGEMASK_EXPANDRELS)) {
@@ -607,7 +545,6 @@ GusdStageCache::_Impl::_ExpandStageMask(UsdStageRefPtr& stage)
         // TODO: This currently will test all relationships, and may be very
         // expensive. For performance, it may be necessary to limit the set
         // of relationships that are searched (skipping, say, shaders).
-        // TODO: This currently does not consider attribute connections.
         stage->ExpandPopulationMask();
     }
 }
@@ -680,8 +617,10 @@ GusdStageCache::_Impl::FindOrOpenMaskedStage(const UT_StringRef& path,
     UT_ASSERT_P(primPath.IsAbsolutePath());
     UT_ASSERT_P(primPath.IsAbsoluteRootOrPrimPath());
 
-    if(primPath == SdfPath::AbsoluteRootPath()) {
-        // Take the cheap path!
+    if(primPath == SdfPath::AbsoluteRootPath() ||
+       !TfGetEnvSetting(GUSD_STAGEMASK_ENABLE)) {
+
+        // Access full stages.
         return FindOrOpenStage(path, opts, edit, err);
     }
 
@@ -707,7 +646,7 @@ GusdStageCache::_Impl::FindOrOpenMaskedStage(const UT_StringRef& path,
     _MaskedStageCacheMap::accessor a;
     _StageKey newKey(path, opts, edit);
     if(_maskedCacheMap.insert(a, newKey))
-        a->second = new _MaskedStageCache(*this, newKey);
+        a->second = new GusdStageCache::_MaskedStageCache(*this, newKey);
     UT_ASSERT_P(a->second);
     return a->second->FindOrOpenStage(primPath, err);
 }
@@ -722,18 +661,18 @@ GusdStageCache::_Impl::GetStageMicroNode(const UsdStagePtr& stage)
     {
         _MicroNodeMap::const_accessor a;
         if(_microNodeMap.find(a, stage))
-            return a->second;
+            return a->second.get();
     }
 
     _MicroNodeMap::accessor a;
     if(_microNodeMap.insert(a, stage))
-        a->second = new _StageChangeMicroNode(stage);
-    return a->second;
+        a->second.reset(new _StageChangeMicroNode(stage));
+    return a->second.get();
 }
 
 
 void
-GusdStageCache::_Impl::Clear()
+GusdStageCache::_Impl::Clear(bool propagateDirty)
 {
     // XXX: Caller should have an exclusive map lock!
     
@@ -752,24 +691,27 @@ GusdStageCache::_Impl::Clear()
         _dataCaches.clear();
     }
 
-    for(auto& pair : _microNodeMap) {
-        // Micro nodes must be deleted on the event queue.
-        _EventQueue::GetInstance().AppendEvictedNode(pair.second);
+    if(propagateDirty) {
+        for(auto& pair : _microNodeMap) {
+            pair.second->SetDirty();
+        }
     }
     _microNodeMap.clear();
 }
 
 
 void
-GusdStageCache::_Impl::Clear(const UT_StringSet& paths)
+GusdStageCache::_Impl::Clear(const UT_StringSet& paths, bool propagateDirty)
 {
     // XXX: Caller should have an exclusive map lock!
 
     UT_Array<_StageKey> keysToRemove;
+    UT_Set<UsdStageRefPtr> stagesBeingRemoved;
+
     for(const auto& pair : _stageMap) {
         if(paths.contains(pair.first.GetPath())) {
             keysToRemove.append(pair.first);
-            _microNodeMap.erase(pair.second);
+            stagesBeingRemoved.insert(pair.second);
         }
     }
     for(const auto& key : keysToRemove)
@@ -778,16 +720,26 @@ GusdStageCache::_Impl::Clear(const UT_StringSet& paths)
     keysToRemove.clear();
     for(auto& pair : _maskedCacheMap) {
         if(paths.contains(pair.first.GetPath())) {
-            delete pair.second;
-
-            // TODO: Iterate over the masked stages,
-            // erase the corresponding micro nodes.
-
             keysToRemove.append(pair.first);
+            pair.second->GetStages(stagesBeingRemoved);
+            delete pair.second;
         }
     }
     for(const auto& key : keysToRemove)
         _maskedCacheMap.erase(key);
+
+    // Update and clear micro nodes.
+    for(const UsdStageRefPtr& stage : stagesBeingRemoved) {
+
+        if(propagateDirty) {
+            _MicroNodeMap::accessor a;
+            if(_microNodeMap.find(a, stage)) {
+                a->second->SetDirty();
+            }
+        }
+        _microNodeMap.erase(stage);
+    }
+
 
     {
         UT_AutoLock lock(_dataCacheLock);
@@ -820,7 +772,7 @@ GusdStageCache::_Impl::FindStages(const UT_StringSet& paths,
 
 
 UsdStageRefPtr
-_MaskedStageCache::FindStage(const SdfPath& primPath)
+GusdStageCache::_MaskedStageCache::FindStage(const SdfPath& primPath)
 {
     UT_ASSERT_P(primPath.IsAbsolutePath());
     UT_ASSERT_P(primPath.IsAbsoluteRootOrPrimPath());
@@ -862,8 +814,8 @@ _MaskedStageCache::FindStage(const SdfPath& primPath)
 
 
 UsdStageRefPtr
-_MaskedStageCache::FindOrOpenStage(const SdfPath& primPath,
-                                   GusdUT_ErrorContext* err)
+GusdStageCache::_MaskedStageCache::FindOrOpenStage(const SdfPath& primPath,
+                                                   GusdUT_ErrorContext* err)
 {
     if(UsdStageRefPtr stage = FindStage(primPath))
         return stage;
@@ -952,7 +904,7 @@ GusdStageCacheReader::~GusdStageCacheReader()
 UsdStageRefPtr
 GusdStageCacheReader::Find(const UT_StringRef& path,
                            const GusdStageOpts& opts,
-                           const GusdStageEditPtr& edit)
+                           const GusdStageEditPtr& edit) const
 {
     return path ? _cache._impl->FindStage(path, opts, edit) : TfNullPtr;
 }
@@ -1069,7 +1021,7 @@ GusdStageCacheReader::GetPrims(
     const UT_Array<SdfPath>& primPaths,
     const GusdDefaultArray<GusdStageEditPtr>& edits,
     UsdPrim* prims,
-    const GusdStageOpts opts,
+    const GusdStageOpts& opts,
     GusdUT_ErrorContext* err)
 {
     exint count = primPaths.size();
@@ -1157,14 +1109,14 @@ GusdStageCacheWriter::GusdStageCacheWriter(GusdStageCache& cache)
 void
 GusdStageCacheWriter::Clear()
 {
-    _cache._impl->Clear();
+    _cache._impl->Clear(/*propagateDirty*/ true);
 }
 
 
 void
 GusdStageCacheWriter::Clear(const UT_StringSet& paths)
 {
-    _cache._impl->Clear(paths);
+    _cache._impl->Clear(paths, /*propagateDirty*/ true);
 }
 
 

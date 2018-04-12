@@ -490,6 +490,16 @@ MayaTransformWriter::MayaTransformWriter(
         this->mXformDagPath = MDagPath(); // make path invalid
     };
 
+    auto is_instanceable = [](const MDagPath& dagPath) -> bool {
+        return dagPath.isInstanced()
+                // Don't want to bother with instancing underworld nodes, too many
+                // headaches
+                && dagPath.pathCount() == 1
+                // Don't want to instance cameras, since they don't support it,
+                // and they may have underworld nodes we want to export (imagePlanes)
+                && !dagPath.hasFn(MFn::kCamera);
+    };
+
     // it's more straightforward to separate code
     if (mIsInstanceSource) {
         if (!hasTransform) {
@@ -500,14 +510,14 @@ MayaTransformWriter::MayaTransformWriter(
             if (hasOnlyOneShapeBelow(iDag)) {
                 auto copyDag = iDag;
                 copyDag.extendToShapeDirectlyBelow(0);
-                if (copyDag.isInstanced()) {
+                if (is_instanceable(copyDag)) {
                     invalidate_transform();
                 } else if (getArgs().mergeTransformAndShape) {
                     invalidate_transform();
                 }
             }
         } else {
-            if (iDag.isInstanced()) {
+            if (is_instanceable(iDag)) {
                 isInstance = true;
                 setup_merged_shape();
             } else if (getArgs().mergeTransformAndShape) {
@@ -552,7 +562,8 @@ MayaTransformWriter::MayaTransformWriter(
             }
 
             if (isInstance) {
-                const auto masterPath = mWriteJobCtx.getMasterPath(getDagPath());
+                const auto masterPath = mWriteJobCtx.getOrCreateMasterPath(
+                        getDagPath());
                 if (!masterPath.IsEmpty()){
                     mUsdPrim.GetReferences().AddReference(SdfReference("", masterPath));
                     mUsdPrim.SetInstanceable(true);
@@ -593,6 +604,44 @@ bool MayaTransformWriter::writeTransformAttrs(
     return true;
 }
 
+bool MayaTransformWriter::isInstance() const
+{
+    // 1. Instance sources aren't instances.
+    // 2. Nothing is an instance if we're not exporting with instances.
+    // 3. Because we only currently do gprim-level instancing, transforms are
+    //    never instances. (This might change in the future.)
+    // 4. Only Maya-instanced things are instanced!
+    return !mIsInstanceSource
+            && getArgs().exportInstances
+            && !getDagPath().hasFn(MFn::kTransform)
+            && getDagPath().isInstanced();
+}
+
+bool MayaTransformWriter::exportsGprims() const
+{
+    if (isInstance()) {
+        MayaPrimWriterPtr primWriter = mWriteJobCtx.getMasterPrimWriter(
+                getDagPath());
+        if (primWriter) {
+            return primWriter->exportsGprims();
+        }
+    }
+
+    return MayaPrimWriter::exportsGprims();
+}
+    
+bool MayaTransformWriter::exportsReferences() const
+{
+    if (isInstance()) {
+        MayaPrimWriterPtr primWriter = mWriteJobCtx.getMasterPrimWriter(
+                getDagPath());
+        if (primWriter) {
+            return primWriter->exportsReferences();
+        }
+    }
+
+    return MayaPrimWriter::exportsReferences();
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
