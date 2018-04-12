@@ -274,24 +274,6 @@ public:
             }
 
             //
-            // Pass along the prim's velocityScale; if it isn't authored, let the
-            // inherited value flow through.
-            //
-
-            float velocityScale = FnKat::FloatAttribute(
-                opArgs.getChildByName("velocityScale")).getValue(1.0f, false);
-            auto motionAPI = UsdGeomMotionAPI(prim);
-            UsdAttribute velocityScaleAttr = motionAPI.GetVelocityScaleAttr();
-            if (velocityScaleAttr and velocityScaleAttr.HasAuthoredValueOpinion() and
-                velocityScaleAttr.Get(&velocityScale, privateData->GetCurrentTime()))
-            {
-                opArgs = FnKat::GroupBuilder()
-                    .update(opArgs)
-                    .set("velocityScale", FnKat::FloatAttribute(velocityScale))
-                    .build();
-            }
-
-            //
             // Compute and set the 'bound' attribute.
             //
             // Note, bound computation is handled here because bounding
@@ -520,6 +502,14 @@ public:
             {
                 FnGeolibServices::StaticSceneCreateOpArgsBuilder sscb(false);
                 
+                struct usdPrimInfo
+                {
+                    std::vector<std::string> usdPrimPathValues;
+                    std::vector<std::string> usdPrimNameValues;
+                };
+                
+                std::map<std::string, usdPrimInfo> primInfoPerLocation;
+                
                 for (size_t i = 0, e = masterMapping.getNumberOfChildren();
                         i != e; ++i)
                 {
@@ -542,10 +532,21 @@ public:
                     std::string locationParent =
                             FnGeolibUtil::Path::GetLocationParent(katanaPath);
                     
+                    auto & entry = primInfoPerLocation[locationParent];
+                    
+                    entry.usdPrimPathValues.push_back(masterName);
+                    entry.usdPrimNameValues.push_back(leafName);
+                }
+                
+                for (const auto & I : primInfoPerLocation)
+                {
+                    const auto & locationParent = I.first;
+                    const auto & entry = I.second;
+                    
                     sscb.setAttrAtLocation(locationParent, "usdPrimPath",
-                            FnKat::StringAttribute(masterName));
+                            FnKat::StringAttribute(entry.usdPrimPathValues));
                     sscb.setAttrAtLocation(locationParent, "usdPrimName",
-                            FnKat::StringAttribute(leafName));
+                            FnKat::StringAttribute(entry.usdPrimNameValues));
                 }
                 
                 FnKat::GroupAttribute childAttrs =
@@ -1101,9 +1102,18 @@ public:
                 .del("usdPrimName")
                 .build();
 
-            std::string primPath = primPathAttr.getValue("", false);
-            if (!primPath.empty())
+            
+            auto usdPrimPathValues = primPathAttr.getNearestSample(0);
+            
+            
+            for (size_t i = 0; i < usdPrimPathValues.size(); ++i)
             {
+                std::string primPath(usdPrimPathValues[i]);
+                if (usdPrimPathValues.empty())
+                {
+                    continue;
+                }
+                
                 // Get the usd prim at the given source path.
                 //
                 UsdPrim prim = usdInArgs->GetStage()->GetPrimAtPath(
@@ -1113,9 +1123,11 @@ public:
                 // ask the prim directly.
                 //
                 std::string nameToUse = prim.GetName();
-                if (primNameAttr.isValid())
+                if (primNameAttr.getNumberOfValues() > static_cast<int64_t>(i))
                 {
-                    std::string primName = primNameAttr.getValue("", false);
+                    auto primNameAttrValues = primNameAttr.getNearestSample(0);
+                    
+                    std::string primName = primNameAttrValues[i];
                     if (!primName.empty())
                     {
                         nameToUse = primName;

@@ -26,6 +26,7 @@ from distutils.spawn import find_executable
 import argparse
 import contextlib
 import datetime
+import fnmatch
 import glob
 import multiprocessing
 import os
@@ -233,10 +234,15 @@ def PatchFile(filename, patches):
         shutil.copy(filename, filename + ".old")
         open(filename, 'w').writelines(newLines)
 
-def DownloadURL(url, context, force):
+def DownloadURL(url, context, force, dontExtract = None):
     """Download and extract the archive file at given URL to the
-    source directory specified in the context. Returns the absolute 
-    path to the directory where files have been extracted."""
+    source directory specified in the context. 
+
+    dontExtract may be a sequence of path prefixes that will
+    be excluded when extracting the archive.
+
+    Returns the absolute  path to the directory where files have 
+    been extracted."""
     with CurrentWorkingDirectory(context.srcDir):
         # Extract filename from URL and see if file already exists. 
         filename = url.split("/")[-1]       
@@ -284,40 +290,51 @@ def DownloadURL(url, context, force):
         # of the contents beneath it.
         archive = None
         rootDir = None
+        members = None
         try:
             if tarfile.is_tarfile(filename):
                 archive = tarfile.open(filename)
                 rootDir = archive.getnames()[0].split('/')[0]
+                if dontExtract != None:
+                    members = (m for m in archive.getmembers() 
+                               if not any((fnmatch.fnmatch(m.name, p)
+                                           for p in dontExtract)))
             elif zipfile.is_zipfile(filename):
                 archive = zipfile.ZipFile(filename)
                 rootDir = archive.namelist()[0].split('/')[0]
+                if dontExtract != None:
+                    members = (m for m in archive.getnames() 
+                               if not any((fnmatch.fnmatch(m, p)
+                                           for p in dontExtract)))
             else:
                 raise RuntimeError("unrecognized archive file type")
 
-            extractedPath = os.path.abspath(rootDir)
-            if force and os.path.isdir(extractedPath):
-                shutil.rmtree(extractedPath)
+            with archive:
+                extractedPath = os.path.abspath(rootDir)
+                if force and os.path.isdir(extractedPath):
+                    shutil.rmtree(extractedPath)
 
-            if os.path.isdir(extractedPath):
-                PrintInfo("Directory {0} already exists, skipping extract"
-                          .format(extractedPath))
-            else:
-                PrintInfo("Extracting archive to {0}".format(extractedPath))
+                if os.path.isdir(extractedPath):
+                    PrintInfo("Directory {0} already exists, skipping extract"
+                              .format(extractedPath))
+                else:
+                    PrintInfo("Extracting archive to {0}".format(extractedPath))
 
-                # Extract to a temporary directory then move the contents
-                # to the expected location when complete. This ensures that
-                # incomplete extracts will be retried if the script is run
-                # again.
-                tmpExtractedPath = os.path.abspath("extract_dir")
-                if os.path.isdir(tmpExtractedPath):
+                    # Extract to a temporary directory then move the contents
+                    # to the expected location when complete. This ensures that
+                    # incomplete extracts will be retried if the script is run
+                    # again.
+                    tmpExtractedPath = os.path.abspath("extract_dir")
+                    if os.path.isdir(tmpExtractedPath):
+                        shutil.rmtree(tmpExtractedPath)
+
+                    archive.extractall(tmpExtractedPath, members=members)
+
+                    shutil.move(os.path.join(tmpExtractedPath, rootDir),
+                                extractedPath)
                     shutil.rmtree(tmpExtractedPath)
 
-                archive.extractall(tmpExtractedPath)
-                shutil.move(os.path.join(tmpExtractedPath, rootDir),
-                            extractedPath)
-                shutil.rmtree(tmpExtractedPath)
-                
-            return extractedPath
+                return extractedPath
         except Exception as e:
             # If extraction failed for whatever reason, assume the
             # archive file was bad and move it aside so that re-running
@@ -382,7 +399,16 @@ elif Windows() or MacOS():
     BOOST_URL = "http://downloads.sourceforge.net/project/boost/boost/1.61.0/boost_1_61_0.tar.gz"
 
 def InstallBoost(context, force):
-    with CurrentWorkingDirectory(DownloadURL(BOOST_URL, context, force)):
+    # Documentation files in the boost archive can have exceptionally
+    # long paths. This can lead to errors when extracting boost on Windows,
+    # since paths are limited to 260 characters by default on that platform.
+    # To avoid this, we skip extracting all documentation.
+    #
+    # For some examples, see: https://svn.boost.org/trac10/ticket/11677
+    dontExtract = ["*/doc/*", "*/libs/*/doc/*"]
+
+    with CurrentWorkingDirectory(DownloadURL(BOOST_URL, context, force, 
+                                             dontExtract)):
         bootstrap = "bootstrap.bat" if Windows() else "./bootstrap.sh"
         Run('{bootstrap} --prefix="{instDir}"'
             .format(bootstrap=bootstrap, instDir=context.instDir))
@@ -456,7 +482,7 @@ if Windows():
 elif MacOS():
     TBB_URL = "https://github.com/01org/tbb/archive/2017_U2.tar.gz"
 else:
-    TBB_URL = "https://github.com/01org/tbb/archive/4.4.tar.gz"
+    TBB_URL = "https://github.com/01org/tbb/archive/4.4.6.tar.gz"
 
 def InstallTBB(context, force):
     if Windows():
@@ -519,25 +545,18 @@ JPEG = Dependency("JPEG", InstallJPEG, "include/jpeglib.h")
 TIFF_URL = "ftp://download.osgeo.org/libtiff/tiff-4.0.7.zip"
 
 def InstallTIFF(context, force):
-    if Windows():
-        InstallTIFF_Windows(context, force)
-    else:
-        InstallTIFF_LinuxOrMacOS(context, force)
-
-def InstallTIFF_Windows(context, force):
     with CurrentWorkingDirectory(DownloadURL(TIFF_URL, context, force)):
         # libTIFF has a build issue on Windows where tools/tiffgt.c
         # unconditionally includes unistd.h, which does not exist.
         # To avoid this, we patch the CMakeLists.txt to skip building
-        # the tools entirely. We also need to skip building tests, since
-        # they rely on the tools we've just elided.
+        # the tools entirely. We do this on Linux and MacOS as well
+        # to avoid requiring some GL and X dependencies.
+        #
+        # We also need to skip building tests, since they rely on 
+        # the tools we've just elided.
         PatchFile("CMakeLists.txt", 
                    [("add_subdirectory(tools)", "# add_subdirectory(tools)"),
                     ("add_subdirectory(test)", "# add_subdirectory(test)")])
-        RunCMake(context, force)
-        
-def InstallTIFF_LinuxOrMacOS(context, force):
-    with CurrentWorkingDirectory(DownloadURL(TIFF_URL, context, force)):
         RunCMake(context, force)
 
 TIFF = Dependency("TIFF", InstallTIFF, "include/tiff.h")

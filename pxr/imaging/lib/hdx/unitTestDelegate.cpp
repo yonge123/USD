@@ -31,7 +31,7 @@
 #include "pxr/imaging/hd/texture.h"
 #include "pxr/imaging/hd/textureResource.h"
 
-#include "pxr/imaging/hdSt/camera.h"
+#include "pxr/imaging/hd/camera.h"
 #include "pxr/imaging/hdSt/drawTarget.h"
 #include "pxr/imaging/hdSt/drawTargetAttachmentDescArray.h"
 #include "pxr/imaging/hdSt/light.h"
@@ -190,12 +190,12 @@ Hdx_UnitTestDelegate::SetCamera(SdfPath const &cameraId,
                                 GfMatrix4d const &projMatrix)
 {
     _ValueCache &cache = _valueCacheMap[cameraId];
-    cache[HdStCameraTokens->windowPolicy] = VtValue(CameraUtilFit);
-    cache[HdStCameraTokens->worldToViewMatrix] = VtValue(viewMatrix);
-    cache[HdStCameraTokens->projectionMatrix] = VtValue(projMatrix);
+    cache[HdCameraTokens->windowPolicy] = VtValue(CameraUtilFit);
+    cache[HdCameraTokens->worldToViewMatrix] = VtValue(viewMatrix);
+    cache[HdCameraTokens->projectionMatrix] = VtValue(projMatrix);
 
     GetRenderIndex().GetChangeTracker().MarkSprimDirty(cameraId,
-                                                       HdStCamera::AllDirty);
+                                                       HdCamera::AllDirty);
 }
 
 void
@@ -204,9 +204,9 @@ Hdx_UnitTestDelegate::AddCamera(SdfPath const &id)
     // add a camera
     GetRenderIndex().InsertSprim(HdPrimTypeTokens->camera, this, id);
     _ValueCache &cache = _valueCacheMap[id];
-    cache[HdStCameraTokens->windowPolicy] = VtValue(CameraUtilFit);
-    cache[HdStCameraTokens->worldToViewMatrix] = VtValue(GfMatrix4d(1.0));
-    cache[HdStCameraTokens->projectionMatrix] = VtValue(GfMatrix4d(1.0));
+    cache[HdCameraTokens->windowPolicy] = VtValue(CameraUtilFit);
+    cache[HdCameraTokens->worldToViewMatrix] = VtValue(GfMatrix4d(1.0));
+    cache[HdCameraTokens->projectionMatrix] = VtValue(GfMatrix4d(1.0));
 }
 
 void
@@ -801,7 +801,7 @@ Hdx_UnitTestDelegate::GetRefineLevel(SdfPath const& id)
 }
 
 TfTokenVector
-Hdx_UnitTestDelegate::GetPrimVarVertexNames(SdfPath const& id)
+Hdx_UnitTestDelegate::GetPrimvarVertexNames(SdfPath const& id)
 {
     TfTokenVector names;
     names.push_back(HdTokens->points);
@@ -814,7 +814,7 @@ Hdx_UnitTestDelegate::GetPrimVarVertexNames(SdfPath const& id)
 }
 
 TfTokenVector
-Hdx_UnitTestDelegate::GetPrimVarConstantNames(SdfPath const& id)
+Hdx_UnitTestDelegate::GetPrimvarConstantNames(SdfPath const& id)
 {
     TfTokenVector names;
     if(_meshes.find(id) != _meshes.end()) {
@@ -826,7 +826,7 @@ Hdx_UnitTestDelegate::GetPrimVarConstantNames(SdfPath const& id)
 }
 
 TfTokenVector
-Hdx_UnitTestDelegate::GetPrimVarFacevaryingNames(SdfPath const& id)
+Hdx_UnitTestDelegate::GetPrimvarFacevaryingNames(SdfPath const& id)
 {
     TfTokenVector names;
     if (_meshes.find(id) != _meshes.end()) {
@@ -838,7 +838,7 @@ Hdx_UnitTestDelegate::GetPrimVarFacevaryingNames(SdfPath const& id)
 }
 
 TfTokenVector
-Hdx_UnitTestDelegate::GetPrimVarUniformNames(SdfPath const& id)
+Hdx_UnitTestDelegate::GetPrimvarUniformNames(SdfPath const& id)
 {
     TfTokenVector names;
     if(_meshes.find(id) != _meshes.end()) {
@@ -850,7 +850,7 @@ Hdx_UnitTestDelegate::GetPrimVarUniformNames(SdfPath const& id)
 }
 
 TfTokenVector
-Hdx_UnitTestDelegate::GetPrimVarInstanceNames(SdfPath const &id)
+Hdx_UnitTestDelegate::GetPrimvarInstanceNames(SdfPath const &id)
 {
     TfTokenVector names;
     if (_instancers.find(id) != _instancers.end()) {

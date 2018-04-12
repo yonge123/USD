@@ -178,12 +178,26 @@ def _CamelCase(aString):
 Token = namedtuple('Token', ['id', 'value', 'desc'])
 
 class PropInfo(object):
+    class CodeGen:
+        """Specifies how code gen constructs get methods for a property
+        
+        - generated: Auto generate the full Public API
+        - custom: Generate the header only. User responsible for implementation.
+        
+        See documentation on Generating Schemas for more information.
+        """
+        Generated = 'generated'
+        Custom = 'custom'
+        
     def __init__(self, sdfProp):
         # Allow user to specify custom naming through customData metadata.
         self.customData = dict(sdfProp.customData)
 
         self.name       = _CamelCase(sdfProp.name)
         self.apiName    = self.customData.get('apiName', self.name)
+        self.apiGet     = self.customData.get('apiGetImplementation', self.CodeGen.Generated)
+        if self.apiGet not in [self.CodeGen.Generated, self.CodeGen.Custom]:
+            print ("Token '%s' is not valid." % self.apiGet)
         self.rawName    = sdfProp.name
         self.doc        = _SanitizeDoc(sdfProp.documentation, '\n    /// ')
         self.custom     = sdfProp.custom
@@ -207,14 +221,7 @@ class AttrInfo(PropInfo):
         
         self.variability = str(sdfProp.variability).replace('Sdf.', 'Sdf')
         self.fallback = sdfProp.default
-
-        self.cppType = sdfProp.typeName.type.typeName
-        # XXX: not sure why, but std::string maps to string, perhaps a
-        # result of calling this from Python. Remap it to std::string here
-        # manually.
-        if self.cppType == 'string':
-            self.cppType = 'std::string'
-
+        self.cppType = sdfProp.typeName.cppTypeName
         self.usdType = "SdfValueTypeNames->%s" % (
             valueTypeNameToStr[sdfProp.typeName])
         
@@ -254,19 +261,36 @@ def _IsTyped(p):
 
 class ClassInfo(object):
     def __init__(self, usdPrim, sdfPrim):
+        # Error handling
+        errorPrefix = ('Invalid schema definition at ' 
+                       + '<' + str(sdfPrim.path) + '>')
+        errorSuffix = ('See '
+                       'https://graphics.pixar.com/usd/docs/api/'
+                       '_usd__page__generating_schemas.html '
+                       'for more information.\n')
+        errorMsg = lambda s: errorPrefix + '\n' + s + '\n' + errorSuffix
+
         # First validate proper class naming...
         if (sdfPrim.typeName != sdfPrim.path.name and
             sdfPrim.typeName != ''):
-            raise Exception("Code generation requires that every instantiable "
-                            "class's name must match its declared type "
-                            "('%s' and '%s' do not match.)" % 
-                            (sdfPrim.typeName, sdfPrim.path.name))
+            raise Exception(errorMsg("Code generation requires that every instantiable "
+                                     "class's name must match its declared type "
+                                     "('%s' and '%s' do not match.)" % 
+                                     (sdfPrim.typeName, sdfPrim.path.name)))
         
         # NOTE: usdPrim should ONLY be used for querying information regarding
         # the class's parent in order to avoid duplicating class members during
         # code generation.
         inherits = usdPrim.GetMetadata('inheritPaths') 
         inheritsList = _ListOpToList(inherits)
+
+        # We do not allow multiple inheritance 
+        numInherits = len(inheritsList)
+        if numInherits > 1:
+            raise Exception(errorMsg(('Schemas can only inherit from one other schema '
+                                      'at most. This schema inherits from %d (%s).' 
+                                      % (numInherits, 
+                                         ', '.join(map(str, inheritsList))))))
 
         # Allow user to specify custom naming through customData metadata.
         self.customData = dict(sdfPrim.customData)
@@ -300,13 +324,12 @@ class ClassInfo(object):
             (parentUsdName, parentClassName,
              self.parentCppClassName, self.parentBaseFileName) = \
              _ExtractNames(parentPrim, parentCustomData)
-        elif self.cppClassName == "UsdTyped" or \
-             self.cppClassName == 'UsdAPISchemaBase':
+        # Only Typed and APISchemaBase are allowed to have no inherits, since 
+        # these are the core base types for all the typed and API schemas 
+        # respectively.
+        elif self.cppClassName in ["UsdTyped", 'UsdAPISchemaBase']:
             self.parentCppClassName = "UsdSchemaBase"
             self.parentBaseFileName = "schemaBase"
-        else:
-            self.parentCppClassName = "UsdAPISchemaBase"
-            self.parentBaseFileName = "apiSchemaBase"
 
         # Extra Class Metadata
         self.doc = _SanitizeDoc(sdfPrim.documentation, '\n/// ')
@@ -326,22 +349,19 @@ class ClassInfo(object):
         self.isMultipleApply = self.customData.get('isMultipleApply', False)
         self.isPrivateApply = self.customData.get('isPrivateApply', False)
 
-        errorPrefix = ('Invalid schema definition at ' 
-                       + '<' + str(sdfPrim.path) + '>')
-        errorSuffix = ('       See '
-                       'https://graphics.pixar.com/usd/docs/api/'
-                       '_usd__page__generating_schemas.html#Usd_IsAVsAPISchemas '
-                       'for more information.\n')
-        errorMsg = lambda s: errorPrefix + s + '\n' + errorSuffix
-
         if self.isConcrete and not self.isTyped:
             raise Exception(errorMsg('Schema classes must either inherit '
                                      'Typed(IsA), or neither inherit typed '
                                      'nor provide a typename(API).'))
-        
+
         if self.isApi and sdfPrim.path.name != "APISchemaBase" and \
             not sdfPrim.path.name.endswith('API'):
-            raise Exception(errorMsg('API schemas must named with an API suffix.'))
+            raise Exception(errorMsg('API schemas must be named with an API suffix.'))
+        
+        if self.isApi and sdfPrim.path.name != "APISchemaBase" and \
+            (not self.parentCppClassName):
+            raise Exception(errorMsg("API schemas must explicitly inherit from "
+                    "UsdAPISchemaBase."))
 
         if not self.isApi and self.isMultipleApply:
             raise Exception(errorMsg('Non API schemas cannot be marked with '
@@ -543,7 +563,8 @@ def _AddToken(tokenDict, tokenId, val, desc):
     # 'interface' is not a reserved word but is a macro on Windows when using
     # COM so we treat it as reserved.
     reserved = set(['class', 'default', 'def', 'case', 'switch', 'break',
-                    'if', 'else', 'struct', 'template', 'interface'])
+                    'if', 'else', 'struct', 'template', 'interface',
+                    'float', 'double', 'int', 'char', 'long', 'short'])
     if tokenId in reserved:
         tokenId = tokenId + '_'
     if tokenId in tokenDict:
