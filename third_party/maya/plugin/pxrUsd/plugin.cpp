@@ -37,6 +37,7 @@
 #include "usdMaya/usdListShadingModes.h"
 #include "usdMaya/usdTranslatorImport.h"
 #include "usdMaya/usdTranslatorExport.h"
+#include "usdMaya/usdCacheFormat.h"
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -93,8 +94,8 @@ MStatus initializePlugin(
     CHECK_MSTATUS(status);
 
     status =
-	MHWRender::MDrawRegistry::registerDrawOverrideCreator(
-	    UsdMayaProxyDrawOverride::sm_drawDbClassification,
+    MHWRender::MDrawRegistry::registerDrawOverrideCreator(
+        UsdMayaProxyDrawOverride::sm_drawDbClassification,
             UsdMayaProxyDrawOverride::sm_drawRegistrantId,
             UsdMayaProxyDrawOverride::Creator);
     CHECK_MSTATUS(status);
@@ -184,6 +185,14 @@ MStatus initializePlugin(
         status.perror("pxrUsd: unable to register USD Export translator.");
     }
 
+    // A MPxCacheFormat to save Maya point data to UsdGeomPoints
+    status = plugin.registerCacheFormat(UsdCacheFormat::translatorName,
+                                        UsdCacheFormat::creator);
+
+    if (!status) {
+        status.perror("pxrUsd: unable to register USD Cache format.");
+    }
+
     return status;
 }
 
@@ -219,12 +228,17 @@ MStatus uninitializePlugin(
         status.perror("pxrUsd: unable to deregister USD Export translator.");
     }
 
+    status = plugin.deregisterCacheFormat("pxrUsdCacheFormat");
+    if (!status) {
+        status.perror("pxrUsd: unable to deregister USD Cache format.");
+    }
+
     status = MGlobal::executeCommand("assembly -e -deregister " + _data.referenceAssembly.typeName);
     CHECK_MSTATUS(status);
 
     status =
-	MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
-	    UsdMayaProxyDrawOverride::sm_drawDbClassification,
+    MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
+        UsdMayaProxyDrawOverride::sm_drawDbClassification,
             UsdMayaProxyDrawOverride::sm_drawRegistrantId);
 
     CHECK_MSTATUS(status);
