@@ -6,7 +6,29 @@
 
 #include "pxr/imaging/hd/vtBufferSource.h"
 
+#include "pxr/imaging/glf/contextCaps.h"
+
 PXR_NAMESPACE_OPEN_SCOPE
+
+namespace {
+    inline void
+    _getTextureResource(HdSceneDelegate* delegate, const SdfPath& id, HdTextureResourceSharedPtr& out) {
+        HdTextureResource::ID texID = delegate->GetTextureResourceID(id);
+        HdInstance<HdTextureResource::ID, HdTextureResourceSharedPtr>
+            texInstance;
+        const HdResourceRegistrySharedPtr& resourceRegistry =
+            delegate->GetRenderIndex().GetResourceRegistry();
+        std::unique_lock<std::mutex> regLock =
+            resourceRegistry->RegisterTextureResource(texID, &texInstance);
+
+        if (texInstance.IsFirstInstance()) {
+            out = delegate->GetTextureResource(id);
+            texInstance.SetValue(out);
+        } else {
+            out = texInstance.GetValue();
+        }
+    }
+}
 
 HdStImagePlane::HdStImagePlane(const SdfPath& id, const SdfPath& instanceId)
     : HdImagePlane(id, instanceId), _topology(), _topologyId(0) {
@@ -15,7 +37,7 @@ HdStImagePlane::HdStImagePlane(const SdfPath& id, const SdfPath& instanceId)
 
 void HdStImagePlane::Sync(
     HdSceneDelegate* delegate,
-    HdRenderParam* renderParam,
+    HdRenderParam* /*renderParam*/,
     HdDirtyBits* dirtyBits,
     const TfToken& reprName,
     bool forcedRepr) {
@@ -25,28 +47,7 @@ void HdStImagePlane::Sync(
     _UpdateRepr(delegate, calcReprName, dirtyBits);
 
     // Loading the texture
-    SdfPath const& id = GetId();
-    //HdResourceRegistrySharedPtr const &resourceRegistry = 
-    //    delegate->GetRenderIndex().GetResourceRegistry();
-
-    HdTextureResource::ID texID = delegate->GetTextureResourceID(id);
-    {
-        HdInstance<HdTextureResource::ID, HdTextureResourceSharedPtr> 
-            texInstance;
-        const HdResourceRegistrySharedPtr& resourceRegistry = 
-            delegate->GetRenderIndex().GetResourceRegistry();
-        std::unique_lock<std::mutex> regLock =
-            resourceRegistry->RegisterTextureResource(texID, &texInstance);
-
-        if (texInstance.IsFirstInstance()) {
-            _textureResource = delegate->GetTextureResource(id);
-            texInstance.SetValue(_textureResource);
-        } else {
-            // Take a reference to the texture to ensure it lives as long
-            // as this class.
-            _textureResource = texInstance.GetValue();
-        }
-    }
+    _getTextureResource(delegate, GetId(), _textureResource);
 
     *dirtyBits &= ~HdChangeTracker::AllSceneDirtyBits;
 }
@@ -103,17 +104,35 @@ HdStImagePlane::_UpdateDrawItem(
     // be able to handle everything.
     drawItem->SetMaterialShaderFromRenderIndex(
         sceneDelegate->GetRenderIndex(), GetMaterialId());
+    const auto& id = GetId();
 
     HdSt_ImagePlaneShaderKey shaderKey;
     HdStResourceRegistrySharedPtr resourceRegistry =
          boost::static_pointer_cast<HdStResourceRegistry>(
              sceneDelegate->GetRenderIndex().GetResourceRegistry());
-    drawItem->SetGeometricShader(
-        HdSt_GeometricShader::Create(shaderKey, resourceRegistry));
+    auto geometricShader = HdSt_GeometricShader::Create(shaderKey, resourceRegistry);
+    // Only supporting bindless textures for now.
+    _getTextureResource(sceneDelegate, id, _textureResource);
+    const auto bindless = GlfContextCaps::GetInstance().bindlessTextureEnabled;
+    if (_textureResource != nullptr && bindless) {
+        // std::cerr << "Binding texture resouce" << std::endl;
+        /*HdBufferSourceSharedPtr texSource(
+            new HdSt_BindlessSamplerBufferSource(
+                "imagePlaneTexture",
+                GL_SAMPLER_2D,
+                _textureResource->GetTexelsTextureHandle()));*/
+
+        /*std::vector<HdBindingRequest> bindingRequests = {
+            {HdBinding::Type::TEXTURE_2D}
+        };*/
+    }
+    drawItem->SetGeometricShader(geometricShader);
+
+    auto& renderIndex = sceneDelegate->GetRenderIndex();
+    renderIndex.GetChangeTracker().MarkShaderBindingsDirty();
 
     // TODO: We'll need points there and later on uvs
     // to control the texture mapping.
-    const auto& id = GetId();
     if (HdChangeTracker::IsAnyPrimVarDirty(*dirtyBits, id)) {
         _PopulateVertexPrimvars(id, sceneDelegate, drawItem, dirtyBits);
     }
