@@ -1,6 +1,5 @@
 tg/simple_features/iterating_maya_underworld
 tg/simple_features/symlink_headers
-tg/simple_features/GetSessionLayerForVariantSelections_SdfPath
 tg/simple_features/tests_set_maya_app_dir
 tg/simple_features/maya_user_attribute_writer_plugins
 tg/simple_features/allow_custom_material_scope_names_in_katana
