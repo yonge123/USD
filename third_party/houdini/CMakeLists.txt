@@ -10,6 +10,8 @@ set(PXR_INSTALL_SUBDIR "third_party/houdini")
 
 pxr_setup_plugins()
 
+pxr_setup_third_party_python_init()
+
 add_definitions( 
     -DHOUDINI_API_VERSION=${HOUDINI_MAJOR_VERSION}${HOUDINI_MINOR_VERSION}
     -DVERSION="${HOUDINI_VERSION}"
