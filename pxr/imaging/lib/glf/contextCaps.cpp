@@ -40,9 +40,9 @@ TF_INSTANTIATE_SINGLETON(GlfContextCaps);
 
 TF_DEFINE_ENV_SETTING(GLF_ENABLE_SHADER_STORAGE_BUFFER, true,
                       "Use GL shader storage buffer (OpenGL 4.3)");
-TF_DEFINE_ENV_SETTING(GLF_ENABLE_BINDLESS_BUFFER, false,
+TF_DEFINE_ENV_SETTING(GLF_ENABLE_BINDLESS_BUFFER, true,
                       "Use GL bindless buffer extention");
-TF_DEFINE_ENV_SETTING(GLF_ENABLE_BINDLESS_TEXTURE, false,
+TF_DEFINE_ENV_SETTING(GLF_ENABLE_BINDLESS_TEXTURE, true,
                       "Use GL bindless texture extention");
 TF_DEFINE_ENV_SETTING(GLF_ENABLE_MULTI_DRAW_INDIRECT, true,
                       "Use GL mult draw indirect extention");
