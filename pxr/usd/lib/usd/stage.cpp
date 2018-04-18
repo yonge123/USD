@@ -62,7 +62,7 @@
 #include "pxr/usd/sdf/schema.h"
 #include "pxr/usd/sdf/types.h" 
 
-#include "pxr/base/tracelite/trace.h"
+#include "pxr/base/trace/trace.h"
 #include "pxr/usd/ar/resolver.h"
 #include "pxr/usd/ar/resolverContext.h"
 #include "pxr/usd/ar/resolverContextBinder.h"
@@ -626,36 +626,13 @@ _CreateNewLayer(const std::string &identifier)
 
 /* static */
 UsdStageRefPtr
-UsdStage::CreateNew(const std::string& identifier)
-{
-    TfAutoMallocTag2 tag("Usd", _StageTag(identifier));
-
-    if (SdfLayerRefPtr layer = _CreateNewLayer(identifier))
-        return Open(layer, _CreateAnonymousSessionLayer(layer));
-    return TfNullPtr;
-}
-
-/* static */
-UsdStageRefPtr
 UsdStage::CreateNew(const std::string& identifier,
-                    const SdfLayerHandle& sessionLayer)
+                    InitialLoadSet load)
 {
     TfAutoMallocTag2 tag("Usd", _StageTag(identifier));
 
     if (SdfLayerRefPtr layer = _CreateNewLayer(identifier))
-        return Open(layer, sessionLayer);
-    return TfNullPtr;
-}
-
-/* static */
-UsdStageRefPtr
-UsdStage::CreateNew(const std::string& identifier,
-                    const ArResolverContext& pathResolverContext)
-{
-    TfAutoMallocTag2 tag("Usd", _StageTag(identifier));
-
-    if (SdfLayerRefPtr layer = _CreateNewLayer(identifier))
-        return Open(layer, pathResolverContext);
+        return Open(layer, _CreateAnonymousSessionLayer(layer), load);
     return TfNullPtr;
 }
 
@@ -663,70 +640,103 @@ UsdStage::CreateNew(const std::string& identifier,
 UsdStageRefPtr
 UsdStage::CreateNew(const std::string& identifier,
                     const SdfLayerHandle& sessionLayer,
-                    const ArResolverContext& pathResolverContext)
+                    InitialLoadSet load)
 {
     TfAutoMallocTag2 tag("Usd", _StageTag(identifier));
 
     if (SdfLayerRefPtr layer = _CreateNewLayer(identifier))
-        return Open(layer, sessionLayer, pathResolverContext);
+        return Open(layer, sessionLayer, load);
     return TfNullPtr;
 }
 
 /* static */
 UsdStageRefPtr
-UsdStage::CreateInMemory()
+UsdStage::CreateNew(const std::string& identifier,
+                    const ArResolverContext& pathResolverContext,
+                    InitialLoadSet load)
+{
+    TfAutoMallocTag2 tag("Usd", _StageTag(identifier));
+
+    if (SdfLayerRefPtr layer = _CreateNewLayer(identifier))
+        return Open(layer, pathResolverContext, load);
+    return TfNullPtr;
+}
+
+/* static */
+UsdStageRefPtr
+UsdStage::CreateNew(const std::string& identifier,
+                    const SdfLayerHandle& sessionLayer,
+                    const ArResolverContext& pathResolverContext,
+                    InitialLoadSet load)
+{
+    TfAutoMallocTag2 tag("Usd", _StageTag(identifier));
+
+    if (SdfLayerRefPtr layer = _CreateNewLayer(identifier))
+        return Open(layer, sessionLayer, pathResolverContext, load);
+    return TfNullPtr;
+}
+
+/* static */
+UsdStageRefPtr
+UsdStage::CreateInMemory(InitialLoadSet load)
 {
     // Use usda file format if an identifier was not provided.
     //
     // In regards to "tmp.usda" below, SdfLayer::CreateAnonymous always
     // prefixes the identifier with the layer's address in memory, so using the
     // same identifier multiple times still produces unique layers.
-    return CreateInMemory("tmp.usda");
-}
-
-/* static */
-UsdStageRefPtr
-UsdStage::CreateInMemory(const std::string& identifier)
-{
-    return Open(SdfLayer::CreateAnonymous(identifier));
+    return CreateInMemory("tmp.usda", load);
 }
 
 /* static */
 UsdStageRefPtr
 UsdStage::CreateInMemory(const std::string& identifier,
-                         const ArResolverContext& pathResolverContext)
+                         InitialLoadSet load)
 {
-    // CreateAnonymous() will transform 'identifier', so don't bother
-    // using it as a tag
-    TfAutoMallocTag tag("Usd");
-    
-    return Open(SdfLayer::CreateAnonymous(identifier), pathResolverContext);
+    return Open(SdfLayer::CreateAnonymous(identifier), load);
 }
 
 /* static */
 UsdStageRefPtr
 UsdStage::CreateInMemory(const std::string& identifier,
-                         const SdfLayerHandle &sessionLayer)
+                         const ArResolverContext& pathResolverContext,
+                         InitialLoadSet load)
 {
     // CreateAnonymous() will transform 'identifier', so don't bother
     // using it as a tag
     TfAutoMallocTag tag("Usd");
     
-    return Open(SdfLayer::CreateAnonymous(identifier), sessionLayer);
+    return Open(SdfLayer::CreateAnonymous(identifier), 
+                pathResolverContext, load);
 }
 
 /* static */
 UsdStageRefPtr
 UsdStage::CreateInMemory(const std::string& identifier,
                          const SdfLayerHandle &sessionLayer,
-                         const ArResolverContext& pathResolverContext)
+                         InitialLoadSet load)
+{
+    // CreateAnonymous() will transform 'identifier', so don't bother
+    // using it as a tag
+    TfAutoMallocTag tag("Usd");
+    
+    return Open(SdfLayer::CreateAnonymous(identifier), 
+                sessionLayer, load);
+}
+
+/* static */
+UsdStageRefPtr
+UsdStage::CreateInMemory(const std::string& identifier,
+                         const SdfLayerHandle &sessionLayer,
+                         const ArResolverContext& pathResolverContext,
+                         InitialLoadSet load)
 {
     // CreateAnonymous() will transform 'identifier', so don't bother
     // using it as a tag
     TfAutoMallocTag tag("Usd");
     
     return Open(SdfLayer::CreateAnonymous(identifier),
-                sessionLayer, pathResolverContext);
+                sessionLayer, pathResolverContext, load);
 }
 
 static
@@ -1293,7 +1303,7 @@ UsdStage::_CreatePropertySpecForEditing(const UsdProperty &prop)
         for (Usd_Resolver r(&prim.GetPrimIndex()); r.IsValid(); r.NextLayer()) {
             if (SdfPropertySpecHandle propSpec = r.GetLayer()->
                 GetPropertyAtPath(r.GetLocalPath().AppendProperty(propName))) {
-                if (specToCopy = TfDynamic_cast<TypedSpecHandle>(propSpec))
+                if ((specToCopy = TfDynamic_cast<TypedSpecHandle>(propSpec)))
                     break;
                 // Type mismatch.
                 TF_RUNTIME_ERROR("Spec type mismatch.  Failed to create %s for "
@@ -1778,7 +1788,7 @@ UsdStage::_IsValidForLoad(const SdfPath& path) const
         // Lets see if any ancestor exists, if so it's safe to attempt to load.
         SdfPath parentPath = path;
         while (parentPath != SdfPath::AbsoluteRootPath()) {
-            if (curPrim = GetPrimAtPath(parentPath)) {
+            if ((curPrim = GetPrimAtPath(parentPath))) {
                 break;
             }
             parentPath = parentPath.GetParentPath();
@@ -3724,8 +3734,25 @@ UsdStage::_RecomposePrims(const PcpChanges &changes,
 {
     changes.Apply();
 
-    const PcpChanges::CacheChanges &cacheChanges = changes.GetCacheChanges();
+    // Process layer stack changes.
+    //
+    // Pcp recomputes layer stacks immediately upon the call to 
+    // PcpChanges::Apply, which causes composition errors that occur
+    // during this process to not be reported in _ComposePrimIndexesInParallel.
+    // Walk through all modified layer stacks and report their errors here.
+    const PcpChanges::LayerStackChanges &layerStackChanges = 
+        changes.GetLayerStackChanges();
 
+    for (const auto& layerStackChange : layerStackChanges) {
+        const PcpLayerStackPtr& layerStack = layerStackChange.first;
+        const PcpErrorVector& errors = layerStack->GetLocalErrors();
+        if (!errors.empty()) {
+            _ReportPcpErrors(errors, "Recomposing stage");
+        }
+    }
+
+    // Process composed prim changes.
+    const PcpChanges::CacheChanges &cacheChanges = changes.GetCacheChanges();
     if (!cacheChanges.empty()) {
         const PcpCacheChanges &ourChanges = cacheChanges.begin()->second;
 
