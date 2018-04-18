@@ -7,7 +7,7 @@ pxr_library(hd
     LIBRARIES
         plug
         tf
-        tracelite
+        trace
         vt
         work
         sdf
@@ -77,6 +77,7 @@ pxr_library(hd
         task
         texture
         textureResource
+        timeSampleArray
         tokens
         topology
         types
