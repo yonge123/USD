@@ -489,10 +489,11 @@ GusdRefiner::addPrimitive( const GT_PrimitiveHandle& gtPrimIn )
         }
     }
 
-    if( (primType != GT_GEO_PACKED || !refinePackedPrims)) {
-        if (gtPrim->getPrimitiveType() == GT_PRIM_VDB_VOLUME) {
+    if (primType != GT_GEO_PACKED || !refinePackedPrims) {
+        if (primType == GT_PRIM_VDB_VOLUME) {
             m_collector.addVDB(gtPrim);
-        } else if (GusdPrimWrapper::isGTPrimSupported(gtPrim)) {
+        }
+        else if (GusdPrimWrapper::isGTPrimSupported(gtPrim)) {
             UT_Matrix4D m;
             if( primType == GT_GEO_PACKED ) {
                 // packed fragment
@@ -511,6 +512,9 @@ GusdRefiner::addPrimitive( const GT_PrimitiveHandle& gtPrimIn )
                              newCtm,
                              purpose,
                              m_writeCtrlFlags );
+        }
+        else {
+            gtPrim->refine( *this, &m_refineParms );
         }
     }
     else {
