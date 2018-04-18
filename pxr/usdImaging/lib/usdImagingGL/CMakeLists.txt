@@ -7,7 +7,7 @@ pxr_library(usdImagingGL
         gf
         tf
         plug
-        tracelite
+        trace
         vt
         work
         garch
@@ -19,7 +19,6 @@ pxr_library(usdImagingGL
         usd
         usdGeom
         usdShade
-        usdHydra
         usdImaging
         ar
         ${Boost_PYTHON_LIBRARY}
@@ -46,6 +45,7 @@ pxr_library(usdImagingGL
         hydraMaterialAdapter
         package
         refEngine
+        imagePlaneAdapter
 
     PUBLIC_HEADERS
         api.h

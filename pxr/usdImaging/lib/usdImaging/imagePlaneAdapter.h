@@ -32,7 +32,7 @@ public:
                                UsdTimeCode time,
                                HdDirtyBits requestedBits,
                                UsdImagingInstancerContext const*
-                               instancerContext = nullptr) override;
+                               instancerContext = nullptr) const override;
 
     USDIMAGING_API
     virtual bool IsSupported(const UsdImagingIndexProxy* index) const override;
@@ -41,7 +41,7 @@ public:
     virtual void TrackVariability(const UsdPrim& prim,
                                   const SdfPath& cachePath,
                                   HdDirtyBits* timeVaryingBits,
-                                  const UsdImagingInstancerContext* instancerContext) override;
+                                  const UsdImagingInstancerContext* instancerContext) const override;
 };
 
 

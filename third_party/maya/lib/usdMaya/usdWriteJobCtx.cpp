@@ -78,7 +78,7 @@ usdWriteJobCtx::usdWriteJobCtx(const JobExportArgs& args) : mArgs(args), mNoInst
 
 }
 
-SdfPath usdWriteJobCtx::getMasterPath(const MDagPath& dg)
+SdfPath usdWriteJobCtx::getOrCreateMasterPath(const MDagPath& dg)
 {
     const MObjectHandle handle(dg.node());
     const auto it = mMasterToUsdPath.find(handle);
@@ -93,23 +93,41 @@ SdfPath usdWriteJobCtx::getMasterPath(const MDagPath& dg)
         auto dagCopy = allInstances[0];
         const auto usdPath = getUsdPathFromDagPath(dagCopy, true);
         dagCopy.pop();
+
         // This will get auto destroyed, because we are not storing it in the list
         MayaTransformWriterPtr transformPrimWriter(new MayaTransformWriter(dagCopy, usdPath.GetParentPath(), true, *this));
-        if (transformPrimWriter != nullptr && transformPrimWriter->isValid()) {
-            transformPrimWriter->write(UsdTimeCode::Default());
-            mMasterToUsdPath.insert(std::make_pair(handle, transformPrimWriter->getUsdPath()));
-        } else {
+        if (!transformPrimWriter || !transformPrimWriter->isValid()) {
             return SdfPath();
         }
+
+        transformPrimWriter->write(UsdTimeCode::Default());
+        mMasterToUsdPath[handle] = transformPrimWriter->getUsdPath();
+
         auto primWriter = _createPrimWriter(allInstances[0], SdfPath(), true);
-        if (primWriter != nullptr) {
-            primWriter->write(UsdTimeCode::Default());
-            mMayaPrimWriterList.push_back(primWriter);
-            return transformPrimWriter->getUsdPath();
-        } else {
+        if (!primWriter) { // Note that _createPrimWriter ensures validity.
             return SdfPath();
+        }
+
+        primWriter->write(UsdTimeCode::Default());
+        mMasterToPrimWriter[handle] = mMayaPrimWriterList.size();
+        mMayaPrimWriterList.push_back(primWriter);
+        return transformPrimWriter->getUsdPath();
+    }
+}
+
+const MayaPrimWriterPtr
+usdWriteJobCtx::getMasterPrimWriter(const MDagPath& dg) const
+{
+    const MObjectHandle handle(dg.node());
+    const auto it = mMasterToPrimWriter.find(handle);
+    if (it != mMasterToPrimWriter.end()) {
+        size_t i = it->second;
+        if (i < mMayaPrimWriterList.size()) {
+            return mMayaPrimWriterList[i];
         }
     }
+
+    return nullptr;
 }
 
 bool usdWriteJobCtx::needToTraverse(const MDagPath& curDag)
@@ -265,6 +283,16 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         return nullptr;
     }
 
+    if (curDag.pathCount() > 1) {
+        MDagPath underworldLeafPath;
+        curDag.getPath(underworldLeafPath, curDag.pathCount() - 1);
+        if (underworldLeafPath.length() == 0)
+        {
+            // This is an underworld "root" node - also skip
+            return nullptr;
+        }
+    }
+
     MObject ob = curDag.node();
     const SdfPath writePath = usdPath.IsEmpty() ?
             getUsdPathFromDagPath(curDag, instanceSource) : usdPath;
@@ -290,14 +318,23 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         }
     }
 
-    // Deal with instances first because they're special.
-    // Then the rest of the checks need to occur with derived classes
-    // coming before base classes (e.g. instancer before transform).
-    if (mArgs.exportInstances && curDag.isInstanced() && !instanceSource) {
+    // Do cameras first, because they don't support instancing,
+    // because they may have exportable underworld nodes
+    if (ob.hasFn(MFn::kCamera)) {
+        const SdfPath cameraWritePath = usdPath.IsEmpty() ?
+                getUsdPathFromDagPath(curDag, false) : usdPath;
+        MayaCameraWriterPtr primPtr(new MayaCameraWriter(curDag, cameraWritePath, *this));
+        if (primPtr->isValid()) {
+            return primPtr;
+        }
+    // Then deal with instances before others because they're special.
+    } else if (mArgs.exportInstances && curDag.isInstanced() && !instanceSource) {
         MayaTransformWriterPtr primPtr(new MayaTransformWriter(curDag, writePath, instanceSource, *this));
         if (primPtr->isValid()) {
             return primPtr;
         }
+    // Then the rest of the checks need to occur with derived classes
+    // coming before base classes (e.g. instancer before transform).
     } else if (ob.hasFn(MFn::kJoint)) {
         MayaSkeletonWriterPtr primPtr(new MayaSkeletonWriter(curDag, writePath, *this));
         if (primPtr->isValid()) {
@@ -333,15 +370,11 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         if (primPtr->isValid()) {
             return primPtr;
         }
-    } else if (ob.hasFn(MFn::kCamera)) {
-        const SdfPath cameraWritePath = usdPath.IsEmpty() ?
-                getUsdPathFromDagPath(curDag, false) : usdPath;
-        MayaCameraWriterPtr primPtr(new MayaCameraWriter(curDag, cameraWritePath, *this));
+    } else if (ob.hasFn(MFn::kLocator)) {
+        MayaLocatorWriterPtr primPtr(new MayaLocatorWriter(curDag, writePath, instanceSource, *this));
         if (primPtr->isValid()) {
             return primPtr;
         }
-    } else if (ob.hasFn(MFn::kLocator)) {
-        MayaLocatorWriterPtr primPtr(new MayaLocatorWriter(curDag, writePath, instanceSource, *this));
     } else if (ob.hasFn(MFn::kImagePlane)) {
         MayaImagePlaneWriterPtr primPtr(new MayaImagePlaneWriter(curDag, writePath, instanceSource, *this));
         if (primPtr->isValid()) {

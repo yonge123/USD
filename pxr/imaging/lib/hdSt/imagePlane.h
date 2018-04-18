@@ -42,7 +42,7 @@ private:
         HdDirtyBits* dirtyBits);
 
     void
-    _PopulateVertexPrimVars(
+    _PopulateVertexPrimvars(
         const SdfPath& id,
         HdSceneDelegate *sceneDelegate,
         HdStDrawItem *drawItem,
@@ -57,6 +57,10 @@ private:
 
     HdSt_MeshTopologySharedPtr _topology;
     HdTopology::ID _topologyId;
+
+    // Make sure we have a reference to the texture resource, so its
+    // life time exists at least as long as this object.
+    HdTextureResourceSharedPtr _textureResource;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

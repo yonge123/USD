@@ -6,17 +6,15 @@
 #include "pxr/usdImaging/usdImaging/delegate.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
+#include "pxr/imaging/hd/imagePlane.h"
+
 PXR_NAMESPACE_OPEN_SCOPE
-
-TF_DEFINE_ENV_SETTING(USD_IMAGING_ENABLE_IMAGEPLANES, false,
-        "Enables/disables the use of image planes in hydra until the code matures enough.");
-
 
 TF_REGISTRY_FUNCTION(TfType)
 {
     typedef UsdImagingImagePlaneAdapter Adapter;
-    TfType t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter> >();
-    t.SetFactory< UsdImagingPrimAdapterFactory<Adapter> >();
+    /*TfType t = */TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter> >();
+    //t.SetFactory< UsdImagingPrimAdapterFactory<Adapter> >();
 }
 
 UsdImagingImagePlaneAdapter::~UsdImagingImagePlaneAdapter() {
@@ -28,7 +26,7 @@ UsdImagingImagePlaneAdapter::Populate(
     const UsdPrim& prim,
     UsdImagingIndexProxy* index,
     const UsdImagingInstancerContext* instancerContext /*= nullptr*/){
-    return TfGetEnvSetting(USD_IMAGING_ENABLE_IMAGEPLANES) ? _AddRprim(HdPrimTypeTokens->imagePlane,
+    return HdImagePlane::IsEnabled() ? _AddRprim(HdPrimTypeTokens->imagePlane,
                      prim, index, GetMaterialId(prim), instancerContext) : SdfPath();
 }
 
@@ -37,7 +35,7 @@ UsdImagingImagePlaneAdapter::TrackVariability(
     const UsdPrim& prim,
     const SdfPath& cachePath,
     HdDirtyBits* timeVaryingBits,
-    const UsdImagingInstancerContext* instancerContext) {
+    const UsdImagingInstancerContext* instancerContext) const {
     BaseAdapter::TrackVariability(
         prim, cachePath, timeVaryingBits, instancerContext);
 
@@ -69,7 +67,7 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
     UsdTimeCode time,
     HdDirtyBits requestedBits,
     UsdImagingInstancerContext const*
-    instancerContext /*= nullptr*/) {
+    instancerContext /*= nullptr*/) const {
     BaseAdapter::UpdateForTime(prim, cachePath, time, requestedBits, instancerContext);
 
     UsdImagingValueCache* valueCache = _GetValueCache();
@@ -117,7 +115,8 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
     }
 }
 
-bool UsdImagingImagePlaneAdapter::IsSupported(const UsdImagingIndexProxy* index) const {
+bool
+UsdImagingImagePlaneAdapter::IsSupported(const UsdImagingIndexProxy* index) const {
     return index->IsRprimTypeSupported(HdPrimTypeTokens->imagePlane);
 }
 

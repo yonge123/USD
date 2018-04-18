@@ -268,7 +268,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
             // children should be included in the export.
             curLeafDagPath = curDagPath;
         } else if (!_HasParent(curDagPath, curLeafDagPath)) {
-            // The lowest-level, non-underworld dagNode from the dagPath is not one of the arg dagPaths, so prune
+            // This dagPath is not a child (or in the underworld of a child) of one of the arg dagPaths, so prune
             itDag.prune();
             continue;
         }
@@ -346,6 +346,10 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
                 mDagPathToUsdPathMap,
                 exportParams);
 
+    // We shouldn't be creating new instance masters after this point, and we
+    // want to cleanup the InstanceSources prim before writing model hierarchy.
+    mJobCtx.processInstances();
+
     if (!mModelKindWriter.MakeModelHierarchy(mJobCtx.mStage)) {
         return false;
     }
@@ -399,7 +403,6 @@ void usdWriteJob::evalJob(double iFrame)
 
 void usdWriteJob::endJob()
 {
-    mJobCtx.processInstances();
     UsdPrimSiblingRange usdRootPrims = mJobCtx.mStage->GetPseudoRoot().GetChildren();
 
     // Write Variants (to first root prim path)

@@ -289,6 +289,11 @@ UsdImagingInstanceAdapter::_Populate(UsdPrim const& prim,
                                    /*parentPath=*/ctx.instancerId,
                                    _GetPrim(instancerPath),
                                    ctx.instancerAdapter);
+
+            // Ensure that the instance transforms are computed on the first
+            // call to UpdateForTime.
+            index->MarkInstancerDirty(instancerPath,
+                HdChangeTracker::DirtyPrimVar);
         } else if (nestedInstances.empty()) {
             // if this instance path ends up to have no prims in subtree
             // and not an instance itself , we don't need to track this path
@@ -432,7 +437,7 @@ UsdImagingInstanceAdapter::TrackVariability(UsdPrim const& prim,
                                   SdfPath const& cachePath,
                                   HdDirtyBits* timeVaryingBits,
                                   UsdImagingInstancerContext const* 
-                                      instancerContext)
+                                      instancerContext) const
 {
     UsdImagingValueCache* valueCache = _GetValueCache();
 
@@ -500,16 +505,6 @@ UsdImagingInstanceAdapter::TrackVariability(UsdPrim const& prim,
         if (instancerBits & HdChangeTracker::DirtyInstancer) {
             *timeVaryingBits |= HdChangeTracker::DirtyPrimVar;
         }
-
-        VtMatrix4dArray instanceXforms;
-        if (_ComputeInstanceTransform(prim, &instanceXforms, time)) {
-            valueCache->GetPrimvar(
-                cachePath, HdTokens->instanceTransform) = instanceXforms;
-            UsdImagingValueCache::PrimvarInfo primvar;
-            primvar.name = HdTokens->instanceTransform;
-            primvar.interpolation = _tokens->instance;
-            _MergePrimvar(primvar, &valueCache->GetPrimvars(cachePath));
-        }
     }
 }
 
@@ -517,7 +512,7 @@ template <typename Functor>
 void
 UsdImagingInstanceAdapter::_RunForAllInstancesToDraw(
     UsdPrim const& instancer,
-    Functor* fn)
+    Functor* fn) const
 {
     const _InstancerData* instancerData = 
         TfMapLookupPtr(_instancerData, instancer.GetPath());
@@ -540,7 +535,7 @@ UsdImagingInstanceAdapter::_RunForAllInstancesToDrawImpl(
     UsdPrim const& instancer, 
     std::vector<UsdPrim> *instanceContext,
     size_t* instanceIdx,
-    Functor* fn)
+    Functor* fn) const
 {
     // NOTE: This logic is almost exactly similar to the logic in
     // _CountAllInstancesToDrawImpl. If you're updating this function, you
@@ -604,7 +599,7 @@ UsdImagingInstanceAdapter::_RunForAllInstancesToDrawImpl(
 
 size_t 
 UsdImagingInstanceAdapter::_CountAllInstancesToDraw(
-    UsdPrim const& instancer)
+    UsdPrim const& instancer) const
 {
     // Memoized table of instancer path to the total number of 
     // times that instancer will be drawn.
@@ -615,7 +610,7 @@ UsdImagingInstanceAdapter::_CountAllInstancesToDraw(
 size_t 
 UsdImagingInstanceAdapter::_CountAllInstancesToDrawImpl(
     UsdPrim const& instancer,
-    _InstancerDrawCounts* drawCounts)
+    _InstancerDrawCounts* drawCounts) const
 {
     // NOTE: This logic is almost exactly similar to the logic in
     // _RunForAllInstancesToDrawImpl. If you're updating this function, you
@@ -678,7 +673,7 @@ UsdImagingInstanceAdapter::_CountAllInstancesToDrawImpl(
 struct UsdImagingInstanceAdapter::_ComputeInstanceTransformFn
 {
     _ComputeInstanceTransformFn(
-        UsdImagingInstanceAdapter* adapter_, const UsdTimeCode& time_) 
+        const UsdImagingInstanceAdapter* adapter_, const UsdTimeCode& time_) 
         : adapter(adapter_), time(time_) 
     { }
 
@@ -709,16 +704,16 @@ struct UsdImagingInstanceAdapter::_ComputeInstanceTransformFn
         return true;
     }
 
-    UsdImagingInstanceAdapter* adapter;
+    const UsdImagingInstanceAdapter* adapter;
     UsdTimeCode time;
     VtMatrix4dArray result;
 };
 
 bool
-UsdImagingInstanceAdapter::_ComputeInstanceTransform(
+UsdImagingInstanceAdapter::_ComputeInstanceTransforms(
     UsdPrim const& instancer,
     VtMatrix4dArray* outTransforms,
-    UsdTimeCode time)
+    UsdTimeCode time) const
 {
     _ComputeInstanceTransformFn computeXform(this, time);
     _RunForAllInstancesToDraw(instancer, &computeXform);
@@ -728,7 +723,7 @@ UsdImagingInstanceAdapter::_ComputeInstanceTransform(
 
 struct UsdImagingInstanceAdapter::_IsInstanceTransformVaryingFn
 {
-    _IsInstanceTransformVaryingFn(UsdImagingInstanceAdapter* adapter_)
+    _IsInstanceTransformVaryingFn(const UsdImagingInstanceAdapter* adapter_)
         : adapter(adapter_), result(false) { }
 
     void Initialize(size_t numInstances)
@@ -737,13 +732,8 @@ struct UsdImagingInstanceAdapter::_IsInstanceTransformVaryingFn
     bool operator()(
         const std::vector<UsdPrim>& instanceContext, size_t instanceIdx)
     {
-        HdDirtyBits dirtyBits;
         TF_FOR_ALL(primIt, instanceContext) {
-            if (adapter->_IsTransformVarying(
-                    *primIt, 
-                    HdChangeTracker::DirtyTransform,
-                    HdTokens->instancer,
-                    &dirtyBits)) {
+            if (_GetIsTransformVarying(*primIt)) {
                 result = true;
                 break;
             }
@@ -751,12 +741,37 @@ struct UsdImagingInstanceAdapter::_IsInstanceTransformVaryingFn
         return !result;
     }
 
-    UsdImagingInstanceAdapter* adapter;
+    bool _GetIsTransformVarying(const UsdPrim& prim) {
+        bool transformVarying;
+        HdDirtyBits dirtyBits;
+
+        // Cache any _IsTransformVarying calls.
+        auto cacheIt = cache.find(prim);
+        if (cacheIt == cache.end()) {
+            transformVarying = adapter->_IsTransformVarying(
+                prim,
+                HdChangeTracker::DirtyTransform,
+                HdTokens->instancer,
+                &dirtyBits);
+            cache[prim] = transformVarying;
+        } else {
+            transformVarying = cacheIt->second;
+        }
+
+        return transformVarying;
+    }
+
+    const UsdImagingInstanceAdapter* adapter;
     bool result;
+
+    // We keep a simple cache directly on _IsInstanceTransformVaryingFn because
+    // we only need it during initialization and resyncs (not in UpdateForTime).
+    boost::unordered_map<UsdPrim, bool, boost::hash<UsdPrim>> cache;
 };
 
 bool 
 UsdImagingInstanceAdapter::_IsInstanceTransformVarying(UsdPrim const& instancer)
+    const 
 {
     _IsInstanceTransformVaryingFn isTransformVarying(this);
     _RunForAllInstancesToDraw(instancer, &isTransformVarying);
@@ -792,7 +807,7 @@ UsdImagingInstanceAdapter::UpdateForTime(UsdPrim const& prim,
                                SdfPath const& cachePath, 
                                UsdTimeCode time,
                                HdDirtyBits requestedBits,
-                               UsdImagingInstancerContext const*)
+                               UsdImagingInstancerContext const*) const
 {
     UsdImagingValueCache* valueCache = _GetValueCache();
 
@@ -823,9 +838,10 @@ UsdImagingInstanceAdapter::UpdateForTime(UsdPrim const& prim,
 
         // Allow the prototype's adapter to update, if there's anything left
         // to do.
+        UsdPrim protoPrim = _GetPrim(rproto.path);
+
         if (protoReqBits != HdChangeTracker::Clean) {
-            rproto.adapter->UpdateForTime(
-                _GetPrim(rproto.path), cachePath, 
+            rproto.adapter->UpdateForTime(protoPrim, cachePath, 
                 rproto.protoGroup->time, protoReqBits, &instancerContext);
         }
 
@@ -851,10 +867,20 @@ UsdImagingInstanceAdapter::UpdateForTime(UsdPrim const& prim,
         }
 
         if (requestedBits & HdChangeTracker::DirtyTransform) {
-            // Inverse out the root transform to avoid a double transformation
-            // when applying the instancer transform.
             GfMatrix4d& childXf = _GetValueCache()->GetTransform(cachePath);
-            childXf = childXf * GetRootTransform().GetInverse();
+            if (protoPrim.IsInstance()) {
+                // If the prototype we're processing is a master, protoPrim is
+                // a pointer to the instance for attribute lookup; but the
+                // instance transform for that instance is already part of the
+                // instanceTransform primvar.  Masters don't have any transform,
+                // aside from the root transform, so we can set the rprim
+                // transform to identity.
+                childXf.SetIdentity();
+            } else {
+                // Inverse out the root transform to avoid a double
+                // transformation when applying the instancer transform.
+                childXf = childXf * GetRootTransform().GetInverse();
+            }
         }
 
     } else if (TfMapLookupPtr(_instancerData, prim.GetPath()) != nullptr) {
@@ -863,7 +889,7 @@ UsdImagingInstanceAdapter::UpdateForTime(UsdPrim const& prim,
         // currently.
         if (requestedBits & HdChangeTracker::DirtyPrimVar) {
             VtMatrix4dArray instanceXforms;
-            if (_ComputeInstanceTransform(prim, &instanceXforms, time)) {
+            if (_ComputeInstanceTransforms(prim, &instanceXforms, time)) {
                 valueCache->GetPrimvar(
                     cachePath, HdTokens->instanceTransform) = instanceXforms;
                 UsdImagingValueCache::PrimvarInfo primvar;
@@ -1106,6 +1132,68 @@ UsdImagingInstanceAdapter::GetInstancer(SdfPath const &cachePath)
     return SdfPath();
 }
 
+/*virtual*/
+size_t
+UsdImagingInstanceAdapter::SampleInstancerTransform(
+    UsdPrim const& instancerPrim,
+    SdfPath const& instancerPath,
+    UsdTimeCode time,
+    const std::vector<float>& configuredSampleTimes,
+    size_t maxSampleCount,
+    float *times,
+    GfMatrix4d *samples)
+{
+    // This code must match UpdateForTime(), which says:
+    // the instancer transform can only be the root transform.
+    if (maxSampleCount > 0) {
+        times[0] = 0.0;
+        samples[0] = GetRootTransform();
+        return 1;
+    }
+    return 0;
+}
+
+size_t
+UsdImagingInstanceAdapter::SamplePrimvar(
+    UsdPrim const& usdPrim,
+    SdfPath const& cachePath,
+    TfToken const& key,
+    UsdTimeCode time, const std::vector<float>& configuredSampleTimes,
+    size_t maxNumSamples, float *times, VtValue *samples)
+{
+    if (_IsChildPrim(usdPrim, cachePath)) {
+        // Note that the proto group in this rproto has not yet been
+        // updated with new instances at this point.
+        UsdImagingInstancerContext instancerContext;
+        _ProtoRprim const& rproto = _GetProtoRprim(usdPrim.GetPath(),
+                                                    cachePath,
+                                                    &instancerContext);
+        if (!TF_VERIFY(rproto.adapter, "%s", cachePath.GetText())) {
+            return 0;
+        }
+        return rproto.adapter->SamplePrimvar(
+            _GetPrim(rproto.path), cachePath,
+            key, time, configuredSampleTimes, maxNumSamples, times, samples);
+    }
+    if (key == HdTokens->instanceTransform) {
+        size_t numSamples = std::min(maxNumSamples,
+                                     configuredSampleTimes.size());
+        for (size_t i=0; i < numSamples; ++i) {
+            UsdTimeCode sceneTime =
+                _GetTimeWithOffset(configuredSampleTimes[i]);
+            times[i] = configuredSampleTimes[i];
+            VtMatrix4dArray xf;
+            _ComputeInstanceTransforms(usdPrim, &xf, sceneTime);
+            samples[i] = xf;
+        }
+        return numSamples;
+    } else {
+        return UsdImagingPrimAdapter::SamplePrimvar(
+            usdPrim, cachePath, key, time, configuredSampleTimes,
+            maxNumSamples, times, samples);
+    }
+}
+
 void
 UsdImagingInstanceAdapter::_ResyncInstancer(SdfPath const& instancerPath,
                                             UsdImagingIndexProxy* index,
@@ -1169,7 +1257,7 @@ UsdImagingInstanceAdapter::_PrimIsInstancer(UsdPrim const& prim) const
 UsdImagingInstanceAdapter::_ProtoRprim const&
 UsdImagingInstanceAdapter::_GetProtoRprim(SdfPath const& instancerPath,
                                           SdfPath const& cachePath,
-                                          UsdImagingInstancerContext* ctx)
+                                          UsdImagingInstancerContext* ctx) const
 {
     static _ProtoRprim const EMPTY;
 
@@ -1220,7 +1308,10 @@ UsdImagingInstanceAdapter::_GetProtoRprim(SdfPath const& instancerPath,
     ctx->instanceMaterialId = materialId;
     ctx->instanceDrawMode = drawMode;
     ctx->childName = TfToken();
-    ctx->instancerAdapter = _GetSharedFromThis();
+    // Note: use a null adapter here.  The UsdImagingInstancerContext is
+    // not really used outside of population.  We should clean this up and
+    // remove these contexts from everything outside of population.
+    ctx->instancerAdapter = UsdImagingPrimAdapterSharedPtr();
 
     return *r;
 }
@@ -1235,7 +1326,7 @@ UsdImagingInstanceAdapter::_GetSharedFromThis()
 struct UsdImagingInstanceAdapter::_UpdateInstanceMapFn
 {
     _UpdateInstanceMapFn(
-        UsdImagingInstanceAdapter* adapter_, const UsdTimeCode& time_,
+        const UsdImagingInstanceAdapter* adapter_, const UsdTimeCode& time_,
         std::vector<_InstancerData::Visibility>* visibility_, 
         VtIntArray* indices_)
         : adapter(adapter_), time(time_), 
@@ -1293,29 +1384,49 @@ struct UsdImagingInstanceAdapter::_UpdateInstanceMapFn
     bool IsVisibilityVarying(const std::vector<UsdPrim>& instanceContext)
     {
         TF_FOR_ALL(primIt, instanceContext) {
-            HdDirtyBits dirtyBits;
-            if (adapter->_IsVarying(*primIt, 
-                           UsdGeomTokens->visibility, 
-                           HdChangeTracker::DirtyVisibility,
-                           UsdImagingTokens->usdVaryingVisibility,
-                           &dirtyBits,
-                           true)) {
+            if (_GetIsVisibilityVarying(*primIt)) {
                 return true;
             }
         }
         return false;
     }
 
-    UsdImagingInstanceAdapter* adapter;
+    bool _GetIsVisibilityVarying(const UsdPrim& prim) {
+        bool visibilityVarying;
+
+        auto cacheIt = varyingCache.find(prim);
+        if (cacheIt == varyingCache.end()) {
+            HdDirtyBits dirtyBits;
+            visibilityVarying = adapter->_IsVarying(
+                prim,
+                UsdGeomTokens->visibility,
+                HdChangeTracker::DirtyVisibility,
+                UsdImagingTokens->usdVaryingVisibility,
+                &dirtyBits,
+                true);
+            varyingCache[prim] = visibilityVarying;
+        } else {
+            visibilityVarying = cacheIt->second;
+        }
+
+        return visibilityVarying;
+    }
+
+    const UsdImagingInstanceAdapter* adapter;
     UsdTimeCode time;
     std::vector<_InstancerData::Visibility>* visibility;
     VtIntArray* indices;
+
+    // We keep a simple cache of visibility varying states directly on
+    // _UpdateInstanceMapFn because we only need it for the first draw and
+    // during resyncs.
+    boost::unordered_map<UsdPrim, bool, boost::hash<UsdPrim>> varyingCache;
 };
 
 void
 UsdImagingInstanceAdapter::_UpdateInstanceMap(
                     UsdPrim const& instancerPrim, 
-                    UsdTimeCode time)
+                    UsdTimeCode time) const
 {
     // We expect the instancerData entry for this instancer to be established
     // before this method is called. This map should also never be accessed and
@@ -1354,7 +1465,7 @@ UsdImagingInstanceAdapter::_UpdateInstanceMap(
 
 int
 UsdImagingInstanceAdapter::_UpdateDirtyBits(
-                    UsdPrim const& instancerPrim)
+                    UsdPrim const& instancerPrim) const
 {
     // We expect the instancerData entry for this instancer to be established
     // before this method is called. This map should also never be accessed and
@@ -1709,7 +1820,7 @@ UsdImagingInstanceAdapter::GetInstanceIndices(SdfPath const &instancerPath,
 GfMatrix4d
 UsdImagingInstanceAdapter::GetRelativeInstancerTransform(
     SdfPath const &parentInstancerPath,
-    SdfPath const &instancerPath, UsdTimeCode time)
+    SdfPath const &instancerPath, UsdTimeCode time) const
 {
     // regardless the parentInstancerPath is empty or not,
     // we subtract the root transform.
