@@ -190,6 +190,81 @@ UsdImagingPrimAdapter::GetInstancer(SdfPath const &cachePath)
 }
 
 /*virtual*/
+size_t
+UsdImagingPrimAdapter::SampleInstancerTransform(
+    UsdPrim const& instancerPrim,
+    SdfPath const& instancerPath,
+    UsdTimeCode time,
+    const std::vector<float> &,
+    size_t maxSampleCount,
+    float *times,
+    GfMatrix4d *samples)
+{
+    return 0;
+}
+
+size_t
+UsdImagingPrimAdapter::SamplePrimvar(
+    UsdPrim const& usdPrim,
+    SdfPath const& cachePath,
+    TfToken const& key,
+    UsdTimeCode time, const std::vector<float>& configuredSampleTimes,
+    size_t maxNumSamples, float *times, VtValue *samples)
+{
+    HD_TRACE_FUNCTION();
+
+    // Try as USD primvar.
+    if (UsdGeomGprim gprim = UsdGeomGprim(usdPrim)) {
+        UsdGeomPrimvar pv = gprim.GetPrimvar(key);
+        if (!pv) {
+            // Try as inherited primvar.
+            pv = gprim.FindInheritedPrimvar(key);
+        }
+        if (pv) {
+            if (pv.ValueMightBeTimeVarying()) {
+                size_t numSamples = std::min(maxNumSamples,
+                                             configuredSampleTimes.size());
+                for (size_t i=0; i < numSamples; ++i) {
+                    UsdTimeCode sceneTime =
+                        _delegate->GetTimeWithOffset(configuredSampleTimes[i]);
+                    times[i] = configuredSampleTimes[i];
+                    pv.Get(&samples[i], sceneTime);
+                }
+                return numSamples;
+            } else {
+                // Return a single sample for non-varying primvars
+                times[0] = 0;
+                pv.Get(samples, time);
+                return 1;
+            }
+        }
+    }
+
+    // Try as USD attribute.  This handles cases like "points" that
+    // are considered primvars by Hydra but non-primvar attributes by USD.
+    if (UsdAttribute attr = usdPrim.GetAttribute(key)) {
+        if (attr.ValueMightBeTimeVarying()) {
+            size_t numSamples = std::min(maxNumSamples,
+                                         configuredSampleTimes.size());
+            for (size_t i=0; i < numSamples; ++i) {
+                UsdTimeCode sceneTime =
+                    _delegate->GetTimeWithOffset(configuredSampleTimes[i]);
+                times[i] = configuredSampleTimes[i];
+                attr.Get(&samples[i], sceneTime);
+            }
+            return numSamples;
+        } else {
+            // Return a single sample for non-varying primvars
+            times[0] = 0;
+            attr.Get(samples, time);
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+/*virtual*/
 SdfPath 
 UsdImagingPrimAdapter::GetPathForInstanceIndex(
     SdfPath const &protoPath,
@@ -230,7 +305,11 @@ UsdImagingPrimAdapter::PopulateSelection(HdxSelectionHighlightMode const& mode,
 
     // insert itself into the selection map.
     // XXX: should check the existence of the path
-    result->AddInstance(mode, indexPath, instanceIndices);
+    if (instanceIndices.size() == 0) {
+        result->AddRprim(mode, indexPath);
+    } else {
+        result->AddInstance(mode, indexPath, instanceIndices);
+    }
 
     TF_DEBUG(USDIMAGING_SELECTION).Msg("PopulateSelection: (prim) %s\n",
                                        indexPath.GetText());
@@ -268,7 +347,7 @@ UsdImagingPrimAdapter::IsChildPath(SdfPath const& path) const
 }
 
 UsdImagingValueCache* 
-UsdImagingPrimAdapter::_GetValueCache() 
+UsdImagingPrimAdapter::_GetValueCache() const
 {
     return &_delegate->_valueCache; 
 }
@@ -289,7 +368,7 @@ UsdImagingPrimAdapter::_GetPrim(SdfPath const& usdPath) const
 
 const UsdImagingPrimAdapterSharedPtr& 
 UsdImagingPrimAdapter::_GetPrimAdapter(UsdPrim const& prim,
-                                       bool ignoreInstancing)
+                                       bool ignoreInstancing) const
 {
     return _delegate->_AdapterLookup(prim, ignoreInstancing);
 }
@@ -339,10 +418,16 @@ UsdImagingPrimAdapter::_GetPrimPathFromInstancerChain(
     return primPath;
 }
 
+UsdTimeCode
+UsdImagingPrimAdapter::_GetTimeWithOffset(float offset) const
+{
+    return _delegate->GetTimeWithOffset(offset);
+}
+
 void 
 UsdImagingPrimAdapter::_MergePrimvar(
                     UsdImagingValueCache::PrimvarInfo const& primvar, 
-                    PrimvarInfoVector* vec) 
+                    PrimvarInfoVector* vec) const
 {
     PrimvarInfoVector::iterator it = std::find(vec->begin(), vec->end(), 
                                                 primvar);
@@ -358,7 +443,7 @@ UsdImagingPrimAdapter::_IsVarying(UsdPrim prim,
                                   HdDirtyBits dirtyFlag,
                                   TfToken const& perfToken,
                                   HdDirtyBits* dirtyFlags,
-                                  bool isInherited)
+                                  bool isInherited) const
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -366,10 +451,7 @@ UsdImagingPrimAdapter::_IsVarying(UsdPrim prim,
     // Unset the bit initially.
     (*dirtyFlags) &= ~dirtyFlag;
 
-    for (bool prime = true;prime ||
-          (isInherited && prim.GetPath() != SdfPath::AbsoluteRootPath());
-          prime = false) 
-    {
+    do {
         UsdAttribute attr = prim.GetAttribute(attrName);
 
         if (attr.ValueMightBeTimeVarying()){
@@ -378,7 +460,8 @@ UsdImagingPrimAdapter::_IsVarying(UsdPrim prim,
             return true;
         } 
         prim = prim.GetParent();
-    }
+
+    } while (isInherited && prim.GetPath() != SdfPath::AbsoluteRootPath());
 
     return false;
 }
@@ -387,7 +470,7 @@ bool
 UsdImagingPrimAdapter::_IsTransformVarying(UsdPrim prim,
                                            HdDirtyBits dirtyFlag,
                                            TfToken const& perfToken,
-                                           HdDirtyBits* dirtyFlags)
+                                           HdDirtyBits* dirtyFlags) const
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -397,10 +480,7 @@ UsdImagingPrimAdapter::_IsTransformVarying(UsdPrim prim,
 
     UsdImaging_XformCache &xfCache = _delegate->_xformCache;
 
-    for (bool prime = true; 
-         prime || (prim.GetPath() != SdfPath::AbsoluteRootPath());
-         prime = false) 
-    {
+    do {
         bool mayXformVary = 
             xfCache.GetQuery(prim)->TransformMightBeTimeVarying();
         if (mayXformVary) {
@@ -417,14 +497,15 @@ UsdImagingPrimAdapter::_IsTransformVarying(UsdPrim prim,
         }
 
         prim = prim.GetParent();
-    }
+
+    } while (prim.GetPath() != SdfPath::AbsoluteRootPath());
 
     return false;
 }
 
 GfMatrix4d 
 UsdImagingPrimAdapter::GetTransform(UsdPrim const& prim, UsdTimeCode time,
-                                    bool ignoreRootTransform)
+                                    bool ignoreRootTransform) const
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -444,7 +525,7 @@ UsdImagingPrimAdapter::GetTransform(UsdPrim const& prim, UsdTimeCode time,
 }
 
 bool
-UsdImagingPrimAdapter::GetVisible(UsdPrim const& prim, UsdTimeCode time)
+UsdImagingPrimAdapter::GetVisible(UsdPrim const& prim, UsdTimeCode time) const
 {
     HD_TRACE_FUNCTION();
 
@@ -463,30 +544,17 @@ UsdImagingPrimAdapter::GetVisible(UsdPrim const& prim, UsdTimeCode time)
 }
 
 SdfPath
-UsdImagingPrimAdapter::GetMaterialId(UsdPrim const& prim)
+UsdImagingPrimAdapter::GetMaterialId(UsdPrim const& prim) const
 {
     HD_TRACE_FUNCTION();
 
     // No need to worry about time here, since relationships do not have time
     // samples.
-
-    // If the renderer supports full material network then this function
-    // will try to return a binding that is compatible..
-    bool useMaterialNetworks = _delegate->GetRenderIndex().
-        GetRenderDelegate()->CanComputeMaterialNetworks();
-
     if (_IsEnabledBindingCache()) {
-        if (useMaterialNetworks) {
-            return _delegate->_materialNetworkBindingCache.GetValue(prim);
-        } else {
-            return _delegate->_materialBindingCache.GetValue(prim);
-        }
+        return _delegate->_materialBindingCache.GetValue(prim);
     } else {
-        if (useMaterialNetworks) {
-            return UsdImaging_MaterialNetworkStrategy::ComputeMaterialPath(prim);
-        } else {
-            return UsdImaging_MaterialStrategy::ComputeMaterialPath(prim);
-        }
+        return UsdImaging_MaterialStrategy::ComputeMaterialPath(prim, 
+                &_delegate->_materialBindingImplData);
     }
 }
 
@@ -523,7 +591,7 @@ UsdImagingPrimAdapter::GetInstanceIndices(SdfPath const &instancerPath,
 GfMatrix4d
 UsdImagingPrimAdapter::GetRelativeInstancerTransform(
     SdfPath const &instancerPath,
-    SdfPath const &protoInstancerPath, UsdTimeCode time)
+    SdfPath const &protoInstancerPath, UsdTimeCode time) const
 {
     return GfMatrix4d(1);
 }
