@@ -89,7 +89,6 @@ pxr_shared_library(${PXR_PACKAGE}
         usdListShadingModes
         usdTranslatorExport
         usdTranslatorImport
-        usdCacheFormat
 
         Chaser
         ChaserRegistry
@@ -180,6 +179,7 @@ pxr_test_scripts(
         testenv/testUsdExportParentScope.py
         testenv/testUsdExportParticles.py
         testenv/testUsdExportPointInstancer.py
+        testenv/testUsdExportPref.py
         testenv/testUsdExportRenderLayerMode.py
         testenv/testUsdExportRfMLight.py
         testenv/testUsdExportSelection.py
@@ -427,6 +427,21 @@ pxr_register_test(testUsdExportPointInstancer
     CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdExportPointInstancer"
     TESTENV testUsdExportPointInstancer
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+        MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=<PXR_TEST_DIR>/maya_profile
+)
+
+pxr_install_test_dir(
+    SRC testenv/UsdExportPrefTest
+    DEST testUsdExportPref
+)
+pxr_register_test(testUsdExportPref
+    CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdExportPref"
+    TESTENV testUsdExportPref
     ENV
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
