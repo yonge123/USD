@@ -219,6 +219,22 @@ HdSceneDelegate::GetInstancerTransform(SdfPath const &instancerId,
 }
 
 /*virtual*/
+size_t
+HdSceneDelegate::SampleInstancerTransform(SdfPath const &instancerId,
+                                          SdfPath const &prototypeId,
+                                          size_t maxSampleCount,
+                                          float *times,
+                                          GfMatrix4d *samples)
+{
+    if (maxSampleCount > 0) {
+        times[0] = 0;
+        samples[0] = GetInstancerTransform(instancerId, prototypeId);
+        return 1;
+    }
+    return 0;
+}
+
+/*virtual*/
 SdfPath
 HdSceneDelegate::GetPathForInstanceIndex(const SdfPath &protoPrimPath,
                                          int instanceIndex,
@@ -363,42 +379,42 @@ HdSceneDelegate::GetExtComputationOutputNames(SdfPath const& id)
 
 /*virtual*/
 TfTokenVector
-HdSceneDelegate::GetPrimVarVertexNames(SdfPath const& id)
+HdSceneDelegate::GetPrimvarVertexNames(SdfPath const& id)
 {
     return TfTokenVector();
 }
 
 /*virtual*/
 TfTokenVector
-HdSceneDelegate::GetPrimVarVaryingNames(SdfPath const& id)
+HdSceneDelegate::GetPrimvarVaryingNames(SdfPath const& id)
 {
     return TfTokenVector();
 }
 
 /*virtual*/
 TfTokenVector
-HdSceneDelegate::GetPrimVarFacevaryingNames(SdfPath const& id)
+HdSceneDelegate::GetPrimvarFacevaryingNames(SdfPath const& id)
 {
     return TfTokenVector();
 }
 
 /*virtual*/
 TfTokenVector
-HdSceneDelegate::GetPrimVarUniformNames(SdfPath const& id)
+HdSceneDelegate::GetPrimvarUniformNames(SdfPath const& id)
 {
     return TfTokenVector();
 }
 
 /*virtual*/
 TfTokenVector
-HdSceneDelegate::GetPrimVarConstantNames(SdfPath const& id)
+HdSceneDelegate::GetPrimvarConstantNames(SdfPath const& id)
 {
     return TfTokenVector();
 }
 
 /*virtual*/
 TfTokenVector
-HdSceneDelegate::GetPrimVarInstanceNames(SdfPath const& id)
+HdSceneDelegate::GetPrimvarInstanceNames(SdfPath const& id)
 {
     return TfTokenVector();
 }
