@@ -34,6 +34,7 @@
 #include "pxr/imaging/hd/meshTopology.h"
 #include "pxr/imaging/hd/renderIndex.h"
 #include "pxr/imaging/hd/textureResource.h"
+#include "pxr/imaging/hd/timeSampleArray.h"
 
 #include "pxr/imaging/pxOsd/subdivTags.h"
 
@@ -213,19 +214,57 @@ public:
 
     /// Store up to \a maxSampleCount transform samples in \a *samples.
     /// Returns the number of samples returned.
+    /// Sample times are relative to the scene delegate's current time.
     /// \see GetTransform()
     HD_API
     virtual size_t
     SampleTransform(SdfPath const & id, size_t maxSampleCount,
                     float *times, GfMatrix4d *samples);
 
+    /// Convenience form of SampleTransform() that takes an HdTimeSampleArray.
+    template <unsigned int CAPACITY>
+    void SampleTransform(SdfPath const & id,
+                         HdTimeSampleArray<GfMatrix4d, CAPACITY> *out) {
+        out->count = SampleTransform(id, CAPACITY, out->times, out->values);
+    }
+
+    /// Store up to \a maxSampleCount transform samples in \a *samples.
+    /// Returns the number of samples returned.
+    /// Sample times are relative to the scene delegate's current time.
+    /// \see GetInstancerTransform()
+    HD_API
+    virtual size_t
+    SampleInstancerTransform(SdfPath const &instancerId,
+                             SdfPath const &prototypeId,
+                             size_t maxSampleCount, float *times,
+                             GfMatrix4d *samples);
+
+    /// Convenience form of SampleInstancerTransform()
+    /// that takes an HdTimeSampleArray.
+    template <unsigned int CAPACITY>
+    void
+    SampleInstancerTransform(SdfPath const &instancerId,
+                             SdfPath const &prototypeId,
+                             HdTimeSampleArray<GfMatrix4d, CAPACITY> *out) {
+        out->count = SampleInstancerTransform(
+            instancerId, prototypeId, CAPACITY, out->times, out->values);
+    }
+
     /// Store up to \a maxSampleCount primvar samples in \a *samples.
     /// Returns the number of samples returned.
+    /// Sample times are relative to the scene delegate's current time.
     /// \see Get()
     HD_API
     virtual size_t
     SamplePrimvar(SdfPath const& id, TfToken const& key,
                   size_t maxSampleCount, float *times, VtValue *samples);
+
+    /// Convenience form of SamplePrimvar() that takes an HdTimeSampleArray.
+    template <unsigned int CAPACITY>
+    void SamplePrimvar(SdfPath const &id, TfToken const& key,
+                       HdTimeSampleArray<VtValue, CAPACITY> *sa) {
+        sa->count = SamplePrimvar(id, key, CAPACITY, sa->times, sa->values);
+    }
 
     // -----------------------------------------------------------------------//
     /// \name Instancer prototypes
@@ -421,29 +460,29 @@ public:
     /// \name Primitive Variables
     // -----------------------------------------------------------------------//
 
-    /// Returns the vertex-rate primVar names.
+    /// Returns the vertex-rate primvar names.
     HD_API
-    virtual TfTokenVector GetPrimVarVertexNames(SdfPath const& id);
+    virtual TfTokenVector GetPrimvarVertexNames(SdfPath const& id);
 
-    /// Returns the varying-rate primVar names.
+    /// Returns the varying-rate primvar names.
     HD_API
-    virtual TfTokenVector GetPrimVarVaryingNames(SdfPath const& id);
+    virtual TfTokenVector GetPrimvarVaryingNames(SdfPath const& id);
 
-    /// Returns the Facevarying-rate primVar names.
+    /// Returns the Facevarying-rate primvar names.
     HD_API
-    virtual TfTokenVector GetPrimVarFacevaryingNames(SdfPath const& id);
+    virtual TfTokenVector GetPrimvarFacevaryingNames(SdfPath const& id);
 
-    /// Returns the Uniform-rate primVar names.
+    /// Returns the Uniform-rate primvar names.
     HD_API
-    virtual TfTokenVector GetPrimVarUniformNames(SdfPath const& id);
+    virtual TfTokenVector GetPrimvarUniformNames(SdfPath const& id);
 
-    /// Returns the Constant-rate primVar names.
+    /// Returns the Constant-rate primvar names.
     HD_API
-    virtual TfTokenVector GetPrimVarConstantNames(SdfPath const& id);
+    virtual TfTokenVector GetPrimvarConstantNames(SdfPath const& id);
 
-    /// Returns the Instance-rate primVar names.
+    /// Returns the Instance-rate primvar names.
     HD_API
-    virtual TfTokenVector GetPrimVarInstanceNames(SdfPath const& id);
+    virtual TfTokenVector GetPrimvarInstanceNames(SdfPath const& id);
 
 private:
     HdRenderIndex *_index;

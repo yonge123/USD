@@ -63,7 +63,7 @@ namespace {
         return path;
     }
 
-    constexpr auto instancesScopeName = "/InstanceSources";
+    const SdfPath instancesScopePath("/InstanceSources");
 }
 
 usdWriteJobCtx::usdWriteJobCtx(const JobExportArgs& args) : mArgs(args), mNoInstances(true)
@@ -71,7 +71,7 @@ usdWriteJobCtx::usdWriteJobCtx(const JobExportArgs& args) : mArgs(args), mNoInst
 
 }
 
-SdfPath usdWriteJobCtx::getMasterPath(const MDagPath& dg)
+SdfPath usdWriteJobCtx::getOrCreateMasterPath(const MDagPath& dg)
 {
     const MObjectHandle handle(dg.node());
     const auto it = mMasterToUsdPath.find(handle);
@@ -86,23 +86,41 @@ SdfPath usdWriteJobCtx::getMasterPath(const MDagPath& dg)
         auto dagCopy = allInstances[0];
         const auto usdPath = getUsdPathFromDagPath(dagCopy, true);
         dagCopy.pop();
+
         // This will get auto destroyed, because we are not storing it in the list
         MayaTransformWriterPtr transformPrimWriter(new MayaTransformWriter(dagCopy, usdPath.GetParentPath(), true, *this));
-        if (transformPrimWriter != nullptr && transformPrimWriter->isValid()) {
-            transformPrimWriter->write(UsdTimeCode::Default());
-            mMasterToUsdPath.insert(std::make_pair(handle, transformPrimWriter->getUsdPath()));
-        } else {
+        if (!transformPrimWriter || !transformPrimWriter->isValid()) {
             return SdfPath();
         }
+
+        transformPrimWriter->write(UsdTimeCode::Default());
+        mMasterToUsdPath[handle] = transformPrimWriter->getUsdPath();
+
         auto primWriter = _createPrimWriter(allInstances[0], SdfPath(), true);
-        if (primWriter != nullptr) {
-            primWriter->write(UsdTimeCode::Default());
-            mMayaPrimWriterList.push_back(primWriter);
-            return transformPrimWriter->getUsdPath();
-        } else {
+        if (!primWriter) { // Note that _createPrimWriter ensures validity.
             return SdfPath();
+        }
+
+        primWriter->write(UsdTimeCode::Default());
+        mMasterToPrimWriter[handle] = mMayaPrimWriterList.size();
+        mMayaPrimWriterList.push_back(primWriter);
+        return transformPrimWriter->getUsdPath();
+    }
+}
+
+const MayaPrimWriterPtr
+usdWriteJobCtx::getMasterPrimWriter(const MDagPath& dg) const
+{
+    const MObjectHandle handle(dg.node());
+    const auto it = mMasterToPrimWriter.find(handle);
+    if (it != mMasterToPrimWriter.end()) {
+        size_t i = it->second;
+        if (i < mMayaPrimWriterList.size()) {
+            return mMayaPrimWriterList[i];
         }
     }
+
+    return nullptr;
 }
 
 bool usdWriteJobCtx::needToTraverse(const MDagPath& curDag)
@@ -156,6 +174,14 @@ SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool inst
         }
     } else {
         path = PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, false);
+        if (!mParentScopePath.IsEmpty())
+        {
+            // Since path is from MDagPathToUsdPath, it will always be
+            // an absolute path...
+            path = path.ReplacePrefix(
+                    SdfPath::AbsoluteRootPath(),
+                    mParentScopePath);
+        }
     }
     return rootOverridePath(mArgs, path);
 }
@@ -185,9 +211,20 @@ bool usdWriteJobCtx::openFile(const std::string& filename, bool append)
         }
     }
 
+    if (!mArgs.getParentScope().IsEmpty()) {
+        mParentScopePath = mArgs.getParentScope();
+        // Note that we only need to create the parentScope prim if we're not
+        // using a usdModelRootOverridePath - if we ARE using
+        // usdModelRootOverridePath, then IT will take the name of our parent
+        // scope, and will be created when we writ out the model variants
+        if (mArgs.usdModelRootOverridePath.IsEmpty()) {
+            mParentScopePath = UsdGeomScope::Define(mStage,
+                                                    mParentScopePath).GetPrim().GetPrimPath();
+        }
+    }
+
     if (mArgs.exportInstances) {
-        SdfPath instancesPath(instancesScopeName);
-        mInstancesPrim = mStage->OverridePrim(rootOverridePath(mArgs, instancesPath));
+        mInstancesPrim = mStage->OverridePrim(instancesScopePath);
     }
 
     return true;

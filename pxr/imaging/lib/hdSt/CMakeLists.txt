@@ -14,7 +14,7 @@ pxr_library(hdSt
         glf
         hd
         tf
-        tracelite
+        trace
         ${GLEW_LIBRARY}
         ${OPENSUBDIV_LIBRARIES}
 
@@ -36,6 +36,7 @@ pxr_library(hdSt
         drawTargetAttachmentDesc
         drawTargetAttachmentDescArray
         drawTargetRenderPassState
+        extComputation
         extCompGpuComputation
         extCompGpuComputationBufferSource
         extCompGpuComputationResource

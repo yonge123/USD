@@ -31,6 +31,7 @@
 #include "pxr/usdImaging/usdImaging/instancerContext.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
+#include "pxr/imaging/hd/enums.h"
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/material.h"
 
@@ -60,6 +61,8 @@ TF_DEFINE_PRIVATE_TOKENS(
     (textureZNeg)
 
     (worldtoscreen)
+
+    (displayRoughness)
 );
 
 namespace {
@@ -194,13 +197,13 @@ UsdImagingGLDrawModeAdapter::Populate(UsdPrim const& prim,
 }
 
 bool
-UsdImagingGLDrawModeAdapter::_IsMaterialPath(SdfPath const& path)
+UsdImagingGLDrawModeAdapter::_IsMaterialPath(SdfPath const& path) const
 {
     return IsChildPath(path) && path.GetNameToken() == _tokens->material;
 }
 
 bool
-UsdImagingGLDrawModeAdapter::_IsTexturePath(SdfPath const& path)
+UsdImagingGLDrawModeAdapter::_IsTexturePath(SdfPath const& path) const
 {
     if (!IsChildPath(path)) {
         return false;
@@ -269,7 +272,7 @@ UsdImagingGLDrawModeAdapter::TrackVariability(UsdPrim const& prim,
                                             SdfPath const& cachePath,
                                             HdDirtyBits* timeVaryingBits,
                                             UsdImagingInstancerContext const*
-                                               instancerContext)
+                                               instancerContext) const
 {
     if (_IsMaterialPath(cachePath) || _IsTexturePath(cachePath)) {
         // Shader/texture aspects aren't time-varying.
@@ -316,7 +319,7 @@ UsdImagingGLDrawModeAdapter::UpdateForTime(UsdPrim const& prim,
                                          UsdTimeCode time,
                                          HdDirtyBits requestedBits,
                                          UsdImagingInstancerContext const*
-                                            instancerContext)
+                                            instancerContext) const
 {
     UsdImagingValueCache* valueCache = _GetValueCache();
     UsdGeomModelAPI model(prim);
@@ -395,7 +398,11 @@ UsdImagingGLDrawModeAdapter::UpdateForTime(UsdPrim const& prim,
     }
 
     if (requestedBits & HdChangeTracker::DirtyDoubleSided) {
-        valueCache->GetDoubleSided(cachePath) = true;
+        valueCache->GetDoubleSided(cachePath) = false;
+    }
+
+    if (requestedBits & HdChangeTracker::DirtyCullStyle) {
+        valueCache->GetCullStyle(cachePath) = HdCullStyleBack;
     }
 
     if (requestedBits & HdChangeTracker::DirtyMaterialId) {
@@ -518,6 +525,13 @@ UsdImagingGLDrawModeAdapter::UpdateForTime(UsdPrim const& prim,
             primvar.name = _tokens->cardsTexAssign;
             primvar.interpolation = UsdGeomTokens->uniform;
             _MergePrimvar(primvar, &primvars);
+
+            // XXX: backdoor into the material system.
+            valueCache->GetPrimvar(cachePath, _tokens->displayRoughness) =
+                VtValue(1.0f);
+            primvar.name = _tokens->displayRoughness;
+            primvar.interpolation = UsdGeomTokens->constant;
+            _MergePrimvar(primvar, &primvars);
         } else {
             TF_CODING_ERROR("<%s> Unexpected draw mode %s",
                 cachePath.GetText(), drawMode.GetText());
@@ -556,7 +570,7 @@ UsdImagingGLDrawModeAdapter::ProcessPropertyChange(UsdPrim const& prim,
 
 void
 UsdImagingGLDrawModeAdapter::_GenerateOriginGeometry(
-        VtValue *topo, VtValue *points, GfRange3d const& extents)
+        VtValue *topo, VtValue *points, GfRange3d const& extents) const
 {
     // Origin: vertices are (0,0,0); (1,0,0); (0,1,0); (0,0,1)
     VtVec3fArray pt = VtVec3fArray(4);
@@ -581,7 +595,7 @@ UsdImagingGLDrawModeAdapter::_GenerateOriginGeometry(
 
 void
 UsdImagingGLDrawModeAdapter::_GenerateBoundsGeometry(
-        VtValue *topo, VtValue *points, GfRange3d const& extents)
+        VtValue *topo, VtValue *points, GfRange3d const& extents) const
 {
     // Bounding box: vertices are for(i: 0 -> 7) {
     //   ((i & 1) ? z : -z) +
@@ -618,7 +632,7 @@ UsdImagingGLDrawModeAdapter::_GenerateBoundsGeometry(
 void
 UsdImagingGLDrawModeAdapter::_GenerateCardsCrossGeometry(
         VtValue *topo, VtValue *points, GfRange3d const& extents,
-        uint8_t axes_mask)
+        uint8_t axes_mask) const
 {
     // Cards (Cross) vertices:
     // - +/-X vertices (CCW wrt +X)
@@ -628,43 +642,42 @@ UsdImagingGLDrawModeAdapter::_GenerateCardsCrossGeometry(
             max = GfVec3f(extents.GetMax()),
             mid = (min+max)/2.0f;
     VtVec3fArray pt = VtVec3fArray(24);
-    GfVec3f eps = 0.001f * (max-min);
 
     // +X
-    pt[ 0] = GfVec3f(mid[0] + eps[0], min[1], min[2]);
-    pt[ 1] = GfVec3f(mid[0] + eps[0], max[1], min[2]);
-    pt[ 2] = GfVec3f(mid[0] + eps[0], max[1], max[2]);
-    pt[ 3] = GfVec3f(mid[0] + eps[0], min[1], max[2]);
+    pt[ 0] = GfVec3f(mid[0], min[1], min[2]);
+    pt[ 1] = GfVec3f(mid[0], max[1], min[2]);
+    pt[ 2] = GfVec3f(mid[0], max[1], max[2]);
+    pt[ 3] = GfVec3f(mid[0], min[1], max[2]);
 
     // -X
-    pt[ 4] = GfVec3f(mid[0] - eps[0], min[1], min[2]);
-    pt[ 5] = GfVec3f(mid[0] - eps[0], max[1], min[2]);
-    pt[ 6] = GfVec3f(mid[0] - eps[0], max[1], max[2]);
-    pt[ 7] = GfVec3f(mid[0] - eps[0], min[1], max[2]);
+    pt[ 4] = GfVec3f(mid[0], min[1], min[2]);
+    pt[ 5] = GfVec3f(mid[0], max[1], min[2]);
+    pt[ 6] = GfVec3f(mid[0], max[1], max[2]);
+    pt[ 7] = GfVec3f(mid[0], min[1], max[2]);
 
     // +Y
-    pt[ 8] = GfVec3f(min[0], mid[1] + eps[1], min[2]);
-    pt[ 9] = GfVec3f(max[0], mid[1] + eps[1], min[2]);
-    pt[10] = GfVec3f(max[0], mid[1] + eps[1], max[2]);
-    pt[11] = GfVec3f(min[0], mid[1] + eps[1], max[2]);
+    pt[ 8] = GfVec3f(min[0], mid[1], min[2]);
+    pt[ 9] = GfVec3f(max[0], mid[1], min[2]);
+    pt[10] = GfVec3f(max[0], mid[1], max[2]);
+    pt[11] = GfVec3f(min[0], mid[1], max[2]);
 
     // -Y
-    pt[12] = GfVec3f(min[0], mid[1] - eps[1], min[2]);
-    pt[13] = GfVec3f(max[0], mid[1] - eps[1], min[2]);
-    pt[14] = GfVec3f(max[0], mid[1] - eps[1], max[2]);
-    pt[15] = GfVec3f(min[0], mid[1] - eps[1], max[2]);
+    pt[12] = GfVec3f(min[0], mid[1], min[2]);
+    pt[13] = GfVec3f(max[0], mid[1], min[2]);
+    pt[14] = GfVec3f(max[0], mid[1], max[2]);
+    pt[15] = GfVec3f(min[0], mid[1], max[2]);
 
     // +Z
-    pt[16] = GfVec3f(min[0], min[1], mid[2] + eps[2]);
-    pt[17] = GfVec3f(max[0], min[1], mid[2] + eps[2]);
-    pt[18] = GfVec3f(max[0], max[1], mid[2] + eps[2]);
-    pt[19] = GfVec3f(min[0], max[1], mid[2] + eps[2]);
+    pt[16] = GfVec3f(min[0], min[1], mid[2]);
+    pt[17] = GfVec3f(max[0], min[1], mid[2]);
+    pt[18] = GfVec3f(max[0], max[1], mid[2]);
+    pt[19] = GfVec3f(min[0], max[1], mid[2]);
 
     // -Z
-    pt[20] = GfVec3f(min[0], min[1], mid[2] - eps[2]);
-    pt[21] = GfVec3f(max[0], min[1], mid[2] - eps[2]);
-    pt[22] = GfVec3f(max[0], max[1], mid[2] - eps[2]);
-    pt[23] = GfVec3f(min[0], max[1], mid[2] - eps[2]);
+    pt[20] = GfVec3f(min[0], min[1], mid[2]);
+    pt[21] = GfVec3f(max[0], min[1], mid[2]);
+    pt[22] = GfVec3f(max[0], max[1], mid[2]);
+    pt[23] = GfVec3f(min[0], max[1], mid[2]);
 
     // Generate one face per axis direction, for included axes.
     int numFaces = ((axes_mask & zAxis) ? 2 : 0) +
@@ -676,7 +689,7 @@ UsdImagingGLDrawModeAdapter::_GenerateCardsCrossGeometry(
 
     const int x_indices[8] = {  2,  3,  0,  1,  7,  6,  5,  4 };
     const int y_indices[8] = { 11, 10,  9,  8, 14, 15, 12, 13 };
-    const int z_indices[8] = { 19, 18, 17, 16, 23, 22, 21, 20 };
+    const int z_indices[8] = { 18, 19, 16, 17, 23, 22, 21, 20 };
     VtIntArray faceIndices = VtIntArray(numFaces * 4);
     int dest = 0;
     if (axes_mask & xAxis) {
@@ -714,7 +727,7 @@ UsdImagingGLDrawModeAdapter::_GenerateCardsCrossGeometry(
 
 void
 UsdImagingGLDrawModeAdapter::_SanityCheckFaceSizes(SdfPath const& cachePath,
-        GfRange3d const& extents, uint8_t axes_mask)
+        GfRange3d const& extents, uint8_t axes_mask) const
 {
     GfVec3d min = extents.GetMin(),
             max = extents.GetMax();
@@ -742,7 +755,7 @@ UsdImagingGLDrawModeAdapter::_SanityCheckFaceSizes(SdfPath const& cachePath,
 void
 UsdImagingGLDrawModeAdapter::_GenerateCardsBoxGeometry(
         VtValue *topo, VtValue *points, GfRange3d const& extents,
-        uint8_t axes_mask)
+        uint8_t axes_mask) const
 {
     // Bounding box: vertices are for(i: 0 -> 7) {
     //   ((i & 1) ? z : -z) +
@@ -769,7 +782,7 @@ UsdImagingGLDrawModeAdapter::_GenerateCardsBoxGeometry(
 
     const int x_indices[8] = { 7, 5, 4, 6, 1, 3, 2, 0 };
     const int y_indices[8] = { 3, 7, 6, 2, 5, 1, 0, 4 };
-    const int z_indices[8] = { 3, 7, 5, 1, 2, 6, 4, 0 };
+    const int z_indices[8] = { 7, 3, 1, 5, 2, 6, 4, 0 };
     VtIntArray faceIndices = VtIntArray(numFaces * 4);
     int dest = 0;
     if (axes_mask & xAxis) {
@@ -796,7 +809,7 @@ UsdImagingGLDrawModeAdapter::_GenerateCardsBoxGeometry(
 void
 UsdImagingGLDrawModeAdapter::_GenerateCardsFromTextureGeometry(
         VtValue *topo, VtValue *points, VtValue *uv, VtValue *assign,
-        GfRange3d *extents, UsdPrim const& prim)
+        GfRange3d *extents, UsdPrim const& prim) const
 {
     UsdGeomModelAPI model(prim);
     std::vector<std::pair<GfMatrix4d, int>> faces;
@@ -865,7 +878,7 @@ UsdImagingGLDrawModeAdapter::_GenerateCardsFromTextureGeometry(
 
 bool
 UsdImagingGLDrawModeAdapter::_GetMatrixFromImageMetadata(
-    UsdAttribute const& attr, GfMatrix4d *mat)
+    UsdAttribute const& attr, GfMatrix4d *mat) const
 {
     // This function expects the input attribute to be an image asset path.
     SdfAssetPath asset;
@@ -900,7 +913,7 @@ UsdImagingGLDrawModeAdapter::_GetMatrixFromImageMetadata(
 
 void
 UsdImagingGLDrawModeAdapter::_GenerateTextureCoordinates(
-        VtValue *uv, VtValue *assign, uint8_t axes_mask)
+        VtValue *uv, VtValue *assign, uint8_t axes_mask) const
 {
     // Note: this function depends on the vertex order of the generated
     // card faces. Per spec, the texture axes are:
@@ -937,8 +950,9 @@ UsdImagingGLDrawModeAdapter::_GenerateTextureCoordinates(
     }
     if (axes_mask & zAxis) {
         // (Z+) and (Z-) have the same (s,t) facing so we don't need to flip uvs
-        // when borrowing a texture from the other side of the axis.
-        uv_faces.push_back(uv_normal);
+        // when borrowing a texture from the other side of the axis; we just
+        // need to flip for the different winding order of the faces.
+        uv_faces.push_back(uv_flipped);
         face_assign.push_back((axes_mask & zPos) ? zPos : zNeg);
         uv_faces.push_back(uv_normal);
         face_assign.push_back((axes_mask & zNeg) ? zNeg : zPos);
@@ -958,7 +972,7 @@ UsdImagingGLDrawModeAdapter::_GenerateTextureCoordinates(
 }
 
 std::string
-UsdImagingGLDrawModeAdapter::_GetSurfaceShaderSource()
+UsdImagingGLDrawModeAdapter::_GetSurfaceShaderSource() const
 {
     GlfGLSLFX gfx (UsdImagingGLPackageDrawModeShader());
     if (!gfx.IsValid()) {
@@ -969,7 +983,7 @@ UsdImagingGLDrawModeAdapter::_GetSurfaceShaderSource()
 }
 
 GfRange3d
-UsdImagingGLDrawModeAdapter::_ComputeExtent(UsdPrim const& prim)
+UsdImagingGLDrawModeAdapter::_ComputeExtent(UsdPrim const& prim) const
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -982,6 +996,7 @@ UsdImagingGLDrawModeAdapter::_ComputeExtent(UsdPrim const& prim)
 
 TfToken
 UsdImagingGLDrawModeAdapter::_GetPurpose(UsdPrim const& prim, UsdTimeCode time)
+    const
 {
     HD_TRACE_FUNCTION();
     // PERFORMANCE: Make this more efficient, see http://bug/90497
