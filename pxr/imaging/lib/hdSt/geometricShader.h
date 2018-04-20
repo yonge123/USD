@@ -152,6 +152,16 @@ public:
         return IsPrimTypePatches(_primType);
     }
 
+    HDST_API
+    void SetTextureDescriptors(const TextureDescriptorVector &texDesc);
+
+    HDST_API
+    void SetBufferSources(HdBufferSourceVector& bufferSources,
+                          const HdResourceRegistrySharedPtr& resourceRegistry);
+
+    HDST_API
+    virtual const HdBufferArrayRangeSharedPtr& GetShaderData() const;
+
     /// Return the GL primitive type of the draw item based on _primType
     HDST_API
     GLenum GetPrimitiveMode() const;
@@ -205,6 +215,11 @@ private:
     boost::scoped_ptr<GlfGLSLFX> _glslfx;
     bool _cullingPass;
     ID _hash;
+
+    HdBufferSpecVector _paramSpec;
+    HdBufferArrayRangeSharedPtr _paramArray;
+
+    TextureDescriptorVector _textureDescriptors;
 
     // No copying
     HdSt_GeometricShader(const HdSt_GeometricShader &)                     = delete;
