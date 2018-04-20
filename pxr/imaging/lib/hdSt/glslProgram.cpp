@@ -130,6 +130,11 @@ HdStGLSLProgram::CompileShader(GLenum type,
     glShaderSource(shader, sizeof(shaderSources)/sizeof(const char *), shaderSources, NULL);
     glCompileShader(shader);
 
+    static std::map<std::string, int> idMap;
+    std::stringstream ss; ss << "/ssd/usd/shaders/" << shaderType << "_" << idMap[shaderType]++;
+    std::fstream fs(ss.str(), std::ios::out);
+    fs << shaderSource;
+
     std::string logString;
     if (!HdStGLUtils::GetShaderCompileStatus(shader, &logString)) {
         // XXX:validation

@@ -3,6 +3,7 @@
 #include "pxr/imaging/hdSt/drawItem.h"
 #include "pxr/imaging/hdSt/imagePlaneShaderKey.h"
 #include "pxr/imaging/hdSt/meshTopology.h"
+#include "pxr/imaging/hdSt/material.h"
 
 #include "pxr/imaging/hd/vtBufferSource.h"
 
@@ -11,22 +12,25 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
+    // FIXME: cleanup! Heaviliy
     inline void
-    _getTextureResource(HdSceneDelegate* delegate, const SdfPath& id, HdTextureResourceSharedPtr& out) {
+    _getTextureResource(HdSceneDelegate* delegate, const SdfPath& id, HdStTextureResourceSharedPtr& out) {
         HdTextureResource::ID texID = delegate->GetTextureResourceID(id);
         HdInstance<HdTextureResource::ID, HdTextureResourceSharedPtr>
             texInstance;
         const HdResourceRegistrySharedPtr& resourceRegistry =
             delegate->GetRenderIndex().GetResourceRegistry();
+
         std::unique_lock<std::mutex> regLock =
             resourceRegistry->RegisterTextureResource(texID, &texInstance);
 
         if (texInstance.IsFirstInstance()) {
-            out = delegate->GetTextureResource(id);
-            texInstance.SetValue(out);
-        } else {
-            out = texInstance.GetValue();
+            texInstance.SetValue(delegate->GetTextureResource(id));
         }
+
+        out = boost::dynamic_pointer_cast<HdStTextureResource>
+            (texInstance.GetValue());
+        TF_VERIFY(out, "Failed to verify the output texture!");
     }
 }
 
@@ -111,25 +115,42 @@ HdStImagePlane::_UpdateDrawItem(
          boost::static_pointer_cast<HdStResourceRegistry>(
              sceneDelegate->GetRenderIndex().GetResourceRegistry());
     auto geometricShader = HdSt_GeometricShader::Create(shaderKey, resourceRegistry);
-    // Only supporting bindless textures for now.
     _getTextureResource(sceneDelegate, id, _textureResource);
-    const auto bindless = GlfContextCaps::GetInstance().bindlessTextureEnabled;
-    if (_textureResource != nullptr && bindless) {
-        // std::cerr << "Binding texture resouce" << std::endl;
-        /*HdBufferSourceSharedPtr texSource(
-            new HdSt_BindlessSamplerBufferSource(
-                "imagePlaneTexture",
-                GL_SAMPLER_2D,
-                _textureResource->GetTexelsTextureHandle()));*/
 
-        /*std::vector<HdBindingRequest> bindingRequests = {
-            {HdBinding::Type::TEXTURE_2D}
-        };*/
-    }
     drawItem->SetGeometricShader(geometricShader);
+
+    if (_textureResource != nullptr) {
+        HdBufferSourceVector sources; sources.reserve(1);
+        HdStShaderCode::TextureDescriptorVector textures; textures.reserve(1);
+        const auto bindless = GlfContextCaps::GetInstance().bindlessTextureEnabled;
+
+        HdStShaderCode::TextureDescriptor tex;
+        tex.name = TfToken("imagePlaneTexture");
+        tex.type = HdStShaderCode::TextureDescriptor::TEXTURE_2D;
+        tex.handle =
+            bindless ? _textureResource->GetTexelsTextureHandle()
+                     : _textureResource->GetTexelsTextureId();
+        tex.sampler =  _textureResource->GetTexelsSamplerId();
+        textures.push_back(tex);
+
+        // TODO: the HdSt_BindlessSampleBufferSource is not exposed!
+        if (bindless) {
+            HdBufferSourceSharedPtr source(
+                new HdSt_BindlessSamplerBufferSource(
+                    tex.name,
+                    GL_SAMPLER_2D,
+                    tex.handle));
+            sources.push_back(source);
+        }
+
+        geometricShader->SetTextureDescriptors(textures);
+        geometricShader->SetBufferSources(sources, resourceRegistry);
+    }
 
     auto& renderIndex = sceneDelegate->GetRenderIndex();
     renderIndex.GetChangeTracker().MarkShaderBindingsDirty();
+
+    auto materialShader = drawItem->GetMaterialShader();
 
     // TODO: We'll need points there and later on uvs
     // to control the texture mapping.
