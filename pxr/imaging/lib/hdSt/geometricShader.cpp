@@ -97,6 +97,12 @@ HdSt_GeometricShader::GetSource(TfToken const &shaderStageKey) const
     return _glslfx->GetSource(shaderStageKey);
 }
 
+const HdBufferArrayRangeSharedPtr&
+HdSt_GeometricShader::GetShaderData() const
+{
+    return _paramArray;
+}
+
 void
 HdSt_GeometricShader::BindResources(HdSt_ResourceBinder const &binder, int program)
 {
@@ -117,6 +123,23 @@ HdSt_GeometricShader::BindResources(HdSt_ResourceBinder const &binder, int progr
             glLineWidth(_lineWidth);
         }
     }
+
+    if (!_textureDescriptors.empty()) {
+        auto samplerUnit = binder.GetNumReservedTextureUnits();
+        for (const auto& it: _textureDescriptors) {
+            auto binding = binder.GetBinding(it.name);
+            if (binding.GetType() == HdBinding::TEXTURE_2D) {
+                glActiveTexture(GL_TEXTURE0 + samplerUnit);
+                glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(it.handle));
+                glBindSampler(samplerUnit, it.sampler);
+                glProgramUniform1i(program, binding.GetLocation(), samplerUnit);
+                samplerUnit++;
+            }
+        }
+
+        glActiveTexture(GL_TEXTURE0);
+        binder.BindShaderResources(this);
+    }
 }
 
 void
@@ -124,6 +147,23 @@ HdSt_GeometricShader::UnbindResources(HdSt_ResourceBinder const &binder, int pro
 {
     if (_polygonMode == HdPolygonModeLine) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+
+    if (!_textureDescriptors.empty()) {
+        binder.UnbindShaderResources(this);
+
+        auto samplerUnit = binder.GetNumReservedTextureUnits();
+        for (const auto& it: _textureDescriptors) {
+            auto binding = binder.GetBinding(it.name);
+            if (binding.GetType() == HdBinding::TEXTURE_2D) {
+                glActiveTexture(GL_TEXTURE0 + samplerUnit);
+                glBindTexture(GL_TEXTURE_2D, 0);
+                glBindSampler(samplerUnit, 0);
+                samplerUnit++;
+            }
+        }
+
+        glActiveTexture(GL_TEXTURE0);
     }
 }
 
@@ -224,6 +264,47 @@ HdSt_GeometricShader::GetNumPrimitiveVertsForGeometryShader() const
     }
 
     return numPrimVerts;
+}
+
+void
+HdSt_GeometricShader::SetTextureDescriptors(const TextureDescriptorVector &texDesc)
+{
+    _textureDescriptors = texDesc;
+}
+
+void
+HdSt_GeometricShader::SetBufferSources(
+    HdBufferSourceVector& bufferSources,
+    const HdResourceRegistrySharedPtr& resourceRegistry) {
+    if (bufferSources.empty()) {
+        _paramArray.reset();
+    } else {
+        // Build the buffer Spec to see if its changed.
+        HdBufferSpecVector bufferSpecs;
+        TF_FOR_ALL(srcIt, bufferSources) {
+            (*srcIt)->AddBufferSpecs(&bufferSpecs);
+        }
+
+        if (!_paramArray || _paramSpec != bufferSpecs) {
+            _paramSpec = bufferSpecs;
+
+            // establish a buffer range
+            HdBufferArrayRangeSharedPtr range =
+                resourceRegistry->AllocateShaderStorageBufferArrayRange(
+                    HdTokens->materialParams,
+                    bufferSpecs);
+
+            if (!TF_VERIFY(range->IsValid())) {
+                _paramArray.reset();
+            } else {
+                _paramArray = range;
+            }
+        }
+
+        if (_paramArray->IsValid()) {
+            resourceRegistry->AddSources(_paramArray, bufferSources);
+        }
+    }
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
