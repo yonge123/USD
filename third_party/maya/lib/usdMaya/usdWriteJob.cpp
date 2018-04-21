@@ -183,8 +183,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
     MDagPath curLeafDagPath;
     MDagPath rootDagPath;
     if (!mJobCtx.exportRootSdfPath.IsEmpty()) {
-        PxrUsdMayaUtil::GetDagPathByName(mJobCtx.mArgs.exportRootPath, rootDagPath,
-            mJobCtx.mArgs.stripNamespaces);
+        PxrUsdMayaUtil::GetDagPathByName(mJobCtx.mArgs.exportRootPath, rootDagPath);
     }
 
     // Pre-process the argument dagPath path names into two sets. One set

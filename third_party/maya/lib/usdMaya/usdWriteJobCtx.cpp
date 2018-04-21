@@ -82,7 +82,8 @@ usdWriteJobCtx::usdWriteJobCtx(const JobExportArgs& args) : mArgs(args), mNoInst
         if (rootDagPath.isValid()){
             SdfPath rootSdfPath;
             PxrUsdMayaUtil::GetDagPathByName(mArgs.exportRootPath, rootDagPath);
-            exportRootSdfPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false);
+            exportRootSdfPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false,
+                    mArgs.stripNamespaces);
         } else {
             MGlobal::displayError(MString("Invalid dag path provided for root: ")
                     + mArgs.exportRootPath.c_str());
