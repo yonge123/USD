@@ -93,6 +93,8 @@ protected:
     std::vector<MayaPrimWriterPtr> mMayaPrimWriterList;
     // Stage used to write out USD file
     UsdStageRefPtr mStage;
+    // Cache the conversion from string to SdfPath here
+    SdfPath exportRootSdfPath;
 private:
     PXRUSDMAYA_API
     SdfPath getUsdPathFromDagPath(const MDagPath& dagPath, bool instanceSource);
