@@ -75,7 +75,6 @@ JobExportArgs::JobExportArgs()
         exportVisibility(true),
         stripNamespaces(false),
         exportRootPath(""),
-        exportRootSdfPath(SdfPath()),
         parentScope(SdfPath())
 {
 }
