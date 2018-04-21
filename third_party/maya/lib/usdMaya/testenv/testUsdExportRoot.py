@@ -106,7 +106,7 @@ class testUsdExportRoot(unittest.TestCase):
         self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
         self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/OtherMid').GetPrim().IsValid())
         self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/Mid/OtherLowest').GetPrim().IsValid())
-        
+
     def testExportRoot_rootTop_selTop_cmd(self):
         stage = self.doExportImport('cmd', root='Top', selection='Top')
         self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/Mid/Cube').GetPrim().IsValid())

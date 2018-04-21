@@ -218,7 +218,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
     MDagPath curLeafDagPath;
     MItDag itDag(MItDag::kDepthFirst, MFn::kInvalid);
 
-    if (!mJobCtx.mArgs.exportRootPath.empty()) {
+    if (!mJobCtx.exportRootSdfPath.IsEmpty()) {
         // If a root is specified, start iteration there
         MDagPath rootDagPath;
         PxrUsdMayaUtil::GetDagPathByName(mJobCtx.mArgs.exportRootPath, rootDagPath);
@@ -234,12 +234,12 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
             // This dagPath is a parent of one of the arg dagPaths. It should
             // be included in the export, but not necessarily all of its
             // children should be, so we continue to traverse down.
-            if (!mJobCtx.mArgs.exportRootSdfPath.IsEmpty() && curDagPath.length() > 0){
+            if (!mJobCtx.exportRootSdfPath.IsEmpty() && curDagPath.length() > 0){
                 // However if an export root is specified, we skip any dag
                 // parents that are above that root.
                 SdfPath sdfDagPath = SdfPath(PxrUsdMayaUtil::MDagPathToUsdPath(curDagPath, false));
-                if (mJobCtx.mArgs.exportRootSdfPath.GetCommonPrefix(sdfDagPath) !=
-                    mJobCtx.mArgs.exportRootSdfPath) {
+                if (mJobCtx.exportRootSdfPath.GetCommonPrefix(sdfDagPath) !=
+                    mJobCtx.exportRootSdfPath) {
                     continue;
                 }
             }

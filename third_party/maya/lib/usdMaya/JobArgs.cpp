@@ -71,7 +71,6 @@ JobExportArgs::JobExportArgs()
         defaultMeshScheme(UsdGeomTokens->catmullClark),
         exportVisibility(true),
         exportRootPath(""),
-        exportRootSdfPath(SdfPath()),
         parentScope(SdfPath())
 {
 }
