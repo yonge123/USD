@@ -34,8 +34,11 @@
 #include "pxr/base/tf/token.h"
 #include "pxr/usd/sdf/path.h"
 
+#include <maya/MString.h>
+
 #include <map>
 #include <ostream>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -125,8 +128,27 @@ struct JobExportArgs
     const SdfPath& getParentScope() const {
         return parentScope;
     }
+
+    PXRUSDMAYA_API
+    void addFilteredTypeName(const MString& typeName);
+
+    const std::set<unsigned int>& getFilteredTypeIds() const {
+        return filteredTypeIds;
+    }
+
+    void clearFilteredTypeIds() {
+        filteredTypeIds.clear();
+    }
+
 private:
     SdfPath parentScope;
+
+    // Maya type ids to avoid exporting; these are
+    // EXACT types, though the only exposed way to modify this,
+    // addFilteredTypeName, will also add all inherited types
+    // (so if you exclude "constraint", it will also exclude
+    // "parentConstraint")
+    std::set<unsigned int> filteredTypeIds;
 };
 
 PXRUSDMAYA_API

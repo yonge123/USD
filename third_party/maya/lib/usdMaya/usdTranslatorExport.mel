@@ -137,6 +137,11 @@ global proc int usdTranslatorExport (string $parent,
         checkBox -l "Export Visibility" exportVisibilityCheckBox;
 
         checkBox -l "Renderable Only" renderableOnlyCheckBox;
+
+        textFieldGrp -l "Filtered Node Types"
+            -annotation ("Do not filter nodes of this type, or their children;\n" +
+                         "specify multiple types by separating with comma: 'constraint,place3dTexture'")
+            filterTypesTextField;
          
         checkBox -l "Export all cameras" allCamerasCheckBox;
 
@@ -195,6 +200,8 @@ global proc int usdTranslatorExport (string $parent,
                     usdTranslatorExport_SetCheckbox($optionBreakDown[1], "exportColorSetsCheckBox");
                 } else if ($optionBreakDown[0] == "renderableOnly") {
                     usdTranslatorExport_SetCheckbox($optionBreakDown[1], "renderableOnlyCheckBox");
+                } else if ($optionBreakDown[0] == "filterTypes") {
+                    usdTranslatorExport_SetTextField($optionBreakDown[1], "filterTypesTextField");
                 } else if ($optionBreakDown[0] == "allCameras") {
                     usdTranslatorExport_SetCheckbox($optionBreakDown[1], "allCamerasCheckBox");
                 } else if ($optionBreakDown[0] == "renderLayerMode") {
@@ -248,6 +255,7 @@ global proc int usdTranslatorExport (string $parent,
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "normalizeUVs", "normalizeUVsCheckBox");
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "exportColorSets", "exportColorSetsCheckBox");
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "renderableOnly", "renderableOnlyCheckBox");
+        $currentOptions = usdTranslatorExport_AppendFromTextField($currentOptions, "filterTypes", "filterTypesTextField");
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "allCameras", "allCamerasCheckBox");
         $currentOptions = usdTranslatorExport_AppendFromPopup($currentOptions, "renderLayerMode", "renderLayerModePopup");
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "mergeXForm", "mergeXFormCheckBox");
