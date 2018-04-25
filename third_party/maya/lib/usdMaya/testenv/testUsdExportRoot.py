@@ -49,7 +49,7 @@ class testUsdExportRoot(unittest.TestCase):
     def tearDownClass(cls):
         standalone.uninitialize()
         
-    def doExportImport(self, method, shouldError=False, root=None, selection=None):
+    def doExportImportOneMethod(self, method, shouldError=False, root=None, selection=None):
         name = 'UsdExportRoot_root-{root}_sel-{sel}'.format(root=root, sel=selection)
         if method == 'cmd':
             name += '.usda'
@@ -91,211 +91,137 @@ class testUsdExportRoot(unittest.TestCase):
             return
         exportMethod(*args, **kwargs)
         return Usd.Stage.Open(usdFile)
+        
+    def doExportImportTest(self, validator, shouldError=False, root=None, selection=None):
+        stage = self.doExportImportOneMethod('cmd', shouldError=shouldError,
+                                             root=root, selection=selection)
+        validator(stage)
+        stage = self.doExportImportOneMethod('translator', shouldError=shouldError,
+                                             root=root, selection=selection)
+        validator(stage)
 
-        p = UsdGeom.Mesh.Get(stage, shouldExist)
-        self.assertTrue(p.GetPrim().IsValid())
+    def assertPrim(self, stage, path, type):
+        prim = stage.GetPrimAtPath(path)
+        self.assertTrue(prim.IsValid())
+        self.assertEqual(prim.GetTypeName(), type)
 
-    def testNonOverlappingSelectionRoot_cmd(self):
+    def assertNotPrim(self, stage, path):
+        self.assertFalse(stage.GetPrimAtPath(path).IsValid())
+
+    def testNonOverlappingSelectionRoot(self):
         # test that the command errors if we give it a root + selection that
         # have no intersection
-        self.doExportImport('cmd', shouldError=True, root='Mid', selection='OtherTop')
+        def validator(stage):
+            pass
+        self.doExportImportTest(validator, shouldError=True, root='Mid', selection='OtherTop')
 
-    def testExportRoot_rootTop_selNone_cmd(self):
-        stage = self.doExportImport('cmd', root='Top')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/Mid/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/OtherMid').GetPrim().IsValid())
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/Mid/OtherLowest').GetPrim().IsValid())
+    def testExportRoot_rootTop_selNone(self):
+        def validator(stage):
+            self.assertPrim(stage, '/Top/Mid/Cube', 'Mesh')
+            self.assertNotPrim(stage, '/OtherTop')
+            self.assertPrim(stage, '/Top/OtherMid', 'Xform')
+            self.assertPrim(stage, '/Top/Mid/OtherLowest', 'Xform')
+        self.doExportImportTest(validator, root='Top')
 
-    def testExportRoot_rootTop_selTop_cmd(self):
-        stage = self.doExportImport('cmd', root='Top', selection='Top')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/Mid/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/OtherMid').GetPrim().IsValid())
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/Mid/OtherLowest').GetPrim().IsValid())
+    def testExportRoot_rootTop_selTop(self):
+        def validator(stage):
+            self.assertPrim(stage, '/Top/Mid/Cube', 'Mesh')
+            self.assertNotPrim(stage, '/OtherTop')
+            self.assertPrim(stage, '/Top/OtherMid', 'Xform')
+            self.assertPrim(stage, '/Top/Mid/OtherLowest', 'Xform')
+        self.doExportImportTest(validator, root='Top', selection='Top')
 
-    def testExportRoot_rootTop_selMid_cmd(self):
-        stage = self.doExportImport('cmd', root='Top', selection='Mid')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/Mid/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top/OtherMid').GetPrim().IsValid())
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/Mid/OtherLowest').GetPrim().IsValid())
+    def testExportRoot_rootTop_selMid(self):
+        def validator(stage):
+            self.assertPrim(stage, '/Top/Mid/Cube', 'Mesh')
+            self.assertNotPrim(stage, '/OtherTop')
+            self.assertNotPrim(stage, '/Top/OtherMid')
+            self.assertPrim(stage, '/Top/Mid/OtherLowest', 'Xform')
+        self.doExportImportTest(validator, root='Top', selection='Mid')
 
-    def testExportRoot_rootTop_selCube_cmd(self):
-        stage = self.doExportImport('cmd', root='Top', selection='Cube')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/Mid/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top/OtherMid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top/Mid/OtherLowest').GetPrim().IsValid())
+    def testExportRoot_rootTop_selCube(self):
+        def validator(stage):
+            self.assertPrim(stage, '/Top/Mid/Cube', 'Mesh')
+            self.assertNotPrim(stage, '/OtherTop')
+            self.assertNotPrim(stage, '/Top/OtherMid')
+            self.assertNotPrim(stage, '/Top/Mid/OtherLowest')
+        self.doExportImportTest(validator, root='Top', selection='Cube')
 
-    def testExportRoot_rootMid_selNone_cmd(self):
-        stage = self.doExportImport('cmd', root='Mid')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Mid/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherMid').GetPrim().IsValid())
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Mid/OtherLowest').GetPrim().IsValid())
-        
-    def testExportRoot_rootMid_selTop_cmd(self):
-        stage = self.doExportImport('cmd', root='Mid', selection='Top')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Mid/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherMid').GetPrim().IsValid())
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Mid/OtherLowest').GetPrim().IsValid())
+    def testExportRoot_rootMid_selNone(self):
+        def validator(stage):
+            self.assertPrim(stage, '/Mid/Cube', 'Mesh')
+            self.assertNotPrim(stage, '/Top')
+            self.assertNotPrim(stage, '/OtherTop')
+            self.assertNotPrim(stage, '/OtherMid')
+            self.assertPrim(stage, '/Mid/OtherLowest', 'Xform')
+        self.doExportImportTest(validator, root='Mid')
 
-    def testExportRoot_rootMid_selMid_cmd(self):
-        stage = self.doExportImport('cmd', root='Mid', selection='Mid')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Mid/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherMid').GetPrim().IsValid())
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Mid/OtherLowest').GetPrim().IsValid())
+    def testExportRoot_rootMid_selTop(self):
+        def validator(stage):
+            self.assertPrim(stage, '/Mid/Cube', 'Mesh')
+            self.assertNotPrim(stage, '/Top')
+            self.assertNotPrim(stage, '/OtherTop')
+            self.assertNotPrim(stage, '/OtherMid')
+            self.assertPrim(stage, '/Mid/OtherLowest', 'Xform')
+        self.doExportImportTest(validator, root='Mid', selection='Top')
 
-    def testExportRoot_rootMid_selCube_cmd(self):
-        stage = self.doExportImport('cmd', root='Mid', selection='Cube')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Mid/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherMid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Mid/OtherLowest').GetPrim().IsValid())
+    def testExportRoot_rootMid_selMid(self):
+        def validator(stage):
+            self.assertPrim(stage, '/Mid/Cube', 'Mesh')
+            self.assertNotPrim(stage, '/Top')
+            self.assertNotPrim(stage, '/OtherTop')
+            self.assertNotPrim(stage, '/OtherMid')
+            self.assertPrim(stage, '/Mid/OtherLowest', 'Xform')
+        self.doExportImportTest(validator, root='Mid', selection='Mid')
 
-    def testExportRoot_rootCube_selNone_cmd(self):
-        stage = self.doExportImport('cmd', root='Cube')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Mid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherMid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherLowest').GetPrim().IsValid())
-        
-    def testExportRoot_rootCube_selTop_cmd(self):
-        stage = self.doExportImport('cmd', root='Cube', selection='Top')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Mid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherMid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherLowest').GetPrim().IsValid())
-        
-    def testExportRoot_rootCube_selMid_cmd(self):
-        stage = self.doExportImport('cmd', root='Cube', selection='Mid')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Mid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherMid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherLowest').GetPrim().IsValid())
+    def testExportRoot_rootMid_selCube(self):
+        def validator(stage):
+            self.assertPrim(stage, '/Mid/Cube', 'Mesh')
+            self.assertNotPrim(stage, '/Top')
+            self.assertNotPrim(stage, '/OtherTop')
+            self.assertNotPrim(stage, '/OtherMid')
+            self.assertNotPrim(stage, '/Mid/OtherLowest')
+        self.doExportImportTest(validator, root='Mid', selection='Cube')
 
-    def testExportRoot_rootCube_selCube_cmd(self):
-        stage = self.doExportImport('cmd', root='Cube', selection='Cube')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Mid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherMid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherLowest').GetPrim().IsValid())
- 
-    def testNonOverlappingSelectionRoot_translator(self):
-        # test that the command errors if we give it a root + selection that
-        # have no intersection
-        self.doExportImport('translator', shouldError=True, root='Mid', selection='OtherTop')
- 
-    def testExportRoot_rootTop_selNone_translator(self):
-        stage = self.doExportImport('translator', root='Top')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/Mid/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/OtherMid').GetPrim().IsValid())
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/Mid/OtherLowest').GetPrim().IsValid())
-         
-    def testExportRoot_rootTop_selTop_translator(self):
-        stage = self.doExportImport('translator', root='Top', selection='Top')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/Mid/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/OtherMid').GetPrim().IsValid())
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/Mid/OtherLowest').GetPrim().IsValid())
- 
-    def testExportRoot_rootTop_selMid_translator(self):
-        stage = self.doExportImport('translator', root='Top', selection='Mid')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/Mid/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top/OtherMid').GetPrim().IsValid())
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/Mid/OtherLowest').GetPrim().IsValid())
- 
-    def testExportRoot_rootTop_selCube_translator(self):
-        stage = self.doExportImport('translator', root='Top', selection='Cube')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Top/Mid/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top/OtherMid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top/Mid/OtherLowest').GetPrim().IsValid())
- 
-    def testExportRoot_rootMid_selNone_translator(self):
-        stage = self.doExportImport('translator', root='Mid')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Mid/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherMid').GetPrim().IsValid())
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Mid/OtherLowest').GetPrim().IsValid())
-         
-    def testExportRoot_rootMid_selTop_translator(self):
-        stage = self.doExportImport('translator', root='Mid', selection='Top')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Mid/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherMid').GetPrim().IsValid())
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Mid/OtherLowest').GetPrim().IsValid())
- 
-    def testExportRoot_rootMid_selMid_translator(self):
-        stage = self.doExportImport('translator', root='Mid', selection='Mid')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Mid/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherMid').GetPrim().IsValid())
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Mid/OtherLowest').GetPrim().IsValid())
- 
-    def testExportRoot_rootMid_selCube_translator(self):
-        stage = self.doExportImport('translator', root='Mid', selection='Cube')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Mid/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherMid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Mid/OtherLowest').GetPrim().IsValid())
- 
-    def testExportRoot_rootCube_selNone_translator(self):
-        stage = self.doExportImport('translator', root='Cube')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Mid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherMid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherLowest').GetPrim().IsValid())
-         
-    def testExportRoot_rootCube_selTop_translator(self):
-        stage = self.doExportImport('translator', root='Cube', selection='Top')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Mid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherMid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherLowest').GetPrim().IsValid())
-         
-    def testExportRoot_rootCube_selMid_translator(self):
-        stage = self.doExportImport('translator', root='Cube', selection='Mid')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Mid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherMid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherLowest').GetPrim().IsValid())
- 
-    def testExportRoot_rootCube_selCube_translator(self):
-        stage = self.doExportImport('translator', root='Cube', selection='Cube')
-        self.assertTrue(UsdGeom.Mesh.Get(stage, '/Cube').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Top').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/Mid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherTop').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherMid').GetPrim().IsValid())
-        self.assertFalse(UsdGeom.Mesh.Get(stage, '/OtherLowest').GetPrim().IsValid())
+    def testExportRoot_rootCube_selNone(self):
+        def validator(stage):
+            self.assertPrim(stage, '/Cube', 'Mesh')
+            self.assertNotPrim(stage, '/Top')
+            self.assertNotPrim(stage, '/Mid')
+            self.assertNotPrim(stage, '/OtherTop')
+            self.assertNotPrim(stage, '/OtherMid')
+            self.assertNotPrim(stage, '/OtherLowest')
+        self.doExportImportTest(validator, root='Cube')
+
+    def testExportRoot_rootCube_selTop(self):
+        def validator(stage):
+            self.assertPrim(stage, '/Cube', 'Mesh')
+            self.assertNotPrim(stage, '/Top')
+            self.assertNotPrim(stage, '/Mid')
+            self.assertNotPrim(stage, '/OtherTop')
+            self.assertNotPrim(stage, '/OtherMid')
+            self.assertNotPrim(stage, '/OtherLowest')
+        self.doExportImportTest(validator, root='Cube', selection='Top')
+
+    def testExportRoot_rootCube_selMid(self):
+        def validator(stage):
+            self.assertPrim(stage, '/Cube', 'Mesh')
+            self.assertNotPrim(stage, '/Top')
+            self.assertNotPrim(stage, '/Mid')
+            self.assertNotPrim(stage, '/OtherTop')
+            self.assertNotPrim(stage, '/OtherMid')
+            self.assertNotPrim(stage, '/OtherLowest')
+        self.doExportImportTest(validator, root='Cube', selection='Mid')
+
+    def testExportRoot_rootCube_selCube(self):
+        def validator(stage):
+            self.assertPrim(stage, '/Cube', 'Mesh')
+            self.assertNotPrim(stage, '/Top')
+            self.assertNotPrim(stage, '/Mid')
+            self.assertNotPrim(stage, '/OtherTop')
+            self.assertNotPrim(stage, '/OtherMid')
+            self.assertNotPrim(stage, '/OtherLowest')
+        self.doExportImportTest(validator, root='Cube', selection='Cube')
 
 
 if __name__ == '__main__':
