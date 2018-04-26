@@ -88,11 +88,10 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
         // ...or only one of those are... or neither are.
 
         // Currently, the parent MayaTransformWriter will handle the merging of the imagePlane
-        // shape with the image plane transform.  Now, we just need to worry about (possilby)
+        // shape with the image plane transform.  Now, we just need to worry about (possibly)
         // popping out the camera shape from our usd path...
 
-        if (getDagPath().pathCount() > 1)
-        {
+        if (getDagPath().pathCount() > 1) {
             auto cameraXformDag = getDagPath();
 
             // We're in the underworld, get the first xform before the underworld (should be the
@@ -127,8 +126,7 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
             cameraXformDag.pop(underworldLength + 2);
 
             // Now we test THIS to see if it is merged...
-            if (hasOnlyOneShapeBelow(cameraXformDag))
-            {
+            if (hasOnlyOneShapeBelow(cameraXformDag)) {
                 // Ok, cameraShape was merged... need to remove the appropriate element from our
                 // usd path...
 
@@ -136,8 +134,7 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
                 // processing done by MDagPathToUsdPath, and we avoid the hash from
                 // token re-creation
                 SdfPath cameraShapePath = getUsdPath();
-                for (auto i = 0u; i < underworldLength; ++i)
-                {
+                for (auto i = 0u; i < underworldLength - 1; ++i) {
                     cameraShapePath = cameraShapePath.GetParentPath();
                 }
                 auto cameraXformPath = cameraShapePath.GetParentPath();
