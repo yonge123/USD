@@ -10,15 +10,21 @@
 --- --------------------------------------------------------------------------
 -- glsl ImagePlane.Vertex
 
+out vec2 fitting;
+
 void main(void)
 {
     gl_Position = vec4(HdGet_points().xy, 0.999999, 1);
+    fitting = HdGet_points().xy;
 }
 
 --- --------------------------------------------------------------------------
 -- glsl ImagePlane.Fragment
 
+in vec2 fitting;
+
 void main(void)
 {
-    RenderColor(vec4(1.0, 0.0, 0.0, 1.0));
+    // RenderColor(vec4(1.0, 0.0, 0.0, 1.0));
+    RenderColor(vec4(fitting.x, fitting.y, 0.0, 1.0));
 }

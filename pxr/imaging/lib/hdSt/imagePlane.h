@@ -7,6 +7,7 @@
 #include "pxr/imaging/hd/imagePlane.h"
 #include "pxr/imaging/hd/repr.h"
 #include "pxr/imaging/hdSt/drawItem.h"
+#include "pxr/imaging/hdSt/textureResource.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -60,7 +61,7 @@ private:
 
     // Make sure we have a reference to the texture resource, so its
     // life time exists at least as long as this object.
-    HdTextureResourceSharedPtr _textureResource;
+    HdStTextureResourceSharedPtr _textureResource;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
