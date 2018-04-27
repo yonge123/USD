@@ -45,7 +45,6 @@ pxr_library(usdImagingGL
         hydraMaterialAdapter
         package
         refEngine
-        imagePlaneAdapter
 
     PUBLIC_HEADERS
         api.h
