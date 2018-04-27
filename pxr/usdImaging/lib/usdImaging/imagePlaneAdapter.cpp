@@ -13,8 +13,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_REGISTRY_FUNCTION(TfType)
 {
     typedef UsdImagingImagePlaneAdapter Adapter;
-    /*TfType t = */TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter> >();
-    //t.SetFactory< UsdImagingPrimAdapterFactory<Adapter> >();
+    TfType t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter> >();
+    t.SetFactory< UsdImagingPrimAdapterFactory<Adapter> >();
 }
 
 UsdImagingImagePlaneAdapter::~UsdImagingImagePlaneAdapter() {
