@@ -66,18 +66,48 @@ struct HdSyncRequestVector {
     std::vector<HdDirtyBits> dirtyBits;
 };
 
-/// \struct HdExtComputationPrimVarDesc
+/// \struct HdPrimvarDescriptor
 ///
-/// Describes a PrimVar that is sourced from an ExtComputation.
+/// Describes a primvar.
+struct HdPrimvarDescriptor {
+    /// Name of the primvar.
+    TfToken name;
+    /// Interpolation (data-sampling rate) of the primvar.
+    HdInterpolation interpolation;
+    /// Optional "role" indicating a desired interpretation --
+    /// for example, to distinguish color/vector/point/normal.
+    /// See HdPrimvarRoleTokens; default is HdPrimvarRoleTokens->none.
+    TfToken role;
+
+    HdPrimvarDescriptor() {}
+    HdPrimvarDescriptor(TfToken const& name_,
+                        HdInterpolation interp_,
+                        TfToken const& role_=HdPrimvarRoleTokens->none)
+        : name(name_), interpolation(interp_), role(role_)
+    { }
+    bool operator==(HdPrimvarDescriptor const& rhs) const {
+        return name == rhs.name && role == rhs.role
+            && interpolation == rhs.interpolation;
+    }
+    bool operator!=(HdPrimvarDescriptor const& rhs) const {
+        return !(*this == rhs);
+    }
+};
+
+typedef std::vector<HdPrimvarDescriptor> HdPrimvarDescriptorVector;
+
+/// \struct HdExtComputationPrimvarDesc
+///
+/// Describes a Primvar that is sourced from an ExtComputation.
 /// The scene delegate is expected to fill in this structure for
-/// a given primVar name on a specific prim.
+/// a given primvar name on a specific prim.
 ///
 /// The structure contains the path to the ExtComputation in the render index,
-/// and which output on that computation to bind the primVar to.
+/// and which output on that computation to bind the primvar to.
 ///
-/// The defaultValue provides expected type information about the primVar
+/// The defaultValue provides expected type information about the primvar
 /// and may be used in case of error.
-struct HdExtComputationPrimVarDesc {
+struct HdExtComputationPrimvarDesc {
     SdfPath         computationId;
     TfToken         computationOutputName;
     VtValue         defaultValue;
@@ -417,20 +447,20 @@ public:
     HD_API
     virtual TfTokenVector GetExtComputationOutputNames(SdfPath const& id);
 
-    /// Returns a list of primVar names that should be bound to
+    /// Returns a list of primvar names that should be bound to
     /// a generated output from  an ExtComputation for the given prim id and
     /// interpolation mode.  Binding information is obtained through
-    /// GetExtComputationPrimVarDesc()
+    /// GetExtComputationPrimvarDesc()
     HD_API
-    virtual TfTokenVector GetExtComputationPrimVarNames(
+    virtual TfTokenVector GetExtComputationPrimvarNames(
                                              SdfPath const& id,
                                              HdInterpolation interpolationMode);
 
-    /// Returns a structure describing source information for a primVar
-    /// that is bound to an ExtComputation.  See HdExtComputationPrimVarDesc
+    /// Returns a structure describing source information for a primvar
+    /// that is bound to an ExtComputation.  See HdExtComputationPrimvarDesc
     /// for the expected information to be returned.
     HD_API
-    virtual HdExtComputationPrimVarDesc GetExtComputationPrimVarDesc(
+    virtual HdExtComputationPrimvarDesc GetExtComputationPrimvarDesc(
                                                 SdfPath const& id,
                                                 TfToken const& varName);
     
@@ -454,35 +484,14 @@ public:
     virtual void InvokeExtComputation(SdfPath const& computationId,
                                       HdExtComputationContext *context);
 
-
-
     // -----------------------------------------------------------------------//
     /// \name Primitive Variables
     // -----------------------------------------------------------------------//
 
-    /// Returns the vertex-rate primvar names.
+    /// Returns descriptors for all primvars of the given interpolation type.
     HD_API
-    virtual TfTokenVector GetPrimvarVertexNames(SdfPath const& id);
-
-    /// Returns the varying-rate primvar names.
-    HD_API
-    virtual TfTokenVector GetPrimvarVaryingNames(SdfPath const& id);
-
-    /// Returns the Facevarying-rate primvar names.
-    HD_API
-    virtual TfTokenVector GetPrimvarFacevaryingNames(SdfPath const& id);
-
-    /// Returns the Uniform-rate primvar names.
-    HD_API
-    virtual TfTokenVector GetPrimvarUniformNames(SdfPath const& id);
-
-    /// Returns the Constant-rate primvar names.
-    HD_API
-    virtual TfTokenVector GetPrimvarConstantNames(SdfPath const& id);
-
-    /// Returns the Instance-rate primvar names.
-    HD_API
-    virtual TfTokenVector GetPrimvarInstanceNames(SdfPath const& id);
+    virtual HdPrimvarDescriptorVector
+    GetPrimvarDescriptors(SdfPath const& id, HdInterpolation interpolation);
 
 private:
     HdRenderIndex *_index;
