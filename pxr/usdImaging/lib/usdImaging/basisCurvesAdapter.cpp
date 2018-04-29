@@ -24,6 +24,7 @@
 #include "pxr/usdImaging/usdImaging/basisCurvesAdapter.h"
 
 #include "pxr/usdImaging/usdImaging/delegate.h"
+#include "pxr/usdImaging/usdImaging/indexProxy.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
 #include "pxr/imaging/hd/basisCurves.h"
@@ -78,7 +79,7 @@ UsdImagingBasisCurvesAdapter::TrackVariability(UsdPrim const& prim,
     _IsVarying(prim,
                UsdGeomTokens->points,
                HdChangeTracker::DirtyPoints,
-               UsdImagingTokens->usdVaryingPrimVar,
+               UsdImagingTokens->usdVaryingPrimvar,
                timeVaryingBits,
                /*isInherited*/false);
 
@@ -117,7 +118,7 @@ UsdImagingBasisCurvesAdapter::UpdateForTime(UsdPrim const& prim,
         prim, cachePath, time, requestedBits, instancerContext);
     UsdImagingValueCache* valueCache = _GetValueCache();
 
-    PrimvarInfoVector& primvars = valueCache->GetPrimvars(cachePath);
+    HdPrimvarDescriptorVector& primvars = valueCache->GetPrimvars(cachePath);
     if (requestedBits & HdChangeTracker::DirtyTopology) {
         VtValue& topology = valueCache->GetTopology(cachePath);
         _GetBasisCurvesTopology(prim, &topology, time);
@@ -126,35 +127,34 @@ UsdImagingBasisCurvesAdapter::UpdateForTime(UsdPrim const& prim,
     if (requestedBits & HdChangeTracker::DirtyPoints) {
         VtValue& points = valueCache->GetPoints(cachePath);
         _GetPoints(prim, &points, time);
-        UsdImagingValueCache::PrimvarInfo primvar;
-        primvar.name = HdTokens->points;
-        primvar.interpolation = UsdGeomTokens->vertex;
-        _MergePrimvar(primvar, &primvars);
+        _MergePrimvar(&primvars,
+                      UsdGeomTokens->points,
+                      HdInterpolationVertex,
+                      HdPrimvarRoleTokens->point);
     }
 
     if (requestedBits & HdChangeTracker::DirtyWidths) {
-        UsdImagingValueCache::PrimvarInfo primvar;
         UsdGeomBasisCurves curves(prim);
+        HdInterpolation interpolation;
         VtFloatArray widths;
-        primvar.name = UsdGeomTokens->widths;
         if (curves.GetWidthsAttr().Get(&widths, time)) {
-            primvar.interpolation = UsdGeomTokens->vertex;
+            interpolation = HdInterpolationVertex;
         } else {
             widths = VtFloatArray(1);
             widths[0] = 1.0f;
-            primvar.interpolation = UsdGeomTokens->constant;
+            interpolation = HdInterpolationConstant;
         }
-        _MergePrimvar(primvar, &primvars);
+        _MergePrimvar(&primvars, UsdGeomTokens->widths, interpolation);
         valueCache->GetWidths(cachePath) = VtValue(widths);
     }
     if (requestedBits & HdChangeTracker::DirtyNormals) {
-        UsdImagingValueCache::PrimvarInfo primvar;
         UsdGeomBasisCurves curves(prim);
         VtVec3fArray normals;
-        primvar.name = UsdGeomTokens->normals;
         if (curves.GetNormalsAttr().Get(&normals, time)) {
-            primvar.interpolation = UsdGeomTokens->vertex;
-            _MergePrimvar(primvar, &primvars);
+            _MergePrimvar(&primvars,
+                          UsdGeomTokens->normals,
+                          HdInterpolationVertex,
+                          HdPrimvarRoleTokens->normal);
             valueCache->GetNormals(cachePath) = VtValue(normals);
         }
     }
