@@ -28,6 +28,7 @@
 #include "pxr/pxr.h"
 
 #include "pxr/base/trace/collection.h"
+#include "pxr/base/trace/counterAccumulator.h"
 #include "pxr/base/trace/singleEventNode.h"
 #include "pxr/base/trace/singleEventGraph.h"
 
@@ -41,7 +42,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// TraceCollection instances.
 ///
 class TraceSingleEventTreeReport
-    : public TraceCollection::Visitor {
+    : protected TraceCollection::Visitor {
 public:
     /// Constructor.
     TraceSingleEventTreeReport();
@@ -49,6 +50,16 @@ public:
     /// Returns the root of the tree.
     TraceSingleEventGraphRefPtr GetGraph() { return _graph; }
 
+    /// Creates a SingleEventGraph from the data in /p collection.
+    TRACE_API void CreateGraph(const TraceCollection& collection);
+
+    /// Set the value of the counters.
+    void SetCounterValues(
+        const TraceSingleEventGraph::CounterMap& counterValues) {
+        _counterAccum.SetCurrentValues(counterValues);
+    }
+
+protected:
     /// \name TraceCollection::Visitor Interface
     /// @{
     virtual void OnBeginCollection() override;
@@ -86,7 +97,6 @@ private:
 
     void _OnBegin(const TraceThreadId&, const TfToken&, const TraceEvent&);
     void _OnEnd(const TraceThreadId&, const TfToken&, const TraceEvent&);
-    void _OnCounter(const TraceThreadId&, const TfToken&, const TraceEvent&);
     void _OnData(const TraceThreadId&, const TfToken&, const TraceEvent&);
     void _OnTimespan(const TraceThreadId&, const TfToken&, const TraceEvent&);
 
@@ -95,8 +105,13 @@ private:
 
     TraceSingleEventNodeRefPtr _root;
     _ThreadStackMap _threadStacks;
-    TraceSingleEventGraph::CounterMap _counterDeltas;
     TraceSingleEventGraphRefPtr _graph;
+
+    class _CounterAccumulator : public TraceCounterAccumulator {
+    protected:
+        bool _AcceptsCategory(TraceCategoryId) override;
+    };
+    _CounterAccumulator _counterAccum;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
