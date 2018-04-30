@@ -159,7 +159,8 @@ MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime,
     }
 
     // Check if samples should be written at time if attr has no animation.
-    bool writeIfConstant = shouldWriteSample(usdTime, false);
+    // FIXME
+    // bool writeIfConstant = shouldWriteSample(usdTime, false);
     // Write user-tagged export attributes. Write attributes on the transform
     // first, and then attributes on the shape node. This means that attribute
     // name collisions will always be handled by taking the shape node's value
@@ -210,6 +211,7 @@ MayaPrimWriter::shouldWriteSample(const UsdTimeCode& usdTime, bool isAnimated) c
     return mWriteJobCtx.shouldWriteSample(usdTime, isAnimated);
 }
 
+bool
 MayaPrimWriter::getAllAuthoredUsdPaths(SdfPathVector* outPaths) const
 {
     if (!getUsdPath().IsEmpty()) {
