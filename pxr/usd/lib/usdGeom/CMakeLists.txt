@@ -21,7 +21,6 @@ pxr_library(usdGeom
         tokens
         bboxCache
         constraintTarget
-        primvar
         xformCache
         basisCurves
         boundable
@@ -45,6 +44,8 @@ pxr_library(usdGeom
         pointBased
         pointInstancer
         points
+        primvar
+        primvarsAPI
         scope
         sphere
         subset
@@ -85,6 +86,7 @@ pxr_library(usdGeom
         wrapPointInstancer.cpp
         wrapPoints.cpp
         wrapPrimvar.cpp
+        wrapPrimvarsAPI.cpp
         wrapScope.cpp
         wrapSphere.cpp
         wrapSubset.cpp
@@ -111,7 +113,7 @@ pxr_test_scripts(
     testenv/testUsdGeomCollectionAPI.py
     testenv/testUsdGeomConstraintTarget.py
     testenv/testUsdGeomConsts.py
-    testenv/test_UsdGeomCurves.py
+    testenv/testUsdGeomCurves.py
     testenv/testUsdGeomFaceSetAPI.py
     testenv/testUsdGeomMesh.py
     testenv/testUsdGeomMotionAPI.py
@@ -255,7 +257,7 @@ pxr_register_test(testUsdGeomCreateAttribute
 
 pxr_register_test(testUsdGeomCurves
     PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/test_UsdGeomCurves"
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomCurves"
     EXPECTED_RETURN_CODE 0
 )
 
