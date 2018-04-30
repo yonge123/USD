@@ -39,7 +39,8 @@ UsdImagingImagePlaneAdapter::TrackVariability(
     BaseAdapter::TrackVariability(
         prim, cachePath, timeVaryingBits, instancerContext);
 
-    _IsVarying(
+    // FIXME
+    /*_IsVarying(
         prim,
         UsdGeomTokens->points,
         HdChangeTracker::DirtyPoints,
@@ -57,7 +58,7 @@ UsdImagingImagePlaneAdapter::TrackVariability(
             HdChangeTracker::DirtyTopology,
             UsdImagingTokens->usdVaryingTopology,
             timeVaryingBits, false);
-    }
+    }*/
 }
 
 void
@@ -84,12 +85,13 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
         pointsValues = vertices;
 
 
-        UsdImagingValueCache::PrimvarInfo primvar;
+        // FIXME
+        /*UsdImagingValueCache::PrimvarInfo primvar;
         primvar.name = HdTokens->points;
         primvar.interpolation = UsdGeomTokens->vertex;
 
         PrimvarInfoVector& primvars = valueCache->GetPrimvars(cachePath);
-        _MergePrimvar(primvar, &primvars);
+        _MergePrimvar(primvar, &primvars);*/
     }
 
     if (requestedBits & HdChangeTracker::DirtyTopology) {
@@ -117,7 +119,9 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
 
 bool
 UsdImagingImagePlaneAdapter::IsSupported(const UsdImagingIndexProxy* index) const {
-    return index->IsRprimTypeSupported(HdPrimTypeTokens->imagePlane);
+    return false;
+    // FIXME
+    // return index->IsRprimTypeSupported(HdPrimTypeTokens->imagePlane);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

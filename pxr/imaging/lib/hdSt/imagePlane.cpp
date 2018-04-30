@@ -98,18 +98,20 @@ HdStImagePlane::_UpdateDrawItem(
 
     // auto materialShader = drawItem->GetMaterialShader();
 
+    // FIXME
     // TODO: We'll need points there and later on uvs
     // to control the texture mapping.
-    if (HdChangeTracker::IsAnyPrimVarDirty(*dirtyBits, id)) {
-        _PopulateVertexPrimvars(id, sceneDelegate, drawItem, dirtyBits);
-    }
+    //if (HdChangeTracker::IsAnyPrimVarDirty(*dirtyBits, id)) {
+    //    _PopulateVertexPrimvars(id, sceneDelegate, drawItem, dirtyBits);
+    //}
 
     if (*dirtyBits & HdChangeTracker::DirtyTopology) {
         _PopulateTopology(id, sceneDelegate, drawItem, dirtyBits);
     }
 
+    // FIXME
     // VertexPrimvar may be null, if there are no points in the prim.
-    TF_VERIFY(drawItem->GetConstantPrimVarRange());
+    // TF_VERIFY(drawItem->GetConstantPrimVarRange());
 }
 
 void
@@ -119,11 +121,12 @@ HdStImagePlane::_PopulateVertexPrimvars(
     HdStDrawItem* drawItem,
     HdDirtyBits* dirtyBits) {
 
-    const HdStResourceRegistrySharedPtr& resourceRegistry =
+    // FIXME
+    /*const HdStResourceRegistrySharedPtr& resourceRegistry =
         boost::static_pointer_cast<HdStResourceRegistry>(
-            sceneDelegate->GetRenderIndex().GetResourceRegistry());
+            sceneDelegate->GetRenderIndex().GetResourceRegistry());*/
 
-    TfTokenVector primVarNames = GetPrimvarVertexNames(sceneDelegate);
+    /*TfTokenVector primVarNames = GetPrimvarVertexNames(sceneDelegate);
     const TfTokenVector& vars = GetPrimvarVaryingNames(sceneDelegate);
     primVarNames.insert(primVarNames.end(), vars.begin(), vars.end());
 
@@ -173,7 +176,7 @@ HdStImagePlane::_PopulateVertexPrimvars(
     }
 
     resourceRegistry->AddSources(
-        drawItem->GetVertexPrimVarRange(), sources);
+        drawItem->GetVertexPrimVarRange(), sources);*/
 }
 
 void
