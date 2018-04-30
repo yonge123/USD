@@ -25,6 +25,7 @@
 
 #include "pxr/usdImaging/usdImaging/debugCodes.h"
 #include "pxr/usdImaging/usdImaging/delegate.h"
+#include "pxr/usdImaging/usdImaging/indexProxy.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
 #include "pxr/imaging/hd/mesh.h"
@@ -103,7 +104,7 @@ UsdImagingMeshAdapter::TrackVariability(UsdPrim const& prim,
     _IsVarying(prim,
                UsdGeomTokens->points,
                HdChangeTracker::DirtyPoints,
-               UsdImagingTokens->usdVaryingPrimVar,
+               UsdImagingTokens->usdVaryingPrimvar,
                timeVaryingBits,
                /*isInherited*/false);
 
@@ -140,13 +141,13 @@ UsdImagingMeshAdapter::TrackVariability(UsdPrim const& prim,
             _IsVarying(subset.GetPrim(),
                        UsdGeomTokens->elementType,
                        HdChangeTracker::DirtyTopology,
-                       UsdImagingTokens->usdVaryingPrimVar,
+                       UsdImagingTokens->usdVaryingPrimvar,
                        timeVaryingBits,
                        /*isInherited*/false);
             _IsVarying(subset.GetPrim(),
                        UsdGeomTokens->indices,
                        HdChangeTracker::DirtyTopology,
-                       UsdImagingTokens->usdVaryingPrimVar,
+                       UsdImagingTokens->usdVaryingPrimvar,
                        timeVaryingBits,
                        /*isInherited*/false);
         }
@@ -203,7 +204,7 @@ UsdImagingMeshAdapter::UpdateForTime(UsdPrim const& prim,
         prim, cachePath, time, requestedBits, instancerContext);
 
     UsdImagingValueCache* valueCache = _GetValueCache();
-    PrimvarInfoVector& primvars = valueCache->GetPrimvars(cachePath);
+    HdPrimvarDescriptorVector& primvars = valueCache->GetPrimvars(cachePath);
 
     if (requestedBits & HdChangeTracker::DirtyTopology) {
         VtValue& topology = valueCache->GetTopology(cachePath);
@@ -213,15 +214,16 @@ UsdImagingMeshAdapter::UpdateForTime(UsdPrim const& prim,
     if (requestedBits & HdChangeTracker::DirtyPoints) {
         VtValue& points = valueCache->GetPoints(cachePath);
         _GetPoints(prim, &points, time);
-        UsdImagingValueCache::PrimvarInfo primvar;
-        primvar.name = HdTokens->points;
-        primvar.interpolation = UsdGeomTokens->vertex;
-        _MergePrimvar(primvar, &primvars);
+        _MergePrimvar(
+            &primvars,
+            HdTokens->points,
+            HdInterpolationVertex,
+            HdPrimvarRoleTokens->point);
     }
 
     // Subdiv tags are only needed if the mesh is refined.  So
     // there's no need to fetch the data if the prim isn't refined.
-    if (_delegate->IsRefined(cachePath)) {
+    if (_IsRefined(cachePath)) {
         if (requestedBits & HdChangeTracker::DirtySubdivTags) {
             SubdivTags& tags = valueCache->GetSubdivTags(cachePath);
             _GetSubdivTags(prim, &tags, time);

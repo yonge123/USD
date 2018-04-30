@@ -24,6 +24,7 @@
 #include "pxr/usdImaging/usdImaging/pointsAdapter.h"
 
 #include "pxr/usdImaging/usdImaging/delegate.h"
+#include "pxr/usdImaging/usdImaging/indexProxy.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
 #include "pxr/imaging/hd/points.h"
@@ -76,7 +77,7 @@ UsdImagingPointsAdapter::TrackVariability(UsdPrim const& prim,
     _IsVarying(prim,
                UsdGeomTokens->points,
                HdChangeTracker::DirtyPoints,
-               UsdImagingTokens->usdVaryingPrimVar,
+               UsdImagingTokens->usdVaryingPrimvar,
                timeVaryingBits,
                /*isInherited*/false);
 
@@ -99,29 +100,27 @@ UsdImagingPointsAdapter::UpdateForTime(UsdPrim const& prim,
         prim, cachePath, time, requestedBits, instancerContext);
     UsdImagingValueCache* valueCache = _GetValueCache();
 
-    PrimvarInfoVector& primvars = valueCache->GetPrimvars(cachePath);
+    HdPrimvarDescriptorVector& primvars = valueCache->GetPrimvars(cachePath);
 
     VtValue& pointsValues = valueCache->GetPoints(cachePath);
 
     if (requestedBits & HdChangeTracker::DirtyPoints) {
         _GetPoints(prim, &pointsValues, time);
-        UsdImagingValueCache::PrimvarInfo primvar;
-        primvar.name = HdTokens->points;
-        primvar.interpolation = UsdGeomTokens->vertex;
-        _MergePrimvar(primvar, &primvars);
+        _MergePrimvar(
+            &primvars,
+            HdTokens->points,
+            HdInterpolationVertex,
+            HdPrimvarRoleTokens->point);
     }
 
     if (requestedBits & HdChangeTracker::DirtyWidths) {
-        UsdImagingValueCache::PrimvarInfo primvar;
         UsdGeomPoints points(prim);
-        VtFloatArray widths;
-        primvar.name = UsdGeomTokens->widths;
 
         // XXX Add support for real constant interpolation
-        primvar.interpolation = UsdGeomTokens->vertex;
 
         // Read the widths, if there is no widths create a buffer
         // and fill it with default widths of 1.0f
+        VtFloatArray widths;
         if (!points.GetWidthsAttr().Get(&widths, time)) {
 
             // Check if we have just updated the points because in that
@@ -134,7 +133,7 @@ UsdImagingPointsAdapter::UpdateForTime(UsdPrim const& prim,
                 widths.push_back(1.0f);
             }
         }
-        _MergePrimvar(primvar, &primvars);
+        _MergePrimvar(&primvars, UsdGeomTokens->widths, HdInterpolationVertex);
         valueCache->GetWidths(cachePath) = VtValue(widths);
     }
 }
