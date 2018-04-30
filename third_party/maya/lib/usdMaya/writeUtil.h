@@ -51,8 +51,9 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+class UsdUtilsSparseValueWriter;
 
-
+/// This struct contains helpers for writing USD (thus reading Maya data).
 struct PxrUsdMayaWriteUtil
 {
     /// \name Helpers for writing USD
@@ -117,13 +118,21 @@ struct PxrUsdMayaWriteUtil
             const bool translateMayaDoubleToUsdSinglePrecision =
                 PxrUsdMayaUserTaggedAttribute::GetFallbackTranslateMayaDoubleToUsdSinglePrecision());
 
+    /// Given an \p attrPlug, reads its value and returns it as a wrapped
+    /// VtValue. The type of the value is determined by consulting the given
+    /// \p typeName; if the value cannot be converted into a \p typeName, then
+    /// returns an empty VtValue.
+    PXRUSDMAYA_API
+    static VtValue GetVtValue(
+            const MPlug& attrPlug,
+            const SdfValueTypeName& typeName);
+
     /// Given an \p attrPlug, determine it's value and set it on \p usdAttr at
     /// \p usdTime.
     ///
-    /// If \p translateMayaDoubleToUsdSinglePrecision is true, Maya plugs that
-    /// contain double data will be set on \p usdAttr as the appropriate
-    /// float-based type. Otherwise, their data will be set as the appropriate
-    /// double-based type.
+    /// Whether to export Maya attributes as single-precision or
+    /// double-precision floating point is determined by consulting the type
+    /// name of the USD attribute.
     PXRUSDMAYA_API
     static bool SetUsdAttr(
             const MPlug& attrPlug,
@@ -131,7 +140,8 @@ struct PxrUsdMayaWriteUtil
             const UsdTimeCode& usdTime,
             const bool writeIfConstant,
             const bool translateMayaDoubleToUsdSinglePrecision =
-                PxrUsdMayaUserTaggedAttribute::GetFallbackTranslateMayaDoubleToUsdSinglePrecision());
+                PxrUsdMayaUserTaggedAttribute::GetFallbackTranslateMayaDoubleToUsdSinglePrecision(),
+            UsdUtilsSparseValueWriter *valueWriter=nullptr);
 
     /// Given a Maya node at \p dagPath, inspect it for attributes tagged by
     /// the user for export to USD and write them onto \p usdPrim at time
@@ -141,7 +151,8 @@ struct PxrUsdMayaWriteUtil
             const MDagPath& dagPath,
             const UsdPrim& usdPrim,
             const UsdTimeCode& usdTime,
-            const bool writeIfConstant);
+            const bool writeIfConstant,
+            UsdUtilsSparseValueWriter *valueWriter=nullptr);
 
     /// Authors class inherits on \p usdPrim.  \p inheritClassNames are
     /// specified as names (not paths).  For example, they should be
@@ -160,7 +171,8 @@ struct PxrUsdMayaWriteUtil
             MFnArrayAttrsData& inputPointsData,
             const UsdGeomPointInstancer& instancer,
             const size_t numPrototypes,
-            const UsdTimeCode& usdTime);
+            const UsdTimeCode& usdTime,
+            UsdUtilsSparseValueWriter *valueWriter=nullptr);
 
     /// \}
 

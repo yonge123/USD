@@ -189,12 +189,12 @@ HdSt_ResourceBinder::ResolveBindings(HdStDrawItem const *drawItem,
     _bindingMap.clear();
 
     // constant primvar (per-object)
-    HdBinding constantPrimVarBinding =
+    HdBinding constantPrimvarBinding =
                 locator.GetBinding(structBufferBindingType,
                                    _tokens->constantPrimvars);
 
     if (HdBufferArrayRangeSharedPtr constantBar_ =
-        drawItem->GetConstantPrimVarRange()) {
+        drawItem->GetConstantPrimvarRange()) {
 
         HdStBufferArrayRangeGLSharedPtr constantBar =
             boost::static_pointer_cast<HdStBufferArrayRangeGL>(constantBar_);
@@ -216,33 +216,33 @@ HdSt_ResourceBinder::ResolveBindings(HdStDrawItem const *drawItem,
         std::sort(sblock.entries.begin(), sblock.entries.end());
 
         metaDataOut->constantData.insert(
-            std::make_pair(constantPrimVarBinding, sblock));
+            std::make_pair(constantPrimvarBinding, sblock));
     }
 
      // constant primvars are interleaved into single struct.
-    _bindingMap[_tokens->constantPrimvars] = constantPrimVarBinding;
+    _bindingMap[_tokens->constantPrimvars] = constantPrimvarBinding;
 
     // instance primvar (per-instance)
-    int instancerNumLevels = drawItem->GetInstancePrimVarNumLevels();
+    int instancerNumLevels = drawItem->GetInstancePrimvarNumLevels();
     metaDataOut->instancerNumLevels = instancerNumLevels;
     for (int i = 0; i < instancerNumLevels; ++i) {
         if (HdBufferArrayRangeSharedPtr instanceBar_ =
-            drawItem->GetInstancePrimVarRange(i)) {
+            drawItem->GetInstancePrimvarRange(i)) {
 
             HdStBufferArrayRangeGLSharedPtr instanceBar =
                 boost::static_pointer_cast<HdStBufferArrayRangeGL>(instanceBar_);
 
             TF_FOR_ALL (it, instanceBar->GetResources()) {
                 // non-interleaved, always create new binding.
-                HdBinding instancePrimVarBinding =
+                HdBinding instancePrimvarBinding =
                     locator.GetBinding(arrayBufferBindingType, it->first);
-                _bindingMap[NameAndLevel(it->first, i)] = instancePrimVarBinding;
+                _bindingMap[NameAndLevel(it->first, i)] = instancePrimvarBinding;
 
                 HdTupleType valueType = it->second->GetTupleType();
                 TfToken glType =
                     HdStGLConversions::GetGLSLTypename(valueType.type);
-                metaDataOut->instanceData[instancePrimVarBinding] =
-                    MetaData::NestedPrimVar(
+                metaDataOut->instanceData[instancePrimvarBinding] =
+                    MetaData::NestedPrimvar(
                         /*name=*/it->first,
                         /*type=*/glType,
                         /*level=*/i);
@@ -253,20 +253,20 @@ HdSt_ResourceBinder::ResolveBindings(HdStDrawItem const *drawItem,
     // vertex primvar (per-vertex)
     // always assigned to VertexAttribute.
     if (HdBufferArrayRangeSharedPtr vertexBar_ =
-        drawItem->GetVertexPrimVarRange()) {
+        drawItem->GetVertexPrimvarRange()) {
 
         HdStBufferArrayRangeGLSharedPtr vertexBar =
             boost::static_pointer_cast<HdStBufferArrayRangeGL>(vertexBar_);
 
         TF_FOR_ALL (it, vertexBar->GetResources()) {
-            HdBinding vertexPrimVarBinding =
+            HdBinding vertexPrimvarBinding =
                 locator.GetBinding(HdBinding::VERTEX_ATTR, it->first);
-            _bindingMap[it->first] = vertexPrimVarBinding;
+            _bindingMap[it->first] = vertexPrimvarBinding;
 
             HdTupleType valueType = it->second->GetTupleType();
             TfToken glType = HdStGLConversions::GetGLSLTypename(valueType.type);
-            metaDataOut->vertexData[vertexPrimVarBinding] =
-                MetaData::PrimVar(/*name=*/it->first,
+            metaDataOut->vertexData[vertexPrimvarBinding] =
+                MetaData::Primvar(/*name=*/it->first,
                                   /*type=*/glType);
         }
     }
@@ -316,40 +316,40 @@ HdSt_ResourceBinder::ResolveBindings(HdStDrawItem const *drawItem,
 
     // element primvar (per-face, per-line)
     if (HdBufferArrayRangeSharedPtr elementBar_ =
-        drawItem->GetElementPrimVarRange()) {
+        drawItem->GetElementPrimvarRange()) {
 
         HdStBufferArrayRangeGLSharedPtr elementBar =
             boost::static_pointer_cast<HdStBufferArrayRangeGL>(elementBar_);
 
         TF_FOR_ALL (it, elementBar->GetResources()) {
-            HdBinding elementPrimVarBinding =
+            HdBinding elementPrimvarBinding =
                 locator.GetBinding(arrayBufferBindingType, it->first);
-            _bindingMap[it->first] = elementPrimVarBinding;
+            _bindingMap[it->first] = elementPrimvarBinding;
             HdTupleType valueType = it->second->GetTupleType();
                 TfToken glType =
                     HdStGLConversions::GetGLSLTypename(valueType.type);
-            metaDataOut->elementData[elementPrimVarBinding] =
-                MetaData::PrimVar(/*name=*/it->first,
+            metaDataOut->elementData[elementPrimvarBinding] =
+                MetaData::Primvar(/*name=*/it->first,
                                   /*type=*/glType);
         }
     }
 
     // facevarying primvar (per-face-vertex)
     if (HdBufferArrayRangeSharedPtr fvarBar_ =
-        drawItem->GetFaceVaryingPrimVarRange()) {
+        drawItem->GetFaceVaryingPrimvarRange()) {
 
         HdStBufferArrayRangeGLSharedPtr fvarBar =
             boost::static_pointer_cast<HdStBufferArrayRangeGL>(fvarBar_);
 
         TF_FOR_ALL (it, fvarBar->GetResources()) {
-            HdBinding fvarPrimVarBinding =
+            HdBinding fvarPrimvarBinding =
                 locator.GetBinding(arrayBufferBindingType, it->first);
-            _bindingMap[it->first] = fvarPrimVarBinding;
+            _bindingMap[it->first] = fvarPrimvarBinding;
             HdTupleType valueType = it->second->GetTupleType();
                 TfToken glType =
                     HdStGLConversions::GetGLSLTypename(valueType.type);
-            metaDataOut->fvarData[fvarPrimVarBinding] =
-                MetaData::PrimVar(/*name=*/it->first,
+            metaDataOut->fvarData[fvarPrimvarBinding] =
+                MetaData::Primvar(/*name=*/it->first,
                                   /*type=*/glType);
         }
     }
@@ -373,7 +373,7 @@ HdSt_ResourceBinder::ResolveBindings(HdStDrawItem const *drawItem,
     _bindingMap[HdTokens->drawingCoord1] = drawingCoord1Binding;
     metaDataOut->drawingCoord1Binding =
         MetaData::BindingDeclaration(/*name=*/HdTokens->drawingCoord1,
-                                     /*type=*/_tokens->ivec3,
+                                     /*type=*/_tokens->ivec4,
                                      /*binding=*/drawingCoord1Binding);
 
     if (instancerNumLevels > 0) {
@@ -525,7 +525,7 @@ HdSt_ResourceBinder::ResolveBindings(HdStDrawItem const *drawItem,
                         MetaData::ShaderParameterAccessor(
                             /*name=*/it->GetName(),
                             /*type=*/glType,
-                            /*inPrimVars=*/it->GetSamplerCoordinates());
+                            /*inPrimvars=*/it->GetSamplerCoordinates());
                     _bindingMap[it->GetName()] = textureBinding; // used for non-bindless
                 }
             } else if (it->IsPrimvar()) {
@@ -533,7 +533,7 @@ HdSt_ResourceBinder::ResolveBindings(HdStDrawItem const *drawItem,
                     = MetaData::ShaderParameterAccessor(
                     /*name=*/it->GetName(),
                     /*type=*/glType,
-                    /*inPrimVars=*/it->GetSamplerCoordinates());
+                    /*inPrimvars=*/it->GetSamplerCoordinates());
             } else {
                 TF_CODING_ERROR("Can't resolve %s", it->GetName().GetText());
             }
@@ -633,7 +633,7 @@ HdSt_ResourceBinder::ResolveComputeBindings(
         HdBinding binding = locator.GetBinding(bindingType, spec.name);
         _bindingMap[spec.name] = binding;
         metaDataOut->computeReadWriteData[binding] =
-            MetaData::PrimVar(spec.name,
+            MetaData::Primvar(spec.name,
                               HdStGLConversions::GetGLSLTypename(
                                              spec.tupleType.type));
     }
@@ -643,7 +643,7 @@ HdSt_ResourceBinder::ResolveComputeBindings(
         HdBinding binding = locator.GetBinding(bindingType, spec.name);
         _bindingMap[spec.name] = binding;
         metaDataOut->computeReadOnlyData[binding] =
-            MetaData::PrimVar(spec.name,
+            MetaData::Primvar(spec.name,
                               HdStGLConversions::GetGLSLTypename(
                                              spec.tupleType.type));
     }
@@ -1221,7 +1221,7 @@ HdSt_ResourceBinder::MetaData::ComputeHash() const
     boost::hash_combine(hash, 0); // separator
     TF_FOR_ALL (it, instanceData) {
         boost::hash_combine(hash, (int)it->first.GetType()); // binding
-        NestedPrimVar const &primvar = it->second;
+        NestedPrimvar const &primvar = it->second;
         boost::hash_combine(hash, primvar.name.Hash());
         boost::hash_combine(hash, primvar.dataType);
         boost::hash_combine(hash, primvar.level);
@@ -1229,21 +1229,21 @@ HdSt_ResourceBinder::MetaData::ComputeHash() const
     boost::hash_combine(hash, 0); // separator
     TF_FOR_ALL (it, vertexData) {
         boost::hash_combine(hash, (int)it->first.GetType()); // binding
-        PrimVar const &primvar = it->second;
+        Primvar const &primvar = it->second;
         boost::hash_combine(hash, primvar.name.Hash());
         boost::hash_combine(hash, primvar.dataType);
     }
     boost::hash_combine(hash, 0); // separator
     TF_FOR_ALL (it, elementData) {
         boost::hash_combine(hash, (int)it->first.GetType()); // binding
-        PrimVar const &primvar = it->second;
+        Primvar const &primvar = it->second;
         boost::hash_combine(hash, primvar.name.Hash());
         boost::hash_combine(hash, primvar.dataType);
     }
     boost::hash_combine(hash, 0); // separator
     TF_FOR_ALL (it, fvarData) {
         boost::hash_combine(hash, (int)it->first.GetType()); // binding
-        PrimVar const &primvar = it->second;
+        Primvar const &primvar = it->second;
         boost::hash_combine(hash, primvar.name.Hash());
         boost::hash_combine(hash, primvar.dataType);
     }
