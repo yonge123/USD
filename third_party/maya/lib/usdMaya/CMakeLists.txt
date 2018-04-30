@@ -56,6 +56,7 @@ pxr_shared_library(${PXR_PACKAGE}
         translatorSkel
         translatorUtil
         translatorXformable
+        readUtil
         roundTripUtil
         shadingModeExporter
         shadingModeExporterContext
@@ -140,9 +141,11 @@ pxr_shared_library(${PXR_PACKAGE}
         wrapEditUtil.cpp
         wrapMeshUtil.cpp
         wrapQuery.cpp
+        wrapReadUtil.cpp
         wrapRoundTripUtil.cpp
         wrapStageCache.cpp
         wrapUserTaggedAttribute.cpp
+        wrapWriteUtil.cpp
         wrapXformStack.cpp
 
     PYMODULE_FILES
@@ -201,6 +204,7 @@ pxr_test_scripts(
         testenv/testUsdMayaGetVariantSetSelections.py
         testenv/testUsdMayaModelKindWriter.py
         testenv/testUsdMayaProxyShape.py
+        testenv/testUsdMayaReadWriteUtils.py
         testenv/testUsdMayaReferenceAssemblyEdits.py
         testenv/testUsdMayaUserExportedAttributes.py
         testenv/testUsdMayaXformStack.py
