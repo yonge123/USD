@@ -27,6 +27,7 @@
 
 #include "pxr/usdImaging/usdImaging/debugCodes.h"
 #include "pxr/usdImaging/usdImaging/delegate.h"
+#include "pxr/usdImaging/usdImaging/indexProxy.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
 #include "pxr/imaging/hd/mesh.h"
@@ -162,7 +163,7 @@ UsdSkelImagingSkelRootAdapter::TrackVariability(
     if(const UsdSkelAnimQuery& animQuery = instance->skelQuery.GetAnimQuery()) {
         if(animQuery.JointTransformsMightBeTimeVarying()) {
             (*timeVaryingBits) |= HdChangeTracker::DirtyPoints;
-            HD_PERF_COUNTER_INCR(UsdImagingTokens->usdVaryingPrimVar);
+            HD_PERF_COUNTER_INCR(UsdImagingTokens->usdVaryingPrimvar);
         }
     }
 }
@@ -219,14 +220,12 @@ UsdSkelImagingSkelRootAdapter::UpdateForTime(
         valueCache->GetPoints(cachePath) = instance->ComputePoints(time);
     }
 
-    if (requestedBits & HdChangeTracker::DirtyPrimVar) {
+    if (requestedBits & HdChangeTracker::DirtyPrimvar) {
         // Expose points as a primvar.
-        UsdImagingValueCache::PrimvarInfo primvar;
-        primvar.name = HdTokens->points;
-        primvar.interpolation = UsdGeomTokens->vertex;
-
-        PrimvarInfoVector& primvars = valueCache->GetPrimvars(cachePath);
-        _MergePrimvar(primvar, &primvars);
+        _MergePrimvar(&valueCache->GetPrimvars(cachePath),
+                      HdTokens->points,
+                      HdInterpolationVertex,
+                      HdPrimvarRoleTokens->point);
     }
 
     if (requestedBits & HdChangeTracker::DirtyTransform) {
