@@ -30,6 +30,8 @@ pxr_shared_library(${PXR_PACKAGE}
         ${HOUDINI_INCLUDE_DIRS}
 
     PUBLIC_CLASSES
+        debugCodes
+        error
         GT_Utils
         GU_PackedUSD
         GU_USD
@@ -54,7 +56,6 @@ pxr_shared_library(${PXR_PACKAGE}
         USD_Utils
         USD_XformCache
         USD_VisCache
-        UT_Error
         UT_TypeTraits
         visitor
         groupBaseWrapper

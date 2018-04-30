@@ -55,13 +55,33 @@
         _TRACE_FUNCTION_SCOPE_INSTANCE( \
             __LINE__, __ARCH_FUNCTION__, __ARCH_PRETTY_FUNCTION__, name)
 
-/// Records a counter value using the name as the counter key. The value can
-/// be positive or negative. A positive value will increment the total counter
-/// value, whereas a negative value will decrement it. The recorded value will
+/// Records a counter \a delta using the \a name as the counter key. The delta can
+/// be positive or negative. A positive delta will increment the total counter
+/// value, whereas a negative delta will decrement it. The recorded value will
 /// be stored at the currently traced scope, and will propagate up to the
 /// parent scopes.
-#define TRACE_COUNTER(name, value) \
-        _TRACE_COUNTER_INSTANCE(__LINE__, name, value)
+#define TRACE_COUNTER_DELTA(name, delta) \
+        _TRACE_COUNTER_INSTANCE(__LINE__, name, delta, /* isDelta */ true)
+
+/// Records a counter delta using the name as the counter key. Similar to 
+/// TRACE_COUNTER_DELTA except that \p name does not need to be a compile time
+/// string.
+/// \sa TRACE_COUNTER_DELTA
+#define TRACE_COUNTER_DELTA_DYNAMIC(name, delta) \
+        TraceCollector::GetInstance().RecordCounterDelta(name, delta);
+
+/// Records a counter value using the name as the counter key. The recorded 
+/// value will be stored at the currently traced scope, and will propagate up to
+/// the parent scopes.
+#define TRACE_COUNTER_VALUE(name, value) \
+        _TRACE_COUNTER_INSTANCE(__LINE__, name, value, /* isDelta */ false)
+
+/// Records a counter value using the name as the counter key. Similar to 
+/// TRACE_COUNTER_VALUE except that \p name does not need to be a compile time
+/// string.
+/// \sa TRACE_COUNTER_VALUE
+#define TRACE_COUNTER_VALUE_DYNAMIC(name, value) \
+        TraceCollector::GetInstance().RecordCounterValue(name, value);
 
 /// Records a counter value using the name as the counter key. The value can
 /// be positive or negative. A positive value will increment the total counter
@@ -69,7 +89,7 @@
 /// be stored at the currently traced scope, and will propagate up to the
 /// parent scopes.
 ///
-/// This macro provides the same functionality as TRACE_COUNTER, but takes
+/// This macro provides the same functionality as TRACE_COUNTER_DELTA, but takes
 /// a section of code in brackets, which assumes that a value will be
 /// assigned to 'value'. The section of code will not be executed, when
 /// tracing is turned off, which makes it possible to gather counter values
@@ -78,11 +98,11 @@
 ///
 /// Usage:
 ///
-/// TRACE_COUNTER_CODE("My counter", {
+/// TRACE_COUNTER_DELTA_CODE("My counter", {
 ///     value = _ComputeExpensiveCounterValue();
 /// })
-#define TRACE_COUNTER_CODE(name, code) \
-        _TRACE_COUNTER_CODE_INSTANCE(__LINE__, name, code)
+#define TRACE_COUNTER_DELTA_CODE(name, code) \
+        _TRACE_COUNTER_CODE_INSTANCE(__LINE__, name, code, true)
 
 /// Records a begin event when constructed and an end event when destructed,
 /// using name of the function or method and the supplied name as the key. 
@@ -99,35 +119,6 @@
 /// overhead.
 #define TRACE_SCOPE_DYNAMIC(name) \
         _TRACE_SCOPE_DYNAMIC_INSTANCE(__LINE__, name)
-
-//
-// Static variables in templated or inlined functions/methods can end up
-// with "vague" linkage:  the compiler will emit multiple copies and the
-// linker should choose one.  Due to a bug in gcc 4.4 the linker may
-// initialize exactly one of these copies but attempt to use more than
-// one, leading to crashes.
-//
-// This macro implements an unpalatable solution to a problem that shouldn't
-// ever had needed to be solved: putting all this stuff in headers due to
-// templating constraints and/or a perceived need to inline everything.
-//
-// The macro works around that bug by preventing the linker from being
-// responsible for the initialization.  The arguments are the type of the
-// variable, the name of the variable, and the arguments to pass to the
-// type's constructor.  The variable is declared as a pointer to the type
-// so it must be accessed as a pointer.  Initialization is not delayed
-// until the first access;  initialization occurs when the macro is reached.
-//
-//
-// If the type uses commas to separate template arguments you need to enclose
-// the type in parentheses as shown in the last example.
-//
-// Note that this macro may only be used at function scope (not namespace
-// scope).
-
-#define _TRACE_VAGUE_STATIC_DATA(Type, Name, ...)                            \
-    static TF_PP_EAT_PARENS(Type)* Name =                                   \
-        new TF_PP_EAT_PARENS(Type)(__VA_ARGS__);
 
 
 /// These pair a uniquely named TraceScopeHolder with a TraceScopeAuto.
@@ -154,21 +145,21 @@ constexpr static PXR_NS::TraceStaticKeyData \
 PXR_NS::TraceScopeAuto BOOST_PP_CAT(TraceScopeAuto_, instance)(\
     BOOST_PP_CAT(TraceKeyData_, instance));
 
-#define _TRACE_COUNTER_INSTANCE(instance, name, value) \
+#define _TRACE_COUNTER_INSTANCE(instance, name, value, isDelta) \
 constexpr static PXR_NS::TraceStaticKeyData \
     BOOST_PP_CAT(TraceKeyData_, instance)(name); \
-_TRACE_VAGUE_STATIC_DATA(PXR_NS::TraceCounterHolder, \
-    BOOST_PP_CAT(TraceCounterHolder, instance), \
-    BOOST_PP_CAT(TraceKeyData_, instance)) \
-BOOST_PP_CAT(TraceCounterHolder, instance)->RecordValue(value);
+static PXR_NS::TraceCounterHolder \
+    BOOST_PP_CAT(TraceCounterHolder_, instance) \
+    (BOOST_PP_CAT(TraceKeyData_, instance)); \
+BOOST_PP_CAT(TraceCounterHolder_, instance).Record(value, isDelta);
 
-#define _TRACE_COUNTER_CODE_INSTANCE(instance, name, code) \
-_TRACE_VAGUE_STATIC_DATA(PXR_NS::TraceCounterHolder, \
-    BOOST_PP_CAT(TraceCounterHolder, instance), name) \
-if (BOOST_PP_CAT(TraceCounterHolder, instance)->IsEnabled()) { \
+#define _TRACE_COUNTER_CODE_INSTANCE(instance, name, code, isDelta) \
+static PXR_NS::TraceCounterHolder \
+    BOOST_PP_CAT(TraceCounterHolder_, instance)(name); \
+if (BOOST_PP_CAT(TraceCounterHolder_, instance).IsEnabled()) { \
     double value = 0.0; \
     code \
-    BOOST_PP_CAT(TraceCounterHolder, instance)->RecordValue(value); \
+    BOOST_PP_CAT(TraceCounterHolder_, instance).RecordDelta(value, isDelta); \
 }
 
 #define _TRACE_FUNCTION_DYNAMIC_INSTANCE(instance, fnName, fnPrettyName, name) \
@@ -304,29 +295,29 @@ private:
 ///
 class TraceCounterHolder {
 public:
-    /// Constructor used by TRACE_COUNTER macro.
+    /// Constructor used by TRACE_COUNTER_* macro.
     ///
-    TRACE_API explicit TraceCounterHolder(const TraceKey& key);
-
-    /// Destructor.
-    ///
-    TRACE_API ~TraceCounterHolder();
+    explicit TraceCounterHolder(const TraceKey& key) 
+        : _key(key) {}
 
     /// Returns whether the TraceCollector is enabled or not.
     ///
     bool IsEnabled() const {
-        return _collector->IsEnabled();
+        return TraceCollector::IsEnabled();
     }
 
     /// Records a counter delta \p value if the TraceCollector is enabled.
     ///
-    void RecordValue(double value) {
-        _collector->RecordCounterValue(_key, value);
+    void Record(double value, bool delta) {
+        if (delta) {
+            TraceCollector::GetInstance().RecordCounterDelta(_key, value);
+        } else {
+            TraceCollector::GetInstance().RecordCounterValue(_key, value);
+        }
     }
 
 private:
     TraceKey _key;
-    TraceCollector* _collector;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
