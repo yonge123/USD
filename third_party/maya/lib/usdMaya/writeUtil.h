@@ -133,12 +133,12 @@ struct PxrUsdMayaWriteUtil
     /// Whether to export Maya attributes as single-precision or
     /// double-precision floating point is determined by consulting the type
     /// name of the USD attribute.
-    // FIXME
     PXRUSDMAYA_API
     static bool SetUsdAttr(
             const MPlug& attrPlug,
             const UsdAttribute& usdAttr,
             const UsdTimeCode& usdTime,
+            const bool writeIfConstant,
             UsdUtilsSparseValueWriter *valueWriter=nullptr);
 
     /// Given a Maya node at \p dagPath, inspect it for attributes tagged by
