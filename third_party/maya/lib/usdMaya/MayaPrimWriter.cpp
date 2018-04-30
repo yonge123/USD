@@ -159,19 +159,18 @@ MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime,
     }
 
     // Check if samples should be written at time if attr has no animation.
-    // FIXME
-    // bool writeIfConstant = shouldWriteSample(usdTime, false);
+    bool writeIfConstant = shouldWriteSample(usdTime, false);
     // Write user-tagged export attributes. Write attributes on the transform
     // first, and then attributes on the shape node. This means that attribute
     // name collisions will always be handled by taking the shape node's value
     // if we're merging transforms and shapes.
     if (dagT.isValid() && !(dagT == getDagPath())) {
         PxrUsdMayaWriteUtil::WriteUserExportedAttributes(dagT, usdPrim, usdTime,
-                _GetSparseValueWriter());
+                writeIfConstant, _GetSparseValueWriter());
     }
 
     PxrUsdMayaWriteUtil::WriteUserExportedAttributes(getDagPath(), usdPrim, 
-            usdTime, _GetSparseValueWriter());
+            usdTime, writeIfConstant, _GetSparseValueWriter());
 
     return true;
 }
