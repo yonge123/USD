@@ -43,21 +43,6 @@ void
 TraceSingleEventTreeReport::OnEndCollection()
 {
     _threadStacks.clear();
-    // Convert the counter delta values to absolute values;
-    TraceSingleEventGraph::CounterMap counterValues;
-    for (const TraceSingleEventGraph::CounterMap::value_type& c 
-        : _counterDeltas) {
-
-        double curValue = 0;
-        for (const TraceSingleEventGraph::CounterValues::value_type& v 
-            : c.second) {
-
-            curValue += v.second;
-            counterValues[c.first].insert(std::make_pair(v.first, curValue));
-        }
-    }
-    _counterDeltas.clear();
-    _graph = TraceSingleEventGraph::New(_root, std::move(counterValues));
 }
 
 bool
@@ -113,8 +98,9 @@ TraceSingleEventTreeReport::OnEvent(
         case TraceEvent::EventType::End:
             _OnEnd(threadIndex, key, e);
             break;
-        case TraceEvent::EventType::Counter:
-            _OnCounter(threadIndex, key, e);
+        case TraceEvent::EventType::CounterDelta:
+        case TraceEvent::EventType::CounterValue:
+            // Handled by the counter accumulator
             break;
         case TraceEvent::EventType::Timespan:
             _OnTimespan(threadIndex, key, e);
@@ -217,14 +203,6 @@ TraceSingleEventTreeReport::_OnTimespan(
 }
 
 void
-TraceSingleEventTreeReport::_OnCounter(
-    const TraceThreadId&, const TfToken& key, const TraceEvent& e)
-{
-    _counterDeltas[key].insert(
-        std::make_pair(e.GetTimeStamp(), e.GetCounterValue()));
-}
-
-void
 TraceSingleEventTreeReport::_OnData(
     const TraceThreadId& threadId, const TfToken& key, const TraceEvent& e)
 {
@@ -257,6 +235,21 @@ TraceSingleEventTreeReport::_PendingSingleEventNode::Close(
         node->AddAttribute(TfToken(it.key), std::move(it.data));
     }
     return node;
+}
+
+void
+TraceSingleEventTreeReport::CreateGraph(const TraceCollection& collection)
+{
+    collection.Iterate(*this);
+    _counterAccum.Update(collection);
+    _graph = TraceSingleEventGraph::New(_root, _counterAccum.GetCounters());
+}
+
+bool
+TraceSingleEventTreeReport::_CounterAccumulator::_AcceptsCategory(
+    TraceCategoryId)
+{
+    return true;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
