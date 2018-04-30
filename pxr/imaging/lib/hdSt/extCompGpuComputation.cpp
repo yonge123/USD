@@ -310,7 +310,7 @@ HdStExtCompGpuComputation::CreateGpuComputation(
 }
 
 void
-HdSt_GetExtComputationPrimVarsComputations(
+HdSt_GetExtComputationPrimvarsComputations(
     SdfPath const &id,
     HdSceneDelegate *sceneDelegate,
     HdInterpolation interpolationMode,
@@ -326,45 +326,45 @@ HdSt_GetExtComputationPrimVarsComputations(
     TF_VERIFY(computations);
 
     HdRenderIndex &renderIndex = sceneDelegate->GetRenderIndex();
-    TfTokenVector compPrimVars =
-        sceneDelegate->GetExtComputationPrimVarNames(id, interpolationMode);
+    TfTokenVector compPrimvars =
+        sceneDelegate->GetExtComputationPrimvarNames(id, interpolationMode);
 
-    for (TfToken const & compPrimVarName: compPrimVars) {
+    for (TfToken const & compPrimvarName: compPrimvars) {
 
-        if (HdChangeTracker::IsPrimVarDirty(dirtyBits, id, compPrimVarName)) {
-            HdExtComputationPrimVarDesc primVarDesc =
-                sceneDelegate->GetExtComputationPrimVarDesc(id,
-                                                            compPrimVarName);
+        if (HdChangeTracker::IsPrimvarDirty(dirtyBits, id, compPrimvarName)) {
+            HdExtComputationPrimvarDesc primvarDesc =
+                sceneDelegate->GetExtComputationPrimvarDesc(id,
+                                                            compPrimvarName);
 
             HdExtComputation const * sourceComp =
                 static_cast<HdExtComputation const *>(
                     renderIndex.GetSprim(HdPrimTypeTokens->extComputation,
-                                         primVarDesc.computationId));
+                                         primvarDesc.computationId));
 
             if (sourceComp && sourceComp->GetElementCount() > 0) {
                 
                 if (HdStGLUtils::IsGpuComputeEnabled() &&
                     !sourceComp->GetGpuKernelSource().empty()) {
 
-                    HdBufferSourceSharedPtr primVarBufferSource(
+                    HdBufferSourceSharedPtr primvarBufferSource(
                             new HdStExtCompGpuPrimvarBufferSource(
-                                compPrimVarName,
-                                primVarDesc.defaultValue,
+                                compPrimvarName,
+                                primvarDesc.defaultValue,
                                 sourceComp->GetElementCount()));
 
                     HdStExtCompGpuComputationSharedPtr gpuComputation = 
                         HdStExtCompGpuComputation::CreateGpuComputation(
                             sceneDelegate,
                             sourceComp,
-                            primVarDesc.computationOutputName,
-                            primVarBufferSource);
+                            primvarDesc.computationOutputName,
+                            primvarBufferSource);
 
                     HdBufferSourceSharedPtr gpuComputationSource(
                             new HdStExtCompGpuComputationBufferSource(
                                 HdBufferSourceVector(),
                                 gpuComputation->GetResource()));
 
-                    reserveOnlySources->push_back(primVarBufferSource);
+                    reserveOnlySources->push_back(primvarBufferSource);
                     separateComputationSources->push_back(gpuComputationSource);
                     computations->push_back(gpuComputation);
 
@@ -376,14 +376,14 @@ HdSt_GetExtComputationPrimVarsComputations(
                             *sourceComp,
                             separateComputationSources);
 
-                    HdBufferSourceSharedPtr primVarBufferSource(
+                    HdBufferSourceSharedPtr primvarBufferSource(
                             new HdExtCompPrimvarBufferSource(
-                                compPrimVarName,
+                                compPrimvarName,
                                 cpuComputation,
-                                primVarDesc.computationOutputName,
-                                primVarDesc.defaultValue));
+                                primvarDesc.computationOutputName,
+                                primvarDesc.defaultValue));
 
-                    sources->push_back(primVarBufferSource);
+                    sources->push_back(primvarBufferSource);
 
                 }
             }

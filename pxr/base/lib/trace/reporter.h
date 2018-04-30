@@ -32,6 +32,7 @@
 #include "pxr/base/trace/event.h"
 #include "pxr/base/trace/eventNode.h"
 #include "pxr/base/trace/key.h"
+#include "pxr/base/trace/reporterBase.h"
 
 #include "pxr/base/tf/declarePtrs.h"
 #include "pxr/base/tf/mallocTag.h"
@@ -68,7 +69,7 @@ class TraceCollectionAvailable;
 /// can then be used as a data source to a GUI or written out to a file.
 ///
 class TraceReporter : 
-    public TfRefBase, public TfWeakBase, public TraceCollection::Visitor {
+    public TraceReporterBase, public TraceCollection::Visitor {
 public:
 
     TF_MALLOC_TAG_NEW("Trace", "TraceReporter");
@@ -121,11 +122,14 @@ public:
 
     /// @}
 
-    /// Returns the root node of the call graph.
+    /// Returns the root node of the aggregated call graph.
     TRACE_API TraceEventNodePtr GetTreeRoot();
 
     /// Returns the root node of the timeline call graph.
     TRACE_API TraceSingleEventNodeRefPtr GetSingleEventRoot();
+
+    /// Returns the timeline event graph
+    TRACE_API TraceSingleEventGraphRefPtr GetSingleEventGraph();
 
     /// \name Counters
     /// @{
@@ -184,7 +188,7 @@ public:
 
     /// Creates a valid TraceEventNode::Id object.
     /// This should be used by very few clients for certain special cases.
-    /// For most cases, the TraceEventNode::Id object should be created and popluated
+    /// For most cases, the TraceEventNode::Id object should be created and populated
     /// internally within the Reporter object itself.
     TRACE_API static TraceEventNode::Id CreateValidEventId();
 
@@ -209,8 +213,8 @@ private:
     // Internal methods to traverse the collector's event log.
     using _EventTimes = std::map<TfToken, TimeStamp>;
 
-    void _OnTraceCollection(const TraceCollectionAvailable&);
-    void _ProcessCollections(bool buildSingleEventGraph);
+    bool _IsAcceptingCollections() override;
+    void _ProcessCollection(const TraceReporterBase::CollectionPtr&) override;
     void _ComputeInclusiveCounterValues();
     void _UpdateTree(bool buildSingleEventGraph);
     void _PrintRecursionMarker(std::ostream &s, const std::string &label, 
@@ -280,8 +284,7 @@ private:
     using _ThreadStackMap = std::map<TraceThreadId, _PendingNodeStack>;
     _ThreadStackMap _threadStacks;
     int _counterIndex;
-
-    tbb::concurrent_queue<std::shared_ptr<TraceCollection>> _collections;
+    bool _buildSingleEventGraph;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
