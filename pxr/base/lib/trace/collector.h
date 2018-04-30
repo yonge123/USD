@@ -87,13 +87,22 @@ public:
     
     TRACE_API ~TraceCollector();
 
-    ///  Enables or disables collection of events.
+    ///  Enables or disables collection of events for DefaultCategory.
     TRACE_API void SetEnabled(bool isEnabled);
 
-    ///  Returns whether collection of events is enabled.
+    ///  Returns whether collection of events is enabled for DefaultCategory.
     static bool IsEnabled() {
         return (_isEnabled.load(std::memory_order_acquire) == 1);
     }
+
+    /// Default Trace category which corresponds to events stored for TRACE_
+    /// macros.
+    struct DefaultCategory {
+        /// Returns TraceCategory::Default.
+        static constexpr TraceCategoryId GetId() { return TraceCategory::Default;}
+        /// Returns the result of TraceCollector::IsEnabled.
+        static bool IsEnabled() { return TraceCollector::IsEnabled(); }
+    };
 
 #ifdef PXR_PYTHON_SUPPORT_ENABLED
     /// Returns whether automatic tracing of all python scopes is enabled.
@@ -112,7 +121,7 @@ public:
     /// \name Event Recording
     /// @{
 
-    /// Record a begin event with \a key if collection of events is enabled.
+    /// Record a begin event with \a key if \p Category is enabled.
     /// A matching end event is expected some time in the future.
     ///
     /// If the key is known at compile time \c BeginScope and \c Scope methods 
@@ -120,19 +129,28 @@ public:
     /// \returns The TimeStamp of the TraceEvent or 0 if the collector is 
     /// disabled.
     /// \sa BeginScope \sa Scope
-    TRACE_API TimeStamp BeginEvent(
-        const Key& key, TraceCategoryId cat = TraceCategory::Default);
+    template <typename Category = DefaultCategory>
+    TimeStamp BeginEvent(const Key& key) {
+        if (ARCH_LIKELY(!Category::IsEnabled())) {
+            return 0;
+        } 
+        return _BeginEvent(key, Category::GetId());
+    }
 
-    /// Record a begin event with \a key at a specified time if collection of 
-    /// events is enabled.
+    /// Record a begin event with \a key at a specified time if \p Category is 
+    /// enabled.
     /// This version of the method allows the passing of a specific number of
     /// elapsed milliseconds, \a ms, to use for this event.
     /// This method is used for testing and debugging code.
-    TRACE_API void BeginEventAtTime(const Key& key, 
-                          double ms, 
-                          TraceCategoryId cat = TraceCategory::Default);
+    template <typename Category = DefaultCategory>
+    void BeginEventAtTime(const Key& key, double ms) {
+      if (ARCH_LIKELY(!Category::IsEnabled())) {
+          return;
+      }
+      _BeginEventAtTime(key, ms, Category::GetId());
+    }
 
-    /// Record an end event with \a key if collection of events is enabled.
+    /// Record an end event with \a key if \p Category is enabled.
     /// A matching begin event must have preceded this end event.
     ///
     /// If the key is known at compile time EndScope and Scope methods are
@@ -140,107 +158,115 @@ public:
     /// \returns The TimeStamp of the TraceEvent or 0 if the collector is 
     /// disabled.
     /// \sa EndScope \sa Scope
-    TRACE_API TimeStamp EndEvent(const Key& key, 
-                       TraceCategoryId cat = TraceCategory::Default);
+    template <typename Category = DefaultCategory>
+    TimeStamp EndEvent(const Key& key) {
+        if (ARCH_LIKELY(!Category::IsEnabled())) {
+            return 0;
+        }
+        return _EndEvent(key, Category::GetId());
+    }
 
-    /// Record an end event with \a key at a specified time if collection of 
-    /// events is enabled.
+    /// Record an end event with \a key at a specified time if \p Category is
+    /// enabled.
     /// This version of the method allows the passing of a specific number of
     /// elapsed milliseconds, \a ms, to use for this event.
     /// This method is used for testing and debugging code.
-    TRACE_API void EndEventAtTime(const Key& key, 
-                        double ms, 
-                        TraceCategoryId cat = TraceCategory::Default);
+    template <typename Category = DefaultCategory>
+    void EndEventAtTime(const Key& key, double ms) {
+        if (ARCH_LIKELY(!Category::IsEnabled())) {
+            return;
+        }
+        _EndEventAtTime(key, ms, Category::GetId());
+    }
 
-    /// Record a begin event for a scope described by \a key if collection of 
-    /// events is enabled.
+    /// Record a begin event for a scope described by \a key if \p Category is
+    /// enabled.
     /// It is more efficient to use the \c Scope method than to call both
     /// \c BeginScope and \c EndScope.
     /// \sa EndScope \sa Scope
-    void BeginScope(
-        const TraceKey& _key, TraceCategoryId cat = TraceCategory::Default) {
-        if (ARCH_LIKELY(!IsEnabled()))
+    template <typename Category = DefaultCategory>
+    void BeginScope(const TraceKey& _key) {
+        if (ARCH_LIKELY(!Category::IsEnabled()))
             return;
 
-        _BeginScope(_key, cat);
+        _BeginScope(_key, Category::GetId());
     }
 
     /// Record a begin event for a scope described by \a key and a specified
-    /// category and store data arguments if collection of events is enabled.
+    /// category and store data arguments if \p Category is enabled.
     /// The variadic arguments \a args must be an even number of parameters in 
     /// the form TraceKey, Value.
     /// \sa EndScope \sa Scope \sa StoreData
-    template <typename... Args>
+    template <typename Category, typename... Args>
     void BeginScope(
-        const TraceKey& key, TraceCategoryId cat, Args&&... args) {
+        const TraceKey& key, Args&&... args) {
         static_assert( sizeof...(Args) %2 == 0, 
             "Data arguments must come in pairs");
 
-        if (ARCH_LIKELY(!IsEnabled()))
+        if (ARCH_LIKELY(!Category::IsEnabled()))
             return;
 
         _PerThreadData *threadData = _GetThreadData();
-        threadData->BeginScope(key, cat);
-        _StoreDataRec(threadData, cat, std::forward<Args>(args)...);
+        threadData->BeginScope(key, Category::GetId());
+        _StoreDataRec(threadData, Category::GetId(), std::forward<Args>(args)...);
     }
 
     /// Record a begin event for a scope described by \a key and store data 
-    /// arguments if collection of events is enabled. The variadic arguments 
-    /// \a args must be an even number of parameters in the form TraceKey, Value.
+    /// arguments if \p Category is enabled. The variadic arguments \a args must
+    /// be an even number of parameters in the form TraceKey, Value.
     /// \sa EndScope \sa Scope \sa StoreData
     template <typename... Args>
     void BeginScope(const TraceKey& key, Args&&... args) {
         static_assert( sizeof...(Args) %2 == 0, 
             "Data arguments must come in pairs");
 
-        // Explcicitly cast to TraceCategoryId so overload resolution choose the
+        // Explicitly cast to TraceCategoryId so overload resolution choose the
         // version with a category arguement.
-        BeginScope(key, 
-            static_cast<TraceCategoryId>(TraceCategory::Default),
+        BeginScope<DefaultCategory>(key, 
             std::forward<Args>(args)...);
     }
 
-    /// Record an end event described by  \a key if collection of events is 
-    /// enabled.
+    /// Record an end event described by  \a key if \p Category is enabled.
     /// It is more efficient to use the \c Scope method than to call both
     /// \c BeginScope and \c EndScope.
     /// \sa BeginScope \sa Scope
-    void EndScope(
-        const TraceKey& key, TraceCategoryId cat = TraceCategory::Default) {
-        if (ARCH_LIKELY(!IsEnabled()))
+    template <typename Category = DefaultCategory>
+    void EndScope(const TraceKey& key) {
+        if (ARCH_LIKELY(!Category::IsEnabled()))
             return;
 
-        _EndScope(key, cat);
+        _EndScope(key, Category::GetId());
     }
 
-    /// Record a scope event described by \a key that started at \a start if
-    /// collection of events is enabled.
+    /// Record a scope event described by \a key that started at \a start if 
+    /// \p Category is enabled.
     ///
     /// This method is used by the TRACE_FUNCTION, TRACE_SCOPE and
     /// TRACE_FUNCTION_SCOPE macros.
     /// \sa BeginScope \sa EndScope
-    void Scope(const TraceKey& key, TimeStamp start,
-        TraceCategoryId cat = TraceCategory::Default) {
-        if (ARCH_LIKELY(!IsEnabled()))
+    template <typename Category = DefaultCategory>
+    void Scope(const TraceKey& key, TimeStamp start) {
+        if (ARCH_LIKELY(!Category::IsEnabled()))
             return;
 
         _PerThreadData *threadData = _GetThreadData();
-        threadData->EmplaceEvent(TraceEvent::Timespan, key,  start, cat);
+        threadData->EmplaceEvent(
+            TraceEvent::Timespan, key,  start, Category::GetId());
     }
 
-    /// Record multiple data events with category \a cat if collection of events
-    /// is enabled.
+    /// Record multiple data events with category \a cat if \p Category is 
+    /// enabled.
     /// \sa StoreData
-    template <typename... Args>
-    void ScopeArgs(TraceCategoryId cat, Args&&... args) {
+    template <typename Category, typename... Args>
+    void ScopeArgs(Args&&... args) {
         static_assert( sizeof...(Args) %2 == 0, 
             "Data arguments must come in pairs");
 
-        if (ARCH_LIKELY(!IsEnabled()))
+        if (ARCH_LIKELY(!Category::IsEnabled()))
             return;
 
         _PerThreadData *threadData = _GetThreadData();
-        _StoreDataRec(threadData, cat, std::forward<Args>(args)...);
+        _StoreDataRec(threadData, Category::GetId(), std::forward<Args>(args)...);
     }
 
     /// Record multiple data events with the default category if collection of 
@@ -254,38 +280,60 @@ public:
         static_assert( sizeof...(Args) %2 == 0, 
             "Data arguments must come in pairs");
 
-        ScopeArgs(static_cast<TraceCategoryId>(TraceCategory::Default),
-            std::forward<Args>(args)...);
+        ScopeArgs<DefaultCategory>(std::forward<Args>(args)...);
     }
 
-    /// Record a data event with the given \a key and \a value if collection of 
-    /// events is enabled. \a value may be  of any type which a TraceEvent can
+    /// Record a data event with the given \a key and \a value if \p Category is
+    /// enabled. \a value may be  of any type which a TraceEvent can
     /// be constructed from (bool, int, std::string, uint64, double).
     /// \sa ScopeArgs
-    template <typename T>
-    void StoreData(
-            const TraceKey &key, const T& value, 
-            TraceCategoryId cat = TraceCategory::Default) {
-        if (ARCH_UNLIKELY(IsEnabled())) {
-            _StoreData(_GetThreadData(), key, cat, value);
+    template <typename Category = DefaultCategory, typename T>
+    void StoreData(const TraceKey &key, const T& value) {
+        if (ARCH_UNLIKELY(Category::IsEnabled())) {
+            _StoreData(_GetThreadData(), key, Category::GetId(), value);
         }
     }
 
-    /// Record a counter value  for a name \a key and delta \a value  if
-    /// collection of events is enabled.
-    void RecordCounterValue(const TraceKey &key, 
-                            double value, 
-                            TraceCategoryId cat = TraceCategory::Default) {
+    /// Record a counter \a delta for a name \a key if \p Category is enabled.
+    template <typename Category = DefaultCategory>
+    void RecordCounterDelta(const TraceKey &key, 
+                            double delta) {
         // Only record counter values if the collector is enabled.
-        //
-        // XXX: Add support for turning specific counters on / off.
-        //      We could do this by creating a CounterKey, which is a
-        //      TraceKeyToken, but also has a stable index!
-        //
-        if (IsEnabled() && value > 0.0) {
+        if (ARCH_UNLIKELY(Category::IsEnabled())) {
             _PerThreadData *threadData = _GetThreadData();
             threadData->EmplaceEvent(
-                TraceEvent::Counter, key, value, cat);
+                TraceEvent::CounterDelta, key, delta, Category::GetId());
+        }
+    }
+
+    /// Record a counter \a delta for a name \a key if \p Category is enabled.
+    template <typename Category = DefaultCategory>
+    void RecordCounterDelta(const Key &key, double delta) {
+        if (ARCH_UNLIKELY(Category::IsEnabled())) {
+            _PerThreadData *threadData = _GetThreadData();
+            threadData->CounterDelta(key, delta, Category::GetId());
+        }
+    }
+
+    /// Record a counter \a value for a name \a key if \p Category is enabled.
+    template <typename Category = DefaultCategory>
+    void RecordCounterValue(const TraceKey &key, double value) {
+        // Only record counter values if the collector is enabled.
+        if (ARCH_UNLIKELY(Category::IsEnabled())) {
+            _PerThreadData *threadData = _GetThreadData();
+            threadData->EmplaceEvent(
+                TraceEvent::CounterValue, key, value, Category::GetId());
+        }
+    }
+
+    /// Record a counter \a value for a name \a key and delta \a value if 
+    /// \p Category is enabled.
+    template <typename Category = DefaultCategory>
+    void RecordCounterValue(const Key &key, double value) {
+
+        if (ARCH_UNLIKELY(Category::IsEnabled())) {
+            _PerThreadData *threadData = _GetThreadData();
+            threadData->CounterValue(key, value, Category::GetId());
         }
     }
 
@@ -313,6 +361,16 @@ private:
     // Return a pointer to existing per-thread data or create one if none
     // exists.
     TRACE_API _PerThreadData* _GetThreadData();
+
+    TRACE_API TimeStamp _BeginEvent(const Key& key, TraceCategoryId cat);
+
+    TRACE_API void _BeginEventAtTime(
+        const Key& key, double ms, TraceCategoryId cat);
+
+    TRACE_API TimeStamp _EndEvent(const Key& key, TraceCategoryId cat);
+
+    TRACE_API void _EndEventAtTime(
+         const Key& key, double ms, TraceCategoryId cat);
 
     // This is the fast execution path called from the TRACE_FUNCTION
     // and TRACE_SCOPE macros
@@ -412,6 +470,12 @@ private:
                 AtomicRef lock(_writing);
                 _EndScope(key, cat);
             }
+
+            TRACE_API void CounterDelta(
+                const Key&, double value, TraceCategoryId cat);
+
+            TRACE_API void CounterValue(
+                const Key&, double value, TraceCategoryId cat);
 
             template <typename T>
             void StoreData(
