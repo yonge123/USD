@@ -241,7 +241,8 @@ _WritePrefixedAttrs(
         }
 
         if (usdAttr) {
-            PxrUsdMayaWriteUtil::SetUsdAttr(plg, usdAttr, usdTime, usdTime.IsDefault());
+            // FIXME
+            PxrUsdMayaWriteUtil::SetUsdAttr(plg, usdAttr, usdTime);
         }
         else {
             MGlobal::displayError(TfStringPrintf(
