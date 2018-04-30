@@ -381,9 +381,10 @@ bool MayaMeshWriter::_createAlphaPrimVar(
 
     if (!assignmentIndices.empty()) {
         primVar.SetIndices(assignmentIndices);
-        if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
+        // FIXME
+        /*if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
            primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
-        }
+        }*/
     }
 
     if (clamped) {
@@ -420,9 +421,10 @@ bool MayaMeshWriter::_createRGBPrimVar(
 
     if (!assignmentIndices.empty()) {
         primVar.SetIndices(assignmentIndices);
-        if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
+        // FIXME
+        /*if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
            primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
-        }
+        }*/
     }
 
     if (clamped) {
@@ -466,9 +468,10 @@ bool MayaMeshWriter::_createRGBAPrimVar(
 
     if (!assignmentIndices.empty()) {
         primVar.SetIndices(assignmentIndices);
-        if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
+        // FIXME
+        /*if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
            primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
-        }
+        }*/
     }
 
     if (clamped) {
@@ -548,9 +551,10 @@ bool MayaMeshWriter::_createUVPrimVar(
 
     if (!assignmentIndices.empty()) {
         primVar.SetIndices(assignmentIndices);
-        if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
+        // FIXME
+        /*if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
            primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
-        }
+        }*/
     }
 
     return true;
