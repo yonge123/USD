@@ -915,11 +915,10 @@ PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
         }
 
         if (usdAttr) {
+            // FIXME
             if (!PxrUsdMayaWriteUtil::SetUsdAttr(attrPlug,
                                                  usdAttr,
                                                  usdTime,
-                                                 writeIfConstant,
-                                                 translateMayaDoubleToUsdSinglePrecision,
                                                  valueWriter)) {
                 MGlobal::displayError(
                     TfStringPrintf("Could not set value for attribute: '%s'",
