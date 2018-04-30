@@ -24,6 +24,7 @@
 #include "pxr/usdImaging/usdImaging/coneAdapter.h"
 
 #include "pxr/usdImaging/usdImaging/delegate.h"
+#include "pxr/usdImaging/usdImaging/indexProxy.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
 #include "pxr/imaging/hd/mesh.h"
@@ -86,13 +87,13 @@ UsdImagingConeAdapter::TrackVariability(UsdPrim const& prim,
     if (!_IsVarying(prim,
                        UsdGeomTokens->radius,
                        HdChangeTracker::DirtyPoints,
-                       UsdImagingTokens->usdVaryingPrimVar,
+                       UsdImagingTokens->usdVaryingPrimvar,
                        timeVaryingBits,
                        /*isInherited*/false)) {
         _IsVarying(prim,
                    UsdGeomTokens->height,
                    HdChangeTracker::DirtyPoints,
-                   UsdImagingTokens->usdVaryingPrimVar,
+                   UsdImagingTokens->usdVaryingPrimvar,
                    timeVaryingBits,
                    /*isInherited*/false);
     }
@@ -118,10 +119,10 @@ UsdImagingConeAdapter::UpdateForTime(UsdPrim const& prim,
         valueCache->GetPoints(cachePath) = GetMeshPoints(prim, time);
 
         // Expose points as a primvar.
-        UsdImagingValueCache::PrimvarInfo primvar;
-        primvar.name = HdTokens->points;
-        primvar.interpolation = UsdGeomTokens->vertex;
-        _MergePrimvar(primvar, &valueCache->GetPrimvars(cachePath));
+        _MergePrimvar(&valueCache->GetPrimvars(cachePath),
+                      HdTokens->points,
+                      HdInterpolationVertex,
+                      HdPrimvarRoleTokens->point);
     }
 }
 

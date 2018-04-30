@@ -18,6 +18,7 @@ pxr_library(trace
         collection
         collectionNotice
         collector
+        counterAccumulator
         dataBuffer
         dynamicKey
         event
@@ -27,13 +28,13 @@ pxr_library(trace
         eventNode
         key
         reporter
+        reporterBase
         serialization
         singleEventGraph
         singleEventNode
         singleEventTreeReport
         staticKeyData
         threads
-        trace
 
     PRIVATE_CLASSES
         jsonSerialization
@@ -42,6 +43,7 @@ pxr_library(trace
         api.h
         concurrentList.h
         stringHash.h
+        trace.h
 
     PYTHON_CPPFILES
         moduleDeps.cpp
@@ -107,6 +109,13 @@ pxr_build_test(testTraceSerialization
         testenv/testTraceSerialization.cpp
 )
 
+pxr_build_test(testTraceCounters
+    LIBRARIES
+        trace
+    CPPFILES
+        testenv/testTraceCounters.cpp
+)
+
 pxr_test_scripts(
     testenv/testTrace.py
     testenv/testTraceRecursion.py
@@ -147,11 +156,6 @@ pxr_install_test_dir(
 pxr_install_test_dir(
     SRC testenv/testTraceRecursion.testenv
     DEST testTraceRecursion7
-)
-
-pxr_install_test_dir(
-    SRC testenv/testTraceSerialization.testenv
-    DEST testTraceSerialization
 )
 
 pxr_register_test(testTraceCategory
@@ -233,5 +237,8 @@ pxr_register_test(testTraceReporter
 
 pxr_register_test(testTraceSerialization
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTraceSerialization"
-    DIFF_COMPARE trace.json
+)
+
+pxr_register_test(testTraceCounters
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTraceCounters"
 )
