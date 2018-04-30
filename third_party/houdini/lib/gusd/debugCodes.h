@@ -21,18 +21,20 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef _GUSD_DEBUGCODES_H_
-#define _GUSD_DEBUGCODES_H_
+#ifndef GUSD_DEBUGCODES_H
+#define GUSD_DEBUGCODES_H
 
 #include "pxr/pxr.h"
 #include "pxr/base/tf/debug.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+
 TF_DEBUG_CODES(
-    PXRUSDHOUDINI_REGISTRY
+    GUSD_STAGECACHE
 );
+
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // _GUSD_DEBUGCODES_H_
+#endif // GUSD_DEBUGCODES_H

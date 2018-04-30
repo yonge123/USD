@@ -377,10 +377,14 @@ bool MayaMeshWriter::_createAlphaPrimVar(
         primSchema.CreatePrimvar(name,
                                  SdfValueTypeNames->FloatArray,
                                  interp);
+    _SetAttribute(primVar.GetAttr(), data, usdTime);
 
-    PxrUsdMayaWriteUtil::SetPrimvarKey(
-        primVar, VtValue(data),
-        assignmentIndices.empty() ? VtValue() : VtValue(assignmentIndices), usdTime);
+    if (!assignmentIndices.empty()) {
+        primVar.SetIndices(assignmentIndices);
+        if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
+           primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
+        }
+    }
 
     if (clamped) {
         PxrUsdMayaRoundTripUtil::MarkPrimvarAsClamped(primVar);
@@ -412,9 +416,14 @@ bool MayaMeshWriter::_createRGBPrimVar(
         primSchema.CreatePrimvar(name,
                                  SdfValueTypeNames->Color3fArray,
                                  interp);
-    PxrUsdMayaWriteUtil::SetPrimvarKey(
-        primVar, VtValue(data),
-        assignmentIndices.empty() ? VtValue() : VtValue(assignmentIndices), usdTime);
+    _SetAttribute(primVar.GetAttr(), data, usdTime);
+
+    if (!assignmentIndices.empty()) {
+        primVar.SetIndices(assignmentIndices);
+        if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
+           primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
+        }
+    }
 
     if (clamped) {
         PxrUsdMayaRoundTripUtil::MarkPrimvarAsClamped(primVar);
@@ -453,10 +462,14 @@ bool MayaMeshWriter::_createRGBAPrimVar(
         rgbaData[i] = GfVec4f(rgbData[i][0], rgbData[i][1], rgbData[i][2],
                               alphaData[i]);
     }
+    _SetAttribute(primVar.GetAttr(), rgbaData, usdTime);
 
-    PxrUsdMayaWriteUtil::SetPrimvarKey(
-        primVar, VtValue(rgbaData),
-        assignmentIndices.empty() ? VtValue() : VtValue(assignmentIndices), usdTime);
+    if (!assignmentIndices.empty()) {
+        primVar.SetIndices(assignmentIndices);
+        if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
+           primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
+        }
+    }
 
     if (clamped) {
         PxrUsdMayaRoundTripUtil::MarkPrimvarAsClamped(primVar);
@@ -531,10 +544,14 @@ bool MayaMeshWriter::_createUVPrimVar(
         primSchema.CreatePrimvar(name,
                                  SdfValueTypeNames->Float2Array,
                                  interp);
+    _SetAttribute(primVar.GetAttr(), data, usdTime);
 
-    PxrUsdMayaWriteUtil::SetPrimvarKey(
-        primVar, VtValue(data),
-        assignmentIndices.empty() ? VtValue() : VtValue(assignmentIndices), usdTime);
+    if (!assignmentIndices.empty()) {
+        primVar.SetIndices(assignmentIndices);
+        if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
+           primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
+        }
+    }
 
     return true;
 }
@@ -556,7 +573,8 @@ bool MayaMeshWriter::_addDisplayPrimvars(
         if (interpolation != displayColor.GetInterpolation()) {
             displayColor.SetInterpolation(interpolation);
         }
-        displayColor.Set(RGBData);
+        _SetAttribute(displayColor.GetAttr(), RGBData);
+
         if (!assignmentIndices.empty()) {
             displayColor.SetIndices(assignmentIndices);
         }
@@ -584,7 +602,8 @@ bool MayaMeshWriter::_addDisplayPrimvars(
             if (interpolation != displayOpacity.GetInterpolation()) {
                 displayOpacity.SetInterpolation(interpolation);
             }
-            displayOpacity.Set(AlphaData);
+            _SetAttribute(displayOpacity.GetAttr(), AlphaData);
+
             if (!assignmentIndices.empty()) {
                 displayOpacity.SetIndices(assignmentIndices);
             }

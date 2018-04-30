@@ -115,10 +115,15 @@ MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime,
         TfToken const &visibilityTok = (isVisible ? UsdGeomTokens->inherited : 
                                         UsdGeomTokens->invisible);
         if (shouldWriteSample(usdTime, isAnimated)) {
-            if (usdTime.IsDefault())
-                primSchema.CreateVisibilityAttr(VtValue(visibilityTok), true);
-            else
-                primSchema.CreateVisibilityAttr().Set(visibilityTok, usdTime);
+            if (usdTime.IsDefault()) {
+                _SetAttribute(primSchema.CreateVisibilityAttr(VtValue(), true), 
+                              visibilityTok, 
+                              usdTime);
+            } else {
+                _SetAttribute(primSchema.CreateVisibilityAttr(), 
+                              visibilityTok, 
+                              usdTime);
+            }
         }
     }
 
@@ -160,9 +165,12 @@ MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime,
     // name collisions will always be handled by taking the shape node's value
     // if we're merging transforms and shapes.
     if (dagT.isValid() && !(dagT == getDagPath())) {
-        PxrUsdMayaWriteUtil::WriteUserExportedAttributes(dagT, usdPrim, usdTime, writeIfConstant);
+        PxrUsdMayaWriteUtil::WriteUserExportedAttributes(dagT, usdPrim, usdTime,
+                _GetSparseValueWriter());
     }
-    PxrUsdMayaWriteUtil::WriteUserExportedAttributes(getDagPath(), usdPrim, usdTime, writeIfConstant);
+
+    PxrUsdMayaWriteUtil::WriteUserExportedAttributes(getDagPath(), usdPrim, 
+            usdTime, _GetSparseValueWriter());
 
     return true;
 }
@@ -200,6 +208,15 @@ bool
 MayaPrimWriter::shouldWriteSample(const UsdTimeCode& usdTime, bool isAnimated) const
 {
     return mWriteJobCtx.shouldWriteSample(usdTime, isAnimated);
+}
+
+MayaPrimWriter::getAllAuthoredUsdPaths(SdfPathVector* outPaths) const
+{
+    if (!getUsdPath().IsEmpty()) {
+        outPaths->push_back(getUsdPath());
+        return true;
+    }
+    return false;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
