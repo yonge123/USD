@@ -35,6 +35,7 @@
 #include "pxr/base/tf/enum.h"
 #include "pxr/base/tf/instantiateSingleton.h"
 #include "pxr/base/tf/mallocTag.h"
+#include "pxr/base/tf/scoped.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/arch/demangle.h"
 #include "pxr/base/arch/symbols.h"
@@ -44,6 +45,7 @@
 
 #include <math.h>
 #include <iostream>
+#include <numeric>
 #include <map>
 #include <vector>
 
@@ -67,12 +69,12 @@ TraceReporter::TraceReporter(const string& label,
     _collector(collector),
     _label(label),
     _groupByFunction(true),
-    _foldRecursiveCalls(false)
+    _foldRecursiveCalls(false),
+    _buildSingleEventGraph(false)
 {
     _rootNode = TraceEventNode::New();
     _singleEventGraph = TraceSingleEventGraph::New();
     _eventTimes = _EventTimes();
-    TfNotice::Register(ThisPtr(this), &This::_OnTraceCollection);
 }
 
 TraceReporter::~TraceReporter()
@@ -191,7 +193,8 @@ TraceReporter::OnEvent(
         case TraceEvent::EventType::End:
             _OnEndEvent(threadIndex, key, e);
             break;
-        case TraceEvent::EventType::Counter:
+        case TraceEvent::EventType::CounterDelta:
+        case TraceEvent::EventType::CounterValue:
             _OnCounterEvent(threadIndex, key, e);
             break;
         case TraceEvent::EventType::Timespan:
@@ -261,8 +264,8 @@ TraceReporter::_OnEndEvent(
 }
 
 void
-TraceReporter::_OnCounterEvent(
-    const TraceThreadId& threadIndex, const TfToken& key, const TraceEvent& e) 
+TraceReporter::_OnCounterEvent( 
+    const TraceThreadId& threadIndex, const TfToken& key, const TraceEvent& e)
 {
     // For counter events, add the counter key to the map of counters
     // and create a new counter index, if necessary. Also, increment
@@ -271,6 +274,14 @@ TraceReporter::_OnCounterEvent(
     // counter values at the node. We will propagate these values to
     // the parents in a post-processing step in
     // _ComputeInclusiveCounterValues.
+
+    bool isDelta = false;
+    switch (e.GetType()) {
+        case TraceEvent::EventType::CounterDelta: isDelta = true; break;
+        case TraceEvent::EventType::CounterValue: break;
+        default: return;
+    }
+
     _ThreadStackMap::iterator it = _threadStacks.find(threadIndex);
     if (it != _threadStacks.end()) {
         _PendingNodeStack& stack = it->second;
@@ -279,7 +290,12 @@ TraceReporter::_OnCounterEvent(
         CounterMap::iterator it =
             _counters.insert(
                 std::make_pair(key, 0.0)).first;
-        it->second += e.GetCounterValue();
+
+        if (isDelta) {
+            it->second += e.GetCounterValue();
+        } else {
+            it->second = e.GetCounterValue();
+        }
 
         // Insert the counter index into the map, if one does not
         // already exist. If no counter index existed in the map, 
@@ -290,9 +306,14 @@ TraceReporter::_OnCounterEvent(
         if (res.second) {
             ++_counterIndex;
         }
-        // Set the counter value on the current node.
-        stack.back().counters.push_back(
-            {e.GetTimeStamp(), res.first->second, e.GetCounterValue()});
+
+        // It only makes sense to store delta values in the specific nodes at 
+        // the moment. This might need to be revisted in the future.
+        if (isDelta) {
+            // Set the counter value on the current node.
+            stack.back().counters.push_back(
+                {e.GetTimeStamp(), res.first->second, e.GetCounterValue()});
+        }
     }
 }
 
@@ -589,8 +610,10 @@ void
 TraceReporter::_UpdateTree(bool buildSingleEventGraph)
 {
     // Get the latest from the collector and process the events.
-    _collector->CreateCollection();
-    _ProcessCollections(buildSingleEventGraph);
+    {
+        TfScopedVar<bool> scope(_buildSingleEventGraph, buildSingleEventGraph);
+        _Update();
+    }
 
     // If MallocTags were enabled for the capture of this trace, add a dummy
     // warning node as an indicator that the trace may have been slowed down
@@ -633,7 +656,7 @@ TraceReporter::ClearTree()
     _counterIndexMap.clear();
     ///XXX: This should really not be clearing the global collector here.
     _collector->Clear();
-    _collections.clear();
+    _Clear();
 }
 
 TraceEventNodePtr
@@ -647,6 +670,13 @@ TraceReporter::GetSingleEventRoot()
 {
     return _singleEventGraph->GetRoot();
 }
+
+TraceSingleEventGraphRefPtr
+TraceReporter::GetSingleEventGraph()
+{
+    return _singleEventGraph;
+}
+
 
 const TraceReporter::CounterMap &
 TraceReporter::GetCounters() const
@@ -730,8 +760,16 @@ TraceReporter::_PendingEventNode::_PendingEventNode(
 TraceReporter::_PendingEventNode::Child 
 TraceReporter::_PendingEventNode::Close(TimeStamp end)
 {
+    // The new node should have a time that is at least as long as the time of 
+    // its children.
+    TimeStamp childTime = std::accumulate(
+        children.begin(), children.end(), 0, 
+        [](TimeStamp ts, const Child& b) -> TimeStamp {
+            return ts + b.node->GetInclusiveTime();
+        });
+    
     TraceEventNodeRefPtr node = 
-    TraceEventNode::New(id, key, end-start);
+        TraceEventNode::New(id, key, std::max(end-start, childTime));
     for (Child& child : children) {
         node->Append(child.node);
     }
@@ -742,27 +780,27 @@ TraceReporter::_PendingEventNode::Close(TimeStamp end)
     return Child{start, node};
 }
 
-void 
-TraceReporter::_OnTraceCollection(const TraceCollectionAvailable& notice) 
+bool 
+TraceReporter::_IsAcceptingCollections()
 {
-    _collections.push(notice.GetCollection());
+    return true;
 }
 
-void TraceReporter::_ProcessCollections(bool buildSingleEventGraph) 
+void
+TraceReporter::_ProcessCollection(
+    const TraceReporterBase::CollectionPtr& collection)
 {
     // Create a temporary reporter for the singleEvent graph if its requested.
     TraceSingleEventTreeReport singleGraphReport;
-
-    std::shared_ptr<TraceCollection> collection;
-    while (_collections.try_pop(collection)) {
-        if (collection) {
-            collection->Iterate(*this);
-            if (buildSingleEventGraph) {
-                collection->Iterate(singleGraphReport);
-            }
+    if (collection) {
+        collection->Iterate(*this);
+        if (_buildSingleEventGraph) {
+            singleGraphReport.SetCounterValues(
+                _singleEventGraph->GetFinalCounterValues());
+            singleGraphReport.CreateGraph(*collection);
         }
     }
-    if (buildSingleEventGraph) {
+    if (_buildSingleEventGraph) {
         _singleEventGraph->Merge(singleGraphReport.GetGraph());
     }
 }

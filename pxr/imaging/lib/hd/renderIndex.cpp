@@ -1117,7 +1117,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector const &tasks,
 
         {
             _SyncRPrims workerState(sceneDelegate, r, reprs, _tracker, renderParam);
-            if (!TfDebug::IsEnabled(HD_DISABLE_MULTITHREADED_RPRIM_SYNC) && !HdImagePlane::IsEnabled() &&
+            if (!TfDebug::IsEnabled(HD_DISABLE_MULTITHREADED_RPRIM_SYNC) &&
                   sceneDelegate->IsEnabled(HdOptionTokens->parallelRprimSync)) {
                 TRACE_SCOPE("Parallel Rprim Sync");
                 // In the lambda below, we capture workerState by value and 

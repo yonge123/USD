@@ -18,6 +18,7 @@ pxr_library(usdImagingGL
         sdf
         usd
         usdGeom
+        usdHydra
         usdShade
         usdImaging
         ar
@@ -45,7 +46,6 @@ pxr_library(usdImagingGL
         hydraMaterialAdapter
         package
         refEngine
-        imagePlaneAdapter
 
     PUBLIC_HEADERS
         api.h
