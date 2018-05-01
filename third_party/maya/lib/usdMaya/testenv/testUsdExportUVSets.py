@@ -52,9 +52,8 @@ class testUsdExportUVSets(unittest.TestCase):
         for idx in range(len(primvar.Get())):
             self.assertEqual(primvar.Get()[idx], expectedValues[idx])
         self.assertEqual(primvar.GetIndices(), expectedIndices)
-        # TODO: fix this properly!
-        # self.assertEqual(primvar.GetUnauthoredValuesIndex(),
-        #     expectedUnauthoredValuesIndex)
+        self.assertEqual(primvar.GetUnauthoredValuesIndex(),
+            expectedUnauthoredValuesIndex)
         self.assertEqual(primvar.GetInterpolation(), expectedInterpolation)
 
 
