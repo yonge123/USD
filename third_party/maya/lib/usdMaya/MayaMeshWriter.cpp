@@ -46,6 +46,10 @@ const float MayaMeshWriter::_ShaderDefaultAlpha = 0.0;
 const GfVec3f MayaMeshWriter::_ColorSetDefaultRGB = GfVec3f(1.0);
 const float MayaMeshWriter::_ColorSetDefaultAlpha = 1.0;
 
+const std::vector<MString> MayaMeshWriter::_MotionVectorNames = {
+    MString("velocityPV"), MString("velocity"), MString("v")
+};
+
 
 MayaMeshWriter::MayaMeshWriter(
         const MDagPath & iDag,
@@ -161,8 +165,8 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             curFaceVertexIndex++;
         }
     }
-    _SetAttribute(primSchema.GetFaceVertexCountsAttr(), &faceVertexCounts);
-    _SetAttribute(primSchema.GetFaceVertexIndicesAttr(), &faceVertexIndices);
+    _SetAttribute(primSchema.GetFaceVertexCountsAttr(), &faceVertexCounts, usdTime);
+    _SetAttribute(primSchema.GetFaceVertexIndicesAttr(), &faceVertexIndices, usdTime);
 
     // Read usdSdScheme attribute. If not set, we default to defaultMeshScheme
     // flag that can be user defined and initialized to catmullClark
@@ -248,6 +252,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
 
         _createUVPrimVar(primSchema,
                          setName,
+                         usdTime,
                          uvValues,
                          interpolation,
                          assignmentIndices,
@@ -278,6 +283,17 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
     }
 
     for (unsigned int i=0; i < colorSetNames.length(); ++i) {
+
+        if (std::find(
+            _MotionVectorNames.begin(),
+            _MotionVectorNames.end(),
+            colorSetNames[i]) != _MotionVectorNames.end()) {
+            _writeMotionVectors(primSchema,
+                                usdTime,
+                                finalMesh,
+                                colorSetNames[i]);
+            continue;
+        }
 
         bool isDisplayColor = false;
 
@@ -349,6 +365,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             if (colorSetRep == MFnMesh::kAlpha) {
                 _createAlphaPrimVar(primSchema,
                                     colorSetNameToken,
+                                    usdTime,
                                     AlphaData,
                                     interpolation,
                                     assignmentIndices,
@@ -357,6 +374,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             } else if (colorSetRep == MFnMesh::kRGB) {
                 _createRGBPrimVar(primSchema,
                                   colorSetNameToken,
+                                  usdTime,
                                   RGBData,
                                   interpolation,
                                   assignmentIndices,
@@ -365,6 +383,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             } else if (colorSetRep == MFnMesh::kRGBA) {
                 _createRGBAPrimVar(primSchema,
                                    colorSetNameToken,
+                                   usdTime,
                                    RGBData,
                                    AlphaData,
                                    interpolation,
