@@ -93,6 +93,7 @@ class MayaMeshWriter : public MayaTransformWriter
 
     bool _createAlphaPrimVar(UsdGeomGprim &primSchema,
                              const TfToken& name,
+                             const UsdTimeCode& usdTime,
                              const VtArray<float>& data,
                              const TfToken& interpolation,
                              const VtArray<int>& assignmentIndices,
@@ -101,6 +102,7 @@ class MayaMeshWriter : public MayaTransformWriter
 
     bool _createRGBPrimVar(UsdGeomGprim &primSchema,
                            const TfToken& name,
+                           const UsdTimeCode& usdTime,
                            const VtArray<GfVec3f>& data,
                            const TfToken& interpolation,
                            const VtArray<int>& assignmentIndices,
@@ -109,6 +111,7 @@ class MayaMeshWriter : public MayaTransformWriter
 
     bool _createRGBAPrimVar(UsdGeomGprim &primSchema,
                             const TfToken& name,
+                            const UsdTimeCode& usdTime,
                             const VtArray<GfVec3f>& rgbData,
                             const VtArray<float>& alphaData,
                             const TfToken& interpolation,
@@ -118,10 +121,16 @@ class MayaMeshWriter : public MayaTransformWriter
 
     bool _createUVPrimVar(UsdGeomGprim &primSchema,
                           const TfToken& name,
+                          const UsdTimeCode& usdTime,
                           const VtArray<GfVec2f>& data,
                           const TfToken& interpolation,
                           const VtArray<int>& assignmentIndices,
                           const int unassignedValueIndex);
+
+    void _writeMotionVectors(UsdGeomMesh& primSchema,
+                            const UsdTimeCode& usdTime,
+                            MFnMesh& mesh,
+                            const MString& colorSetName);
 
     /// Adds displayColor and displayOpacity primvars using the given color,
     /// alpha, and assignment data if the \p primSchema does not already have
@@ -150,6 +159,9 @@ class MayaMeshWriter : public MayaTransformWriter
     /// component has no authored value.
     static const GfVec3f _ColorSetDefaultRGB;
     static const float _ColorSetDefaultAlpha;
+
+    /// Names for color sets that are interpreted as motion vectors.
+    static const std::vector<MString> _MotionVectorNames;
 
     /// Input mesh before any skeletal deformations, cached between iterations.
     MObject _skelInputMesh;
