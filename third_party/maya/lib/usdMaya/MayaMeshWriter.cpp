@@ -26,7 +26,6 @@
 #include "usdMaya/MayaMeshWriter.h"
 
 #include "usdMaya/meshUtil.h"
-#include "usdMaya/writeUtil.h"
 
 #include "pxr/base/gf/vec3f.h"
 #include "pxr/usd/usdGeom/mesh.h"
@@ -207,8 +206,8 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             curFaceVertexIndex++;
         }
     }
-    _SetAttribute(primSchema.GetFaceVertexCountsAttr(), &faceVertexCounts, usdTime); // ANIMATED
-    _SetAttribute(primSchema.GetFaceVertexIndicesAttr(), &faceVertexIndices, usdTime); // ANIMATED
+    _SetAttribute(primSchema.GetFaceVertexCountsAttr(), &faceVertexCounts);
+    _SetAttribute(primSchema.GetFaceVertexIndicesAttr(), &faceVertexIndices);
 
     // Read usdSdScheme attribute. If not set, we default to defaultMeshScheme
     // flag that can be user defined and initialized to catmullClark
@@ -277,29 +276,27 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             continue;
         }
 
-        // The unassigned value can't be animated! Which is a big problem
-        // when you are working with varying meshes.
+        int unassignedValueIndex = -1;
         PxrUsdMayaUtil::AddUnassignedUVIfNeeded(&uvValues,
-                                                 &assignmentIndices,
-                                                 _DefaultUV);
+                                                &assignmentIndices,
+                                                &unassignedValueIndex,
+                                                _DefaultUV);
 
         // XXX:bug 118447
         // We should be able to configure the UV map name that triggers this
         // behavior, and the name to which it exports.
         // The UV Set "map1" is renamed st. This is a Pixar/USD convention.
-
-        // LUMA: we are following MtoA's convention to quickly hotfix the thing.
         TfToken setName(uvSetNames[i].asChar());
-        if (i == 0) {
+        if (setName == "map1") {
             setName = UsdUtilsGetPrimaryUVSetName();
         }
 
         _createUVPrimVar(primSchema,
-                         usdTime,
                          setName,
                          uvValues,
                          interpolation,
-                         assignmentIndices);
+                         assignmentIndices,
+                         unassignedValueIndex);
     }
 
     // == Gather ColorSets
@@ -327,16 +324,6 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
 
     for (unsigned int i=0; i < colorSetNames.length(); ++i) {
 
-        if (colorSetNames[i] == "velocityPV" ||
-            colorSetNames[i] == "velocity" ||
-            colorSetNames[i] == "v") {
-            _writeMotionVector(primSchema,
-                               usdTime,
-                               finalMesh,
-                               colorSetNames[i]);
-            continue;
-        }
-
         bool isDisplayColor = false;
 
         if (colorSetNames[i] == PxrUsdMayaMeshColorSetTokens->DisplayColorColorSetName.GetText()) {
@@ -358,6 +345,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
         VtArray<float> AlphaData;
         TfToken interpolation;
         VtArray<int> assignmentIndices;
+        int unassignedValueIndex = -1;
         MFnMesh::MColorRepresentation colorSetRep;
         bool clamped = false;
 
@@ -383,6 +371,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             &RGBData,
             &AlphaData,
             &assignmentIndices,
+            &unassignedValueIndex,
             _ColorSetDefaultRGB,
             _ColorSetDefaultAlpha);
 
@@ -395,6 +384,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
                                 AlphaData,
                                 interpolation,
                                 assignmentIndices,
+                                unassignedValueIndex,
                                 clamped,
                                 true);
         } else {
@@ -403,28 +393,28 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
                     std::string(colorSetNames[i].asChar())));
             if (colorSetRep == MFnMesh::kAlpha) {
                 _createAlphaPrimVar(primSchema,
-                                    usdTime,
                                     colorSetNameToken,
                                     AlphaData,
                                     interpolation,
                                     assignmentIndices,
+                                    unassignedValueIndex,
                                     clamped);
             } else if (colorSetRep == MFnMesh::kRGB) {
                 _createRGBPrimVar(primSchema,
-                                  usdTime,
                                   colorSetNameToken,
                                   RGBData,
                                   interpolation,
                                   assignmentIndices,
+                                  unassignedValueIndex,
                                   clamped);
             } else if (colorSetRep == MFnMesh::kRGBA) {
                 _createRGBAPrimVar(primSchema,
-                                   usdTime,
                                    colorSetNameToken,
                                    RGBData,
                                    AlphaData,
                                    interpolation,
                                    assignmentIndices,
+                                   unassignedValueIndex,
                                    clamped);
             }
         }
@@ -437,10 +427,12 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
         // Using the shader default values (an alpha of zero, in particular)
         // results in Gprims rendering the same way in usdview as they do in
         // Maya (i.e. unassigned components are invisible).
+        int unassignedValueIndex = -1;
         PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
                 &shadersRGBData,
                 &shadersAlphaData,
                 &shadersAssignmentIndices,
+                &unassignedValueIndex,
                 _ShaderDefaultRGB,
                 _ShaderDefaultAlpha);
 
@@ -454,6 +446,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
                             shadersAlphaData,
                             shadersInterpolation,
                             shadersAssignmentIndices,
+                            unassignedValueIndex,
                             false,
                             false);
     }
@@ -495,29 +488,6 @@ bool
 MayaMeshWriter::exportsGprims() const
 {
     return true;
-}
-
-void
-MayaMeshWriter::postExport()
-{
-    UsdGeomMesh primSchema(mUsdPrim);
-    const auto keepSample = mWriteJobCtx.getArgs().exportAsClip;
-    // TODO: Use TBB to run these tasks in parallel
-    if (primSchema) {
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetPointsAttr(), keepSample);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetNormalsAttr(), keepSample);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetVelocitiesAttr(), keepSample);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexCountsAttr(), keepSample, UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexIndicesAttr(), keepSample, UsdInterpolationTypeHeld);
-    }
-
-    UsdGeomGprim gprimSchema(mUsdPrim);
-    if (gprimSchema) {
-        // All created primvars are authored at this point
-        for (const auto& primvar : gprimSchema.GetPrimvars()) {
-            PxrUsdMayaWriteUtil::CleanupPrimvarKeys(primvar, keepSample);
-        }
-    }
 }
 
 

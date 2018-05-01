@@ -328,6 +328,7 @@ PXRUSDMAYA_API
 bool AddUnassignedUVIfNeeded(
         PXR_NS::VtArray<PXR_NS::GfVec2f>* uvData,
         PXR_NS::VtArray<int>* assignmentIndices,
+        int* unassignedValueIndex,
         const PXR_NS::GfVec2f& defaultUV);
 
 /// If any components in \p assignmentIndices are unassigned (-1), the given
@@ -341,6 +342,7 @@ bool AddUnassignedColorAndAlphaIfNeeded(
         PXR_NS::VtArray<PXR_NS::GfVec3f>* RGBData,
         PXR_NS::VtArray<float>* AlphaData,
         PXR_NS::VtArray<int>* assignmentIndices,
+        int* unassignedValueIndex,
         const PXR_NS::GfVec3f& defaultRGB,
         const float defaultAlpha);
 
