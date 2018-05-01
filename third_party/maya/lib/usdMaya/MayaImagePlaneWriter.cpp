@@ -194,28 +194,6 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
 MayaImagePlaneWriter::~MayaImagePlaneWriter() {
 }
 
-// virtual override
-void MayaImagePlaneWriter::postExport() {
-    UsdGeomImagePlane primSchema(mUsdPrim);
-
-    if (primSchema) {
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFilenameAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetUseFrameExtensionAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFrameOffsetAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetWidthAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetHeightAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetAlphaGainAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetAlphaGainAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetDepthAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetSqueezeCorrectionAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetOffsetAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetSizeAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetRotateAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetCoverageAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetCoverageOriginAttr(), UsdInterpolationTypeHeld);
-    }
-}
-
 void MayaImagePlaneWriter::write(const UsdTimeCode& usdTime) {
     UsdGeomImagePlane primSchema(mUsdPrim);
 
@@ -241,7 +219,7 @@ bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdG
     auto boundingBox = dnode.boundingBox();
     extent[0] = GfVec3f(boundingBox.min().x, boundingBox.min().y, boundingBox.min().z);
     extent[1] = GfVec3f(boundingBox.max().x, boundingBox.max().y, boundingBox.max().z);
-    primSchema.CreateExtentAttr().Set(extent, usdTime);
+    _SetAttribute(primSchema.CreateExtentAttr(), extent, usdTime);
 
     const auto sizePlug = dnode.findPlug("size");
     const auto imageName = SdfAssetPath(std::string(dnode.findPlug("imageName").asString().asChar()));
@@ -265,20 +243,24 @@ bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdG
         primSchema.GetFitAttr().Set(image_plane_to_size);
     }
     primSchema.GetUseFrameExtensionAttr().Set(dnode.findPlug("useFrameExtension").asBool());
-    primSchema.GetFrameOffsetAttr().Set(dnode.findPlug("frameOffset").asInt(), usdTime);
-    primSchema.GetWidthAttr().Set(dnode.findPlug("width").asFloat(), usdTime);
-    primSchema.GetHeightAttr().Set(dnode.findPlug("height").asFloat(), usdTime);
-    primSchema.GetAlphaGainAttr().Set(dnode.findPlug("alphaGain").asFloat(), usdTime);
-    primSchema.GetDepthAttr().Set(dnode.findPlug("depth").asFloat(), usdTime);
-    primSchema.GetSqueezeCorrectionAttr().Set(dnode.findPlug("squeezeCorrection").asFloat(), usdTime);
+    _SetAttribute(primSchema.GetFrameOffsetAttr(), dnode.findPlug("frameOffset").asInt(), usdTime);
+    _SetAttribute(primSchema.GetWidthAttr(), dnode.findPlug("width").asFloat(), usdTime);
+    _SetAttribute(primSchema.GetHeightAttr(), dnode.findPlug("height").asFloat(), usdTime);
+    _SetAttribute(primSchema.GetAlphaGainAttr(), dnode.findPlug("alphaGain").asFloat(), usdTime);
+    _SetAttribute(primSchema.GetDepthAttr(), dnode.findPlug("depth").asFloat(), usdTime);
+    _SetAttribute(primSchema.GetSqueezeCorrectionAttr(), dnode.findPlug("squeezeCorrection").asFloat(), usdTime);
     const auto offsetPlug = dnode.findPlug("offset");
-    primSchema.GetOffsetAttr().Set(GfVec2f(offsetPlug.child(0).asFloat(), offsetPlug.child(1).asFloat()), usdTime);
-    primSchema.GetSizeAttr().Set(GfVec2f(sizePlug.child(0).asFloat(), sizePlug.child(1).asFloat()), usdTime);
-    primSchema.GetRotateAttr().Set(dnode.findPlug("rotate").asFloat(), usdTime);
+    _SetAttribute(primSchema.GetOffsetAttr(),
+                  GfVec2f(offsetPlug.child(0).asFloat(), offsetPlug.child(1).asFloat()), usdTime);
+    _SetAttribute(primSchema.GetSizeAttr(),
+                  GfVec2f(sizePlug.child(0).asFloat(), sizePlug.child(1).asFloat()), usdTime);
+    _SetAttribute(primSchema.GetRotateAttr(), dnode.findPlug("rotate").asFloat(), usdTime);
     const auto coveragePlug = dnode.findPlug("coverage");
-    primSchema.GetCoverageAttr().Set(GfVec2i(coveragePlug.child(0).asInt(), coveragePlug.child(1).asInt()), usdTime);
+    _SetAttribute(primSchema.GetCoverageAttr(),
+                  GfVec2i(coveragePlug.child(0).asInt(), coveragePlug.child(1).asInt()), usdTime);
     const auto coverageOriginPlug = dnode.findPlug("coverageOrigin");
-    primSchema.GetCoverageOriginAttr().Set(GfVec2i(coverageOriginPlug.child(0).asInt(), coverageOriginPlug.child(1).asInt()), usdTime);
+    _SetAttribute(primSchema.GetCoverageOriginAttr(),
+                  GfVec2i(coverageOriginPlug.child(0).asInt(), coverageOriginPlug.child(1).asInt()), usdTime);
     return true;
 }
 
