@@ -212,38 +212,6 @@ struct PxrUsdMayaWriteUtil
             VtVec3fArray* val);
     /// \}
 
-    /// \brief Cleans up duplicate keys on \p attribute based on \p parameterInterpolation.
-    /// If \p keepSingleSample is true, will stop short of converting a time sampled attr
-    /// to a constant one.
-    PXRUSDMAYA_API
-    static void CleanupAttributeKeys(
-        UsdAttribute attribute,
-        bool keepSingleSample = false,
-        UsdInterpolationType parameterInterpolation = UsdInterpolationTypeLinear);
-
-    /// \brief Cleans up duplicate keys on \p primvar based on \p parameterInterpolation.
-    PXRUSDMAYA_API
-    static void CleanupPrimvarKeys(
-        UsdGeomPrimvar primvar,
-        bool keepSingleSample = false,
-        UsdInterpolationType parameterInterpolation = UsdInterpolationTypeLinear);
-
-    /// \brief Appends new VtValue to a USDAttribute. The function does cleanup and
-    /// removes extra keys on the fly, so it's useful to decrease memory usage during export.
-    PXRUSDMAYA_API
-    static void SetAttributeKey(
-            UsdAttribute attribute,
-            const VtValue& value,
-            const UsdTimeCode& usdTime);
-
-    /// \brief Appends new VtValue and indices to a USDGeomPrimvar. The function does cleanup and
-    ///  removes extra keys on the fly, so it's useful to decrease memory usage during export.
-    PXRUSDMAYA_API
-    static void SetPrimvarKey(
-            UsdGeomPrimvar primvar,
-            const VtValue& value,
-            const VtValue& indices,
-            const UsdTimeCode& usdTime);
 };
 
 
