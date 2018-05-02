@@ -172,14 +172,40 @@ void extractPrimvarsFromNode(UsdShadeShader const & shadeNode,
     }
 }
 
+// Walk the shader graph and emit nodes in topological order
+// to avoid forward-references.
 static
-bool visitNode(UsdShadeShader const & shadeNode, 
-               std::vector<UsdShadeInput> const & shadeNodeInputs,
+void walkGraph(UsdShadeShader const & shadeNode, 
                HdMaterialNetwork *materialNetwork)
 {
     // Store the path of the node
     HdMaterialNode node;
     node.path = shadeNode.GetPath();
+    if (!TF_VERIFY(node.path != SdfPath::EmptyPath())) {
+        return;
+    }
+    // If this node has already been found via another path, we do
+    // not need to add it again.
+    for (HdMaterialNode const& existingNode: materialNetwork->nodes) {
+        if (existingNode.path == node.path) {
+            return;
+        }
+    }
+
+    // Visit the inputs of this node to ensure they are emitted first.
+    const std::vector<UsdShadeInput> shadeNodeInputs = shadeNode.GetInputs();
+    for (UsdShadeInput const& input: shadeNodeInputs) {
+        // Check if this input is a connection and if so follow the path
+        UsdShadeConnectableAPI source;
+        TfToken outputName;
+        UsdShadeAttributeType sourceType;
+        if (UsdShadeConnectableAPI::GetConnectedSource(input, 
+                &source, &outputName, &sourceType)) {
+            // When we find a connection, we try to walk it.
+            UsdShadeShader connectedNode(source);
+            walkGraph(connectedNode, materialNetwork);
+        }
+    }
 
     // Extract the type of the node
     VtValue value;
@@ -197,69 +223,31 @@ bool visitNode(UsdShadeShader const & shadeNode,
         node.type = TfToken("PbsNetworkMaterialStandIn_2");
     }
 
-    // Protect against inserting the same node twice.  This can happen
-    // when, for example, multiple connections exist to the same node.
-    auto dup = std::find(std::begin(materialNetwork->nodes), 
-                         std::end(materialNetwork->nodes), 
-                         node);
-    if (dup != std::end(materialNetwork->nodes)) {
-        return false;
-    }
-
     // Add the parameters and the relationships of this node
-    UsdShadeConnectableAPI source;
-    TfToken outputName;
-    UsdShadeAttributeType sourceType;
-    for (size_t i = 0; i<shadeNodeInputs.size(); i++) {
-        
+    for (UsdShadeInput const& input: shadeNodeInputs) {
         // Check if this input is a connection and if so follow the path
-        if (UsdShadeConnectableAPI::GetConnectedSource(shadeNodeInputs[i], 
+        UsdShadeConnectableAPI source;
+        TfToken outputName;
+        UsdShadeAttributeType sourceType;
+        if (UsdShadeConnectableAPI::GetConnectedSource(input,
             &source, &outputName, &sourceType)) {
             
             // Store the relationship
             HdMaterialRelationship relationship;
             relationship.sourceId = shadeNode.GetPath();
-            relationship.sourceTerminal = shadeNodeInputs[i].GetBaseName();
+            relationship.sourceTerminal = input.GetBaseName();
             relationship.remoteId = source.GetPath();
             relationship.remoteTerminal = outputName;
             materialNetwork->relationships.push_back(relationship);
         } else {
             // Parameters detected, let's store it
-            if (shadeNodeInputs[i].Get(&value)) {
-                node.parameters[shadeNodeInputs[i].GetBaseName()] = value;
+            if (input.Get(&value)) {
+                node.parameters[input.GetBaseName()] = value;
             }
         }
     }
 
     materialNetwork->nodes.push_back(node);
-    return true;
-}
-
-static
-void walkGraph(UsdShadeShader const & shadeNode, 
-               HdMaterialNetwork *materialNetwork)
-{
-    // Visit the current node, and if it was correctly inserted, visit the
-    // inputs after. It is possible the node was not inserted (for instance
-    // when its Id attribute is incorrect).
-    std::vector<UsdShadeInput> shadeNodeInputs = shadeNode.GetInputs();
-    if (!visitNode(shadeNode, shadeNodeInputs, materialNetwork)) {
-        return;
-    } 
-
-    // Visit the inputs of this node
-    UsdShadeConnectableAPI source;
-    TfToken outputName;
-    UsdShadeAttributeType sourceType;
-    for (size_t i = 0; i<shadeNodeInputs.size(); i++) {
-        // Check if this input is a connection and if so follow the path
-        if (UsdShadeConnectableAPI::GetConnectedSource(shadeNodeInputs[i], 
-                &source, &outputName, &sourceType)) {
-            // When we find a connection, we try to walk it.
-            UsdShadeShader connectedNode(source);
-            walkGraph(connectedNode, materialNetwork);
-        }
-    }
 }
 
 void 
