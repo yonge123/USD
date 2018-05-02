@@ -1007,13 +1007,7 @@ UsdMayaProxyShape::~UsdMayaProxyShape()
 MSelectionMask
 UsdMayaProxyShape::getShapeSelectionMask() const
 {
-    if (_CanBeSoftSelected()) {
-        // to support soft selection (mode=Object), we need to add kSelectMeshes
-        // to our selection mask.
-        MSelectionMask::SelectionType selType = MSelectionMask::kSelectMeshes;
-        return MSelectionMask(selType);
-    }
-    return MPxSurfaceShape::getShapeSelectionMask();
+    return MSelectionMask::kSelectMeshes;
 }
 
 bool
