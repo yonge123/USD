@@ -27,3 +27,4 @@ tg/simple_features/curve_issues_in_usdview
 tg/simple_features/separate_third_party_builds
 tg/simple_features/maya_export_for_clips
 houdini_variant_selection_fix
+pr/filterTypes
