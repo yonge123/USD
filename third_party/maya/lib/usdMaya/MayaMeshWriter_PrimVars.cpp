@@ -24,8 +24,10 @@
 #include "pxr/pxr.h"
 #include "usdMaya/MayaMeshWriter.h"
 
+#include "usdMaya/colorSpace.h"
 #include "usdMaya/roundTripUtil.h"
 #include "usdMaya/util.h"
+#include "usdMaya/writeUtil.h"
 
 #include "pxr/base/gf/gamma.h"
 #include "pxr/base/gf/math.h"
@@ -179,7 +181,7 @@ _LinearColorFromColorSet(
     // need to convert it to linear.
     GfVec3f c(mayaColor[0], mayaColor[1], mayaColor[2]);
     if (shouldConvertToLinear) {
-        return GfConvertDisplayToLinear(c);
+        return PxrUsdMayaColorSpace::ConvertMayaToLinear(c);
     }
     return c;
 }
@@ -495,10 +497,11 @@ bool MayaMeshWriter::_createUVPrimVar(
         interp = TfToken();
     }
 
-    UsdGeomPrimvar primVar =
-        primSchema.CreatePrimvar(name,
-                                 SdfValueTypeNames->Float2Array,
-                                 interp);
+    SdfValueTypeName uvValueType = (PxrUsdMayaWriteUtil::WriteUVAsFloat2())?
+        (SdfValueTypeNames->Float2Array) : (SdfValueTypeNames->TexCoord2fArray); 
+    UsdGeomPrimvar primVar = 
+        primSchema.CreatePrimvar(name, uvValueType, interp);
+    
     _SetAttribute(primVar.GetAttr(), data);
 
     if (!assignmentIndices.empty()) {
