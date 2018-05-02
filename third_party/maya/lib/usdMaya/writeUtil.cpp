@@ -22,6 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/pxr.h"
+#include "usdMaya/colorSpace.h"
 #include "usdMaya/writeUtil.h"
 #include "usdMaya/translatorUtil.h"
 #include "usdMaya/UserTaggedAttribute.h"
@@ -31,6 +32,7 @@
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/token.h"
 #include "pxr/base/vt/types.h"
+#include "pxr/base/tf/envSetting.h"
 #include "pxr/usd/sdf/valueTypeName.h"
 #include "pxr/usd/usd/attribute.h"
 #include "pxr/usd/usd/inherits.h"
@@ -73,6 +75,13 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+TF_DEFINE_ENV_SETTING(
+        PIXMAYA_WRITE_UV_AS_FLOAT2, true,
+        "Set to true to write uv sets as Float2Array types "
+        " and set to false to write Texture Coordinate value types "
+        "(TexCoord2h, TexCoord2f, TexCoord2d, TexCoord3h, "
+        " TexCoord3f, TexCoord3d and their associated Array types)");
+
 static
 bool
 _GetMayaAttributeNumericTypedAndUnitDataTypes(
@@ -111,6 +120,14 @@ _GetMayaAttributeNumericTypedAndUnitDataTypes(
     }
 
     return true;
+}
+
+bool
+PxrUsdMayaWriteUtil::WriteUVAsFloat2()
+{
+    static const bool writeUVAsFloat2 = 
+        TfGetEnvSetting(PIXMAYA_WRITE_UV_AS_FLOAT2);
+    return writeUVAsFloat2;
 }
 
 SdfValueTypeName
@@ -449,7 +466,7 @@ _ConvertVec(
         const SdfValueTypeName& typeName,
         const T& val) {
     return VtValue(typeName.GetRole() == SdfValueRoleNames->Color
-            ? GfConvertDisplayToLinear(val)
+            ? PxrUsdMayaColorSpace::ConvertMayaToLinear(val)
             : val);
 }
 
