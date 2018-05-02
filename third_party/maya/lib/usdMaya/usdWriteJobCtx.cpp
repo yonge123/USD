@@ -172,6 +172,14 @@ bool usdWriteJobCtx::needToTraverse(const MDagPath& curDag)
         }
     }
 
+    if (mArgs.getFilteredTypeIds().size() > 0) {
+        MFnDependencyNode mfnNode(ob);
+        if (mArgs.getFilteredTypeIds().find(mfnNode.typeId().id())
+                != mArgs.getFilteredTypeIds().end()) {
+            return false;
+        }
+    }
+
     return true;
 }
 

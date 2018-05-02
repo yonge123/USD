@@ -30,6 +30,8 @@
 #include "pxr/usd/usdGeom/tokens.h"
 
 #include <maya/MDagPath.h>
+#include <maya/MNodeClass.h>
+#include <maya/MTypeId.h>
 
 #include <ostream>
 #include <string>
@@ -127,6 +129,10 @@ operator <<(std::ostream& out, const JobExportArgs& exportArgs)
     for (const MDagPath& dagPath : exportArgs.dagPaths) {
         out << "    " << dagPath.fullPathName().asChar() << std::endl;
     }
+    out << "filteredTypeIds (" << exportArgs.getFilteredTypeIds().size() << ")" << std::endl;
+    for (unsigned int id : exportArgs.getFilteredTypeIds()) {
+        out << "    " << id << ": " << MNodeClass(MTypeId(id)).className() << std::endl;
+    }
 
     out << "chaserNames (" << exportArgs.chaserNames.size() << ")" << std::endl;
     for (const std::string& chaserName : exportArgs.chaserNames) {
@@ -154,6 +160,44 @@ void JobExportArgs::setParentScope(const std::string& ps) {
     // Otherwise this is a malformed sdfpath.
     if (!ps.empty()) {
         parentScope = ps[0] == '/' ? SdfPath(ps) : SdfPath("/" + ps);
+    }
+}
+
+void JobExportArgs::addFilteredTypeName(const MString& typeName)
+{
+    MNodeClass cls(typeName);
+    unsigned int id = cls.typeId().id();
+    if (id == 0) {
+        MGlobal::displayWarning(MString("Given excluded node type '") + typeName
+                + "' does not exist; ignoring");
+        return;
+    }
+    filteredTypeIds.insert(id);
+    // We also insert all inherited types - only way to query this is through mel,
+    // which is slower, but this should be ok, as these queries are only done
+    // "up front" when the export starts, not per-node
+    MString queryCommand("nodeType -isTypeName -derived ");
+    queryCommand += typeName;
+    MStringArray inheritedTypes;
+    MStatus status = MGlobal::executeCommand(queryCommand, inheritedTypes, false, false);
+    if (!status) {
+        MGlobal::displayWarning(MString("Error querying derived types for '") + typeName
+                + "': " + status.errorString());
+        return;
+    }
+
+    for (unsigned int i=0; i < inheritedTypes.length(); ++i) {
+        if (inheritedTypes[i].length() == 0) continue;
+        id = MNodeClass(inheritedTypes[i]).typeId().id();
+        if (id == 0) {
+            // Unfortunately, the returned list will often include weird garbage, like
+            // "THconstraint" for "constraint", which cannot be converted to a MNodeClass,
+            // so just ignore these...
+            // MGlobal::displayError(MString("Given inherited excluded node type '") + inheritedTypes[i]
+            //         + "' does not exist; ignoring");
+            continue;
+        }
+        filteredTypeIds.insert(id);
     }
 }
 
