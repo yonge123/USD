@@ -26,6 +26,7 @@
 #include "usdMaya/MayaMeshWriter.h"
 
 #include "usdMaya/meshUtil.h"
+#include "usdMaya/writeUtil.h"
 
 #include "pxr/base/gf/vec3f.h"
 #include "pxr/usd/usdGeom/mesh.h"
@@ -134,7 +135,8 @@ void MayaMeshWriter::_prependDefaultValue(UsdAttribute& attr, const UsdTimeCode&
     const auto typeName = attr.GetTypeName();
     if (typeName == SdfValueTypeNames->FloatArray) {
         _prependValue(attr, usdTime, MayaMeshWriter::_ColorSetDefaultAlpha);
-    } else if (typeName == SdfValueTypeNames->Float2Array) {
+    } else if (typeName == (PxrUsdMayaWriteUtil::WriteUVAsFloat2() ?
+                            SdfValueTypeNames->Float2Array : SdfValueTypeNames->TexCoord2fArray)) {
         _prependValue(attr, usdTime, MayaMeshWriter::_DefaultUV);
     } else if (typeName == SdfValueTypeNames->Float3Array) {
         _prependValue(attr, usdTime, MayaMeshWriter::_ColorSetDefaultRGB);
