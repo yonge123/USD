@@ -98,9 +98,9 @@ void MayaMeshWriter::_prependDefaultValue(UsdAttribute& attr, const UsdTimeCode&
     } else if (typeName == (PxrUsdMayaWriteUtil::WriteUVAsFloat2() ?
                             SdfValueTypeNames->Float2Array : SdfValueTypeNames->TexCoord2fArray)) {
         _prependValue(attr, usdTime, MayaMeshWriter::_DefaultUV);
-    } else if (typeName == SdfValueTypeNames->Float3Array) {
+    } else if (typeName == SdfValueTypeNames->Color3fArray) {
         _prependValue(attr, usdTime, MayaMeshWriter::_ColorSetDefaultRGB);
-    } else if (typeName == SdfValueTypeNames->Float4Array) {
+    } else if (typeName == SdfValueTypeNames->Color4fArray) {
         _prependValue(attr, usdTime, MayaMeshWriter::_ColorSetDefaultRGBA);
     }
 };
