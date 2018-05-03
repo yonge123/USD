@@ -94,12 +94,16 @@ MayaMeshWriter::MayaMeshWriter(
 void MayaMeshWriter::_prependDefaultValue(UsdAttribute& attr, const UsdTimeCode& usdTime) {
     const auto typeName = attr.GetTypeName();
     if (typeName == SdfValueTypeNames->FloatArray) {
-        _prependValue(attr, usdTime, MayaMeshWriter::_ColorSetDefaultAlpha);
+        _prependValue(attr, usdTime, attr.GetName() == UsdGeomTokens->primvarsDisplayOpacity ?
+                                     MayaMeshWriter::_ShaderDefaultAlpha :
+                                     MayaMeshWriter::_ColorSetDefaultAlpha);
     } else if (typeName == (PxrUsdMayaWriteUtil::WriteUVAsFloat2() ?
                             SdfValueTypeNames->Float2Array : SdfValueTypeNames->TexCoord2fArray)) {
         _prependValue(attr, usdTime, MayaMeshWriter::_DefaultUV);
     } else if (typeName == SdfValueTypeNames->Color3fArray) {
-        _prependValue(attr, usdTime, MayaMeshWriter::_ColorSetDefaultRGB);
+        _prependValue(attr, usdTime, attr.GetName() == UsdGeomTokens->primvarsDisplayColor ?
+                                     MayaMeshWriter::_ShaderDefaultRGB :
+                                     MayaMeshWriter::_ColorSetDefaultRGB);
     } else if (typeName == SdfValueTypeNames->Color4fArray) {
         _prependValue(attr, usdTime, MayaMeshWriter::_ColorSetDefaultRGBA);
     }
@@ -108,22 +112,23 @@ void MayaMeshWriter::_prependDefaultValue(UsdAttribute& attr, const UsdTimeCode&
 // virtual
 void MayaMeshWriter::postExport()
 {
-    auto shiftIndices = [](UsdAttribute& attr, const UsdTimeCode& usdTime) {
-        VtArray<int> indices;
-        if (attr.Get(&indices, usdTime)) {
-            for (auto& id: indices) {
-                id += 1;
-            }
-            attr.Set(indices, usdTime);
+    auto shiftPrimvar = [](const UsdGeomPrimvar& primvar) {
+        if (!primvar) {
+            return;
         }
-    };
+        auto shiftIndices = [](UsdAttribute& attr, const UsdTimeCode& usdTime) {
+            VtArray<int> indices;
+            if (attr.Get(&indices, usdTime)) {
+                for (auto& id: indices) {
+                    id += 1;
+                }
+                attr.Set(indices, usdTime);
+            }
+        };
 
-    UsdGeomMesh primSchema(mUsdPrim);
-
-    for (auto& primvar: primSchema.GetPrimvars()) {
         const auto unauthoredValueIndex = primvar.GetUnauthoredValuesIndex();
         if (unauthoredValueIndex == -1) {
-            continue;
+            return;
         }
 
         // Either 0 or -1.
@@ -153,6 +158,12 @@ void MayaMeshWriter::postExport()
                 _prependDefaultValue(attr, timeSample);
             }
         }
+    };
+
+    UsdGeomMesh primSchema(mUsdPrim);
+
+    for (auto& primvar: primSchema.GetPrimvars()) {
+        shiftPrimvar(primvar);
     }
 }
 
