@@ -77,6 +77,8 @@ struct JobExportArgs
     bool exportInstances;
 
     bool exportAnimation;
+    bool exportAsClip;
+    UsdTimeCode clipStartTime;
     bool excludeInvisible;
     bool exportDefaultCameras;
     bool exportSkin;
