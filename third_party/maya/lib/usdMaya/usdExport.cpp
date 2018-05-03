@@ -89,6 +89,8 @@ MSyntax usdExport::createSyntax()
     syntax.makeFlagMultiUse("-frameSample");
 
     syntax.addFlag("-ro"  , "-renderableOnly", MSyntax::kNoArg);
+    syntax.addFlag("-ft" , "-filterTypes", MSyntax::kString);
+    syntax.makeFlagMultiUse("-filterTypes");
     syntax.addFlag("-sl"  , "-selection", MSyntax::kNoArg);
     syntax.addFlag("-dc"  , "-defaultCameras", MSyntax::kNoArg);
     syntax.addFlag("-rlm" , "-renderLayerMode" , MSyntax::kString);
@@ -372,6 +374,12 @@ try
     }
 
     jobArgs.excludeInvisible = argData.isFlagSet("renderableOnly");
+    unsigned int numFilteredTypes = argData.numberOfFlagUses("filterTypes");
+    for (unsigned int i=0; i < numFilteredTypes; i++) {
+        MArgList tmpArgList;
+        argData.getFlagArgumentList("filterTypes", i, tmpArgList);
+        jobArgs.addFilteredTypeName(tmpArgList.asString(0));
+    }
     jobArgs.exportDefaultCameras = argData.isFlagSet("defaultCameras");
 
     if (argData.isFlagSet("renderLayerMode")) {
