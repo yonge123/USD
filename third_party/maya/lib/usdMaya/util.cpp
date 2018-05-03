@@ -22,6 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/pxr.h"
+#include "usdMaya/colorSpace.h"
 #include "usdMaya/util.h"
 #include "usdMaya/debugCodes.h"
 
@@ -661,7 +662,7 @@ _GetColorAndTransparencyFromLambert(
             for (int j=0;j<3;j++) {
                 displayColor[j] = color[j];
             }
-            *rgb = GfConvertDisplayToLinear(displayColor);
+            *rgb = PxrUsdMayaColorSpace::ConvertMayaToLinear(displayColor);
         }
         if (alpha) {
             MColor trn = lambertFn.transparency();
@@ -697,7 +698,7 @@ _GetColorAndTransparencyFromDepNode(
         for (int j=0; j<3; j++) {
             colorPlug.child(j).getValue(displayColor[j]);
         }
-        *rgb = GfConvertDisplayToLinear(displayColor);
+        *rgb = PxrUsdMayaColorSpace::ConvertMayaToLinear(displayColor);
     }
 
     if (alpha) {
@@ -1021,83 +1022,21 @@ PxrUsdMayaUtil::CompressFaceVaryingPrimvarIndices(
 }
 
 bool
-PxrUsdMayaUtil::AddUnassignedUVIfNeeded(
-        VtArray<GfVec2f>* uvData,
-        VtArray<int>* assignmentIndices,
-        int* unassignedValueIndex,
-        const GfVec2f& defaultUV)
-{
-    if (!assignmentIndices || assignmentIndices->empty()) {
+PxrUsdMayaUtil::SetUnassignedValueIndex(
+    VtArray<int>* assignmentIndices,
+    int* unassignedValueIndex) {
+    if (assignmentIndices == nullptr || unassignedValueIndex == nullptr) {
         return false;
     }
 
     *unassignedValueIndex = -1;
-
-    for (size_t i = 0; i < assignmentIndices->size(); ++i) {
-        if ((*assignmentIndices)[i] >= 0) {
-            // This component has an assignment, so skip it.
-            continue;
+    for (auto& index: *assignmentIndices) {
+        if (index < 0) {
+            index = -1;
+            *unassignedValueIndex = 0;
         }
-
-        // We found an unassigned index. Add the unassigned value to uvData
-        // if we haven't already.
-        if (*unassignedValueIndex < 0) {
-            if (uvData) {
-                uvData->push_back(defaultUV);
-            }
-            *unassignedValueIndex = uvData->size() - 1;
-        }
-
-        // Assign the component the unassigned value index.
-        (*assignmentIndices)[i] = *unassignedValueIndex;
     }
-
-    return true;
-}
-
-bool
-PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
-        VtArray<GfVec3f>* RGBData,
-        VtArray<float>* AlphaData,
-        VtArray<int>* assignmentIndices,
-        int* unassignedValueIndex,
-        const GfVec3f& defaultRGB,
-        const float defaultAlpha)
-{
-    if (!assignmentIndices || assignmentIndices->empty()) {
-        return false;
-    }
-
-    if (RGBData && AlphaData && (RGBData->size() != AlphaData->size())) {
-        TF_CODING_ERROR("Unequal sizes for color (%zu) and opacity (%zu)",
-                        RGBData->size(), AlphaData->size());
-    }
-
-    *unassignedValueIndex = -1;
-
-    for (size_t i=0; i < assignmentIndices->size(); ++i) {
-        if ((*assignmentIndices)[i] >= 0) {
-            // This component has an assignment, so skip it.
-            continue;
-        }
-
-        // We found an unassigned index. Add unassigned values to RGBData and
-        // AlphaData if we haven't already.
-        if (*unassignedValueIndex < 0) {
-            if (RGBData) {
-                RGBData->push_back(defaultRGB);
-            }
-            if (AlphaData) {
-                AlphaData->push_back(defaultAlpha);
-            }
-            *unassignedValueIndex = RGBData->size() - 1;
-        }
-
-        // Assign the component the unassigned value index.
-        (*assignmentIndices)[i] = *unassignedValueIndex;
-    }
-
-    return true;
+    return *unassignedValueIndex == 0;
 }
 
 bool
@@ -1264,7 +1203,7 @@ _GetVec(
 {
     T ret = val.UncheckedGet<T>();
     if (attr.GetRoleName() == SdfValueRoleNames->Color)  {
-        return GfConvertLinearToDisplay(ret);
+        return PxrUsdMayaColorSpace::ConvertMayaToLinear(ret);
     }   
     return ret;
 
