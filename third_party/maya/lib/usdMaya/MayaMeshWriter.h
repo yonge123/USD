@@ -52,6 +52,8 @@ class MayaMeshWriter : public MayaTransformWriter
     virtual void write(const UsdTimeCode &usdTime) override;
     virtual bool exportsGprims() const override;
 
+    virtual void postExport() override;
+
   protected:
     bool writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &primSchema);
 
@@ -146,6 +148,10 @@ class MayaMeshWriter : public MayaTransformWriter
         const bool clamped,
         const bool authored);
 
+    /// Prepends a default value to an attribute containing primvars.
+    void _prependDefaultValue(UsdAttribute& attr,
+                              const UsdTimeCode& usdTime);
+
     /// Default value to use when collecting UVs from a UV set and a component
     /// has no authored value.
     static const GfVec2f _DefaultUV;
@@ -159,6 +165,7 @@ class MayaMeshWriter : public MayaTransformWriter
     /// component has no authored value.
     static const GfVec3f _ColorSetDefaultRGB;
     static const float _ColorSetDefaultAlpha;
+    static const GfVec4f _ColorSetDefaultRGBA;
 
     /// Names for color sets that are interpreted as motion vectors.
     static const std::vector<MString> _MotionVectorNames;
