@@ -239,13 +239,13 @@ class testUsdExportDisplayColor(unittest.TestCase):
         # opacity 0.
         oneFace = self._GetCubeMesh('ShadingGroupNoShaderOneFace')
         expectedColors = Vt.Vec3fArray([
-            (1, 0, 0),  
+            (0.5, 0.5, 0.5),
+            (1, 0, 0),
             (0, 0, 1), 
-            (0.21763764, 0.21763764, 0.21763764),  # initialShadingGroup
-            (0.5, 0.5, 0.5)])
-        expectedOpacities = Vt.FloatArray([1, 1, 1, 0])
-        expectedIndices = [3, 1, 2, 2, 0, 2]
-        expectedUnauthoredValuesIndex = 3
+            (0.21763764, 0.21763764, 0.21763764)])  # initialShadingGroup
+        expectedOpacities = Vt.FloatArray([0, 1, 1, 1])
+        expectedIndices = [0, 2, 3, 3, 1, 3]
+        expectedUnauthoredValuesIndex = 0
         self._AssertMeshDisplayColorAndOpacity(oneFace, expectedColors,
             expectedOpacities, UsdGeom.Tokens.uniform,
             expectedIndices, expectedUnauthoredValuesIndex)
