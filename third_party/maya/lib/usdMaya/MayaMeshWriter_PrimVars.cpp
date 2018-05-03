@@ -326,7 +326,7 @@ bool MayaMeshWriter::_GetMeshColorSetData(
         // If we have a color/alpha value, add it to the data to be returned.
         if (colorSetData[fvi] != unsetColor) {
             GfVec3f rgbValue = _ColorSetDefaultRGB;
-            float alphaValue = _ColorSetDefaultAlpha;
+            float alphaValue = _ColorSetDefaultRGBA[3];
 
             if (useShaderColorFallback              || 
                     (*colorSetRep == MFnMesh::kRGB) || 
@@ -384,7 +384,7 @@ bool MayaMeshWriter::_createAlphaPrimVar(
 
     if (!assignmentIndices.empty()) {
         _SetAttribute(primVar.CreateIndicesAttr(), assignmentIndices, usdTime);
-        if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
+        if (unassignedValueIndex == 0) {
            primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
         }
     }
@@ -424,7 +424,7 @@ bool MayaMeshWriter::_createRGBPrimVar(
 
     if (!assignmentIndices.empty()) {
         _SetAttribute(primVar.CreateIndicesAttr(), assignmentIndices, usdTime);
-        if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
+        if (unassignedValueIndex == 0) {
            primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
         }
     }
@@ -471,7 +471,7 @@ bool MayaMeshWriter::_createRGBAPrimVar(
 
     if (!assignmentIndices.empty()) {
         _SetAttribute(primVar.CreateIndicesAttr(), assignmentIndices, usdTime);
-        if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
+        if (unassignedValueIndex == 0) {
            primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
         }
     }
@@ -511,7 +511,7 @@ bool MayaMeshWriter::_createUVPrimVar(
 
     if (!assignmentIndices.empty()) {
         _SetAttribute(primVar.CreateIndicesAttr(), assignmentIndices, usdTime);
-        if (unassignedValueIndex != primVar.GetUnauthoredValuesIndex()) {
+        if (unassignedValueIndex == 0) {
            primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
         }
     }
@@ -585,7 +585,7 @@ bool MayaMeshWriter::_addDisplayPrimvars(
 
         if (!assignmentIndices.empty()) {
             displayColor.SetIndices(assignmentIndices);
-            if (unassignedValueIndex != displayColor.GetUnauthoredValuesIndex()) {
+            if (unassignedValueIndex == 0) {
                displayColor.SetUnauthoredValuesIndex(unassignedValueIndex);
             }
         }
@@ -617,7 +617,7 @@ bool MayaMeshWriter::_addDisplayPrimvars(
 
             if (!assignmentIndices.empty()) {
                 displayOpacity.SetIndices(assignmentIndices);
-                if (unassignedValueIndex != displayOpacity.GetUnauthoredValuesIndex()) {
+                if (unassignedValueIndex == 0) {
                    displayOpacity.SetUnauthoredValuesIndex(unassignedValueIndex);
                 }
             }
