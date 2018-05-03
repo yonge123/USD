@@ -149,8 +149,8 @@ class MayaMeshWriter : public MayaTransformWriter
         const bool authored);
 
     /// Prepends a default value to an attribute containing primvars.
-    void _prependDefaultValue(UsdAttribute& attr,
-                              const UsdTimeCode& usdTime);
+    static void _prependDefaultValue(UsdAttribute& attr,
+                                     const UsdTimeCode& usdTime);
 
     /// Default value to use when collecting UVs from a UV set and a component
     /// has no authored value.
