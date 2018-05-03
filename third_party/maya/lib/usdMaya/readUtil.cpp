@@ -23,10 +23,13 @@
 //
 
 #include "usdMaya/readUtil.h"
+#include "usdMaya/colorSpace.h"
+#include "usdMaya/util.h"
 
 #include "pxr/base/gf/gamma.h"
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/vt/array.h"
+#include "pxr/base/tf/envSetting.h"
 #include "pxr/usd/sdf/assetPath.h"
 
 #include <maya/MFnAttribute.h>
@@ -50,6 +53,18 @@
 #include <maya/MVectorArray.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+TF_DEFINE_ENV_SETTING(
+        PIXMAYA_READ_FLOAT2_AS_UV, true,
+        "Set to false to disable ability to read Float2 type as a UV set");
+
+bool
+PxrUsdMayaReadUtil::ReadFloat2AsUV()
+{
+    static const bool readFloat2AsUV = 
+        TfGetEnvSetting(PIXMAYA_READ_FLOAT2_AS_UV);
+    return readFloat2AsUV;
+}
 
 MObject
 PxrUsdMayaReadUtil::FindOrCreateMayaAttr(
@@ -336,9 +351,12 @@ T
 _ConvertVec(
         const MPlug& plug,
         const T& val) {
-    return MFnAttribute(plug.attribute()).isUsedAsColor()
-            ? GfConvertLinearToDisplay(val)
-            : val;
+    if (MFnAttribute(plug.attribute()).isUsedAsColor()) {
+        return PxrUsdMayaColorSpace::ConvertLinearToMaya(val);
+    }
+    else {
+        return val;
+    }
 }
 
 bool PxrUsdMayaReadUtil::SetMayaAttr(
