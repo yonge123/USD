@@ -149,7 +149,6 @@ class testUsdExportColorSets(unittest.TestCase):
             self.assertFalse(primvar.GetAttr().HasAuthoredValueOpinion())
             self.assertEqual(primvar.Get(), None)
         else:
-            isSparse = expectedUnauthoredValuesIndex == 0
             for idx in range(len(primvar.Get())):
                 val1 = primvar.Get()[idx]
                 val2 = expectedValues[idx]
