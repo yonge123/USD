@@ -205,14 +205,14 @@ class testUsdExportDisplayColor(unittest.TestCase):
         cubeMesh = self._GetCubeMesh('OneFaceCube')
 
         expectedColors = Vt.Vec3fArray([
-            (0.0, 1.0, 0.0),
-            (0.5, 0.5, 0.5)])
+            (0.5, 0.5, 0.5),
+            (0.0, 1.0, 0.0)])
         expectedOpacities = Vt.FloatArray([
-            0.7,
-            0.0])
+            0.0,
+            0.7])
 
-        expectedIndices = Vt.IntArray([0, 1, 1, 1, 1, 1])
-        expectedUnauthoredValuesIndex = 1
+        expectedIndices = Vt.IntArray([1, 0, 0, 0, 0, 0])
+        expectedUnauthoredValuesIndex = 0
         self._AssertMeshDisplayColorAndOpacity(cubeMesh, expectedColors,
             expectedOpacities, UsdGeom.Tokens.uniform,
             expectedIndices, expectedUnauthoredValuesIndex)
