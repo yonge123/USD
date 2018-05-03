@@ -128,6 +128,14 @@ usdTranslatorExport::writer(const MFileObject &file,
             if (theOption[0] == MString("renderableOnly")) {
                 jobArgs.excludeInvisible = theOption[1].asInt();
             }
+            if (theOption[0] == MString("filterTypes")) {
+                jobArgs.clearFilteredTypeIds();
+                MStringArray filteredTypes;
+                theOption[1].split(',', filteredTypes);
+                for (unsigned int i=0; i < filteredTypes.length(); ++i) {
+                    jobArgs.addFilteredTypeName(filteredTypes[i].asChar());
+                }
+            }
             if (theOption[0] == MString("allCameras")) {
                 jobArgs.exportDefaultCameras = theOption[1].asInt();
             }
@@ -202,7 +210,7 @@ usdTranslatorExport::writer(const MFileObject &file,
             }
             if (theOption[0] == MString("parentScope")) {
                 jobArgs.setParentScope(theOption[1].asChar());
-            }            
+            }
         }
         // Now resync start and end frame based on animation mode
         if (jobArgs.exportAnimation) {
