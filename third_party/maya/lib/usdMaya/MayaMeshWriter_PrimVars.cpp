@@ -326,7 +326,7 @@ bool MayaMeshWriter::_GetMeshColorSetData(
         // If we have a color/alpha value, add it to the data to be returned.
         if (colorSetData[fvi] != unsetColor) {
             GfVec3f rgbValue = _ColorSetDefaultRGB;
-            float alphaValue = _ColorSetDefaultRGBA[3];
+            float alphaValue = _ColorSetDefaultAlpha;
 
             if (useShaderColorFallback              || 
                     (*colorSetRep == MFnMesh::kRGB) || 
