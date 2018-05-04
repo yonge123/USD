@@ -173,7 +173,7 @@ class testUsdExportUVSets(unittest.TestCase):
         usdCubeMesh = self._GetCubeUsdMesh('OneMissingFaceCube')
 
         expectedValues = [
-            Gf.Vec2f(-1.234567, -1.234567),
+            Gf.Vec2f(-1e+30, -1e+30),
             Gf.Vec2f(0.375, 0),
             Gf.Vec2f(0.625, 0),
             Gf.Vec2f(0.625, 0.25),
@@ -216,7 +216,7 @@ class testUsdExportUVSets(unittest.TestCase):
         usdCubeMesh = self._GetCubeUsdMesh('OneAssignedFaceCube')
 
         expectedValues = [
-            Gf.Vec2f(-1.234567, -1.234567),
+            Gf.Vec2f(-1e+30, -1e+30),
             Gf.Vec2f(0.375, 0.5),
             Gf.Vec2f(0.625, 0.5),
             Gf.Vec2f(0.625, 0.75),
