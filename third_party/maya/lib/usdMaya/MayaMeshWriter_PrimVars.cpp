@@ -565,6 +565,7 @@ void MayaMeshWriter::_writeMotionVectors(
 
 bool MayaMeshWriter::_addDisplayPrimvars(
         UsdGeomGprim &primSchema,
+        const UsdTimeCode& usdTime,
         const MFnMesh::MColorRepresentation colorRep,
         const VtArray<GfVec3f>& RGBData,
         const VtArray<float>& AlphaData,
@@ -581,10 +582,10 @@ bool MayaMeshWriter::_addDisplayPrimvars(
         if (interpolation != displayColor.GetInterpolation()) {
             displayColor.SetInterpolation(interpolation);
         }
-        _SetAttribute(displayColor.GetAttr(), RGBData);
+        _SetAttribute(displayColor.GetAttr(), RGBData, usdTime);
 
         if (!assignmentIndices.empty()) {
-            displayColor.SetIndices(assignmentIndices);
+            _SetAttribute(displayColor.CreateIndicesAttr(), assignmentIndices, usdTime);
             if (unassignedValueIndex == 0) {
                displayColor.SetUnauthoredValuesIndex(unassignedValueIndex);
             }
@@ -613,10 +614,10 @@ bool MayaMeshWriter::_addDisplayPrimvars(
             if (interpolation != displayOpacity.GetInterpolation()) {
                 displayOpacity.SetInterpolation(interpolation);
             }
-            _SetAttribute(displayOpacity.GetAttr(), AlphaData);
+            _SetAttribute(displayOpacity.GetAttr(), AlphaData, usdTime);
 
             if (!assignmentIndices.empty()) {
-                displayOpacity.SetIndices(assignmentIndices);
+                _SetAttribute(displayOpacity.CreateIndicesAttr(), assignmentIndices, usdTime);
                 if (unassignedValueIndex == 0) {
                    displayOpacity.SetUnauthoredValuesIndex(unassignedValueIndex);
                 }
