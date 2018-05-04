@@ -139,6 +139,7 @@ class MayaMeshWriter : public MayaTransformWriter
     /// authored opinions for them.
     bool _addDisplayPrimvars(
         UsdGeomGprim &primSchema,
+        const UsdTimeCode& usdTime,
         const MFnMesh::MColorRepresentation colorRep,
         const VtArray<GfVec3f>& RGBData,
         const VtArray<float>& AlphaData,

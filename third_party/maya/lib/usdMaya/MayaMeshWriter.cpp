@@ -487,6 +487,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             // We tag the resulting displayColor/displayOpacity primvar as
             // authored to make sure we reconstruct the color set on import.
             _addDisplayPrimvars(primSchema,
+                                usdTime,
                                 colorSetRep,
                                 RGBData,
                                 AlphaData,
@@ -548,6 +549,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
         // reconstruct a color set from them on import since they originated
         // from the bound shader(s), so the authored flag is set to false.
         _addDisplayPrimvars(primSchema,
+                            usdTime,
                             MFnMesh::kRGBA,
                             shadersRGBData,
                             shadersAlphaData,
