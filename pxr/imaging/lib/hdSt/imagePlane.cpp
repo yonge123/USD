@@ -98,20 +98,18 @@ HdStImagePlane::_UpdateDrawItem(
 
     // auto materialShader = drawItem->GetMaterialShader();
 
-    // FIXME
     // TODO: We'll need points there and later on uvs
     // to control the texture mapping.
-    //if (HdChangeTracker::IsAnyPrimVarDirty(*dirtyBits, id)) {
-    //    _PopulateVertexPrimvars(id, sceneDelegate, drawItem, dirtyBits);
-    //}
+    if (HdChangeTracker::IsAnyPrimvarDirty(*dirtyBits, id)) {
+        _PopulateVertexPrimvars(id, sceneDelegate, drawItem, dirtyBits);
+    }
 
     if (*dirtyBits & HdChangeTracker::DirtyTopology) {
         _PopulateTopology(id, sceneDelegate, drawItem, dirtyBits);
     }
 
-    // FIXME
     // VertexPrimvar may be null, if there are no points in the prim.
-    // TF_VERIFY(drawItem->GetConstantPrimVarRange());
+    TF_VERIFY(drawItem->GetConstantPrimvarRange());
 }
 
 void
@@ -121,40 +119,41 @@ HdStImagePlane::_PopulateVertexPrimvars(
     HdStDrawItem* drawItem,
     HdDirtyBits* dirtyBits) {
 
-    // FIXME
-    /*const HdStResourceRegistrySharedPtr& resourceRegistry =
+    const HdStResourceRegistrySharedPtr& resourceRegistry =
         boost::static_pointer_cast<HdStResourceRegistry>(
-            sceneDelegate->GetRenderIndex().GetResourceRegistry());*/
+            sceneDelegate->GetRenderIndex().GetResourceRegistry());
 
-    /*TfTokenVector primVarNames = GetPrimvarVertexNames(sceneDelegate);
-    const TfTokenVector& vars = GetPrimvarVaryingNames(sceneDelegate);
-    primVarNames.insert(primVarNames.end(), vars.begin(), vars.end());
+    HdPrimvarDescriptorVector primvars =
+        GetPrimvarDescriptors(sceneDelegate, HdInterpolationVertex);
+    HdPrimvarDescriptorVector varyingPvs =
+        GetPrimvarDescriptors(sceneDelegate, HdInterpolationVarying);
+    primvars.insert(primvars.end(), varyingPvs.begin(), varyingPvs.end());
 
     HdBufferSourceVector sources;
-    sources.reserve(primVarNames.size());
+    sources.reserve(primvars.size());
 
     size_t pointsIndexInSourceArray = std::numeric_limits<size_t>::max();
 
-    for (const auto& nameIt: primVarNames) {
-        if (!HdChangeTracker::IsPrimVarDirty(*dirtyBits, id, nameIt)) {
+    for (const auto& primvar: primvars) {
+        if (!HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, primvar.name)) {
             continue;
         }
 
-        auto value = GetPrimvar(sceneDelegate, nameIt);
+        auto value = GetPrimvar(sceneDelegate, primvar.name);
 
         if (!value.IsEmpty()) {
-            if (nameIt == HdTokens->points) {
+            if (primvar.name == HdTokens->points) {
                 pointsIndexInSourceArray = sources.size();
             }
 
-            HdBufferSourceSharedPtr source(new HdVtBufferSource(nameIt, value));
+            HdBufferSourceSharedPtr source(new HdVtBufferSource(primvar.name, value));
             sources.push_back(source);
         }
     }
 
     if (sources.empty()) { return; }
 
-    auto vertexPrimVarRange = drawItem->GetVertexPrimVarRange();
+    auto vertexPrimVarRange = drawItem->GetVertexPrimvarRange();
     if (!vertexPrimVarRange ||
         !vertexPrimVarRange->IsValid()) {
         HdBufferSpecVector bufferSpecs;
@@ -163,11 +162,11 @@ HdStImagePlane::_PopulateVertexPrimvars(
         }
 
         auto range = resourceRegistry->AllocateNonUniformBufferArrayRange(
-                HdTokens->primVar, bufferSpecs);
+                HdTokens->primvar, bufferSpecs);
         _sharedData.barContainer.Set(
-            drawItem->GetDrawingCoord()->GetVertexPrimVarIndex(), range);
+            drawItem->GetDrawingCoord()->GetVertexPrimvarIndex(), range);
     } else if (pointsIndexInSourceArray != std::numeric_limits<size_t>::max()) {
-        const auto previousRange = drawItem->GetVertexPrimVarRange()->GetNumElements();
+        const auto previousRange = drawItem->GetVertexPrimvarRange()->GetNumElements();
         const auto newRange = sources[pointsIndexInSourceArray]->GetNumElements();
 
         if (previousRange != newRange) {
@@ -176,7 +175,7 @@ HdStImagePlane::_PopulateVertexPrimvars(
     }
 
     resourceRegistry->AddSources(
-        drawItem->GetVertexPrimVarRange(), sources);*/
+        drawItem->GetVertexPrimvarRange(), sources);
 }
 
 void
