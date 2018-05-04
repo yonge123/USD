@@ -5,6 +5,7 @@
 
 #include "pxr/usdImaging/usdImaging/delegate.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
+#include "pxr/usdImaging/usdImaging/indexProxy.h"
 
 #include "pxr/imaging/hd/imagePlane.h"
 
@@ -39,12 +40,11 @@ UsdImagingImagePlaneAdapter::TrackVariability(
     BaseAdapter::TrackVariability(
         prim, cachePath, timeVaryingBits, instancerContext);
 
-    // FIXME
-    /*_IsVarying(
+    _IsVarying(
         prim,
         UsdGeomTokens->points,
         HdChangeTracker::DirtyPoints,
-        UsdImagingTokens->usdVaryingPrimVar,
+        UsdImagingTokens->usdVaryingPrimvar,
         timeVaryingBits, false);
 
     if (!_IsVarying(
@@ -58,7 +58,7 @@ UsdImagingImagePlaneAdapter::TrackVariability(
             HdChangeTracker::DirtyTopology,
             UsdImagingTokens->usdVaryingTopology,
             timeVaryingBits, false);
-    }*/
+    }
 }
 
 void
@@ -84,14 +84,11 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
         VtValue& pointsValues = valueCache->GetPoints(cachePath);
         pointsValues = vertices;
 
-
-        // FIXME
-        /*UsdImagingValueCache::PrimvarInfo primvar;
-        primvar.name = HdTokens->points;
-        primvar.interpolation = UsdGeomTokens->vertex;
-
-        PrimvarInfoVector& primvars = valueCache->GetPrimvars(cachePath);
-        _MergePrimvar(primvar, &primvars);*/
+        _MergePrimvar(
+            &valueCache->GetPrimvars(cachePath),
+            HdTokens->points,
+            HdInterpolationVertex,
+            HdPrimvarRoleTokens->point);
     }
 
     if (requestedBits & HdChangeTracker::DirtyTopology) {
@@ -119,9 +116,7 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
 
 bool
 UsdImagingImagePlaneAdapter::IsSupported(const UsdImagingIndexProxy* index) const {
-    return false;
-    // FIXME
-    // return index->IsRprimTypeSupported(HdPrimTypeTokens->imagePlane);
+    return index->IsRprimTypeSupported(HdPrimTypeTokens->imagePlane);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
