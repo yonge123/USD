@@ -811,7 +811,15 @@ UsdMayaGLBatchRenderer::TestIntersection(
         return false;
     }
 
-    if (_UpdateSelectionFrameStamp(context.getFrameStamp())) {
+    // FIXME: fix so we don't re-run the same selection query
+    // for every single proxyShape .getFrameStep() does not
+    // uniquely identify the selection event, though - just
+    // the last render. We would either need to also save all
+    // the selection info, do something similar to what
+    // is done for legacy selection.
+    // Going to leave this to Pixar to fix for now, though.
+//    if (_UpdateSelectionFrameStamp(context.getFrameStamp())) {
+    {
         _ComputeSelection(_shapeAdapterBuckets,
                           viewMatrix,
                           projectionMatrix,
