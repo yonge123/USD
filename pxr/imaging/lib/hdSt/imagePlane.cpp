@@ -40,6 +40,7 @@ HdStImagePlane::_GetInitialDirtyBits() const {
                        | HdChangeTracker::DirtyTransform
                        | HdChangeTracker::DirtyPrimID
                        | HdChangeTracker::DirtyRepr
+                       | HdChangeTracker::DirtyPrimvar
                        | HdChangeTracker::DirtyMaterialId
                        | HdChangeTracker::DirtyVisibility;
 
