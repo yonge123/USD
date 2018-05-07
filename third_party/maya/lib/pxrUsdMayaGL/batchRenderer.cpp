@@ -680,12 +680,11 @@ void UsdMayaGLBatchRenderer::DrawCustomCollection(
     _Render(viewMatrix, projectionMatrix, viewport, items);
 }
 
-bool
+const HdxIntersector::Hit*
 UsdMayaGLBatchRenderer::TestIntersection(
         const PxrMayaHdShapeAdapter* shapeAdapter,
         M3dView& view,
-        const bool singleSelection,
-        GfVec3f* hitPoint)
+        const bool singleSelection)
 {
     // Legacy viewport implementation.
     //
@@ -765,33 +764,26 @@ UsdMayaGLBatchRenderer::TestIntersection(
             // selection operation.
             view.scheduleRefresh();
         }
-
-        return false;
     }
-
-    if (hitPoint) {
-        *hitPoint = hitInfo->worldSpaceHitPoint;
+    else {
+        TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg(
+            "FOUND HIT:\n"
+            "    delegateId: %s\n"
+            "    objectId  : %s\n"
+            "    ndcDepth  : %f\n",
+            hitInfo->delegateId.GetText(),
+            hitInfo->objectId.GetText(),
+            hitInfo->ndcDepth);
     }
-
-    TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg(
-        "FOUND HIT:\n"
-        "    delegateId: %s\n"
-        "    objectId  : %s\n"
-        "    ndcDepth  : %f\n",
-        hitInfo->delegateId.GetText(),
-        hitInfo->objectId.GetText(),
-        hitInfo->ndcDepth);
-
-    return true;
+    return hitInfo;
 }
 
-bool
+const HdxIntersector::Hit*
 UsdMayaGLBatchRenderer::TestIntersection(
         const PxrMayaHdShapeAdapter* shapeAdapter,
         const MHWRender::MSelectionInfo& selectInfo,
         const MHWRender::MDrawContext& context,
-        const bool singleSelection,
-        GfVec3f* hitPoint)
+        const bool singleSelection)
 {
     // Viewport 2.0 implementation.
 
@@ -799,7 +791,7 @@ UsdMayaGLBatchRenderer::TestIntersection(
     // setup, or with no shape adapters registered.
     if (!_renderIndex || _shapeAdapterBuckets.empty()) {
         _selectResults.clear();
-        return false;
+        return nullptr;
     }
 
     GfMatrix4d viewMatrix;
@@ -808,7 +800,7 @@ UsdMayaGLBatchRenderer::TestIntersection(
                                             context,
                                             viewMatrix,
                                             projectionMatrix)) {
-        return false;
+        return nullptr;
     }
 
     if (_UpdateSelectionFrameStamp(context.getFrameStamp())) {
@@ -820,24 +812,18 @@ UsdMayaGLBatchRenderer::TestIntersection(
 
     const HdxIntersector::Hit* hitInfo =
         TfMapLookupPtr(_selectResults, shapeAdapter->GetDelegateID());
-    if (!hitInfo) {
-        return false;
+    if (hitInfo) {
+        TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg(
+            "FOUND HIT:\n"
+            "    delegateId: %s\n"
+            "    objectId  : %s\n"
+            "    ndcDepth  : %f\n",
+            hitInfo->delegateId.GetText(),
+            hitInfo->objectId.GetText(),
+            hitInfo->ndcDepth);
     }
 
-    if (hitPoint) {
-        *hitPoint = hitInfo->worldSpaceHitPoint;
-    }
-
-    TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg(
-        "FOUND HIT:\n"
-        "    delegateId: %s\n"
-        "    objectId  : %s\n"
-        "    ndcDepth  : %f\n",
-        hitInfo->delegateId.GetText(),
-        hitInfo->objectId.GetText(),
-        hitInfo->ndcDepth);
-
-    return true;
+    return hitInfo;
 }
 
 bool
@@ -845,7 +831,7 @@ UsdMayaGLBatchRenderer::TestIntersectionCustomCollection(
         const HdRprimCollection& collection,
         const GfMatrix4d& viewMatrix,
         const GfMatrix4d& projectionMatrix,
-        GfVec3d* hitPoint)
+        HdxIntersector::Hit* hit)
 {
     // Custom collection implementation.
     // Differs from viewport implementations in that it doesn't rely on
@@ -861,8 +847,8 @@ UsdMayaGLBatchRenderer::TestIntersectionCustomCollection(
 
     HdxIntersector::HitSet hits;
     if (_TestIntersection(collection, params, true, &hits)) {
-        if (hitPoint) {
-            *hitPoint = hits.begin()->worldSpaceHitPoint;
+        if (hit) {
+            *hit = *hits.begin();
         }
         return true;
     }

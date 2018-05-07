@@ -217,20 +217,19 @@ UsdMayaProxyDrawOverride::userSelect(
         return false;
     }
 
-    GfVec3f batchHitPoint;
-    const bool didHit =
+    const HdxIntersector::Hit* hit =
         UsdMayaGLBatchRenderer::GetInstance().TestIntersection(
             &_shapeAdapter,
             selectInfo,
             context,
-            selectInfo.singleSelection(),
-            &batchHitPoint);
+            selectInfo.singleSelection());
 
-    if (didHit) {
-        hitPoint = MPoint(batchHitPoint[0], batchHitPoint[1], batchHitPoint[2]);
+    if (hit) {
+        hitPoint = MPoint(hit->worldSpaceHitPoint[0],
+                hit->worldSpaceHitPoint[1], hit->worldSpaceHitPoint[2]);
     }
 
-    return didHit;
+    return bool(hit);
 }
 
 #endif // MAYA_API_VERSION >= 201800

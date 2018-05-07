@@ -179,27 +179,25 @@ public:
     /// Tests the object from the given shape adapter for intersection with
     /// a given view using the legacy viewport.
     ///
-    /// \p hitPoint yields the point of intersection if \c true is returned.
+    /// \returns a pointer to the hitIntersection object, or nullptr if no hit.
     ///
     PXRUSDMAYAGL_API
-    bool TestIntersection(
+    const HdxIntersector::Hit* TestIntersection(
             const PxrMayaHdShapeAdapter* shapeAdapter,
             M3dView& view,
-            const bool singleSelection,
-            GfVec3f* hitPoint);
+            const bool singleSelection);
 
     /// Tests the object from the given shape adapter for intersection with
     /// a given draw context in Viewport 2.0.
     ///
-    /// \p hitPoint yields the point of intersection if \c true is returned.
+    /// \returns a pointer to the hitIntersection object, or nullptr if no hit.
     ///
     PXRUSDMAYAGL_API
-    bool TestIntersection(
+    const HdxIntersector::Hit* TestIntersection(
             const PxrMayaHdShapeAdapter* shapeAdapter,
             const MHWRender::MSelectionInfo& selectInfo,
             const MHWRender::MDrawContext& context,
-            const bool singleSelection,
-            GfVec3f* hitPoint);
+            const bool singleSelection);
 
     /// Tests the contents of the given custom collection (previously obtained
     /// via PopulateCustomCollection) for intersection with the current OpenGL
@@ -208,14 +206,14 @@ public:
     /// context is available; this function is not appropriate for interesecting
     /// using the Maya viewport.
     ///
-    /// \p hitPoint yields the point of intersection if \c true is returned.
+    /// \p hit yields the hit information if \c true is returned.
     ///
     PXRUSDMAYAGL_API
     bool TestIntersectionCustomCollection(
             const HdRprimCollection& collection,
             const GfMatrix4d& viewMatrix,
             const GfMatrix4d& projectionMatrix,
-            GfVec3d* hitPoint);
+            HdxIntersector::Hit* hit);
 
 private:
 

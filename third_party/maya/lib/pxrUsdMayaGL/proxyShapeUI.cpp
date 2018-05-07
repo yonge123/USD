@@ -153,19 +153,18 @@ UsdMayaProxyShapeUI::select(
         return false;
     }
 
-    GfVec3f hitPoint;
-    const bool didHit =
+    const HdxIntersector::Hit* hit =
         UsdMayaGLBatchRenderer::GetInstance().TestIntersection(
             &_shapeAdapter,
             view,
-            selectInfo.singleSelection(),
-            &hitPoint);
+            selectInfo.singleSelection());
 
-    if (didHit) {
+    if (hit) {
         MSelectionList newSelectionList;
         newSelectionList.add(selectInfo.selectPath());
 
-        MPoint mayaHitPoint = MPoint(hitPoint[0], hitPoint[1], hitPoint[2]);
+        MPoint mayaHitPoint = MPoint(hit->worldSpaceHitPoint[0],
+                hit->worldSpaceHitPoint[1], hit->worldSpaceHitPoint[2]);
 
         selectInfo.addSelection(
             newSelectionList,
@@ -181,7 +180,7 @@ UsdMayaProxyShapeUI::select(
             false);
     }
 
-    return didHit;
+    return bool(hit);
 }
 
 UsdMayaProxyShapeUI::UsdMayaProxyShapeUI() : MPxSurfaceShapeUI()

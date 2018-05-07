@@ -121,17 +121,17 @@ UsdMayaGL_ClosestPointOnProxyShape(
             viewMatrix,
             projectionMatrix,
             /*viewport*/ GfVec4d(0, 0, ISECT_RESOLUTION, ISECT_RESOLUTION));
-    GfVec3d worldPoint;
+    HdxIntersector::Hit hit;
     bool didIsect = renderer.TestIntersectionCustomCollection(
             _sharedRprimCollection,
             viewMatrix,
             projectionMatrix,
-            &worldPoint);
+            &hit);
     drawTarget->Unbind();
 
     if (didIsect) {
         GfMatrix4d worldToLocal = localToWorld.GetInverse();
-        *outClosestPoint = worldToLocal.Transform(worldPoint);
+        *outClosestPoint = worldToLocal.Transform(hit.worldSpaceHitPoint);
     }
     return didIsect;
 }
