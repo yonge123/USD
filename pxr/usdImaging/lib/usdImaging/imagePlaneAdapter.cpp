@@ -81,7 +81,7 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
             GfVec3f(-1.0f , -1.0f , 0.0f),
         };
 
-        VtValue& pointsValues = valueCache->GetPoints(cachePath);
+        auto& pointsValues = valueCache->GetPoints(cachePath);
         pointsValues = vertices;
 
         _MergePrimvar(
@@ -89,6 +89,23 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
             HdTokens->points,
             HdInterpolationVertex,
             HdPrimvarRoleTokens->point);
+
+        /*static const VtVec2fArray uvs = {
+            GfVec2f(0.0f, 0.0f),
+            GfVec2f(1.0f, 0.0f),
+            GfVec2f(1.0f, 1.0f),
+            GfVec2f(0.0f, 1.0f),
+        };
+
+        TfToken stName("st");
+
+        auto& stValues = valueCache->GetPrimvar(cachePath, stName);
+        stValues = uvs;
+        _MergePrimvar(
+            &valueCache->GetPrimvars(cachePath),
+            stName,
+            HdInterpolationVertex,
+            HdPrimvarRoleTokens->none);*/
     }
 
     if (requestedBits & HdChangeTracker::DirtyTopology) {
