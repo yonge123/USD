@@ -132,6 +132,9 @@ HdStGLSLProgram::CompileShader(GLenum type,
 
 #if 0
     static std::map<std::string, int> idMap;
+    if (idMap.empty()) {
+        system("rm -f /ssd/usd/shaders/*");
+    }
     std::stringstream ss; ss << "/ssd/usd/shaders/" << shaderType << "_" << idMap[shaderType]++;
     std::fstream fs(ss.str(), std::ios::out);
     fs << shaderSource;

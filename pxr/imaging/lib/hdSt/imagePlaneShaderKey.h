@@ -30,7 +30,7 @@ struct HdSt_ImagePlaneShaderKey {
     bool IsFaceVarying() const { return false; }
 
     TfToken glslfx;
-    TfToken VS[3];
+    TfToken VS[2];
     TfToken FS[6];
 };
 
