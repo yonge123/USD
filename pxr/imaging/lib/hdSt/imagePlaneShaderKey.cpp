@@ -13,10 +13,12 @@ TF_DEFINE_PRIVATE_TOKENS(
     ((primitiveIdFs,   "EdgeId.Fragment.BaryFallback"))
     ((pointIdFs,       "PointId.Fragment.Fallback"))
     ((mainFS,          "ImagePlane.Fragment"))
+    // ((instancing,      "Instancing.Transform"))
 );
 
 HdSt_ImagePlaneShaderKey::HdSt_ImagePlaneShaderKey()
     : glslfx(_tokens->baseGLSLFX) {
+    // VS[0] = _tokens->instancing;
     VS[0] = _tokens->mainVS;
     VS[1] = TfToken();
 

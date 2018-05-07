@@ -36,6 +36,7 @@ HdStImagePlane::_GetInitialDirtyBits() const {
                        | HdChangeTracker::InitRepr
                        | HdChangeTracker::DirtyPoints
                        | HdChangeTracker::DirtyTopology
+                       | HdChangeTracker::DirtyTransform
                        | HdChangeTracker::DirtyPrimID
                        | HdChangeTracker::DirtyRepr
                        | HdChangeTracker::DirtyMaterialId
@@ -89,14 +90,11 @@ HdStImagePlane::_UpdateDrawItem(
          boost::static_pointer_cast<HdStResourceRegistry>(
              sceneDelegate->GetRenderIndex().GetResourceRegistry());
     auto geometricShader = HdSt_GeometricShader::Create(shaderKey, resourceRegistry);
-    // _getTextureResource(sceneDelegate, id, _textureResource);
 
     drawItem->SetGeometricShader(geometricShader);
 
     auto& renderIndex = sceneDelegate->GetRenderIndex();
     renderIndex.GetChangeTracker().MarkShaderBindingsDirty();
-
-    // auto materialShader = drawItem->GetMaterialShader();
 
     // TODO: We'll need points there and later on uvs
     // to control the texture mapping.
