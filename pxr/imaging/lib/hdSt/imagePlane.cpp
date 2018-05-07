@@ -4,6 +4,7 @@
 #include "pxr/imaging/hdSt/imagePlaneShaderKey.h"
 #include "pxr/imaging/hdSt/meshTopology.h"
 #include "pxr/imaging/hdSt/material.h"
+#include "pxr/imaging/hdSt/package.h"
 
 #include "pxr/imaging/hd/vtBufferSource.h"
 
@@ -81,8 +82,24 @@ HdStImagePlane::_UpdateDrawItem(
     // TODO: we need to figure out what's required here
     // essentially we don't need any materials here, imagePlane.glslfx should
     // be able to handle everything.
+    const auto materialId = GetMaterialId();
+    // This was taken from a mesh.cpp utility function.
+    TfToken mixinKey = sceneDelegate->GetShadingStyle(GetId()).GetWithDefault<TfToken>();
+    static std::once_flag firstUse;
+    static std::unique_ptr<GlfGLSLFX> mixinFX;
+
+    std::call_once(firstUse, [](){
+        std::string filePath = HdStPackageLightingIntegrationShader();
+        mixinFX.reset(new GlfGLSLFX(filePath));
+    });
+
+    auto mixinSource = mixinFX->GetSource(mixinKey);
+
     drawItem->SetMaterialShaderFromRenderIndex(
-        sceneDelegate->GetRenderIndex(), GetMaterialId());
+        sceneDelegate->GetRenderIndex(), materialId, mixinSource);
+    //drawItem->SetMaterialShaderFromRenderIndex(
+    //    sceneDelegate->GetRenderIndex(), materialId);
+
     const auto& id = GetId();
 
     HdSt_ImagePlaneShaderKey shaderKey;

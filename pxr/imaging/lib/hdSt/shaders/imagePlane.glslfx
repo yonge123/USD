@@ -26,5 +26,19 @@ in vec2 fitting;
 void main(void)
 {
     // RenderColor(vec4(1.0, 0.0, 0.0, 1.0));
-    RenderColor(vec4(fitting.x, fitting.y, 0.0, 1.0));
+    // RenderColor(vec4(fitting.x, fitting.y, 0.0, 1.0));
+
+    #ifdef HD_HAS_color
+        vec4 color = vec4(HdGet_color());
+    #else
+        vec4 color = vec4(1);
+    #endif
+
+    color = ShadingTerminal(vec4(1, 1, 1, 1), vec3(1, 1, 1), color, vec4(1, 1, 1, 1));
+
+    if (ShouldDiscardByAlpha(color)) {
+        discard;
+    }
+
+    RenderColor(color);
 }
