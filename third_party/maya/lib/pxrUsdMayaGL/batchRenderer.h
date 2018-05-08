@@ -176,6 +176,16 @@ public:
             const GfVec4d& viewport,
             const PxrMayaHdRenderParams& params = PxrMayaHdRenderParams());
 
+    /// Gets all intersections with the object from the given shape adaptor.
+    ///
+    /// \returns a pointer to a vector of hitIntersection objects, or nullptr if no hits.
+    ///
+    PXRUSDMAYAGL_API
+    const std::vector<HdxIntersector::Hit>* GetAllIntersections(
+            const PxrMayaHdShapeAdapter* shapeAdapter,
+            M3dView& view,
+            const bool singleSelection=false);
+
     /// Tests the object from the given shape adapter for intersection with
     /// a given view using the legacy viewport.
     ///
@@ -186,6 +196,18 @@ public:
             const PxrMayaHdShapeAdapter* shapeAdapter,
             M3dView& view,
             const bool singleSelection);
+
+    /// Gets all intersections with the object from the given shape adactor in
+    /// Viewport 2.0.
+    ///
+    /// \returns a pointer to a vector of hitIntersection objects, or nullptr if no hits.
+    ///
+    PXRUSDMAYAGL_API
+    const std::vector<HdxIntersector::Hit>* GetAllIntersections(
+            const PxrMayaHdShapeAdapter* shapeAdapter,
+            const MHWRender::MSelectionInfo& selectInfo,
+            const MHWRender::MDrawContext& context,
+            const bool singleSelection=false);
 
     /// Tests the object from the given shape adapter for intersection with
     /// a given draw context in Viewport 2.0.
@@ -399,6 +421,13 @@ private:
     /// Populates the selection results using the given parameters by
     /// performing intersection tests against all of the shapes in the given
     /// \p bucketsMap.
+    ///
+    /// If singleSelection is True, then each resulting HitVector for each
+    /// proxyShape will only have one hit, the closest; if not in
+    /// singleSelection mode, all hits will be stored, with the first result in
+    /// each vector guaranteed to be the closest hit, and the rest in
+    /// indeterminate order. Thus, in either case, the first result in each
+    /// vector should be the closest hit.
     void _ComputeSelection(
             _ShapeAdapterBucketsMap& bucketsMap,
             const GfMatrix4d& viewMatrix,
@@ -415,7 +444,7 @@ private:
     /// ended.
     std::unordered_set<std::string> _drawnMayaRenderPasses;
 
-    typedef std::unordered_map<SdfPath, HdxIntersector::Hit, SdfPath::Hash> HitBatch;
+    typedef std::unordered_map<SdfPath, std::vector<HdxIntersector::Hit>, SdfPath::Hash> HitBatch;
 
     /// A cache of all selection results gathered since the last selection was
     /// computed.
