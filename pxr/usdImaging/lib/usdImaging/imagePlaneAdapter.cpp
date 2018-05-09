@@ -27,8 +27,10 @@ UsdImagingImagePlaneAdapter::Populate(
     const UsdPrim& prim,
     UsdImagingIndexProxy* index,
     const UsdImagingInstancerContext* instancerContext /*= nullptr*/){
-    return HdImagePlane::IsEnabled() ? _AddRprim(HdPrimTypeTokens->imagePlane,
+    return HdImagePlane::IsEnabled() ? _AddRprim(HdPrimTypeTokens->mesh,
                      prim, index, GetMaterialId(prim), instancerContext) : SdfPath();
+    // return HdImagePlane::IsEnabled() ? _AddRprim(HdPrimTypeTokens->imagePlane,
+    //                                              prim, index, GetMaterialId(prim), instancerContext) : SdfPath();
 }
 
 void
@@ -39,26 +41,6 @@ UsdImagingImagePlaneAdapter::TrackVariability(
     const UsdImagingInstancerContext* instancerContext) const {
     BaseAdapter::TrackVariability(
         prim, cachePath, timeVaryingBits, instancerContext);
-
-    _IsVarying(
-        prim,
-        UsdGeomTokens->points,
-        HdChangeTracker::DirtyPoints,
-        UsdImagingTokens->usdVaryingPrimvar,
-        timeVaryingBits, false);
-
-    if (!_IsVarying(
-            prim,
-            UsdGeomTokens->faceVertexCounts,
-            HdChangeTracker::DirtyTopology,
-            UsdImagingTokens->usdVaryingTopology,
-            timeVaryingBits, false)) {
-        _IsVarying(prim,
-            UsdGeomTokens->faceVertexIndices,
-            HdChangeTracker::DirtyTopology,
-            UsdImagingTokens->usdVaryingTopology,
-            timeVaryingBits, false);
-    }
 }
 
 void
@@ -72,6 +54,13 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
     BaseAdapter::UpdateForTime(prim, cachePath, time, requestedBits, instancerContext);
 
     UsdImagingValueCache* valueCache = _GetValueCache();
+
+    if (requestedBits & HdChangeTracker::DirtyTransform) {
+        // Update the transform with the size authored for the sphere.
+        GfMatrix4d& ctm = valueCache->GetTransform(cachePath);
+        GfMatrix4d xf; xf.SetIdentity();
+        ctm = xf * ctm;
+    }
 
     if (requestedBits & HdChangeTracker::DirtyPoints) {
         static const VtVec3fArray vertices = {
@@ -90,22 +79,19 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
             HdInterpolationVertex,
             HdPrimvarRoleTokens->point);
 
-        /*static const VtVec2fArray uvs = {
+        static const VtVec2fArray uvs = {
             GfVec2f(0.0f, 0.0f),
-            GfVec2f(1.0f, 0.0f),
-            GfVec2f(1.0f, 1.0f),
-            GfVec2f(0.0f, 1.0f),
+            GfVec2f(0.0f, 0.0f),
+            GfVec2f(0.0f, 0.0f),
+            GfVec2f(0.0f, 0.0f),
         };
 
-        TfToken stName("st");
+        valueCache->GetPrimvar(cachePath, TfToken("st")) = uvs;
 
-        auto& stValues = valueCache->GetPrimvar(cachePath, stName);
-        stValues = uvs;
         _MergePrimvar(
             &valueCache->GetPrimvars(cachePath),
-            stName,
-            HdInterpolationVertex,
-            HdPrimvarRoleTokens->none);*/
+            TfToken("st"),
+            HdInterpolationVertex);
     }
 
     if (requestedBits & HdChangeTracker::DirtyTopology) {
@@ -133,7 +119,8 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
 
 bool
 UsdImagingImagePlaneAdapter::IsSupported(const UsdImagingIndexProxy* index) const {
-    return index->IsRprimTypeSupported(HdPrimTypeTokens->imagePlane);
+    return index->IsRprimTypeSupported(HdPrimTypeTokens->mesh);
+    // return index->IsRprimTypeSupported(HdPrimTypeTokens->imagePlane);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
