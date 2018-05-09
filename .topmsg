@@ -1,2 +1,2 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/simple_features/default_value_for_hydra_parameters
+Subject: [HD] Setting up a default fallbackValue when handling connections that has no fallback value for Hydra.
