@@ -262,13 +262,6 @@ PxrMayaHdShapeAdapter::GetRenderParams(
 }
 
 /* virtual */
-const HdRprimCollection&
-PxrMayaHdShapeAdapter::GetRprimCollection() const
-{
-    return _rprimCollection;
-}
-
-/* virtual */
 const GfMatrix4d&
 PxrMayaHdShapeAdapter::GetRootXform() const
 {

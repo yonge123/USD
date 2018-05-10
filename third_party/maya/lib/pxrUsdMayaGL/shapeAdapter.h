@@ -141,7 +141,10 @@ class PxrMayaHdShapeAdapter
                 bool* drawBoundingBox) const;
 
         PXRUSDMAYAGL_API
-        virtual const HdRprimCollection& GetRprimCollection() const;
+        virtual const HdRprimCollection& GetFullRprimCollection() const = 0;
+
+        PXRUSDMAYAGL_API
+        virtual const HdRprimCollectionVector& GetRenderRprimCollections() const = 0;
 
         PXRUSDMAYAGL_API
         virtual const GfMatrix4d& GetRootXform() const;
@@ -215,8 +218,6 @@ class PxrMayaHdShapeAdapter
         PxrMayaHdRenderParams _renderParams;
         bool _drawShape;
         bool _drawBoundingBox;
-
-        HdRprimCollection _rprimCollection;
 
         GfMatrix4d _rootXform;
 

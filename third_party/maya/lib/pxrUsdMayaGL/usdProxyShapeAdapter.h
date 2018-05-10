@@ -76,6 +76,14 @@ class PxrMayaHdUsdProxyShapeAdapter : public PxrMayaHdShapeAdapter
         PXRUSDMAYAGL_API
         virtual const SdfPath& GetDelegateID() const override;
 
+        PXRUSDMAYAGL_API
+        virtual const HdRprimCollection&
+        GetFullRprimCollection() const override;
+
+        PXRUSDMAYAGL_API
+        virtual const HdRprimCollectionVector&
+        GetRenderRprimCollections() const override;
+
     protected:
 
         /// Update the shape adapter's state from the shape with the given
@@ -120,6 +128,11 @@ class PxrMayaHdUsdProxyShapeAdapter : public PxrMayaHdShapeAdapter
         SdfPathVector _excludedPrimPaths;
 
         std::shared_ptr<UsdImagingDelegate> _delegate;
+
+        // This should only ever have one member (the fullRprimCollection), but
+        // we store in a vector to avoid copying in the implementation of
+        // GetRenderRprimCollections
+        HdRprimCollectionVector _rprimCollections;
 
         /// The classes that maintain ownership of and are responsible for
         /// updating the shape adapter for their shape are made friends of

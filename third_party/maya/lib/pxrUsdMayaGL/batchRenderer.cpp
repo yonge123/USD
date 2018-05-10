@@ -346,10 +346,10 @@ UsdMayaGLBatchRenderer::PopulateCustomCollection(
     // Only update the collection and mark it dirty if the root paths have
     // actually changed. This greatly affects performance.
     PxrMayaHdShapeAdapter* adapter = iter->second;
-    const SdfPathVector& roots = adapter->GetRprimCollection().GetRootPaths();
+    const SdfPathVector& roots = adapter->GetFullRprimCollection().GetRootPaths();
     if (collection.GetRootPaths() != roots) {
         collection.SetRootPaths(roots);
-        collection.SetRenderTags(adapter->GetRprimCollection().GetRenderTags());
+        collection.SetRenderTags(adapter->GetFullRprimCollection().GetRenderTags());
         changeTracker.MarkCollectionDirty(collection.GetName());
     }
 
@@ -919,7 +919,7 @@ UsdMayaGLBatchRenderer::_GetIntersectionRprimCollections(
                 continue;
             }
 
-            rprimCollections.push_back(shapeAdapter->GetRprimCollection());
+            rprimCollections.push_back(shapeAdapter->GetFullRprimCollection());
         }
     }
 
@@ -1230,7 +1230,9 @@ UsdMayaGLBatchRenderer::_RenderBatches(
         for (PxrMayaHdShapeAdapter* shapeAdapter : shapeAdapters) {
             shapeAdapter->UpdateVisibility();
 
-            rprimCollections.push_back(shapeAdapter->GetRprimCollection());
+            for (auto& collection : shapeAdapter->GetRenderRprimCollections()) {
+                rprimCollections.push_back(collection);
+            }
         }
 
         items.push_back(std::make_pair(params, std::move(rprimCollections)));

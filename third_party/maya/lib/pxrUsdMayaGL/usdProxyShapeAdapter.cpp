@@ -126,6 +126,20 @@ PxrMayaHdUsdProxyShapeAdapter::GetDelegateID() const
 }
 
 /* virtual */
+const HdRprimCollection&
+PxrMayaHdUsdProxyShapeAdapter::GetFullRprimCollection() const
+{
+    return _rprimCollections[0];
+}
+
+/* virtual */
+const HdRprimCollectionVector&
+PxrMayaHdUsdProxyShapeAdapter::GetRenderRprimCollections() const
+{
+    return _rprimCollections;
+}
+
+/* virtual */
 bool
 PxrMayaHdUsdProxyShapeAdapter::_Sync(
         const MDagPath& shapeDagPath,
@@ -197,18 +211,19 @@ PxrMayaHdUsdProxyShapeAdapter::_Sync(
     if (showRenderGuides) {
         renderTags.push_back(_tokens->RenderGuidesTag);
     }
+    auto& rprimCollection = _rprimCollections[0];
 
-    if (_rprimCollection.GetRenderTags() != renderTags) {
-        _rprimCollection.SetRenderTags(renderTags);
+    if (rprimCollection.GetRenderTags() != renderTags) {
+        rprimCollection.SetRenderTags(renderTags);
 
         TF_DEBUG(PXRUSDMAYAGL_SHAPE_ADAPTER_LIFECYCLE).Msg(
             "    Render tags changed: %s\n"
             "        Marking collection dirty: %s\n",
             TfStringJoin(renderTags.begin(), renderTags.end()).c_str(),
-            _rprimCollection.GetName().GetText());
+            rprimCollection.GetName().GetText());
 
         _delegate->GetRenderIndex().GetChangeTracker().MarkCollectionDirty(
-            _rprimCollection.GetName());
+            rprimCollection.GetName());
     }
 
     MStatus status;
@@ -279,17 +294,17 @@ PxrMayaHdUsdProxyShapeAdapter::_Sync(
         _delegate->SetRootVisibility(_drawShape);
     }
 
-    if (_rprimCollection.GetReprName() != reprName) {
-        _rprimCollection.SetReprName(reprName);
+    if (rprimCollection.GetReprName() != reprName) {
+        rprimCollection.SetReprName(reprName);
 
         TF_DEBUG(PXRUSDMAYAGL_SHAPE_ADAPTER_LIFECYCLE).Msg(
                 "    Repr name changed: %s\n"
                 "        Marking collection dirty: %s\n",
                 reprName.GetText(),
-                _rprimCollection.GetName().GetText());
+                rprimCollection.GetName().GetText());
 
         _delegate->GetRenderIndex().GetChangeTracker().MarkCollectionDirty(
-            _rprimCollection.GetName());
+            rprimCollection.GetName());
     }
 
     // Maya 2016 SP2 lacks MHWRender::MFrameContext::DisplayStyle::kBackfaceCulling
@@ -385,18 +400,23 @@ PxrMayaHdUsdProxyShapeAdapter::_Init(HdRenderIndex* renderIndex)
 
     _delegate->Populate(_rootPrim, _excludedPrimPaths, SdfPathVector());
 
-    if (collectionName != _rprimCollection.GetName()) {
-        _rprimCollection.SetName(collectionName);
-        renderIndex->GetChangeTracker().AddCollection(_rprimCollection.GetName());
+    auto& rprimCollection = _rprimCollections[0];
+
+    if (collectionName != rprimCollection.GetName()) {
+        rprimCollection.SetName(collectionName);
+        renderIndex->GetChangeTracker().AddCollection(rprimCollection.GetName());
     }
 
-    _rprimCollection.SetReprName(HdTokens->refined);
-    _rprimCollection.SetRootPath(delegateId);
+    rprimCollection.SetReprName(HdTokens->refined);
+    rprimCollection.SetRootPath(delegateId);
 
     return true;
 }
 
-PxrMayaHdUsdProxyShapeAdapter::PxrMayaHdUsdProxyShapeAdapter()
+PxrMayaHdUsdProxyShapeAdapter::PxrMayaHdUsdProxyShapeAdapter() :
+        // initialize rprimCollections to have one member,
+        // the fullRprimCollection
+        _rprimCollections(1)
 {
     TF_DEBUG(PXRUSDMAYAGL_SHAPE_ADAPTER_LIFECYCLE).Msg(
         "Constructing PxrMayaHdUsdProxyShapeAdapter: %p\n",
