@@ -81,9 +81,9 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
 
         static const VtVec2fArray uvs = {
             GfVec2f(0.0f, 0.0f),
-            GfVec2f(0.0f, 0.0f),
-            GfVec2f(0.0f, 0.0f),
-            GfVec2f(0.0f, 0.0f),
+            GfVec2f(1.0f, 0.0f),
+            GfVec2f(1.0f, 1.0f),
+            GfVec2f(0.0f, 1.0f),
         };
 
         valueCache->GetPrimvar(cachePath, TfToken("st")) = uvs;
