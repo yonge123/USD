@@ -144,11 +144,29 @@ UsdImagingGLHydraMaterialAdapter::TrackVariability(UsdPrim const& prim,
 
     // XXX: This is terrifying. Run through all attributes of the prim,
     // and if any are time varying, assume all shader params are time-varying.
-    const std::vector<UsdAttribute> &attrs = surfaceShaderPrim.GetAttributes();
-    TF_FOR_ALL(attrIter, attrs) {
-        const UsdAttribute& attr = *attrIter;
-        if (attr.GetNumTimeSamples()>1){
+    for (const auto& attr: surfaceShaderPrim.GetAttributes()) {
+        if (attr.GetNumTimeSamples() > 1) {
             *timeVaryingBits |= HdMaterial::DirtyParams;
+            return;
+        }
+    }
+
+    // Checking all the connected shaders for info:filename time samples, meaning
+    // animated textures.
+    UsdShadeConnectableAPI connectableAPI(surfaceShaderPrim);
+    if (connectableAPI) {
+        for (auto& input: connectableAPI.GetInputs()) {
+            if (input.HasConnectedSource()) {
+                UsdShadeConnectableAPI source;
+                TfToken sourceName;
+                UsdShadeAttributeType sourceType;
+                if (input.GetConnectedSource(&source, &sourceName, &sourceType)) {
+                    const auto textureAttr = source.GetPrim().GetAttribute(UsdHydraTokens->infoFilename);
+                    if (textureAttr && textureAttr.GetNumTimeSamples() > 1) {
+                        *timeVaryingBits |= HdMaterial::DirtyParams;
+                    }
+                }
+            }
         }
     }
 }
