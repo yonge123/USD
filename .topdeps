@@ -27,6 +27,7 @@ tg/simple_features/separate_third_party_builds
 tg/simple_features/maya_export_for_clips
 tg/simple_features/maya_motion_vector_export
 tg/simple_features/default_value_for_hydra_parameters
+tg/simple_features/animated_textures_for_hydra
 houdini_variant_selection_fix
 pr/filterTypes
 pr/fix_selection_VP2
