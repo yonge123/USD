@@ -36,7 +36,9 @@
 #include "pxr/imaging/hd/tokens.h"
 
 #include "pxr/usd/usdHydra/tokens.h"
-#include "pxr/usd/usdShade/connectableAPI.h"    
+#include "pxr/usd/usdShade/connectableAPI.h"
+
+#include <functional>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -45,6 +47,31 @@ TF_DEFINE_PRIVATE_TOKENS(
     (surfaceShader)
     (displacementShader)
 );
+
+namespace {
+// Iterating through all the connected texture parameters that are animated.
+// If f returns true, the function returns.
+inline
+void _iterateAnimatedTextures(const UsdPrim& prim, std::function<bool(const UsdAttribute&)> f) {
+    UsdShadeConnectableAPI connectableAPI(prim);
+    if (connectableAPI) {
+        UsdShadeConnectableAPI source;
+        TfToken sourceName;
+        UsdShadeAttributeType sourceType;
+        for (auto& input: connectableAPI.GetInputs()) {
+            if (input.HasConnectedSource()) {
+                if (input.GetConnectedSource(&source, &sourceName, &sourceType)) {
+                    const auto textureAttr = source.GetPrim().GetAttribute(UsdHydraTokens->infoFilename);
+                    if (textureAttr && textureAttr.GetNumTimeSamples() > 1) {
+                        if (f(textureAttr)) { return; }
+                    }
+                }
+            }
+        }
+    }
+}
+
+}
 
 TF_REGISTRY_FUNCTION(TfType)
 {
@@ -153,22 +180,10 @@ UsdImagingGLHydraMaterialAdapter::TrackVariability(UsdPrim const& prim,
 
     // Checking all the connected shaders for info:filename time samples, meaning
     // animated textures.
-    UsdShadeConnectableAPI connectableAPI(surfaceShaderPrim);
-    if (connectableAPI) {
-        for (auto& input: connectableAPI.GetInputs()) {
-            if (input.HasConnectedSource()) {
-                UsdShadeConnectableAPI source;
-                TfToken sourceName;
-                UsdShadeAttributeType sourceType;
-                if (input.GetConnectedSource(&source, &sourceName, &sourceType)) {
-                    const auto textureAttr = source.GetPrim().GetAttribute(UsdHydraTokens->infoFilename);
-                    if (textureAttr && textureAttr.GetNumTimeSamples() > 1) {
-                        *timeVaryingBits |= HdMaterial::DirtyParams;
-                    }
-                }
-            }
-        }
-    }
+    _iterateAnimatedTextures(surfaceShaderPrim, [&timeVaryingBits] (const UsdAttribute&) -> bool {
+        *timeVaryingBits |= HdMaterial::DirtyParams;
+        return true;
+    });
 }
 
 static bool
@@ -404,6 +419,12 @@ UsdImagingGLHydraMaterialAdapter::MarkDirty(UsdPrim const& prim,
         index->MarkBprimDirty(cachePath, dirty);
     } else {
         index->MarkSprimDirty(cachePath, dirty);
+        _iterateAnimatedTextures(
+            _GetSurfaceShaderPrim(UsdShadeMaterial(prim)),
+            [index](const UsdAttribute& a) -> bool {
+                index->MarkBprimDirty(a.GetPath(), HdTexture::DirtyTexture);
+                return false;
+        });
     }
 }
 
