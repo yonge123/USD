@@ -322,10 +322,6 @@ try
     }
     jobArgs.clipStartTime = startTime;
 
-    if (argData.isFlagSet("eulerFilter")) {
-        argData.getFlagArgument("eulerFilter", 0, jobArgs.eulerFilter);
-    }
-
     if (argData.isFlagSet("preRoll")) {
         argData.getFlagArgument("preRoll", 0, preRoll);
     }

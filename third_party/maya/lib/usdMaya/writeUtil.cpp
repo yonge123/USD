@@ -473,22 +473,8 @@ _ConvertVec(
 VtValue
 PxrUsdMayaWriteUtil::GetVtValue(
         const MPlug& attrPlug,
-        const SdfValueTypeName& typeName,
-        const UsdAttribute& usdAttr,
-        const UsdTimeCode& usdTime,
-        const bool writeIfConstant,
-        const bool translateMayaDoubleToUsdSinglePrecision)
+        const SdfValueTypeName& typeName)
 {
-    if (!usdAttr || attrPlug.isNull()) {
-        return false;
-    }
-
-    bool isAnimated = attrPlug.isDestination();
-    // If attr is animated, we will never write the default value.
-    // If attr is not animated, we will write the default value or the first frame of a clip.
-    if ((usdTime.IsDefault() && isAnimated) || (!writeIfConstant && !isAnimated)){
-        return true;
-    }
     // We perform a similar set of type-infererence acrobatics here as we do up
     // above in GetUsdTypeName(). See the comments there for more detail on a
     // few type-related oddities.
