@@ -157,6 +157,9 @@ usdTranslatorExport::writer(const MFileObject &file,
             if (theOption[0] == MString("exportVisibility")) {
                 jobArgs.exportVisibility = theOption[1].asInt();
             }
+            if (theOption[0] == MString("stripNamespaces")) {
+                jobArgs.stripNamespaces = theOption[1].asInt();
+            }
             if (theOption[0] == MString("exportSkin")) {
                 if (theOption[1] == "All (Automatically Create SkelRoots)") {
                     jobArgs.exportSkin = true;

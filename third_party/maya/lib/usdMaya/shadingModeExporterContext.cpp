@@ -68,7 +68,8 @@ PxrUsdMayaShadingModeExportContext::PxrUsdMayaShadingModeExportContext(
 
 
             SdfPath usdPath = PxrUsdMayaUtil::MDagPathToUsdPath(bindableRootDagPath, 
-                _exportParams.mergeTransformAndShape);
+                _exportParams.mergeTransformAndShape,
+                _exportParams.stripNamespaces);
 
             // If overrideRootPath is not empty, replace the root namespace with it
             if (!_exportParams.overrideRootPath.IsEmpty() ) {
@@ -132,7 +133,8 @@ PxrUsdMayaShadingModeExportContext::GetAssignments() const
             continue;
 
         SdfPath usdPath = PxrUsdMayaUtil::MDagPathToUsdPath(dagPath, 
-            _exportParams.mergeTransformAndShape);
+            _exportParams.mergeTransformAndShape,
+            _exportParams.stripNamespaces);
 
         // If _exportParams.overrideRootPath is not empty, replace the root 
         // namespace with it
