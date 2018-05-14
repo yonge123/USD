@@ -114,10 +114,16 @@ MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime,
 
         TfToken const &visibilityTok = (isVisible ? UsdGeomTokens->inherited : 
                                         UsdGeomTokens->invisible);
-        if (usdTime.IsDefault() != isAnimated ) {
-            _SetAttribute(primSchema.CreateVisibilityAttr(VtValue(), true), 
-                          visibilityTok, 
-                          usdTime);
+        if (shouldWriteSample(usdTime, isAnimated)) {
+            if (usdTime.IsDefault()) {
+                _SetAttribute(primSchema.CreateVisibilityAttr(VtValue(), true), 
+                              visibilityTok, 
+                              usdTime);
+            } else {
+                _SetAttribute(primSchema.CreateVisibilityAttr(), 
+                              visibilityTok, 
+                              usdTime);
+            }
         }
     }
 
@@ -151,18 +157,20 @@ MayaPrimWriter::writePrimAttrs(const MDagPath &dagT, const UsdTimeCode &usdTime,
         // We want the node for the xform (depFnT).
         converter->MayaToUsd(depFnT, usdPrim, usdTime);
     }
-    
+
+    // Check if samples should be written at time if attr has no animation.
+    bool writeIfConstant = shouldWriteSample(usdTime, false);
     // Write user-tagged export attributes. Write attributes on the transform
     // first, and then attributes on the shape node. This means that attribute
     // name collisions will always be handled by taking the shape node's value
     // if we're merging transforms and shapes.
     if (dagT.isValid() && !(dagT == getDagPath())) {
         PxrUsdMayaWriteUtil::WriteUserExportedAttributes(dagT, usdPrim, usdTime,
-                _GetSparseValueWriter());
+                writeIfConstant, _GetSparseValueWriter());
     }
 
     PxrUsdMayaWriteUtil::WriteUserExportedAttributes(getDagPath(), usdPrim, 
-            usdTime, _GetSparseValueWriter());
+            usdTime, writeIfConstant, _GetSparseValueWriter());
 
     return true;
 }
@@ -194,6 +202,12 @@ void
 MayaPrimWriter::setExportsVisibility(bool exports)
 {
     mExportsVisibility = exports;
+}
+
+bool
+MayaPrimWriter::shouldWriteSample(const UsdTimeCode& usdTime, bool isAnimated) const
+{
+    return mWriteJobCtx.shouldWriteSample(usdTime, isAnimated);
 }
 
 bool

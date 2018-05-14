@@ -817,6 +817,7 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
         const MPlug& attrPlug,
         const UsdAttribute& usdAttr,
         const UsdTimeCode& usdTime,
+        const bool writeIfConstant,
         UsdUtilsSparseValueWriter *valueWriter)
 {
     if (!usdAttr || attrPlug.isNull()) {
@@ -824,7 +825,7 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
     }
 
     bool isAnimated = attrPlug.isDestination();
-    if (usdTime.IsDefault() == isAnimated) {
+    if ((usdTime.IsDefault() == isAnimated) || (!writeIfConstant && !isAnimated)) {
         return true;
     }
 
@@ -878,6 +879,7 @@ PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
         const MDagPath& dagPath,
         const UsdPrim& usdPrim,
         const UsdTimeCode& usdTime,
+        const bool writeIfConstant,
         UsdUtilsSparseValueWriter *valueWriter)
 {
     std::vector<PxrUsdMayaUserTaggedAttribute> exportedAttributes =
@@ -931,6 +933,7 @@ PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
             if (!PxrUsdMayaWriteUtil::SetUsdAttr(attrPlug,
                                                  usdAttr,
                                                  usdTime,
+                                                 writeIfConstant,
                                                  valueWriter)) {
                 MGlobal::displayError(
                     TfStringPrintf("Could not set value for attribute: '%s'",
