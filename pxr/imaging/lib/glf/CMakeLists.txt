@@ -67,6 +67,7 @@ pxr_library(glf
         texture
         textureHandle
         textureRegistry
+        udimTexture
         uniformBlock
         utils
         uvTexture
