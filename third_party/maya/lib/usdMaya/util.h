@@ -370,6 +370,9 @@ void Connect(
 PXRUSDMAYA_API
 MPlug FindChildPlugByName(const MPlug& plug, const MString& name);
 
+PXRUSDMAYA_API
+std::string MDagPathToUsdPathString(const MDagPath& dagPath);
+
 /// For \p dagPath, returns a UsdPath corresponding to it.  
 /// If \p mergeTransformAndShape and the dagPath is a shapeNode, it will return
 /// the same value as MDagPathToUsdPath(transformPath) where transformPath is
