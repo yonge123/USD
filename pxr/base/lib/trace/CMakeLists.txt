@@ -14,6 +14,7 @@ pxr_library(trace
         ${TBB_INCLUDE_DIRS}
 
     PUBLIC_CLASSES
+        aggregateNode
         category
         collection
         collectionNotice
@@ -26,17 +27,19 @@ pxr_library(trace
         eventData
         eventList
         eventNode
+        eventTree
         key
         reporter
         reporterBase
+        reporterDataSourceBase
+        reporterDataSourceCollection
+        reporterDataSourceCollector
         serialization
-        singleEventGraph
-        singleEventNode
-        singleEventTreeReport
         staticKeyData
         threads
 
     PRIVATE_CLASSES
+        eventTreeBuilder
         jsonSerialization
 
     PUBLIC_HEADERS
@@ -50,8 +53,8 @@ pxr_library(trace
 
     PYMODULE_CPPFILES
         module.cpp
+        wrapAggregateNode.cpp
         wrapCollector.cpp
-        wrapEventNode.cpp
         wrapReporter.cpp
         wrapTestTrace.cpp
 
