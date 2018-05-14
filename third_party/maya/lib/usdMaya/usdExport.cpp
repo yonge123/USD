@@ -40,6 +40,7 @@
 #include <maya/MTime.h>
 
 #include "pxr/usd/usdGeom/tokens.h"
+#include "JobArgs.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -73,6 +74,7 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-cls" , "-exportColorSets", MSyntax::kBoolean);
     syntax.addFlag("-dms" , "-defaultMeshScheme", MSyntax::kString);
     syntax.addFlag("-vis" , "-exportVisibility", MSyntax::kBoolean);
+    syntax.addFlag("-rt" , "-root", MSyntax::kString);
     syntax.addFlag("-skn" , "-exportSkin", MSyntax::kString);
     syntax.addFlag("-psc" , "-parentScope", MSyntax::kString);
 
@@ -237,6 +239,22 @@ try
         argData.getFlagArgument("exportVisibility", 0, jobArgs.exportVisibility);
     }
 
+    if (argData.isFlagSet("root")) {
+        MString stringVal;
+        argData.getFlagArgument("root", 0, stringVal);
+        std::string rootPath = stringVal.asChar();
+
+        if (!rootPath.empty()) {
+            MDagPath rootDagPath;
+            PxrUsdMayaUtil::GetDagPathByName(rootPath, rootDagPath);
+            if (!rootDagPath.isValid()){
+                MGlobal::displayError(MString("Invalid dag path provided for root: ") + stringVal);
+                return MS::kFailure;
+            }
+            jobArgs.exportRootPath = rootPath;
+        }
+    }
+    
     if (argData.isFlagSet("exportSkin")) {
         MString stringVal;
 

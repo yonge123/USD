@@ -180,6 +180,17 @@ usdTranslatorExport::writer(const MFileObject &file,
             if (theOption[0] == MString("frameSample")) {
                 frameSamples.insert(theOption[1].asDouble());
             }
+            if (theOption[0] == MString("root")) {
+                jobArgs.exportRootPath = theOption[1].asChar();
+                if (!jobArgs.exportRootPath.empty()) {
+                    MDagPath rootDagPath;
+                    PxrUsdMayaUtil::GetDagPathByName(jobArgs.exportRootPath, rootDagPath);
+                    if (!rootDagPath.isValid()){
+                        MGlobal::displayError(MString("Invalid dag path provided for root: ") + theOption[1]);
+                        return MS::kFailure;
+                    }
+                }
+            }
             if (theOption[0] == MString("parentScope")) {
                 jobArgs.setParentScope(theOption[1].asChar());
             }            
