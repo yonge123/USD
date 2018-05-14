@@ -358,6 +358,14 @@ class AppController(QtCore.QObject):
             self._filterObj = AppEventFilter(self)
             QtWidgets.QApplication.instance().installEventFilter(self._filterObj)
 
+            # Setup Usdview API and optionally load plugins.  We do this before
+            # loading the stage in case a plugin wants to modify global settings
+            # that affect stage loading.
+            self._plugRegistry = None
+            self._usdviewApi = UsdviewApi(self)
+            if not self._noPlugins:
+                self._configurePlugins()
+
             # read the stage here
             stage = self._openStage(
                 self._parserData.usdFile, self._parserData.populationMask)
@@ -987,12 +995,6 @@ class AppController(QtCore.QObject):
 
             self._setupDebugMenu()
 
-            # Setup Usdview API and optionally load plugins
-            self._plugRegistry = None
-            self._usdviewApi = UsdviewApi(self)
-            if not self._noPlugins:
-                self._configurePlugins()
-
             # timer for slider. when user stops scrubbing for 0.5s, update stuff.
             self._sliderTimer = QtCore.QTimer(self)
             self._sliderTimer.setInterval(500)
@@ -1209,7 +1211,13 @@ class AppController(QtCore.QObject):
     # Render plugin support
     def _rendererPluginChanged(self, plugin):
         if self._stageView:
-            self._stageView.SetRendererPlugin(plugin)
+            if not self._stageView.SetRendererPlugin(plugin):
+                # If SetRendererPlugin failed, we need to reset the check mark
+                # to whatever the currently loaded renderer is.
+                for action in self._ui.rendererPluginActionGroup.actions():
+                    if action.text() == self._stageView.rendererPluginName:
+                        action.setChecked(True)
+                        break
 
     def _configureRendererPlugins(self):
         if self._stageView:

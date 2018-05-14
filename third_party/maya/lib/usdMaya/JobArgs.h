@@ -139,13 +139,14 @@ struct JobImportArgs
     JobImportArgs();
 
     TfToken shadingMode;
-    TfToken defaultMeshScheme;
     TfToken assemblyRep;
     bool readAnimData;
     bool useCustomFrameRange;
     double startTime;
     double endTime;
     bool importWithProxyShapes;
+    TfToken::Set includeMetadataKeys;
+    TfToken::Set includeAPINames;
 };
 
 PXRUSDMAYA_API
