@@ -30,19 +30,21 @@ PXR_NAMESPACE_OPEN_SCOPE
 PxrUsdMayaPrimReaderArgs::PxrUsdMayaPrimReaderArgs(
         const UsdPrim& prim,
         const TfToken& shadingMode,
-        const TfToken& defaultMeshScheme,
         const bool readAnimData,
         const bool useCustomFrameRange,
         const double startTime,
-        const double endTime)
+        const double endTime,
+        const TfToken::Set& includeMetadataKeys,
+        const TfToken::Set& includeAPINames)
     : 
         _prim(prim),
         _shadingMode(shadingMode),
-        _defaultMeshScheme(defaultMeshScheme),
         _readAnimData(readAnimData),
         _useCustomFrameRange(useCustomFrameRange),
         _startTime(startTime),
-        _endTime(endTime)
+        _endTime(endTime),
+        _includeMetadataKeys(includeMetadataKeys),
+        _includeAPINames(includeAPINames)
 {
 }
 const UsdPrim&
@@ -54,11 +56,6 @@ const TfToken&
 PxrUsdMayaPrimReaderArgs::GetShadingMode() const
 {
     return _shadingMode;
-}
-const TfToken&
-PxrUsdMayaPrimReaderArgs::GetDefaultMeshScheme() const
-{
-    return _defaultMeshScheme;
 }
 const bool&
 PxrUsdMayaPrimReaderArgs::GetReadAnimData() const
@@ -79,6 +76,18 @@ double
 PxrUsdMayaPrimReaderArgs::GetEndTime() const
 {
     return _endTime;
+}
+
+const TfToken::Set&
+PxrUsdMayaPrimReaderArgs::GetIncludeMetadataKeys() const
+{
+    return _includeMetadataKeys;
+}
+
+const TfToken::Set&
+PxrUsdMayaPrimReaderArgs::GetIncludeAPINames() const
+{
+    return _includeAPINames;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
