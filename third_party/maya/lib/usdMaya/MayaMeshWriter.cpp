@@ -22,6 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/pxr.h"
+#include "usdMaya/debugCodes.h"
 #include "usdMaya/MayaMeshWriter.h"
 
 #include "usdMaya/adaptor.h"
@@ -219,7 +220,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
     // Note that isShapeAnimated() as computed by MayaTransformWriter is
     // whether the finalMesh is animated.
     bool isAnimated = _skelInputMesh.isNull() ? isShapeAnimated() : false;
-    if (usdTime.IsDefault() == isAnimated) {
+    if (!shouldWriteSample(usdTime, isAnimated)) {
         // skip shape as the usdTime does not match if shape isAnimated value
         return true; 
     }

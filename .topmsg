@@ -1,0 +1,6 @@
+Subject: [usdMaya] Add a mode to usdExport to produce files that can be stitched
+together.
+
+Value clips have some differences to normal layers that require special
+handling. For example they disregard default time samples in clips (but 
+they can exist in the topology layer)
