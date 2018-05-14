@@ -840,6 +840,12 @@ PxrUsdKatanaGeomGetPrimvarGroup(
         FnKat::GroupBuilder attrBuilder;
         attrBuilder.set("scope", scopeAttr);
         attrBuilder.set("inputType", inputTypeAttr);
+        
+        if (!typeName.GetRole().GetString().empty()) {
+            attrBuilder.set("usd.role", 
+                        FnKat::StringAttribute(typeName.GetRole().GetString()));
+        }
+
         if (elementSizeAttr.isValid()) {
             attrBuilder.set("elementSize", elementSizeAttr);
         }

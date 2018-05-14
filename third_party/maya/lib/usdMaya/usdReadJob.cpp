@@ -294,11 +294,12 @@ bool usdReadJob::_DoImport(UsdPrimRange& rootRange,
                 // This is the normal Read step (pre-visit).
                 PxrUsdMayaPrimReaderArgs args(prim,
                                               mArgs.shadingMode,
-                                              mArgs.defaultMeshScheme,
                                               mArgs.readAnimData,
                                               mArgs.useCustomFrameRange,
                                               mArgs.startTime,
-                                              mArgs.endTime);
+                                              mArgs.endTime,
+                                              mArgs.includeMetadataKeys,
+                                              mArgs.includeAPINames);
                 PxrUsdMayaPrimReaderContext readCtx(&mNewNodeRegistry);
 
                 // If we are NOT importing on behalf of an assembly, then we'll

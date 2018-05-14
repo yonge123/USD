@@ -132,6 +132,12 @@ struct PxrUsdMayaWriteUtil
             const MPlug& attrPlug,
             const SdfValueTypeName& typeName);
 
+    PXRUSDMAYA_API
+    static VtValue GetVtValue(
+            const MPlug& attrPlug,
+            const TfType& type,
+            const TfToken& role);
+
     /// Given an \p attrPlug, determine it's value and set it on \p usdAttr at
     /// \p usdTime.
     ///
@@ -155,6 +161,63 @@ struct PxrUsdMayaWriteUtil
             const UsdPrim& usdPrim,
             const UsdTimeCode& usdTime,
             const bool writeIfConstant,
+            UsdUtilsSparseValueWriter *valueWriter=nullptr);
+
+    /// Writes all of the adaptor metadata from \p mayaObject onto the \p prim.
+    /// Returns true if successful (even if there was nothing to export).
+    PXRUSDMAYA_API
+    static bool WriteMetadataToPrim(
+            const MObject& mayaObject,
+            const UsdPrim& prim);
+
+    /// Writes all of the adaptor API schema attributes from \p mayaObject onto
+    /// the \p prim. Only attributes on applied schemas will be written to
+    /// \p prim.
+    /// Returns true if successful (even if there was nothing to export).
+    /// \sa PxrUsdMayaAdaptor::GetAppliedSchemas
+    PXRUSDMAYA_API
+    static bool WriteAPISchemaAttributesToPrim(
+            const MObject& mayaObject,
+            const UsdPrim& prim,
+            UsdUtilsSparseValueWriter *valueWriter=nullptr);
+
+    template <typename T>
+    static size_t WriteSchemaAttributesToPrim(
+            const MObject& shapeObject,
+            const MObject& transformObject,
+            const UsdPrim& prim,
+            const std::vector<TfToken>& attributeNames,
+            const UsdTimeCode& usdTime = UsdTimeCode::Default(),
+            UsdUtilsSparseValueWriter *valueWriter=nullptr)
+    {
+        return WriteSchemaAttributesToPrim(
+                shapeObject,
+                transformObject,
+                prim,
+                TfType::Find<T>(),
+                attributeNames,
+                usdTime,
+                valueWriter);
+    }
+
+    /// Writes schema attributes specified by \attributeNames for the schema
+    /// with type \p schemaType to the prim \p prim.
+    /// Values are resolved by consulting the \p shapeObject first, and then,
+    /// if the \p shapeObject had no authored value for the attribute,
+    /// consulting the \p transformObject. (This means that attribute collisions
+    /// will always be handled by taking the shape node's value if we're merging
+    /// transforms and shapes.)
+    /// Values are read at the current Maya time, and are written into the USD
+    /// stage at time \p usdTime. If the optional \p valueWriter is provided,
+    /// it will be used to write the values.
+    /// Returns the number of attributes actually written to the USD stage.
+    static size_t WriteSchemaAttributesToPrim(
+            const MObject& shapeObject,
+            const MObject& transformObject,
+            const UsdPrim& prim,
+            const TfType& schemaType,
+            const std::vector<TfToken>& attributeNames,
+            const UsdTimeCode& usdTime = UsdTimeCode::Default(),
             UsdUtilsSparseValueWriter *valueWriter=nullptr);
 
     /// Authors class inherits on \p usdPrim.  \p inheritClassNames are
