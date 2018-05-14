@@ -393,11 +393,12 @@ PxrUsdMayaTranslatorCamera::ReadToCamera(
     PxrUsdMayaPrimReaderArgs args(
             usdCamera.GetPrim(),
             defaultJobArgs.shadingMode,
-            defaultJobArgs.defaultMeshScheme,
             defaultJobArgs.readAnimData,
             defaultJobArgs.useCustomFrameRange,
             defaultJobArgs.startTime,
-            defaultJobArgs.endTime);
+            defaultJobArgs.endTime,
+            defaultJobArgs.includeMetadataKeys,
+            defaultJobArgs.includeAPINames);
 
     return _ReadToCamera(usdCamera, cameraObject, args, NULL);
 }

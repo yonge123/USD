@@ -45,11 +45,12 @@ public:
     PxrUsdMayaPrimReaderArgs(
             const UsdPrim& prim,
             const TfToken& shadingMode,
-            const TfToken& defaultMeshScheme,
             const bool readAnimData,
             const bool useCustomFrameRange,
             const double startTime,
-            const double endTime);
+            const double endTime,
+            const TfToken::Set& includeMetadataKeys,
+            const TfToken::Set& includeAPINames);
 
     /// \brief return the usd prim that should be read.
     PXRUSDMAYA_API
@@ -57,9 +58,6 @@ public:
 
     PXRUSDMAYA_API
     const TfToken& GetShadingMode() const;
-
-    PXRUSDMAYA_API
-    const TfToken& GetDefaultMeshScheme() const;
 
     PXRUSDMAYA_API
     const bool& GetReadAnimData() const;
@@ -70,7 +68,12 @@ public:
     double GetStartTime() const;
     PXRUSDMAYA_API
     double GetEndTime() const;
-    
+
+    PXRUSDMAYA_API
+    const TfToken::Set& GetIncludeMetadataKeys() const;
+    PXRUSDMAYA_API
+    const TfToken::Set& GetIncludeAPINames() const;
+
     bool ShouldImportUnboundShaders() const {
         // currently this is disabled.
         return false;
@@ -79,11 +82,12 @@ public:
 private:
     const UsdPrim& _prim;
     const TfToken& _shadingMode;
-    const TfToken& _defaultMeshScheme;
     const bool _readAnimData;
     const bool _useCustomFrameRange;
     const double _startTime;
     const double _endTime;
+    const TfToken::Set& _includeMetadataKeys;
+    const TfToken::Set& _includeAPINames;
 };
 
 
