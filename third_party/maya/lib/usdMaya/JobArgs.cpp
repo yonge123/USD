@@ -73,6 +73,7 @@ JobExportArgs::JobExportArgs()
         exportNurbsExplicitUV(true),
         nurbsExplicitUVType(PxUsdExportJobArgsTokens->Uniform),
         exportColorSets(true),
+        exportReferenceObjects(false),
         renderLayerMode(PxUsdExportJobArgsTokens->defaultLayer),
         defaultMeshScheme(UsdGeomTokens->catmullClark),
         exportVisibility(true),
