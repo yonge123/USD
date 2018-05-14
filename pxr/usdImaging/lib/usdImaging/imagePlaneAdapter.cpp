@@ -11,6 +11,35 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+namespace {
+
+const VtVec3fArray _vertices = {
+    GfVec3f(-1.0f ,  1.0f , 0.0f),
+    GfVec3f( 1.0f ,  1.0f , 0.0f),
+    GfVec3f( 1.0f , -1.0f , 0.0f),
+    GfVec3f(-1.0f , -1.0f , 0.0f),
+};
+
+const VtVec2fArray _uvs = {
+    GfVec2f(0.0f, 0.0f),
+    GfVec2f(1.0f, 0.0f),
+    GfVec2f(1.0f, 1.0f),
+    GfVec2f(0.0f, 1.0f),
+};
+
+// Simplest right handed vertex counts and vertex indices.
+const VtIntArray _faceVertexCounts = {
+    3, 3
+};
+
+const VtIntArray _faceVertexIndices = {
+    0, 1, 2, 0, 2, 3
+};
+
+const VtIntArray _holeIndices;
+
+}
+
 TF_REGISTRY_FUNCTION(TfType)
 {
     typedef UsdImagingImagePlaneAdapter Adapter;
@@ -63,15 +92,7 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
     }
 
     if (requestedBits & HdChangeTracker::DirtyPoints) {
-        static const VtVec3fArray vertices = {
-            GfVec3f(-1.0f ,  1.0f , 0.0f),
-            GfVec3f( 1.0f ,  1.0f , 0.0f),
-            GfVec3f( 1.0f , -1.0f , 0.0f),
-            GfVec3f(-1.0f , -1.0f , 0.0f),
-        };
-
-        auto& pointsValues = valueCache->GetPoints(cachePath);
-        pointsValues = vertices;
+        valueCache->GetPoints(cachePath) = _vertices;
 
         _MergePrimvar(
             &valueCache->GetPrimvars(cachePath),
@@ -79,14 +100,7 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
             HdInterpolationVertex,
             HdPrimvarRoleTokens->point);
 
-        static const VtVec2fArray uvs = {
-            GfVec2f(0.0f, 0.0f),
-            GfVec2f(1.0f, 0.0f),
-            GfVec2f(1.0f, 1.0f),
-            GfVec2f(0.0f, 1.0f),
-        };
-
-        valueCache->GetPrimvar(cachePath, TfToken("st")) = uvs;
+        valueCache->GetPrimvar(cachePath, TfToken("st")) = _uvs;
 
         _MergePrimvar(
             &valueCache->GetPrimvars(cachePath),
@@ -97,23 +111,12 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
     if (requestedBits & HdChangeTracker::DirtyTopology) {
         VtValue& topology = valueCache->GetTopology(cachePath);
 
-        // Simplest right handed vertex counts and vertex indices.
-        static const VtIntArray faceVertexCounts = {
-            3, 3
-        };
-
-        static const VtIntArray faceVertexIndices = {
-            0, 1, 2, 0, 2, 3
-        };
-
-        static const VtIntArray holeIndices;
-
         topology = HdMeshTopology(
             UsdGeomTokens->triangleSubdivisionRule,
             UsdGeomTokens->rightHanded,
-            faceVertexCounts,
-            faceVertexIndices,
-            holeIndices, 0);
+            _faceVertexCounts,
+            _faceVertexIndices,
+            _holeIndices, 0);
     }
 }
 
