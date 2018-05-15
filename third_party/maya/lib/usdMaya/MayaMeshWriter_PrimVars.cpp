@@ -488,9 +488,9 @@ void MayaMeshWriter::_writeMotionVectors(
     const UsdTimeCode& usdTime,
     MFnMesh& mesh,
     const std::string& colorSetName) {
+    const MString colorSetNameMS(colorSetName.c_str());
     VtArray<GfVec3f> motionVectors;
     motionVectors.resize(static_cast<size_t>(mesh.numVertices()));
-    MString colorSetNameMS(colorSetName.c_str());
 
     // We need to average the color out here, because we need per vertex velocity.
     MObject meshObject = mesh.object();
