@@ -34,6 +34,7 @@ pxr_library(usdGeom
         collectionAPI
         faceSetAPI
         imageable
+        imagePlane
         gprim
         mesh
         metrics
@@ -76,6 +77,7 @@ pxr_library(usdGeom
         wrapFaceSetAPI.cpp
         wrapGprim.cpp
         wrapImageable.cpp
+        wrapImagePlane.cpp
         wrapMesh.cpp
         wrapMetrics.cpp
         wrapModelAPI.cpp
