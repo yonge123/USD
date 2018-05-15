@@ -99,6 +99,7 @@ pxr_shared_library(${PXR_PACKAGE}
         debugCodes
         registryHelper
         MayaCameraWriter
+        MayaImagePlaneWriter
         MayaInstancerWriter
         MayaLocatorWriter
         MayaMeshWriter
