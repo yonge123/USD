@@ -1,0 +1,4 @@
+From: Paul Molodowitch <pm@stanfordalumni.org>
+Subject: [maya] set the default uv to a more sane value
+
+this is used for unassigned uvs... the old huge value caused arnold render problems

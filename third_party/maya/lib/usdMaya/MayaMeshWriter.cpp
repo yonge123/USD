@@ -57,7 +57,7 @@ void _prependValue(UsdAttribute& attr, const UsdTimeCode& usdTime, const T& valu
 
 PXRUSDMAYA_REGISTER_ADAPTOR_SCHEMA(MFn::kMesh, UsdGeomMesh);
 
-const GfVec2f MayaMeshWriter::_DefaultUV = GfVec2f(0.f);
+const GfVec2f MayaMeshWriter::_DefaultUV = GfVec2f(-1.234567);
 
 const GfVec3f MayaMeshWriter::_ShaderDefaultRGB = GfVec3f(0.5);
 const float MayaMeshWriter::_ShaderDefaultAlpha = 0.0;
