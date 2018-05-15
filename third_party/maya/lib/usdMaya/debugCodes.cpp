@@ -33,6 +33,8 @@ TF_REGISTRY_FUNCTION(TfDebug)
 {
     TF_DEBUG_ENVIRONMENT_SYMBOL(PXRUSDMAYA_REGISTRY,
             "UsdMaya registration for usd types.");
+    TF_DEBUG_ENVIRONMENT_SYMBOL(PXRUSDMAYA_SHADER_COLOR,
+        "UsdMaya export of the ShaderBaseColor.");
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
