@@ -173,9 +173,9 @@ HdStImagePlane::_PopulateVertexPrimvars(
     if (!vertexPrimVarRange ||
         !vertexPrimVarRange->IsValid()) {
         HdBufferSpecVector bufferSpecs;
-        for (auto& it: sources) {
-            it->AddBufferSpecs(&bufferSpecs);
-        }
+        // for (auto& it: sources) {
+        //     it->AddBufferSpecs(&bufferSpecs);
+        // }
 
         auto range = resourceRegistry->AllocateNonUniformBufferArrayRange(
                 HdTokens->primvar, bufferSpecs);
@@ -240,7 +240,7 @@ HdStImagePlane::_PopulateTopology(
             sources.push_back(source);
 
             HdBufferSpecVector bufferSpecs;
-            HdBufferSpec::AddBufferSpecs(&bufferSpecs, sources);
+            // HdBufferSpec::AddBufferSpecs(&bufferSpecs, sources);
 
             HdBufferArrayRangeSharedPtr range =
                 resourceRegistry->AllocateNonUniformBufferArrayRange(
