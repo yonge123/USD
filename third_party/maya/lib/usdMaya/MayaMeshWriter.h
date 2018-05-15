@@ -169,7 +169,7 @@ class MayaMeshWriter : public MayaTransformWriter
     static const GfVec4f _ColorSetDefaultRGBA;
 
     /// Names for color sets that are interpreted as motion vectors.
-    static const std::vector<MString> _MotionVectorNames;
+    static const std::vector<std::string> _MotionVectorNames;
 
     /// Input mesh before any skeletal deformations, cached between iterations.
     MObject _skelInputMesh;
