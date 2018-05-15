@@ -118,6 +118,7 @@ pxr_library(hdSt
         shaders/ptexTexture.glslfx
         shaders/renderPass.glslfx
         shaders/renderPassShader.glslfx
+        shaders/simpleTexturedSurface.glslfx
         shaders/terminals.glslfx
 )
 
