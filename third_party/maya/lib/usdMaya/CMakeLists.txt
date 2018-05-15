@@ -32,6 +32,7 @@ pxr_shared_library(${PXR_PACKAGE}
         api.h
 
     PUBLIC_CLASSES
+        adaptor
         colorSpace
         editUtil
         stageCache
@@ -93,9 +94,6 @@ pxr_shared_library(${PXR_PACKAGE}
         Chaser
         ChaserRegistry
 
-        AttributeConverter
-        AttributeConverterRegistry
-
         UserTaggedAttribute
 
     PRIVATE_CLASSES
@@ -133,8 +131,6 @@ pxr_shared_library(${PXR_PACKAGE}
         translatorMesh_SubDiv.cpp
         translatorXformable_decompose.cpp
         usdReadJob_ImportWithProxies.cpp
-        UsdMetadataAttributeConverters.cpp
-        UsdGeomAttributeConverters.cpp
 
     PYMODULE_CPPFILES
         module.cpp
@@ -146,6 +142,7 @@ pxr_shared_library(${PXR_PACKAGE}
         wrapReadUtil.cpp
         wrapRoundTripUtil.cpp
         wrapStageCache.cpp
+        wrapAdaptor.cpp
         wrapUserTaggedAttribute.cpp
         wrapWriteUtil.cpp
         wrapXformStack.cpp
@@ -191,6 +188,7 @@ pxr_test_scripts(
         testenv/testUsdImportCamera.py
         testenv/testUsdImportColorSets.py
         testenv/testUsdImportFrameRange.py
+        testenv/testUsdImportMesh.py
         testenv/testUsdImportNestedAssemblyAnimation.py
         testenv/testUsdImportRfMLight.py
         testenv/testUsdImportSessionLayer.py
@@ -199,6 +197,9 @@ pxr_test_scripts(
         testenv/testUsdImportSkeleton.py
         testenv/testUsdImportUVSets.py
         testenv/testUsdImportXforms.py
+        testenv/testUsdMayaAdaptor.py
+        testenv/testUsdMayaAdaptorMetadata.py
+        testenv/testUsdMayaAdaptorGeom.py
         testenv/testUsdMayaAppDir.py
         testenv/testUsdMayaGetVariantSetSelections.py
         testenv/testUsdMayaModelKindWriter.py
@@ -207,8 +208,6 @@ pxr_test_scripts(
         testenv/testUsdMayaReferenceAssemblyEdits.py
         testenv/testUsdMayaUserExportedAttributes.py
         testenv/testUsdMayaXformStack.py
-        testenv/testUsdGeomAttributeConverters.py
-        testenv/testUsdMetadataAttributeConverters.py
         testenv/testUsdReferenceAssemblyChangeRepresentations.py
         testenv/testUsdReferenceAssemblySelection.py
 )
@@ -608,6 +607,21 @@ pxr_register_test(testUsdImportFrameRange
 )
 
 pxr_install_test_dir(
+    SRC testenv/UsdImportMeshTest
+    DEST testUsdImportMesh
+)
+pxr_register_test(testUsdImportMesh
+    CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdImportMesh"
+    TESTENV testUsdImportMesh
+    ENV
+        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
+        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
+        MAYA_DISABLE_CIP=1
+        MAYA_APP_DIR=<PXR_TEST_DIR>/maya_profile
+)
+
+pxr_install_test_dir(
     SRC testenv/UsdImportNestedAssemblyAnimationTest
     DEST testUsdImportNestedAssemblyAnimation
 )
@@ -837,13 +851,13 @@ pxr_register_test(testUsdMayaUserExportedAttributes
 )
 
 pxr_install_test_dir(
-    SRC testenv/UsdGeomAttributeConvertersTest
-    DEST testUsdGeomAttributeConverters
+    SRC testenv/UsdMayaAdaptorGeomTest
+    DEST testUsdMayaAdaptorGeom
 )
-pxr_register_test(testUsdGeomAttributeConverters
+pxr_register_test(testUsdMayaAdaptorGeom
     CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomAttributeConverters"
-    TESTENV testUsdGeomAttributeConverters
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdMayaAdaptorGeom"
+    TESTENV testUsdMayaAdaptorGeom
     ENV
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
@@ -852,13 +866,13 @@ pxr_register_test(testUsdGeomAttributeConverters
 )
 
 pxr_install_test_dir(
-    SRC testenv/UsdMetadataAttributeConvertersTest
-    DEST testUsdMetadataAttributeConverters
+    SRC testenv/UsdMayaAdaptorMetadataTest
+    DEST testUsdMayaAdaptorMetadata
 )
-pxr_register_test(testUsdMetadataAttributeConverters
+pxr_register_test(testUsdMayaAdaptorMetadata
     CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdMetadataAttributeConverters"
-    TESTENV testUsdMetadataAttributeConverters
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdMayaAdaptorMetadata"
+    TESTENV testUsdMayaAdaptorMetadata
     ENV
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources

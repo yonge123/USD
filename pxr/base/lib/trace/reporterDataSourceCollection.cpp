@@ -22,57 +22,37 @@
 // language governing permissions and limitations under the Apache License.
 //
 
-#include "pxr/base/trace/singleEventNode.h"
+#include "pxr/base/trace/reporterDataSourceCollection.h"
 
 #include "pxr/pxr.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-TraceSingleEventNodeRefPtr
-TraceSingleEventNode::Append(
-    const TfToken &key, 
-    TraceCategoryId category, 
-    TimeStamp beginTime, 
-    TimeStamp endTime,
-    bool separateEvents)
-{
-    TraceSingleEventNodeRefPtr n = 
-        TraceSingleEventNode::New(
-            key, category, beginTime, endTime, separateEvents);
-    _children.push_back(n);
-    return n;
-}
+TraceReporterDataSourceCollection::TraceReporterDataSourceCollection(
+    CollectionPtr collection)
+    : _data({collection})
+{}
+
+TraceReporterDataSourceCollection::TraceReporterDataSourceCollection(
+    std::vector<CollectionPtr> collections)
+    : _data(std::move(collections))
+{}
 
 void
-TraceSingleEventNode::Append(TraceSingleEventNodeRefPtr node)
+TraceReporterDataSourceCollection::Clear()
 {
-    _children.push_back(node);
+    using std::swap;
+    std::vector<CollectionPtr> newData;
+    swap(_data,newData);
 }
 
-void 
-TraceSingleEventNode::SetBeginAndEndTimesFromChildren()
+std::vector<TraceReporterDataSourceBase::CollectionPtr>
+TraceReporterDataSourceCollection::ConsumeData()
 {
-    if (_children.empty()) {
-        _beginTime = 0;
-        _endTime = 0;
-        return;
-    }
-
-    _beginTime = std::numeric_limits<TimeStamp>::max();
-    _endTime   = std::numeric_limits<TimeStamp>::min();
-
-    for (const TraceSingleEventNodeRefPtr& c : _children) {
-        _beginTime = std::min(_beginTime, c->GetBeginTime());
-        _endTime   = std::max(_endTime, c->GetEndTime());
-    }
-
-}
-
-void
-TraceSingleEventNode::AddAttribute(
-    const TfToken& key, const AttributeData& attr)
-{
-    _attributes.emplace(key, attr);
+    using std::swap;
+    std::vector<CollectionPtr> result;
+    swap(_data,result);
+    return result;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
