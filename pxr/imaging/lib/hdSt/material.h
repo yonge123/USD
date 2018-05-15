@@ -37,34 +37,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 typedef boost::shared_ptr<class HdStShaderCode> HdStShaderCodeSharedPtr;
 typedef boost::shared_ptr<class HdStSurfaceShader> HdStSurfaceShaderSharedPtr;
 
-// A bindless GL sampler buffer.
-// This identifies a texture as a 64-bit handle, passed to GLSL as "uvec2".
-// See https://www.khronos.org/opengl/wiki/Bindless_Texture
-class HdSt_BindlessSamplerBufferSource : public HdBufferSource {
-public:
-    HdSt_BindlessSamplerBufferSource(TfToken const &name,
-                                     GLenum type,
-                                     size_t value);
-
-    virtual TfToken const &GetName() const;
-    virtual void const* GetData() const;
-    virtual HdTupleType GetTupleType() const;
-    virtual int GetGLComponentDataType() const;
-    virtual int GetGLElementDataType() const;
-    virtual int GetNumElements() const;
-    virtual short GetNumComponents() const;
-    virtual void AddBufferSpecs(HdBufferSpecVector *specs) const;
-    virtual bool Resolve();
-
-protected:
-    virtual bool _CheckValid() const;
-
-private:
-    TfToken _name;
-    GLenum _type;
-    size_t _value;
-};
-
 class HdStMaterial final: public HdMaterial {
 public:
     HF_MALLOC_TAG_NEW("new HdStMaterial");
