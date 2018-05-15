@@ -280,11 +280,11 @@ public:
     USDIMAGING_API
     virtual HdCullStyle GetCullStyle(SdfPath const &id) override;
 
-    /// Gets the explicit refinement level for the given prim, if no level is
-    /// explicitly set, the fallback is returned; also see 
+    /// Gets the explicit display style for the given prim, if no refine level
+    /// is explicitly set, the fallback is returned; also see 
     /// GetRefineLevelFallback().
     USDIMAGING_API
-    virtual int GetRefineLevel(SdfPath const& id) override;
+    virtual HdDisplayStyle GetDisplayStyle(SdfPath const& id) override;
 
     USDIMAGING_API
     virtual VtValue Get(SdfPath const& id, TfToken const& key) override;
@@ -319,6 +319,8 @@ public:
                   VtValue *samples) override;
 
     // Material Support
+    USDIMAGING_API
+    virtual SdfPath GetMaterialId(SdfPath const &rprimId) override;
     USDIMAGING_API
     virtual std::string GetSurfaceShaderSource(SdfPath const &id) override;
     USDIMAGING_API

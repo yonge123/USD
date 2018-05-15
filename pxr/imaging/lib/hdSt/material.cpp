@@ -37,64 +37,67 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-
-HdSt_BindlessSamplerBufferSource::HdSt_BindlessSamplerBufferSource(
-    TfToken const &name,
-    GLenum type,
-    size_t value) : HdBufferSource()
-    , _name(name)
-    , _type(type)
-    , _value(value)
-{
-    if (_value == 0) {
-        TF_CODING_ERROR("Invalid texture handle: %s: %ld\n",
-                        name.GetText(), value);
+// A bindless GL sampler buffer.
+// This identifies a texture as a 64-bit handle, passed to GLSL as "uvec2".
+// See https://www.khronos.org/opengl/wiki/Bindless_Texture
+class HdSt_BindlessSamplerBufferSource : public HdBufferSource {
+public:
+    HdSt_BindlessSamplerBufferSource(TfToken const &name,
+                                     GLenum type,
+                                     size_t value)
+     : HdBufferSource()
+     , _name(name)
+     , _type(type)
+     , _value(value)
+    {
+        if (_value == 0) {
+            TF_CODING_ERROR("Invalid texture handle: %s: %ld\n",
+                            name.GetText(), value);
+        }
     }
-}
 
-TfToken const &HdSt_BindlessSamplerBufferSource::GetName() const {
-    return _name;
-}
+    virtual TfToken const &GetName() const {
+        return _name;
+    }
+    virtual void const* GetData() const {
+        return &_value;
+    }
+    virtual HdTupleType GetTupleType() const {
+        return {HdTypeUInt32Vec2, 1};
+    }
+    virtual int GetGLComponentDataType() const {
+        // note: we use sampler enums to express bindless pointer
+        // (somewhat unusual)
+        return _type;
+    }
+    virtual int GetGLElementDataType() const {
+        return GL_UNSIGNED_INT64_ARB;
+    }
+    virtual int GetNumElements() const {
+        return 1;
+    }
+    virtual short GetNumComponents() const {
+        return 1;
+    }
+    virtual void GetBufferSpecs(HdBufferSpecVector *specs) const {
+        specs->emplace_back(_name, GetTupleType());
+    }
+    virtual bool Resolve() {
+        if (!_TryLock()) return false;
+        _SetResolved();
+        return true;
+    }
 
-void const* HdSt_BindlessSamplerBufferSource::GetData() const {
-    return &_value;
-}
+protected:
+    virtual bool _CheckValid() const {
+        return true;
+    }
 
-HdTupleType HdSt_BindlessSamplerBufferSource::GetTupleType() const {
-    return {HdTypeUInt32Vec2, 1};
-}
-
-int HdSt_BindlessSamplerBufferSource::GetGLComponentDataType() const {
-    // note: we use sampler enums to express bindless pointer
-    // (somewhat unusual)
-    return _type;
-}
-
-int HdSt_BindlessSamplerBufferSource::GetGLElementDataType() const {
-    return GL_UNSIGNED_INT64_ARB;
-}
-
-int HdSt_BindlessSamplerBufferSource::GetNumElements() const {
-    return 1;
-}
-
-short HdSt_BindlessSamplerBufferSource::GetNumComponents() const {
-    return 1;
-}
-
-void HdSt_BindlessSamplerBufferSource::AddBufferSpecs(HdBufferSpecVector *specs) const {
-    specs->emplace_back(_name, GetTupleType());
-}
-
-bool HdSt_BindlessSamplerBufferSource::Resolve() {
-    if (!_TryLock()) return false;
-    _SetResolved();
-    return true;
-}
-
-bool HdSt_BindlessSamplerBufferSource::_CheckValid() const {
-    return true;
-}
+private:
+    TfToken _name;
+    GLenum _type;
+    size_t _value;
+};
 
 HdStMaterial::HdStMaterial(SdfPath const &id)
  : HdMaterial(id)

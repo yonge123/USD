@@ -487,9 +487,10 @@ void MayaMeshWriter::_writeMotionVectors(
     UsdGeomMesh& primSchema,
     const UsdTimeCode& usdTime,
     MFnMesh& mesh,
-    const MString& colorSetName) {
+    const std::string& colorSetName) {
     VtArray<GfVec3f> motionVectors;
     motionVectors.resize(static_cast<size_t>(mesh.numVertices()));
+    MString colorSetNameMS(colorSetName.c_str());
 
     // We need to average the color out here, because we need per vertex velocity.
     MObject meshObject = mesh.object();
@@ -511,7 +512,7 @@ void MayaMeshWriter::_writeMotionVectors(
 
             for (auto f = decltype(flen){0}; f < flen; ++f) {
                 MColor col;
-                if (itVertex.getColor(col, faces[f], &colorSetName)) {
+                if (itVertex.getColor(col, faces[f], &colorSetNameMS)) {
                     v[0] += col[0];
                     v[1] += col[1];
                     v[2] += col[2];
