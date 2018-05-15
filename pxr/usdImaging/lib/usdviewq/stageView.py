@@ -790,6 +790,10 @@ class StageView(QtOpenGL.QGLWidget):
         of source."""
         return self._lastComputedGfCamera.frustum
 
+    @property
+    def rendererPluginName(self):
+        return self._rendererPluginName
+
     def __init__(self, parent=None, dataModel=None, printTiming=False):
 
         glFormat = QtOpenGL.QGLFormat()
@@ -1504,6 +1508,7 @@ class StageView(QtOpenGL.QGLWidget):
         cameraViewport = self.computeCameraViewport(cameraAspect)
 
         viewport = self.computeWindowViewport()
+        windowViewport = viewport
         if self._cropImageToCameraViewport:
             viewport = cameraViewport
 
@@ -1523,7 +1528,7 @@ class StageView(QtOpenGL.QGLWidget):
                                            * frustum.ComputeProjectionMatrix())
 
 
-        GL.glViewport(*viewport)
+        GL.glViewport(*windowViewport)
         GL.glClear(GL.GL_COLOR_BUFFER_BIT|GL.GL_DEPTH_BUFFER_BIT)
 
         # ensure viewport is right for the camera framing
