@@ -99,15 +99,7 @@ HdRprim::_Sync(HdSceneDelegate* delegate,
     // if so, we will request the binding from the delegate and set it up in
     // this rprim.
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
-        VtValue materialId = 
-            delegate->Get(GetId(), HdShaderTokens->material);
-
-        if (materialId.IsHolding<SdfPath>()){
-            _SetMaterialId(changeTracker, materialId.Get<SdfPath>());
-        } else {
-            _SetMaterialId(changeTracker, SdfPath());
-        }
-
+        _SetMaterialId(changeTracker, delegate->GetMaterialId(GetId()));
         *dirtyBits &= ~HdChangeTracker::DirtyMaterialId;
     }
 }
@@ -203,8 +195,8 @@ HdRprim::PropagateRprimDirtyBits(HdDirtyBits bits)
                                               HdChangeTracker::DirtyNormals : 0;
 
     // when refine level changes, topology becomes dirty.
-    // XXX: can we remove DirtyRefineLevel then?
-    if (bits & HdChangeTracker::DirtyRefineLevel) {
+    // XXX: can we remove DirtyDisplayStyle then?
+    if (bits & HdChangeTracker::DirtyDisplayStyle) {
         bits |=  HdChangeTracker::DirtyTopology;
     }
 
@@ -410,9 +402,7 @@ HdRprim::_PopulateConstantPrimvars(HdSceneDelegate* delegate,
     if (!drawItem->GetConstantPrimvarRange()) {
         // establish a buffer range
         HdBufferSpecVector bufferSpecs;
-        TF_FOR_ALL(srcIt, sources) {
-            (*srcIt)->AddBufferSpecs(&bufferSpecs);
-        }
+        HdBufferSpec::GetBufferSpecs(sources, &bufferSpecs);
 
         HdBufferArrayRangeSharedPtr range =
             resourceRegistry->AllocateShaderStorageBufferArrayRange(
@@ -520,7 +510,7 @@ HdRprim::_ComputeSharedPrimvarId(uint64_t baseId,
     }
 
     HdBufferSpecVector bufferSpecs;
-    HdBufferSpec::AddBufferSpecs(&bufferSpecs, computations);
+    HdBufferSpec::GetBufferSpecs(computations, &bufferSpecs);
     for (HdBufferSpec const &bufferSpec : bufferSpecs) {
         boost::hash_combine(primvarId, bufferSpec.name);
         boost::hash_combine(primvarId, bufferSpec.tupleType.type);
