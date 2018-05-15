@@ -44,7 +44,6 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-
 /* static */
 bool 
 PxrUsdMayaTranslatorMesh::Create(
@@ -219,18 +218,27 @@ PxrUsdMayaTranslatorMesh::Create(
         }
      }
 
-    // Determine if PolyMesh or SubdivMesh
-    TfToken subdScheme = PxrUsdMayaMeshUtil::setSubdivScheme(mesh, meshFn, args.GetDefaultMeshScheme());
+    // Copy UsdGeomMesh schema attrs into Maya if they're authored.
+    PxrUsdMayaReadUtil::ReadSchemaAttributesFromPrim<UsdGeomMesh>(
+            mesh.GetPrim(),
+            meshFn.object(),
+            {
+                UsdGeomTokens->subdivisionScheme,
+                UsdGeomTokens->interpolateBoundary,
+                UsdGeomTokens->faceVaryingLinearInterpolation
+            });
 
-    // If we are dealing with polys, check if there are normals
-    // If we are dealing with SubdivMesh, read additional attributes and SubdivMesh properties
-    if (subdScheme == UsdGeomTokens->none) {
-        if (normals.size() == static_cast<size_t>(meshFn.numFaceVertices())) {
-            PxrUsdMayaMeshUtil::setEmitNormals(mesh, meshFn, UsdGeomTokens->none);
+    // If we are dealing with polys, check if there are normals and set the
+    // internal emit-normals tag so that the normals will round-trip.
+    // If we are dealing with a subdiv, read additional subdiv tags.
+    TfToken subdScheme;
+    if (mesh.GetSubdivisionSchemeAttr().Get(&subdScheme) &&
+            subdScheme == UsdGeomTokens->none) {
+        if (normals.size() == static_cast<size_t>(meshFn.numFaceVertices()) &&
+                mesh.GetNormalsInterpolation() == UsdGeomTokens->faceVarying) {
+            PxrUsdMayaMeshUtil::SetEmitNormalsTag(meshFn, true);
         }
     } else {
-        PxrUsdMayaMeshUtil::setSubdivInterpBoundary(mesh, meshFn, UsdGeomTokens->edgeAndCorner);
-        PxrUsdMayaMeshUtil::setSubdivFVLinearInterpolation(mesh, meshFn);
         _AssignSubDivTagsToMesh(mesh, meshObj, meshFn);
     }
  

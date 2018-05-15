@@ -1563,13 +1563,13 @@ UsdImagingDelegate::GetCullStyle(SdfPath const &id)
 }
 
 /*virtual*/ 
-int 
-UsdImagingDelegate::GetRefineLevel(SdfPath const& id) { 
+HdDisplayStyle 
+UsdImagingDelegate::GetDisplayStyle(SdfPath const& id) { 
     SdfPath usdPath = GetPathForUsd(id);
     int level = 0;
     if (TfMapLookup(_refineLevelMap, usdPath, &level))
-        return level;
-    return GetRefineLevelFallback();
+        return HdDisplayStyle(level);
+    return HdDisplayStyle(GetRefineLevelFallback());
 }
 
 void
@@ -2269,16 +2269,7 @@ UsdImagingDelegate::Get(SdfPath const& id, TfToken const& key)
     SdfPath usdPath = GetPathForUsd(id);
     VtValue value;
 
-    if (key == HdShaderTokens->material) {
-        SdfPath pathValue;
-        if (!_valueCache.ExtractMaterialId(usdPath, &pathValue)) {
-            _UpdateSingleValue(usdPath, HdChangeTracker::DirtyMaterialId);
-            TF_VERIFY(_valueCache.ExtractMaterialId(usdPath, &pathValue));
-        }
-        value = VtValue(GetPathForIndex(pathValue));
-    }
-
-    else if (!_valueCache.ExtractPrimvar(usdPath, key, &value)) {
+    if (!_valueCache.ExtractPrimvar(usdPath, key, &value)) {
         if (key == HdTokens->points) {
             _UpdateSingleValue(usdPath,HdChangeTracker::DirtyPoints);
             if (!TF_VERIFY(_valueCache.ExtractPoints(usdPath, &value))) {
@@ -2484,6 +2475,19 @@ UsdImagingDelegate::SampleInstancerTransform(SdfPath const &instancerId,
     return 0;
 }
 
+/*virtual*/ 
+SdfPath 
+UsdImagingDelegate::GetMaterialId(SdfPath const &rprimId)
+{
+    SdfPath usdPath = GetPathForUsd(rprimId);
+    SdfPath pathValue;
+    if (!_valueCache.ExtractMaterialId(usdPath, &pathValue)) {
+        _UpdateSingleValue(usdPath, HdChangeTracker::DirtyMaterialId);
+        TF_VERIFY(_valueCache.ExtractMaterialId(usdPath, &pathValue));
+    }
+    return GetPathForIndex(pathValue);
+}
+
 /*virtual*/
 std::string
 UsdImagingDelegate::GetSurfaceShaderSource(SdfPath const &materialId)
@@ -2622,11 +2626,17 @@ UsdImagingDelegate::GetTextureResourceID(SdfPath const &textureId)
 {
     SdfPath usdPath = GetPathForUsd(textureId);
     _PrimInfo *primInfo = GetPrimInfo(usdPath);
-    if (TF_VERIFY(primInfo)) {
+    if (primInfo) {
         return primInfo->adapter
             ->GetTextureResourceID(primInfo->usdPrim, usdPath, _time,
                                    (size_t) &GetRenderIndex() );
-    }
+    } 
+
+    // A bad asset can cause GetPrimInfo() to fail. Hence, issue a warning and 
+    // return an invalid resource ID.
+    TF_WARN("Could not get prim tracking data for path <%s>. Unable to get "
+            "associated texture resource ID.", textureId.GetText());
+
     return HdTextureResource::ID(-1);
 }
 
