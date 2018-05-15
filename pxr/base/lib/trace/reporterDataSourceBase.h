@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Pixar
+// Copyright 2018 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -21,35 +21,40 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef PXRUSDMAYA_ATTRIBUTECONVERTERREGISTRY_H
-#define PXRUSDMAYA_ATTRIBUTECONVERTERREGISTRY_H
 
-/// \file AttributeConverterRegistry.h
+#ifndef TRACE_REPORTER_DATA_SOURCE_BASE_H
+#define TRACE_REPORTER_DATA_SOURCE_BASE_H
 
 #include "pxr/pxr.h"
-#include "usdMaya/api.h"
+
+#include "pxr/base/trace/api.h"
+#include "pxr/base/trace/collection.h"
+
 #include <vector>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+////////////////////////////////////////////////////////////////////////////////
+/// \class TraceReporterDataSourceBase
+///
+/// This class is a base class for TraceReporterBase data sources. 
+/// TraceReporterBase uses an instance of a TraceReporterDataSourceBase derived 
+/// class to access TraceCollections.
+///
+class TraceReporterDataSourceBase {
+public:
+    using CollectionPtr = std::shared_ptr<TraceCollection>;
 
-class AttributeConverter;
+    /// Destructor
+    TRACE_API virtual ~TraceReporterDataSourceBase();
 
-/// \brief A registry of all the converters used to import and export
-/// USD-specific information stored in Maya attributes (e.g. "USD_hidden").
-struct AttributeConverterRegistry {
-    /// \brief Registers the given attribute converter.
-    /// Ownership of the converter \p converter transfers to
-    /// AttributeConverterRegistry.
-    PXRUSDMAYA_API
-    static void Register(AttributeConverter* converter);
-    
-    /// \brief Gets a copy of the list of all registered converters.
-    PXRUSDMAYA_API
-    static std::vector<const AttributeConverter*> GetAllConverters();
+    /// Removes all references to TraceCollections.
+    virtual void Clear() = 0;
+
+    /// Returns the next TraceCollections which need to be processed.
+    virtual std::vector<CollectionPtr> ConsumeData() = 0;
 };
-
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // PXRUSDMAYA_ATTRIBUTECONVERTERREGISTRY_H
+#endif // TRACE_REPORTER_DATA_SOURCE_BASE_H

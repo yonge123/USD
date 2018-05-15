@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Pixar
+// Copyright 2018 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -21,32 +21,14 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/pxr.h"
-#include "usdMaya/AttributeConverterRegistry.h"
 
-#include "pxr/base/tf/registryManager.h" 
+#include "pxr/base/trace/reporterDataSourceBase.h"
+
+#include "pxr/pxr.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-
-static std::vector<AttributeConverter*> _reg;
-
-/* static */
-void
-AttributeConverterRegistry::Register(AttributeConverter* converter) {
-    _reg.push_back(converter);
-}
-
-/* static */
-std::vector<const AttributeConverter*>
-AttributeConverterRegistry::GetAllConverters() {
-    TfRegistryManager::GetInstance().SubscribeTo<AttributeConverterRegistry>();
-    std::vector<const AttributeConverter*> ret;
-    for (AttributeConverter* converter : _reg) {
-        ret.push_back(converter);
-    }
-    return ret;
-}
+TraceReporterDataSourceBase::~TraceReporterDataSourceBase()
+{}
 
 PXR_NAMESPACE_CLOSE_SCOPE
-
