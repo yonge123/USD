@@ -30,7 +30,7 @@
 #include "pxr/base/trace/api.h"
 #include "pxr/base/trace/collector.h"
 #include "pxr/base/trace/event.h"
-#include "pxr/base/trace/eventNode.h"
+#include "pxr/base/trace/aggregateNode.h"
 #include "pxr/base/trace/key.h"
 #include "pxr/base/trace/reporterBase.h"
 
@@ -53,19 +53,19 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DECLARE_PUBLIC_TOKENS(TraceReporterTokens, TRACE_REPORTER_TOKENS);
 
 
+TF_DECLARE_WEAK_AND_REF_PTRS(TraceAggregateNode);
 TF_DECLARE_WEAK_AND_REF_PTRS(TraceEventNode);
-TF_DECLARE_WEAK_AND_REF_PTRS(TraceSingleEventNode);
-TF_DECLARE_WEAK_AND_REF_PTRS(TraceSingleEventGraph);
+TF_DECLARE_WEAK_AND_REF_PTRS(TraceEventTree);
 
 TF_DECLARE_WEAK_AND_REF_PTRS(TraceReporter);
 
-class TraceEventNode;
+class TraceAggregateNode;
 class TraceCollectionAvailable;
 
 ////////////////////////////////////////////////////////////////////////////////
 /// \class TraceReporter
 ///
-/// This class converters streams of TraceEvent objects into call graphs which
+/// This class converters streams of TraceEvent objects into call trees which
 /// can then be used as a data source to a GUI or written out to a file.
 ///
 class TraceReporter : 
@@ -82,10 +82,15 @@ public:
     using TimeStamp = TraceEvent::TimeStamp;
     using CounterMap = TfHashMap<TfToken, double, TfToken::HashFunctor>;
 
-    /// Create a new reporter with \a label and \a collector.
+    /// Create a new reporter with \a label and \a dataSource.
     static ThisRefPtr New(const std::string& label,
-                          const TraceCollectorPtr& collector) {
-        return TfCreateRefPtr(new This(label, collector));
+                          DataSourcePtr dataSource) {
+        return TfCreateRefPtr(new This(label, std::move(dataSource)));
+    }
+
+    /// Create a new reporter with \a label and no data source.
+    static ThisRefPtr New(const std::string& label) {
+        return TfCreateRefPtr(new This(label, nullptr));
     }
 
     /// Returns the global reporter.
@@ -93,11 +98,6 @@ public:
    
     /// Destructor.
     TRACE_API virtual ~TraceReporter();
-
-    /// Return the collector from which events are gathered.
-    TraceCollectorPtr GetCollector() const {
-        return _collector;
-    }
 
     /// Return the label associated with this reporter.
     const std::string& GetLabel() {
@@ -122,14 +122,14 @@ public:
 
     /// @}
 
-    /// Returns the root node of the aggregated call graph.
-    TRACE_API TraceEventNodePtr GetTreeRoot();
+    /// Returns the root node of the aggregated call tree.
+    TRACE_API TraceAggregateNodePtr GetAggregateTreeRoot();
 
-    /// Returns the root node of the timeline call graph.
-    TRACE_API TraceSingleEventNodeRefPtr GetSingleEventRoot();
+    /// Returns the root node of the call tree.
+    TRACE_API TraceEventNodeRefPtr GetEventRoot();
 
-    /// Returns the timeline event graph
-    TRACE_API TraceSingleEventGraphRefPtr GetSingleEventGraph();
+    /// Returns the event call tree
+    TRACE_API TraceEventTreeRefPtr GetEventTree();
 
     /// \name Counters
     /// @{
@@ -154,12 +154,12 @@ public:
     /// If we want to have multiple reporters per collector, this will need to
     /// be changed so that all reporters reporting on a collector update their
     /// respective trees
-    TRACE_API void UpdateTree();
+    TRACE_API void UpdateAggregateTree();
 
-    /// Like UpdateTree() but also builds the single event tree.  This
+    /// Like UpdateAggregateTree() but also builds the event tree.  This
     /// takes extra time and most clients don't need it so it's a separate
     /// method.
-    TRACE_API void UpdateSingleEventTree();
+    TRACE_API void UpdateEventTree();
     
     /// Clears event tree and counters.
     TRACE_API void ClearTree();
@@ -186,11 +186,11 @@ public:
 
     /// @}
 
-    /// Creates a valid TraceEventNode::Id object.
+    /// Creates a valid TraceAggregateNode::Id object.
     /// This should be used by very few clients for certain special cases.
-    /// For most cases, the TraceEventNode::Id object should be created and populated
-    /// internally within the Reporter object itself.
-    TRACE_API static TraceEventNode::Id CreateValidEventId();
+    /// For most cases, the TraceAggregateNode::Id object should be created and 
+    /// populated internally within the Reporter object itself.
+    TRACE_API static TraceAggregateNode::Id CreateValidEventId();
 
 
     /// \name TraceCollection::Visitor Interface
@@ -207,27 +207,26 @@ public:
 protected:
 
     TRACE_API TraceReporter(const std::string& label,
-                   const TraceCollectorPtr& collector);
+                   DataSourcePtr dataSource);
 
 private:
     // Internal methods to traverse the collector's event log.
     using _EventTimes = std::map<TfToken, TimeStamp>;
 
-    bool _IsAcceptingCollections() override;
     void _ProcessCollection(const TraceReporterBase::CollectionPtr&) override;
     void _ComputeInclusiveCounterValues();
-    void _UpdateTree(bool buildSingleEventGraph);
+    void _UpdateTree(bool buildEventTree);
     void _PrintRecursionMarker(std::ostream &s, const std::string &label, 
                                int indent);
     void _PrintLineTimes(std::ostream &s, double inclusive, double exclusive,
                     int count, const std::string& label, int indent,
                     bool recursive_node, int iterationCount=1);
-    void _PrintNodeTimes(std::ostream &s, TraceEventNodeRefPtr node,  int indent,
-                         int iterationCount=1);
+    void _PrintNodeTimes(std::ostream &s, TraceAggregateNodeRefPtr node, 
+                        int indent, int iterationCount=1);
     void _PrintLineCalls(std::ostream &s, int inclusive, int exclusive,
                          int total, const std::string& label, int indent);
     void _PrintTimes(std::ostream &s);
-    void _AccumulateTime(const TraceEventNodeRefPtr& node);
+    void _AccumulateTime(const TraceAggregateNodeRefPtr& node);
 
     void _OnBeginEvent(const TraceThreadId&, const TfToken&, const TraceEvent&);
     void _OnEndEvent(const TraceThreadId&, const TfToken&, const TraceEvent&);
@@ -239,27 +238,25 @@ private:
 
     std::string _GetKeyName(const TfToken&) const;
 
-    TraceCollectorPtr _collector;
-
     std::string _label;
 
     bool _groupByFunction;
     bool _foldRecursiveCalls;
 
     _EventTimes _eventTimes;
-    TraceEventNodeRefPtr _rootNode;
-    TraceSingleEventGraphRefPtr _singleEventGraph;
+    TraceAggregateNodeRefPtr _rootAggregateNode;
+    TraceEventTreeRefPtr _eventTree;
 
     CounterMap _counters;
 
     using _CounterIndexMap =TfHashMap<TfToken, int, TfToken::HashFunctor>;
     _CounterIndexMap _counterIndexMap;
 
-    // Helper class for event graph creation
+    // Helper class for aggregate event tree creation
     struct _PendingEventNode {
         struct Child {
             TimeStamp start;
-            TraceEventNodeRefPtr node;
+            TraceAggregateNodeRefPtr node;
         };
 
         struct CounterData {
@@ -269,11 +266,11 @@ private:
         };
 
         _PendingEventNode(
-            TraceEventNode::Id id, const TfToken& key, TimeStamp start);
+            TraceAggregateNode::Id id, const TfToken& key, TimeStamp start);
 
         Child Close(TimeStamp end);
 
-        TraceEventNode::Id id;
+        TraceAggregateNode::Id id;
         TfToken key;
         TimeStamp start;
         std::vector<Child> children;
@@ -284,7 +281,7 @@ private:
     using _ThreadStackMap = std::map<TraceThreadId, _PendingNodeStack>;
     _ThreadStackMap _threadStacks;
     int _counterIndex;
-    bool _buildSingleEventGraph;
+    bool _buildEventTree;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
