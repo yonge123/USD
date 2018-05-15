@@ -57,7 +57,7 @@ void _prependValue(UsdAttribute& attr, const UsdTimeCode& usdTime, const T& valu
 
 }
 
-const GfVec2f MayaMeshWriter::_DefaultUV = GfVec2f(0.0f);
+const GfVec2f MayaMeshWriter::_DefaultUV = GfVec2f(0.f);
 
 const GfVec3f MayaMeshWriter::_ShaderDefaultRGB = GfVec3f(0.5);
 const float MayaMeshWriter::_ShaderDefaultAlpha = 0.0;
