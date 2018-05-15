@@ -50,8 +50,8 @@ TF_WRAP_MODULE
             TF_WRAP(UsdGeomXform);
             TF_WRAP(UsdGeomCamera);
             TF_WRAP(UsdGeomBoundable);
-                TF_WRAP(UsdGeomImagePlane);
                 TF_WRAP(UsdGeomGprim);
+                    TF_WRAP(UsdGeomImagePlane);
                     TF_WRAP(UsdGeomCapsule);
                     TF_WRAP(UsdGeomCone);
                     TF_WRAP(UsdGeomCube);

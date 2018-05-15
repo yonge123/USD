@@ -14,6 +14,7 @@ pxr_shared_library(${PXR_PACKAGE}
         usdLux
         usdRi
         usdShade
+        usdHydra
         usdSkel
         usdUtils
         vt

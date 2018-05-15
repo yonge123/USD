@@ -49,7 +49,8 @@ pxr_library(hdSt
         glUtils
         instancer
         interleavedMemoryManager
-        light      
+        imagePlane
+        light
         lightingShader
         material
         mesh
@@ -86,6 +87,7 @@ pxr_library(hdSt
         cullingShaderKey
         drawBatch
         drawTargetTextureResource
+        imagePlaneShaderKey
         immediateDrawBatch
         indirectDrawBatch
         meshShaderKey
@@ -107,6 +109,7 @@ pxr_library(hdSt
         shaders/fallbackLightingShader.glslfx
         shaders/fallbackSurface.glslfx
         shaders/frustumCull.glslfx
+        shaders/imagePlane.glslfx
         shaders/instancing.glslfx
         shaders/lighting.glslfx
         shaders/lightingIntegrationShader.glslfx

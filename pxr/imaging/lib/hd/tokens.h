@@ -200,6 +200,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (mesh)                                      \
     (basisCurves)                               \
     (points)                                    \
+    (imagePlane)                                \
                                                 \
     /* Sprims */                                \
     (camera)                                    \

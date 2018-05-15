@@ -129,10 +129,24 @@ HdStGLSLProgram::CompileShader(GLenum type,
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, sizeof(shaderSources)/sizeof(const char *), shaderSources, NULL);
     glCompileShader(shader);
+// #define DEBUG_SHADER_OUTPUT
+
+#ifdef DEBUG_SHADER_OUTPUT
+    static std::map<std::string, int> idMap;
+    if (idMap.empty()) {
+        system("rm -f /ssd/usd/shaders/*");
+    }
+    std::stringstream ss; ss << "/ssd/usd/shaders/" << shaderType << "_" << idMap[shaderType]++;
+    std::fstream fs(ss.str(), std::ios::out);
+    fs << shaderSource;
+#endif
 
     std::string logString;
     if (!HdStGLUtils::GetShaderCompileStatus(shader, &logString)) {
         // XXX:validation
+#ifdef DEBUG_SHADER_OUTPUT
+        TF_WARN("Faulty file: %s", ss.str().c_str());
+#endif
         TF_WARN("Failed to compile shader (%s): %s",
                 shaderType, logString.c_str());
 
