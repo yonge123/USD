@@ -38,6 +38,8 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+PXRUSDMAYA_REGISTER_ADAPTOR_SCHEMA(MFn::kMesh, UsdGeomMesh);
+
 namespace {
 
 template <typename T>
@@ -55,8 +57,6 @@ void _prependValue(UsdAttribute& attr, const UsdTimeCode& usdTime, const T& valu
 }
 
 }
-
-PXRUSDMAYA_REGISTER_ADAPTOR_SCHEMA(MFn::kMesh, UsdGeomMesh);
 
 const GfVec2f MayaMeshWriter::_DefaultUV = GfVec2f(0.f);
 
