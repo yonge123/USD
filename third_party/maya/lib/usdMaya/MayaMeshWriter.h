@@ -132,7 +132,7 @@ class MayaMeshWriter : public MayaTransformWriter
     void _writeMotionVectors(UsdGeomMesh& primSchema,
                              const UsdTimeCode& usdTime,
                              MFnMesh& mesh,
-                             const MString& colorSetName);
+                             const std::string& colorSetName);
 
     /// Adds displayColor and displayOpacity primvars using the given color,
     /// alpha, and assignment data if the \p primSchema does not already have
