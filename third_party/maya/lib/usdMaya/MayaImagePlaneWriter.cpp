@@ -7,14 +7,49 @@
 
 #include "writeUtil.h"
 
+#ifdef GENERATE_SHADERS
+#include <pxr/imaging/glf/glslfx.h>
+#include <pxr/usd/usdShade/material.h>
+#include <pxr/usd/usdShade/materialBindingAPI.h>
+#include <pxr/usd/usdShade/shader.h>
+#include <pxr/usd/usdShade/connectableAPI.h>
+#include <pxr/usd/usdHydra/tokens.h>
+
+#include <maya/MRenderUtil.h>
+#endif
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-const TfToken MayaImagePlaneWriter::image_plane_fill("fill");
-const TfToken MayaImagePlaneWriter::image_plane_best("best");
-const TfToken MayaImagePlaneWriter::image_plane_horizontal("horizontal");
-const TfToken MayaImagePlaneWriter::image_plane_vertical("vertical");
-const TfToken MayaImagePlaneWriter::image_plane_to_size("to size");
+namespace {
+
+enum {
+    IMAGE_PLANE_FIT_FILL,
+    IMAGE_PLANE_FIT_BEST,
+    IMAGE_PLANE_FIT_HORIZONTAL,
+    IMAGE_PLANE_FIT_VERTICAL,
+    IMAGE_PLANE_FIT_TO_SIZE
+};
+
+const TfToken image_plane_fill("fill");
+const TfToken image_plane_best("best");
+const TfToken image_plane_horizontal("horizontal");
+const TfToken image_plane_vertical("vertical");
+const TfToken image_plane_to_size("to size");
+
+#ifdef GENERATE_SHADERS
+const TfToken materialNameToken("HdMaterial");
+const TfToken shaderNameToken("HdShader");
+const TfToken primvarNameToken("HdPrimvar");
+const TfToken textureNameToken("HdTexture");
+const TfToken stToken("st");
+const TfToken uvToken("uv");
+const TfToken resultToken("result");
+const TfToken baseColorToken("baseColor");
+const TfToken colorToken("color");
+#endif
+
+}
 
 MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx)
     : MayaTransformWriter(iDag, uPath, instanceSource, jobCtx),
@@ -125,6 +160,44 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
     TF_AXIOM(primSchema);
     mUsdPrim = primSchema.GetPrim();
     TF_AXIOM(mUsdPrim);
+
+#ifdef GENERATE_SHADERS
+    const auto materialPath = getUsdPath().AppendChild(materialNameToken);
+    auto material = UsdShadeMaterial::Define(getUsdStage(), materialPath);
+    auto shader = UsdShadeShader::Define(getUsdStage(), materialPath.AppendChild(shaderNameToken));
+    auto primvar = UsdShadeShader::Define(getUsdStage(), materialPath.AppendChild(primvarNameToken));
+    auto texture = UsdShadeShader::Define(getUsdStage(), materialPath.AppendChild(textureNameToken));
+    mTexture = texture.GetPrim();
+    TF_AXIOM(mTexture);
+
+    UsdShadeMaterialBindingAPI(mUsdPrim)
+        .Bind(material);
+
+    UsdShadeConnectableAPI::ConnectToSource(
+        UsdShadeMaterial(material).CreateSurfaceOutput(GlfGLSLFXTokens->glslfx),
+        UsdShadeMaterial(shader).CreateSurfaceOutput(GlfGLSLFXTokens->glslfx));
+
+    shader.CreateOutput(UsdHydraTokens->infoFilename, SdfValueTypeNames->Asset)
+        .Set(SdfAssetPath("shaders/simpleTexturedSurface.glslfx"));
+
+    primvar.CreateIdAttr().Set(UsdHydraTokens->HwPrimvar_1);
+    primvar.CreateOutput(UsdHydraTokens->infoVarname, SdfValueTypeNames->Token).Set(stToken);
+
+    texture.CreateIdAttr().Set(UsdHydraTokens->HwUvTexture_1);
+    texture.CreateOutput(UsdHydraTokens->textureMemory, SdfValueTypeNames->Float).Set(10.0f * 1024.0f * 1024.0f);
+
+    UsdShadeConnectableAPI shaderApi(shader);
+    UsdShadeConnectableAPI primvarApi(primvar);
+    UsdShadeConnectableAPI textureApi(texture);
+
+    UsdShadeConnectableAPI::ConnectToSource(
+        textureApi.CreateInput(uvToken, SdfValueTypeNames->Float2),
+        primvarApi.CreateOutput(resultToken, SdfValueTypeNames->Float2));
+
+    UsdShadeConnectableAPI::ConnectToSource(
+        shaderApi.CreateInput(baseColorToken, SdfValueTypeNames->Color3f),
+        textureApi.CreateOutput(colorToken, SdfValueTypeNames->Color3f));
+#endif
 }
 
 MayaImagePlaneWriter::~MayaImagePlaneWriter() {
@@ -158,7 +231,15 @@ bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdG
     _SetAttribute(primSchema.CreateExtentAttr(), extent, usdTime);
 
     const auto sizePlug = dnode.findPlug("size");
-    primSchema.GetFilenameAttr().Set(SdfAssetPath(std::string(dnode.findPlug("imageName").asString().asChar())));
+    const auto imageName = SdfAssetPath(std::string(dnode.findPlug("imageName").asString().asChar()));
+    primSchema.GetFilenameAttr().Set(imageName);
+#ifdef GENERATE_SHADERS
+    auto imageNameExtracted = MRenderUtil::exactImagePlaneFileName(dnode.object());
+    UsdShadeShader textureShader(mTexture);
+    auto filenameAttr = textureShader.CreateOutput(UsdHydraTokens->infoFilename, SdfValueTypeNames->Asset);
+    filenameAttr.Set(SdfAssetPath(std::string(imageNameExtracted.asChar())), usdTime);
+    filenameAttr.Set(imageName);
+#endif
     const auto fit = dnode.findPlug("fit").asShort();
     if (fit == IMAGE_PLANE_FIT_BEST) {
         primSchema.GetFitAttr().Set(image_plane_best);
