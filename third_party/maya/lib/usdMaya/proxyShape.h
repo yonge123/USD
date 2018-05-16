@@ -99,8 +99,12 @@ class UsdMayaProxyShape : public MPxSurfaceShape,
             MObject outStageData;
             MObject displayGuides;
             MObject displayRenderGuides;
+            MObject rendererPlugin;
 
             MObject softSelectable;
+
+            TfTokenVector rendererPluginIds;
+            short defaultRendererIndex;
 
             // this will not change once constructed.
             const MTypeId typeId;
@@ -127,6 +131,12 @@ class UsdMayaProxyShape : public MPxSurfaceShape,
         typedef std::function<bool(const UsdMayaProxyShape&, const GfRay&,
                 GfVec3d*)> ClosestPointDelegate;
 
+        /// Delegate function for setting the renderer plugin
+        typedef std::function<void(TfToken)> SetRendererPluginDelegate;
+
+        /// Delegate function for getting the renderer plugin
+        typedef std::function<TfToken()> GetRendererPluginDelegate;
+
         PXRUSDMAYA_API
         static void* creator(const PluginStaticData& psData);
 
@@ -138,6 +148,18 @@ class UsdMayaProxyShape : public MPxSurfaceShape,
 
         PXRUSDMAYA_API
         static void SetClosestPointDelegate(ClosestPointDelegate delegate);
+
+        PXRUSDMAYA_API
+        static void SetSetRendererPluginDelegate(SetRendererPluginDelegate delegate);
+
+        PXRUSDMAYA_API
+        static void SetGetRendererPluginDelegate(GetRendererPluginDelegate delegate);
+
+        PXRUSDMAYA_API
+        short GetRendererPluginIndex();
+
+        PXRUSDMAYA_API
+        void SetRendererPluginIndex(short index);
 
         // Virtual function overrides
         PXRUSDMAYA_API
@@ -252,6 +274,8 @@ class UsdMayaProxyShape : public MPxSurfaceShape,
         bool _useFastPlayback;
 
         static ClosestPointDelegate _sharedClosestPointDelegate;
+        static SetRendererPluginDelegate _sharedSetRendererPluginDelegate;
+        static GetRendererPluginDelegate _sharedGetRendererPluginDelegate;
 };
 
 

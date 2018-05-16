@@ -71,6 +71,8 @@ PxrMayaHdSceneDelegate::PxrMayaHdSceneDelegate(
         const SdfPath& delegateID) :
     HdSceneDelegate(renderIndex, delegateID)
 {
+    _supportsLights = GetRenderIndex().
+            IsSprimTypeSupported(HdPrimTypeTokens->simpleLight);
     _lightingContext = GlfSimpleLightingContext::New();
 
     // populate tasks in renderindex
@@ -96,6 +98,7 @@ PxrMayaHdSceneDelegate::PxrMayaHdSceneDelegate(
     }
 
     // simple lighting task (for Hydra native)
+    if (_supportsLights)
     {
         renderIndex->InsertTask<HdxSimpleLightTask>(this, _simpleLightTaskId);
         _ValueCache& cache = _valueCacheMap[_simpleLightTaskId];
@@ -144,16 +147,18 @@ PxrMayaHdSceneDelegate::SetCameraState(
         _viewport = viewport;
 
         // Update the simple light task.
-        HdxSimpleLightTaskParams simpleLightTaskParams =
-            _GetValue<HdxSimpleLightTaskParams>(_simpleLightTaskId,
-                                                HdTokens->params);
+        if (_supportsLights) {
+            HdxSimpleLightTaskParams simpleLightTaskParams =
+                _GetValue<HdxSimpleLightTaskParams>(_simpleLightTaskId,
+                                                    HdTokens->params);
 
-        simpleLightTaskParams.viewport = GfVec4f(_viewport);
-        _SetValue(_simpleLightTaskId, HdTokens->params, simpleLightTaskParams);
+            simpleLightTaskParams.viewport = GfVec4f(_viewport);
+            _SetValue(_simpleLightTaskId, HdTokens->params, simpleLightTaskParams);
 
-        GetRenderIndex().GetChangeTracker().MarkTaskDirty(
-            _simpleLightTaskId,
-            HdChangeTracker::DirtyParams);
+            GetRenderIndex().GetChangeTracker().MarkTaskDirty(
+                _simpleLightTaskId,
+                HdChangeTracker::DirtyParams);
+        }
 
         // Update all render setup tasks.
         for (const auto& it : _renderSetupTaskIdMap) {
@@ -208,6 +213,9 @@ PxrMayaHdSceneDelegate::SetLightingStateFromMayaDrawContext(
 void
 PxrMayaHdSceneDelegate::_SetLightingStateFromLightingContext()
 {
+    // If we don't support lights, we shouldn't get in this code...
+    TF_VERIFY(_supportsLights);
+
     const GlfSimpleLightVector& lights = _lightingContext->GetLights();
 
     bool hasNumLightsChanged = false;
@@ -217,11 +225,6 @@ PxrMayaHdSceneDelegate::_SetLightingStateFromLightingContext()
         const SdfPath lightId(
             TfStringPrintf("%s/light%zu", _rootId.GetText(), _lightIds.size()));
         _lightIds.push_back(lightId);
-
-        // Since we're hardcoded to use HdStRenderDelegate, we expect to have
-        // light Sprims.
-        TF_VERIFY(GetRenderIndex().
-            IsSprimTypeSupported(HdPrimTypeTokens->simpleLight));
 
         GetRenderIndex().
             InsertSprim(HdPrimTypeTokens->simpleLight, this, lightId);
@@ -285,7 +288,9 @@ PxrMayaHdSceneDelegate::GetSetupTasks()
 {
     HdTaskSharedPtrVector tasks;
 
-    tasks.push_back(GetRenderIndex().GetTask(_simpleLightTaskId));
+    if (_supportsLights) {
+        tasks.push_back(GetRenderIndex().GetTask(_simpleLightTaskId));
+    }
 
     return tasks;
 }

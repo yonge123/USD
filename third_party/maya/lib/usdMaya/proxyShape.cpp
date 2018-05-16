@@ -39,6 +39,7 @@
 #include "pxr/base/tf/staticTokens.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/token.h"
+#include "pxr/imaging/hdx/rendererPluginRegistry.h"
 #include "pxr/usd/ar/resolver.h"
 #include "pxr/usd/sdf/layer.h"
 #include "pxr/usd/sdf/path.h"
@@ -77,6 +78,7 @@
 #include <maya/MTime.h>
 #include <maya/MViewport2Renderer.h>
 
+#include <limits>
 #include <map>
 #include <string>
 #include <utility>
@@ -103,6 +105,12 @@ TF_DEFINE_ENV_SETTING(PIXMAYA_ENABLE_BOUNDING_BOX_MODE, false,
 
 UsdMayaProxyShape::ClosestPointDelegate
 UsdMayaProxyShape::_sharedClosestPointDelegate = nullptr;
+
+UsdMayaProxyShape::SetRendererPluginDelegate
+UsdMayaProxyShape::_sharedSetRendererPluginDelegate = nullptr;
+
+UsdMayaProxyShape::GetRendererPluginDelegate
+UsdMayaProxyShape::_sharedGetRendererPluginDelegate = nullptr;
 
 bool
 UsdMayaIsBoundingBoxModeEnabled()
@@ -351,6 +359,70 @@ UsdMayaProxyShape::initialize(PluginStaticData* psData)
     retValue = addAttribute(psData->displayRenderGuides);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
 
+    HfPluginDescVector pluginDescriptors;
+    HdxRendererPluginRegistry::GetInstance().GetPluginDescs(&pluginDescriptors);
+
+    if (pluginDescriptors.empty()) {
+        MGlobal::displayError(
+            TfStringPrintf(
+                "Could not find any renderer plugins - aborting").c_str());
+        return MStatus::kFailure;
+    }
+    // Unlikely, but if we have more rendererPlugins that can fit in a short,
+    // warn. We set to max - 1 to account for "Unknown" plugin
+    short numPlugins = std::numeric_limits<short>::max();
+    if (pluginDescriptors.size() > static_cast<size_t>(numPlugins)) {
+        MGlobal::displayWarning(
+            TfStringPrintf(
+                "Exceeded max number of renderer plugins - truncating at %d",
+                numPlugins).c_str());
+    }
+    else {
+        numPlugins = static_cast<short>(pluginDescriptors.size());
+    }
+
+    psData->rendererPluginIds.reserve(numPlugins);
+    MStringArray pluginDisplayNames(numPlugins, "");
+
+    psData->defaultRendererIndex = -1;
+    TfToken defaultRenderer = HdxRendererPluginRegistry::GetInstance().
+            GetDefaultPluginId();
+    for(short i = 0; i < numPlugins; ++i) {
+        psData->rendererPluginIds.push_back(pluginDescriptors[i].id);
+        pluginDisplayNames[i] = pluginDescriptors[i].displayName.c_str();
+        if (pluginDescriptors[i].id
+                == defaultRenderer) {
+            psData->defaultRendererIndex = i;
+        }
+    }
+    if (psData->defaultRendererIndex == -1) {
+        MGlobal::displayWarning(
+            TfStringPrintf(
+                "Could not find %s renderer plugin - setting default to %s",
+                defaultRenderer.GetText(),
+                pluginDisplayNames[0].asChar()).c_str());
+    }
+
+    psData->rendererPlugin = enumAttrFn.create(
+        "rendererPlugin",
+        "rendererPlugin",
+        psData->defaultRendererIndex,
+        &retValue);
+    CHECK_MSTATUS_AND_RETURN_IT(retValue);
+    for(short i = 0; i < numPlugins; ++i) {
+        CHECK_MSTATUS_AND_RETURN_IT(enumAttrFn.addField(
+                pluginDisplayNames[i], i));
+    }
+    enumAttrFn.setInternal(true);
+    enumAttrFn.setCached(true);
+    enumAttrFn.setKeyable(true);
+    enumAttrFn.setReadable(true);
+    enumAttrFn.setStorable(true);
+    enumAttrFn.setWritable(true);
+    enumAttrFn.setAffectsAppearance(true);
+    retValue = addAttribute(psData->rendererPlugin);
+    CHECK_MSTATUS_AND_RETURN_IT(retValue);
+
     psData->softSelectable = numericAttrFn.create(
         "softSelectable",
         "softSelectable",
@@ -418,6 +490,71 @@ UsdMayaProxyShape::SetClosestPointDelegate(ClosestPointDelegate delegate)
 {
     _sharedClosestPointDelegate = delegate;
 }
+
+/* static */
+void
+UsdMayaProxyShape::SetSetRendererPluginDelegate(
+        SetRendererPluginDelegate delegate)
+{
+    _sharedSetRendererPluginDelegate = delegate;
+}
+
+/* static */
+void
+UsdMayaProxyShape::SetGetRendererPluginDelegate(
+        GetRendererPluginDelegate delegate)
+{
+    _sharedGetRendererPluginDelegate = delegate;
+}
+
+short
+UsdMayaProxyShape::GetRendererPluginIndex()
+{
+    if (!_sharedGetRendererPluginDelegate) {
+        TF_CODING_ERROR("_sharedGetRendererPluginDelegate has not been set"
+                " yet - cannot call GetRendererPluginIndex; returning default"
+                " index");
+        return _psData.defaultRendererIndex;
+    }
+
+    // Just iterate through known plugins - highly doubt the number of
+    // renderer plugins will ever get large enough to warrant anything else
+    TfToken currentRenderer = _sharedGetRendererPluginDelegate();
+    auto found = std::find(
+            _psData.rendererPluginIds.begin(),
+            _psData.rendererPluginIds.end(),
+            currentRenderer);
+    if (found == _psData.rendererPluginIds.end()) {
+        const TfToken& defaultRenderer =
+                _psData.rendererPluginIds[_psData.defaultRendererIndex];
+        MGlobal::displayError(
+            TfStringPrintf(
+                "Current renderer '%s' was added after %s was initialized;"
+                    " setting to default renderer, %s",
+                currentRenderer.GetText(),
+                _psData.typeName.asChar(),
+                defaultRenderer.GetText()
+            ).c_str());
+        return _psData.defaultRendererIndex;
+    }
+    // We checked that size of _psData.rendererPluginIds was < max size of
+    // short when it was created, so casting to short should be safe
+    return static_cast<short>(found - _psData.rendererPluginIds.begin());
+}
+
+void
+UsdMayaProxyShape::SetRendererPluginIndex(short index)
+{
+    if (index < 0
+            || static_cast<size_t>(index) >= _psData.rendererPluginIds.size()) {
+        TF_CODING_ERROR(TfStringPrintf(
+                "Unable to set renderer to %d - out of bounds of 0 to %lu",
+                index, _psData.rendererPluginIds.size() - 1));
+        return;
+    }
+    _sharedSetRendererPluginDelegate(_psData.rendererPluginIds[index]);
+}
+
 
 /* virtual */
 void
@@ -788,6 +925,10 @@ UsdMayaProxyShape::setInternalValueInContext(
         _useFastPlayback = dataHandle.asBool();
         return true;
     }
+    else if (plug == _psData.rendererPlugin) {
+        short rendererIndex = dataHandle.asShort();
+        SetRendererPluginIndex(rendererIndex);
+    }
 
     return MPxSurfaceShape::setInternalValueInContext(plug, dataHandle, ctx);
 }
@@ -803,7 +944,10 @@ UsdMayaProxyShape::getInternalValueInContext(
         dataHandle.set(_useFastPlayback);
         return true;
     }
-
+    else if (plug == _psData.rendererPlugin) {
+        dataHandle.set(GetRendererPluginIndex());
+        return true;
+    }
     return MPxSurfaceShape::getInternalValueInContext(plug, dataHandle, ctx);
 }
 

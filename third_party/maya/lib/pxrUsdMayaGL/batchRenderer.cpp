@@ -58,6 +58,7 @@
 #include "pxr/imaging/hd/task.h"
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hdx/intersector.h"
+#include "pxr/imaging/hdx/rendererPluginRegistry.h"
 #include "pxr/imaging/hdx/selectionTracker.h"
 #include "pxr/imaging/hdx/tokens.h"
 #include "pxr/usd/sdf/path.h"
@@ -120,6 +121,85 @@ UsdMayaGLBatchRenderer&
 UsdMayaGLBatchRenderer::GetInstance()
 {
     return TfSingleton<UsdMayaGLBatchRenderer>::GetInstance();
+}
+
+bool
+UsdMayaGLBatchRenderer::SetRendererPlugin(const TfToken id)
+{
+    TfToken actualId = id;
+
+    // Special case: TfToken() selects the first plugin in the list.
+    if (actualId.IsEmpty()) {
+        actualId = HdxRendererPluginRegistry::GetInstance().
+            GetDefaultPluginId();
+    }
+    if (actualId == _renderPluginId) {
+        return true;
+    }
+
+    TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg(
+            "Switching rendererPlugin: %s to %s\n",
+            _renderPluginId.IsEmpty() ? "<none>" : _renderPluginId.GetText(),
+            actualId.GetText());
+
+    HdxRendererPlugin *plugin = nullptr;
+    plugin = HdxRendererPluginRegistry::GetInstance().
+        GetRendererPlugin(actualId);
+
+    if (plugin == nullptr) {
+        TF_CODING_ERROR("Couldn't find plugin for id %s", actualId.GetText());
+        return false;
+    } else if (plugin == _renderPlugin) {
+        // It's a no-op to load the same plugin twice.
+        HdxRendererPluginRegistry::GetInstance().ReleasePlugin(plugin);
+        return true;
+    } else if (!plugin->IsSupported()) {
+        // Don't do anything if the plugin isn't supported on the running
+        // system, just return that we're not able to set it.
+        HdxRendererPluginRegistry::GetInstance().ReleasePlugin(plugin);
+        return false;
+    }
+
+    HdSelectionSharedPtr selection;
+    if (_selectionTracker) {
+        selection = _selectionTracker->GetSelectionMap();
+    }
+    if (!selection) {
+        selection.reset(new HdSelection);
+    }
+
+    // Delete hydra state.
+    _DeleteHydraResources();
+
+    _renderPluginId = actualId;
+
+    // Recreate the render index.
+    _renderPlugin = plugin;
+    HdRenderDelegate *renderDelegate = _renderPlugin->CreateRenderDelegate();
+    _renderIndex.reset(HdRenderIndex::New(renderDelegate));
+
+    // Create the new scene delegate
+    _taskDelegate.reset(
+        new PxrMayaHdSceneDelegate(_renderIndex.get(), _rootId));
+
+    _intersector.reset(new HdxIntersector(_renderIndex.get()));
+    _selectionTracker.reset(new HdxSelectionTracker());
+
+    // Rebuild state in the new delegate/task controller.
+    _selectionTracker->SetSelection(selection);
+
+    _renderIndex->GetChangeTracker().AddCollection(
+        _legacyViewportRprimCollection.GetName());
+    _renderIndex->GetChangeTracker().AddCollection(
+        _viewport2RprimCollection.GetName());
+
+    return true;
+}
+
+const TfToken
+UsdMayaGLBatchRenderer::GetRendererPlugin()
+{
+    return _renderPluginId;
 }
 
 HdRenderIndex*
@@ -387,7 +467,8 @@ UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer() :
         _lastRenderFrameStamp(0u),
         _lastSelectionFrameStamp(0u),
         _legacyRenderPending(false),
-        _legacySelectionPending(false)
+        _legacySelectionPending(false),
+        _renderPlugin(nullptr)
 {
     _viewport2UsesLegacySelection = TfGetenvBool("MAYA_VP2_USE_VP1_SELECTION",
                                                  false);
@@ -396,14 +477,6 @@ UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer() :
         _tokens->BatchRendererRootName);
     _legacyViewportPrefix = _rootId.AppendChild(_tokens->LegacyViewport);
     _viewport2Prefix = _rootId.AppendChild(_tokens->Viewport2);
-
-    _renderIndex.reset(HdRenderIndex::New(&_renderDelegate));
-    if (!TF_VERIFY(_renderIndex)) {
-        return;
-    }
-
-    _taskDelegate.reset(
-        new PxrMayaHdSceneDelegate(_renderIndex.get(), _rootId));
 
     const TfTokenVector renderTags({HdTokens->geometry, HdTokens->proxy});
 
@@ -414,8 +487,6 @@ UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer() :
     _legacyViewportRprimCollection.SetReprName(HdTokens->refined);
     _legacyViewportRprimCollection.SetRootPath(_legacyViewportPrefix);
     _legacyViewportRprimCollection.SetRenderTags(renderTags);
-    _renderIndex->GetChangeTracker().AddCollection(
-        _legacyViewportRprimCollection.GetName());
 
     _viewport2RprimCollection.SetName(TfToken(
         TfStringPrintf("%s_%s",
@@ -424,11 +495,9 @@ UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer() :
     _viewport2RprimCollection.SetReprName(HdTokens->refined);
     _viewport2RprimCollection.SetRootPath(_viewport2Prefix);
     _viewport2RprimCollection.SetRenderTags(renderTags);
-    _renderIndex->GetChangeTracker().AddCollection(
-        _viewport2RprimCollection.GetName());
 
-    _intersector.reset(new HdxIntersector(_renderIndex.get()));
-    _selectionTracker.reset(new HdxSelectionTracker());
+    // empty token will set default renderer (GL, currently)
+    SetRendererPlugin(TfToken());
 
     // The batch renderer needs to be reset when changing scenes (either by
     // switching to a new empty scene or by opening a different scene). We
@@ -471,9 +540,7 @@ UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer() :
 /* virtual */
 UsdMayaGLBatchRenderer::~UsdMayaGLBatchRenderer()
 {
-    _selectionTracker.reset();
-    _intersector.reset();
-    _taskDelegate.reset();
+    _DeleteHydraResources();
 }
 
 const UsdMayaGLSoftSelectHelper&
@@ -1054,7 +1121,6 @@ UsdMayaGLBatchRenderer::_ComputeSelection(
                     hitVector[0] = hit;
                 } else if (!singleSelection) {
                     hitVector.push_back(hit);
-                    }
                 }
             }
         }
@@ -1120,6 +1186,49 @@ UsdMayaGLBatchRenderer::_ComputeSelection(
 
     TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg(
         "^^^^^^^^^^^^ SELECTION STAGE FINISH ^^^^^^^^^^^^^\n");
+}
+
+void
+UsdMayaGLBatchRenderer::_DeleteHydraResources()
+{
+    // Unwinding order: remove data sources first (shapeAdapter delegates,
+    // task controller, scene delegate); then render index;
+    // then render delegate; finally the renderer plugin used to manage
+    // the render delegate.
+    // This order is important because the Hydra render index is constructed
+    // with and is dependent on the render delegate. At destruction time,
+    // the render index uses the delegate to destroy Hydra prims, so the
+    // delegate must be destructed *after* the render index.
+    auto resetShapeAdapters = [](_ShapeAdapterBucketsMap& bucketsMap) {
+        for (auto& hashAndBucket : bucketsMap) {
+            auto& bucket = hashAndBucket.second;
+            for (auto& adapter : bucket.second) {
+                adapter->ReleaseHydraResources();
+            }
+        }
+    };
+
+    resetShapeAdapters(_shapeAdapterBuckets);
+    resetShapeAdapters(_legacyShapeAdapterBuckets);
+
+    _selectResults.clear();
+    _selectionTracker.reset();
+    _intersector.reset();
+    _taskDelegate.reset();
+
+    HdRenderDelegate *renderDelegate = nullptr;
+    if (_renderIndex != nullptr) {
+        renderDelegate = _renderIndex->GetRenderDelegate();
+        _renderIndex.reset();
+    }
+    if (_renderPlugin != nullptr) {
+        if (renderDelegate != nullptr) {
+            _renderPlugin->DeleteRenderDelegate(renderDelegate);
+        }
+        HdxRendererPluginRegistry::GetInstance().ReleasePlugin(_renderPlugin);
+        _renderPlugin = nullptr;
+    }
+    _renderPluginId = TfToken();
 }
 
 void
@@ -1238,34 +1347,37 @@ UsdMayaGLBatchRenderer::_RenderBatches(
         items.push_back(std::make_pair(params, std::move(rprimCollections)));
     }
 
-    // Update lighting depending on VP2/Legacy.
-    if (vp2Context) {
-        _taskDelegate->SetLightingStateFromMayaDrawContext(*vp2Context);
-    } else {
-        // Maya does not appear to use GL_LIGHT_MODEL_AMBIENT, but it leaves
-        // the default value of (0.2, 0.2, 0.2, 1.0) in place. The first time
-        // that the viewport is set to use lights in the scene (instead of the
-        // default lights or the no/flat lighting modes), the value is reset to
-        // (0.0, 0.0, 0.0, 1.0), and it does not get reverted if/when the
-        // lighting mode is changed back.
-        // Since in the legacy viewport we get the lighting context from
-        // OpenGL, we read in GL_LIGHT_MODEL_AMBIENT as the scene ambient. We
-        // therefore need to explicitly set GL_LIGHT_MODEL_AMBIENT to the
-        // zero/no ambient value before we do, otherwise we would end up using
-        // the "incorrect" (i.e. not what Maya itself uses) default value.
-        // This is not a problem in Viewport 2.0, since we do not consult
-        // OpenGL at all for any of the lighting context state.
-        glPushAttrib(GL_LIGHTING_BIT);
+    if (GetRenderIndex()->
+                IsSprimTypeSupported(HdPrimTypeTokens->simpleLight))
+    {
+        // Update lighting depending on VP2/Legacy.
+        if (vp2Context) {
+            _taskDelegate->SetLightingStateFromMayaDrawContext(*vp2Context);
+        } else {
+            // Maya does not appear to use GL_LIGHT_MODEL_AMBIENT, but it leaves
+            // the default value of (0.2, 0.2, 0.2, 1.0) in place. The first time
+            // that the viewport is set to use lights in the scene (instead of the
+            // default lights or the no/flat lighting modes), the value is reset to
+            // (0.0, 0.0, 0.0, 1.0), and it does not get reverted if/when the
+            // lighting mode is changed back.
+            // Since in the legacy viewport we get the lighting context from
+            // OpenGL, we read in GL_LIGHT_MODEL_AMBIENT as the scene ambient. We
+            // therefore need to explicitly set GL_LIGHT_MODEL_AMBIENT to the
+            // zero/no ambient value before we do, otherwise we would end up using
+            // the "incorrect" (i.e. not what Maya itself uses) default value.
+            // This is not a problem in Viewport 2.0, since we do not consult
+            // OpenGL at all for any of the lighting context state.
+            glPushAttrib(GL_LIGHTING_BIT);
 
-        const GfVec4f zeroAmbient(0.0f, 0.0f, 0.0f, 1.0f);
-        glLightModelfv(GL_LIGHT_MODEL_AMBIENT, zeroAmbient.data());
+            const GfVec4f zeroAmbient(0.0f, 0.0f, 0.0f, 1.0f);
+            glLightModelfv(GL_LIGHT_MODEL_AMBIENT, zeroAmbient.data());
 
-        _taskDelegate->SetLightingStateFromVP1(worldToViewMatrix,
-                                               projectionMatrix);
+            _taskDelegate->SetLightingStateFromVP1(worldToViewMatrix,
+                                                   projectionMatrix);
 
-        glPopAttrib(); // GL_LIGHTING_BIT
+            glPopAttrib(); // GL_LIGHTING_BIT
+        }
     }
-
     _Render(worldToViewMatrix,
             projectionMatrix,
             viewport,

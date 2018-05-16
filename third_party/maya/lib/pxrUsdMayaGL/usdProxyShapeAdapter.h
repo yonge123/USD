@@ -84,6 +84,9 @@ class PxrMayaHdUsdProxyShapeAdapter : public PxrMayaHdShapeAdapter
         virtual const HdRprimCollectionVector&
         GetRenderRprimCollections() const override;
 
+        PXRUSDMAYAGL_API
+        virtual void ReleaseHydraResources() override;
+
     protected:
 
         /// Update the shape adapter's state from the shape with the given

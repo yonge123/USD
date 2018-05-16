@@ -136,10 +136,25 @@ UsdMayaGL_ClosestPointOnProxyShape(
     return didIsect;
 }
 
+bool UsdMayaGL_SetRendererPlugin(TfToken id)
+{
+    return UsdMayaGLBatchRenderer::GetInstance().SetRendererPlugin(id);
+}
+
+TfToken UsdMayaGL_GetRendererPlugin()
+{
+    return UsdMayaGLBatchRenderer::GetInstance().GetRendererPlugin();
+}
+
+
 TF_REGISTRY_FUNCTION(UsdMayaProxyShape)
 {
     UsdMayaProxyShape::SetClosestPointDelegate(
             UsdMayaGL_ClosestPointOnProxyShape);
+    UsdMayaProxyShape::SetSetRendererPluginDelegate(
+            UsdMayaGL_SetRendererPlugin);
+    UsdMayaProxyShape::SetGetRendererPluginDelegate(
+            UsdMayaGL_GetRendererPlugin);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

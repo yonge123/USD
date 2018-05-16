@@ -79,6 +79,13 @@ class PxrMayaHdShapeAdapter
                 const unsigned int displayStyle,
                 const MHWRender::DisplayStatus displayStatus);
 
+        /// Clean up any references to hydra resources, so owning entities can
+        /// delete them.
+        ///
+        /// These resources should be recreated on the next _Sync call.
+        PXRUSDMAYAGL_API
+        virtual void ReleaseHydraResources() = 0;
+
         /// Update the shape adapter's visibility state from the display status
         /// of its shape.
         ///

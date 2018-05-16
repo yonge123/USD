@@ -140,6 +140,13 @@ PxrMayaHdUsdProxyShapeAdapter::GetRenderRprimCollections() const
 }
 
 /* virtual */
+void
+PxrMayaHdUsdProxyShapeAdapter::ReleaseHydraResources()
+{
+    _delegate.reset();
+}
+
+/* virtual */
 bool
 PxrMayaHdUsdProxyShapeAdapter::_Sync(
         const MDagPath& shapeDagPath,
@@ -359,9 +366,10 @@ PxrMayaHdUsdProxyShapeAdapter::_Init(HdRenderIndex* renderIndex)
 
     const SdfPath delegateId = delegatePrefix.AppendChild(delegateName);
 
-    if (_delegate &&
-            delegateId == GetDelegateID() &&
-            renderIndex == &_delegate->GetRenderIndex()) {
+    bool sameRenderIndex = _delegate && \
+            renderIndex == &(_delegate->GetRenderIndex());
+    if (sameRenderIndex &&
+            delegateId == GetDelegateID()) {
         // The delegate's current ID matches the delegate ID we computed and
         // the render index matches, so it must be up to date already.
         return true;
@@ -402,7 +410,8 @@ PxrMayaHdUsdProxyShapeAdapter::_Init(HdRenderIndex* renderIndex)
 
     auto& rprimCollection = _rprimCollections[0];
 
-    if (collectionName != rprimCollection.GetName()) {
+    if (!sameRenderIndex ||
+            collectionName != rprimCollection.GetName()) {
         rprimCollection.SetName(collectionName);
         renderIndex->GetChangeTracker().AddCollection(rprimCollection.GetName());
     }

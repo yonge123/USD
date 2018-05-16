@@ -42,6 +42,7 @@
 #include "pxr/imaging/hd/rprimCollection.h"
 #include "pxr/imaging/hdSt/renderDelegate.h"
 #include "pxr/imaging/hdx/intersector.h"
+#include "pxr/imaging/hdx/rendererPlugin.h"
 #include "pxr/imaging/hdx/selectionTracker.h"
 #include "pxr/usd/sdf/path.h"
 
@@ -100,6 +101,16 @@ public:
     /// Get the singleton instance of the batch renderer.
     PXRUSDMAYAGL_API
     static UsdMayaGLBatchRenderer& GetInstance();
+
+    /// Set the current render-graph delegate to \p id.
+    /// the plugin will be loaded if it's not yet.
+    PXRUSDMAYAGL_API
+    bool SetRendererPlugin(const TfToken id);
+
+    /// Set the current render-graph delegate to \p id.
+    /// the plugin will be loaded if it's not yet.
+    PXRUSDMAYAGL_API
+    const TfToken GetRendererPlugin();
 
     /// Get the render index owned by the batch renderer.
     ///
@@ -259,6 +270,10 @@ private:
 
     typedef std::pair<PxrMayaHdRenderParams, HdRprimCollectionVector>
             _RenderItem;
+
+    // This function disposes of: the render index, the render plugin,
+    // and the usd imaging delegate.
+    void _DeleteHydraResources();
 
     /// Private helper function to render the given list of render items.
     /// Note that this doesn't set lighting, so if you need to update the
@@ -452,14 +467,9 @@ private:
 
     /// Hydra engine objects used to render batches.
     ///
-    /// Note that the Hydra render index is constructed with and is dependent
-    /// on the render delegate. At destruction time, the render index uses the
-    /// delegate to destroy Hydra prims, so the delegate must be destructed
-    /// *after* the render index. We enforce that ordering by declaring the
-    /// render delegate *before* the render index, since class members are
-    /// destructed in reverse declaration order.
     HdEngine _hdEngine;
-    HdStRenderDelegate _renderDelegate;
+    HdxRendererPlugin *_renderPlugin;
+    TfToken _renderPluginId;
     std::unique_ptr<HdRenderIndex> _renderIndex;
 
     /// The root ID of the batch renderer itself, and the top of the path

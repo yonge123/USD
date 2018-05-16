@@ -4,6 +4,7 @@ pxr_shared_library(${PXR_PACKAGE}
     LIBRARIES
         ar
         gf
+        hdx
         js
         kind
         plug
