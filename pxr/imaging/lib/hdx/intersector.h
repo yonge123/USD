@@ -51,7 +51,7 @@ class HdRenderIndex;
 class HdRprimCollection;
 
 typedef boost::shared_ptr<class HdRenderPass> HdRenderPassSharedPtr;
-typedef boost::shared_ptr<class HdStRenderPassState> HdStRenderPassStateSharedPtr;
+typedef boost::shared_ptr<class HdRenderPassState> HdRenderPassStateSharedPtr;
 
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfDrawTarget);
 
@@ -106,17 +106,20 @@ public:
     /// selection.
     typedef std::function<void(void)> DepthMaskCallback;
 
-    enum PickMode {
-        PickPrimsAndInstances = 1 << 0,
-        PickFaces             = 1 << 1,
-        PickEdges             = 1 << 2,
-        PickPoints            = 1 << 3
+    /// The target of the picking operation, which allows us to write out the
+    /// minimal number of id's during the ID render pass.
+    enum PickTarget {
+        PickPrimsAndInstances = 0,
+        PickFaces,
+        PickEdges,
+        PickPoints
     };
 
     struct Params {
         Params() 
             : hitMode(HitFirst)
-            , pickMode(PickPrimsAndInstances)
+            , pickTarget(PickPrimsAndInstances)
+            , pickThrough(false)
             , projectionMatrix(1)
             , viewMatrix(1)
             , alphaThreshold(0.0f)
@@ -126,7 +129,8 @@ public:
         {}
 
         HitMode hitMode;
-        PickMode pickMode;
+        PickTarget pickTarget;
+        bool pickThrough;
         GfMatrix4d projectionMatrix;
         GfMatrix4d viewMatrix;
         float alphaThreshold;
@@ -227,6 +231,7 @@ public:
     private:
         bool _ResolveHit(int index, int x, int y, float z, Hit* hit) const;
         size_t _GetHash(int index) const;
+        bool _IsPrimIdValid(int index) const;
         
         std::unique_ptr<unsigned char[]> _primIds;
         std::unique_ptr<unsigned char[]> _instanceIds;
@@ -245,13 +250,13 @@ private:
 
     // Create a shared render pass each for pickables and unpickables
     HdRenderPassSharedPtr _pickableRenderPass;
-    HdRenderPassSharedPtr _unpickableRenderPass;
+    HdRenderPassSharedPtr _occluderRenderPass;
 
     // Having separate render pass states allows us to queue up the tasks
     // corresponding to each of the above render passes. It also lets us use
     // different shader mixins if we choose to (we don't currently.)
-    HdStRenderPassStateSharedPtr _pickableRenderPassState;
-    HdStRenderPassStateSharedPtr _unpickableRenderPassState;
+    HdRenderPassStateSharedPtr _pickableRenderPassState;
+    HdRenderPassStateSharedPtr _occluderRenderPassState;
 
     // A single draw target is shared for all contexts. Since the FBO cannot be
     // shared, we clone the attachements on each request.

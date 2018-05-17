@@ -1,6 +1,10 @@
 #usda 1.0
 (
     "WARNING: THIS FILE IS GENERATED.  DO NOT EDIT."
+    customLayerData = {
+        string[] appliedAPISchemas = ["MaterialBindingAPI"]
+        string[] multipleApplyAPISchemas = []
+    }
 )
 
 class NodeGraph "NodeGraph" (
@@ -74,6 +78,21 @@ class Material "Material" (
     """
 )
 {
+    token outputs:displacement (
+        displayGroup = "Outputs"
+        doc = '''Represents the universal "displacement" output terminal of a 
+        material.'''
+    )
+    token outputs:surface (
+        displayGroup = "Outputs"
+        doc = '''Represents the universal "surface" output terminal of a
+        material.'''
+    )
+    token outputs:volume (
+        displayGroup = "Outputs"
+        doc = '''Represents the universal "volume" output terminal of a
+        material.'''
+    )
 }
 
 class Shader "Shader" (
@@ -223,6 +242,10 @@ class "MaterialBindingAPI" (
     not authored (i.e. empty) on a binding-relationship, the default behavior 
     matches UsdShadeTokens->weakerThanDescendants.
 
+    \\note If a material binding relationship is a built-in property defined as 
+    part of a typed prim's schema, a fallback value should not be provided for 
+    it. This is because the \"material resolution\" algorithm only conisders 
+    <i>authored</i> properties.
     """
 )
 {

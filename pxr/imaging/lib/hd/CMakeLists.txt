@@ -7,10 +7,11 @@ pxr_library(hd
     LIBRARIES
         plug
         tf
-        tracelite
+        trace
         vt
         work
         sdf
+        cameraUtil
         hf
         pxOsd
         ${TBB_tbb_LIBRARY}
@@ -29,6 +30,7 @@ pxr_library(hd
         bufferResource
         bufferSource
         bufferSpec
+        camera
         changeTracker
         compExtCompInputSource
         computation
@@ -60,6 +62,7 @@ pxr_library(hd
         renderIndex
         renderPass
         renderPassState
+        renderThread
         repr
         resource
         resourceRegistry
@@ -75,6 +78,7 @@ pxr_library(hd
         task
         texture
         textureResource
+        timeSampleArray
         tokens
         topology
         types

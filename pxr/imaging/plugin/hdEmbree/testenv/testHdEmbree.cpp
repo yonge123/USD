@@ -32,7 +32,7 @@
 
 #include "pxr/imaging/hdx/renderTask.h"
 
-#include "pxr/imaging/hdSt/camera.h"
+#include "pxr/imaging/hd/camera.h"
 
 #include "pxr/imaging/hdEmbree/rendererPlugin.h"
 #include "pxr/imaging/hdEmbree/renderDelegate.h"
@@ -245,10 +245,10 @@ void HdEmbree_TestGLDrawing::InitTest()
     frustum.SetRotation(GfRotation(GfVec3d(1, 0, 0), 45));
 
     _sceneDelegate->UpdateCamera(camera,
-        HdStCameraTokens->worldToViewMatrix,
+        HdCameraTokens->worldToViewMatrix,
         VtValue(frustum.ComputeViewMatrix()));
     _sceneDelegate->UpdateCamera(camera,
-        HdStCameraTokens->projectionMatrix,
+        HdCameraTokens->projectionMatrix,
         VtValue(frustum.ComputeProjectionMatrix()));
 };
 
@@ -258,15 +258,27 @@ void HdEmbree_TestGLDrawing::DrawTest()
     glViewport(0, 0, GetWidth(), GetHeight());
 
     // Ask hydra to execute our render task (producing an image).
-    HdTaskSharedPtrVector tasks;
-    tasks.push_back(_renderIndex->GetTask(SdfPath("/renderTask")));
+    HdTaskSharedPtr renderTask = _renderIndex->GetTask(SdfPath("/renderTask"));
+    HdTaskSharedPtrVector tasks = { renderTask };
     _engine.Execute(*_renderIndex, tasks);
 }
 
 void HdEmbree_TestGLDrawing::OffscreenTest()
 {
     // Render and write out to a file.
-    DrawTest();
+    glViewport(0, 0, GetWidth(), GetHeight());
+
+    // Ask hydra to execute our render task (producing an image).
+    boost::shared_ptr<HdxRenderTask> renderTask =
+        boost::static_pointer_cast<HdxRenderTask>(
+            _renderIndex->GetTask(SdfPath("/renderTask")));
+
+    // For offline rendering, make sure we render to convergence.
+    HdTaskSharedPtrVector tasks = { renderTask };
+    do {
+        _engine.Execute(*_renderIndex, tasks);
+    } while (!renderTask->IsConverged());
+
     WriteToFile("color", _outputName.c_str());
 }
 

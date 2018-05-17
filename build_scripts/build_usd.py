@@ -26,6 +26,7 @@ from distutils.spawn import find_executable
 import argparse
 import contextlib
 import datetime
+import fnmatch
 import glob
 import multiprocessing
 import os
@@ -105,26 +106,31 @@ def GetCPUCount():
     except NotImplementedError:
         return 1
 
-def Run(cmd):
+def Run(cmd, logCommandOutput = True):
     """Run the specified command in a subprocess."""
     PrintInfo('Running "{cmd}"'.format(cmd=cmd))
 
     with open("log.txt", "a") as logfile:
-        # Let exceptions escape from subprocess.check_output -- higher level
-        # code will handle them.
-        p = subprocess.Popen(shlex.split(cmd),
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         logfile.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
         logfile.write("\n")
         logfile.write(cmd)
         logfile.write("\n")
-        while True:
-            l = p.stdout.readline()
-            if l != "":
-                logfile.write(l)
-                PrintCommandOutput(l)
-            elif p.poll() is not None:
-                break
+
+        # Let exceptions escape from subprocess calls -- higher level
+        # code will handle them.
+        if logCommandOutput:
+            p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, 
+                                 stderr=subprocess.STDOUT)
+            while True:
+                l = p.stdout.readline()
+                if l != "":
+                    logfile.write(l)
+                    PrintCommandOutput(l)
+                elif p.poll() is not None:
+                    break
+        else:
+            p = subprocess.Popen(shlex.split(cmd))
+            p.wait()
 
     if p.returncode != 0:
         # If verbosity >= 3, we'll have already been printing out command output
@@ -190,11 +196,14 @@ def RunCMake(context, force, extraArgs = None):
         if msvcCompilerAndVersion:
             _, version = msvcCompilerAndVersion
             if version >= MSVC_2017_COMPILER_VERSION:
-                generator = '-G "Visual Studio 15 2017 Win64"'
+                generator = "Visual Studio 15 2017 Win64"
             else:
-                generator = '-G "Visual Studio 14 2015 Win64"'
+                generator = "Visual Studio 14 2015 Win64"
+
+    if generator is not None:
+        generator = '-G "{gen}"'.format(gen=generator)
                 
-    # On MacOS, enable the use of @rpath for  relocatable builds.
+    # On MacOS, enable the use of @rpath for relocatable builds.
     osx_rpath = None
     if MacOS():
         osx_rpath = "-DCMAKE_MACOSX_RPATH=ON"
@@ -230,10 +239,15 @@ def PatchFile(filename, patches):
         shutil.copy(filename, filename + ".old")
         open(filename, 'w').writelines(newLines)
 
-def DownloadURL(url, context, force):
+def DownloadURL(url, context, force, dontExtract = None):
     """Download and extract the archive file at given URL to the
-    source directory specified in the context. Returns the absolute 
-    path to the directory where files have been extracted."""
+    source directory specified in the context. 
+
+    dontExtract may be a sequence of path prefixes that will
+    be excluded when extracting the archive.
+
+    Returns the absolute path to the directory where files have 
+    been extracted."""
     with CurrentWorkingDirectory(context.srcDir):
         # Extract filename from URL and see if file already exists. 
         filename = url.split("/")[-1]       
@@ -262,17 +276,37 @@ def DownloadURL(url, context, force):
 
             for i in xrange(maxRetries):
                 try:
-                    r = urllib2.urlopen(url)
-                    with open(tmpFilename, "wb") as outfile:
-                        outfile.write(r.read())
+                    if context.useCurl:
+                        # Don't log command output so that curl's progress
+                        # meter doesn't get written to the log file.
+                        Run("curl {progress} -L -o {filename} {url}".format(
+                            progress="-#" if verbosity >= 2 else "-s",
+                            filename=tmpFilename, url=url), 
+                            logCommandOutput=False)
+                    else:
+                        r = urllib2.urlopen(url)
+                        with open(tmpFilename, "wb") as outfile:
+                            outfile.write(r.read())
+
                     break
                 except Exception as e:
                     PrintCommandOutput("Retrying download due to error: {err}\n"
                                        .format(err=e))
                     lastError = e
             else:
+                errorMsg = str(lastError)
+                if "SSL: TLSV1_ALERT_PROTOCOL_VERSION" in errorMsg:
+                    errorMsg += ("\n\n"
+                                 "Your OS or version of Python may not support "
+                                 "TLS v1.2+, which is required for downloading "
+                                 "files from certain websites. This support "
+                                 "was added in Python 2.7.9."
+                                 "\n\n"
+                                 "You can use curl to download dependencies "
+                                 "by installing it in your PATH and re-running "
+                                 "this script.")
                 raise RuntimeError("Failed to download {url}: {err}"
-                                   .format(url=url, err=lastError))
+                                   .format(url=url, err=errorMsg))
 
             shutil.move(tmpFilename, filename)
 
@@ -281,40 +315,51 @@ def DownloadURL(url, context, force):
         # of the contents beneath it.
         archive = None
         rootDir = None
+        members = None
         try:
             if tarfile.is_tarfile(filename):
                 archive = tarfile.open(filename)
                 rootDir = archive.getnames()[0].split('/')[0]
+                if dontExtract != None:
+                    members = (m for m in archive.getmembers() 
+                               if not any((fnmatch.fnmatch(m.name, p)
+                                           for p in dontExtract)))
             elif zipfile.is_zipfile(filename):
                 archive = zipfile.ZipFile(filename)
                 rootDir = archive.namelist()[0].split('/')[0]
+                if dontExtract != None:
+                    members = (m for m in archive.getnames() 
+                               if not any((fnmatch.fnmatch(m, p)
+                                           for p in dontExtract)))
             else:
                 raise RuntimeError("unrecognized archive file type")
 
-            extractedPath = os.path.abspath(rootDir)
-            if force and os.path.isdir(extractedPath):
-                shutil.rmtree(extractedPath)
+            with archive:
+                extractedPath = os.path.abspath(rootDir)
+                if force and os.path.isdir(extractedPath):
+                    shutil.rmtree(extractedPath)
 
-            if os.path.isdir(extractedPath):
-                PrintInfo("Directory {0} already exists, skipping extract"
-                          .format(extractedPath))
-            else:
-                PrintInfo("Extracting archive to {0}".format(extractedPath))
+                if os.path.isdir(extractedPath):
+                    PrintInfo("Directory {0} already exists, skipping extract"
+                              .format(extractedPath))
+                else:
+                    PrintInfo("Extracting archive to {0}".format(extractedPath))
 
-                # Extract to a temporary directory then move the contents
-                # to the expected location when complete. This ensures that
-                # incomplete extracts will be retried if the script is run
-                # again.
-                tmpExtractedPath = os.path.abspath("extract_dir")
-                if os.path.isdir(tmpExtractedPath):
+                    # Extract to a temporary directory then move the contents
+                    # to the expected location when complete. This ensures that
+                    # incomplete extracts will be retried if the script is run
+                    # again.
+                    tmpExtractedPath = os.path.abspath("extract_dir")
+                    if os.path.isdir(tmpExtractedPath):
+                        shutil.rmtree(tmpExtractedPath)
+
+                    archive.extractall(tmpExtractedPath, members=members)
+
+                    shutil.move(os.path.join(tmpExtractedPath, rootDir),
+                                extractedPath)
                     shutil.rmtree(tmpExtractedPath)
 
-                archive.extractall(tmpExtractedPath)
-                shutil.move(os.path.join(tmpExtractedPath, rootDir),
-                            extractedPath)
-                shutil.rmtree(tmpExtractedPath)
-                
-            return extractedPath
+                return extractedPath
         except Exception as e:
             # If extraction failed for whatever reason, assume the
             # archive file was bad and move it aside so that re-running
@@ -379,7 +424,16 @@ elif Windows() or MacOS():
     BOOST_URL = "http://downloads.sourceforge.net/project/boost/boost/1.61.0/boost_1_61_0.tar.gz"
 
 def InstallBoost(context, force):
-    with CurrentWorkingDirectory(DownloadURL(BOOST_URL, context, force)):
+    # Documentation files in the boost archive can have exceptionally
+    # long paths. This can lead to errors when extracting boost on Windows,
+    # since paths are limited to 260 characters by default on that platform.
+    # To avoid this, we skip extracting all documentation.
+    #
+    # For some examples, see: https://svn.boost.org/trac10/ticket/11677
+    dontExtract = ["*/doc/*", "*/libs/*/doc/*"]
+
+    with CurrentWorkingDirectory(DownloadURL(BOOST_URL, context, force, 
+                                             dontExtract)):
         bootstrap = "bootstrap.bat" if Windows() else "./bootstrap.sh"
         Run('{bootstrap} --prefix="{instDir}"'
             .format(bootstrap=bootstrap, instDir=context.instDir))
@@ -400,11 +454,13 @@ def InstallBoost(context, force):
             '--with-date_time',
             '--with-filesystem',
             '--with-program_options',
-            '--with-python',
             '--with-regex',
             '--with-system',
             '--with-thread'
         ]
+
+        if context.buildPython:
+            b2_settings.append("--with-python")
 
         if force:
             b2_settings.append("-a")
@@ -451,7 +507,7 @@ if Windows():
 elif MacOS():
     TBB_URL = "https://github.com/01org/tbb/archive/2017_U2.tar.gz"
 else:
-    TBB_URL = "https://github.com/01org/tbb/archive/4.4.tar.gz"
+    TBB_URL = "https://github.com/01org/tbb/archive/4.4.6.tar.gz"
 
 def InstallTBB(context, force):
     if Windows():
@@ -514,25 +570,18 @@ JPEG = Dependency("JPEG", InstallJPEG, "include/jpeglib.h")
 TIFF_URL = "ftp://download.osgeo.org/libtiff/tiff-4.0.7.zip"
 
 def InstallTIFF(context, force):
-    if Windows():
-        InstallTIFF_Windows(context, force)
-    else:
-        InstallTIFF_LinuxOrMacOS(context, force)
-
-def InstallTIFF_Windows(context, force):
     with CurrentWorkingDirectory(DownloadURL(TIFF_URL, context, force)):
         # libTIFF has a build issue on Windows where tools/tiffgt.c
         # unconditionally includes unistd.h, which does not exist.
         # To avoid this, we patch the CMakeLists.txt to skip building
-        # the tools entirely. We also need to skip building tests, since
-        # they rely on the tools we've just elided.
+        # the tools entirely. We do this on Linux and MacOS as well
+        # to avoid requiring some GL and X dependencies.
+        #
+        # We also need to skip building tests, since they rely on 
+        # the tools we've just elided.
         PatchFile("CMakeLists.txt", 
                    [("add_subdirectory(tools)", "# add_subdirectory(tools)"),
                     ("add_subdirectory(test)", "# add_subdirectory(test)")])
-        RunCMake(context, force)
-        
-def InstallTIFF_LinuxOrMacOS(context, force):
-    with CurrentWorkingDirectory(DownloadURL(TIFF_URL, context, force)):
         RunCMake(context, force)
 
 TIFF = Dependency("TIFF", InstallTIFF, "include/tiff.h")
@@ -649,6 +698,7 @@ def InstallOpenImageIO(context, force):
     with CurrentWorkingDirectory(DownloadURL(OIIO_URL, context, force)):
         extraArgs = ['-DOIIO_BUILD_TOOLS=OFF',
                      '-DOIIO_BUILD_TESTS=OFF',
+                     '-DUSE_PYTHON=OFF',
                      '-DSTOP_ON_WARNING=OFF']
 
         # OIIO's FindOpenEXR module circumvents CMake's normal library 
@@ -845,6 +895,11 @@ def InstallUSD(context):
         else:
             extraArgs.append('-DPXR_BUILD_USD_IMAGING=OFF')
 
+        if context.buildUsdview:
+            extraArgs.append('-DPXR_BUILD_USDVIEW=ON')
+        else:
+            extraArgs.append('-DPXR_BUILD_USDVIEW=OFF')
+
         if context.buildAlembic:
             extraArgs.append('-DPXR_BUILD_ALEMBIC_PLUGIN=ON')
             if context.enableHDF5:
@@ -896,6 +951,9 @@ programDescription = """\
 Installation Script for USD
 
 Builds and installs USD and 3rd-party dependencies to specified location.
+
+If curl is installed and located in PATH, it will be used to download
+dependencies. Otherwise, a built-in downloader will be used.
 """
 
 parser = argparse.ArgumentParser(
@@ -988,6 +1046,13 @@ subgroup.add_argument("--ptex", dest="enable_ptex", action="store_true",
 subgroup.add_argument("--no-ptex", dest="enable_ptex", 
                       action="store_false",
                       help="Disable Ptex support in imaging (default)")
+subgroup = group.add_mutually_exclusive_group()
+subgroup.add_argument("--usdview", dest="build_usdview",
+                      action="store_true", default=True,
+                      help="Build usdview (default)")
+subgroup.add_argument("--no-usdview", dest="build_usdview",
+                      action="store_false", 
+                      help="Do not build usdview")
 
 group = parser.add_argument_group(title="Imaging Plugin Options")
 subgroup = group.add_mutually_exclusive_group()
@@ -1066,6 +1131,11 @@ class InstallContext:
         self.buildDir = (os.path.abspath(args.build) if args.build
                          else os.path.join(self.usdInstDir, "build"))
 
+        # Whether to use curl or urllib for downloading dependencies
+        # Use curl by default if it's available, otherwise fall back
+        # to built-in methods.
+        self.useCurl = find_executable("curl")
+
         # CMake generator
         self.cmakeGenerator = args.generator
 
@@ -1092,6 +1162,11 @@ class InstallContext:
 
         # - USD Imaging
         self.buildUsdImaging = (args.build_imaging == USD_IMAGING)
+
+        # - usdview
+        self.buildUsdview = (self.buildUsdImaging and 
+                             self.buildPython and 
+                             args.build_usdview)
 
         # - Imaging plugins
         self.buildEmbree = self.buildImaging and args.build_embree
@@ -1163,8 +1238,8 @@ if context.buildImaging:
     requiredDependencies += [JPEG, TIFF, PNG, OPENEXR, GLEW, 
                              OPENIMAGEIO, OPENSUBDIV]
                              
-    if context.buildUsdImaging and context.buildPython:
-        requiredDependencies += [PYOPENGL, PYSIDE]
+if context.buildUsdview:
+    requiredDependencies += [PYOPENGL, PYSIDE]
 
 # Assume zlib already exists on Linux platforms and don't build
 # our own. This avoids potential issues where a host application
@@ -1173,6 +1248,17 @@ if context.buildImaging:
 if Linux():
     requiredDependencies.remove(ZLIB)
 
+# Error out if user explicitly specified building usdview without required
+# components. Otherwise, usdview will be silently disabled. This lets users
+# specify "--no-python" without explicitly having to specify "--no-usdview",
+# for instance.
+if "--usdview" in sys.argv:
+    if not context.buildUsdImaging:
+        PrintError("Cannot build usdview when usdImaging is disabled.")
+        sys.exit(1)
+    if not context.buildPython:
+        PrintError("Cannot build usdview when Python support is disabled.")
+        sys.exit(1)
 
 # Error out if we try to build any third party plugins with python disabled.
 if not context.buildPython:
@@ -1234,7 +1320,7 @@ if context.buildDocs:
                    "PATH")
         sys.exit(1)
 
-if context.buildUsdImaging:
+if PYSIDE in requiredDependencies:
     # The USD build will skip building usdview if pyside-uic or pyside2-uic is 
     # not found, so check for it here to avoid confusing users. This list of 
     # PySide executable names comes from cmake/modules/FindPySide.cmake
@@ -1263,11 +1349,14 @@ Building with settings:
   3rd-party source directory    {srcDir}
   3rd-party install directory   {instDir}
   Build directory               {buildDir}
+  CMake generator               {cmakeGenerator}
+  Downloader                    {downloader}
 
   Building                      {buildType}
     Imaging                     {buildImaging}
       Ptex support:             {enablePtex}
     UsdImaging                  {buildUsdImaging}
+      usdview:                  {buildUsdview}
     Python support              {buildPython}
     Documentation               {buildDocs}
     Tests                       {buildTests}
@@ -1284,6 +1373,9 @@ Building with settings:
     srcDir=context.srcDir,
     buildDir=context.buildDir,
     instDir=context.instDir,
+    cmakeGenerator=("Default" if not context.cmakeGenerator
+                    else context.cmakeGenerator),
+    downloader=("curl" if context.useCurl else "built-in"),
     dependencies=("None" if not dependenciesToBuild else 
                   ", ".join([d.name for d in dependenciesToBuild])),
     buildType=("Shared libraries" if context.buildShared
@@ -1292,6 +1384,7 @@ Building with settings:
     buildImaging=("On" if context.buildImaging else "Off"),
     enablePtex=("On" if context.enablePtex else "Off"),
     buildUsdImaging=("On" if context.buildUsdImaging else "Off"),
+    buildUsdview=("On" if context.buildUsdview else "Off"),
     buildPython=("On" if context.buildPython else "Off"),
     buildDocs=("On" if context.buildDocs else "Off"),
     buildTests=("On" if context.buildTests else "Off"),

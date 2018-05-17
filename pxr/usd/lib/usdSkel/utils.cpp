@@ -23,8 +23,8 @@
 //
 #include "pxr/usd/usdSkel/utils.h"
 
+#include "pxr/base/gf/matrix3f.h"
 #include "pxr/base/gf/matrix4d.h"
-#include "pxr/base/gf/matrix4f.h"
 #include "pxr/base/gf/range3f.h"
 #include "pxr/base/gf/rotation.h"
 #include "pxr/base/gf/vec3d.h"
@@ -397,29 +397,23 @@ UsdSkelDecomposeTransforms(const VtMatrix4dArray& xforms,
 
 GfMatrix4d
 UsdSkelMakeTransform(const GfVec3f& translate,
-                     const GfRotation& rotate,
+                     const GfMatrix3f& rotate,
                      const GfVec3h& scale)
 {
-    // XXX: This is a simplified form of GfTransform::GetMatrix().
+    // Order is scale*rotate*translate
+    return GfMatrix4d(rotate[0][0]*scale[0],
+                      rotate[0][1]*scale[0],
+                      rotate[0][2]*scale[0], 0,
 
-    GfMatrix4d xform;
+                      rotate[1][0]*scale[1],
+                      rotate[1][1]*scale[1],
+                      rotate[1][2]*scale[1], 0,
 
-    bool doScale = scale != GfVec3h(0,0,0);
-    if(doScale)
-        xform.SetScale(scale);
+                      rotate[2][0]*scale[2],
+                      rotate[2][1]*scale[2],
+                      rotate[2][2]*scale[2], 0,
 
-    if(rotate.GetAngle() != 0.0) {
-        if(doScale) {
-            GfMatrix4d rotMx;
-            rotMx.SetRotate(rotate);
-            xform *= rotMx;
-        } else {
-            xform.SetRotate(rotate);
-        }
-    }
-
-    xform.SetTranslateOnly(translate);
-    return xform;
+                      translate[0], translate[1], translate[2], 1);
 }
 
 
@@ -428,7 +422,7 @@ UsdSkelMakeTransform(const GfVec3f& translate,
                      const GfQuatf& rotate,
                      const GfVec3h& scale)
 {
-    return UsdSkelMakeTransform(translate, GfRotation(rotate), scale);
+    return UsdSkelMakeTransform(translate, GfMatrix3f(rotate), scale);
 }
 
 
@@ -503,7 +497,8 @@ bool
 UsdSkelComputeJointsExtent(const GfMatrix4d* xforms,
                            size_t count,
                            VtVec3fArray* extent,
-                           const GfVec3f& pad)
+                           float pad,
+                           const GfMatrix4d* rootXform)
 {
     if(!extent) {
         TF_CODING_ERROR("'extent' pointer is null.");
@@ -515,18 +510,23 @@ UsdSkelComputeJointsExtent(const GfMatrix4d* xforms,
         return false;
     }
 
-    GfRange3d bbox;
+    GfRange3f range;
     if(count > 0) {
-        for(size_t i = 0;i < count; ++i) {
-            bbox.UnionWith(xforms[i].ExtractTranslation());
+        for(size_t i = 0; i < count; ++i) {
+            GfVec3f pivot(xforms[i].ExtractTranslation());
+            range.UnionWith(rootXform ?
+                            rootXform->TransformAffine(pivot) : pivot);
         }
-        bbox.SetMin(bbox.GetMin()-pad);
-        bbox.SetMax(bbox.GetMax()-pad);
+
+        const GfVec3f padVec(pad);
+        range.SetMin(range.GetMin()-padVec);
+        range.SetMax(range.GetMax()+padVec);
     }
 
+
     extent->resize(2);
-    (*extent)[0] = GfVec3f(bbox.GetMin());
-    (*extent)[1] = GfVec3f(bbox.GetMax());
+    (*extent)[0] = range.GetMin();
+    (*extent)[1] = range.GetMax();
     return true;
 }
 
@@ -534,12 +534,13 @@ UsdSkelComputeJointsExtent(const GfMatrix4d* xforms,
 bool
 UsdSkelComputeJointsExtent(const VtMatrix4dArray& xforms,
                            VtVec3fArray* extent,
-                           const GfVec3f& pad)
+                           float pad,
+                           const GfMatrix4d* rootXform)
 {
     TRACE_FUNCTION();
 
-    return UsdSkelComputeJointsExtent(xforms.cdata(),
-                                      xforms.size(), extent, pad);
+    return UsdSkelComputeJointsExtent(xforms.cdata(), xforms.size(),
+                                      extent, pad, rootXform);
 }
 
 
@@ -548,17 +549,16 @@ namespace {
 /// Validate the size of a weight/index array for a given
 /// number of influences per component.
 /// Throws a warning for failed validation.
-template <typename T>
 bool
-_ValidateArrayShape(T* array, int numInfluencesPerComponent)
+_ValidateArrayShape(size_t size, int numInfluencesPerComponent)
 {
     if(numInfluencesPerComponent > 0) {
-        if(array->size()%numInfluencesPerComponent == 0) {
+        if(size%numInfluencesPerComponent == 0) {
             return true;
         } else {
             TF_WARN("Unexpected array size [%zu]: Size must be a multiple of "
                     "the number of influences per component [%d].",
-                    array->size(), numInfluencesPerComponent);
+                    size, numInfluencesPerComponent);
         }
     } else {
         TF_WARN("Invalid number of influences per component (%d): "
@@ -618,7 +618,7 @@ UsdSkelNormalizeWeights(VtFloatArray* weights,
         return false;
     }
 
-    if(!_ValidateArrayShape(weights, numInfluencesPerComponent))
+    if(!_ValidateArrayShape(weights->size(), numInfluencesPerComponent))
         return false;
 
     return _NormalizeWeights(weights->data(), weights->size(),
@@ -692,7 +692,7 @@ UsdSkelSortInfluences(VtIntArray* indices,
         return false;
     }
 
-    if(!_ValidateArrayShape(weights, numInfluencesPerComponent)) {
+    if(!_ValidateArrayShape(weights->size(), numInfluencesPerComponent)) {
         return false;
     }
 
@@ -759,7 +759,7 @@ _ResizeInfluences(VtArray<T>* array, int srcNumInfluencesPerComponent,
         return false;
     }
 
-    if(!_ValidateArrayShape(array, srcNumInfluencesPerComponent))
+    if(!_ValidateArrayShape(array->size(), srcNumInfluencesPerComponent))
         return false;
 
     size_t numComponents = array->size()/srcNumInfluencesPerComponent;
@@ -1234,17 +1234,17 @@ _BakeSkinnedPoints(const UsdPrim& prim,
                 xfCache->GetLocalToWorldTransform(prim);
 
             GfMatrix4d skelLocalToWorld;
-            if(!skelQuery.ComputeAnimTransform(&skelLocalToWorld, time)) {
+            if(!skelQuery.ComputeLocalToWorldTransform(
+                   &skelLocalToWorld, xfCache)) {
                 TF_DEBUG(USDSKEL_BAKESKINNING).Msg(
                     "[UsdSkelBakeSkinning]   Failed computing "
-                    "anim transform\n");
+                    "skel local-to-world transform\n");
                 return false;
             }
-            skelLocalToWorld *= xfCache->GetLocalToWorldTransform(prim);
 
             GfMatrix4d skelToGprimXf =
                 skelLocalToWorld*gprimLocalToWorld.GetInverse();
-           
+
             for(auto& pt : skinnedPoints) {
                 pt = skelToGprimXf.Transform(pt);
             }
@@ -1327,13 +1327,13 @@ _BakeSkinnedTransform(const UsdPrim& prim,
             xfCache->SetTime(time);
 
             GfMatrix4d skelLocalToWorld;
-            if(!skelQuery.ComputeAnimTransform(&skelLocalToWorld, time)) {
+            if(!skelQuery.ComputeLocalToWorldTransform(
+                   &skelLocalToWorld, xfCache)) {
                 TF_DEBUG(USDSKEL_BAKESKINNING).Msg(
                     "[UsdSkelBakeSkinning]   Failed computing "
-                    "anim transform\n");
+                    "skel local-to-world transform\n");
                 return false;
             }
-            skelLocalToWorld *= xfCache->GetLocalToWorldTransform(prim);
 
             GfMatrix4d newLocalXform;
             

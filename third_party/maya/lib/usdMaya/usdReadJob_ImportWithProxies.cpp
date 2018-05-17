@@ -188,11 +188,12 @@ usdReadJob::_ProcessProxyPrims(
         const UsdPrim proxyPrim = *iter;
         PxrUsdMayaPrimReaderArgs args(proxyPrim,
                                       mArgs.shadingMode,
-                                      mArgs.defaultMeshScheme,
                                       mArgs.readAnimData,
                                       mArgs.useCustomFrameRange,
                                       mArgs.startTime,
-                                      mArgs.endTime);
+                                      mArgs.endTime,
+                                      mArgs.includeMetadataKeys,
+                                      mArgs.includeAPINames);
         PxrUsdMayaPrimReaderContext ctx(&mNewNodeRegistry);
 
         if (!_CreateParentTransformNodes(proxyPrim, args, &ctx)) {
@@ -247,11 +248,12 @@ usdReadJob::_ProcessSubAssemblyPrims(const std::vector<UsdPrim>& subAssemblyPrim
         const UsdPrim subAssemblyPrim = *iter;
         PxrUsdMayaPrimReaderArgs args(subAssemblyPrim,
                                       mArgs.shadingMode,
-                                      mArgs.defaultMeshScheme,
                                       mArgs.readAnimData,
                                       mArgs.useCustomFrameRange,
                                       mArgs.startTime,
-                                      mArgs.endTime);
+                                      mArgs.endTime,
+                                      mArgs.includeMetadataKeys,
+                                      mArgs.includeAPINames);
         PxrUsdMayaPrimReaderContext ctx(&mNewNodeRegistry);
 
         // We use the file path of the file currently being imported and
@@ -287,20 +289,24 @@ usdReadJob::_ProcessCameraPrims(const std::vector<UsdPrim>& cameraPrims)
         const UsdPrim cameraPrim = *iter;
         PxrUsdMayaPrimReaderArgs args(cameraPrim,
                                       mArgs.shadingMode,
-                                      mArgs.defaultMeshScheme,
                                       mArgs.readAnimData,
                                       mArgs.useCustomFrameRange,
                                       mArgs.startTime,
-                                      mArgs.endTime);
+                                      mArgs.endTime,
+                                      mArgs.includeMetadataKeys,
+                                      mArgs.includeAPINames);
         PxrUsdMayaPrimReaderContext ctx(&mNewNodeRegistry);
 
         if (!_CreateParentTransformNodes(cameraPrim, args, &ctx)) {
             return false;
         }
 
-        if (PxrUsdMayaPrimReaderRegistry::ReaderFn primReader =
+        if (PxrUsdMayaPrimReaderRegistry::ReaderFactoryFn factoryFn =
                 PxrUsdMayaPrimReaderRegistry::Find(cameraPrim.GetTypeName())) {
-            primReader(args, &ctx);
+            PxrUsdMayaPrimReaderPtr primReader = factoryFn(args);
+            if (primReader) {
+                primReader->Read(&ctx);
+            }
         }
     }
 

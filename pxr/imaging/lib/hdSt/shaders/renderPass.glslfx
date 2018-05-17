@@ -101,13 +101,6 @@ vec4  GetWireframeColor() {
     return vec4(0,0,0,0);
 #endif
 }
-vec4 GetPointColor() {
-#if defined(HD_HAS_pointColor)
-    return HdGet_pointColor();
-#else
-    return vec4(0,0,0,1);
-#endif
-}
 
 bool IsFlipped(MAT4 m)
 {
@@ -182,7 +175,7 @@ vec4 ApplyColorOverrides(vec4 color)
     // Allow a scalar value to override the color from the surface
     // for previewing heatmaps. This is useful for editing workflows.
 #if defined(HD_HAS_scalarOverrideColorRamp)
-    int rampCount = constantPrimVars[GetDrawingCoord().constantCoord].
+    int rampCount = constantPrimvars[GetDrawingCoord().constantCoord].
                 scalarOverrideColorRamp.length();
     float scalar = HdGet_scalarOverride() * float(rampCount - 1);
     float baseIndex = floor(scalar);

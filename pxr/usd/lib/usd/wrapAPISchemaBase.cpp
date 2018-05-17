@@ -114,6 +114,12 @@ void wrapUsdAPISchemaBase()
 namespace {
 
 WRAP_CUSTOM {
+    _class
+        .def("IsAPISchema",
+            static_cast<bool (*)(void)>( [](){ 
+                return UsdAPISchemaBase::IsAPISchema; }))
+        .staticmethod("IsAPISchema")
+    ;
 }
 
 }

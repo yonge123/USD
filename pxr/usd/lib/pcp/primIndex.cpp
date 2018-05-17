@@ -45,7 +45,7 @@
 #include "pxr/usd/ar/resolverContextBinder.h"
 #include "pxr/usd/sdf/layer.h"
 #include "pxr/usd/sdf/layerUtils.h"
-#include "pxr/base/tracelite/trace.h"
+#include "pxr/base/trace/trace.h"
 #include "pxr/base/tf/debug.h"
 #include "pxr/base/tf/enum.h"
 #include "pxr/base/tf/diagnostic.h"
@@ -346,6 +346,29 @@ PcpPrimIndexInputs::IsEquivalentTo(const PcpPrimIndexInputs& inputs) const
         _CheckIfEquivalent(variantFallbacks, inputs.variantFallbacks) && 
         _CheckIfEquivalent(includedPayloads, inputs.includedPayloads) && 
         cull == inputs.cull;
+}
+
+////////////////////////////////////////////////////////////////////////
+
+PcpNodeRef 
+PcpPrimIndexOutputs::Append(const PcpPrimIndexOutputs& childOutputs, 
+                            const PcpArc& arcToParent)
+{
+    PcpNodeRef parent = arcToParent.parent;
+    PcpNodeRef newNode = parent.InsertChildSubgraph(
+        childOutputs.primIndex.GetGraph(), arcToParent);
+
+    if (childOutputs.primIndex.GetGraph()->HasPayload()) {
+        parent.GetOwningGraph()->SetHasPayload(true);
+    }
+
+    allErrors.insert(
+        allErrors.end(), 
+        childOutputs.allErrors.begin(), childOutputs.allErrors.end());
+
+    includedDiscoveredPayload |= childOutputs.includedDiscoveredPayload;
+
+    return newNode;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -1451,23 +1474,12 @@ _AddArc(
                             indexer->inputs,
                             &childOutputs );
 
-        // Join the subtree into this graph.
-        newNode = parent.InsertChildSubgraph(
-            childOutputs.primIndex.GetGraph(), newArc);
+        // Combine the child output with our current output.
+        newNode = indexer->outputs->Append(childOutputs, newArc);
         PCP_INDEXING_UPDATE(
             indexer, newNode, 
             "Added subtree for site %s to graph",
             TfStringify(site).c_str());
-
-        if (childOutputs.primIndex.GetGraph()->HasPayload()) {
-            parent.GetOwningGraph()->SetHasPayload(true);
-        }
-
-        // Pass along the other outputs from the nested computation. 
-        indexer->outputs->allErrors.insert(
-            indexer->outputs->allErrors.end(),
-            childOutputs.allErrors.begin(),
-            childOutputs.allErrors.end());
     }
 
     // If culling is enabled, check whether the entire subtree rooted
@@ -1984,7 +1996,7 @@ _EvalNodeRelocations(
     // incorporate the ancestral arcs from the relocation sources (spooky
     // ancestors).  Using actual nodes for this lets us easily
     // incorporate spooky ancestral opinions, spooky implied inherits
-    // etc. without needed special accomodation.  However, it does
+    // etc. without needed special accommodation.  However, it does
     // have some other ramifications; see XXX:RelocatesSourceNodes.
     //
     // XXX: It could be that a better design would be to only use
@@ -2608,7 +2620,7 @@ _EvalImpliedClassTree(
                 indexer);
         }
 
-        // If we succesfully added the arc (or found it already existed)
+        // If we successfully added the arc (or found it already existed)
         // recurse on nested classes.  This will build up the full
         // class hierarchy that we are inheriting.
         // Optimization: Recursion requires some cost to set up

@@ -99,7 +99,7 @@ public:
     /// Returns the max number of elements
     virtual size_t GetMaxNumElements() const = 0;
 
-    /// Sets the buffer array assosiated with this buffer;
+    /// Sets the buffer array associated with this buffer;
     virtual void SetBufferArray(HdBufferArray *bufferArray) = 0;
 
     /// Debug output
@@ -112,7 +112,7 @@ public:
 
     /// Sets the bufferSpecs for all resources.
     HD_API
-    virtual void AddBufferSpecs(HdBufferSpecVector *bufferSpecs) const = 0;
+    virtual void GetBufferSpecs(HdBufferSpecVector *bufferSpecs) const = 0;
 
 protected:
     /// Returns the aggregation container to be used in IsAggregatedWith()

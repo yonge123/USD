@@ -38,12 +38,90 @@
 
 #include "pxr/base/tf/fileUtils.h"
 
-#include "pxr/usd/usdHydra/shader.h"
-#include "pxr/usd/usdHydra/uvTexture.h"
-#include "pxr/usd/usdHydra/primvar.h"
 #include "pxr/usd/usdHydra/tokens.h"
+#include "pxr/usd/usdShade/shader.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+static HdWrap _GetWrapS(UsdPrim const &usdPrim)
+{
+    // XXX: This default value should come from the registry
+    TfToken wrapS("repeat");
+    UsdShadeShader shader(usdPrim);
+    if (shader) {
+        UsdAttribute attr = shader.GetInput(UsdHydraTokens->wrapS);
+        if (attr) attr.Get(&wrapS);
+    }
+    HdWrap wrapShd = (wrapS == UsdHydraTokens->clamp) ? HdWrapClamp
+                   : (wrapS == UsdHydraTokens->repeat) ? HdWrapRepeat
+                   : HdWrapBlack; 
+    return wrapShd;
+}
+
+static HdWrap _GetWrapT(UsdPrim const &usdPrim)
+{
+    // XXX: This default value should come from the registry
+    TfToken wrapT("repeat");
+    UsdShadeShader shader(usdPrim);
+    if (shader) {
+        UsdAttribute attr = shader.GetInput(UsdHydraTokens->wrapT);
+        if (attr) attr.Get(&wrapT);
+    }
+    HdWrap wrapThd = (wrapT == UsdHydraTokens->clamp) ? HdWrapClamp
+                   : (wrapT == UsdHydraTokens->repeat) ? HdWrapRepeat
+                   : HdWrapBlack; 
+    return wrapThd;
+}
+
+static HdMinFilter _GetMinFilter(UsdPrim const &usdPrim)
+{
+    // XXX: This default value should come from the registry
+    TfToken minFilter("linear");
+    UsdShadeShader shader(usdPrim);
+    if (shader) {
+        UsdAttribute attr = shader.GetInput(UsdHydraTokens->minFilter);
+        if (attr) attr.Get(&minFilter);
+    }
+    HdMinFilter minFilterHd = 
+                 (minFilter == UsdHydraTokens->nearest) ? HdMinFilterNearest
+                 : (minFilter == UsdHydraTokens->nearestMipmapNearest) 
+                                ? HdMinFilterNearestMipmapNearest
+                 : (minFilter == UsdHydraTokens->nearestMipmapLinear) 
+                                ? HdMinFilterNearestMipmapLinear
+                 : (minFilter == UsdHydraTokens->linearMipmapNearest) 
+                                ? HdMinFilterLinearMipmapNearest
+                 : (minFilter == UsdHydraTokens->linearMipmapLinear) 
+                                ? HdMinFilterLinearMipmapLinear
+                 : HdMinFilterLinear; 
+    return minFilterHd;
+}
+
+static HdMagFilter _GetMagFilter(UsdPrim const &usdPrim)
+{
+    // XXX: This default value should come from the registry
+    TfToken magFilter("linear");
+    UsdShadeShader shader(usdPrim);
+    if (shader) {
+        UsdAttribute attr = shader.GetInput(UsdHydraTokens->magFilter);
+        if (attr) attr.Get(&magFilter);
+    }
+    HdMagFilter magFilterHd = 
+                 (magFilter == UsdHydraTokens->nearest) ? HdMagFilterNearest
+                 : HdMagFilterLinear; 
+    return magFilterHd;
+}
+
+static float _GetMemoryLimit(UsdPrim const &usdPrim)
+{
+    // XXX: This default value should come from the registry
+    float memoryLimit = 0.0f;
+    UsdShadeShader shader(usdPrim);
+    if (shader) {
+        UsdAttribute attr = shader.GetInput(UsdHydraTokens->textureMemory);
+        if (attr) attr.Get(&memoryLimit);
+    }
+    return memoryLimit;
+}
 
 HdTextureResource::ID
 UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
@@ -51,27 +129,26 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
                                   UsdTimeCode time,
                                   size_t salt)
 {
-    // Compute the hash, but we need to validate that the texture exists
-    // (in case we need to return a fallback texture).
-    size_t hash = usdPath.GetHash();
+    if (!TF_VERIFY(usdPrim))
+        return HdTextureResource::ID(-1);
+    if (!TF_VERIFY(usdPath != SdfPath()))
+        return HdTextureResource::ID(-1);
 
-    // Salt the result to prevent collisions in non-shared imaging.
-    // Note that this salt is ignored if we end up using a fallback
-    // texture below.
-    boost::hash_combine(hash, salt);
-
-    if (!usdPrim || usdPath == SdfPath())
-        return HdTextureResource::ID(hash);
-
+    // If the texture name attribute doesn't exist, it might be badly specified
+    // in scene data.
     UsdAttribute attr = usdPrim.GetAttribute(usdPath.GetNameToken());
     SdfAssetPath asset;
-    if (!attr || !attr.Get(&asset, time))
-        return HdTextureResource::ID(hash);
+    if (!attr || !attr.Get(&asset, time)) {
+        TF_WARN("Unable to find texture attribute <%s> in scene data",
+                usdPath.GetText());
+        return HdTextureResource::ID(-1);
+    }
 
     TfToken filePath = TfToken(asset.GetResolvedPath());
     // Fallback to the literal path if it couldn't be resolved.
-    if (filePath.IsEmpty())
+    if (filePath.IsEmpty()) {
         filePath = TfToken(asset.GetAssetPath());
+    }
 
     const bool isPtex = GlfIsSupportedPtexTexture(filePath);
 
@@ -88,6 +165,26 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
             return HdTextureResource::ComputeFallbackUVHash();
         }
     }
+
+    // Hash on the texture filename.
+    size_t hash = asset.GetHash();
+
+    // Hash in wrapping and filtering metadata.
+    HdWrap wrapS = _GetWrapS(usdPrim);
+    HdWrap wrapT = _GetWrapT(usdPrim);
+    HdMinFilter minFilter = _GetMinFilter(usdPrim);
+    HdMagFilter magFilter = _GetMagFilter(usdPrim);
+    float memoryLimit = _GetMemoryLimit(usdPrim);
+
+    boost::hash_combine(hash, wrapS);
+    boost::hash_combine(hash, wrapT);
+    boost::hash_combine(hash, minFilter);
+    boost::hash_combine(hash, magFilter);
+    boost::hash_combine(hash, memoryLimit);
+
+    // Salt the result to prevent collisions in non-shared imaging.
+    // Note that the salt is ignored for fallback texture hashes above.
+    boost::hash_combine(hash, salt);
 
     return HdTextureResource::ID(hash);
 }
@@ -110,34 +207,17 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
 
     TfToken filePath = TfToken(asset.GetResolvedPath());
     // Fallback to the literal path if it couldn't be resolved.
-    if (filePath.IsEmpty())
+    if (filePath.IsEmpty()) {
         filePath = TfToken(asset.GetAssetPath());
+    }
 
     const bool isPtex = GlfIsSupportedPtexTexture(filePath);
 
-    TfToken wrapS = UsdHydraTokens->repeat;
-    TfToken wrapT = UsdHydraTokens->repeat;
-    TfToken minFilter = UsdHydraTokens->linear;
-    TfToken magFilter = UsdHydraTokens->linear;
-    float memoryLimit = 0.0f;
-
-    // Mode overrides for UsdHydraTexture
-    UsdShadeShader shader(usdPrim);
-    if (shader) {
-        UsdAttribute attr = UsdHydraTexture(shader).GetTextureMemoryAttr();
-        if (attr) attr.Get(&memoryLimit);
-        if (!isPtex) {
-            UsdHydraUvTexture uvt(shader);
-            attr = uvt.GetWrapSAttr();
-            if (attr) attr.Get(&wrapS);
-            attr = uvt.GetWrapTAttr();
-            if (attr) attr.Get(&wrapT);
-            attr = uvt.GetMinFilterAttr();
-            if (attr) attr.Get(&minFilter);
-            attr = uvt.GetMagFilterAttr();
-            if (attr) attr.Get(&magFilter);
-        }
-    }
+    HdWrap wrapS = _GetWrapS(usdPrim);
+    HdWrap wrapT = _GetWrapT(usdPrim);
+    HdMinFilter minFilter = _GetMinFilter(usdPrim);
+    HdMagFilter magFilter = _GetMagFilter(usdPrim);
+    float memoryLimit = _GetMemoryLimit(usdPrim);
 
     TF_DEBUG(USDIMAGING_TEXTURES).Msg(
             "Loading texture: id(%s), isPtex(%s)\n",
@@ -153,36 +233,15 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
     }
 
     HdTextureResourceSharedPtr texResource;
-
     TfStopwatch timer;
     timer.Start();
     GlfTextureHandleRefPtr texture =
         GlfTextureRegistry::GetInstance().GetTextureHandle(filePath);
     texture->AddMemoryRequest(memoryLimit);
-    HdWrap wrapShd = (wrapS == UsdHydraTokens->clamp) ? HdWrapClamp
-                 : (wrapS == UsdHydraTokens->repeat) ? HdWrapRepeat
-                 : HdWrapBlack; 
-    HdWrap wrapThd = (wrapT == UsdHydraTokens->clamp) ? HdWrapClamp
-                 : (wrapT == UsdHydraTokens->repeat) ? HdWrapRepeat
-                 : HdWrapBlack; 
-    HdMagFilter magFilterHd = 
-                 (magFilter == UsdHydraTokens->nearest) ? HdMagFilterNearest
-                 : HdMagFilterLinear; 
-    HdMinFilter minFilterHd = 
-                 (minFilter == UsdHydraTokens->nearest) ? HdMinFilterNearest
-                 : (minFilter == UsdHydraTokens->nearestMipmapNearest) 
-                                ? HdMinFilterNearestMipmapNearest
-                 : (minFilter == UsdHydraTokens->nearestMipmapLinear) 
-                                ? HdMinFilterNearestMipmapLinear
-                 : (minFilter == UsdHydraTokens->linearMipmapNearest) 
-                                ? HdMinFilterLinearMipmapNearest
-                 : (minFilter == UsdHydraTokens->linearMipmapLinear) 
-                                ? HdMinFilterLinearMipmapLinear
-                 : HdMinFilterLinear; 
 
     texResource = HdTextureResourceSharedPtr(
-        new HdStSimpleTextureResource(texture, isPtex, wrapShd, wrapThd,
-                                      minFilterHd, magFilterHd));
+        new HdStSimpleTextureResource(texture, isPtex, wrapS, wrapT,
+                                      minFilter, magFilter));
     timer.Stop();
 
     TF_DEBUG(USDIMAGING_TEXTURES).Msg("    Load time: %.3f s\n", 

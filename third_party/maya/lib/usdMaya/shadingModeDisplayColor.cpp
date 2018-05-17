@@ -23,6 +23,7 @@
 //
 #include "pxr/pxr.h"
 
+#include "usdMaya/colorSpace.h"
 #include "usdMaya/shadingModeExporter.h"
 #include "usdMaya/shadingModeExporterContext.h"
 #include "usdMaya/shadingModeRegistry.h"
@@ -108,9 +109,10 @@ private:
         const UsdStageRefPtr& stage = context.GetUsdStage();
         const MColor mayaColor = lambertFn.color();
         const MColor mayaTransparency = lambertFn.transparency();
-        const GfVec3f color = GfConvertDisplayToLinear(
-            GfVec3f(mayaColor[0], mayaColor[1], mayaColor[2]));
-        const GfVec3f transparency = GfConvertDisplayToLinear(
+        const float diffuseCoeff = lambertFn.diffuseCoeff();
+        const GfVec3f color = PxrUsdMayaColorSpace::ConvertMayaToLinear(
+            diffuseCoeff*GfVec3f(mayaColor[0], mayaColor[1], mayaColor[2]));
+        const GfVec3f transparency = PxrUsdMayaColorSpace::ConvertMayaToLinear(
             GfVec3f(mayaTransparency[0], mayaTransparency[1], mayaTransparency[2]));
 
         VtArray<GfVec3f> displayColorAry;
@@ -226,21 +228,9 @@ private:
                 return;
             }
 
-            UsdShadeOutput materialSurfaceOutput =
-                material.CreateOutput(UsdShadeTokens->surface,
-                                      shaderDefaultOutput.GetTypeName());
-            if (!materialSurfaceOutput) {
-                return;
-            }
-
-            materialSurfaceOutput.ConnectToSource(shaderDefaultOutput);
-
-            // XXX: For backwards compatibility, we continue to author the
-            // UsdRi Bxdf source until consumers (e.g. PxrUsdIn) are updated to
-            // look at the outputs:surface terminal.
-            UsdRiMaterialAPI(materialPrim).SetBxdfSource(
-                shaderDefaultOutput.GetAttr().GetPath());
-
+            UsdRiMaterialAPI riMaterialAPI(materialPrim);
+            riMaterialAPI.SetSurfaceSource(
+                    shaderDefaultOutput.GetAttr().GetPath());
         }
     }
 };
@@ -311,8 +301,8 @@ DEFINE_SHADING_MODE_IMPORTER(displayColor, context)
         gotDisplayColorAndOpacity = true;
     }
 
-    GfVec3f displayColor = GfConvertLinearToDisplay(linearDisplayColor);
-    GfVec3f transparencyColor = GfConvertLinearToDisplay(linearTransparency);
+    GfVec3f displayColor = PxrUsdMayaColorSpace::ConvertLinearToMaya(linearDisplayColor);
+    GfVec3f transparencyColor = PxrUsdMayaColorSpace::ConvertLinearToMaya(linearTransparency);
     if (gotDisplayColorAndOpacity) {
 
         std::string shaderName(_tokens->MayaShaderName.GetText());
@@ -332,6 +322,11 @@ DEFINE_SHADING_MODE_IMPORTER(displayColor, context)
         lambertFn.setName( mShaderName );
         lambertFn.setColor(MColor(displayColor[0], displayColor[1], displayColor[2]));
         lambertFn.setTransparency(MColor(transparencyColor[0], transparencyColor[1], transparencyColor[2]));
+        // we explicitly set diffuse coefficient to 1.0 here since new lambert's
+        // default to 0.8.  This is to make sure the color value visually when
+        // roundtripping since we bake the diffuseCoeff into the diffuse color
+        // at export.
+        lambertFn.setDiffuseCoeff(1.0);
 
         const SdfPath lambertPath = shaderParentPath.AppendChild(
             TfToken(lambertFn.name().asChar()));

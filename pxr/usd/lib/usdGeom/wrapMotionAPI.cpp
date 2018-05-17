@@ -84,6 +84,14 @@ void wrapUsdGeomMotionAPI()
             static_cast<bool (*)(void)>( [](){ return This::IsTyped; } ))
         .staticmethod("IsTyped")
 
+        .def("IsApplied", 
+            static_cast<bool (*)(void)>( [](){ return This::IsApplied; } ))
+        .staticmethod("IsApplied")
+
+        .def("IsMultipleApply", 
+            static_cast<bool (*)(void)>( [](){ return This::IsMultipleApply; } ))
+        .staticmethod("IsMultipleApply")
+
         .def("GetSchemaAttributeNames",
              &This::GetSchemaAttributeNames,
              arg("includeInherited")=true,

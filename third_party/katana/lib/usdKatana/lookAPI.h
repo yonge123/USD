@@ -68,6 +68,17 @@ public:
     /// UsdPrim.
     static const bool IsTyped = false;
 
+    /// Compile-time constant indicating whether or not this class represents an 
+    /// applied API schema, i.e. an API schema that has to be applied to a prim
+    /// with a call to auto-generated Apply() method before any schema 
+    /// properties are authored.
+    static const bool IsApplied = true;
+    
+    /// Compile-time constant indicating whether or not this class represents a 
+    /// multiple-apply API schema. Mutiple-apply API schemas can be applied 
+    /// to the same prim multiple times with different instance names. 
+    static const bool IsMultipleApply = false;
+
     /// Construct a UsdKatanaLookAPI on UsdPrim \p prim .
     /// Equivalent to UsdKatanaLookAPI::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
@@ -137,6 +148,11 @@ private:
     // override SchemaBase virtuals.
     USDKATANA_API
     virtual const TfType &_GetTfType() const;
+
+    // This override returns true since UsdKatanaLookAPI is an 
+    // applied API schema.
+    USDKATANA_API
+    virtual bool _IsAppliedAPISchema() const override;
 
 public:
     // --------------------------------------------------------------------- //

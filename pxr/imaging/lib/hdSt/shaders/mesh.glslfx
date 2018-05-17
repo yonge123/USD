@@ -50,7 +50,7 @@ out vec2 gsTessCoord;
 
 void main(void)
 {
-    ProcessPrimVars();
+    ProcessPrimvars();
 
     MAT4 transform    = ApplyInstanceTransform(HdGet_transform());
     MAT4 transformInv = ApplyInstanceTransformInverse(HdGet_transformInverse());
@@ -131,7 +131,7 @@ void main(void)
         gl_TessLevelInner[1] = tessLevelInner[1];
     }
 
-    ProcessPrimVars();
+    ProcessPrimvars();
 }
 
 --- --------------------------------------------------------------------------
@@ -178,7 +178,7 @@ void main(void)
     tesPatchCoord = OsdInterpolatePatchCoord(UV, patchParam);
     tesTessCoord = UV;
 
-    ProcessPrimVars(UV.x, UV.y, 10, 9, 6, 5);
+    ProcessPrimvars(UV.x, UV.y, 10, 9, 6, 5);
 }
 
 --- --------------------------------------------------------------------------
@@ -211,14 +211,12 @@ vec4 GetPatchCoord(int index)
     return tesPatchCoord[index];
 }
 
-vec4 displacementShader(int index, vec4 Peye, vec3 Neye, vec4 patchCoord);
-
-void emit(int index, int triIndex0, int triIndex1, int triIndex2, vec3 normal)
+void emit(int index, vec4 Peye, vec3 Neye,
+          vec4 triPeye0, vec4 triPeye1, vec4 triPeye2)
 {
-    outData.Peye = displacementShader(index, inData[index].Peye, normal, GetPatchCoord(index));
-    outData.Neye = normal;
+    outData.Peye = Peye;
+    outData.Neye = Neye;
     gsPatchCoord = GetPatchCoord(index);
-    gsPatchCoord.w = GetElementID() + 0.5;
     gsTessCoord = vec2(0);
     gl_Position = vec4(GetProjectionMatrix() * outData.Peye);
     ApplyClipPlanes(outData.Peye);
@@ -231,15 +229,11 @@ void emit(int index, int triIndex0, int triIndex1, int triIndex2, vec3 normal)
     if (min(dt12.x, dt12.y) > 0.03) inEdgeFlag |= 4;
     if (min(dt20.x, dt20.y) > 0.03) inEdgeFlag |= 1;
 
-    ProcessTriEdgeDistance(inData[index].Peye,
-                           inData[triIndex0].Peye,
-                           inData[triIndex1].Peye,
-                           inData[triIndex2].Peye,
-                           inEdgeFlag);
+    ProcessTriEdgeDistance(Peye, triPeye0, triPeye1, triPeye2, inEdgeFlag);
 
     ProcessEdgeId(index, gsPatchCoord.xy);
 
-    ProcessPrimVars(index);
+    ProcessPrimvars(index);
 
     EmitVertex();
 }
@@ -250,19 +244,28 @@ void main(void)
 
     bool isFlipped = IsFlipped(); // consider handedness AND negative-scale
 
-    vec3 normal0 = GetTriGeometryNormal(
+    vec3 Neye0 = GetTriGeometryNormal(
         inData[0].Neye, inData[0].Peye, inData[1].Peye, inData[2].Peye,
         isFlipped);
-    vec3 normal1 = GetTriGeometryNormal(
+    vec3 Neye1 = GetTriGeometryNormal(
         inData[1].Neye, inData[0].Peye, inData[1].Peye, inData[2].Peye,
         isFlipped);
-    vec3 normal2 = GetTriGeometryNormal(
+    vec3 Neye2 = GetTriGeometryNormal(
         inData[2].Neye, inData[0].Peye, inData[1].Peye, inData[2].Peye,
         isFlipped);
 
-    emit(0, 0, 1, 2, normal0);
-    emit(1, 0, 1, 2, normal1);
-    emit(2, 0, 1, 2, normal2);
+    vec4 Peye0 = DisplacementTerminal(
+        0, inData[0].Peye, Neye0, GetPatchCoord(0));
+    vec4 Peye1 = DisplacementTerminal(
+        1, inData[1].Peye, Neye1, GetPatchCoord(1));
+    vec4 Peye2 = DisplacementTerminal(
+        2, inData[2].Peye, Neye2, GetPatchCoord(2));
+
+    // triangle 0: vertices (0,1,2)
+    emit(0, Peye0, Neye0, Peye0, Peye1, Peye2);
+    emit(1, Peye1, Neye1, Peye0, Peye1, Peye2);
+    emit(2, Peye2, Neye2, Peye0, Peye1, Peye2);
+
     EndPrimitive();
 }
 
@@ -319,12 +322,11 @@ vec4 GetPatchCoord(int index)
     return InterpolatePatchCoordBarycentric(uv[index], patchParam);
 }
 
-vec4 displacementShader(int index, vec4 Peye, vec3 Neye, vec4 patchCoord);
-
-void emit(int index, int triIndex0, int triIndex1, int triIndex2, vec3 normal)
+void emit(int index, vec4 Peye, vec3 Neye,
+          vec4 triPeye0, vec4 triPeye1, vec4 triPeye2)
 {
-    outData.Peye = displacementShader(index, inData[index].Peye, normal, GetPatchCoord(index));
-    outData.Neye = normal;
+    outData.Peye = Peye;
+    outData.Neye = Neye;
 
     gsPatchCoord = GetPatchCoord(index);
     gsTessCoord = vec2(0);
@@ -333,15 +335,11 @@ void emit(int index, int triIndex0, int triIndex1, int triIndex2, vec3 normal)
     ApplyClipPlanes(outData.Peye);
 
     int inEdgeFlag = 0;
-    ProcessTriEdgeDistance(inData[index].Peye,
-                           inData[triIndex0].Peye,
-                           inData[triIndex1].Peye,
-                           inData[triIndex2].Peye,
-                           inEdgeFlag);
+    ProcessTriEdgeDistance(Peye, triPeye0, triPeye1, triPeye2, inEdgeFlag);
 
     ProcessEdgeId(index, gsPatchCoord.xy);
 
-    ProcessPrimVars(index);
+    ProcessPrimvars(index);
 
     EmitVertex();
 }
@@ -352,19 +350,28 @@ void main(void)
 
     bool isFlipped = IsFlipped(); // consider handedness AND negative-scale
 
-    vec3 normal0 = GetTriGeometryNormal(
+    vec3 Neye0 = GetTriGeometryNormal(
         inData[0].Neye, inData[0].Peye, inData[1].Peye, inData[2].Peye,
         isFlipped);
-    vec3 normal1 = GetTriGeometryNormal(
+    vec3 Neye1 = GetTriGeometryNormal(
         inData[1].Neye, inData[0].Peye, inData[1].Peye, inData[2].Peye,
         isFlipped);
-    vec3 normal2 = GetTriGeometryNormal(
+    vec3 Neye2 = GetTriGeometryNormal(
         inData[2].Neye, inData[0].Peye, inData[1].Peye, inData[2].Peye,
         isFlipped);
 
-    emit(0, 0, 1, 2, normal0);
-    emit(1, 0, 1, 2, normal1);
-    emit(2, 0, 1, 2, normal2);
+    vec4 Peye0 = DisplacementTerminal(
+        0, inData[0].Peye, Neye0, GetPatchCoord(0));
+    vec4 Peye1 = DisplacementTerminal(
+        1, inData[1].Peye, Neye1, GetPatchCoord(1));
+    vec4 Peye2 = DisplacementTerminal(
+        2, inData[2].Peye, Neye2, GetPatchCoord(2));
+
+    // triangle 0: vertices (0,1,2)
+    emit(0, Peye0, Neye0, Peye0, Peye1, Peye2);
+    emit(1, Peye1, Neye1, Peye0, Peye1, Peye2);
+    emit(2, Peye2, Neye2, Peye0, Peye1, Peye2);
+
     EndPrimitive();
 }
 
@@ -401,13 +408,11 @@ vec4 GetPatchCoord(int index)
     return OsdInterpolatePatchCoord(uv[index], patchParam);
 }
 
-vec4 displacementShader(int index, vec4 Peye, vec3 Neye, vec4 patchCoord);
-
-void emit(int index, int triIndex0, int triIndex1, int triIndex2,
-          vec3 normal, int triCounter)
+void emit(int triCounter, int index, vec4 Peye, vec3 Neye,
+          vec4 triPeye0, vec4 triPeye1, vec4 triPeye2)
 {
-    outData.Peye = displacementShader(index, inData[index].Peye, normal, GetPatchCoord(index));
-    outData.Neye = normal;
+    outData.Peye = Peye;
+    outData.Neye = Neye;
 
     gsPatchCoord = GetPatchCoord(index);
     gsTessCoord = vec2(0);
@@ -415,15 +420,11 @@ void emit(int index, int triIndex0, int triIndex1, int triIndex2,
     gl_Position = vec4(GetProjectionMatrix() * outData.Peye);
     ApplyClipPlanes(outData.Peye);
 
-    ProcessQuadEdgeDistance(inData[index].Peye,
-                            inData[triIndex0].Peye,
-                            inData[triIndex1].Peye,
-                            inData[triIndex2].Peye,
-                            triCounter);
+    ProcessQuadEdgeDistance(Peye, triPeye0, triPeye1, triPeye2, triCounter);
 
     ProcessEdgeId(index, gsPatchCoord.xy);
 
-    ProcessPrimVars(index);
+    ProcessPrimvars(index);
 
     EmitVertex();
 }
@@ -434,22 +435,31 @@ void main(void)
 
     bool isFlipped = IsFlipped(); // consider handedness AND negative-scale
 
-    vec3 normal0 = GetQuadGeometryNormal(
+    vec3 Neye0 = GetQuadGeometryNormal(
         inData[0].Neye,
         inData[0].Peye, inData[1].Peye, inData[2].Peye, inData[3].Peye,
         isFlipped);
-    vec3 normal1 = GetQuadGeometryNormal(
+    vec3 Neye1 = GetQuadGeometryNormal(
         inData[1].Neye,
         inData[0].Peye, inData[1].Peye, inData[2].Peye, inData[3].Peye,
         isFlipped);
-    vec3 normal2 = GetQuadGeometryNormal(
+    vec3 Neye2 = GetQuadGeometryNormal(
         inData[2].Neye,
         inData[0].Peye, inData[1].Peye, inData[2].Peye, inData[3].Peye,
         isFlipped);
-    vec3 normal3 = GetQuadGeometryNormal(
+    vec3 Neye3 = GetQuadGeometryNormal(
         inData[3].Neye,
         inData[0].Peye, inData[1].Peye, inData[2].Peye, inData[3].Peye,
         isFlipped);
+
+    vec4 Peye0 = DisplacementTerminal(
+        0, inData[0].Peye, Neye0, GetPatchCoord(0));
+    vec4 Peye1 = DisplacementTerminal(
+        1, inData[1].Peye, Neye1, GetPatchCoord(1));
+    vec4 Peye2 = DisplacementTerminal(
+        2, inData[2].Peye, Neye2, GetPatchCoord(2));
+    vec4 Peye3 = DisplacementTerminal(
+        3, inData[3].Peye, Neye3, GetPatchCoord(3));
 
     // Generate triangles (3,0,2) and (2,0,1)
     //  0---3
@@ -468,14 +478,16 @@ void main(void)
     // In the case of flat normals, we use the vertex positions, so it doesn't
     // matter.
 
-    emit(3, 3, 0, 2, normal3, 0);
-    emit(0, 3, 0, 2, normal0, 0);
-    emit(2, 3, 0, 2, normal2, 0);
+    // triangle 0: vertices (3,0,2)
+    emit(0, 3, Peye3, Neye3, Peye3, Peye0, Peye2);
+    emit(0, 0, Peye0, Neye0, Peye3, Peye0, Peye2);
+    emit(0, 2, Peye2, Neye2, Peye3, Peye0, Peye2);
     EndPrimitive();
 
-    emit(2, 2, 0, 1, normal2, 1);
-    emit(0, 2, 0, 1, normal0, 1);
-    emit(1, 2, 0, 1, normal1, 1);
+    // triangle 1: vertices (2,0,1)
+    emit(1, 2, Peye2, Neye2, Peye2, Peye0, Peye1);
+    emit(1, 0, Peye0, Neye0, Peye2, Peye0, Peye1);
+    emit(1, 1, Peye1, Neye1, Peye2, Peye0, Peye1);
     EndPrimitive();
 }
 

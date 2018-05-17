@@ -48,13 +48,6 @@ namespace {
 // fwd decl.
 WRAP_CUSTOM;
 
-        
-static UsdAttribute
-_CreateFocusRegionAttr(UsdRiStatementsAPI &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateFocusRegionAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
-}
 
 } // anonymous namespace
 
@@ -84,6 +77,14 @@ void wrapUsdRiStatementsAPI()
             static_cast<bool (*)(void)>( [](){ return This::IsTyped; } ))
         .staticmethod("IsTyped")
 
+        .def("IsApplied", 
+            static_cast<bool (*)(void)>( [](){ return This::IsApplied; } ))
+        .staticmethod("IsApplied")
+
+        .def("IsMultipleApply", 
+            static_cast<bool (*)(void)>( [](){ return This::IsMultipleApply; } ))
+        .staticmethod("IsMultipleApply")
+
         .def("GetSchemaAttributeNames",
              &This::GetSchemaAttributeNames,
              arg("includeInherited")=true,
@@ -96,13 +97,6 @@ void wrapUsdRiStatementsAPI()
 
         .def(!self)
 
-        
-        .def("GetFocusRegionAttr",
-             &This::GetFocusRegionAttr)
-        .def("CreateFocusRegionAttr",
-             &_CreateFocusRegionAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
 
     ;
 
@@ -158,7 +152,8 @@ WRAP_CUSTOM {
                  const TfToken &, const std::string &, const std::string &))
              &UsdRiStatementsAPI::CreateRiAttribute,
              (arg("name"), arg("riType"), arg("nameSpace")="user"))
-        .def("CreateRiAttributeAsRel", &UsdRiStatementsAPI::CreateRiAttributeAsRel,
+        .def("GetRiAttribute",
+             &UsdRiStatementsAPI::GetRiAttribute,
              (arg("name"), arg("nameSpace")="user"))
         .def("GetRiAttributes", &UsdRiStatementsAPI::GetRiAttributes,
              (arg("nameSpace")=""),

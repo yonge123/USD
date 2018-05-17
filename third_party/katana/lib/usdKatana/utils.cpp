@@ -639,7 +639,8 @@ _KTypeAndSizeFromUsdVec2(TfToken const &roleName,
         *inputTypeAttr = FnKat::StringAttribute("vector2");
     } else if (roleName == SdfValueRoleNames->Normal) {
         *inputTypeAttr = FnKat::StringAttribute("normal2");
-    } else if (roleName.IsEmpty()) {
+    } else if (roleName == SdfValueRoleNames->TextureCoordinate ||
+               roleName.IsEmpty()) {
         *inputTypeAttr = FnKat::StringAttribute(typeStr);
         *elementSizeAttr = FnKat::IntAttribute(2);
     } else {
@@ -1641,23 +1642,23 @@ std::string PxrUsdKatanaUtils::GetModelInstanceName(const UsdPrim& prim)
         return std::string();
     }
 
-    bool isPseudoRoot = prim.GetPath() == SdfPath::AbsoluteRootPath();
+    if (prim.GetPath() == SdfPath::AbsoluteRootPath()) {
+        return std::string();
+    }
 
-    if (!isPseudoRoot) {
+    if (UsdAttribute attr =
+        UsdRiStatementsAPI(prim).GetRiAttribute(TfToken("ModelInstance"))) {
         std::string modelInstanceName;
-        if (prim.GetAttribute(TfToken(
-                        UsdRiStatementsAPI::MakeRiAttributePropertyName(
-                            "ModelInstance")))
-                .Get(&modelInstanceName)) {
+        if (attr.Get(&modelInstanceName)) {
             return modelInstanceName;
         }
+    }
 
-        if (PxrUsdKatanaUtils::IsModelAssemblyOrComponent(prim)) {
-            FnLogWarn(TfStringPrintf("Could not get modelInstanceName for "
-                     "assembly/component '%s'. Using prim.name", 
-                     prim.GetPath().GetText()).c_str());
-            return prim.GetName();
-        }
+    if (PxrUsdKatanaUtils::IsModelAssemblyOrComponent(prim)) {
+        FnLogWarn(TfStringPrintf("Could not get modelInstanceName for "
+                 "assembly/component '%s'. Using prim.name", 
+                 prim.GetPath().GetText()).c_str());
+        return prim.GetName();
     }
 
     // Recurse to namespace parents so we can find the enclosing model
