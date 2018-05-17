@@ -82,8 +82,6 @@ UsdMayaProxyShapeUI::getDrawRequests(
         return;
     }
 
-    UsdMayaGLBatchRenderer::GetInstance().AddShapeAdapter(&_shapeAdapter);
-
     bool drawShape;
     bool drawBoundingBox;
     _shapeAdapter.GetRenderParams(&drawShape, &drawBoundingBox);

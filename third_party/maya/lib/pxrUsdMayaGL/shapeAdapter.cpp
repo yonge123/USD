@@ -152,6 +152,7 @@ PxrMayaHdShapeAdapter::Sync(
             _renderParams.wireframeColor =
                 GfConvertDisplayToLinear(_renderParams.wireframeColor);
         }
+        UsdMayaGLBatchRenderer::GetInstance().AddShapeAdapter(this);
     }
 
     return success;
@@ -171,7 +172,11 @@ PxrMayaHdShapeAdapter::Sync(
         "Synchronizing PxrMayaHdShapeAdapter for Viewport 2.0: %p\n",
         this);
 
-    return _Sync(shapeDagPath, displayStyle, displayStatus);
+    const bool success = _Sync(shapeDagPath, displayStyle, displayStatus);
+    if (success) {
+        UsdMayaGLBatchRenderer::GetInstance().AddShapeAdapter(this);
+    }
+    return success;
 }
 
 /* virtual */
