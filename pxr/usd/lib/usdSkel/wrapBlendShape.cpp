@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "{{ libraryPath }}/{{ cls.GetHeaderFile() }}"
+#include "pxr/usd/usdSkel/blendShape.h"
 #include "pxr/usd/usd/schemaBase.h"
 
 #include "pxr/usd/sdf/primSpec.h"
@@ -38,42 +38,39 @@
 
 using namespace boost::python;
 
-{% if useExportAPI %}
-{{ namespaceUsing }}
+PXR_NAMESPACE_USING_DIRECTIVE
 
 namespace {
 
-{% endif %}
 #define WRAP_CUSTOM                                                     \
     template <class Cls> static void _CustomWrapCode(Cls &_class)
 
 // fwd decl.
 WRAP_CUSTOM;
 
-{% for attrName in cls.attrOrder -%}
-{% set attr = cls.attrs[attrName] %}
-{# Only emit Create/Get API if apiName is not empty string. #}
-{% if attr.apiName != '' %}
         
 static UsdAttribute
-_Create{{ Proper(attr.apiName) }}Attr({{ cls.cppClassName }} &self,
+_CreateOffsetsAttr(UsdSkelBlendShape &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.Create{{ Proper(attr.apiName) }}Attr(
-        UsdPythonToSdfType(defaultVal, {{ attr.usdType }}), writeSparsely);
+    return self.CreateOffsetsAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Vector3fArray), writeSparsely);
 }
-{% endif %}
-{% endfor %}
-{% if useExportAPI %}
+        
+static UsdAttribute
+_CreatePointIndicesAttr(UsdSkelBlendShape &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreatePointIndicesAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->UIntArray), writeSparsely);
+}
 
 } // anonymous namespace
-{% endif %}
 
-void wrap{{ cls.cppClassName }}()
+void wrapUsdSkelBlendShape()
 {
-    typedef {{ cls.cppClassName }} This;
+    typedef UsdSkelBlendShape This;
 
-    class_<This, bases<{{ cls.parentCppClassName }}> >
-        cls("{{ cls.className }}");
+    class_<This, bases<UsdTyped> >
+        cls("BlendShape");
 
     cls
         .def(init<UsdPrim>(arg("prim")))
@@ -82,21 +79,9 @@ void wrap{{ cls.cppClassName }}()
 
         .def("Get", &This::Get, (arg("stage"), arg("path")))
         .staticmethod("Get")
-{% if cls.isConcrete %}
 
         .def("Define", &This::Define, (arg("stage"), arg("path")))
         .staticmethod("Define")
-{% endif %}
-{% if cls.isAppliedAPISchema and not cls.isMultipleApply and not cls.isPrivateApply %}
-
-        .def("Apply", &This::Apply, (arg("prim")))
-        .staticmethod("Apply")
-{% endif %}
-{% if cls.isAppliedAPISchema and cls.isMultipleApply and not cls.isPrivateApply %}
-
-        .def("Apply", &This::Apply, (arg("prim"), arg("name")))
-        .staticmethod("Apply")
-{% endif %}
 
         .def("IsConcrete",
             static_cast<bool (*)(void)>( [](){ return This::IsConcrete; }))
@@ -106,18 +91,6 @@ void wrap{{ cls.cppClassName }}()
             static_cast<bool (*)(void)>( [](){ return This::IsTyped; } ))
         .staticmethod("IsTyped")
 
-{% if cls.isApi %}
-        .def("IsApplied", 
-            static_cast<bool (*)(void)>( [](){ return This::IsApplied; } ))
-        .staticmethod("IsApplied")
-
-{% endif %}
-{% if cls.isAppliedAPISchema %}
-        .def("IsMultipleApply", 
-            static_cast<bool (*)(void)>( [](){ return This::IsMultipleApply; } ))
-        .staticmethod("IsMultipleApply")
-
-{% endif %}
         .def("GetSchemaAttributeNames",
              &This::GetSchemaAttributeNames,
              arg("includeInherited")=true,
@@ -130,31 +103,21 @@ void wrap{{ cls.cppClassName }}()
 
         .def(!self)
 
-{% for attrName in cls.attrOrder -%}
-{% set attr = cls.attrs[attrName] %}
-{# Only emit Create/Get API if apiName is not empty string. #}
-{% if attr.apiName != '' %}
         
-        .def("Get{{ Proper(attr.apiName) }}Attr",
-             &This::Get{{ Proper(attr.apiName) }}Attr)
-        .def("Create{{ Proper(attr.apiName) }}Attr",
-             &_Create{{ Proper(attr.apiName) }}Attr,
+        .def("GetOffsetsAttr",
+             &This::GetOffsetsAttr)
+        .def("CreateOffsetsAttr",
+             &_CreateOffsetsAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
-{% endif %}
-{% endfor %}
-
-{% for relName in cls.relOrder -%}
-{# Only emit Create/Get API and doxygen if apiName is not empty string. #}
-{% set rel = cls.rels[relName] %}
-{% if rel.apiName != '' %}
         
-        .def("Get{{ Proper(rel.apiName) }}Rel",
-             &This::Get{{ Proper(rel.apiName) }}Rel)
-        .def("Create{{ Proper(rel.apiName) }}Rel",
-             &This::Create{{ Proper(rel.apiName) }}Rel)
-{% endif %}
-{% endfor %}
+        .def("GetPointIndicesAttr",
+             &This::GetPointIndicesAttr)
+        .def("CreatePointIndicesAttr",
+             &_CreatePointIndicesAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+
     ;
 
     _CustomWrapCode(cls);
@@ -172,12 +135,27 @@ void wrap{{ cls.cppClassName }}()
 // }
 //
 // Of course any other ancillary or support code may be provided.
-{% if useExportAPI %}
 // 
 // Just remember to wrap code in the appropriate delimiters:
 // 'namespace {', '}'.
 //
-{% endif %}
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
+namespace {
+
+WRAP_CUSTOM {
+
+    using This = UsdSkelBlendShape;
+
+    _class
+        .def("CreateInbetween", &This::CreateInbetween, arg("name"))
+        .def("GetInbetween", &This::GetInbetween, arg("name"))
+        .def("HasInbetween", &This::HasInbetween, arg("name"))
+        
+        .def("GetInbetweens", &This::GetInbetweens)
+        .def("GetAuthoredInbetweens", &This::GetAuthoredInbetweens)
+        ;
+}
+
+}
