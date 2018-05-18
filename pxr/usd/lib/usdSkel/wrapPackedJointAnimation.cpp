@@ -76,6 +76,20 @@ _CreateScalesAttr(UsdSkelPackedJointAnimation &self,
     return self.CreateScalesAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Half3Array), writeSparsely);
 }
+        
+static UsdAttribute
+_CreateBlendShapesAttr(UsdSkelPackedJointAnimation &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateBlendShapesAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->TokenArray), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateBlendShapeWeightsAttr(UsdSkelPackedJointAnimation &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateBlendShapeWeightsAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->FloatArray), writeSparsely);
+}
 
 } // anonymous namespace
 
@@ -143,6 +157,20 @@ void wrapUsdSkelPackedJointAnimation()
              &This::GetScalesAttr)
         .def("CreateScalesAttr",
              &_CreateScalesAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetBlendShapesAttr",
+             &This::GetBlendShapesAttr)
+        .def("CreateBlendShapesAttr",
+             &_CreateBlendShapesAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetBlendShapeWeightsAttr",
+             &This::GetBlendShapeWeightsAttr)
+        .def("CreateBlendShapeWeightsAttr",
+             &_CreateBlendShapeWeightsAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 
