@@ -21,47 +21,44 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-///
-/// \file sdf/wrapTextReferenceParser.cpp
+#include "pxr/usd/usdSkel/inbetweenShape.h"
 
-#include <boost/python/def.hpp>
-#include <boost/python/tuple.hpp>
+#include "pxr/usd/usd/pyConversions.h"
+#include "pxr/base/tf/pyContainerConversions.h"
+#include "pxr/base/tf/pyResultConversions.h"
+#include "pxr/base/tf/pyUtils.h"
+#include "pxr/base/tf/wrapTypeHelpers.h"
 
-#include "pxr/pxr.h"
-#include "pxr/usd/sdf/textReferenceParser.h"
+#include <boost/python.hpp>
+#include <boost/python/extract.hpp>
 
-namespace bp = boost::python;
+
+using namespace boost::python;
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-namespace {
 
-static bp::tuple
-_ExtractExternalReferences(
-    const std::string& filePath)
+void wrapUsdSkelInbetweenShape()
 {
-    std::vector<std::string> subLayers, references, payloads;
-    SdfExtractExternalReferences(filePath,
-        &subLayers, &references, &payloads);
-    return bp::make_tuple(subLayers, references, payloads);
-}
+    using This = UsdSkelInbetweenShape;
 
-static bp::tuple
-_ExtractExternalReferencesFromString(
-    const std::string& layerData)
-{
-    std::vector<std::string> subLayers, references, payloads;
-    SdfExtractExternalReferencesFromString(layerData,
-        &subLayers, &references, &payloads);
-    return boost::python::make_tuple(
-        subLayers, references, payloads);
-}
+    class_<This>("InbetweenShape")
 
-} // anonymous namespace 
+        .def(init<UsdAttribute>(arg("attr")))
+        .def(!self)
 
-void wrapTextReferenceParser()
-{
-    bp::def("ExtractExternalReferences", _ExtractExternalReferences);
-    bp::def("ExtractExternalReferencesFromString",
-        _ExtractExternalReferencesFromString);
-}
+        .def("GetWeight", &This::GetWeight)
+        .def("SetWeight", &This::SetWeight, arg("weight"))
+        .def("HasAuthoredWeight", &This::HasAuthoredWeight)
+
+        .def("GetPoints", &This::GetPoints)
+        .def("SetPoints", &This::SetPoints, arg("points"))
+
+        .def("IsInbetween", &This::IsInbetween, arg("attr"))
+        .staticmethod("IsInbetween")
+
+        .def("GetAttr", &This::GetAttr,
+             return_value_policy<return_by_value>())
+        .def("IsDefined", &This::IsDefined)
+        ;
+}            
