@@ -51,6 +51,11 @@ const TfToken colorToken("color");
 
 }
 
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    ((defaultOutputName, "out"))
+);
+
 MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx)
     : MayaTransformWriter(iDag, uPath, instanceSource, jobCtx),
       mIsShapeAnimated(false)
@@ -175,16 +180,21 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
 
     UsdShadeConnectableAPI::ConnectToSource(
         UsdShadeMaterial(material).CreateSurfaceOutput(GlfGLSLFXTokens->glslfx),
-        UsdShadeMaterial(shader).CreateSurfaceOutput(GlfGLSLFXTokens->glslfx));
+        UsdShadeMaterial(shader).CreateOutput(_tokens->defaultOutputName, SdfValueTypeNames->Token));
 
-    shader.CreateOutput(UsdHydraTokens->infoFilename, SdfValueTypeNames->Asset)
+    shader.GetPrim()
+        .CreateAttribute(UsdHydraTokens->infoFilename, SdfValueTypeNames->Asset, SdfVariabilityUniform)
         .Set(SdfAssetPath("shaders/simpleTexturedSurface.glslfx"));
 
     primvar.CreateIdAttr().Set(UsdHydraTokens->HwPrimvar_1);
-    primvar.CreateOutput(UsdHydraTokens->infoVarname, SdfValueTypeNames->Token).Set(stToken);
+    primvar.GetPrim()
+        .CreateAttribute(UsdHydraTokens->infoVarname, SdfValueTypeNames->Token, SdfVariabilityUniform)
+        .Set(stToken);
 
     texture.CreateIdAttr().Set(UsdHydraTokens->HwUvTexture_1);
-    texture.CreateOutput(UsdHydraTokens->textureMemory, SdfValueTypeNames->Float).Set(10.0f * 1024.0f * 1024.0f);
+    texture.GetPrim()
+        .CreateAttribute(UsdHydraTokens->textureMemory, SdfValueTypeNames->Float, SdfVariabilityUniform)
+        .Set(10.0f * 1024.0f * 1024.0f);
 
     UsdShadeConnectableAPI shaderApi(shader);
     UsdShadeConnectableAPI primvarApi(primvar);
@@ -236,7 +246,8 @@ bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdG
 #ifdef GENERATE_SHADERS
     auto imageNameExtracted = MRenderUtil::exactImagePlaneFileName(dnode.object());
     UsdShadeShader textureShader(mTexture);
-    auto filenameAttr = textureShader.CreateOutput(UsdHydraTokens->infoFilename, SdfValueTypeNames->Asset);
+    auto filenameAttr = textureShader.GetPrim()
+        .CreateAttribute(UsdHydraTokens->infoFilename, SdfValueTypeNames->Asset, SdfVariabilityVarying);
     filenameAttr.Set(SdfAssetPath(std::string(imageNameExtracted.asChar())), usdTime);
     filenameAttr.Set(imageName);
 #endif
