@@ -21,13 +21,11 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-namespace {
-
-#ifdef GENERATE_SHADERS
 
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
-
+    ((defaultOutputName, "out"))
+#ifdef GENERATE_SHADERS
     ((materialName, "HdMaterial"))
     ((shaderName, "HdShader"))
     ((primvarName, "HdPrimvar"))
@@ -37,15 +35,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     (result)
     (baseColor)
     (color)
-);
-
 #endif
-
-}
-
-TF_DEFINE_PRIVATE_TOKENS(
-    _tokens,
-    ((defaultOutputName, "out"))
 );
 
 MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx)
