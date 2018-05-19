@@ -30,6 +30,9 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+TF_DEFINE_PUBLIC_TOKENS(UsdGeomImagePlaneFitTokens,
+        USDGEOM_IMAGEPLANE_FIT_TOKENS);
+
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
