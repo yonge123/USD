@@ -24,15 +24,21 @@ PXR_NAMESPACE_OPEN_SCOPE
 namespace {
 
 #ifdef GENERATE_SHADERS
-const TfToken materialNameToken("HdMaterial");
-const TfToken shaderNameToken("HdShader");
-const TfToken primvarNameToken("HdPrimvar");
-const TfToken textureNameToken("HdTexture");
-const TfToken stToken("st");
-const TfToken uvToken("uv");
-const TfToken resultToken("result");
-const TfToken baseColorToken("baseColor");
-const TfToken colorToken("color");
+
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+
+    ((materialName, "HdMaterial"))
+    ((shaderName, "HdShader"))
+    ((primvarName, "HdPrimvar"))
+    ((textureName, "HdTexture"))
+    (st)
+    (uv)
+    (result)
+    (baseColor)
+    (color)
+);
+
 #endif
 
 }
@@ -153,11 +159,11 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
     TF_AXIOM(mUsdPrim);
 
 #ifdef GENERATE_SHADERS
-    const auto materialPath = getUsdPath().AppendChild(materialNameToken);
+    const auto materialPath = getUsdPath().AppendChild(_tokens->materialName);
     auto material = UsdShadeMaterial::Define(getUsdStage(), materialPath);
-    auto shader = UsdShadeShader::Define(getUsdStage(), materialPath.AppendChild(shaderNameToken));
-    auto primvar = UsdShadeShader::Define(getUsdStage(), materialPath.AppendChild(primvarNameToken));
-    auto texture = UsdShadeShader::Define(getUsdStage(), materialPath.AppendChild(textureNameToken));
+    auto shader = UsdShadeShader::Define(getUsdStage(), materialPath.AppendChild(_tokens->shaderName));
+    auto primvar = UsdShadeShader::Define(getUsdStage(), materialPath.AppendChild(_tokens->primvarName));
+    auto texture = UsdShadeShader::Define(getUsdStage(), materialPath.AppendChild(_tokens->textureName));
     mTexture = texture.GetPrim();
     TF_AXIOM(mTexture);
 
@@ -175,7 +181,7 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
     primvar.CreateIdAttr().Set(UsdHydraTokens->HwPrimvar_1);
     primvar.GetPrim()
         .CreateAttribute(UsdHydraTokens->infoVarname, SdfValueTypeNames->Token, SdfVariabilityUniform)
-        .Set(stToken);
+        .Set(_tokens->st);
 
     texture.CreateIdAttr().Set(UsdHydraTokens->HwUvTexture_1);
     texture.GetPrim()
@@ -187,12 +193,12 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
     UsdShadeConnectableAPI textureApi(texture);
 
     UsdShadeConnectableAPI::ConnectToSource(
-        textureApi.CreateInput(uvToken, SdfValueTypeNames->Float2),
-        primvarApi.CreateOutput(resultToken, SdfValueTypeNames->Float2));
+        textureApi.CreateInput(_tokens->uv, SdfValueTypeNames->Float2),
+        primvarApi.CreateOutput(_tokens->result, SdfValueTypeNames->Float2));
 
     UsdShadeConnectableAPI::ConnectToSource(
-        shaderApi.CreateInput(baseColorToken, SdfValueTypeNames->Color3f),
-        textureApi.CreateOutput(colorToken, SdfValueTypeNames->Color3f));
+        shaderApi.CreateInput(_tokens->baseColor, SdfValueTypeNames->Color3f),
+        textureApi.CreateOutput(_tokens->color, SdfValueTypeNames->Color3f));
 #endif
 }
 
