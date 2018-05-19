@@ -21,8 +21,6 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-namespace {
-
 #ifdef GENERATE_SHADERS
 
 TF_DEFINE_PRIVATE_TOKENS(
@@ -40,8 +38,6 @@ TF_DEFINE_PRIVATE_TOKENS(
 );
 
 #endif
-
-}
 
 MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx)
     : MayaTransformWriter(iDag, uPath, instanceSource, jobCtx),
