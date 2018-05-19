@@ -23,20 +23,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
 
-enum {
-    IMAGE_PLANE_FIT_FILL,
-    IMAGE_PLANE_FIT_BEST,
-    IMAGE_PLANE_FIT_HORIZONTAL,
-    IMAGE_PLANE_FIT_VERTICAL,
-    IMAGE_PLANE_FIT_TO_SIZE
-};
-
-const TfToken image_plane_fill("fill");
-const TfToken image_plane_best("best");
-const TfToken image_plane_horizontal("horizontal");
-const TfToken image_plane_vertical("vertical");
-const TfToken image_plane_to_size("to size");
-
 #ifdef GENERATE_SHADERS
 const TfToken materialNameToken("HdMaterial");
 const TfToken shaderNameToken("HdShader");
@@ -253,16 +239,16 @@ bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdG
     filenameAttr.Set(imageName);
 #endif
     const auto fit = dnode.findPlug("fit").asShort();
-    if (fit == IMAGE_PLANE_FIT_BEST) {
-        primSchema.GetFitAttr().Set(image_plane_best);
-    } else if (fit == IMAGE_PLANE_FIT_FILL) {
-        primSchema.GetFitAttr().Set(image_plane_fill);
-    } else if (fit == IMAGE_PLANE_FIT_HORIZONTAL) {
-        primSchema.GetFitAttr().Set(image_plane_horizontal);
-    } else if (fit == IMAGE_PLANE_FIT_VERTICAL) {
-        primSchema.GetFitAttr().Set(image_plane_vertical);
-    } else if (fit == IMAGE_PLANE_FIT_TO_SIZE) {
-        primSchema.GetFitAttr().Set(image_plane_to_size);
+    if (fit == UsdGeomImagePlane::FIT_BEST) {
+        primSchema.GetFitAttr().Set(UsdGeomImagePlaneFitTokens->best);
+    } else if (fit == UsdGeomImagePlane::FIT_FILL) {
+        primSchema.GetFitAttr().Set(UsdGeomImagePlaneFitTokens->fill);
+    } else if (fit == UsdGeomImagePlane::FIT_HORIZONTAL) {
+        primSchema.GetFitAttr().Set(UsdGeomImagePlaneFitTokens->horizontal);
+    } else if (fit == UsdGeomImagePlane::FIT_VERTICAL) {
+        primSchema.GetFitAttr().Set(UsdGeomImagePlaneFitTokens->vertical);
+    } else if (fit == UsdGeomImagePlane::FIT_TO_SIZE) {
+        primSchema.GetFitAttr().Set(UsdGeomImagePlaneFitTokens->toSize);
     }
     primSchema.GetUseFrameExtensionAttr().Set(dnode.findPlug("useFrameExtension").asBool());
     _SetAttribute(primSchema.GetFrameOffsetAttr(), dnode.findPlug("frameOffset").asInt(), usdTime);
