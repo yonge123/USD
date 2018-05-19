@@ -75,22 +75,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 static const GLuint invalid_texture = 0;
 
-namespace {
-    enum {
-        IMAGE_PLANE_FIT_FILL,
-        IMAGE_PLANE_FIT_BEST,
-        IMAGE_PLANE_FIT_HORIZONTAL,
-        IMAGE_PLANE_FIT_VERTICAL,
-        IMAGE_PLANE_FIT_TO_SIZE
-    };
-
-    const TfToken image_plane_fill("fill");
-    const TfToken image_plane_best("best");
-    const TfToken image_plane_horizontal("horizontal");
-    const TfToken image_plane_vertical("vertical");
-    const TfToken image_plane_to_size("to size");
-}
-
 struct ImagePlaneDef {
     SdfAssetPath asset;
     GfVec2f size;
@@ -121,18 +105,18 @@ struct ImagePlaneDef {
         image_plane.GetCoverageOriginAttr().Get(&coverage_origin, _params.frame);
         TfToken fit_token;
         image_plane.GetFitAttr().Get(&fit_token, _params.frame);
-        if (fit_token == image_plane_fill) {
-            fit = IMAGE_PLANE_FIT_FILL;
-        } else if (fit_token == image_plane_best) {
-            fit = IMAGE_PLANE_FIT_BEST;
-        } else if (fit_token == image_plane_horizontal) {
-            fit = IMAGE_PLANE_FIT_HORIZONTAL;
-        } else if (fit_token == image_plane_vertical) {
-            fit = IMAGE_PLANE_FIT_VERTICAL;
-        } else if (fit_token == image_plane_to_size) {
-            fit = IMAGE_PLANE_FIT_TO_SIZE;
+        if (fit_token == UsdGeomImagePlaneFitTokens->fill) {
+            fit = UsdGeomImagePlane::FIT_FILL;
+        } else if (fit_token == UsdGeomImagePlaneFitTokens->best) {
+            fit = UsdGeomImagePlane::FIT_BEST;
+        } else if (fit_token == UsdGeomImagePlaneFitTokens->horizontal) {
+            fit = UsdGeomImagePlane::FIT_HORIZONTAL;
+        } else if (fit_token == UsdGeomImagePlaneFitTokens->vertical) {
+            fit = UsdGeomImagePlane::FIT_VERTICAL;
+        } else if (fit_token == UsdGeomImagePlaneFitTokens->toSize) {
+            fit = UsdGeomImagePlane::FIT_TO_SIZE;
         } else {
-            fit = IMAGE_PLANE_FIT_BEST;
+            fit = UsdGeomImagePlane::FIT_BEST;
         }
         rotate = static_cast<float>(M_PI) * rotate / 180.0f;
 
@@ -511,7 +495,7 @@ UsdImagingGLRefEngine::_DrawImagePlanes()
         const float image_height = static_cast<float>(it.height);
 
         switch (it.fit) {
-            case IMAGE_PLANE_FIT_FILL:
+            case UsdGeomImagePlane::FIT_FILL:
             {
                 const float image_ratio = image_width / image_height;
                 const float viewport_ratio = width / height;
@@ -524,7 +508,7 @@ UsdImagingGLRefEngine::_DrawImagePlanes()
                 }
             }
                 break;
-            case IMAGE_PLANE_FIT_BEST:
+            case UsdGeomImagePlane::FIT_BEST:
             {
                 const float image_ratio = image_width / image_height;
                 const float viewport_ratio = width / height;
@@ -537,15 +521,15 @@ UsdImagingGLRefEngine::_DrawImagePlanes()
                 }
             }
                 break;
-            case IMAGE_PLANE_FIT_HORIZONTAL:
+            case UsdGeomImagePlane::FIT_HORIZONTAL:
                 max_y = image_height * width / image_width;
                 min_y = -1.0f * max_y;
                 break;
-            case IMAGE_PLANE_FIT_VERTICAL:
+            case UsdGeomImagePlane::FIT_VERTICAL:
                 max_x = image_width * height / image_height;
                 min_x = -1.0f * max_x;
                 break;
-            case IMAGE_PLANE_FIT_TO_SIZE:
+            case UsdGeomImagePlane::FIT_TO_SIZE:
                 break;
             default:
                 assert("Invalid enum passed in ImagePlaneDef.fit!");

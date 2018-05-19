@@ -44,6 +44,18 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+/// \hideinitializer
+#define USDGEOM_IMAGEPLANE_FIT_TOKENS \
+    (fill) \
+    (best) \
+    (horizontal) \
+    (vertical) \
+    ((toSize, "to size"))
+
+TF_DECLARE_PUBLIC_TOKENS(UsdGeomImagePlaneFitTokens, USDGEOM_API,
+        USDGEOM_IMAGEPLANE_FIT_TOKENS);
+
+
 class SdfAssetPath;
 
 // -------------------------------------------------------------------------- //
@@ -64,6 +76,14 @@ class SdfAssetPath;
 class UsdGeomImagePlane : public UsdGeomBoundable
 {
 public:
+    enum FitType {
+        FIT_FILL,
+        FIT_BEST,
+        FIT_HORIZONTAL,
+        FIT_VERTICAL,
+        FIT_TO_SIZE
+    };
+
     /// Compile-time constant indicating whether or not this class corresponds
     /// to a concrete instantiable prim type in scene description.  If this is
     /// true, GetStaticPrimDefinition() will return a valid prim definition with
