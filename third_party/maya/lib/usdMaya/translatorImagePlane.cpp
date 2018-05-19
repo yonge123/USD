@@ -7,8 +7,9 @@
 #include <maya/MTimeArray.h>
 #include <maya/MFnAnimCurve.h>
 
+#include "pxr/usd/usdGeom/imagePlane.h"
+
 #include "usdMaya/translatorUtil.h"
-#include "MayaImagePlaneWriter.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -394,16 +395,16 @@ bool PxrUsdMayaTranslatorImagePlane::Read(
 
     TfToken fit;
     usdImagePlane.GetFitAttr().Get(&fit, earliestTimeCode);
-    if (fit == MayaImagePlaneWriter::image_plane_best) {
-        fitPlug.setShort(MayaImagePlaneWriter::IMAGE_PLANE_FIT_BEST);
-    } else if (fit == MayaImagePlaneWriter::image_plane_fill) {
-        fitPlug.setShort(MayaImagePlaneWriter::IMAGE_PLANE_FIT_FILL);
-    } else if (fit == MayaImagePlaneWriter::image_plane_horizontal) {
-        fitPlug.setShort(MayaImagePlaneWriter::IMAGE_PLANE_FIT_HORIZONTAL);
-    } else if (fit == MayaImagePlaneWriter::image_plane_vertical) {
-        fitPlug.setShort(MayaImagePlaneWriter::IMAGE_PLANE_FIT_VERTICAL);
-    } else if (fit == MayaImagePlaneWriter::image_plane_to_size) {
-        fitPlug.setShort(MayaImagePlaneWriter::IMAGE_PLANE_FIT_TO_SIZE);
+    if (fit == UsdGeomImagePlaneFitTokens->best) {
+        fitPlug.setShort(UsdGeomImagePlane::FIT_BEST);
+    } else if (fit == UsdGeomImagePlaneFitTokens->fill) {
+        fitPlug.setShort(UsdGeomImagePlane::FIT_FILL);
+    } else if (fit == UsdGeomImagePlaneFitTokens->horizontal) {
+        fitPlug.setShort(UsdGeomImagePlane::FIT_HORIZONTAL);
+    } else if (fit == UsdGeomImagePlaneFitTokens->vertical) {
+        fitPlug.setShort(UsdGeomImagePlane::FIT_VERTICAL);
+    } else if (fit == UsdGeomImagePlaneFitTokens->toSize) {
+        fitPlug.setShort(UsdGeomImagePlane::FIT_TO_SIZE);
     }
 
     SdfAssetPath imageAssetPath;
