@@ -13,20 +13,22 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-namespace {
-    // From the camera translator code, cleaned the code up a bit
-    const TfToken frameOffsetToken("frameOffset");
-    const TfToken widthToken("width");
-    const TfToken heightToken("height");
-    const TfToken alphaGainToken("alphaGain");
-    const TfToken depthToken("depth");
-    const TfToken squeezeCorrectionToken("squeezeCorrection");
-    const TfToken sizeToken("size");
-    const TfToken offsetToken("offset");
-    const TfToken rotateToken("rotate");
-    const TfToken coverageToken("coverage");
-    const TfToken coverageOriginToken("coverageOrigin");
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    (frameOffset)
+    (width)
+    (height)
+    (alphaGain)
+    (depth)
+    (squeezeCorrection)
+    (size)
+    (offset)
+    (rotate)
+    (coverage)
+    (coverageOrigin)
+);
 
+namespace {
     const TfType floatType = TfType::Find<float>();
     const TfType intType = TfType::Find<int>();
     const TfType float2Type = TfType::Find<GfVec2f>();
@@ -417,17 +419,17 @@ bool PxrUsdMayaTranslatorImagePlane::Read(
     auto set_attribute = [&imagePlaneNode, &args, &context] (const UsdAttribute& attr, const TfToken& token) {
         translate_usd_attribute(attr, imagePlaneNode, token, args, context);
     };
-    set_attribute(usdImagePlane.GetFrameOffsetAttr(), frameOffsetToken);
-    set_attribute(usdImagePlane.GetWidthAttr(), widthToken);
-    set_attribute(usdImagePlane.GetHeightAttr(), heightToken);
-    set_attribute(usdImagePlane.GetAlphaGainAttr(), alphaGainToken);
-    set_attribute(usdImagePlane.GetDepthAttr(), depthToken);
-    set_attribute(usdImagePlane.GetSqueezeCorrectionAttr(), squeezeCorrectionToken);
-    set_attribute(usdImagePlane.GetSizeAttr(), sizeToken);
-    set_attribute(usdImagePlane.GetOffsetAttr(), offsetToken);
-    set_attribute(usdImagePlane.GetRotateAttr(), rotateToken);
-    set_attribute(usdImagePlane.GetCoverageAttr(), coverageToken);
-    set_attribute(usdImagePlane.GetCoverageOriginAttr(), coverageOriginToken);
+    set_attribute(usdImagePlane.GetFrameOffsetAttr(), _tokens->frameOffset);
+    set_attribute(usdImagePlane.GetWidthAttr(), _tokens->width);
+    set_attribute(usdImagePlane.GetHeightAttr(), _tokens->height);
+    set_attribute(usdImagePlane.GetAlphaGainAttr(), _tokens->alphaGain);
+    set_attribute(usdImagePlane.GetDepthAttr(), _tokens->depth);
+    set_attribute(usdImagePlane.GetSqueezeCorrectionAttr(), _tokens->squeezeCorrection);
+    set_attribute(usdImagePlane.GetSizeAttr(), _tokens->size);
+    set_attribute(usdImagePlane.GetOffsetAttr(), _tokens->offset);
+    set_attribute(usdImagePlane.GetRotateAttr(), _tokens->rotate);
+    set_attribute(usdImagePlane.GetCoverageAttr(), _tokens->coverage);
+    set_attribute(usdImagePlane.GetCoverageOriginAttr(), _tokens->coverageOrigin);
 
     return true;
 }
