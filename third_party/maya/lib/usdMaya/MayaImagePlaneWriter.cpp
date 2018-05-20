@@ -15,6 +15,7 @@
 #include <pxr/usd/usdShade/shader.h>
 #include <pxr/usd/usdShade/connectableAPI.h>
 #include <pxr/usd/usdHydra/tokens.h>
+#include <pxr/usd/usdGeom/camera.h>
 
 #include <maya/MRenderUtil.h>
 #endif
@@ -142,7 +143,7 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
         }
     }
 
-    UsdGeomImagePlane primSchema =
+    auto primSchema =
         UsdGeomImagePlane::Define(getUsdStage(), getUsdPath());
     TF_AXIOM(primSchema);
     mUsdPrim = primSchema.GetPrim();
@@ -189,6 +190,14 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
     UsdShadeConnectableAPI::ConnectToSource(
         shaderApi.CreateInput(_tokens->baseColor, SdfValueTypeNames->Color3f),
         textureApi.CreateOutput(_tokens->color, SdfValueTypeNames->Color3f));
+
+    for (auto pt = getUsdPath(); !pt.IsEmpty(); pt = pt.GetParentPath()) {
+        auto pr = getUsdStage()->GetPrimAtPath(pt);
+        if (pr && pr.IsA<UsdGeomCamera>()) {
+            primSchema.CreateCameraRel().AddTarget(pt);
+            break;
+        }
+    }
 #endif
 }
 
