@@ -67,8 +67,12 @@ MStatus usdTranslatorImport::reader(const MFileObject & file,
     std::string fileName(file.fullName().asChar());
     std::string primPath("/");
     std::map<std::string,std::string> variants;
+
+    bool readAnimData = true;
+    bool useCustomFrameRange = false;
+    GfInterval customFrameRange(1.0, 1.0);
+
     JobImportArgs jobArgs;
-        
     int i;
 
     if ( optionsString.length() > 0 ) {
@@ -79,44 +83,46 @@ MStatus usdTranslatorImport::reader(const MFileObject & file,
             theOption.clear();
             optionList[i].split('=', theOption);
             if (theOption[0] == MString("shadingMode")) {
-                if (theOption[1]=="None") {
-                    jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none;
-                } else if (theOption[1]=="GPrim Colors") {
-                    jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
-                } else if (theOption[1]=="Material Colors") {
-                    jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
-                } else if (theOption[1]=="RfM Shaders") {
-                    TfToken shadingMode("pxrRis");
-                    if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode)) {
+                TfToken shadingMode(theOption[1].asChar());
+                if (!shadingMode.IsEmpty()) {
+                    if (PxrUsdMayaShadingModeRegistry::GetInstance()
+                            .GetImporter(shadingMode)) {
                         jobArgs.shadingMode = shadingMode;
-                    } else {
-                        MGlobal::displayError(
-                        TfStringPrintf("No shadingMode '%s' found.  Setting shadingMode='none'", 
-                                        shadingMode.GetText()).c_str());
+                    }
+                    else {
+                        if (shadingMode != PxrUsdMayaShadingModeTokens->none) {
+                            MGlobal::displayError(TfStringPrintf(
+                                    "No shadingMode '%s' found. "
+                                    "Setting shadingMode='none'", 
+                                    shadingMode.GetText()).c_str());
+                        }
                         jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none;
                     }
-                } else { 
-                    TfToken modeToken(theOption[1].asChar()); 
-                    if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(modeToken)) { 
-                        jobArgs.shadingMode = modeToken; 
-                    } else { 
-                        MGlobal::displayError( 
-                            TfStringPrintf("No shadingMode '%s' found. Setting shadingMode='none'", modeToken.GetText()).c_str()); 
-                        jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none; 
-                    }
                 }
-            } else if (theOption[0] == MString("readAnimData")) {
-                jobArgs.readAnimData = theOption[1].asInt();
             } else if (theOption[0] == MString("assemblyRep")) {
                 jobArgs.assemblyRep = TfToken(theOption[1].asChar());
-            } else if (theOption[0] == MString("startTime")) {
-                jobArgs.startTime = theOption[1].asDouble();
-            } else if (theOption[0] == MString("endTime")) {
-                jobArgs.endTime = theOption[1].asDouble();
+            } else if (theOption[0] == MString("readAnimData")) {
+                readAnimData = theOption[1].asInt();
             } else if (theOption[0] == MString("useCustomFrameRange")) {
-                jobArgs.useCustomFrameRange = theOption[1].asInt();
+                useCustomFrameRange = theOption[1].asInt();
+            } else if (theOption[0] == MString("startTime")) {
+                customFrameRange.SetMin(theOption[1].asDouble());
+            } else if (theOption[0] == MString("endTime")) {
+                customFrameRange.SetMax(theOption[1].asDouble());
             }
         }
+    }
+
+    if (readAnimData) {
+        if (useCustomFrameRange) {
+            jobArgs.timeInterval = customFrameRange;
+        }
+        else {
+            jobArgs.timeInterval = GfInterval::GetFullInterval();
+        }
+    }
+    else {
+        jobArgs.timeInterval = GfInterval();
     }
 
     usdReadJob *mUsdReadJob = new usdReadJob(fileName, primPath, variants, jobArgs,
