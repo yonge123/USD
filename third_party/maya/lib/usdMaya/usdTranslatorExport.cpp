@@ -192,7 +192,7 @@ usdTranslatorExport::writer(const MFileObject &file,
                 exportAnimation = theOption[1].asInt();
             }
             if (theOption[0] == MString("eulerFilter")) {
-                jobArgs.exportAnimation = theOption[1].asInt();
+                jobArgs.eulerFilter = theOption[1].asInt();
             }
             if (theOption[0] == MString("startTime")) {
                 timeInterval.SetMin(theOption[1].asDouble());
