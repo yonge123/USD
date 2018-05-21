@@ -70,6 +70,7 @@ UsdImagingImagePlaneAdapter::TrackVariability(
     const UsdImagingInstancerContext* instancerContext) const {
     BaseAdapter::TrackVariability(
         prim, cachePath, timeVaryingBits, instancerContext);
+    *timeVaryingBits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyExtent;
 }
 
 void
@@ -89,6 +90,10 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
         GfMatrix4d& ctm = valueCache->GetTransform(cachePath);
         GfMatrix4d xf; xf.SetIdentity();
         ctm = xf * ctm;
+    }
+
+    if (requestedBits & HdChangeTracker::DirtyExtent) {
+        // TODO
     }
 
     if (requestedBits & HdChangeTracker::DirtyPoints) {
