@@ -43,7 +43,7 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
     : MayaTransformWriter(iDag, uPath, instanceSource, jobCtx),
       mIsShapeAnimated(false)
 {
-    if (getArgs().exportAnimation) {
+    if (!getArgs().timeInterval.IsEmpty()) {
         MObject obj = getDagPath().node();
         mIsShapeAnimated = PxrUsdMayaUtil::isAnimated(obj);
     }
