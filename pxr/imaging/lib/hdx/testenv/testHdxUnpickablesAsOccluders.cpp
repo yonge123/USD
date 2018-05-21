@@ -191,7 +191,7 @@ My_TestGLDrawing::_SetPickParams()
     pParams.viewMatrix     = GetViewMatrix();
     pParams.engine         = &_engine;
     pParams.pickablesCol   = &_pickablesCol;
-    pParams.highlightMode  = HdxSelectionHighlightModeSelect;
+    pParams.highlightMode  = HdSelection::HighlightModeSelect;
 
     _picker.SetPickParams(pParams);
 }
@@ -226,11 +226,11 @@ My_TestGLDrawing::OffscreenTest()
     _picker.Pick(GfVec2i(319,221), GfVec2i(320,222));
     DrawScene();
     WriteToFile("color", "color2_cube0_pickable.png");
-    HdxSelectionSharedPtr selection = _picker.GetSelection();
-    HdxSelectionHighlightMode mode = HdxSelectionHighlightModeSelect;
+    HdSelectionSharedPtr selection = _picker.GetSelection();
+    HdSelection::HighlightMode mode = HdSelection::HighlightModeSelect;
 
-    TF_VERIFY(selection->GetSelectedPrims(mode).size() == 1);
-    TF_VERIFY(selection->GetSelectedPrims(mode)[0] == SdfPath("/cube0"));
+    TF_VERIFY(selection->GetSelectedPrimPaths(mode).size() == 1);
+    TF_VERIFY(selection->GetSelectedPrimPaths(mode)[0] == SdfPath("/cube0"));
 
     // make cube0 unpickable; it should not let us pick cube1 since it occludes
     SdfPathVector excludePaths = {SdfPath("/cube0")};
@@ -239,7 +239,7 @@ My_TestGLDrawing::OffscreenTest()
     DrawScene();
     WriteToFile("color", "color3_cube0_unpickable.png");
     selection = _picker.GetSelection();
-    //TF_VERIFY(selection->GetSelectedPrims(mode).size() == 0);
+    //TF_VERIFY(selection->GetSelectedPrimPaths(mode).size() == 0);
 }
 
 void
