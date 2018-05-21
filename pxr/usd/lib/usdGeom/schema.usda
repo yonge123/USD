@@ -199,6 +199,7 @@ class "PrimvarsAPI" (
     as UsdGeomPrimvar, which interpolate across a primitive's topology,
     can override shader inputs, and inherit down namespace.""" 
     customData = {
+        token apiSchemaType = "nonApplied"
         string extraIncludes = """
 #include "pxr/usd/usdGeom/primvar.h" """
     }
@@ -735,11 +736,11 @@ class "PointBased" (
 
     # shaping
     normal3f[] normals (
-        doc = """Provide orientation for individual points, which, depending on
-        subclass, may define a surface, curve, or free points.  Note that in
-        general you should not need or want to provide 'normals' for any
-        Mesh that is subdivided, as the subdivision scheme will provide smooth
-        normals.  'normals' is not a generic Primvar,
+        doc = """Provide an object-space orientation for individual points, 
+        which, depending on subclass, may define a surface, curve, or free 
+        points.  Note that in general you should not need or want to provide
+        'normals' for any Mesh that is subdivided, as the subdivision scheme 
+        will provide smooth normals.  'normals' is not a generic Primvar,
         but the number of elements in this attribute will be determined by
         its 'interpolation'.  See \\ref SetNormalsInterpolation()"""
     )
@@ -1737,6 +1738,7 @@ class Camera "Camera" (
 
 class "GeomModelAPI"
 (
+    inherits = </APISchemaBase>
     customData = {
          string className = "ModelAPI"
          string extraIncludes = """
@@ -1817,7 +1819,6 @@ class "GeomModelAPI"
     All card faces are drawn and textured as single-sided.
 
     \\todo CreatePayload() """
-    inherits = </ModelAPI>
 )
 {
     uniform token model:drawMode (

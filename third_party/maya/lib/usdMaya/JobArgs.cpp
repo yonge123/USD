@@ -45,6 +45,12 @@ TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
 TF_DEFINE_PUBLIC_TOKENS(PxUsdExportJobArgsTokens, 
         PXRUSDMAYA_JOBARGS_TOKENS);
 
+TF_DEFINE_PRIVATE_TOKENS(
+    _defaultIncludeMetadataKeys, 
+    (hidden)
+    (instanceable)
+    (kind)
+);
 
 JobExportArgs::JobExportArgs()
     :
@@ -65,7 +71,6 @@ JobExportArgs::JobExportArgs()
         exportCollectionBasedBindings(false),
         normalizeNurbs(false),
         exportNurbsExplicitUV(true),
-        nurbsExplicitUVType(PxUsdExportJobArgsTokens->Uniform),
         exportColorSets(true),
         renderLayerMode(PxUsdExportJobArgsTokens->defaultLayer),
         defaultMeshScheme(UsdGeomTokens->catmullClark),
@@ -105,7 +110,6 @@ operator <<(std::ostream& out, const JobExportArgs& exportArgs)
         << "exportCollectionBasedBindings: " << _StringifyBool(exportArgs.exportCollectionBasedBindings) << std::endl
         << "normalizeNurbs: " << _StringifyBool(exportArgs.normalizeNurbs) << std::endl
         << "exportNurbsExplicitUV: " << _StringifyBool(exportArgs.exportNurbsExplicitUV) << std::endl
-        << "nurbsExplicitUVType: " << exportArgs.nurbsExplicitUVType << std::endl
         << "exportColorSets: " << _StringifyBool(exportArgs.exportColorSets) << std::endl
         << "renderLayerMode: " << exportArgs.renderLayerMode << std::endl
         << "defaultMeshScheme: " << exportArgs.defaultMeshScheme << std::endl
@@ -154,13 +158,16 @@ void JobExportArgs::setParentScope(const std::string& ps) {
 JobImportArgs::JobImportArgs()
     :
         shadingMode(PxrUsdMayaShadingModeTokens->displayColor),
-        defaultMeshScheme(UsdGeomTokens->catmullClark),
         assemblyRep(PxrUsdMayaTranslatorTokens->Collapsed),
         readAnimData(true),
         useCustomFrameRange(false),
         startTime(1.0),
         endTime(1.0),
-        importWithProxyShapes(false)
+        importWithProxyShapes(false),
+        includeMetadataKeys(
+                _defaultIncludeMetadataKeys->allTokens.begin(),
+                _defaultIncludeMetadataKeys->allTokens.end()),
+        includeAPINames(/*empty*/)
 {
 }
 
@@ -168,7 +175,6 @@ std::ostream&
 operator <<(std::ostream& out, const JobImportArgs& importArgs)
 {
     out << "shadingMode: " << importArgs.shadingMode << std::endl
-        << "defaultMeshScheme: " << importArgs.defaultMeshScheme << std::endl
         << "assemblyRep: " << importArgs.assemblyRep << std::endl
         << "readAnimData: " << _StringifyBool(importArgs.readAnimData) << std::endl
         << "useCustomFrameRange: " << _StringifyBool(importArgs.useCustomFrameRange) << std::endl

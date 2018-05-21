@@ -79,7 +79,7 @@ public:
     virtual short GetNumComponents() const {
         return 1;
     }
-    virtual void AddBufferSpecs(HdBufferSpecVector *specs) const {
+    virtual void GetBufferSpecs(HdBufferSpecVector *specs) const {
         specs->emplace_back(_name, GetTupleType());
     }
     virtual bool Resolve() {
@@ -179,9 +179,12 @@ HdStMaterial::Sync(HdSceneDelegate *sceneDelegate,
                     std::unique_lock<std::mutex> regLock =
                         resourceRegistry->FindTextureResource
                         (texID, &texInstance, &textureResourceFound);
-                    if (!TF_VERIFY(textureResourceFound,
-                            "No texture resource found with path %s",
-                            paramIt->GetConnection().GetText())) {
+                    // A bad asset can cause the texture resource to not 
+                    // be found. Hence, issue a warning and continue onto the 
+                    // next param.
+                    if (!textureResourceFound) {
+                        TF_WARN("No texture resource found with path %s",
+                            paramIt->GetConnection().GetText());
                         continue;
                     }
 

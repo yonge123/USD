@@ -116,7 +116,18 @@ PcpPrimIndex::GetPath() const
 bool
 PcpPrimIndex::HasSpecs() const
 {
-    return !_primStack.empty();
+    // Prim stacks are not cached in Usd mode
+    if (!IsUsd()) {
+        return !_primStack.empty();
+    }
+
+    for (const auto& node : GetNodeRange()) {
+        if (node.HasSpecs()) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool
@@ -346,6 +357,29 @@ PcpPrimIndexInputs::IsEquivalentTo(const PcpPrimIndexInputs& inputs) const
         _CheckIfEquivalent(variantFallbacks, inputs.variantFallbacks) && 
         _CheckIfEquivalent(includedPayloads, inputs.includedPayloads) && 
         cull == inputs.cull;
+}
+
+////////////////////////////////////////////////////////////////////////
+
+PcpNodeRef 
+PcpPrimIndexOutputs::Append(const PcpPrimIndexOutputs& childOutputs, 
+                            const PcpArc& arcToParent)
+{
+    PcpNodeRef parent = arcToParent.parent;
+    PcpNodeRef newNode = parent.InsertChildSubgraph(
+        childOutputs.primIndex.GetGraph(), arcToParent);
+
+    if (childOutputs.primIndex.GetGraph()->HasPayload()) {
+        parent.GetOwningGraph()->SetHasPayload(true);
+    }
+
+    allErrors.insert(
+        allErrors.end(), 
+        childOutputs.allErrors.begin(), childOutputs.allErrors.end());
+
+    includedDiscoveredPayload |= childOutputs.includedDiscoveredPayload;
+
+    return newNode;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -1451,23 +1485,12 @@ _AddArc(
                             indexer->inputs,
                             &childOutputs );
 
-        // Join the subtree into this graph.
-        newNode = parent.InsertChildSubgraph(
-            childOutputs.primIndex.GetGraph(), newArc);
+        // Combine the child output with our current output.
+        newNode = indexer->outputs->Append(childOutputs, newArc);
         PCP_INDEXING_UPDATE(
             indexer, newNode, 
             "Added subtree for site %s to graph",
             TfStringify(site).c_str());
-
-        if (childOutputs.primIndex.GetGraph()->HasPayload()) {
-            parent.GetOwningGraph()->SetHasPayload(true);
-        }
-
-        // Pass along the other outputs from the nested computation. 
-        indexer->outputs->allErrors.insert(
-            indexer->outputs->allErrors.end(),
-            childOutputs.allErrors.begin(),
-            childOutputs.allErrors.end());
     }
 
     // If culling is enabled, check whether the entire subtree rooted

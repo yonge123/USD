@@ -27,7 +27,9 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 TF_WRAP_MODULE {
+    TF_WRAP(Adaptor);
     TF_WRAP(Assembly);
+    TF_WRAP(ColorSpace);
     TF_WRAP(EditUtil);
     TF_WRAP(MeshUtil);
     TF_WRAP(Query);

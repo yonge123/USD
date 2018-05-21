@@ -56,7 +56,6 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
         PXRUSDMAYA_TRANSLATOR_TOKENS);
 
 #define PXRUSDMAYA_JOBARGS_TOKENS \
-    (Uniform) \
     (defaultLayer) \
     (currentLayer) \
     (modelingVariant)
@@ -91,7 +90,6 @@ struct JobExportArgs
 
     bool normalizeNurbs;
     bool exportNurbsExplicitUV;
-    TfToken nurbsExplicitUVType;
     
     bool exportColorSets;
 
@@ -139,13 +137,14 @@ struct JobImportArgs
     JobImportArgs();
 
     TfToken shadingMode;
-    TfToken defaultMeshScheme;
     TfToken assemblyRep;
     bool readAnimData;
     bool useCustomFrameRange;
     double startTime;
     double endTime;
     bool importWithProxyShapes;
+    TfToken::Set includeMetadataKeys;
+    TfToken::Set includeAPINames;
 };
 
 PXRUSDMAYA_API

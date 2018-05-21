@@ -51,13 +51,17 @@ namespace {
 WRAP_CUSTOM;
 
 {% for attrName in cls.attrOrder -%}
-{% set attr = cls.attrs[attrName] %}        
+{% set attr = cls.attrs[attrName] %}
+{# Only emit Create/Get API if apiName is not empty string. #}
+{% if attr.apiName != '' %}
+        
 static UsdAttribute
 _Create{{ Proper(attr.apiName) }}Attr({{ cls.cppClassName }} &self,
                                       object defaultVal, bool writeSparsely) {
     return self.Create{{ Proper(attr.apiName) }}Attr(
         UsdPythonToSdfType(defaultVal, {{ attr.usdType }}), writeSparsely);
 }
+{% endif %}
 {% endfor %}
 {% if useExportAPI %}
 
@@ -83,12 +87,12 @@ void wrap{{ cls.cppClassName }}()
         .def("Define", &This::Define, (arg("stage"), arg("path")))
         .staticmethod("Define")
 {% endif %}
-{% if cls.isApi and not cls.isMultipleApply and not cls.isPrivateApply %}
+{% if cls.isAppliedAPISchema and not cls.isMultipleApply and not cls.isPrivateApply %}
 
         .def("Apply", &This::Apply, (arg("prim")))
         .staticmethod("Apply")
 {% endif %}
-{% if cls.isApi and cls.isMultipleApply and not cls.isPrivateApply %}
+{% if cls.isAppliedAPISchema and cls.isMultipleApply and not cls.isPrivateApply %}
 
         .def("Apply", &This::Apply, (arg("prim"), arg("name")))
         .staticmethod("Apply")
@@ -103,6 +107,12 @@ void wrap{{ cls.cppClassName }}()
         .staticmethod("IsTyped")
 
 {% if cls.isApi %}
+        .def("IsApplied", 
+            static_cast<bool (*)(void)>( [](){ return This::IsApplied; } ))
+        .staticmethod("IsApplied")
+
+{% endif %}
+{% if cls.isAppliedAPISchema %}
         .def("IsMultipleApply", 
             static_cast<bool (*)(void)>( [](){ return This::IsMultipleApply; } ))
         .staticmethod("IsMultipleApply")
@@ -121,21 +131,29 @@ void wrap{{ cls.cppClassName }}()
         .def(!self)
 
 {% for attrName in cls.attrOrder -%}
-{% set attr = cls.attrs[attrName] %}        
+{% set attr = cls.attrs[attrName] %}
+{# Only emit Create/Get API if apiName is not empty string. #}
+{% if attr.apiName != '' %}
+        
         .def("Get{{ Proper(attr.apiName) }}Attr",
              &This::Get{{ Proper(attr.apiName) }}Attr)
         .def("Create{{ Proper(attr.apiName) }}Attr",
              &_Create{{ Proper(attr.apiName) }}Attr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
+{% endif %}
 {% endfor %}
 
 {% for relName in cls.relOrder -%}
-{% set rel = cls.rels[relName] %}        
+{# Only emit Create/Get API and doxygen if apiName is not empty string. #}
+{% set rel = cls.rels[relName] %}
+{% if rel.apiName != '' %}
+        
         .def("Get{{ Proper(rel.apiName) }}Rel",
              &This::Get{{ Proper(rel.apiName) }}Rel)
         .def("Create{{ Proper(rel.apiName) }}Rel",
              &This::Create{{ Proper(rel.apiName) }}Rel)
+{% endif %}
 {% endfor %}
     ;
 

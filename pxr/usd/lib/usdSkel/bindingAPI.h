@@ -76,6 +76,12 @@ public:
     /// UsdPrim.
     static const bool IsTyped = false;
 
+    /// Compile-time constant indicating whether or not this class represents an 
+    /// applied API schema, i.e. an API schema that has to be applied to a prim
+    /// with a call to auto-generated Apply() method before any schema 
+    /// properties are authored.
+    static const bool IsApplied = true;
+    
     /// Compile-time constant indicating whether or not this class represents a 
     /// multiple-apply API schema. Mutiple-apply API schemas can be applied 
     /// to the same prim multiple times with different instance names. 
@@ -151,6 +157,11 @@ private:
     USDSKEL_API
     virtual const TfType &_GetTfType() const;
 
+    // This override returns true since UsdSkelBindingAPI is an 
+    // applied API schema.
+    USDSKEL_API
+    virtual bool _IsAppliedAPISchema() const override;
+
 public:
     // --------------------------------------------------------------------- //
     // GEOMBINDTRANSFORM 
@@ -186,7 +197,8 @@ public:
     /// An (optional) array of tokens defining the list of
     /// joints to which jointIndices apply. If not defined, jointIndices applies
     /// to the ordered list of joints defined in the bound Skeleton's *joints*
-    /// attribute.
+    /// attribute. If undefined on a primitive, the primitive inherits the 
+    /// value of the nearest ancestor prim, if any.
     ///
     /// \n  C++ Type: VtArray<TfToken>
     /// \n  Usd Type: SdfValueTypeNames->TokenArray
@@ -259,6 +271,32 @@ public:
 
 public:
     // --------------------------------------------------------------------- //
+    // BLENDSHAPES 
+    // --------------------------------------------------------------------- //
+    /// An array of tokens defining the order onto which blend shape
+    /// weights from an animation source map onto the *skel:blendShapeTargets*
+    /// rel of a binding site. If authored, the number of elements must be equal
+    /// to the number of targets in the _blendShapeTargets_ rel. This property
+    /// is not inherited hierarchically, and is expected to be authored directly
+    /// on the skinnable primitive to which the blend shapes apply.
+    ///
+    /// \n  C++ Type: VtArray<TfToken>
+    /// \n  Usd Type: SdfValueTypeNames->TokenArray
+    /// \n  Variability: SdfVariabilityUniform
+    /// \n  Fallback Value: No Fallback
+    USDSKEL_API
+    UsdAttribute GetBlendShapesAttr() const;
+
+    /// See GetBlendShapesAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    USDSKEL_API
+    UsdAttribute CreateBlendShapesAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
     // ANIMATIONSOURCE 
     // --------------------------------------------------------------------- //
     /// Animation source to be bound to this prim and its 
@@ -292,6 +330,22 @@ public:
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create
     USDSKEL_API
     UsdRelationship CreateSkeletonRel() const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // BLENDSHAPETARGETS 
+    // --------------------------------------------------------------------- //
+    /// Ordered list of all target blend shapes. This property is not
+    /// inherited hierarchically, and is expected to be authored directly on
+    /// the skinnable primitive to which the the blend shapes apply.
+    ///
+    USDSKEL_API
+    UsdRelationship GetBlendShapeTargetsRel() const;
+
+    /// See GetBlendShapeTargetsRel(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create
+    USDSKEL_API
+    UsdRelationship CreateBlendShapeTargetsRel() const;
 
 public:
     // ===================================================================== //
