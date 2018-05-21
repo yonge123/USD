@@ -92,10 +92,6 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
         ctm = xf * ctm;
     }
 
-    if (requestedBits & HdChangeTracker::DirtyExtent) {
-        // TODO
-    }
-
     if (requestedBits & HdChangeTracker::DirtyPoints) {
         valueCache->GetPoints(cachePath) = _vertices;
 
@@ -111,6 +107,17 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
             &valueCache->GetPrimvars(cachePath),
             TfToken("st"),
             HdInterpolationVertex);
+    }
+
+    if (requestedBits & HdChangeTracker::DirtyExtent) {
+        // This does not change the extent representation in the viewport,
+        // but affects the frustrum culling.
+        // This also freaks out the min / max depth calculation.
+        GfRange3d extent;
+        for (const auto& vertex: valueCache->GetPoints(cachePath).Get<VtVec3fArray>()) {
+            extent.ExtendBy(vertex);
+        }
+        valueCache->GetExtent(cachePath) = extent;
     }
 
     if (requestedBits & HdChangeTracker::DirtyTopology) {
