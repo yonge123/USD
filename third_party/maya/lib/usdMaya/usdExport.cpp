@@ -325,7 +325,7 @@ try
     if (argData.isFlagSet("asClip")) {
         argData.getFlagArgument("asClip", 0, jobArgs.exportAsClip);
     }
-    jobArgs.clipStartTime = startTime;
+    jobArgs.clipStartTime = jobArgs.timeInterval.GetMin();
 
     if (argData.isFlagSet("preRoll")) {
         argData.getFlagArgument("preRoll", 0, preRoll);
