@@ -6,7 +6,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-TF_DEFINE_ENV_SETTING(USD_IMAGING_ENABLE_IMAGEPLANES, false,
+TF_DEFINE_ENV_SETTING(USD_IMAGING_ENABLE_IMAGEPLANES, true,
         "Enables/disables the use of image planes in hydra until the code matures enough.");
 
 HdImagePlane::HdImagePlane(const SdfPath& id,
