@@ -224,12 +224,16 @@ bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdG
         return true;
     }
 
-    // Write extent
+    // Write extent, just the default for now. It should be setup in the adapter for drawing.
     MFnDagNode dnode(getDagPath());
     VtArray<GfVec3f> extent(2);
-    auto boundingBox = dnode.boundingBox();
-    extent[0] = GfVec3f(boundingBox.min().x, boundingBox.min().y, boundingBox.min().z);
-    extent[1] = GfVec3f(boundingBox.max().x, boundingBox.max().y, boundingBox.max().z);
+    extent[0] = GfVec3f(-1.0f, -1.0f, -1.0f);
+    extent[1] = GfVec3f(1.0f, 1.0f, 1.0f);
+    // Something is wrong with the initializer list constructor in Release mode.
+    // VtArray<GfVec3f> extent {{-1.0f, -1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}};
+    // auto boundingBox = dnode.boundingBox();
+    // extent[0] = GfVec3f(boundingBox.min().x, boundingBox.min().y, boundingBox.min().z);
+    // extent[1] = GfVec3f(boundingBox.max().x, boundingBox.max().y, boundingBox.max().z);
     _SetAttribute(primSchema.CreateExtentAttr(), extent, usdTime);
 
     const auto sizePlug = dnode.findPlug("size");
