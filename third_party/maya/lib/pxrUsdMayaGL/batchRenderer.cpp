@@ -1053,10 +1053,10 @@ UsdMayaGLBatchRenderer::_ComputeSelection(
     }
 
     // Populate the Hydra selection from the selection results.
-    HdxSelectionSharedPtr selection(new HdxSelection);
+    HdSelectionSharedPtr selection(new HdSelection);
 
-    const HdxSelectionHighlightMode selectionMode =
-        HdxSelectionHighlightModeSelect;
+    const HdSelection::HighlightMode selectionMode =
+        HdSelection::HighlightModeSelect;
 
     for (const auto& selectPair : _selectResults) {
         const SdfPath& path = selectPair.first;
