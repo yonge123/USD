@@ -62,7 +62,8 @@ usdTranslatorExport::writer(const MFileObject &file,
 
     std::string fileName(file.fullName().asChar());
     JobExportArgs jobArgs;
-    double startTime=1, endTime=1;
+    bool exportAnimation = false;
+    GfInterval timeInterval(1.0, 1.0);
     std::set<double> frameSamples;
     bool append=false;
     
@@ -78,29 +79,25 @@ usdTranslatorExport::writer(const MFileObject &file,
                 jobArgs.exportRefsAsInstanceable = theOption[1].asInt();
             }
             if (theOption[0] == MString("shadingMode")) {
-                // Set default (most common) options
-                jobArgs.exportDisplayColor = true;
-                jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none;
-                
-                if (theOption[1] == MString("None")) {
-                    jobArgs.exportDisplayColor = false;
-                } else if (theOption[1] == MString("Material Colors")) {
-                    jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
-                } else if (theOption[1] == MString("RfM Shaders")) {
-                    TfToken shadingMode("pxrRis");
-                    if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode)) {
+                TfToken shadingMode(theOption[1].asChar());
+                if (!shadingMode.IsEmpty()) {
+                    if (PxrUsdMayaShadingModeRegistry::GetInstance()
+                            .GetExporter(shadingMode)) {
                         jobArgs.shadingMode = shadingMode;
                     }
-                } else if (theOption[1] != MString("GPrim Colors")) { 
-                    TfToken modeToken(theOption[1].asChar());
-                    if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(modeToken)) { 
-                        jobArgs.shadingMode = modeToken; 
-                    } else { 
-                        MGlobal::displayError( 
-                            TfStringPrintf("No shadingMode '%s' found. Setting shadingMode='none'", modeToken.GetText()).c_str()); 
-                        jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none; 
+                    else {
+                        if (shadingMode != PxrUsdMayaShadingModeTokens->none) {
+                            MGlobal::displayError(TfStringPrintf(
+                                    "No shadingMode '%s' found. "
+                                    "Setting shadingMode='none'", 
+                                    shadingMode.GetText()).c_str());
+                        }
+                        jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none;
                     }
-                } 
+                }
+            }
+            if (theOption[0] == MString("exportDisplayColor")) {
+                jobArgs.exportDisplayColor = theOption[1].asInt();
             }
             if (theOption[0] == MString("exportUVs")) {
                 jobArgs.exportMeshUVs = theOption[1].asInt();
@@ -131,12 +128,14 @@ usdTranslatorExport::writer(const MFileObject &file,
                 jobArgs.exportDefaultCameras = theOption[1].asInt();
             }
             if (theOption[0] == MString("renderLayerMode")) {
-                jobArgs.renderLayerMode = PxUsdExportJobArgsTokens->defaultLayer;
-
-                if (theOption[1]=="Use Current Layer") {
-                    jobArgs.renderLayerMode = PxUsdExportJobArgsTokens->currentLayer;
-                } else if (theOption[1]=="Modeling Variant Per Layer") {
-                    jobArgs.renderLayerMode = PxUsdExportJobArgsTokens->modelingVariant;
+                const TfToken mode(theOption[1].asChar());
+                if (mode != PxUsdExportJobArgsTokens->defaultLayer &&
+                        mode != PxUsdExportJobArgsTokens->currentLayer &&
+                        mode != PxUsdExportJobArgsTokens->modelingVariant) {
+                    TF_WARN("renderLayerMode '%s' not recognized",
+                            mode.GetText());
+                } else {
+                    jobArgs.renderLayerMode = mode;
                 }
             }
             if (theOption[0] == MString("mergeXForm")) {
@@ -146,38 +145,45 @@ usdTranslatorExport::writer(const MFileObject &file,
                 jobArgs.exportInstances = theOption[1].asInt();
             }
             if (theOption[0] == MString("defaultMeshScheme")) {            
-                if (theOption[1]=="Polygonal Mesh") {
-                    jobArgs.defaultMeshScheme = UsdGeomTokens->none;
-                } else if (theOption[1]=="Bilinear SubDiv") {
-                    jobArgs.defaultMeshScheme = UsdGeomTokens->bilinear;
-                } else if (theOption[1]=="CatmullClark SDiv") {
-                    jobArgs.defaultMeshScheme = UsdGeomTokens->catmullClark;
-                } else if (theOption[1]=="Loop SDiv") {
-                    jobArgs.defaultMeshScheme = UsdGeomTokens->loop;
+                const TfToken scheme(theOption[1].asChar());
+                if (scheme != UsdGeomTokens->none &&
+                        scheme != UsdGeomTokens->catmullClark &&
+                        scheme != UsdGeomTokens->loop &&
+                        scheme != UsdGeomTokens->bilinear) {
+                    TF_WARN("defaultMeshScheme '%s' not recognized",
+                            scheme.GetText());
+                } else {
+                    jobArgs.defaultMeshScheme = scheme;
                 }
             }
             if (theOption[0] == MString("exportVisibility")) {
                 jobArgs.exportVisibility = theOption[1].asInt();
             }
             if (theOption[0] == MString("exportSkin")) {
-                if (theOption[1] == "All (Automatically Create SkelRoots)") {
+                const TfToken tok(theOption[1].asChar());
+                if (tok == PxUsdExportJobArgsTokens->none) {
+                    jobArgs.exportSkin = false;
+                }
+                else if (tok == PxUsdExportJobArgsTokens->auto_) {
                     jobArgs.exportSkin = true;
                     jobArgs.autoSkelRoots = true;
-                } else if (theOption[1] == "Only Under SkelRoots") {
+                }
+                else if (tok == PxUsdExportJobArgsTokens->explicit_) {
                     jobArgs.exportSkin = true;
                     jobArgs.autoSkelRoots = false;
-                } else {
-                    jobArgs.exportSkin = false;
+                }
+                else {
+                    TF_WARN("exportSkin '%s' not recognized", tok.GetText());
                 }
             }
             if (theOption[0] == MString("animation")) {
-                jobArgs.exportAnimation = theOption[1].asInt();
+                exportAnimation = theOption[1].asInt();
             }
             if (theOption[0] == MString("startTime")) {
-                startTime = theOption[1].asDouble();
+                timeInterval.SetMin(theOption[1].asDouble());
             }
             if (theOption[0] == MString("endTime")) {
-                endTime = theOption[1].asDouble();
+                timeInterval.SetMax(theOption[1].asDouble());
             }
             if (theOption[0] == MString("frameSample")) {
                 frameSamples.insert(theOption[1].asDouble());
@@ -186,13 +192,30 @@ usdTranslatorExport::writer(const MFileObject &file,
                 jobArgs.setParentScope(theOption[1].asChar());
             }            
         }
-        // Now resync start and end frame based on animation mode
-        if (jobArgs.exportAnimation) {
-            if (endTime<startTime) endTime=startTime;
-        } else {
-            startTime=MAnimControl::currentTime().value();
-            endTime=startTime;
+    }
+
+
+    // Now resync start and end frame based on export time interval.
+    if (exportAnimation) {
+        if (timeInterval.IsEmpty()) {
+            // If the user accidentally set start > end, resync to the closed
+            // interval with the single start point.
+            jobArgs.timeInterval = GfInterval(timeInterval.GetMin());
         }
+        else {
+            // Use the user's interval as-is.
+            jobArgs.timeInterval = timeInterval;
+        }
+    }
+    else {
+        // Use the _open_ interval with the single point of the current time.
+        // This preserves the existing behavior of not exporting animation,
+        // but setting the stage start/end frame.
+        // XXX This differs from usdExport, which uses (1, 1) in this case.
+        jobArgs.timeInterval = GfInterval(
+                MAnimControl::currentTime().value(),
+                MAnimControl::currentTime().value(),
+                /*minClosed*/ false, /*maxClosed*/ false);
     }
 
     if (frameSamples.empty()) {
@@ -218,10 +241,12 @@ usdTranslatorExport::writer(const MFileObject &file,
     
     if (jobArgs.dagPaths.size()) {
         usdWriteJob writeJob(jobArgs);
-        if (writeJob.beginJob(fileName, append, startTime, endTime)) {
-            if (jobArgs.exportAnimation) {
+        if (writeJob.beginJob(fileName, append)) {
+            if (!jobArgs.timeInterval.IsEmpty()) {
                 const MTime oldCurTime = MAnimControl::currentTime();
-                for (double i = startTime; i < (endTime + 1.0); ++i) {
+                for (double i = jobArgs.timeInterval.GetMin();
+                        jobArgs.timeInterval.Contains(i);
+                        i += 1.0) {
                     for (double sampleTime : frameSamples) {
                         const double actualTime = i + sampleTime;
                         MGlobal::viewFrame(actualTime);
