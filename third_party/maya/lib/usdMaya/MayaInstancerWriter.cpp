@@ -103,7 +103,7 @@ MayaInstancerWriter::_GetInstancerTranslateSampleType(
 {
     // XXX: Maybe we could be smarter here and figure out if the animation
     // affects instancerTranslate?
-    bool animated = getArgs().exportAnimation &&
+    bool animated = !getArgs().timeInterval.IsEmpty() &&
             MAnimUtil::isAnimated(prototypeDagPath.node(), false);
     if (animated) {
         return ANIMATED;
@@ -227,7 +227,10 @@ MayaInstancerWriter::writeInstancerAttrs(
             MDagPath prototypeDagPath;
             sourceNode.getPath(prototypeDagPath);
 
-            const TfToken prototypeName(TfStringPrintf("prototype_%d", i));
+            // Prototype names are guaranteed unique by virtue of having a
+            // unique numerical suffix _# indicating the prototype index.
+            const TfToken prototypeName(
+                    TfStringPrintf("%s_%d", sourceNode.name().asChar(), i));
             const SdfPath prototypeUsdPath = prototypesGroupPrim.GetPath()
                     .AppendChild(prototypeName);
             UsdPrim prototypePrim = getUsdStage()->DefinePrim(
