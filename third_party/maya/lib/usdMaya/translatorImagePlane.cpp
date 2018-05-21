@@ -43,8 +43,8 @@ namespace {
         MTimeArray* timeArray,
         MDoubleArray* valueArray)
     {
-        if (!PxrUsdMayaTranslatorUtil::GetTimeSamples(usdAttr, args,
-                                                      &timeSamples)) {
+        if (!usdAttr.GetTimeSamplesInInterval(
+                args.GetTimeInterval(), &timeSamples)) {
             return false;
         }
 
@@ -201,7 +201,7 @@ namespace {
                                   const PxrUsdMayaPrimReaderArgs& args,
                                   PxrUsdMayaPrimReaderContext* context)
     {
-        if (!args.GetReadAnimData()) {
+        if (args.GetTimeInterval().IsEmpty()) {
             return false;
         }
 
@@ -227,7 +227,7 @@ namespace {
                                   const PxrUsdMayaPrimReaderArgs& args,
                                   PxrUsdMayaPrimReaderContext* context)
     {
-        if (!args.GetReadAnimData()) {
+        if (args.GetTimeInterval().IsEmpty()) {
             return false;
         }
 
@@ -259,7 +259,7 @@ namespace {
                                   const PxrUsdMayaPrimReaderArgs& args,
                                   PxrUsdMayaPrimReaderContext* context)
     {
-        if (!args.GetReadAnimData()) {
+        if (args.GetTimeInterval().IsEmpty()) {
             return false;
         }
 
@@ -291,7 +291,7 @@ namespace {
                                 const PxrUsdMayaPrimReaderArgs& args,
                                 PxrUsdMayaPrimReaderContext* context)
     {
-        if (!args.GetReadAnimData()) {
+        if (args.GetTimeInterval().IsEmpty()) {
             return false;
         }
 
