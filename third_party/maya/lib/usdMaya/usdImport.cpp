@@ -138,23 +138,21 @@ MStatus usdImport::doIt(const MArgList & args)
         argData.getFlagArgument("shadingMode", 0, stringVal);
         TfToken shadingMode(stringVal.asChar());
 
-        if (shadingMode.IsEmpty()) {
-            jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
-        } else if (PxrUsdMayaShadingModeRegistry::GetInstance().GetImporter(shadingMode)) {
-            jobArgs.shadingMode = shadingMode;
-        } else {
-            if (shadingMode != PxrUsdMayaShadingModeTokens->none) {
-                MGlobal::displayError(
-                    TfStringPrintf("No shadingMode '%s' found. Setting shadingMode='none'",
-                                   shadingMode.GetText()).c_str());
+        if (!shadingMode.IsEmpty()) {
+            if (PxrUsdMayaShadingModeRegistry::GetInstance()
+                    .GetImporter(shadingMode)) {
+                jobArgs.shadingMode = shadingMode;
             }
-            jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none;
+            else {
+                if (shadingMode != PxrUsdMayaShadingModeTokens->none) {
+                    MGlobal::displayError(TfStringPrintf(
+                            "No shadingMode '%s' found. "
+                            "Setting shadingMode='none'",
+                            shadingMode.GetText()).c_str());
+                }
+                jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none;
+            }
         }
-    }
-
-    if (argData.isFlagSet("readAnimData"))
-    {   
-        argData.getFlagArgument("readAnimData", 0, jobArgs.readAnimData);
     }
 
     // Specify usd PrimPath.  Default will be "/<useFileBasename>"
@@ -190,10 +188,26 @@ MStatus usdImport::doIt(const MArgList & args)
         }
     }
 
-    if (argData.isFlagSet("frameRange")) {
-        jobArgs.useCustomFrameRange = true;
-        argData.getFlagArgument("frameRange", 0, jobArgs.startTime);
-        argData.getFlagArgument("frameRange", 1, jobArgs.endTime);
+    bool readAnimData = true;
+    if (argData.isFlagSet("readAnimData"))
+    {   
+        argData.getFlagArgument("readAnimData", 0, readAnimData);
+    }
+
+    if (readAnimData) {
+        if (argData.isFlagSet("frameRange")) {
+            double startTime = 1.0;
+            double endTime = 1.0;
+            argData.getFlagArgument("frameRange", 0, startTime);
+            argData.getFlagArgument("frameRange", 1, endTime);
+            jobArgs.timeInterval = GfInterval(startTime, endTime);
+        }
+        else {
+            jobArgs.timeInterval = GfInterval::GetFullInterval();
+        }
+    }
+    else {
+        jobArgs.timeInterval = GfInterval();
     }
 
     // Add metadata keys. Multi-use.
