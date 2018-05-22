@@ -33,9 +33,9 @@
 #include "pxr/usdImaging/usdImaging/instancerContext.h"
 
 #include "pxr/imaging/hd/sceneDelegate.h"
+#include "pxr/imaging/hd/selection.h"
 #include "pxr/imaging/hd/texture.h"
 #include "pxr/imaging/hd/version.h"
-#include "pxr/imaging/hdx/selectionTracker.h"
 
 #include "pxr/imaging/pxOsd/subdivTags.h"
 #include "pxr/usd/sdf/path.h"
@@ -280,11 +280,11 @@ public:
     USDIMAGING_API
     virtual HdCullStyle GetCullStyle(SdfPath const &id) override;
 
-    /// Gets the explicit refinement level for the given prim, if no level is
-    /// explicitly set, the fallback is returned; also see 
+    /// Gets the explicit display style for the given prim, if no refine level
+    /// is explicitly set, the fallback is returned; also see 
     /// GetRefineLevelFallback().
     USDIMAGING_API
-    virtual int GetRefineLevel(SdfPath const& id) override;
+    virtual HdDisplayStyle GetDisplayStyle(SdfPath const& id) override;
 
     USDIMAGING_API
     virtual VtValue Get(SdfPath const& id, TfToken const& key) override;
@@ -319,6 +319,8 @@ public:
                   VtValue *samples) override;
 
     // Material Support
+    USDIMAGING_API
+    virtual SdfPath GetMaterialId(SdfPath const &rprimId) override;
     USDIMAGING_API
     virtual std::string GetSurfaceShaderSource(SdfPath const &id) override;
     USDIMAGING_API
@@ -417,10 +419,10 @@ public:
     /// XXX: subtree highlighting with native instancing is not working
     /// correctly right now. Path needs to be a leaf prim or instancer.
     USDIMAGING_API
-    bool PopulateSelection(HdxSelectionHighlightMode const& highlightMode,
+    bool PopulateSelection(HdSelection::HighlightMode const& highlightMode,
                            const SdfPath &path,
                            int instanceIndex,
-                           HdxSelectionSharedPtr const &result);
+                           HdSelectionSharedPtr const &result);
 
     /// Returns true if \p usdPath is included in invised path list.
     USDIMAGING_API

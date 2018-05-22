@@ -181,8 +181,8 @@ _GatherRibAttributes(
     bool hasAttrs = false;
 
     // USD SHADING STYLE ATTRIBUTES
-    UsdRiStatementsAPI riStatements(prim);
-    if (riStatements) {
+    if (prim) {
+        UsdRiStatementsAPI riStatements(prim);
         const std::vector<UsdProperty> props = 
             riStatements.GetRiAttributes();
         std::string attrName;
@@ -833,10 +833,17 @@ PxrUsdKatanaGeomGetPrimvarGroup(
         FnKat::GroupBuilder attrBuilder;
         attrBuilder.set("scope", scopeAttr);
         attrBuilder.set("inputType", inputTypeAttr);
+        
+        if (!typeName.GetRole().GetString().empty()) {
+            attrBuilder.set("usd.role", 
+                        FnKat::StringAttribute(typeName.GetRole().GetString()));
+        }
+
         if (elementSizeAttr.isValid()) {
             attrBuilder.set("elementSize", elementSizeAttr);
         }
         attrBuilder.set("value", valueAttr);
+
         // Note that 'varying' vs 'vertex' require special handling, as in
         // Katana they are both expressed as 'point' scope above. To get
         // 'vertex' interpolation we must set an additional

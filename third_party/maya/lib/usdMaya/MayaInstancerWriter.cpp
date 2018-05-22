@@ -23,6 +23,7 @@
 //
 #include "usdMaya/MayaInstancerWriter.h"
 
+#include "usdMaya/adaptor.h"
 #include "usdMaya/util.h"
 #include "usdMaya/writeUtil.h"
 
@@ -41,6 +42,8 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 static constexpr double _EPSILON = 1e-3;
+
+PXRUSDMAYA_REGISTER_ADAPTOR_SCHEMA(MFn::kInstancer, UsdGeomPointInstancer);
 
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens, 
@@ -100,7 +103,7 @@ MayaInstancerWriter::_GetInstancerTranslateSampleType(
 {
     // XXX: Maybe we could be smarter here and figure out if the animation
     // affects instancerTranslate?
-    bool animated = getArgs().exportAnimation &&
+    bool animated = !getArgs().timeInterval.IsEmpty() &&
             MAnimUtil::isAnimated(prototypeDagPath.node(), false);
     if (animated) {
         return ANIMATED;
@@ -224,7 +227,10 @@ MayaInstancerWriter::writeInstancerAttrs(
             MDagPath prototypeDagPath;
             sourceNode.getPath(prototypeDagPath);
 
-            const TfToken prototypeName(TfStringPrintf("prototype_%d", i));
+            // Prototype names are guaranteed unique by virtue of having a
+            // unique numerical suffix _# indicating the prototype index.
+            const TfToken prototypeName(
+                    TfStringPrintf("%s_%d", sourceNode.name().asChar(), i));
             const SdfPath prototypeUsdPath = prototypesGroupPrim.GetPath()
                     .AppendChild(prototypeName);
             UsdPrim prototypePrim = getUsdStage()->DefinePrim(

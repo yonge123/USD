@@ -37,6 +37,7 @@
 #include "pxr/usd/pcp/mapExpression.h"
 #include "pxr/usd/usd/relationship.h"
 #include "pxr/usd/usd/attribute.h"
+#include "pxr/usd/usd/collectionAPI.h"
 #include "pxr/usd/usd/modelAPI.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usdGeom/boundable.h"
@@ -46,7 +47,6 @@
 #include "pxr/usd/usdUI/sceneGraphPrimAPI.h"
 #include "pxr/usd/usdLux/light.h"
 #include "pxr/usd/usdLux/lightFilter.h"
-#include "pxr/usd/usdLux/linkingAPI.h"
 #include "pxr/usd/usdLux/listAPI.h"
 #include "pxr/usd/usdShade/shader.h"
 #include "pxr/usd/usdShade/material.h"
@@ -639,7 +639,8 @@ _KTypeAndSizeFromUsdVec2(TfToken const &roleName,
         *inputTypeAttr = FnKat::StringAttribute("vector2");
     } else if (roleName == SdfValueRoleNames->Normal) {
         *inputTypeAttr = FnKat::StringAttribute("normal2");
-    } else if (roleName.IsEmpty()) {
+    } else if (roleName == SdfValueRoleNames->TextureCoordinate ||
+               roleName.IsEmpty()) {
         *inputTypeAttr = FnKat::StringAttribute(typeStr);
         *elementSizeAttr = FnKat::IntAttribute(2);
     } else {
@@ -1189,7 +1190,7 @@ PxrUsdKatanaUtils::FindLightPaths(const UsdStageRefPtr& stage)
 }
 
 std::string
-PxrUsdKatanaUtils::_ConvertUsdPathToKatLocation(
+PxrUsdKatanaUtils::ConvertUsdPathToKatLocation(
         const SdfPath &path,
         const std::string &isolatePathString,
         const std::string &rootPathString,
@@ -1246,10 +1247,10 @@ PxrUsdKatanaUtils::ConvertUsdPathToKatLocation(
         const PxrUsdKatanaUsdInArgsRefPtr &usdInArgs,
         bool allowOutsideIsolation)
 {
-    return _ConvertUsdPathToKatLocation(path, usdInArgs->GetIsolatePath(),
-                                        usdInArgs->GetRootLocationPath(),
-                                        usdInArgs->GetSessionLocationPath(),
-                                        allowOutsideIsolation);
+    return ConvertUsdPathToKatLocation(path, usdInArgs->GetIsolatePath(),
+                                       usdInArgs->GetRootLocationPath(),
+                                       usdInArgs->GetSessionLocationPath(),
+                                       allowOutsideIsolation);
 }
 
 std::string
@@ -1959,7 +1960,7 @@ PxrUsdKatanaUtilsLightListAccess::_Set(
 
 bool
 PxrUsdKatanaUtilsLightListAccess::SetLinks(
-    const UsdLuxLinkingAPI &linkAPI,
+    const UsdCollectionAPI &collectionAPI,
     const std::string &linkName)
 {
     bool isLinked = false;
@@ -1967,7 +1968,7 @@ PxrUsdKatanaUtilsLightListAccess::SetLinks(
 
     // See if the prim has special blind data for round-tripping CEL
     // expressions.
-    UsdPrim prim = linkAPI.GetPrim();
+    UsdPrim prim = collectionAPI.GetPrim();
     UsdAttribute off =
         prim.GetAttribute(TfToken("katana:CEL:lightLink:" + linkName + ":off"));
     UsdAttribute on =
@@ -1993,8 +1994,15 @@ PxrUsdKatanaUtilsLightListAccess::SetLinks(
         isLinked = true;
     }
     else {
-        UsdLuxLinkingAPI::LinkMap linkMap = linkAPI.ComputeLinkMap();
+        UsdCollectionAPI::MembershipQuery query =
+            collectionAPI.ComputeMembershipQuery();
+        UsdCollectionAPI::MembershipQuery::PathExpansionRuleMap linkMap =
+            query.GetAsPathExpansionRuleMap();
         for (const auto &entry: linkMap) {
+            if (!entry.first.IsAbsoluteRootOrPrimPath()) {
+                // Skip property paths
+                continue;
+            }
             // By convention, entries are "link.TYPE.{on,off}.HASH" where
             // HASH is getHash() of the CEL and TYPE is the type of linking
             // (light, shadow, etc). In this case we can just hash the
@@ -2004,9 +2012,10 @@ PxrUsdKatanaUtilsLightListAccess::SetLinks(
                                                                _usdInArgs);
             const FnKat::StringAttribute locAttr(location);
             const std::string linkHash = locAttr.getHash().str();
-            (entry.second ? onBuilder : offBuilder).set(linkHash, locAttr);
+            const bool on = (entry.second != UsdTokens->exclude);
+            (on ? onBuilder : offBuilder).set(linkHash, locAttr);
         }
-        isLinked = UsdLuxLinkingAPI::DoesLinkPath(linkMap, linkAPI.GetPath());
+        isLinked = query.IsPathIncluded(collectionAPI.GetPath());
     }
 
     // Set off and then on attributes, in order, to ensure

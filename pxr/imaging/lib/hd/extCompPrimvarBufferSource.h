@@ -29,7 +29,6 @@
 #include "pxr/imaging/hd/bufferSource.h"
 #include "pxr/imaging/hd/types.h"
 #include "pxr/base/tf/token.h"
-#include "pxr/base/vt/value.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -53,7 +52,7 @@ public:
     HdExtCompPrimvarBufferSource(const TfToken &primvarName,
                                  const HdExtCompCpuComputationSharedPtr &source,
                                  const TfToken &sourceOutputName,
-                                 const VtValue &defaultValue);
+                                 const HdTupleType &valueType);
 
     HD_API
     virtual ~HdExtCompPrimvarBufferSource() = default;
@@ -64,11 +63,11 @@ public:
 
     /// Adds this Primvar's buffer description to the buffer spec vector.
     HD_API
-    virtual void AddBufferSpecs(HdBufferSpecVector *specs) const override;
+    virtual void GetBufferSpecs(HdBufferSpecVector *specs) const override;
 
     /// Computes and returns a hash value for the underlying data.
     HD_API
-    virtual size_t ComputeHash() const { return 0; }
+    virtual size_t ComputeHash() const override { return 0; }
 
     /// Extracts the primvar from the source computation.
     HD_API

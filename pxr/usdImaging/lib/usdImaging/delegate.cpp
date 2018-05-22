@@ -45,8 +45,8 @@
 #include "pxr/usd/ar/resolver.h"
 #include "pxr/usd/ar/resolverContext.h"
 
+#include "pxr/usd/usd/modelAPI.h"
 #include "pxr/usd/usd/primRange.h"
-
 #include "pxr/usd/kind/registry.h"
 
 #include "pxr/usd/usdGeom/tokens.h"
@@ -167,14 +167,17 @@ UsdImagingDelegate::_IsDrawModeApplied(UsdPrim const& prim)
 
     // Draw mode is only applied on models that are components, or which have
     // applyDrawMode = true.
-    UsdGeomModelAPI model(prim);
+    UsdModelAPI model(prim);
     bool applyDrawMode = false;
     TfToken kind;
     UsdAttribute attr;
     if (model.GetKind(&kind) && KindRegistry::IsA(kind, KindTokens->component))
         applyDrawMode = true;
-    else if ((attr = model.GetModelApplyDrawModeAttr()))
-        attr.Get(&applyDrawMode);
+    else {
+        UsdGeomModelAPI geomModel(prim);
+        if ((attr = geomModel.GetModelApplyDrawModeAttr()))
+            attr.Get(&applyDrawMode);
+    }
 
     return applyDrawMode;
 }
@@ -1260,7 +1263,7 @@ UsdImagingDelegate::_RefreshObject(SdfPath const& usdPath,
         // repopulate the whole subtree starting at the owning prim.
         if (attrName == UsdGeomTokens->modelDrawMode ||
             attrName == UsdGeomTokens->modelApplyDrawMode) {
-            _ResyncPrim(usdPath, proxy, true);
+            _ResyncPrim(usdPath.GetPrimPath(), proxy, true);
             return;
         }
 
@@ -1555,13 +1558,13 @@ UsdImagingDelegate::GetCullStyle(SdfPath const &id)
 }
 
 /*virtual*/ 
-int 
-UsdImagingDelegate::GetRefineLevel(SdfPath const& id) { 
+HdDisplayStyle 
+UsdImagingDelegate::GetDisplayStyle(SdfPath const& id) { 
     SdfPath usdPath = GetPathForUsd(id);
     int level = 0;
     if (TfMapLookup(_refineLevelMap, usdPath, &level))
-        return level;
-    return GetRefineLevelFallback();
+        return HdDisplayStyle(level);
+    return HdDisplayStyle(GetRefineLevelFallback());
 }
 
 void
@@ -2054,10 +2057,10 @@ UsdImagingDelegate::GetPathForInstanceIndex(SdfPath const& protoPrimPath,
 
 bool
 UsdImagingDelegate::PopulateSelection(
-              HdxSelectionHighlightMode const& highlightMode,
+              HdSelection::HighlightMode const& highlightMode,
               SdfPath const &path,
               int instanceIndex,
-              HdxSelectionSharedPtr const &result)
+              HdSelectionSharedPtr const &result)
 {
     HD_TRACE_FUNCTION();
 
@@ -2261,16 +2264,7 @@ UsdImagingDelegate::Get(SdfPath const& id, TfToken const& key)
     SdfPath usdPath = GetPathForUsd(id);
     VtValue value;
 
-    if (key == HdShaderTokens->material) {
-        SdfPath pathValue;
-        if (!_valueCache.ExtractMaterialId(usdPath, &pathValue)) {
-            _UpdateSingleValue(usdPath, HdChangeTracker::DirtyMaterialId);
-            TF_VERIFY(_valueCache.ExtractMaterialId(usdPath, &pathValue));
-        }
-        value = VtValue(GetPathForIndex(pathValue));
-    }
-
-    else if (!_valueCache.ExtractPrimvar(usdPath, key, &value)) {
+    if (!_valueCache.ExtractPrimvar(usdPath, key, &value)) {
         if (key == HdTokens->points) {
             _UpdateSingleValue(usdPath,HdChangeTracker::DirtyPoints);
             if (!TF_VERIFY(_valueCache.ExtractPoints(usdPath, &value))) {
@@ -2476,6 +2470,19 @@ UsdImagingDelegate::SampleInstancerTransform(SdfPath const &instancerId,
     return 0;
 }
 
+/*virtual*/ 
+SdfPath 
+UsdImagingDelegate::GetMaterialId(SdfPath const &rprimId)
+{
+    SdfPath usdPath = GetPathForUsd(rprimId);
+    SdfPath pathValue;
+    if (!_valueCache.ExtractMaterialId(usdPath, &pathValue)) {
+        _UpdateSingleValue(usdPath, HdChangeTracker::DirtyMaterialId);
+        TF_VERIFY(_valueCache.ExtractMaterialId(usdPath, &pathValue));
+    }
+    return GetPathForIndex(pathValue);
+}
+
 /*virtual*/
 std::string
 UsdImagingDelegate::GetSurfaceShaderSource(SdfPath const &materialId)
@@ -2598,6 +2605,7 @@ UsdImagingDelegate::GetMaterialParams(SdfPath const &materialId)
             // Unfortunately, HdMaterialParam is immutable;
             // fortunately, it has relatively lightweight members.
             *paramIt = HdMaterialParam(
+                HdMaterialParam::ParamTypeTexture,
                 paramIt->GetName(),
                 paramIt->GetFallbackValue(),
                 GetPathForIndex(paramIt->GetConnection()),
@@ -2614,11 +2622,17 @@ UsdImagingDelegate::GetTextureResourceID(SdfPath const &textureId)
 {
     SdfPath usdPath = GetPathForUsd(textureId);
     _PrimInfo *primInfo = GetPrimInfo(usdPath);
-    if (TF_VERIFY(primInfo)) {
+    if (primInfo) {
         return primInfo->adapter
             ->GetTextureResourceID(primInfo->usdPrim, usdPath, _time,
                                    (size_t) &GetRenderIndex() );
-    }
+    } 
+
+    // A bad asset can cause GetPrimInfo() to fail. Hence, issue a warning and 
+    // return an invalid resource ID.
+    TF_WARN("Could not get prim tracking data for path <%s>. Unable to get "
+            "associated texture resource ID.", textureId.GetText());
+
     return HdTextureResource::ID(-1);
 }
 
