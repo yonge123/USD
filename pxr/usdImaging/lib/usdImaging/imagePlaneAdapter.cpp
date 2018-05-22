@@ -7,25 +7,13 @@
 #include "pxr/usdImaging/usdImaging/tokens.h"
 #include "pxr/usdImaging/usdImaging/indexProxy.h"
 
+#include "pxr/usd/usdGeom/imagePlane.h"
+
 #include "pxr/imaging/hd/imagePlane.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
-
-const VtVec3fArray _vertices = {
-    GfVec3f(-1.0f ,  1.0f , 0.0f),
-    GfVec3f( 1.0f ,  1.0f , 0.0f),
-    GfVec3f( 1.0f , -1.0f , 0.0f),
-    GfVec3f(-1.0f , -1.0f , 0.0f),
-};
-
-const VtVec2fArray _uvs = {
-    GfVec2f(0.0f, 0.0f),
-    GfVec2f(1.0f, 0.0f),
-    GfVec2f(1.0f, 1.0f),
-    GfVec2f(0.0f, 1.0f),
-};
 
 // Simplest right handed vertex counts and vertex indices.
 const VtIntArray _faceVertexCounts = {
@@ -37,6 +25,7 @@ const VtIntArray _faceVertexIndices = {
 };
 
 const VtIntArray _holeIndices;
+
 
 }
 
@@ -93,7 +82,11 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
     }
 
     if (requestedBits & HdChangeTracker::DirtyPoints) {
-        valueCache->GetPoints(cachePath) = _vertices;
+        UsdGeomImagePlane imagePlane(prim);
+        VtVec3fArray vertices;
+        VtVec2fArray uvs;
+        imagePlane.CalculateGeometry(&vertices, &uvs, time);
+        valueCache->GetPoints(cachePath) = vertices;
 
         _MergePrimvar(
             &valueCache->GetPrimvars(cachePath),
@@ -101,7 +94,7 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
             HdInterpolationVertex,
             HdPrimvarRoleTokens->point);
 
-        valueCache->GetPrimvar(cachePath, TfToken("st")) = _uvs;
+        valueCache->GetPrimvar(cachePath, TfToken("st")) = uvs;
 
         _MergePrimvar(
             &valueCache->GetPrimvars(cachePath),

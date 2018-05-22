@@ -440,3 +440,44 @@ PXR_NAMESPACE_CLOSE_SCOPE
 // 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
+
+#include "pxr/usd/usdGeom/camera.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+void
+UsdGeomImagePlane::CalculateGeometry(
+    VtVec3fArray* vertices,
+    VtVec2fArray* uvs,
+    const UsdTimeCode& usdTime) const {
+    if (ARCH_UNLIKELY(vertices == nullptr)) { return; }
+    float depth = 100.0f;
+    GetDepthAttr().Get(&depth, usdTime);
+
+    SdfPathVector cameras;
+    GetCameraRel().GetTargets(&cameras);
+
+    if (cameras.size() != 1) { return; }
+    UsdGeomCamera usdCamera(this->GetPrim().GetStage()->GetPrimAtPath(cameras[0]));
+    if (!usdCamera) { return; }
+    auto gfCamera = usdCamera.GetCamera(usdTime);
+
+    const auto hFov = GfDegreesToRadians(gfCamera.GetFieldOfView(GfCamera::FOVHorizontal));
+    const auto vFov = GfDegreesToRadians(gfCamera.GetFieldOfView(GfCamera::FOVVertical));
+    const auto hEnd = static_cast<float>(sin(hFov)) * depth;
+    const auto vEnd = static_cast<float>(sin(vFov)) * depth;
+    vertices->resize(4);
+    vertices->operator[](0) = GfVec3f(-hEnd ,  vEnd , -depth);
+    vertices->operator[](1) = GfVec3f( hEnd ,  vEnd , -depth);
+    vertices->operator[](2) = GfVec3f( hEnd , -vEnd , -depth);
+    vertices->operator[](3) = GfVec3f(-hEnd , -vEnd , -depth);
+
+    if (ARCH_UNLIKELY(uvs == nullptr)) { return; }
+    uvs->resize(4);
+    uvs->operator[](0) = GfVec2f(0.0f, 0.0f);
+    uvs->operator[](1) = GfVec2f(1.0f, 0.0f);
+    uvs->operator[](2) = GfVec2f(1.0f, 1.0f);
+    uvs->operator[](3) = GfVec2f(0.0f, 1.0f);
+}
+
+PXR_NAMESPACE_CLOSE_SCOPE
