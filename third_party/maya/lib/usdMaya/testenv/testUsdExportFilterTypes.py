@@ -92,7 +92,7 @@ class testUsdExportFilterTypes(unittest.TestCase):
             }
             options = {
                 'mergeXForm': int(mergeXform),
-                'shadingMode': 'None',
+                'shadingMode': 'none',
             }
             if filter:
                 options['filterTypes'] = ','.join(filter)
