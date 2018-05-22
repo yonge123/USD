@@ -9,9 +9,12 @@
 
 #include "pxr/usd/usdGeom/imagePlane.h"
 
-#include "pxr/imaging/hd/imagePlane.h"
-
 PXR_NAMESPACE_OPEN_SCOPE
+
+
+TF_DEFINE_ENV_SETTING(USD_IMAGING_ENABLE_IMAGEPLANES, true,
+                      "Enables/disables the use of image planes in hydra until the code matures enough.");
+
 
 namespace {
 
@@ -25,6 +28,12 @@ const VtIntArray _faceVertexIndices = {
 };
 
 const VtIntArray _holeIndices;
+
+bool
+_isImagePlaneEnabled() {
+    static const auto _enabled = TfGetEnvSetting(USD_IMAGING_ENABLE_IMAGEPLANES);
+    return _enabled;
+}
 
 
 }
@@ -45,10 +54,8 @@ UsdImagingImagePlaneAdapter::Populate(
     const UsdPrim& prim,
     UsdImagingIndexProxy* index,
     const UsdImagingInstancerContext* instancerContext /*= nullptr*/){
-    return HdImagePlane::IsEnabled() ? _AddRprim(HdPrimTypeTokens->mesh,
+    return _isImagePlaneEnabled() ? _AddRprim(HdPrimTypeTokens->mesh,
                      prim, index, GetMaterialId(prim), instancerContext) : SdfPath();
-    // return HdImagePlane::IsEnabled() ? _AddRprim(HdPrimTypeTokens->imagePlane,
-    //                                              prim, index, GetMaterialId(prim), instancerContext) : SdfPath();
 }
 
 void
@@ -128,7 +135,6 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
 bool
 UsdImagingImagePlaneAdapter::IsSupported(const UsdImagingIndexProxy* index) const {
     return index->IsRprimTypeSupported(HdPrimTypeTokens->mesh);
-    // return index->IsRprimTypeSupported(HdPrimTypeTokens->imagePlane);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
