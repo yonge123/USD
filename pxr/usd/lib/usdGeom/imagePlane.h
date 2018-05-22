@@ -536,6 +536,12 @@ public:
     //  - Close the include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
+
+    USDGEOM_API
+    void CalculateGeometry(
+        VtVec3fArray* vertices,
+        VtVec2fArray* uvs,
+        const UsdTimeCode& usdTime = UsdTimeCode::Default()) const;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
