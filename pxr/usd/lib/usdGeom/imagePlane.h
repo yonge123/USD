@@ -538,10 +538,11 @@ public:
     // --(BEGIN CUSTOM CODE)--
 
     USDGEOM_API
-    void CalculateGeometry(
+    void CalculateGeometryForViewport(
         VtVec3fArray* vertices,
         VtVec2fArray* uvs,
-        const UsdTimeCode& usdTime = UsdTimeCode::Default()) const;
+        const UsdTimeCode& usdTime = UsdTimeCode::Default(),
+        float aspect = 1.0f) const;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
