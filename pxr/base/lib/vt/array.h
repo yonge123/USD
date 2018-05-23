@@ -276,10 +276,7 @@ class VtArray : public Vt_ArrayBase {
     }
 
     VtArray(std::initializer_list<ElementType> l) {
-        reserve(l.size());
-        for (const auto& v: l) {
-            push_back(v);
-        }
+        assign(l.begin(), l.end());
     }
 
     /// Copy assign from \p other.  This array shares underlying data with
