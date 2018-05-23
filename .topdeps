@@ -7,7 +7,6 @@ tg/simple_features/maya_primvar_export
 tg/simple_features/maya_export_camera_shake
 tg/simple_features/houdini_shader_output_registry
 tg/simple_features/houdini_st_uv_translation
-tg/bugfixes/alembic_write_uvs
 tg/simple_features/maya_pref_export
 tg/simple_features/tx_hydra
 tg/bugfixes/oiio_read_with_asserts
