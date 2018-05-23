@@ -2246,7 +2246,8 @@ void
 _WriteNamespacedPropertyGroup(
     _PrimWriterContext* context,
     const TfToken& namespaceName,
-    const boost::function<OCompoundProperty()>& getParentProperty) {
+    const boost::function<OCompoundProperty()>& getParentProperty)
+{
     // First check if there are any properties to convert.  We only ask
     // for that property if so, because asking for it will create it on
     // demand and we don't want to create it if unnecessary.  Note,
