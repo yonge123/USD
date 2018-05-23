@@ -8,6 +8,10 @@ tg/simple_features/maya_export_camera_shake
 tg/simple_features/houdini_shader_output_registry
 tg/simple_features/houdini_st_uv_translation
 tg/simple_features/maya_pref_export
+tg/simple_features/filterTypes
+tg/simple_features/default_value_for_hydra_parameters
+tg/simple_features/animated_textures_for_hydra
+tg/bugfixes/fix_selection_VP2
 tg/bugfixes/oiio_read_with_asserts
 tg/bugfixes/ubuntu_katana_build_fix
 tg/bugfixes/katana_testsuite_precision
@@ -24,8 +28,4 @@ tg/simple_features/curve_issues_in_usdview
 tg/simple_features/separate_third_party_builds
 tg/simple_features/maya_export_for_clips
 tg/simple_features/maya_motion_vector_export
-tg/simple_features/default_value_for_hydra_parameters
-tg/simple_features/animated_textures_for_hydra
-tg/bugfixes/fix_selection_VP2
-tg/simple_features/filterTypes
 houdini_variant_selection_fix
