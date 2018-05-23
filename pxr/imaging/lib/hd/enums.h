@@ -117,11 +117,6 @@ enum HdPointsGeomStyle {
     HdPointsGeomStylePoints
 };
 
-enum HdImagePlaneGeomStyle {
-    HdImagePlaneGeomStyleInvalid,
-    HdImagePlaneGeomStyleTextured
-};
-
 /// \enum HdGeomStyle
 ///
 /// Defines geometric styles for how each polygon/triangle
