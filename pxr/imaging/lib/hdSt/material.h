@@ -27,7 +27,6 @@
 #include "pxr/pxr.h"
 #include "pxr/imaging/hdSt/api.h"
 #include "pxr/imaging/hd/material.h"
-#include "pxr/imaging/hd/bufferSource.h"
 #include "pxr/imaging/hf/perfLog.h"
 
 #include <boost/shared_ptr.hpp>
