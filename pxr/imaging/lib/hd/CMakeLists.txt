@@ -44,7 +44,6 @@ pxr_library(hd
         extCompPrimvarBufferSource
         extComputation
         extComputationContext
-        imagePlane
         geomSubset
         instancer
         instanceRegistry

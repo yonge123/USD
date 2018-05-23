@@ -30,7 +30,6 @@
 #include "pxr/imaging/hdSt/extComputation.h"
 #include "pxr/imaging/hdSt/glslfxShader.h"
 #include "pxr/imaging/hdSt/instancer.h"
-#include "pxr/imaging/hdSt/imagePlane.h"
 #include "pxr/imaging/hdSt/light.h"
 #include "pxr/imaging/hdSt/material.h"
 #include "pxr/imaging/hdSt/mesh.h"
@@ -52,28 +51,27 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 const TfTokenVector HdStRenderDelegate::SUPPORTED_RPRIM_TYPES =
-{
-    HdPrimTypeTokens->mesh,
-    HdPrimTypeTokens->basisCurves,
-    HdPrimTypeTokens->points,
-    HdPrimTypeTokens->imagePlane,
-};
+    {
+        HdPrimTypeTokens->mesh,
+        HdPrimTypeTokens->basisCurves,
+        HdPrimTypeTokens->points
+    };
 
 const TfTokenVector HdStRenderDelegate::SUPPORTED_SPRIM_TYPES =
-{
-    HdPrimTypeTokens->camera,
-    HdPrimTypeTokens->drawTarget,
-    HdPrimTypeTokens->extComputation,
-    HdPrimTypeTokens->material,
-    HdPrimTypeTokens->rectLight,
-    HdPrimTypeTokens->simpleLight,
-    HdPrimTypeTokens->sphereLight
-};
+    {
+        HdPrimTypeTokens->camera,
+        HdPrimTypeTokens->drawTarget,
+        HdPrimTypeTokens->extComputation,
+        HdPrimTypeTokens->material,
+        HdPrimTypeTokens->rectLight,
+        HdPrimTypeTokens->simpleLight,
+        HdPrimTypeTokens->sphereLight
+    };
 
 const TfTokenVector HdStRenderDelegate::SUPPORTED_BPRIM_TYPES =
-{
-    HdPrimTypeTokens->texture
-};
+    {
+        HdPrimTypeTokens->texture
+    };
 
 std::mutex HdStRenderDelegate::_mutexResourceRegistry;
 std::atomic_int HdStRenderDelegate::_counterResourceRegistry;
@@ -85,7 +83,7 @@ HdStRenderDelegate::HdStRenderDelegate()
     // It will also add the resource to the logging object so we
     // can query the resources used by all St plugins later
     std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
-    
+
     if (_counterResourceRegistry.fetch_add(1) == 0) {
         _resourceRegistry.reset( new HdStResourceRegistry() );
         HdPerfLog::GetInstance().AddResourceRegistry(_resourceRegistry);
@@ -131,7 +129,7 @@ HdStRenderDelegate::GetResourceRegistry() const
 
 HdRenderPassSharedPtr
 HdStRenderDelegate::CreateRenderPass(HdRenderIndex *index,
-                        HdRprimCollection const& collection)
+                                     HdRprimCollection const& collection)
 {
     return HdRenderPassSharedPtr(new HdSt_RenderPass(index, collection));
 }
@@ -158,8 +156,8 @@ HdStRenderDelegate::DestroyInstancer(HdInstancer *instancer)
 
 HdRprim *
 HdStRenderDelegate::CreateRprim(TfToken const& typeId,
-                                    SdfPath const& rprimId,
-                                    SdfPath const& instancerId)
+                                SdfPath const& rprimId,
+                                SdfPath const& instancerId)
 {
     if (typeId == HdPrimTypeTokens->mesh) {
         return new HdStMesh(rprimId, instancerId);
@@ -167,8 +165,6 @@ HdStRenderDelegate::CreateRprim(TfToken const& typeId,
         return new HdStBasisCurves(rprimId, instancerId);
     } else  if (typeId == HdPrimTypeTokens->points) {
         return new HdStPoints(rprimId, instancerId);
-    } else if (typeId == HdPrimTypeTokens->imagePlane) {
-        return new HdStImagePlane(rprimId, instancerId);
     } else {
         TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
     }
@@ -184,7 +180,7 @@ HdStRenderDelegate::DestroyRprim(HdRprim *rPrim)
 
 HdSprim *
 HdStRenderDelegate::CreateSprim(TfToken const& typeId,
-                                    SdfPath const& sprimId)
+                                SdfPath const& sprimId)
 {
     if (typeId == HdPrimTypeTokens->camera) {
         return new HdCamera(sprimId);
@@ -216,10 +212,10 @@ HdStRenderDelegate::CreateFallbackSprim(TfToken const& typeId)
         return new HdStLight(SdfPath::EmptyPath(),
                              HdPrimTypeTokens->simpleLight);
     } else if (typeId == HdPrimTypeTokens->sphereLight) {
-        return new HdStLight(SdfPath::EmptyPath(), 
+        return new HdStLight(SdfPath::EmptyPath(),
                              HdPrimTypeTokens->sphereLight);
     } else if (typeId == HdPrimTypeTokens->rectLight) {
-        return new HdStLight(SdfPath::EmptyPath(), 
+        return new HdStLight(SdfPath::EmptyPath(),
                              HdPrimTypeTokens->rectLight);
     } else  if (typeId == HdPrimTypeTokens->drawTarget) {
         return new HdStDrawTarget(SdfPath::EmptyPath());
@@ -242,7 +238,7 @@ HdStRenderDelegate::DestroySprim(HdSprim *sPrim)
 
 HdBprim *
 HdStRenderDelegate::CreateBprim(TfToken const& typeId,
-                                    SdfPath const& bprimId)
+                                SdfPath const& bprimId)
 {
     if (typeId == HdPrimTypeTokens->texture) {
         return new HdStTexture(bprimId);
@@ -290,7 +286,7 @@ void
 HdStRenderDelegate::CommitResources(HdChangeTracker *tracker)
 {
     GLF_GROUP_FUNCTION();
-    
+
     // --------------------------------------------------------------------- //
     // RESOLVE, COMPUTE & COMMIT PHASE
     // --------------------------------------------------------------------- //
