@@ -5,6 +5,7 @@ set(PXR_PACKAGE usdImaging)
 pxr_library(usdImaging
     LIBRARIES
         gf
+        glf
         tf
         plug
         trace
@@ -18,15 +19,16 @@ pxr_library(usdImaging
         usdLux
         usdRi
         usdShade
-        ar
         ${Boost_PYTHON_LIBRARY}
         ${PYTHON_LIBRARY}
         ${TBB_tbb_LIBRARY}
+        ${GLEW_LIBRARY}
 
     INCLUDE_DIRS
         ${PYTHON_INCLUDE_PATH}
         ${PYTHON_INCLUDE_DIRS}
         ${TBB_INCLUDE_DIRS}
+        ${GLEW_INCLUDE_DIR}
 
     PUBLIC_CLASSES
         adapterRegistry

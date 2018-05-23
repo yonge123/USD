@@ -442,14 +442,16 @@ PXR_NAMESPACE_CLOSE_SCOPE
 // --(BEGIN CUSTOM CODE)--
 
 #include "pxr/usd/usdGeom/camera.h"
+#include "pxr/imaging/cameraUtil/conformWindow.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 void
-UsdGeomImagePlane::CalculateGeometry(
+UsdGeomImagePlane::CalculateGeometryForViewport(
     VtVec3fArray* vertices,
     VtVec2fArray* uvs,
-    const UsdTimeCode& usdTime) const {
+    const UsdTimeCode& usdTime,
+    float aspect) const {
     if (ARCH_UNLIKELY(vertices == nullptr)) { return; }
     float depth = 100.0f;
     GetDepthAttr().Get(&depth, usdTime);
@@ -462,10 +464,12 @@ UsdGeomImagePlane::CalculateGeometry(
     if (!usdCamera) { return; }
     auto gfCamera = usdCamera.GetCamera(usdTime);
 
+    CameraUtilConformWindow(&gfCamera, CameraUtilFit, aspect);
+
     const auto hFov = GfDegreesToRadians(gfCamera.GetFieldOfView(GfCamera::FOVHorizontal));
     const auto vFov = GfDegreesToRadians(gfCamera.GetFieldOfView(GfCamera::FOVVertical));
-    const auto hEnd = static_cast<float>(sin(hFov)) * depth;
-    const auto vEnd = static_cast<float>(sin(vFov)) * depth;
+    const auto hEnd = static_cast<float>(sin(hFov)) * depth * 0.99f;
+    const auto vEnd = static_cast<float>(sin(vFov)) * depth * 0.99f;
     vertices->resize(4);
     vertices->operator[](0) = GfVec3f(-hEnd ,  vEnd , -depth);
     vertices->operator[](1) = GfVec3f( hEnd ,  vEnd , -depth);
