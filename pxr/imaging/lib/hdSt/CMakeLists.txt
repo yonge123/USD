@@ -55,7 +55,7 @@ pxr_library(hdSt
         glUtils
         instancer
         interleavedMemoryManager
-        light
+        light      
         lightingShader
         material
         mesh
