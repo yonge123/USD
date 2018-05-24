@@ -1,7 +1,8 @@
 #include "MayaImagePlaneWriter.h"
 
-#include "pxr/usd/usdGeom/tokens.h"
-#include "pxr/usd/usdGeom/imagePlane.h"
+#include <pxr/usd/usdGeom/tokens.h>
+#include <pxr/usd/usdGeom/imagePlane.h>
+#include <pxr/base/gf/range3f.h>
 #include <maya/MBoundingBox.h>
 #include <maya/MFnDependencyNode.h>
 #include <maya/MRenderUtil.h>
@@ -226,16 +227,7 @@ bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdG
 
     // Write extent, just the default for now. It should be setup in the adapter for drawing.
     MFnDagNode dnode(getDagPath());
-    VtArray<GfVec3f> extent(2);
-    extent[0] = GfVec3f(-1.0f, -1.0f, -1.0f);
-    extent[1] = GfVec3f(1.0f, 1.0f, 1.0f);
-    // Something is wrong with the initializer list constructor in Release mode.
-    // VtArray<GfVec3f> extent {{-1.0f, -1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}};
-    // auto boundingBox = dnode.boundingBox();
-    // extent[0] = GfVec3f(boundingBox.min().x, boundingBox.min().y, boundingBox.min().z);
-    // extent[1] = GfVec3f(boundingBox.max().x, boundingBox.max().y, boundingBox.max().z);
-    _SetAttribute(primSchema.CreateExtentAttr(), extent, usdTime);
-
+    
     auto imageNameExtracted = MRenderUtil::exactImagePlaneFileName(dnode.object());
     const SdfAssetPath imageNameExtractedPath(std::string(imageNameExtracted.asChar()));
     const auto sizePlug = dnode.findPlug("size");
@@ -280,6 +272,16 @@ bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdG
     const auto coverageOriginPlug = dnode.findPlug("coverageOrigin");
     _SetAttribute(primSchema.GetCoverageOriginAttr(),
                   GfVec2i(coverageOriginPlug.child(0).asInt(), coverageOriginPlug.child(1).asInt()), usdTime);
+    VtVec3fArray positions;
+    primSchema.CalculateGeometryForViewport(&positions, nullptr, usdTime);
+    GfRange3f extent;
+    for (const auto& vertex: positions) {
+        extent.ExtendBy(vertex);
+    }
+    VtArray<GfVec3f> extents(2);
+    extents[0] = extent.GetMin();
+    extents[1] = extent.GetMax();
+    _SetAttribute(primSchema.CreateExtentAttr(), extents, usdTime);
     return true;
 }
 
