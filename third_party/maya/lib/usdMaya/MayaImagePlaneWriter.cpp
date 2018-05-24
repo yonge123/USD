@@ -189,8 +189,8 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
         primvarApi.CreateOutput(_tokens->result, SdfValueTypeNames->Float2));
 
     UsdShadeConnectableAPI::ConnectToSource(
-        shaderApi.CreateInput(_tokens->baseColor, SdfValueTypeNames->Color3f),
-        textureApi.CreateOutput(_tokens->color, SdfValueTypeNames->Color3f));
+        shaderApi.CreateInput(_tokens->baseColor, SdfValueTypeNames->Color4f),
+        textureApi.CreateOutput(_tokens->color, SdfValueTypeNames->Color4f));
 
     for (auto pt = getUsdPath(); !pt.IsEmpty(); pt = pt.GetParentPath()) {
         auto pr = getUsdStage()->GetPrimAtPath(pt);
