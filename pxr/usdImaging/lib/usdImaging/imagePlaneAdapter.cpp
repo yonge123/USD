@@ -9,10 +9,6 @@
 
 #include "pxr/usd/usdGeom/imagePlane.h"
 
-#include "pxr/imaging/glf/glew.h"
-
-#include <GL/glew.h>
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DEFINE_ENV_SETTING(USD_IMAGING_ENABLE_IMAGEPLANES, true,
@@ -90,16 +86,11 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
     }
 
     if (requestedBits & HdChangeTracker::DirtyPoints) {
-        GLint viewport[4] = {0, 0, 1, 1};
-        //if (GlfGlewInit()) {
-        //    glGetIntegerv(GL_VIEWPORT, viewport);
-        //}
         UsdGeomImagePlane imagePlane(prim);
         VtVec3fArray vertices;
         VtVec2fArray uvs;
         imagePlane.CalculateGeometryForViewport(
-            &vertices, &uvs, time,
-            static_cast<float>(viewport[2]) / static_cast<float>(viewport[3]));
+            &vertices, &uvs, time);
         valueCache->GetPoints(cachePath) = vertices;
 
         _MergePrimvar(
