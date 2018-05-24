@@ -410,7 +410,7 @@ bool PxrUsdMayaTranslatorImagePlane::Read(
     }
 
     SdfAssetPath imageAssetPath;
-    usdImagePlane.GetFilenameAttr().Get(&imageAssetPath, earliestTimeCode);
+    usdImagePlane.GetFilenameAttr().Get(&imageAssetPath, UsdTimeCode::Default());
     imagePlaneNode.findPlug("imageName").setString(imageAssetPath.GetAssetPath().c_str());
     bool useFrameExtension = false;
     usdImagePlane.GetUseFrameExtensionAttr().Get(&useFrameExtension, earliestTimeCode);

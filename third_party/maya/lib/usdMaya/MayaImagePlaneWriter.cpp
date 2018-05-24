@@ -236,15 +236,17 @@ bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdG
     // extent[1] = GfVec3f(boundingBox.max().x, boundingBox.max().y, boundingBox.max().z);
     _SetAttribute(primSchema.CreateExtentAttr(), extent, usdTime);
 
+    auto imageNameExtracted = MRenderUtil::exactImagePlaneFileName(dnode.object());
+    const SdfAssetPath imageNameExtractedPath(std::string(imageNameExtracted.asChar()));
     const auto sizePlug = dnode.findPlug("size");
     const auto imageName = SdfAssetPath(std::string(dnode.findPlug("imageName").asString().asChar()));
     primSchema.GetFilenameAttr().Set(imageName);
+    primSchema.GetFilenameAttr().Set(imageNameExtractedPath, usdTime);
 #ifdef GENERATE_SHADERS
-    auto imageNameExtracted = MRenderUtil::exactImagePlaneFileName(dnode.object());
     UsdShadeShader textureShader(mTexture);
     auto filenameAttr = textureShader.GetPrim()
         .CreateAttribute(UsdHydraTokens->infoFilename, SdfValueTypeNames->Asset, SdfVariabilityVarying);
-    filenameAttr.Set(SdfAssetPath(std::string(imageNameExtracted.asChar())), usdTime);
+    filenameAttr.Set(imageNameExtractedPath, usdTime);
     filenameAttr.Set(imageName);
 #endif
     const auto fit = dnode.findPlug("fit").asShort();
