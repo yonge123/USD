@@ -464,12 +464,24 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
     if (!usdCamera) { return; }
     auto gfCamera = usdCamera.GetCamera(usdTime);
 
-    CameraUtilConformWindow(&gfCamera, CameraUtilFit, aspect);
+    /*auto horizontalAperture = 1.0f;
+    auto verticalAperture = 1.0f;
+    usdCamera.GetHorizontalApertureAttr().Get(&horizontalAperture, usdTime);
+    usdCamera.GetVerticalApertureAttr().Get(&verticalAperture, usdTime);
+    const auto cameraRatio = horizontalAperture / verticalAperture;
+
+    const auto imageWidth = 400.0f;
+    const auto imageHeight = 400.0f;
+    const auto imageRatio = imageWidth / imageHeight;*/
+    //SdfAssetPath filename;
+    //GetFilenameAttr().Get(&filename, usdTime);
+
+    // CameraUtilConformWindow(&gfCamera, CameraUtilFit, aspect);
 
     const auto hFov = GfDegreesToRadians(gfCamera.GetFieldOfView(GfCamera::FOVHorizontal));
     const auto vFov = GfDegreesToRadians(gfCamera.GetFieldOfView(GfCamera::FOVVertical));
-    const auto hEnd = static_cast<float>(sin(hFov)) * depth * 0.99f;
-    const auto vEnd = static_cast<float>(sin(vFov)) * depth * 0.99f;
+    const auto hEnd = static_cast<float>(sin(hFov)) * depth;
+    const auto vEnd = static_cast<float>(sin(vFov)) * depth;
     vertices->resize(4);
     vertices->operator[](0) = GfVec3f(-hEnd ,  vEnd , -depth);
     vertices->operator[](1) = GfVec3f( hEnd ,  vEnd , -depth);
