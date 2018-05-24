@@ -442,16 +442,27 @@ PXR_NAMESPACE_CLOSE_SCOPE
 // --(BEGIN CUSTOM CODE)--
 
 #include "pxr/usd/usdGeom/camera.h"
-#include "pxr/imaging/cameraUtil/conformWindow.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+namespace {
+
+constexpr float inch_to_mm = 25.4f;
+
+template <typename T>
+T getAttr(const UsdAttribute& attr, const UsdTimeCode& usdTime, const T& defaultValue) {
+    auto r = defaultValue;
+    attr.Get(&r, usdTime);
+    return r;
+}
+
+}
 
 void
 UsdGeomImagePlane::CalculateGeometryForViewport(
     VtVec3fArray* vertices,
     VtVec2fArray* uvs,
-    const UsdTimeCode& usdTime,
-    float aspect) const {
+    const UsdTimeCode& usdTime) const {
     if (ARCH_UNLIKELY(vertices == nullptr)) { return; }
     float depth = 100.0f;
     GetDepthAttr().Get(&depth, usdTime);
@@ -462,24 +473,54 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
     if (cameras.size() != 1) { return; }
     UsdGeomCamera usdCamera(this->GetPrim().GetStage()->GetPrimAtPath(cameras[0]));
     if (!usdCamera) { return; }
-    auto gfCamera = usdCamera.GetCamera(usdTime);
 
-    /*auto horizontalAperture = 1.0f;
-    auto verticalAperture = 1.0f;
-    usdCamera.GetHorizontalApertureAttr().Get(&horizontalAperture, usdTime);
-    usdCamera.GetVerticalApertureAttr().Get(&verticalAperture, usdTime);
-    const auto cameraRatio = horizontalAperture / verticalAperture;
+    GfVec2f aperture {1.0f, 1.0f};
+    usdCamera.GetHorizontalApertureAttr().Get(&aperture[0], usdTime);
+    usdCamera.GetVerticalApertureAttr().Get(&aperture[1], usdTime);
+    const auto focalLength = getAttr(usdCamera.GetFocalLengthAttr(), usdTime, 1.0f);
 
-    const auto imageWidth = 400.0f;
-    const auto imageHeight = 400.0f;
-    const auto imageRatio = imageWidth / imageHeight;*/
-    //SdfAssetPath filename;
-    //GetFilenameAttr().Get(&filename, usdTime);
+    // The trick here is to take the image plane size (if not valid the camera aperture),
+    // and try to fit the aperture to the image ratio, based on the fit parameter on the image plane.
+    // We don't need the viewport aspect ratio / size, because it's already affecting the image by
+    // affecting the projection matrix.
 
-    // CameraUtilConformWindow(&gfCamera, CameraUtilFit, aspect);
+    // Size is exported in inches
+    // while aperture is in millimeters.
+    // TODO: fix this in the maya image plane writer / translator.
+    auto size = getAttr(GetSizeAttr(), usdTime, GfVec2f(-1.0f, -1.0f)) * inch_to_mm;
+    if (size[0] <= 0.0f) {
+        size[0] = aperture[0];
+    }
+    if (size[1] <= 0.0f) {
+        size[1] = aperture[1];
+    }
 
-    const auto hFov = GfDegreesToRadians(gfCamera.GetFieldOfView(GfCamera::FOVHorizontal));
-    const auto vFov = GfDegreesToRadians(gfCamera.GetFieldOfView(GfCamera::FOVVertical));
+    // TODO: get the image's size
+    GfVec2f imageSize {400.0f, 400.0f};
+    const auto imageRatio = imageSize[0] / imageSize[1];
+    const auto sizeRatio = size[0] / size[1];
+
+    const auto fit = getAttr(GetFitAttr(), usdTime, UsdGeomImagePlaneFitTokens->best);
+    if (fit == UsdGeomImagePlaneFitTokens->fill) {
+
+    } else if (fit == UsdGeomImagePlaneFitTokens->best) {
+        if (imageRatio > sizeRatio) {
+            size[1] = size[0] / imageRatio;
+        } else {
+            size[0] = size[1] * imageRatio;
+        }
+    } else if (fit == UsdGeomImagePlaneFitTokens->horizontal) {
+    } else if (fit == UsdGeomImagePlaneFitTokens->vertical) {
+    } else if (fit == UsdGeomImagePlaneFitTokens->toSize) {
+    } else { assert("Invalid value passed to UsdGeomImagePlane.fit!"); }
+
+    // Both aperture and focal length should be in millimeters.
+    auto calculateFOV = [] (const float fl, const float ap) -> float {
+        return atanf(ap / (2.0f * fl));
+    };
+
+    const auto hFov = calculateFOV(focalLength, size[0]);
+    const auto vFov = calculateFOV(focalLength, size[1]);
     const auto hEnd = static_cast<float>(sin(hFov)) * depth;
     const auto vEnd = static_cast<float>(sin(vFov)) * depth;
     vertices->resize(4);

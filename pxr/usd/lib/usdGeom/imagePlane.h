@@ -541,8 +541,7 @@ public:
     void CalculateGeometryForViewport(
         VtVec3fArray* vertices,
         VtVec2fArray* uvs,
-        const UsdTimeCode& usdTime = UsdTimeCode::Default(),
-        float aspect = 1.0f) const;
+        const UsdTimeCode& usdTime = UsdTimeCode::Default()) const;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
