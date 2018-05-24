@@ -11,7 +11,6 @@ pxr_library(usdGeom
         trace
         usd
         work
-        cameraUtil
         ${Boost_PYTHON_LIBRARY}
 
     INCLUDE_DIRS
