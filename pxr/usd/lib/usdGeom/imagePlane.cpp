@@ -502,7 +502,11 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
 
     const auto fit = getAttr(GetFitAttr(), usdTime, UsdGeomImagePlaneFitTokens->best);
     if (fit == UsdGeomImagePlaneFitTokens->fill) {
-
+        if (imageRatio > sizeRatio) {
+            size[0] = size[1] * imageRatio;
+        } else {
+            size[1] = size[0] / imageRatio;
+        }
     } else if (fit == UsdGeomImagePlaneFitTokens->best) {
         if (imageRatio > sizeRatio) {
             size[1] = size[0] / imageRatio;
@@ -510,24 +514,54 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
             size[0] = size[1] * imageRatio;
         }
     } else if (fit == UsdGeomImagePlaneFitTokens->horizontal) {
+        size[1] = size[0] / imageRatio;
     } else if (fit == UsdGeomImagePlaneFitTokens->vertical) {
+        size[0] = size[1] * imageRatio;
     } else if (fit == UsdGeomImagePlaneFitTokens->toSize) {
     } else { assert("Invalid value passed to UsdGeomImagePlane.fit!"); }
 
-    // Both aperture and focal length should be in millimeters.
-    auto calculateFOV = [] (const float fl, const float ap) -> float {
-        return atanf(ap / (2.0f * fl));
+    GfVec2f upperLeft  { -size[0],  size[1]};
+    GfVec2f upperRight {  size[0],  size[1]};
+    GfVec2f lowerLeft  { -size[0], -size[1]};
+    GfVec2f lowerRight {  size[0], -size[1]};
+
+    auto rotate = getAttr(GetRotateAttr(), usdTime, 0.0f);
+    if (!GfIsClose(rotate, 0.0f, 0.001f)) {
+        rotate = static_cast<float>(M_PI) * rotate / 180.0f;
+        const float rsin = sinf(-rotate);
+        const float rcos = cosf(-rotate);
+
+        auto rotateCorner = [rsin, rcos] (GfVec2f& corner) {
+            const float t = corner[0] * rcos - corner[1] * rsin;
+            corner[1] = corner[0] * rsin + corner[1] * rcos;
+            corner[0] = t;
+        };
+
+        rotateCorner(upperLeft);
+        rotateCorner(upperRight);
+        rotateCorner(lowerLeft);
+        rotateCorner(lowerRight);
+    }
+
+    // Offset is in inches.
+
+    // Both aperture and focal length should be in millimeters,
+    // so no need of conversion, because they will equal out in the division.
+    auto projectVertex = [focalLength, depth] (GfVec2f& vertex) {
+        vertex[0] = sinf(atanf(vertex[0] / (2.0f * focalLength))) * depth;
+        vertex[1] = sinf(atanf(vertex[1] / (2.0f * focalLength))) * depth;
     };
 
-    const auto hFov = calculateFOV(focalLength, size[0]);
-    const auto vFov = calculateFOV(focalLength, size[1]);
-    const auto hEnd = static_cast<float>(sin(hFov)) * depth;
-    const auto vEnd = static_cast<float>(sin(vFov)) * depth;
+    projectVertex(upperLeft);
+    projectVertex(upperRight);
+    projectVertex(lowerLeft);
+    projectVertex(lowerRight);
+
     vertices->resize(4);
-    vertices->operator[](0) = GfVec3f(-hEnd ,  vEnd , -depth);
-    vertices->operator[](1) = GfVec3f( hEnd ,  vEnd , -depth);
-    vertices->operator[](2) = GfVec3f( hEnd , -vEnd , -depth);
-    vertices->operator[](3) = GfVec3f(-hEnd , -vEnd , -depth);
+    vertices->operator[](0) = GfVec3f(upperLeft[0] , upperLeft[1] , -depth);
+    vertices->operator[](1) = GfVec3f(upperRight[0], upperRight[1], -depth);
+    vertices->operator[](2) = GfVec3f(lowerRight[0], lowerRight[1], -depth);
+    vertices->operator[](3) = GfVec3f(lowerLeft[0] , lowerLeft[1] , -depth);
 
     if (ARCH_UNLIKELY(uvs == nullptr)) { return; }
     uvs->resize(4);
