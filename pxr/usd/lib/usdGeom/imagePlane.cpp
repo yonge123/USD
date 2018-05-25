@@ -578,21 +578,27 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
     vertices->operator[](2) = GfVec3f(lowerRight[0], lowerRight[1], -depth);
     vertices->operator[](3) = GfVec3f(lowerLeft[0] , lowerLeft[1] , -depth);
 
-    if (ARCH_UNLIKELY(uvs == nullptr)) { return; }
-    GfVec2f coverage = getAttr(GetCoverageAttr(),
-        usdTime, GfVec2i(static_cast<int>(imageSize[0]), static_cast<int>(imageSize[1])));
-    coverage[0] = std::min(std::max(-imageSize[0], coverage[0]), imageSize[0]);
-    coverage[1] = std::min(std::max(-imageSize[1], coverage[1]), imageSize[1]);
-    GfVec2f coverageOrigin = getAttr(GetCoverageOriginAttr(), usdTime, GfVec2i(0, 0));
-    coverageOrigin[0] = std::min(std::max(-imageSize[0], coverageOrigin[0]), imageSize[0]);
-    coverageOrigin[1] = std::min(std::max(-imageSize[1], coverageOrigin[1]), imageSize[1]);
-
-    GfVec2f minUV = {0.0f, 0.0f};
-    GfVec2f maxUV = {1.0f, 1.0f};
-
     auto lerp = [] (float v, float lo, float hi) -> float {
         return lo * (1.0f - v) + hi * v;
     };
+
+    auto clamp = [] (float v, float lo, float hi) -> float {
+        if (v < lo) { return lo; }
+        else if (v > hi) { return hi; }
+        return v;
+    };
+
+    if (ARCH_UNLIKELY(uvs == nullptr)) { return; }
+    GfVec2f coverage = getAttr(GetCoverageAttr(),
+        usdTime, GfVec2i(static_cast<int>(imageSize[0]), static_cast<int>(imageSize[1])));
+    coverage[0] = clamp(coverage[0], 0.0f, imageSize[0]);
+    coverage[1] = clamp(coverage[1], 0.0f, imageSize[1]);
+    GfVec2f coverageOrigin = getAttr(GetCoverageOriginAttr(), usdTime, GfVec2i(0, 0));
+    coverageOrigin[0] = clamp(coverageOrigin[0], -imageSize[0], imageSize[0]);
+    coverageOrigin[1] = clamp(coverageOrigin[1], -imageSize[1], imageSize[1]);
+
+    GfVec2f minUV = {0.0f, 0.0f};
+    GfVec2f maxUV = {1.0f, 1.0f};
 
     if (coverageOrigin[0] > 0) {
         minUV[0] = coverageOrigin[0] / imageSize[0];
