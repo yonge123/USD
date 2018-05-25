@@ -442,6 +442,7 @@ PXR_NAMESPACE_CLOSE_SCOPE
 // --(BEGIN CUSTOM CODE)--
 
 #include "pxr/usd/usdGeom/camera.h"
+#include <OpenImageIO/imageio.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -495,8 +496,18 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
         size[1] = aperture[1];
     }
 
-    // TODO: get the image's size
-    GfVec2f imageSize {400.0f, 400.0f};
+    GfVec2f imageSize {100.0f, 100.0f};
+    const auto fileName = getAttr(GetFilenameAttr(), usdTime, SdfAssetPath(""));
+    {
+        auto* in = OIIO::ImageInput::open(fileName.GetResolvedPath());
+        if (in) {
+            in->close();
+            const auto& spec = in->spec();
+            imageSize[0] = static_cast<float>(spec.width);
+            imageSize[1] = static_cast<float>(spec.height);
+            OIIO::ImageInput::destroy(in);
+        }
+    }
     const auto imageRatio = imageSize[0] / imageSize[1];
     const auto sizeRatio = size[0] / size[1];
 
@@ -525,9 +536,8 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
     GfVec2f lowerLeft  { -size[0], -size[1]};
     GfVec2f lowerRight {  size[0], -size[1]};
 
-    auto rotate = getAttr(GetRotateAttr(), usdTime, 0.0f);
+    const auto rotate = getAttr(GetRotateAttr(), usdTime, 0.0f);
     if (!GfIsClose(rotate, 0.0f, 0.001f)) {
-        rotate = static_cast<float>(M_PI) * rotate / 180.0f;
         const float rsin = sinf(-rotate);
         const float rcos = cosf(-rotate);
 
@@ -543,8 +553,13 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
         rotateCorner(lowerRight);
     }
 
-    // Offset is in inches.
+    // FIXME: Offset doesn't work properly!
+    const auto offset = getAttr(GetOffsetAttr(), usdTime, GfVec2f(0.0f, 0.0f)) * inch_to_mm;
 
+    upperLeft += offset;
+    upperRight += offset;
+    lowerLeft += offset;
+    lowerRight += offset;
     // Both aperture and focal length should be in millimeters,
     // so no need of conversion, because they will equal out in the division.
     auto projectVertex = [focalLength, depth] (GfVec2f& vertex) {

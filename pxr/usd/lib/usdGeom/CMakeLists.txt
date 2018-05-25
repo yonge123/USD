@@ -12,9 +12,13 @@ pxr_library(usdGeom
         usd
         work
         ${Boost_PYTHON_LIBRARY}
+        ${OIIO_LIBRARIES}
+        ${OPENEXR_LIBRARIES}
 
     INCLUDE_DIRS
         ${Boost_INCLUDE_DIRS}
+        ${OIIO_INCLUDE_DIRS}
+        ${OPENEXR_INCLUDE_DIRS}
 
     PUBLIC_CLASSES
         debugCodes
