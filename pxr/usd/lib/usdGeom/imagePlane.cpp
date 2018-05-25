@@ -556,9 +556,9 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
     // FIXME: Offset doesn't work properly!
     const auto offset = getAttr(GetOffsetAttr(), usdTime, GfVec2f(0.0f, 0.0f)) * inch_to_mm;
 
-    upperLeft += offset;
+    upperLeft  += offset;
     upperRight += offset;
-    lowerLeft += offset;
+    lowerLeft  += offset;
     lowerRight += offset;
     // Both aperture and focal length should be in millimeters,
     // so no need of conversion, because they will equal out in the division.
@@ -579,11 +579,47 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
     vertices->operator[](3) = GfVec3f(lowerLeft[0] , lowerLeft[1] , -depth);
 
     if (ARCH_UNLIKELY(uvs == nullptr)) { return; }
+    GfVec2f coverage = getAttr(GetCoverageAttr(),
+        usdTime, GfVec2i(static_cast<int>(imageSize[0]), static_cast<int>(imageSize[1])));
+    coverage[0] = std::min(std::max(-imageSize[0], coverage[0]), imageSize[0]);
+    coverage[1] = std::min(std::max(-imageSize[1], coverage[1]), imageSize[1]);
+    GfVec2f coverageOrigin = getAttr(GetCoverageOriginAttr(), usdTime, GfVec2i(0, 0));
+    coverageOrigin[0] = std::min(std::max(-imageSize[0], coverageOrigin[0]), imageSize[0]);
+    coverageOrigin[1] = std::min(std::max(-imageSize[1], coverageOrigin[1]), imageSize[1]);
+
+    GfVec2f minUV = {0.0f, 0.0f};
+    GfVec2f maxUV = {1.0f, 1.0f};
+
+    auto lerp = [] (float v, float lo, float hi) -> float {
+        return lo * (1.0f - v) + hi * v;
+    };
+
+    if (coverageOrigin[0] > 0) {
+        minUV[0] = coverageOrigin[0] / imageSize[0];
+        maxUV[0] = lerp(std::min(coverage[0], imageSize[0] - coverageOrigin[0]) /
+                            (imageSize[0] - coverageOrigin[0]), minUV[0], 1.0f);
+    } else if (coverageOrigin[0] < 0) {
+        maxUV[0] = coverage[0] * (imageSize[0] + coverageOrigin[0]) / (imageSize[0] * imageSize[0]);
+    } else {
+        maxUV[0] = coverage[0] / imageSize[0];
+    }
+
+    if (coverageOrigin[1] > 0) {
+        maxUV[1] = (imageSize[1] - coverageOrigin[1]) / imageSize[1];
+        minUV[1] = lerp(std::min(coverage[1], imageSize[1] - coverageOrigin[1]) /
+                            (imageSize[1] - coverageOrigin[1]), maxUV[1], 0.0f);
+    } else if (coverageOrigin[1] < 0) {
+        minUV[1] = std::min(1.0f, -coverageOrigin[1] / imageSize[1] +
+                                  (1.0f - coverage[1] / imageSize[1]));
+    } else {
+        minUV[1] = 1.0f - coverage[1] / imageSize[1];
+    }
+
     uvs->resize(4);
-    uvs->operator[](0) = GfVec2f(0.0f, 0.0f);
-    uvs->operator[](1) = GfVec2f(1.0f, 0.0f);
-    uvs->operator[](2) = GfVec2f(1.0f, 1.0f);
-    uvs->operator[](3) = GfVec2f(0.0f, 1.0f);
+    uvs->operator[](0) = GfVec2f(minUV[0], minUV[1]);
+    uvs->operator[](1) = GfVec2f(maxUV[0], minUV[1]);
+    uvs->operator[](2) = GfVec2f(maxUV[0], maxUV[1]);
+    uvs->operator[](3) = GfVec2f(minUV[0], maxUV[1]);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

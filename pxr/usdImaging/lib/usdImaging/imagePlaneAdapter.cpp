@@ -63,7 +63,9 @@ UsdImagingImagePlaneAdapter::TrackVariability(
     const UsdImagingInstancerContext* instancerContext) const {
     BaseAdapter::TrackVariability(
         prim, cachePath, timeVaryingBits, instancerContext);
-    *timeVaryingBits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyExtent;
+    // We can check here if coverage or coverage origin is animated and
+    // turn off varying for primvars.
+    *timeVaryingBits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyExtent;
 }
 
 void
@@ -85,37 +87,42 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
         ctm = xf * ctm;
     }
 
-    if (requestedBits & HdChangeTracker::DirtyPoints) {
+    if (requestedBits & (HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyExtent)) {
         UsdGeomImagePlane imagePlane(prim);
         VtVec3fArray vertices;
         VtVec2fArray uvs;
         imagePlane.CalculateGeometryForViewport(
             &vertices, &uvs, time);
-        valueCache->GetPoints(cachePath) = vertices;
 
-        _MergePrimvar(
-            &valueCache->GetPrimvars(cachePath),
-            HdTokens->points,
-            HdInterpolationVertex,
-            HdPrimvarRoleTokens->point);
+        if (requestedBits & HdChangeTracker::DirtyPoints) {
+            valueCache->GetPoints(cachePath) = vertices;
 
-        valueCache->GetPrimvar(cachePath, TfToken("st")) = uvs;
-
-        _MergePrimvar(
-            &valueCache->GetPrimvars(cachePath),
-            TfToken("st"),
-            HdInterpolationVertex);
-    }
-
-    if (requestedBits & HdChangeTracker::DirtyExtent) {
-        // This does not change the extent representation in the viewport,
-        // but affects the frustrum culling.
-        // This also freaks out the min / max depth calculation.
-        GfRange3d extent;
-        for (const auto& vertex: valueCache->GetPoints(cachePath).Get<VtVec3fArray>()) {
-            extent.ExtendBy(vertex);
+            _MergePrimvar(
+                &valueCache->GetPrimvars(cachePath),
+                HdTokens->points,
+                HdInterpolationVertex,
+                HdPrimvarRoleTokens->point);
         }
-        valueCache->GetExtent(cachePath) = extent;
+
+        if (requestedBits & HdChangeTracker::DirtyPrimvar) {
+            valueCache->GetPrimvar(cachePath, TfToken("st")) = uvs;
+
+            _MergePrimvar(
+                &valueCache->GetPrimvars(cachePath),
+                TfToken("st"),
+                HdInterpolationVertex);
+        }
+
+        if (requestedBits & HdChangeTracker::DirtyExtent) {
+            // This does not change the extent representation in the viewport,
+            // but affects the frustrum culling.
+            // This also freaks out the min / max depth calculation.
+            GfRange3d extent;
+            for (const auto& vertex: vertices) {
+                extent.ExtendBy(vertex);
+            }
+            valueCache->GetExtent(cachePath) = extent;
+        }
     }
 
     if (requestedBits & HdChangeTracker::DirtyTopology) {
