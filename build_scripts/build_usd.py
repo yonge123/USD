@@ -106,26 +106,31 @@ def GetCPUCount():
     except NotImplementedError:
         return 1
 
-def Run(cmd):
+def Run(cmd, logCommandOutput = True):
     """Run the specified command in a subprocess."""
     PrintInfo('Running "{cmd}"'.format(cmd=cmd))
 
     with open("log.txt", "a") as logfile:
-        # Let exceptions escape from subprocess.check_output -- higher level
-        # code will handle them.
-        p = subprocess.Popen(shlex.split(cmd),
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         logfile.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
         logfile.write("\n")
         logfile.write(cmd)
         logfile.write("\n")
-        while True:
-            l = p.stdout.readline()
-            if l != "":
-                logfile.write(l)
-                PrintCommandOutput(l)
-            elif p.poll() is not None:
-                break
+
+        # Let exceptions escape from subprocess calls -- higher level
+        # code will handle them.
+        if logCommandOutput:
+            p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, 
+                                 stderr=subprocess.STDOUT)
+            while True:
+                l = p.stdout.readline()
+                if l != "":
+                    logfile.write(l)
+                    PrintCommandOutput(l)
+                elif p.poll() is not None:
+                    break
+        else:
+            p = subprocess.Popen(shlex.split(cmd))
+            p.wait()
 
     if p.returncode != 0:
         # If verbosity >= 3, we'll have already been printing out command output
@@ -234,6 +239,29 @@ def PatchFile(filename, patches):
         shutil.copy(filename, filename + ".old")
         open(filename, 'w').writelines(newLines)
 
+def DownloadFileWithCurl(url, outputFilename):
+    # Don't log command output so that curl's progress
+    # meter doesn't get written to the log file.
+    Run("curl {progress} -L -o {filename} {url}".format(
+        progress="-#" if verbosity >= 2 else "-s",
+        filename=outputFilename, url=url), 
+        logCommandOutput=False)
+
+def DownloadFileWithPowershell(url, outputFilename):
+    # It's important that we specify to use TLS v1.2 at least or some
+    # of the downloads will fail.
+    cmd = "powershell [Net.ServicePointManager]::SecurityProtocol = \
+            [Net.SecurityProtocolType]::Tls12; \"(new-object \
+            System.Net.WebClient).DownloadFile('{url}', '{filename}')\""\
+            .format(filename=outputFilename, url=url)
+
+    Run(cmd,logCommandOutput=False)
+
+def DownloadFileWithUrllib(url, outputFilename):
+    r = urllib2.urlopen(url)
+    with open(outputFilename, "wb") as outfile:
+        outfile.write(r.read())
+
 def DownloadURL(url, context, force, dontExtract = None):
     """Download and extract the archive file at given URL to the
     source directory specified in the context. 
@@ -241,7 +269,7 @@ def DownloadURL(url, context, force, dontExtract = None):
     dontExtract may be a sequence of path prefixes that will
     be excluded when extracting the archive.
 
-    Returns the absolute  path to the directory where files have 
+    Returns the absolute path to the directory where files have 
     been extracted."""
     with CurrentWorkingDirectory(context.srcDir):
         # Extract filename from URL and see if file already exists. 
@@ -271,17 +299,26 @@ def DownloadURL(url, context, force, dontExtract = None):
 
             for i in xrange(maxRetries):
                 try:
-                    r = urllib2.urlopen(url)
-                    with open(tmpFilename, "wb") as outfile:
-                        outfile.write(r.read())
+                    context.downloader(url, tmpFilename)
                     break
                 except Exception as e:
                     PrintCommandOutput("Retrying download due to error: {err}\n"
                                        .format(err=e))
                     lastError = e
             else:
+                errorMsg = str(lastError)
+                if "SSL: TLSV1_ALERT_PROTOCOL_VERSION" in errorMsg:
+                    errorMsg += ("\n\n"
+                                 "Your OS or version of Python may not support "
+                                 "TLS v1.2+, which is required for downloading "
+                                 "files from certain websites. This support "
+                                 "was added in Python 2.7.9."
+                                 "\n\n"
+                                 "You can use curl to download dependencies "
+                                 "by installing it in your PATH and re-running "
+                                 "this script.")
                 raise RuntimeError("Failed to download {url}: {err}"
-                                   .format(url=url, err=lastError))
+                                   .format(url=url, err=errorMsg))
 
             shutil.move(tmpFilename, filename)
 
@@ -542,7 +579,7 @@ JPEG = Dependency("JPEG", InstallJPEG, "include/jpeglib.h")
 ############################################################
 # TIFF
 
-TIFF_URL = "ftp://download.osgeo.org/libtiff/tiff-4.0.7.zip"
+TIFF_URL = "http://download.osgeo.org/libtiff/tiff-4.0.7.zip"
 
 def InstallTIFF(context, force):
     with CurrentWorkingDirectory(DownloadURL(TIFF_URL, context, force)):
@@ -760,9 +797,13 @@ PYOPENGL = PythonDependency("PyOpenGL", GetPyOpenGLInstructions,
 def GetPySideInstructions():
     # For licensing reasons, this script cannot install PySide itself.
     if MacOS():
-        return ('PySide is not installed. If you have MacPorts '
-                'installed, run "port install py27-pyside-tools" '
-                'to install it, then re-run this script.\n'
+        # There are issues with the PySide package available via pip, so
+        # we direct users to installing PySide2 instead.
+        return ('PySide is not installed. If you have pip '
+                'installed, follow the instructions at '
+                'https://wiki.qt.io/Qt_for_Python/GettingStarted '
+                'to install PySide2 from published wheels, '
+                'then re-run this script.\n'
                 'If PySide is already installed, you may need to '
                 'update your PYTHONPATH to indicate where it is '
                 'located.')
@@ -870,6 +911,11 @@ def InstallUSD(context):
         else:
             extraArgs.append('-DPXR_BUILD_USD_IMAGING=OFF')
 
+        if context.buildUsdview:
+            extraArgs.append('-DPXR_BUILD_USDVIEW=ON')
+        else:
+            extraArgs.append('-DPXR_BUILD_USDVIEW=OFF')
+
         if context.buildAlembic:
             extraArgs.append('-DPXR_BUILD_ALEMBIC_PLUGIN=ON')
             if context.enableHDF5:
@@ -921,6 +967,9 @@ programDescription = """\
 Installation Script for USD
 
 Builds and installs USD and 3rd-party dependencies to specified location.
+
+If curl is installed and located in PATH, it will be used to download
+dependencies. Otherwise, a built-in downloader will be used.
 """
 
 parser = argparse.ArgumentParser(
@@ -1013,6 +1062,13 @@ subgroup.add_argument("--ptex", dest="enable_ptex", action="store_true",
 subgroup.add_argument("--no-ptex", dest="enable_ptex", 
                       action="store_false",
                       help="Disable Ptex support in imaging (default)")
+subgroup = group.add_mutually_exclusive_group()
+subgroup.add_argument("--usdview", dest="build_usdview",
+                      action="store_true", default=True,
+                      help="Build usdview (default)")
+subgroup.add_argument("--no-usdview", dest="build_usdview",
+                      action="store_false", 
+                      help="Do not build usdview")
 
 group = parser.add_argument_group(title="Imaging Plugin Options")
 subgroup = group.add_mutually_exclusive_group()
@@ -1091,6 +1147,20 @@ class InstallContext:
         self.buildDir = (os.path.abspath(args.build) if args.build
                          else os.path.join(self.usdInstDir, "build"))
 
+        # Determine which downloader to use.  The reason we don't simply
+        # use urllib2 all the time is that some older versions of Python
+        # don't support TLS v1.2, which is required for downloading some
+        # dependencies.
+        if find_executable("curl"):
+            self.downloader = DownloadFileWithCurl
+            self.downloaderName = "curl"
+        elif Windows() and find_executable("powershell"):
+            self.downloader = DownloadFileWithPowershell
+            self.downloaderName = "powershell"
+        else:
+            self.downloader = DownloadFileWithUrllib
+            self.downloaderName = "built-in"
+
         # CMake generator
         self.cmakeGenerator = args.generator
 
@@ -1117,6 +1187,11 @@ class InstallContext:
 
         # - USD Imaging
         self.buildUsdImaging = (args.build_imaging == USD_IMAGING)
+
+        # - usdview
+        self.buildUsdview = (self.buildUsdImaging and 
+                             self.buildPython and 
+                             args.build_usdview)
 
         # - Imaging plugins
         self.buildEmbree = self.buildImaging and args.build_embree
@@ -1188,8 +1263,8 @@ if context.buildImaging:
     requiredDependencies += [JPEG, TIFF, PNG, OPENEXR, GLEW, 
                              OPENIMAGEIO, OPENSUBDIV]
                              
-    if context.buildUsdImaging and context.buildPython:
-        requiredDependencies += [PYOPENGL, PYSIDE]
+if context.buildUsdview:
+    requiredDependencies += [PYOPENGL, PYSIDE]
 
 # Assume zlib already exists on Linux platforms and don't build
 # our own. This avoids potential issues where a host application
@@ -1198,6 +1273,17 @@ if context.buildImaging:
 if Linux():
     requiredDependencies.remove(ZLIB)
 
+# Error out if user explicitly specified building usdview without required
+# components. Otherwise, usdview will be silently disabled. This lets users
+# specify "--no-python" without explicitly having to specify "--no-usdview",
+# for instance.
+if "--usdview" in sys.argv:
+    if not context.buildUsdImaging:
+        PrintError("Cannot build usdview when usdImaging is disabled.")
+        sys.exit(1)
+    if not context.buildPython:
+        PrintError("Cannot build usdview when Python support is disabled.")
+        sys.exit(1)
 
 # Error out if we try to build any third party plugins with python disabled.
 if not context.buildPython:
@@ -1289,11 +1375,13 @@ Building with settings:
   3rd-party install directory   {instDir}
   Build directory               {buildDir}
   CMake generator               {cmakeGenerator}
+  Downloader                    {downloader}
 
   Building                      {buildType}
     Imaging                     {buildImaging}
       Ptex support:             {enablePtex}
     UsdImaging                  {buildUsdImaging}
+      usdview:                  {buildUsdview}
     Python support              {buildPython}
     Documentation               {buildDocs}
     Tests                       {buildTests}
@@ -1312,6 +1400,7 @@ Building with settings:
     instDir=context.instDir,
     cmakeGenerator=("Default" if not context.cmakeGenerator
                     else context.cmakeGenerator),
+    downloader=(context.downloaderName),
     dependencies=("None" if not dependenciesToBuild else 
                   ", ".join([d.name for d in dependenciesToBuild])),
     buildType=("Shared libraries" if context.buildShared
@@ -1320,6 +1409,7 @@ Building with settings:
     buildImaging=("On" if context.buildImaging else "Off"),
     enablePtex=("On" if context.enablePtex else "Off"),
     buildUsdImaging=("On" if context.buildUsdImaging else "Off"),
+    buildUsdview=("On" if context.buildUsdview else "Off"),
     buildPython=("On" if context.buildPython else "Off"),
     buildDocs=("On" if context.buildDocs else "Off"),
     buildTests=("On" if context.buildTests else "Off"),

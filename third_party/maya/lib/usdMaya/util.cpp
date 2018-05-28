@@ -22,10 +22,12 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/pxr.h"
+#include "usdMaya/colorSpace.h"
 #include "usdMaya/util.h"
 
 #include "pxr/base/gf/gamma.h"
 #include "pxr/base/tf/hashmap.h"
+#include "pxr/base/tf/staticTokens.h"
 #include "pxr/usd/usdGeom/mesh.h"
 
 #include <maya/MAnimControl.h>
@@ -93,6 +95,36 @@ PxrUsdMayaUtil::GetDagPathByName(const std::string& nodeName, MDagPath& dagPath)
 
     status = selectionList.getDagPath(0, dagPath);
 
+    return status;
+}
+
+MStatus
+PxrUsdMayaUtil::GetPlugByName(const std::string& attrPath, MPlug& plug)
+{
+    std::vector<std::string> comps = TfStringSplit(attrPath, ".");
+    if (comps.size() != 2) {
+        TF_RUNTIME_ERROR("'%s' is not a valid Maya attribute path",
+                attrPath.c_str());
+        return MStatus::kFailure;
+    }
+
+    MObject object;
+    MStatus status = GetMObjectByName(comps[0], object);
+    if (!status) {
+        return status;
+    }
+
+    MFnDependencyNode depNode(object, &status);
+    if (!status) {
+        return status;
+    }
+
+    MPlug tmpPlug = depNode.findPlug(comps[1].c_str(), true, &status);
+    if (!status) {
+        return status;
+    }
+
+    plug = tmpPlug;
     return status;
 }
 
@@ -633,7 +665,8 @@ _GetColorAndTransparencyFromLambert(
             for (int j=0;j<3;j++) {
                 displayColor[j] = color[j];
             }
-            *rgb = GfConvertDisplayToLinear(displayColor);
+            displayColor *= lambertFn.diffuseCoeff();
+            *rgb = PxrUsdMayaColorSpace::ConvertMayaToLinear(displayColor);
         }
         if (alpha) {
             MColor trn = lambertFn.transparency();
@@ -669,7 +702,7 @@ _GetColorAndTransparencyFromDepNode(
         for (int j=0; j<3; j++) {
             colorPlug.child(j).getValue(displayColor[j]);
         }
-        *rgb = GfConvertDisplayToLinear(displayColor);
+        *rgb = PxrUsdMayaColorSpace::ConvertMayaToLinear(displayColor);
     }
 
     if (alpha) {
@@ -1219,7 +1252,7 @@ _GetVec(
 {
     T ret = val.UncheckedGet<T>();
     if (attr.GetRoleName() == SdfValueRoleNames->Color)  {
-        return GfConvertLinearToDisplay(ret);
+        return PxrUsdMayaColorSpace::ConvertMayaToLinear(ret);
     }   
     return ret;
 

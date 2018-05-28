@@ -50,5 +50,30 @@ class TestSdfLayer(unittest.TestCase):
             joinedIdentifier = Sdf.Layer.CreateIdentifier(splitPath, splitArgs)
             self.assertEqual(identifier, joinedIdentifier)
 
+    def test_OpenWithInvalidFormat(self):
+        l = Sdf.Layer.FindOrOpen('foo.invalid')
+        self.assertIsNone(l)
+
+        # XXX: 
+        # OpenAsAnonymous raises a coding error when it cannot determine a
+        # file format. This is inconsistent with FindOrOpen and is purely
+        # historical.
+        with self.assertRaises(Tf.ErrorException):
+            l = Sdf.Layer.OpenAsAnonymous('foo.invalid')
+
+    def test_AnonymousIdentifiersDisplayName(self):
+        # Ensure anonymous identifiers work as expected
+
+        ident = 'anonIdent.sdf'
+        l = Sdf.Layer.CreateAnonymous(ident)
+        self.assertEqual(l.GetDisplayName(), ident)
+
+        identWithColons = 'anonIdent:afterColon.sdf'
+        l = Sdf.Layer.CreateAnonymous(identWithColons)
+        self.assertEqual(l.GetDisplayName(), identWithColons)
+
+        l = Sdf.Layer.CreateAnonymous()
+        self.assertEqual(l.GetDisplayName(), '')
+
 if __name__ == "__main__":
     unittest.main()

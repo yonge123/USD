@@ -62,12 +62,13 @@ class SdfAssetPath;
 /// names. 
 /// 
 /// A collection allows an enumeration of a set of paths to include and a 
-/// set of paths to exclude (beneath the included paths). Whether the 
-/// descendants of an included path are members of a collection are decided 
-/// by it's expansion rule (see below). A collection shall not exclude a 
-/// path that's not already included by it. This rule isn't enforced by the 
-/// authoring API, but can be validated using the UsdCollectionAPI::Validate()
-/// method. 
+/// set of paths to exclude.  Whether the descendants of an included
+/// path are members of a collection are decided by its expansion rule
+/// (see below).  If the collection excludes paths that are not descendents
+/// of included paths, the collection implicitly includes the root path
+/// &lt;/&gt;.  If such a collection also includes paths that are not
+/// descendants of the excluded paths, it is considered invalid, since
+/// the intention is ambiguous.
 /// 
 /// All the properties authored by the schema are namespaced under
 /// "collection:". The given name of the collection provides additional 
@@ -94,17 +95,27 @@ class SdfAssetPath;
 /// </li>
 /// </ul>
 /// </li>
+/// <li><b>rel collection:<i>collectionName</i>:includeRoot</b> - boolean
+/// attribute indicating whether the pseudo-root path &lt;/&gt; should
+/// be counted as one of the included target paths.  The fallback is false.
+/// This separate attribute is required because relationships cannot
+/// directly target the root.
 /// <li><b>rel collection:<i>collectionName</i>:includes</b> - specifies a list 
 /// of targets that are included in the collection. This can target prims or 
-/// properties directly. A collection can include another collection by 
-/// making its <i>includes</i> relationship target the <b>collection:{collectionName}</b> 
-/// property on the owning prim of the collection to be included.
+/// properties directly. A collection can insert the rules of another
+/// collection by making its <i>includes</i> relationship target the
+/// <b>collection:{collectionName}</b> property on the owning prim of the
+/// collection to be included.
 /// Such a property may not (and typically does not) exist on the UsdStage, but 
-/// it is the path that is used to refer to the collection. When a collection 
+/// it is the path that is used to refer to the collection.
+/// It is important to note that including another collection does not
+/// guarantee the contents of that collection will be in the final collection;
+/// instead, the rules are merged.  This means, for example, an exclude
+/// entry may exclude a portion of the included collection.
 /// When a collection includes one or more collections, the order in which 
 /// targets are added to the includes relationship may become significant, if 
 /// there are conflicting opinions about the same path. Targets that are added 
-/// later are considered to be stronger than earlier targets. 
+/// later are considered to be stronger than earlier targets for the same path.
 /// </li>
 /// <li><b>rel collection:<i>collectionName</i>:excludes</b> - specifies a list 
 /// of targets that are excluded below the <b>included</b> paths in this 
@@ -118,6 +129,13 @@ class SdfAssetPath;
 /// or of enumerating the objects belonging to the collection (see 
 /// UsdCollectionAPI::GetIncludedObjects).
 /// </li></ul>
+/// 
+/// <b>Implicit inclusion</b>
+/// 
+/// In some scenarios it is useful to express a collection that includes
+/// everything except certain paths.  To support this, a collection
+/// that has an exclude that is not a descendent of any include
+/// will include the root path &lt;/&gt;.
 /// 
 /// <b>Creating collections in C++</b>
 /// 
@@ -138,6 +156,12 @@ public:
     /// UsdPrim.
     static const bool IsTyped = false;
 
+    /// Compile-time constant indicating whether or not this class represents an 
+    /// applied API schema, i.e. an API schema that has to be applied to a prim
+    /// with a call to auto-generated Apply() method before any schema 
+    /// properties are authored.
+    static const bool IsApplied = true;
+    
     /// Compile-time constant indicating whether or not this class represents a 
     /// multiple-apply API schema. Mutiple-apply API schemas can be applied 
     /// to the same prim multiple times with different instance names. 
@@ -217,6 +241,11 @@ private:
     USD_API
     virtual const TfType &_GetTfType() const;
 
+    // This override returns true since UsdCollectionAPI is an 
+    // applied API schema.
+    USD_API
+    virtual bool _IsAppliedAPISchema() const override;
+
 public:
     // ===================================================================== //
     // Feel free to add custom code below this line, it will be preserved by 
@@ -229,6 +258,15 @@ public:
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
 
+protected:
+    // This virtual override customizes the validity checking for a 
+    // UsdCollectionAPI object. It is invoked when the schema object is 
+    // converted to a bool. 
+    // A collection is said to be valid if it has a non-empty instance name and 
+    // has a valid "expansionRule" attribute.
+    USD_API
+    virtual bool _IsCompatible() const override;
+
 public:
     /// Constructor to initialize a UsdCollectionAPI object for a collection 
     /// named \p name on the prim, \p prim.
@@ -237,8 +275,7 @@ public:
     /// modified. Use ApplyCollection() to create a collection on a prim.
     UsdCollectionAPI(const UsdPrim& prim, 
                      const TfToken &name) :
-        UsdAPISchemaBase(prim),
-        _name(name)
+        UsdAPISchemaBase(prim, /*instanceName*/ name)
     { }
 
     /// Adds a new collection named \p name on the given prim, \p prim with the 
@@ -268,18 +305,21 @@ public:
     USD_API
     static std::vector<UsdCollectionAPI> GetAllCollections(const UsdPrim &prim);
 
-    /// Returns whether the collection is valid. A collection is said to be 
-    /// valid if it has a non-empty name and has a valid "expansionRule" 
-    /// attribute.
-    USD_API
-    explicit operator bool() const;
-
     /// Represents a flattened view of a collection. An object of this class 
     /// is computed by calling UsdCollectionAPI::ComputeMembershipQuery() on a 
     /// collection. It can be used to answer queries about membership of paths 
     /// in the collection efficiently.
     class MembershipQuery {
     public:
+        /// Holds an unordered map describing membership of paths in
+        /// this collection and the associated expansionRule for how the
+        /// paths are to be expanded. If a collection includes another
+        /// collection, the included collection's PathExpansionRuleMap
+        /// is merged into this one. If a path is excluded, its
+        /// expansion rule is set to UsdTokens->exclude.
+        using PathExpansionRuleMap = std::unordered_map<SdfPath, 
+              TfToken, SdfPath::Hash>;
+
         /// Default Constructor, creates an empty MembershipQuery object for 
         /// passing into UsdCollectionAPI::ComputeMembershipQuery() via a 
         /// pointer.
@@ -334,15 +374,38 @@ public:
         bool HasExcludes() const {
             return _hasExcludes;
         }
+
+        /// Equality operator
+        bool operator==(MembershipQuery const& rhs) const {
+            return _hasExcludes == rhs._hasExcludes &&
+                _pathExpansionRuleMap == rhs._pathExpansionRuleMap;
+        }
+
+        /// Inequality operator
+        bool operator!=(MembershipQuery const& rhs) const {
+            return !(*this == rhs);
+        }
+
+        /// Hash functor
+        struct Hash {
+            USD_API
+            size_t operator()(MembershipQuery const& query) const;
+        };
+
+        /// Hash function
+        inline size_t GetHash() const {
+            return Hash()(*this);
+        }
+
+        /// Returns a raw map of the paths included or excluded in the 
+        /// collection along with the expansion rules for the included 
+        /// paths.
+        USD_API
+        PathExpansionRuleMap GetAsPathExpansionRuleMap() const {
+            return _pathExpansionRuleMap;
+        }
+
     private:
-        // Holds an unordered map describing membership of paths in this 
-        // collection and the associated expansionRule for how the paths are to 
-        // be expanded. If a collection includes another collection, the 
-        // included collection's _PathExpansionRuleMap is merged into this one. 
-        // If a path is excluded, its expansion rule is set to 
-        // UsdTokens->exclude.
-        using _PathExpansionRuleMap = std::unordered_map<SdfPath, 
-                                        TfToken, SdfPath::Hash>;
 
         // Add \p path as an included path in the MembershipQuery with the 
         // given expansion rule, \p expansionRule.
@@ -360,25 +423,19 @@ public:
         // existing opinions for overlapping paths.
         void _MergeMembershipQuery(const MembershipQuery &query);
 
-        // Returns a raw map of the paths included or excluded in the 
-        // collection along with the expansion rules for the included 
-        // paths.
-        USD_API
-        const _PathExpansionRuleMap &_GetPathExpansionRuleMap() const {
-            return _pathExpansionRuleMap;
-        }
-
         friend class UsdCollectionAPI;
 
-        _PathExpansionRuleMap _pathExpansionRuleMap;
+        PathExpansionRuleMap _pathExpansionRuleMap;
 
+        // A cached flag indicating whether _pathExpansionRuleMap contains
+        // any exclude rules.
         bool _hasExcludes=false;
     };
 
     /// Returns the name of the collection.
     USD_API
     TfToken GetName() const {
-        return _name;
+        return _GetInstanceName();
     }
 
     /// Returns the canonical path that represents this collection. 
@@ -418,10 +475,12 @@ public:
     void ComputeMembershipQuery(MembershipQuery *query) const; 
 
     /// Returns true if the collection has nothing included in it.
+    /// This requires both that the includes relationship have no
+    /// target paths, and that the includeRoot attribute be false.
     /// Note that there may be cases where the collection has no objects 
-    /// included in it even when IsEmpty() returns false. For example, 
-    /// if the included objects are unloaded or if the included objects 
-    /// are also excluded.
+    /// included in it even when HasNoIncludedPaths() returns false.
+    /// For example, if the included objects are unloaded or if the
+    /// included objects are also excluded.
     USD_API
     bool HasNoIncludedPaths() const;
 
@@ -452,6 +511,27 @@ public:
     /// collection. 
     /// 
     /// @{
+
+    /// Boolean attribute indicating whether the pseudo-root
+    /// path &lt;/&gt; should be counted as one of the included target
+    /// paths.  The fallback is false.  This separate attribute is
+    /// required because relationships cannot directly target the root.
+    ///
+    /// \n  C++ Type: bool
+    /// \n  Usd Type: SdfValueTypeNames->Bool
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: False
+    USD_API
+    UsdAttribute GetIncludeRootAttr() const;
+
+    /// See GetIncludeRootAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    USD_API
+    UsdAttribute CreateIncludeRootAttr(VtValue const &defaultValue = VtValue(),
+                                       bool writeSparsely=false) const;
 
     /// Returns the "expansionRule" attribute of the collection if it exists.
     /// 
@@ -517,7 +597,9 @@ public:
 
     /// Excludes or removes the given path, \p pathToExclude from the collection.
     /// 
-    /// This does nothing if the path is not included in the collection. 
+    /// If the collection is empty, the collection becomes one that
+    /// includes all paths except the givne path.  Otherwise, this does
+    /// nothing if the path is not included in the collection. 
     ///
     /// This does not modify the expansion-rule of the collection. Hence, if the 
     /// expansionRule is <i>expandPrims</i> or <i>expandPrimsAndProperties</i>, 
@@ -533,10 +615,10 @@ public:
     /// Validates the collection by checking the following rules:
     /// * a collection's expansionRule should be one of "explicitOnly", 
     ///   "expandPrims" or "expandPrimsAndProperties".
-    /// * a collection should not exclude any paths that are not 
-    ///   included in it.
     /// * a collection should not have have a circular dependency on 
     ///   another collection.
+    /// * a collection should not have both includes and excludes
+    ///   among its top-level rules
     USD_API 
     bool Validate(std::string *reason) const; 
 
@@ -588,9 +670,6 @@ private:
         const Usd_PrimFlagsPredicate &pred,
         std::set<UsdObject> *includedObjects,
         SdfPathSet *includedPaths);
-
-    // The name of the collection.
-    TfToken _name;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

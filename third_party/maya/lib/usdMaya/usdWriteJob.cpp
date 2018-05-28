@@ -81,10 +81,7 @@ usdWriteJob::~usdWriteJob()
 {
 }
 
-bool usdWriteJob::beginJob(const std::string &iFileName,
-                         bool append,
-                         double startTime,
-                         double endTime)
+bool usdWriteJob::beginJob(const std::string &iFileName, bool append)
 {
     // Check for DAG nodes that are a child of an already specified DAG node to export
     // if that's the case, report the issue and skip the export
@@ -132,9 +129,11 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
         return false;
     }
 
-    // Set time range for the USD file
-    mJobCtx.mStage->SetStartTimeCode(startTime);
-    mJobCtx.mStage->SetEndTimeCode(endTime);
+    // Set time range for the USD file if we're exporting animation.
+    if (!mJobCtx.mArgs.timeInterval.IsEmpty()) {
+        mJobCtx.mStage->SetStartTimeCode(mJobCtx.mArgs.timeInterval.GetMin());
+        mJobCtx.mStage->SetEndTimeCode(mJobCtx.mArgs.timeInterval.GetMax());
+    }
 
     mModelKindWriter.Reset();
 

@@ -55,6 +55,12 @@ public:
     virtual bool ComputeJointLocalTransforms(VtMatrix4dArray* xforms,
                                              UsdTimeCode time) const override;
 
+    virtual bool ComputeJointLocalTransformComponents(
+                     VtVec3fArray* translations,
+                     VtQuatfArray* rotations,
+                     VtVec3hArray* scales,
+                     UsdTimeCode time) const override;
+
     virtual bool
     GetJointTransformTimeSamples(const GfInterval& interval,
                                  std::vector<double>* times) const override;
@@ -70,10 +76,13 @@ public:
     virtual bool ComputeTransform(GfMatrix4d* xform,
                                   UsdTimeCode time) const override;
 
+    virtual bool ComputeBlendShapeWeights(VtFloatArray* weights,
+                                          UsdTimeCode time) const override;
+
 
 private:
     UsdSkelPackedJointAnimation _anim;
-    UsdAttributeQuery _translations, _rotations, _scales;
+    UsdAttributeQuery _translations, _rotations, _scales, _blendShapeWeights;
     UsdGeomXformable::XformQuery _xformQuery;
 };
 
@@ -84,10 +93,12 @@ UsdSkel_PackedJointAnimationQueryImpl::UsdSkel_PackedJointAnimationQueryImpl(
       _translations(anim.GetTranslationsAttr()),
       _rotations(anim.GetRotationsAttr()),
       _scales(anim.GetScalesAttr()),
+      _blendShapeWeights(anim.GetBlendShapeWeightsAttr()),
       _xformQuery(anim)
 {
     if(TF_VERIFY(anim)) {
         anim.GetJointsAttr().Get(&_jointOrder);
+        anim.GetBlendShapesAttr().Get(&_blendShapeOrder);
     }
 }
 
@@ -103,17 +114,46 @@ UsdSkel_PackedJointAnimationQueryImpl::ComputeJointLocalTransforms(
     VtQuatfArray rotations;
     VtVec3hArray scales;
 
-    if(_translations.Get(&translations, time) &&
-       _rotations.Get(&rotations, time) &&
-       _scales.Get(&scales, time)) {
+    if(ComputeJointLocalTransformComponents(&translations, &rotations,
+                                            &scales, time)) {
 
-        if(UsdSkelMakeTransforms(translations, rotations, scales, xforms))
-            return true;
-
-        TF_WARN("%s -- failed composing transforms from components.",
-                _anim.GetPrim().GetPath().GetText());
+        if(UsdSkelMakeTransforms(translations, rotations, scales, xforms)) {
+            if(xforms->size() == _jointOrder.size()) {
+                return true;
+            } else {
+                if(xforms->size() == 0) {
+                    // XXX: If the size of all components was zero, we
+                    // infer that the arrays were *intentionally* authored as
+                    // empty, to nullify the animation. Since this is 
+                    // suspected to be intentional, we emit no warning.
+                    return false;
+                }
+                TF_WARN("%s -- size of transform component arrays [%zu] "
+                        "!= joint order size [%zu].",
+                        _anim.GetPrim().GetPath().GetText(),
+                        xforms->size(), _jointOrder.size());
+            }
+        } else {
+            TF_WARN("%s -- failed composing transforms from components.",
+                    _anim.GetPrim().GetPath().GetText());
+        }
     }
     return false;
+}
+
+
+bool
+UsdSkel_PackedJointAnimationQueryImpl::ComputeJointLocalTransformComponents(
+    VtVec3fArray* translations,
+    VtQuatfArray* rotations,
+    VtVec3hArray* scales,
+    UsdTimeCode time) const
+{
+    TRACE_FUNCTION();
+
+    return _translations.Get(translations, time) &&
+           _rotations.Get(rotations, time) &&
+           _scales.Get(scales, time);
 }
 
 
@@ -161,6 +201,18 @@ UsdSkel_PackedJointAnimationQueryImpl::ComputeTransform(GfMatrix4d* xform,
 {
     if(TF_VERIFY(_anim, "PackedJointAnimation schema object is invalid.")) {
         return _xformQuery.GetLocalTransformation(xform, time);
+    }
+    return false;
+}
+
+
+bool
+UsdSkel_PackedJointAnimationQueryImpl::ComputeBlendShapeWeights(
+    VtFloatArray* weights,
+    UsdTimeCode time) const
+{
+    if(TF_VERIFY(_anim, "PackedJointAnimation schema object is invalid.")) {
+        return _blendShapeWeights.Get(weights, time);
     }
     return false;
 }

@@ -77,6 +77,10 @@ void wrapUsdRiStatementsAPI()
             static_cast<bool (*)(void)>( [](){ return This::IsTyped; } ))
         .staticmethod("IsTyped")
 
+        .def("IsApplied", 
+            static_cast<bool (*)(void)>( [](){ return This::IsApplied; } ))
+        .staticmethod("IsApplied")
+
         .def("IsMultipleApply", 
             static_cast<bool (*)(void)>( [](){ return This::IsMultipleApply; } ))
         .staticmethod("IsMultipleApply")
@@ -148,6 +152,9 @@ WRAP_CUSTOM {
                  const TfToken &, const std::string &, const std::string &))
              &UsdRiStatementsAPI::CreateRiAttribute,
              (arg("name"), arg("riType"), arg("nameSpace")="user"))
+        .def("GetRiAttribute",
+             &UsdRiStatementsAPI::GetRiAttribute,
+             (arg("name"), arg("nameSpace")="user"))
         .def("GetRiAttributes", &UsdRiStatementsAPI::GetRiAttributes,
              (arg("nameSpace")=""),
              return_value_policy<TfPySequenceToList>())

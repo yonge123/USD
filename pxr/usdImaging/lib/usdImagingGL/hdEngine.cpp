@@ -67,9 +67,6 @@ UsdImagingGLHdEngine::UsdImagingGLHdEngine(
     , _delegate(nullptr)
     , _renderPlugin(nullptr)
     , _taskController(nullptr)
-    , _lastViewMatrix(0.0)
-    , _lastViewport(0.0)
-    , _lastRefineLevel(0)
     , _selectionColor(1.0f, 1.0f, 0.0f, 1.0f)
     , _rootPath(rootPath)
     , _excludedPrimPaths(excludedPrimPaths)
@@ -166,23 +163,12 @@ UsdImagingGLHdEngine::_PreSetTime(const UsdPrim& root, const RenderParams& param
     // all prim refine levels will be dirtied.
     int refineLevel = _GetRefineLevel(params.complexity);
     _delegate->SetRefineLevelFallback(refineLevel);
-    if (refineLevel != _lastRefineLevel) {
-        _taskController->ResetImage();
-        _lastRefineLevel = refineLevel;
-    }
 }
 
 void
 UsdImagingGLHdEngine::_PostSetTime(const UsdPrim& root, const RenderParams& params)
 {
     HD_TRACE_FUNCTION();
-    if (_isPopulated)
-        return;
-
-    // The delegate may have been populated from somewhere other than
-    // where we are drawing. This applies a compensating transformation that
-    // cancels out any accumulated transformation from the population root.
-    _delegate->SetRootCompensation(root.GetPath());
 }
 
 /*virtual*/
@@ -201,10 +187,6 @@ UsdImagingGLHdEngine::PrepareBatch(const UsdPrim& root, RenderParams params)
         }
 
         _PreSetTime(root, params);
-        // Reset progressive rendering if we're changing the timecode.
-        if (_delegate->GetTime() != params.frame) {
-            _taskController->ResetImage();
-        }
         // SetTime will only react if time actually changes.
         _delegate->SetTime(params.frame);
         _PostSetTime(root, params);
@@ -283,8 +265,6 @@ UsdImagingGLHdEngine::_SetTimes(const UsdImagingGLHdEngineSharedPtrVector& engin
     for (size_t i = 0; i < engines.size(); ++i) {
         engines[i]->_PreSetTime(rootPrims[i], params);
         delegates.push_back(engines[i]->_delegate);
-        // Reset progressive rendering in each engine before setting timecode.
-        engines[i]->_taskController->ResetImage();
     }
 
     UsdImagingDelegate::SetTimes(delegates, times);
@@ -494,10 +474,7 @@ void
 UsdImagingGLHdEngine::RenderBatch(const SdfPathVector& paths, RenderParams params)
 {
     _taskController->SetCameraClipPlanes(params.clipPlanes);
-    if (_UpdateHydraCollection(&_renderCollection, paths, params, &_renderTags)) {
-        // If the collection was updated, reset progressive rendering.
-        _taskController->ResetImage();
-    }
+    _UpdateHydraCollection(&_renderCollection, paths, params, &_renderTags);
     _taskController->SetCollection(_renderCollection);
 
     HdxRenderTaskParams hdParams = _MakeHydraRenderParams(params);
@@ -517,10 +494,7 @@ UsdImagingGLHdEngine::Render(const UsdPrim& root, RenderParams params)
     SdfPathVector roots(1, rootPath);
 
     _taskController->SetCameraClipPlanes(params.clipPlanes);
-    if (_UpdateHydraCollection(&_renderCollection, roots, params, &_renderTags)) {
-        // If the collection was updated, reset progressive rendering.
-        _taskController->ResetImage();
-    }
+    _UpdateHydraCollection(&_renderCollection, roots, params, &_renderTags);
     _taskController->SetCollection(_renderCollection);
 
     HdxRenderTaskParams hdParams = _MakeHydraRenderParams(params);
@@ -747,14 +721,6 @@ UsdImagingGLHdEngine::SetCameraState(const GfMatrix4d& viewMatrix,
                             const GfMatrix4d& projectionMatrix,
                             const GfVec4d& viewport)
 {
-    // If the view matrix changes at all, we need to reset the progressive
-    // render.
-    if (viewMatrix != _lastViewMatrix || viewport != _lastViewport) {
-        _lastViewMatrix = viewMatrix;
-        _lastViewport = viewport;
-        _taskController->ResetImage();
-    }
-
     // usdview passes these matrices from OpenGL state.
     // update the camera in the task controller accordingly.
     _taskController->SetCameraMatrices(viewMatrix, projectionMatrix);
@@ -840,10 +806,10 @@ void
 UsdImagingGLHdEngine::SetSelected(SdfPathVector const& paths)
 {
     // populate new selection
-    HdxSelectionSharedPtr selection(new HdxSelection);
+    HdSelectionSharedPtr selection(new HdSelection);
     // XXX: Usdview currently supports selection on click. If we extend to
     // rollover (locate) selection, we need to pass that mode here.
-    HdxSelectionHighlightMode mode = HdxSelectionHighlightModeSelect;
+    HdSelection::HighlightMode mode = HdSelection::HighlightModeSelect;
     for (SdfPath const& path : paths) {
         _delegate->PopulateSelection(mode,
                                      path,
@@ -859,7 +825,7 @@ UsdImagingGLHdEngine::SetSelected(SdfPathVector const& paths)
 void
 UsdImagingGLHdEngine::ClearSelected()
 {
-    HdxSelectionSharedPtr selection(new HdxSelection);
+    HdSelectionSharedPtr selection(new HdSelection);
     _selTracker->SetSelection(selection);
 }
 
@@ -867,13 +833,13 @@ UsdImagingGLHdEngine::ClearSelected()
 void
 UsdImagingGLHdEngine::AddSelected(SdfPath const &path, int instanceIndex)
 {
-    HdxSelectionSharedPtr selection = _selTracker->GetSelectionMap();
+    HdSelectionSharedPtr selection = _selTracker->GetSelectionMap();
     if (!selection) {
-        selection.reset(new HdxSelection);
+        selection.reset(new HdSelection);
     }
     // XXX: Usdview currently supports selection on click. If we extend to
     // rollover (locate) selection, we need to pass that mode here.
-    HdxSelectionHighlightMode mode = HdxSelectionHighlightModeSelect;
+    HdSelection::HighlightMode mode = HdSelection::HighlightModeSelect;
     _delegate->PopulateSelection(mode, path, instanceIndex, selection);
 
     // set the result back to selection tracker
@@ -967,9 +933,9 @@ UsdImagingGLHdEngine::SetRendererPlugin(TfToken const &id)
         rootTransform = _delegate->GetRootTransform();
         isVisible = _delegate->GetRootVisibility();
     }
-    HdxSelectionSharedPtr selection = _selTracker->GetSelectionMap();
+    HdSelectionSharedPtr selection = _selTracker->GetSelectionMap();
     if (!selection) {
-        selection.reset(new HdxSelection);
+        selection.reset(new HdSelection);
     }
 
     // Delete hydra state.

@@ -30,6 +30,7 @@ testPrim = stage.GetPrimAtPath("/CollectionTest")
 
 geom = stage.GetPrimAtPath("/CollectionTest/Geom")
 box = stage.GetPrimAtPath("/CollectionTest/Geom/Box")
+materials = stage.GetPrimAtPath("/CollectionTest/Materials")
 
 shapes = stage.GetPrimAtPath("/CollectionTest/Geom/Shapes")
 sphere = stage.GetPrimAtPath("/CollectionTest/Geom/Shapes/Sphere")
@@ -47,11 +48,17 @@ def _DebugCollection(collection):
     for obj in incObjects: print ".. ", obj.GetPath() 
 
 class TestUsdCollectionAPI(unittest.TestCase):
+    def tearDown(self):
+        # Discard any edits made to layers
+        stage.Reload()
+        pass
+
     def test_AuthorCollections(self):
         # ----------------------------------------------------------
         # Test an explicitOnly collection.
         explicitColl = Usd.CollectionAPI.ApplyCollection(testPrim, 
                 "test:Explicit:Collection", Usd.Tokens.explicitOnly)
+        # The collection is initially empty.
         self.assertTrue(explicitColl.HasNoIncludedPaths())
         self.assertEqual(['CollectionAPI:test:Explicit:Collection'],
                          testPrim.GetAppliedSchemas())
@@ -75,6 +82,7 @@ class TestUsdCollectionAPI(unittest.TestCase):
         explicitCollIncObjects = Usd.CollectionAPI.ComputeIncludedObjects(
                 explicitCollMquery, stage)
         self.assertEqual(len(explicitCollIncObjects), 4)
+        self.assertTrue(len(explicitCollMquery.GetAsPathExpansionRuleMap()) > 0)
 
         for obj in explicitCollIncObjects:
             self.assertTrue(explicitCollMquery.IsPathIncluded(obj.GetPath()))
@@ -213,6 +221,27 @@ class TestUsdCollectionAPI(unittest.TestCase):
         self.assertTrue(query.IsPathIncluded(cylinder.GetPath()))
         self.assertTrue(query.IsPathIncluded(cube.GetPath()))
 
+        # Test includeRoot.
+        # First create a collection that excludes /CollectionTest/Geom
+        # but includes the root.
+        includeRootTest = Usd.CollectionAPI.ApplyCollection(testPrim,
+            "includeRootTest")
+        includeRootTest.IncludePath('/')
+        includeRootTest.ExcludePath(geom.GetPath())
+        query = includeRootTest.ComputeMembershipQuery()
+        self.assertTrue(query.IsPathIncluded(testPrim.GetPath()))
+        self.assertFalse(query.IsPathIncluded(geom.GetPath()))
+        self.assertFalse(query.IsPathIncluded(box.GetPath()))
+        self.assertTrue(query.IsPathIncluded(materials.GetPath()))
+        # Modify it to include /CollectionTest/Geom/Box,
+        # a path under the excluded Geom scope.
+        includeRootTest.IncludePath(box.GetPath())
+        query = includeRootTest.ComputeMembershipQuery()
+        self.assertTrue(query.IsPathIncluded(testPrim.GetPath()))
+        self.assertFalse(query.IsPathIncluded(geom.GetPath()))
+        self.assertTrue(query.IsPathIncluded(box.GetPath()))
+        self.assertTrue(query.IsPathIncluded(materials.GetPath()))
+
     def test_testReadCollection(self):
         leafGeom = Usd.CollectionAPI(testPrim, "leafGeom")
         (valid, reason) = leafGeom.Validate()
@@ -225,7 +254,7 @@ class TestUsdCollectionAPI(unittest.TestCase):
 
         (valid, reason) = leafGeom.Validate()
         self.assertTrue(valid)
-        
+
         # Test GetName() API.
         self.assertEqual(leafGeom.GetName(), 'leafGeom')
 
@@ -270,7 +299,7 @@ class TestUsdCollectionAPI(unittest.TestCase):
         (valid, reason) = allGeomProperties.Validate()
         allGeomPropertiesMquery = allGeomProperties.ComputeMembershipQuery()
         self.assertEqual(len(Usd.CollectionAPI.ComputeIncludedObjects(
-                allGeomPropertiesMquery, stage)), 27)
+                allGeomPropertiesMquery, stage)), 24)
 
         hasRels = Usd.CollectionAPI(testPrim, "hasRelationships")
         (valid, reason) = hasRels.Validate()
@@ -327,7 +356,8 @@ class TestUsdCollectionAPI(unittest.TestCase):
     def test_invalidCollections(self):
         invalidCollectionNames = ["invalidExpansionRule", 
             "invalidExcludesExplicitOnly",
-            "invalidExcludesExpandPrims"]
+            "invalidExcludesExpandPrims",
+            "invalidTopLevelRules"]
 
         for collName in invalidCollectionNames:
             coll = Usd.CollectionAPI(testPrim, collName)
@@ -397,6 +427,33 @@ class TestUsdCollectionAPI(unittest.TestCase):
             Usd.CollectionAPI.ApplyCollection(testPrim, "", 
                     Usd.Tokens.explicitOnly)
 
+    def test_CollectionEquivalence(self):
+        # ----------------------------------------------------------
+        # Test the ability to compare two collections whose MembershipQuery
+        # ends up equivalent.
+
+        # Get all collections on the root test prim
+        collections = Usd.CollectionAPI.GetAllCollections(testPrim)
+        self.assertTrue(len(collections) > 1)
+
+        # Each of their membership queries should be equal to itself,
+        # and unequal to the others.  Same for their hashes -- although
+        # note that the hashes are not, in general, guaranteed to be
+        # distinct due to the pigeonhole principle.
+        mqueries = [c.ComputeMembershipQuery() for c in collections]
+        for i in range(len(mqueries)):
+            for j in range(i, len(mqueries)):
+                if i == j:
+                    self.assertEqual(mqueries[i], mqueries[j])
+                    self.assertEqual(hash(mqueries[i]), hash(mqueries[j]))
+                else:
+                    self.assertNotEqual(mqueries[i], mqueries[j])
+
+        # Confirm that the hash operator lets us use python dicts
+        mqueryToPath = {}
+        for (coll,mquery) in zip(collections, mqueries):
+            mqueryToPath[mquery] = coll.GetCollectionPath()
+        self.assertEqual(len(mqueryToPath.keys()), len(mqueries))
 
 if __name__ == "__main__":
     unittest.main()

@@ -28,6 +28,7 @@
 #include "pxr/usdImaging/usdImaging/debugCodes.h"
 #include "pxr/usdImaging/usdImaging/delegate.h"
 #include "pxr/usdImaging/usdImaging/gprimAdapter.h"
+#include "pxr/usdImaging/usdImaging/indexProxy.h"
 #include "pxr/usdImaging/usdImaging/instancerContext.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
@@ -376,6 +377,7 @@ UsdImagingGLDrawModeAdapter::UpdateForTime(UsdPrim const& prim,
                 attr = prim.GetAttribute(textureAttrs[i]);
                 if (attr) {
                     params.push_back(HdMaterialParam(
+                                HdMaterialParam::ParamTypeTexture,
                                 textureNames[i], fallback,
                                 attr.GetPath(), samplerParams, false));
                 }
@@ -387,7 +389,7 @@ UsdImagingGLDrawModeAdapter::UpdateForTime(UsdPrim const& prim,
     }
 
     // Geometry aspect
-    PrimvarInfoVector& primvars = valueCache->GetPrimvars(cachePath);
+    HdPrimvarDescriptorVector& primvars = valueCache->GetPrimvars(cachePath);
 
     if (requestedBits & HdChangeTracker::DirtyTransform) {
         valueCache->GetTransform(cachePath) = GetTransform(prim, time);
@@ -415,14 +417,11 @@ UsdImagingGLDrawModeAdapter::UpdateForTime(UsdPrim const& prim,
         VtFloatArray widths = VtFloatArray(1);
         widths[0] = 1.0f;
         valueCache->GetWidths(cachePath) = VtValue(widths);
-
-        UsdImagingValueCache::PrimvarInfo primvar;
-        primvar.name = UsdGeomTokens->widths;
-        primvar.interpolation = UsdGeomTokens->constant;
-        _MergePrimvar(primvar, &primvars);
+        _MergePrimvar(&primvars, UsdGeomTokens->widths,
+                      HdInterpolationConstant);
     }
 
-    if (requestedBits & HdChangeTracker::DirtyPrimVar) {
+    if (requestedBits & HdChangeTracker::DirtyPrimvar) {
         VtVec4fArray color = VtVec4fArray(1);
         // Default color to 18% gray.
         GfVec3f schemaColor= GfVec3f(0.18f, 0.18f, 0.18f);
@@ -433,17 +432,15 @@ UsdImagingGLDrawModeAdapter::UpdateForTime(UsdPrim const& prim,
         color[0] = GfVec4f(schemaColor[0], schemaColor[1], schemaColor[2], 1);
         valueCache->GetColor(cachePath) = color;
 
-        UsdImagingValueCache::PrimvarInfo primvar;
-        primvar.name = HdTokens->color;
-        primvar.interpolation = UsdGeomTokens->constant;
-        _MergePrimvar(primvar, &primvars);
+        _MergePrimvar(&primvars, HdTokens->color,
+                      HdInterpolationConstant, HdPrimvarRoleTokens->color);
     }
 
     // We compute all of the below items together, since their derivations
     // aren't easily separable.
     HdDirtyBits geometryBits = HdChangeTracker::DirtyTopology |
                                HdChangeTracker::DirtyPoints |
-                               HdChangeTracker::DirtyPrimVar |
+                               HdChangeTracker::DirtyPrimvar |
                                HdChangeTracker::DirtyExtent;
 
     if (requestedBits & geometryBits) {
@@ -517,31 +514,25 @@ UsdImagingGLDrawModeAdapter::UpdateForTime(UsdPrim const& prim,
             }
 
             // Merge "cardsUv" and "cardsTexAssign" primvars
-            UsdImagingValueCache::PrimvarInfo primvar;
-            primvar.name = _tokens->cardsUv;
-            primvar.interpolation = UsdGeomTokens->faceVarying;
-            _MergePrimvar(primvar, &primvars);
-
-            primvar.name = _tokens->cardsTexAssign;
-            primvar.interpolation = UsdGeomTokens->uniform;
-            _MergePrimvar(primvar, &primvars);
+            _MergePrimvar(&primvars, _tokens->cardsUv,
+                          HdInterpolationFaceVarying);
+            _MergePrimvar(&primvars, _tokens->cardsTexAssign,
+                          HdInterpolationUniform);
 
             // XXX: backdoor into the material system.
             valueCache->GetPrimvar(cachePath, _tokens->displayRoughness) =
                 VtValue(1.0f);
-            primvar.name = _tokens->displayRoughness;
-            primvar.interpolation = UsdGeomTokens->constant;
-            _MergePrimvar(primvar, &primvars);
+            _MergePrimvar(&primvars, _tokens->displayRoughness,
+                          HdInterpolationConstant);
         } else {
             TF_CODING_ERROR("<%s> Unexpected draw mode %s",
                 cachePath.GetText(), drawMode.GetText());
         }
 
         // Merge "points" primvar
-        UsdImagingValueCache::PrimvarInfo primvar;
-        primvar.name = HdTokens->points;
-        primvar.interpolation = UsdGeomTokens->vertex;
-        _MergePrimvar(primvar, &primvars);
+        _MergePrimvar(&primvars, HdTokens->points,
+                      HdInterpolationVertex,
+                      HdPrimvarRoleTokens->point);
     }
 }
 
@@ -551,7 +542,7 @@ UsdImagingGLDrawModeAdapter::ProcessPropertyChange(UsdPrim const& prim,
                                                  TfToken const& propertyName)
 {
     if (propertyName == UsdGeomTokens->modelDrawModeColor)
-        return HdChangeTracker::DirtyPrimVar;
+        return HdChangeTracker::DirtyPrimvar;
     else if (propertyName == UsdGeomTokens->modelCardGeometry)
         return (HdChangeTracker::DirtyTopology | HdChangeTracker::DirtyPoints);
     else if (propertyName == UsdGeomTokens->extent)
@@ -842,10 +833,10 @@ UsdImagingGLDrawModeAdapter::_GenerateCardsFromTextureGeometry(
     VtIntArray faceCounts = VtIntArray(faces.size());
     VtIntArray faceIndices = VtIntArray(faces.size() * 4);
 
-    GfVec3f corners[4] = { GfVec3f(-1, -1, 0), GfVec3f(1, -1, 0),
-                           GfVec3f(1, 1, 0), GfVec3f(-1, 1, 0) };
-    GfVec2f std_uvs[4] = { GfVec2f(0,0), GfVec2f(1,0),
-                           GfVec2f(1,1), GfVec2f(0,1) };
+    GfVec3f corners[4] = { GfVec3f(-1, -1, 0), GfVec3f(-1, 1, 0),
+                           GfVec3f(1, 1, 0), GfVec3f(1, -1, 0) };
+    GfVec2f std_uvs[4] = { GfVec2f(0,0), GfVec2f(0,1),
+                           GfVec2f(1,1), GfVec2f(1,0) };
 
     for(size_t i = 0; i < faces.size(); ++i) {
         GfMatrix4d screenToWorld = faces[i].first.GetInverse();
@@ -916,45 +907,40 @@ UsdImagingGLDrawModeAdapter::_GenerateTextureCoordinates(
         VtValue *uv, VtValue *assign, uint8_t axes_mask) const
 {
     // Note: this function depends on the vertex order of the generated
-    // card faces. Per spec, the texture axes are:
-    //  card +x: local (-y,-z)
-    //  card -x: local (y,-z)
-    //  card +y: local (x,-z)
-    //  card -y: local (-x,-z)
-    //  card +z: local (x,-y)
-    //  card -z: local (x,-y)
-    // .. meaning, for example: card x uv (0,0) maps to (y,z), and uv (1,1)
-    // maps to (-y,-z).
+    // card faces.
     //
     // This function generates face-varying UVs, and also uniform indices
     // for each face specifying which texture to sample.
 
     const GfVec2f uv_normal[4] =
-        { GfVec2f(0,0), GfVec2f(1,0), GfVec2f(1,1), GfVec2f(0,1) };
-    const GfVec2f uv_flipped[4] =
         { GfVec2f(1,0), GfVec2f(0,0), GfVec2f(0,1), GfVec2f(1,1) };
+    const GfVec2f uv_flipped_s[4] =
+        { GfVec2f(0,0), GfVec2f(1,0), GfVec2f(1,1), GfVec2f(0,1) };
+    const GfVec2f uv_flipped_t[4] =
+        { GfVec2f(1,1), GfVec2f(0,1), GfVec2f(0,0), GfVec2f(1,0) };
+    const GfVec2f uv_flipped_st[4] =
+        { GfVec2f(0,1), GfVec2f(1,1), GfVec2f(1,0), GfVec2f(0,0) };
 
     std::vector<const GfVec2f*> uv_faces;
     std::vector<int> face_assign;
     if (axes_mask & xAxis) {
-        uv_faces.push_back((axes_mask & xPos) ? uv_normal : uv_flipped);
+        uv_faces.push_back((axes_mask & xPos) ? uv_normal : uv_flipped_s);
         face_assign.push_back((axes_mask & xPos) ? xPos : xNeg);
-        uv_faces.push_back((axes_mask & xNeg) ? uv_normal : uv_flipped);
+        uv_faces.push_back((axes_mask & xNeg) ? uv_normal : uv_flipped_s);
         face_assign.push_back((axes_mask & xNeg) ? xNeg : xPos);
     }
     if (axes_mask & yAxis) {
-        uv_faces.push_back((axes_mask & yPos) ? uv_normal : uv_flipped);
+        uv_faces.push_back((axes_mask & yPos) ? uv_normal : uv_flipped_s);
         face_assign.push_back((axes_mask & yPos) ? yPos : yNeg);
-        uv_faces.push_back((axes_mask & yNeg) ? uv_normal : uv_flipped);
+        uv_faces.push_back((axes_mask & yNeg) ? uv_normal : uv_flipped_s);
         face_assign.push_back((axes_mask & yNeg) ? yNeg : yPos);
     }
     if (axes_mask & zAxis) {
-        // (Z+) and (Z-) have the same (s,t) facing so we don't need to flip uvs
-        // when borrowing a texture from the other side of the axis; we just
-        // need to flip for the different winding order of the faces.
-        uv_faces.push_back(uv_flipped);
+        // (Z+) and (Z-) need to be flipped on the (t) axis instead of the (s)
+        // axis when we're borrowing a texture from the other side of the axis.
+        uv_faces.push_back((axes_mask & zPos) ? uv_normal : uv_flipped_t);
         face_assign.push_back((axes_mask & zPos) ? zPos : zNeg);
-        uv_faces.push_back(uv_normal);
+        uv_faces.push_back((axes_mask & zNeg) ? uv_flipped_st : uv_flipped_s);
         face_assign.push_back((axes_mask & zNeg) ? zNeg : zPos);
     }
 
