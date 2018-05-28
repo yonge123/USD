@@ -707,8 +707,13 @@ SdfLayer::FindOrOpen(const string &identifier,
     if (SdfLayerRefPtr layer =
         _TryToFindLayer(layerInfo.identifier, layerInfo.resolvedLayerPath,
                         lock, /*retryAsWriter=*/true)) {
-        return layer->_WaitForInitializationAndCheckIfSuccessful() ?
-            layer : TfNullPtr;
+        // This could be written as a ternary, but we rely on return values 
+        // being implicitly moved to avoid making an unnecessary copy of 
+        // layer and the associated ref-count bump.
+        if (layer->_WaitForInitializationAndCheckIfSuccessful()) {
+            return layer;
+        }
+        return TfNullPtr;
     }
     // At this point _TryToFindLayer has upgraded lock to a writer.
 
@@ -735,6 +740,15 @@ SdfLayer::OpenAsAnonymous(
     _FindOrOpenLayerInfo layerInfo;
     if (!_ComputeInfoToFindOrOpenLayer(layerPath, FileFormatArguments(), 
                                        &layerInfo)) {
+        return TfNullPtr;
+    }
+
+    // XXX: Is this really a coding error? SdfLayer avoids issuing errors if
+    //      given a non-existent file, for instance. Should we be following the
+    //      same policy here?
+    if (!layerInfo.fileFormat) {
+        TF_CODING_ERROR("Cannot determine file format for @%s@", 
+                        layerInfo.identifier.c_str());
         return TfNullPtr;
     }
 

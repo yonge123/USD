@@ -24,6 +24,7 @@
 #include "pxr/usdImaging/usdImaging/instanceAdapter.h"
 
 #include "pxr/usdImaging/usdImaging/delegate.h"
+#include "pxr/usdImaging/usdImaging/indexProxy.h"
 #include "pxr/usdImaging/usdImaging/instancerContext.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
@@ -293,7 +294,7 @@ UsdImagingInstanceAdapter::_Populate(UsdPrim const& prim,
             // Ensure that the instance transforms are computed on the first
             // call to UpdateForTime.
             index->MarkInstancerDirty(instancerPath,
-                HdChangeTracker::DirtyPrimVar);
+                HdChangeTracker::DirtyPrimvar);
         } else if (nestedInstances.empty()) {
             // if this instance path ends up to have no prims in subtree
             // and not an instance itself , we don't need to track this path
@@ -500,10 +501,10 @@ UsdImagingInstanceAdapter::TrackVariability(UsdPrim const& prim,
 
         // If any of the instance transforms vary over time, the
         // instancer will have the DirtyInstancer bit set. Translate
-        // that to DirtyPrimVar so that Hd will note that the
+        // that to DirtyPrimvar so that Hd will note that the
         // instance transform primvar is varying over time.
         if (instancerBits & HdChangeTracker::DirtyInstancer) {
-            *timeVaryingBits |= HdChangeTracker::DirtyPrimVar;
+            *timeVaryingBits |= HdChangeTracker::DirtyPrimvar;
         }
     }
 }
@@ -885,17 +886,17 @@ UsdImagingInstanceAdapter::UpdateForTime(UsdPrim const& prim,
 
     } else if (TfMapLookupPtr(_instancerData, prim.GetPath()) != nullptr) {
         // For the instancer itself, we only send the instance transforms
-        // back as primvars, which falls into the DirtyPrimVar bucket
+        // back as primvars, which falls into the DirtyPrimvar bucket
         // currently.
-        if (requestedBits & HdChangeTracker::DirtyPrimVar) {
+        if (requestedBits & HdChangeTracker::DirtyPrimvar) {
             VtMatrix4dArray instanceXforms;
             if (_ComputeInstanceTransforms(prim, &instanceXforms, time)) {
                 valueCache->GetPrimvar(
                     cachePath, HdTokens->instanceTransform) = instanceXforms;
-                UsdImagingValueCache::PrimvarInfo primvar;
-                primvar.name = HdTokens->instanceTransform;
-                primvar.interpolation = _tokens->instance;
-                _MergePrimvar(primvar, &valueCache->GetPrimvars(cachePath));
+                _MergePrimvar(
+                    &valueCache->GetPrimvars(cachePath),
+                    HdTokens->instanceTransform,
+                    HdInterpolationInstance);
             }
         }
 
@@ -1088,9 +1089,9 @@ UsdImagingInstanceAdapter::MarkTransformDirty(UsdPrim const& prim,
     } else if (TfMapLookupPtr(_instancerData, prim.GetPath()) != nullptr) {
         // For the instancer itself, the instance transforms are sent back
         // as primvars, so we need to augment the DirtyTransform bit with
-        // DirtyPrimVar.
+        // DirtyPrimvar.
         static const HdDirtyBits transformDirty =
-                                                HdChangeTracker::DirtyPrimVar  |
+                                                HdChangeTracker::DirtyPrimvar  |
                                                 HdChangeTracker::DirtyTransform;
 
         index->MarkInstancerDirty(cachePath, transformDirty);
@@ -1649,8 +1650,8 @@ struct UsdImagingInstanceAdapter::_PopulateInstanceSelectionFn
         SdfPath const &instancerPath_,
         SdfPath const &instancePath_,
         VtIntArray const &instanceIndices_,
-        HdxSelectionHighlightMode const& highlightMode_,
-        HdxSelectionSharedPtr const &result_)
+        HdSelection::HighlightMode const& highlightMode_,
+        HdSelectionSharedPtr const &result_)
         : adapter(adapter_)
         , instancerPath(instancerPath_)
         , instancePath(instancePath_)
@@ -1699,14 +1700,14 @@ struct UsdImagingInstanceAdapter::_PopulateInstanceSelectionFn
         TF_FOR_ALL (it, instancerData->primMap) {
             SdfPath protoRprim = it->first;
             // convert to indexPath (add prefix)
-            SdfPath indexPath = adapter->_delegate->GetPathForIndex(it->first);
+            SdfPath indexPath = adapter->_GetPathForIndex(it->first);
 
             // highlight all subtree with instanceIndices.
             // XXX: this seems redundant, but needed for point instancer 
-            // highlighting for now. Ideally we should communicate back to point 
+            // highlighting for now. Ideally we should communicate back to point
             // instancer adapter to not use renderIndex
-            SdfPathVector const &ids
-                = adapter->_delegate->GetRenderIndex().GetRprimSubtree(indexPath);
+            SdfPathVector const &ids = adapter->_GetRprimSubtree(indexPath);
+
             TF_FOR_ALL (protoIt, ids) {
                 result->AddInstance(highlightMode, *protoIt, niInstanceIndices);
 
@@ -1725,18 +1726,18 @@ struct UsdImagingInstanceAdapter::_PopulateInstanceSelectionFn
     SdfPath instancerPath;
     SdfPath instancePath;
     VtIntArray instanceIndices;
-    HdxSelectionHighlightMode highlightMode;
-    HdxSelectionSharedPtr result;
+    HdSelection::HighlightMode highlightMode;
+    HdSelectionSharedPtr result;
     bool found;
 };
 
 /*virtual*/
 bool
 UsdImagingInstanceAdapter::PopulateSelection(
-    HdxSelectionHighlightMode const& highlightMode,
+    HdSelection::HighlightMode const& highlightMode,
     SdfPath const &instancePath,
     VtIntArray const &instanceIndices,
-    HdxSelectionSharedPtr const &result)
+    HdSelectionSharedPtr const &result)
 {
     HD_TRACE_FUNCTION();
 

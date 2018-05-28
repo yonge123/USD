@@ -60,6 +60,12 @@ UsdShadeMaterialBindingAPI::Get(const UsdStagePtr &stage, const SdfPath &path)
     return UsdShadeMaterialBindingAPI(stage->GetPrimAtPath(path));
 }
 
+/*virtual*/
+bool 
+UsdShadeMaterialBindingAPI::_IsAppliedAPISchema() const 
+{
+    return true;
+}
 
 /* static */
 UsdShadeMaterialBindingAPI
@@ -681,8 +687,16 @@ UsdShadeMaterialBindingAPI::ComputeBoundMaterial(
             if (bindingsIt == bindingsCache->end()) {
                 TRACE_SCOPE("UsdShadeMaterialBindingAPI::ComputeBoundMaterial "
                         "(BindingsCache)");
-                bindingsIt = bindingsCache->emplace(p.GetPath(), 
-                    std::make_shared<BindingsAtPrim>(p, materialPurpose)).first;
+
+                std::unique_ptr<BindingsAtPrim> bindingsAtP(
+                    new BindingsAtPrim(p, materialPurpose));
+                    
+                // XXX: emplace does not work here due to a tbb bug.
+                // see https://software.intel.com/en-us/forums/
+                // intel-threading-building-blocks/topic/671548
+                
+                bindingsIt = bindingsCache->insert(std::make_pair(p.GetPath(), 
+                    std::move(bindingsAtP))).first;
             }
 
             const BindingsAtPrim &bindingsAtP = *bindingsIt->second;
@@ -721,12 +735,15 @@ UsdShadeMaterialBindingAPI::ComputeBoundMaterial(
                     TRACE_SCOPE("UsdShadeMaterialBindingAPI::"
                         "ComputeBoundMaterial (CollectionQuery)");
 
-                    std::shared_ptr<UsdCollectionAPI::MembershipQuery> mQuery =
-                        std::make_shared<UsdCollectionAPI::MembershipQuery>();
+                    std::unique_ptr<UsdCollectionAPI::MembershipQuery> 
+                        mQuery(new UsdCollectionAPI::MembershipQuery);
                     collection.ComputeMembershipQuery(mQuery.get());
 
-                    collIt = collectionQueryCache->emplace(
-                        collectionPath, mQuery).first; 
+                    // XXX: emplace does not work here due to a tbb bug.
+                    // see https://software.intel.com/en-us/forums/
+                    // intel-threading-building-blocks/topic/671548
+                    collIt = collectionQueryCache->insert(std::make_pair(
+                        collectionPath, std::move(mQuery))).first; 
                 }
                 
                 bool isPrimIncludedInCollection = 

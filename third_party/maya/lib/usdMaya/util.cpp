@@ -22,10 +22,12 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/pxr.h"
+#include "usdMaya/colorSpace.h"
 #include "usdMaya/util.h"
 
 #include "pxr/base/gf/gamma.h"
 #include "pxr/base/tf/hashmap.h"
+#include "pxr/base/tf/staticTokens.h"
 #include "pxr/usd/usdGeom/mesh.h"
 
 #include <maya/MAnimControl.h>
@@ -93,6 +95,36 @@ PxrUsdMayaUtil::GetDagPathByName(const std::string& nodeName, MDagPath& dagPath)
 
     status = selectionList.getDagPath(0, dagPath);
 
+    return status;
+}
+
+MStatus
+PxrUsdMayaUtil::GetPlugByName(const std::string& attrPath, MPlug& plug)
+{
+    std::vector<std::string> comps = TfStringSplit(attrPath, ".");
+    if (comps.size() != 2) {
+        TF_RUNTIME_ERROR("'%s' is not a valid Maya attribute path",
+                attrPath.c_str());
+        return MStatus::kFailure;
+    }
+
+    MObject object;
+    MStatus status = GetMObjectByName(comps[0], object);
+    if (!status) {
+        return status;
+    }
+
+    MFnDependencyNode depNode(object, &status);
+    if (!status) {
+        return status;
+    }
+
+    MPlug tmpPlug = depNode.findPlug(comps[1].c_str(), true, &status);
+    if (!status) {
+        return status;
+    }
+
+    plug = tmpPlug;
     return status;
 }
 
@@ -630,7 +662,8 @@ _GetColorAndTransparencyFromLambert(
             for (int j=0;j<3;j++) {
                 displayColor[j] = color[j];
             }
-            *rgb = GfConvertDisplayToLinear(displayColor);
+            displayColor *= lambertFn.diffuseCoeff();
+            *rgb = PxrUsdMayaColorSpace::ConvertMayaToLinear(displayColor);
         }
         if (alpha) {
             MColor trn = lambertFn.transparency();
@@ -666,7 +699,7 @@ _GetColorAndTransparencyFromDepNode(
         for (int j=0; j<3; j++) {
             colorPlug.child(j).getValue(displayColor[j]);
         }
-        *rgb = GfConvertDisplayToLinear(displayColor);
+        *rgb = PxrUsdMayaColorSpace::ConvertMayaToLinear(displayColor);
     }
 
     if (alpha) {
@@ -990,79 +1023,21 @@ PxrUsdMayaUtil::CompressFaceVaryingPrimvarIndices(
 }
 
 bool
-PxrUsdMayaUtil::AddUnassignedUVIfNeeded(
-        VtArray<GfVec2f>* uvData,
-        VtArray<int>* assignmentIndices,
-        const GfVec2f& defaultUV)
-{
-    if (!assignmentIndices || assignmentIndices->empty()) {
+PxrUsdMayaUtil::SetUnassignedValueIndex(
+    VtArray<int>* assignmentIndices,
+    int* unassignedValueIndex) {
+    if (assignmentIndices == nullptr || unassignedValueIndex == nullptr) {
         return false;
     }
 
-    int unassignedValueIndex = -1;
-
-    for (size_t i = 0; i < assignmentIndices->size(); ++i) {
-        if ((*assignmentIndices)[i] >= 0) {
-            // This component has an assignment, so skip it.
-            continue;
+    *unassignedValueIndex = -1;
+    for (auto& index: *assignmentIndices) {
+        if (index < 0) {
+            index = -1;
+            *unassignedValueIndex = 0;
         }
-
-        if (unassignedValueIndex < 0) {
-            if (uvData->size()) {
-                unassignedValueIndex = uvData->size();
-                uvData->push_back(defaultUV);
-            }
-        }
-
-        // Assign the component the unassigned value index.
-        (*assignmentIndices)[i] = unassignedValueIndex;
     }
-
-    return true;
-}
-
-bool
-PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
-        VtArray<GfVec3f>* RGBData,
-        VtArray<float>* AlphaData,
-        VtArray<int>* assignmentIndices,
-        const GfVec3f& defaultRGB,
-        const float defaultAlpha)
-{
-    if (!assignmentIndices || assignmentIndices->empty()) {
-        return false;
-    }
-
-    if (RGBData && AlphaData && (RGBData->size() != AlphaData->size())) {
-        TF_CODING_ERROR("Unequal sizes for color (%zu) and opacity (%zu)",
-                        RGBData->size(), AlphaData->size());
-    }
-
-    int unassignedValueIndex = -1;
-
-    for (size_t i=0; i < assignmentIndices->size(); ++i) {
-        if ((*assignmentIndices)[i] >= 0) {
-            // This component has an assignment, so skip it.
-            continue;
-        }
-
-        if (unassignedValueIndex < 0) {
-            if (RGBData) {
-                unassignedValueIndex = RGBData->size();
-                RGBData->push_back(defaultRGB);
-            }
-
-            if (AlphaData) {
-                unassignedValueIndex = AlphaData->size();
-                AlphaData->push_back(defaultAlpha);
-            }
-        }
-
-        // Assign the component the unassigned value index.
-        (*assignmentIndices)[i] = unassignedValueIndex;
-    }
-
-    return true;
+    return *unassignedValueIndex == 0;
 }
 
 bool
@@ -1229,7 +1204,7 @@ _GetVec(
 {
     T ret = val.UncheckedGet<T>();
     if (attr.GetRoleName() == SdfValueRoleNames->Color)  {
-        return GfConvertLinearToDisplay(ret);
+        return PxrUsdMayaColorSpace::ConvertMayaToLinear(ret);
     }   
     return ret;
 

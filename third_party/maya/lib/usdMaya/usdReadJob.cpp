@@ -99,7 +99,31 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
         return false;
     }
 
-    TfToken modelName = UsdUtilsGetModelNameFromRootLayer(rootLayer);
+    SdfPath primSdfPath;
+
+    if (mPrimPath.empty()) {
+        TfToken rootName = UsdUtilsGetModelNameFromRootLayer(rootLayer);
+        primSdfPath = SdfPath(rootName);
+        if (primSdfPath.IsEmpty()) {
+            std::string errorMsg = TfStringPrintf(
+                "Default prim \"%s\" was not a valid prim path",
+                rootName.GetText());
+            MGlobal::displayError(errorMsg.c_str());
+            return false;
+        }
+    }
+    else {
+        primSdfPath = SdfPath(mPrimPath);
+        if (primSdfPath.IsEmpty()) {
+            std::string errorMsg = TfStringPrintf(
+                "Given root prim \"%s\" is not a valid prim path",
+                mPrimPath.c_str());
+            MGlobal::displayError(errorMsg.c_str());
+            return false;
+        }
+    }
+
+    primSdfPath = primSdfPath.MakeAbsolutePath(SdfPath::AbsoluteRootPath()).GetAbsoluteRootOrPrimPath();
 
     std::vector<std::pair<std::string, std::string> > varSelsVec;
     TF_FOR_ALL(iter, mVariants) {
@@ -110,7 +134,7 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
     }
 
     SdfLayerRefPtr sessionLayer =
-        UsdUtilsStageCache::GetSessionLayerForVariantSelections(modelName,
+        UsdUtilsStageCache::GetSessionLayerForVariantSelections(primSdfPath,
                                                                 varSelsVec);
 
     // Layer and Stage used to Read in the USD file
@@ -122,39 +146,38 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
 
     stage->SetEditTarget(stage->GetSessionLayer());
 
-    // If readAnimData is true, we expand the Min/Max time sliders to include
-    // the stage's range if necessary.
-    if (mArgs.readAnimData) {
+    // If the import time interval isn't empty, we expand the Min/Max time
+    // sliders to include the stage's range if necessary.
+    if (!mArgs.timeInterval.IsEmpty()) {
         MTime currentMinTime = MAnimControl::minTime();
         MTime currentMaxTime = MAnimControl::maxTime();
 
-        double startTimeCode, endTimeCode;
-        if (mArgs.useCustomFrameRange) {
-            if (mArgs.startTime > mArgs.endTime) {
+        GfInterval stageInterval;
+        if (mArgs.timeInterval.IsFinite()) {
+            if (mArgs.timeInterval.GetMin() > mArgs.timeInterval.GetMax()) {
                 std::string errorMsg = TfStringPrintf(
                     "Frame range start (%f) was greater than end (%f)",
-                    mArgs.startTime, mArgs.endTime);
+                    mArgs.timeInterval.GetMin(), mArgs.timeInterval.GetMax());
                 MGlobal::displayError(errorMsg.c_str());
                 return false;
             }
-            startTimeCode = mArgs.startTime;
-            endTimeCode = mArgs.endTime;
+            stageInterval = mArgs.timeInterval;
         } else {
-            startTimeCode = stage->GetStartTimeCode();
-            endTimeCode = stage->GetEndTimeCode();
+            stageInterval.SetMin(stage->GetStartTimeCode());
+            stageInterval.SetMax(stage->GetEndTimeCode());
         }
 
-        if (startTimeCode < currentMinTime.value()) {
-            MAnimControl::setMinTime(MTime(startTimeCode));
+        if (stageInterval.GetMin() < currentMinTime.value()) {
+            MAnimControl::setMinTime(MTime(stageInterval.GetMin()));
         }
-        if (endTimeCode > currentMaxTime.value()) {
-            MAnimControl::setMaxTime(MTime(endTimeCode));
+        if (stageInterval.GetMax() > currentMaxTime.value()) {
+            MAnimControl::setMaxTime(MTime(stageInterval.GetMax()));
         }
     }
 
     // Use the primPath to get the root usdNode
     UsdPrim usdRootPrim = mPrimPath.empty() ? stage->GetDefaultPrim() :
-        stage->GetPrimAtPath(SdfPath(mPrimPath));
+        stage->GetPrimAtPath(primSdfPath);
     if (!usdRootPrim && !(mPrimPath.empty() || mPrimPath == "/")) {
         std::string errorMsg = TfStringPrintf(
             "Unable to set root prim to \"%s\" for USD file \"%s\" - using pseudo-root \"/\" instead",
@@ -173,6 +196,11 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
         return false;
     }
 
+    SdfPrimSpecHandle usdRootPrimSpec =
+        SdfCreatePrimInLayer(sessionLayer, usdRootPrim.GetPrimPath());
+    if (!usdRootPrimSpec) {
+        return false;
+    }
     // Set the variants on the usdRootPrim
     for (std::map<std::string, std::string>::iterator it=mVariants.begin(); it!=mVariants.end(); ++it) {
         usdRootPrim.GetVariantSet(it->first).SetVariantSelection(it->second);
@@ -265,11 +293,9 @@ bool usdReadJob::_DoImport(UsdPrimRange& rootRange,
                 // This is the normal Read step (pre-visit).
                 PxrUsdMayaPrimReaderArgs args(prim,
                                               mArgs.shadingMode,
-                                              mArgs.defaultMeshScheme,
-                                              mArgs.readAnimData,
-                                              mArgs.useCustomFrameRange,
-                                              mArgs.startTime,
-                                              mArgs.endTime);
+                                              mArgs.timeInterval,
+                                              mArgs.includeMetadataKeys,
+                                              mArgs.includeAPINames);
                 PxrUsdMayaPrimReaderContext readCtx(&mNewNodeRegistry);
 
                 // If we are NOT importing on behalf of an assembly, then we'll

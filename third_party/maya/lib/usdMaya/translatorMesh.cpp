@@ -23,6 +23,7 @@
 //
 #include "pxr/pxr.h"
 #include "usdMaya/translatorMesh.h"
+#include "usdMaya/readUtil.h"
 
 #include "usdMaya/meshUtil.h"
 #include "usdMaya/roundTripUtil.h"
@@ -41,7 +42,6 @@
 #include <maya/MUintArray.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
-
 
 
 /* static */
@@ -112,22 +112,22 @@ PxrUsdMayaTranslatorMesh::Create(
     }
 
     // Gather points and normals
-    // If args.GetReadAnimData() is TRUE,
-    // pick the first avaiable sample or default
+    // If timeInterval is non-empty, pick the first available sample in the
+    // timeInterval or default.
     UsdTimeCode pointsTimeSample=UsdTimeCode::EarliestTime();
     UsdTimeCode normalsTimeSample=UsdTimeCode::EarliestTime();
     std::vector<double> pointsTimeSamples;
     size_t pointsNumTimeSamples = 0;
-    if (args.GetReadAnimData()) {
-        PxrUsdMayaTranslatorUtil::GetTimeSamples(mesh.GetPointsAttr(), args,
-                &pointsTimeSamples);
+    if (!args.GetTimeInterval().IsEmpty()) {
+        mesh.GetPointsAttr().GetTimeSamplesInInterval(
+                args.GetTimeInterval(), &pointsTimeSamples);
         pointsNumTimeSamples = pointsTimeSamples.size();
         if (pointsNumTimeSamples>0) {
             pointsTimeSample = pointsTimeSamples[0];
         }
     	std::vector<double> normalsTimeSamples;
-        PxrUsdMayaTranslatorUtil::GetTimeSamples(mesh.GetNormalsAttr(), args,
-                &normalsTimeSamples);
+        mesh.GetNormalsAttr().GetTimeSamplesInInterval(
+                args.GetTimeInterval(), &normalsTimeSamples);
         if (normalsTimeSamples.size()) {
             normalsTimeSample = normalsTimeSamples[0];
         }
@@ -140,6 +140,15 @@ PxrUsdMayaTranslatorMesh::Create(
             TfStringPrintf("Points arrays is empty on Mesh <%s>. Skipping...", 
                 prim.GetPath().GetText()).c_str());
         return false; // invalid mesh, so exit
+    }
+
+    std::string reason;
+    if (!UsdGeomMesh::ValidateTopology(faceVertexIndices, faceVertexCounts,
+                                       points.size(), &reason)) {
+        MGlobal::displayError(
+            TfStringPrintf("Skipping Mesh <%s> with invalid topology: %s",
+                           prim.GetPath().GetText(), reason.c_str()).c_str());
+        return false;
     }
 
 
@@ -209,18 +218,27 @@ PxrUsdMayaTranslatorMesh::Create(
         }
      }
 
-    // Determine if PolyMesh or SubdivMesh
-    TfToken subdScheme = PxrUsdMayaMeshUtil::setSubdivScheme(mesh, meshFn, args.GetDefaultMeshScheme());
+    // Copy UsdGeomMesh schema attrs into Maya if they're authored.
+    PxrUsdMayaReadUtil::ReadSchemaAttributesFromPrim<UsdGeomMesh>(
+            mesh.GetPrim(),
+            meshFn.object(),
+            {
+                UsdGeomTokens->subdivisionScheme,
+                UsdGeomTokens->interpolateBoundary,
+                UsdGeomTokens->faceVaryingLinearInterpolation
+            });
 
-    // If we are dealing with polys, check if there are normals
-    // If we are dealing with SubdivMesh, read additional attributes and SubdivMesh properties
-    if (subdScheme == UsdGeomTokens->none) {
-        if (normals.size() == static_cast<size_t>(meshFn.numFaceVertices())) {
-            PxrUsdMayaMeshUtil::setEmitNormals(mesh, meshFn, UsdGeomTokens->none);
+    // If we are dealing with polys, check if there are normals and set the
+    // internal emit-normals tag so that the normals will round-trip.
+    // If we are dealing with a subdiv, read additional subdiv tags.
+    TfToken subdScheme;
+    if (mesh.GetSubdivisionSchemeAttr().Get(&subdScheme) &&
+            subdScheme == UsdGeomTokens->none) {
+        if (normals.size() == static_cast<size_t>(meshFn.numFaceVertices()) &&
+                mesh.GetNormalsInterpolation() == UsdGeomTokens->faceVarying) {
+            PxrUsdMayaMeshUtil::SetEmitNormalsTag(meshFn, true);
         }
     } else {
-        PxrUsdMayaMeshUtil::setSubdivInterpBoundary(mesh, meshFn, UsdGeomTokens->edgeAndCorner);
-        PxrUsdMayaMeshUtil::setSubdivFVLinearInterpolation(mesh, meshFn);
         _AssignSubDivTagsToMesh(mesh, meshObj, meshFn);
     }
  
@@ -262,8 +280,13 @@ PxrUsdMayaTranslatorMesh::Create(
         // which store floats, so we currently only import primvars holding
         // float-typed arrays. Should we still consider other precisions
         // (double, half, ...) and/or numeric types (int)?
-        if (typeName == SdfValueTypeNames->Float2Array) {
-            // We assume that Float2Array primvars are UV sets.
+        if(typeName == SdfValueTypeNames->TexCoord2fArray ||
+                (PxrUsdMayaReadUtil::ReadFloat2AsUV() && 
+                 typeName == SdfValueTypeNames->Float2Array)) { 
+            // Looks for TexCoord2fArray types for UV sets first
+            // Otherwise, if env variable for reading Float2 
+            // as uv sets is turned on, we assume that Float2Array primvars 
+            // are UV sets.
             if (!_AssignUVSetPrimvarToMesh(primvar, meshFn)) {
                 MGlobal::displayWarning(
                     TfStringPrintf("Unable to retrieve and assign data for UV set <%s> on mesh <%s>", 

@@ -54,8 +54,9 @@ class SdfAssetPath;
 
 /// \class UsdSkelSkeleton
 ///
-/// Describes a skeleton. A Skeleton is responsible both for establishing
-/// the _topology_ of a skeleton, as well as for identifying a rest pose.
+/// Describes a skeleton. A Skeleton is responsible both for
+/// establishing the _topology_ of a skeleton, as well as for identifying a
+/// rest pose.
 /// 
 /// See the extended \ref UsdSkel_Skeleton "Skeleton Schema" documentation for
 /// more information.

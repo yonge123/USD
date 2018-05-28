@@ -65,6 +65,32 @@ UsdSkelAnimQuery::ComputeJointLocalTransforms(VtMatrix4dArray* xforms,
 
 
 bool
+UsdSkelAnimQuery::ComputeJointLocalTransformComponents(
+    VtVec3fArray* translations,
+    VtQuatfArray* rotations,
+    VtVec3hArray* scales,
+    UsdTimeCode time) const
+{
+    if(TF_VERIFY(IsValid(), "invalid anim query.")) {
+        return _impl->ComputeJointLocalTransformComponents(
+            translations, rotations, scales, time);
+    }
+    return false;
+}
+
+
+bool
+UsdSkelAnimQuery::ComputeBlendShapeWeights(VtFloatArray* weights,
+                                           UsdTimeCode time) const
+{
+    if(TF_VERIFY(IsValid(), "invalid anim query.")) {
+        return _impl->ComputeBlendShapeWeights(weights, time);
+    }
+    return false;
+}
+
+
+bool
 UsdSkelAnimQuery::GetJointTransformTimeSamples(std::vector<double>* times) const
 {
     return GetJointTransformTimeSamplesInInterval(
@@ -119,6 +145,16 @@ UsdSkelAnimQuery::GetJointOrder() const
 {
     if(TF_VERIFY(IsValid(), "invalid anim query.")) {
         return _impl->GetJointOrder();
+    }
+    return VtTokenArray();
+}
+
+
+VtTokenArray
+UsdSkelAnimQuery::GetBlendShapeOrder() const
+{
+    if(TF_VERIFY(IsValid(), "invalid anim query.")) {
+        return _impl->GetBlendShapeOrder();
     }
     return VtTokenArray();
 }

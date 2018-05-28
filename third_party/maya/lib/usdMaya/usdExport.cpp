@@ -70,7 +70,6 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-cbb" , "-exportCollectionBasedBindings", MSyntax::kBoolean);
     syntax.addFlag("-nuv" , "-normalizeMeshUVs" , MSyntax::kBoolean);
     syntax.addFlag("-nnu" , "-normalizeNurbs" , MSyntax::kBoolean);
-    syntax.addFlag("-euv" , "-nurbsExplicitUVType" , MSyntax::kString);
     syntax.addFlag("-cls" , "-exportColorSets", MSyntax::kBoolean);
     syntax.addFlag("-ero" , "-exportReferenceObjects", MSyntax::kBoolean);
     syntax.addFlag("-dms" , "-defaultMeshScheme", MSyntax::kString);
@@ -89,6 +88,8 @@ MSyntax usdExport::createSyntax()
     syntax.makeFlagMultiUse("-frameSample");
 
     syntax.addFlag("-ro"  , "-renderableOnly", MSyntax::kNoArg);
+    syntax.addFlag("-ft" , "-filterTypes", MSyntax::kString);
+    syntax.makeFlagMultiUse("-filterTypes");
     syntax.addFlag("-sl"  , "-selection", MSyntax::kNoArg);
     syntax.addFlag("-dc"  , "-defaultCameras", MSyntax::kNoArg);
     syntax.addFlag("-rlm" , "-renderLayerMode" , MSyntax::kString);
@@ -159,22 +160,17 @@ try
         argData.getFlagArgument("shadingMode", 0, stringVal);
         TfToken shadingMode(stringVal.asChar());
 
-        if (shadingMode.IsEmpty()) {
-            jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->displayColor;
-        }
-        else {
-            if (shadingMode == "Material Colors") {
-                shadingMode = TfToken("displayColor");
-            } else if (shadingMode == "RfM Shaders") {
-                shadingMode = TfToken("pxrRis");
-            }
-            if (PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode)) {
+        if (!shadingMode.IsEmpty()) {
+            if (PxrUsdMayaShadingModeRegistry::GetInstance()
+                    .GetExporter(shadingMode)) {
                 jobArgs.shadingMode = shadingMode;
             }
             else {
                 if (shadingMode != PxrUsdMayaShadingModeTokens->none) {
-                    MGlobal::displayError(TfStringPrintf("No shadingMode '%s' found.  Setting shadingMode='none'", 
-                                shadingMode.GetText()).c_str());
+                    MGlobal::displayError(TfStringPrintf(
+                            "No shadingMode '%s' found. "
+                            "Setting shadingMode='none'", 
+                            shadingMode.GetText()).c_str());
                 }
                 jobArgs.shadingMode = PxrUsdMayaShadingModeTokens->none;
             }
@@ -210,14 +206,6 @@ try
         argData.getFlagArgument("normalizeNurbs", 0, jobArgs.normalizeNurbs);
     }
 
-    if (argData.isFlagSet("nurbsExplicitUVType")) {
-        MString stringVal;
-        argData.getFlagArgument("nurbsExplicitUVType", 0, stringVal);
-        if (stringVal=="uniform") {
-            jobArgs.nurbsExplicitUVType = PxUsdExportJobArgsTokens->Uniform;
-        }
-    }
-
     if (argData.isFlagSet("exportColorSets")) {
         argData.getFlagArgument("exportColorSets", 0, jobArgs.exportColorSets);
     }
@@ -228,19 +216,20 @@ try
 
     if (argData.isFlagSet("defaultMeshScheme")) {
         MString stringVal;
-
         argData.getFlagArgument("defaultMeshScheme", 0, stringVal);
-        if (stringVal=="none") {
-            jobArgs.defaultMeshScheme = UsdGeomTokens->none;
-        } else if (stringVal=="catmullClark") {
-            jobArgs.defaultMeshScheme = UsdGeomTokens->catmullClark;
-        } else if (stringVal=="loop") {
-            jobArgs.defaultMeshScheme = UsdGeomTokens->loop;
-        } else if (stringVal=="bilinear") {
-            jobArgs.defaultMeshScheme = UsdGeomTokens->bilinear;
-        } else {
-            MGlobal::displayWarning("Incorrect Default Mesh Schema: " + stringVal +
-            " defaulting to: " + MString(jobArgs.defaultMeshScheme.GetText()));
+
+        const TfToken scheme(stringVal.asChar());
+        if (scheme != UsdGeomTokens->none &&
+                scheme != UsdGeomTokens->catmullClark &&
+                scheme != UsdGeomTokens->loop &&
+                scheme != UsdGeomTokens->bilinear) {
+            MGlobal::displayWarning(
+                    "Incorrect Default Mesh Schema: " + stringVal +
+                    " defaulting to: " +
+                    MString(jobArgs.defaultMeshScheme.GetText()));
+        }
+        else {
+            jobArgs.defaultMeshScheme = scheme;
         }
     }
 
@@ -260,31 +249,27 @@ try
         if (!rootPath.empty()) {
             MDagPath rootDagPath;
             PxrUsdMayaUtil::GetDagPathByName(rootPath, rootDagPath);
-            if (rootDagPath.isValid()){
-                SdfPath rootSdfPath;
-                PxrUsdMayaUtil::GetDagPathByName(rootPath, rootDagPath);
-                rootSdfPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false, jobArgs.stripNamespaces);
-                jobArgs.exportRootPath = rootPath;
-                jobArgs.exportRootSdfPath = rootSdfPath;
-            } else {
+            if (!rootDagPath.isValid()){
                 MGlobal::displayError(MString("Invalid dag path provided for root: ") + stringVal);
                 return MS::kFailure;
             }
+            jobArgs.exportRootPath = rootPath;
         }
     }
 
     if (argData.isFlagSet("exportSkin")) {
         MString stringVal;
-
         argData.getFlagArgument("exportSkin", 0, stringVal);
-        if (stringVal == "none") {
+
+        const TfToken tok(stringVal.asChar());
+        if (tok == PxUsdExportJobArgsTokens->none) {
             jobArgs.exportSkin = false;
         }
-        else if (stringVal == "auto") {
+        else if (tok == PxUsdExportJobArgsTokens->auto_) {
             jobArgs.exportSkin = true;
             jobArgs.autoSkelRoots = true;
         }
-        else if (stringVal == "explicit") {
+        else if (tok == PxUsdExportJobArgsTokens->explicit_) {
             jobArgs.exportSkin = true;
             jobArgs.autoSkelRoots = false;
         }
@@ -337,29 +322,35 @@ try
         return MS::kFailure;
     }
 
-    double startTime=1;
-    double endTime=1;
     double preRoll=0;
     std::set<double> frameSamples;
 
     // If you provide a frame range we consider this an anim
     // export even if start and end are the same
     if (argData.isFlagSet("frameRange")) {
+        double startTime = 1;
+        double endTime = 1;
         argData.getFlagArgument("frameRange", 0, startTime);
         argData.getFlagArgument("frameRange", 1, endTime);
-        jobArgs.exportAnimation=true;
+        GfInterval timeInterval(startTime, endTime);
+        if (timeInterval.IsEmpty()) {
+            // If the user accidentally set start > end, resync to the closed
+            // interval with the single start point.
+            jobArgs.timeInterval = GfInterval(timeInterval.GetMin());
+        }
+        else {
+            // Use the user's interval as-is.
+            jobArgs.timeInterval = timeInterval;
+        }
     } else {
-        jobArgs.exportAnimation=false;
+        // No animation, so empty interval.
+        jobArgs.timeInterval = GfInterval();
     }
 
     if (argData.isFlagSet("asClip")) {
         argData.getFlagArgument("asClip", 0, jobArgs.exportAsClip);
     }
-    jobArgs.clipStartTime = startTime;
-
-    if (argData.isFlagSet("eulerFilter")) {
-        argData.getFlagArgument("eulerFilter", 0, jobArgs.eulerFilter);
-    }
+    jobArgs.clipStartTime = jobArgs.timeInterval.GetMin();
 
     if (argData.isFlagSet("preRoll")) {
         argData.getFlagArgument("preRoll", 0, preRoll);
@@ -377,23 +368,32 @@ try
     }
 
     jobArgs.excludeInvisible = argData.isFlagSet("renderableOnly");
+    unsigned int numFilteredTypes = argData.numberOfFlagUses("filterTypes");
+    for (unsigned int i=0; i < numFilteredTypes; i++) {
+        MArgList tmpArgList;
+        argData.getFlagArgumentList("filterTypes", i, tmpArgList);
+        jobArgs.addFilteredTypeName(tmpArgList.asString(0));
+    }
     jobArgs.exportDefaultCameras = argData.isFlagSet("defaultCameras");
 
     if (argData.isFlagSet("renderLayerMode")) {
         MString stringVal;
         argData.getFlagArgument("renderLayerMode", 0, stringVal);
-        TfToken renderLayerMode(stringVal.asChar());
+        const TfToken renderLayerMode(stringVal.asChar());
 
-        if (renderLayerMode.IsEmpty()) {
-            jobArgs.renderLayerMode = PxUsdExportJobArgsTokens->defaultLayer;
-        } else if (renderLayerMode != PxUsdExportJobArgsTokens->defaultLayer &&
+        if (!renderLayerMode.IsEmpty()) {
+            if (renderLayerMode != PxUsdExportJobArgsTokens->defaultLayer &&
                    renderLayerMode != PxUsdExportJobArgsTokens->currentLayer &&
-                   renderLayerMode != PxUsdExportJobArgsTokens->modelingVariant) {
-            MGlobal::displayError(TfStringPrintf("Invalid renderLayerMode '%s'.  Setting renderLayerMode='defaultLayer'", 
-                                renderLayerMode.GetText()).c_str());
-            jobArgs.renderLayerMode = PxUsdExportJobArgsTokens->defaultLayer;
-        } else {
-            jobArgs.renderLayerMode = renderLayerMode;
+                   renderLayerMode != PxUsdExportJobArgsTokens->modelingVariant)
+            {
+                MGlobal::displayError(TfStringPrintf(
+                        "Invalid renderLayerMode '%s'. "
+                        "Defaulting to renderLayerMode='%s'", 
+                        renderLayerMode.GetText(),
+                        jobArgs.renderLayerMode.GetText()).c_str());
+            } else {
+                jobArgs.renderLayerMode = renderLayerMode;
+            }
         }
     }
 
@@ -493,10 +493,12 @@ try
     computation.beginComputation();
 
     // Create stage and process static data
-    if (usdWriteJob.beginJob(fileName, append, startTime, endTime)) {
-        if (jobArgs.exportAnimation) {
+    if (usdWriteJob.beginJob(fileName, append)) {
+        if (!jobArgs.timeInterval.IsEmpty()) {
             const MTime oldCurTime = MAnimControl::currentTime();
-            for (double i = startTime; i < (endTime + 1.0); ++i) {
+            for (double i = jobArgs.timeInterval.GetMin();
+                    jobArgs.timeInterval.Contains(i);
+                    i += 1.0) {
                 for (double sampleTime : frameSamples) {
                     const double actualTime = i + sampleTime;
                     if (verbose) {

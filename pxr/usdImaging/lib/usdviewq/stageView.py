@@ -25,7 +25,7 @@
 Module that provides the StageView class.
 '''
 
-from math import tan, atan, floor, ceil, radians as rad
+from math import tan, floor, ceil, radians as rad
 import os, sys
 from time import time
 
@@ -656,16 +656,14 @@ class StageView(QtOpenGL.QGLWidget):
 
     # First arg is primPath, (which could be empty Path)
     # Second arg is instanceIndex (or UsdImagingGL.GL.ALL_INSTANCES for all instances)
-    # Third and Fourth args represent state at time of the pick
-    signalPrimSelected = QtCore.Signal(Sdf.Path, int, QtCore.Qt.MouseButton,
-                                       QtCore.Qt.KeyboardModifiers)
-
-    signalPointSelected = QtCore.Signal(Gf.Vec3d, QtCore.Qt.MouseButton,
+    # Third arg is selectedPoint
+    # Fourth and Fifth args represent state at time of the pick
+    signalPrimSelected = QtCore.Signal(Sdf.Path, int, Gf.Vec3f, QtCore.Qt.MouseButton,
                                        QtCore.Qt.KeyboardModifiers)
 
     # Only raised when StageView has been told to do so, setting
     # rolloverPicking to True
-    signalPrimRollover = QtCore.Signal(Sdf.Path, int, QtCore.Qt.KeyboardModifiers)
+    signalPrimRollover = QtCore.Signal(Sdf.Path, int, Gf.Vec3f, QtCore.Qt.KeyboardModifiers)
     signalMouseDrag = QtCore.Signal()
     signalErrorMessage = QtCore.Signal(str)
 
@@ -792,6 +790,10 @@ class StageView(QtOpenGL.QGLWidget):
         of source."""
         return self._lastComputedGfCamera.frustum
 
+    @property
+    def rendererPluginName(self):
+        return self._rendererPluginName
+
     def __init__(self, parent=None, dataModel=None, printTiming=False):
 
         glFormat = QtOpenGL.QGLFormat()
@@ -816,8 +818,6 @@ class StageView(QtOpenGL.QGLWidget):
         self._dataModel.signalStageReplaced.connect(self._stageReplaced)
         self._dataModel.selection.signalPrimSelectionChanged.connect(
             self._primSelectionChanged)
-        self._dataModel.selection.signalPointSelectionChanged.connect(
-            self._pointSelectionChanged)
 
         self._dataModel.viewSettings.freeCamera = FreeCamera(True)
         self._lastComputedGfCamera = None
@@ -855,20 +855,12 @@ class StageView(QtOpenGL.QGLWidget):
                               RenderModes.HIDDEN_SURFACE_WIREFRAME:UsdImagingGL.GL.DrawMode.DRAW_WIREFRAME}
 
         self._renderParams = UsdImagingGL.GL.RenderParams()
-        self._defaultFov = 60
-        self._dist = 50
-        self._oldDist = self._dist
+        self._dist = 50 
         self._bbox = Gf.BBox3d()
         self._selectionBBox = Gf.BBox3d()
         self._selectionBrange = Gf.Range3d()
         self._selectionOrientedRange = Gf.Range3d()
         self._bbcenterForBoxDraw = (0, 0, 0)
-        self._bbcenter = (0,0,0)
-        self._rotTheta = 0
-        self._rotPhi = 0
-        self._oldRotTheta = self._rotTheta
-        self._oldRotPhi = self._rotPhi
-        self._oldBbCenter = self._bbcenter
 
         self._overrideNear = None
         self._overrideFar = None
@@ -933,6 +925,7 @@ class StageView(QtOpenGL.QGLWidget):
             if self._renderer.SetRendererPlugin(plugId):
                 self._rendererPluginName = \
                         self.GetRendererPluginDisplayName(plugId)
+                self.updateGL()
                 return True
             else:
                 return False
@@ -1001,6 +994,8 @@ class StageView(QtOpenGL.QGLWidget):
         GL.glVertexAttribPointer(0, 3, GL.GL_FLOAT, False, 0, ctypes.c_void_p(0))
 
         GL.glUseProgram(glslProgram.program)
+        # i *think* this actually wants the camera dist so that the axis stays
+        # somewhat fixed in screen-space size.
         mvpMatrix = Gf.Matrix4f().SetScale(self._dist/20.0) * viewProjectionMatrix
         matrix = (ctypes.c_float*16).from_buffer_copy(mvpMatrix)
         GL.glUniformMatrix4fv(glslProgram.uniformLocations["mvpMatrix"],
@@ -1021,7 +1016,6 @@ class StageView(QtOpenGL.QGLWidget):
             GL.glBindVertexArray(0)
 
     def DrawBBox(self, viewProjectionMatrix):
-        from OpenGL import GL
         col = self._dataModel.viewSettings.clearColor
         color = Gf.Vec3f(col[0]-.5 if col[0]>0.5 else col[0]+.5,
                          col[1]-.5 if col[1]>0.5 else col[1]+.5,
@@ -1471,7 +1465,6 @@ class StageView(QtOpenGL.QGLWidget):
             return
 
         from OpenGL import GL
-        from OpenGL import GLU
 
         if self._dataModel.viewSettings.showHUD_GPUstats:
             if self._glPrimitiveGeneratedQuery is None:
@@ -1499,12 +1492,16 @@ class StageView(QtOpenGL.QGLWidget):
         cameraViewport = self.computeCameraViewport(cameraAspect)
 
         viewport = self.computeWindowViewport()
+        windowViewport = viewport
         if self._cropImageToCameraViewport:
             viewport = cameraViewport
 
         cam_pos = frustum.position
         cam_up = frustum.ComputeUpVector()
         cam_right = Gf.Cross(frustum.ComputeViewDirection(), cam_up)
+
+        # not using the actual camera dist ...
+        cam_light_dist = self._dist
 
         renderer.SetCameraState(
             frustum.ComputeViewMatrix(),
@@ -1515,7 +1512,7 @@ class StageView(QtOpenGL.QGLWidget):
                                            * frustum.ComputeProjectionMatrix())
 
 
-        GL.glViewport(*viewport)
+        GL.glViewport(*windowViewport)
         GL.glClear(GL.GL_COLOR_BUFFER_BIT|GL.GL_DEPTH_BUFFER_BIT)
 
         # ensure viewport is right for the camera framing
@@ -1532,10 +1529,6 @@ class StageView(QtOpenGL.QGLWidget):
             # for renderModes that need lights
             if self._dataModel.viewSettings.renderMode in ShadedRenderModes:
 
-                stagePos = Gf.Vec3d(self._bbcenter[0], self._bbcenter[1],
-                                    self._bbcenter[2])
-                stageDir = (stagePos - cam_pos).GetNormalized()
-
                 # ambient light located at the camera
                 if self._dataModel.viewSettings.ambientLightOnly:
                     l = Glf.SimpleLight()
@@ -1548,7 +1541,7 @@ class StageView(QtOpenGL.QGLWidget):
                         # 45 degree horizontal viewing angle, 20 degree vertical
                         keyHorz = -1 / tan(rad(45)) * cam_right
                         keyVert = 1 / tan(rad(70)) * cam_up
-                        keyPos = cam_pos + (keyVert + keyHorz) * self._dist
+                        keyPos = cam_pos + (keyVert + keyHorz) * cam_light_dist
                         keyColor = (.8, .8, .8, 1.0)
 
                         l = Glf.SimpleLight()
@@ -1562,7 +1555,7 @@ class StageView(QtOpenGL.QGLWidget):
                         # 60 degree horizontal viewing angle, 45 degree vertical
                         fillHorz = 1 / tan(rad(30)) * cam_right
                         fillVert = 1 / tan(rad(45)) * cam_up
-                        fillPos = cam_pos + (fillVert + fillHorz) * self._dist
+                        fillPos = cam_pos + (fillVert + fillHorz) * cam_light_dist
                         fillColor = (.6, .6, .6, 1.0)
 
                         l = Glf.SimpleLight()
@@ -1573,12 +1566,13 @@ class StageView(QtOpenGL.QGLWidget):
                         lights.append(l)
 
                     if self._dataModel.viewSettings.backLightEnabled:
-                        # back light base is camera position refelcted over origin
+                        # back light base is camera position reflected over origin
                         # 30 degree horizontal viewing angle, 30 degree vertical
-                        backPos = cam_pos + (stagePos - cam_pos) * 2
+                        origin = Gf.Vec3d(0.0)
+                        backPos = cam_pos + (origin - cam_pos) * 2
                         backHorz = 1 / tan(rad(60)) * cam_right
                         backVert = -1 / tan(rad(60)) * cam_up
-                        backPos += (backHorz + backVert) * self._dist
+                        backPos += (backHorz + backVert) * cam_light_dist
                         backColor = (.6, .6, .6, 1.0)
 
                         l = Glf.SimpleLight()
@@ -1749,7 +1743,7 @@ class StageView(QtOpenGL.QGLWidget):
             toPrint["GL prims "] = self._glPrimitiveGeneratedQuery.GetResult()
             toPrint["GPU time "] = "%.2f ms " % (self._glTimeElapsedQuery.GetResult() / 1000000.0)
             toPrint["GPU mem  "] = gpuMemTotal
-            toPrint[" primvar "] = allocInfo["primVar"] if "primVar" in allocInfo else "N/A"
+            toPrint[" primvar "] = allocInfo["primvar"] if "primvar" in allocInfo else "N/A"
             toPrint[" topology"] = allocInfo["topology"] if "topology" in allocInfo else "N/A"
             toPrint[" shader  "] = allocInfo["drawingShader"] if "drawingShader" in allocInfo else "N/A"
             toPrint[" texture "] = texMem
@@ -1836,17 +1830,22 @@ class StageView(QtOpenGL.QGLWidget):
             dy = event.y() - self._lastY
             if dx == 0 and dy == 0:
                 return
+
+            freeCam = self._dataModel.viewSettings.freeCamera
             if self._cameraMode == "tumble":
-                self._dataModel.viewSettings.freeCamera.rotTheta += 0.25 * dx
-                self._dataModel.viewSettings.freeCamera.rotPhi += 0.25 * dy
+                freeCam.Tumble(0.25 * dx, 0.25*dy)
 
             elif self._cameraMode == "zoom":
                 zoomDelta = -.002 * (dx + dy)
-                self._dataModel.viewSettings.freeCamera.adjustDist(1 + zoomDelta)
+                freeCam.AdjustDistance(1 + zoomDelta)
 
             elif self._cameraMode == "truck":
                 height = float(self.size().height())
-                self._dataModel.viewSettings.freeCamera.Truck(dx, dy, height)
+                pixelsToWorld = freeCam.ComputePixelsToWorldFactor(height)
+
+                self._dataModel.viewSettings.freeCamera.Truck(
+                        -dx * pixelsToWorld, 
+                         dy * pixelsToWorld)
 
             self._lastX = event.x()
             self._lastY = event.y()
@@ -1862,9 +1861,9 @@ class StageView(QtOpenGL.QGLWidget):
             event.ignore()
 
     def wheelEvent(self, event):
-        distBefore = self._dist
         self.switchToFreeCamera()
-        self._dataModel.viewSettings.freeCamera.adjustDist(1-max(-0.5,min(0.5,(event.angleDelta().y()/1000.))))
+        self._dataModel.viewSettings.freeCamera.AdjustDistance(
+                1-max(-0.5,min(0.5,(event.angleDelta().y()/1000.))))
         self.updateGL()
 
     def detachAndReClipFromCurrentCamera(self):
@@ -1897,7 +1896,6 @@ class StageView(QtOpenGL.QGLWidget):
                         self._dataModel.viewSettings.freeCamera._selSize / 10.0)
         cameraFrustum.nearFar = \
             Gf.Range1d(smallNear, smallNear*FreeCamera.maxSafeZResolution)
-        scrSz = self.size()
         pickResults = self.pick(cameraFrustum)
         if pickResults[0] is None or pickResults[1] == Sdf.Path.emptyPath:
             cameraFrustum.nearFar = \
@@ -1922,6 +1920,8 @@ class StageView(QtOpenGL.QGLWidget):
             # error has already been issued
             return None, Sdf.Path.emptyPath, None, None, None
 
+        # this import is here to make sure the create_first_image stat doesn't
+        # regress..
         from OpenGL import GL
 
         # Need a correct OpenGL Rendering context for FBOs
@@ -1950,6 +1950,8 @@ class StageView(QtOpenGL.QGLWidget):
                 self._dataModel.stage.GetPseudoRoot(), self._renderParams)
         if Tf.Debug.IsDebugSymbolNameEnabled(DEBUG_CLIPPING):
             print "Pick results = {}".format(results)
+
+        self.doneCurrent()
         return results
 
     def computePickFrustum(self, x, y):
@@ -2017,17 +2019,12 @@ class StageView(QtOpenGL.QGLWidget):
         else:
             selectedInstanceIndex = ALL_INSTANCES
 
-        selectedPrim = self._dataModel.stage.GetPrimAtPath(selectedPrimPath)
-
         if button:
             self.signalPrimSelected.emit(
-                selectedPrimPath, selectedInstanceIndex, button, modifiers)
-            self.signalPointSelected.emit(selectedPoint, button, modifiers)
+                selectedPrimPath, selectedInstanceIndex, selectedPoint, button, modifiers)
         else:
             self.signalPrimRollover.emit(
-                selectedPrimPath, selectedInstanceIndex, modifiers)
-            self.signalPointSelected.emit(
-                selectedPoint, button, modifiers)
+                selectedPrimPath, selectedInstanceIndex, selectedPoint, modifiers)
 
     def glDraw(self):
         # override glDraw so we can time it.
@@ -2112,7 +2109,4 @@ class StageView(QtOpenGL.QGLWidget):
 
         # set highlighted paths to renderer
         self.updateSelection()
-        self.update()
-
-    def _pointSelectionChanged(self):
         self.update()

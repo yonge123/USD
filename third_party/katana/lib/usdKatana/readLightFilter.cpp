@@ -39,7 +39,6 @@
 #include "pxr/usd/usdLux/rectLight.h"
 #include "pxr/usd/usdLux/shapingAPI.h"
 #include "pxr/usd/usdLux/shadowAPI.h"
-#include "pxr/usd/usdLux/linkingAPI.h"
 #include "pxr/usd/usdRi/lightFilterAPI.h"
 #include "pxr/usd/usdRi/pxrIntMultLightFilter.h"
 #include "pxr/usd/usdRi/pxrBarnLightFilter.h"
@@ -147,7 +146,8 @@ PxrUsdKatanaReadLightFilter(
     GroupBuilder filterBuilder;
     _UsdBuilder usdBuilder = {filterBuilder, currentTime};
     
-    if (UsdRiLightFilterAPI f = UsdRiLightFilterAPI(filterPrim)) {
+    if (filterPrim) {
+        UsdRiLightFilterAPI f(filterPrim);
         usdBuilder
             .Set("density", f.GetRiDensityAttr())
             .Set("intensity", f.GetRiIntensityAttr())

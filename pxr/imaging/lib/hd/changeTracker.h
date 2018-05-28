@@ -64,9 +64,9 @@ public:
         AllDirty                    = ~Varying,
         DirtyPrimID                 = 1 << 2,
         DirtyExtent                 = 1 << 3,
-        DirtyRefineLevel            = 1 << 4,
+        DirtyDisplayStyle           = 1 << 4,
         DirtyPoints                 = 1 << 5,
-        DirtyPrimVar                = 1 << 6,
+        DirtyPrimvar                = 1 << 6,
         DirtyMaterialId             = 1 << 7,
         DirtyTopology               = 1 << 8,
         DirtyTransform              = 1 << 9,
@@ -79,7 +79,7 @@ public:
         DirtyInstancer              = 1 << 16,
         DirtyInstanceIndex          = 1 << 17,
         DirtyRepr                   = 1 << 18,
-        DirtyPurpose                = 1 << 19,
+        DirtyRenderTag              = 1 << 19,
         DirtyComputationPrimvarDesc = 1 << 20,
         AllSceneDirtyBits           = ((1<<21) - 1),
 
@@ -139,7 +139,7 @@ public:
 
     /// Mark the primvar for the rprim with \p id as being dirty.
     HD_API
-    void MarkPrimVarDirty(SdfPath const& id, TfToken const& name);
+    void MarkPrimvarDirty(SdfPath const& id, TfToken const& name);
 
     /// Flag all the Rprim with the given \p id as being dirty. Multiple calls
     /// with different dirty bits accumulate.
@@ -167,18 +167,18 @@ public:
     HD_API
     bool IsExtentDirty(SdfPath const& id);
 
-    /// Returns true if the rprim identified by \p id has a dirty refine level.
+    /// Returns true if the rprim identified by \p id has a dirty display style.
     HD_API
-    bool IsRefineLevelDirty(SdfPath const& id);
+    bool IsDisplayStyleDirty(SdfPath const& id);
 
     /// Returns true if the rprim identified by \p id with primvar \p name is
     /// dirty.
     HD_API
-    bool IsPrimVarDirty(SdfPath const& id, TfToken const& name);
+    bool IsPrimvarDirty(SdfPath const& id, TfToken const& name);
 
     /// Returns true if the rprim identified by \p id has any dirty primvars.
     HD_API
-    bool IsAnyPrimVarDirty(SdfPath const& id);
+    bool IsAnyPrimvarDirty(SdfPath const& id);
 
     /// Returns true if the rprim identified by \p id has a dirty topology.
     HD_API
@@ -222,9 +222,9 @@ public:
     HD_API
     static bool IsExtentDirty(HdDirtyBits dirtyBits, SdfPath const& id);
 
-    /// Returns true if the dirtyBits has a dirty refine level. id is for perflog.
+    /// Returns true if the dirtyBits has a dirty display style. id is for perflog.
     HD_API
-    static bool IsRefineLevelDirty(HdDirtyBits dirtyBits, SdfPath const& id);
+    static bool IsDisplayStyleDirty(HdDirtyBits dirtyBits, SdfPath const& id);
 
     /// Returns true if the dirtyBits has a dirty subdiv tags. id is for perflog.
     HD_API
@@ -233,13 +233,13 @@ public:
     /// Returns true if the dirtyBits has a dirty primvar \p name.
     /// id is for perflog.
     HD_API
-    static bool IsPrimVarDirty(HdDirtyBits dirtyBits, SdfPath const& id,
+    static bool IsPrimvarDirty(HdDirtyBits dirtyBits, SdfPath const& id,
                                TfToken const& name);
 
     /// Returns true if the dirtyBits has any dirty primvars.
     /// id is for perflog.
     HD_API
-    static bool IsAnyPrimVarDirty(HdDirtyBits dirtyBits, SdfPath const& id);
+    static bool IsAnyPrimvarDirty(HdDirtyBits dirtyBits, SdfPath const& id);
 
     /// Returns true if the dirtyBits has a dirty topology. id is for perflog.
     HD_API
@@ -280,7 +280,7 @@ public:
 
     /// Set the primvar dirty flag to \p dirtyBits.
     HD_API
-    static void MarkPrimVarDirty(HdDirtyBits *dirtyBits, TfToken const &name);
+    static void MarkPrimvarDirty(HdDirtyBits *dirtyBits, TfToken const &name);
 
     // ---------------------------------------------------------------------- //
     /// @}

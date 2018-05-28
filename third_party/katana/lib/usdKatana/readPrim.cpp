@@ -181,8 +181,8 @@ _GatherRibAttributes(
     bool hasAttrs = false;
 
     // USD SHADING STYLE ATTRIBUTES
-    UsdRiStatementsAPI riStatements(prim);
-    if (riStatements) {
+    if (prim) {
+        UsdRiStatementsAPI riStatements(prim);
         const std::vector<UsdProperty> props = 
             riStatements.GetRiAttributes();
         std::string attrName;
@@ -840,6 +840,12 @@ PxrUsdKatanaGeomGetPrimvarGroup(
         FnKat::GroupBuilder attrBuilder;
         attrBuilder.set("scope", scopeAttr);
         attrBuilder.set("inputType", inputTypeAttr);
+        
+        if (!typeName.GetRole().GetString().empty()) {
+            attrBuilder.set("usd.role", 
+                        FnKat::StringAttribute(typeName.GetRole().GetString()));
+        }
+
         if (elementSizeAttr.isValid()) {
             attrBuilder.set("elementSize", elementSizeAttr);
         }
