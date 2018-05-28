@@ -44,16 +44,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 /// \class HdVtBufferSource
 ///
-/// A transient buffer of data that has not yet been committed to the GPU.
-///
-/// This class is primarily used in the interaction between HdRprim and the
-/// HdSceneDelegate. The buffer source holds raw data that is either 
-/// topological or a shader input (PrimVar data), so it gets attached to either
-/// an HdTopologySubset or an HdPrimVarLayout. The buffer source will be 
-/// inserted into these objects at the offset specified or appended to the end.
-/// 
-/// The public interface provided is intended to be convenient for OpenGL API
-/// calls.
+/// An implementation of HdBufferSource where the source data value is a
+/// VtValue.
 ///
 class HdVtBufferSource : public HdBufferSource {
 public:
@@ -114,7 +106,7 @@ public:
     virtual int GetNumElements() const override;
 
     /// Add the buffer spec for this buffer source into given bufferspec vector.
-    virtual void AddBufferSpecs(HdBufferSpecVector *specs) const override {
+    virtual void GetBufferSpecs(HdBufferSpecVector *specs) const override {
         specs->push_back(HdBufferSpec(_name, _tupleType));
     }
 

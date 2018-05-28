@@ -27,14 +27,16 @@
 #include "pxr/pxr.h"
 #include "pxr/base/trace/collection.h"
 #include "pxr/base/trace/collectionNotice.h"
-#include "pxr/base/trace/singleEventNode.h"
-#include "pxr/base/trace/singleEventTreeReport.h"
+#include "pxr/base/trace/eventNode.h"
+#include "pxr/base/trace/eventTreeBuilder.h"
+#include "pxr/base/trace/reporterDataSourceCollector.h"
 #include "pxr/base/trace/threads.h"
 #include "pxr/base/trace/trace.h"
 
 #include "pxr/base/tf/enum.h"
 #include "pxr/base/tf/instantiateSingleton.h"
 #include "pxr/base/tf/mallocTag.h"
+#include "pxr/base/tf/scoped.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/arch/demangle.h"
 #include "pxr/base/arch/symbols.h"
@@ -44,6 +46,7 @@
 
 #include <math.h>
 #include <iostream>
+#include <numeric>
 #include <map>
 #include <vector>
 
@@ -63,16 +66,16 @@ TF_DEFINE_PUBLIC_TOKENS(TraceReporterTokens, TRACE_REPORTER_TOKENS);
 //
 
 TraceReporter::TraceReporter(const string& label,
-                             const TraceCollectorPtr& collector) :
-    _collector(collector),
+                             DataSourcePtr dataSource) :
+    TraceReporterBase(std::move(dataSource)),
     _label(label),
     _groupByFunction(true),
-    _foldRecursiveCalls(false)
+    _foldRecursiveCalls(false),
+    _buildEventTree(false)
 {
-    _rootNode = TraceEventNode::New();
-    _singleEventGraph = TraceSingleEventGraph::New();
+    _rootAggregateNode = TraceAggregateNode::New();
+    _eventTree = TraceEventTree::New();
     _eventTimes = _EventTimes();
-    TfNotice::Register(ThisPtr(this), &This::_OnTraceCollection);
 }
 
 TraceReporter::~TraceReporter()
@@ -92,15 +95,15 @@ TraceReporter::_ComputeInclusiveCounterValues()
     // Algorithmically, this does a post-order depth-first traversal of the
     // recently built event graph.
 
-    TfHashSet< TraceEventNodeRefPtr, TfHash > pushed;
-    std::vector< TraceEventNodeRefPtr > stack(1, _rootNode);
+    TfHashSet< TraceAggregateNodeRefPtr, TfHash > pushed;
+    std::vector< TraceAggregateNodeRefPtr > stack(1, _rootAggregateNode);
     while (!stack.empty()) {
-        TraceEventNodeRefPtr &top = stack.back();
+        TraceAggregateNodeRefPtr &top = stack.back();
 
         // Push children in a depth first manner
-        const TraceEventNodeRefPtrVector &children = top->GetChildrenRef();
+        const TraceAggregateNodeRefPtrVector &children = top->GetChildrenRef();
         bool didPushChild = false;
-        for (const TraceEventNodeRefPtr& it : children) {
+        for (const TraceAggregateNodeRefPtr& it : children) {
             if (pushed.insert(it).second) {
                 stack.push_back(it);
                 didPushChild = true;
@@ -114,7 +117,7 @@ TraceReporter::_ComputeInclusiveCounterValues()
             stack.pop_back();
 
             if (!stack.empty()) {
-                TraceEventNodeRefPtr parent = stack.back();
+                TraceAggregateNodeRefPtr parent = stack.back();
                 for (const _CounterIndexMap::value_type& it :
                     _counterIndexMap) {
                     const int index = it.second;
@@ -147,7 +150,7 @@ void
 TraceReporter::OnBeginThread(const TraceThreadId& threadIndex) 
 {
     // Node need a valid id to be printed in reports.
-    TraceEventNode::Id id(threadIndex);
+    TraceAggregateNode::Id id(threadIndex);
 
     // Note, that TraceGetThreadId() returns the id of the current thread,
     // i.e. the reporting thread. Since we always report from the main
@@ -166,7 +169,7 @@ TraceReporter::OnEndThread(const TraceThreadId& threadIndex)
     if (it != _threadStacks.end()) {
         _PendingNodeStack& stack = it->second;
         // Close any incomplete nodes.
-        TraceEventNodeRefPtr threadRoot;
+        TraceAggregateNodeRefPtr threadRoot;
         while (!stack.empty()) {
             stack.back().start = 0;
             _PendingEventNode::Child child = stack.back().Close(0);
@@ -176,7 +179,7 @@ TraceReporter::OnEndThread(const TraceThreadId& threadIndex)
                 stack.back().children.push_back(child);
             }
         }
-        _rootNode->Append(threadRoot);
+        _rootAggregateNode->Append(threadRoot);
     }
 }
 
@@ -191,7 +194,8 @@ TraceReporter::OnEvent(
         case TraceEvent::EventType::End:
             _OnEndEvent(threadIndex, key, e);
             break;
-        case TraceEvent::EventType::Counter:
+        case TraceEvent::EventType::CounterDelta:
+        case TraceEvent::EventType::CounterValue:
             _OnCounterEvent(threadIndex, key, e);
             break;
         case TraceEvent::EventType::Timespan:
@@ -219,7 +223,7 @@ TraceReporter::_OnBeginEvent(
     _ThreadStackMap::iterator it = _threadStacks.find(threadIndex);
     if (it != _threadStacks.end()) {
         // Node needs a valid id to be printed in reports.
-        TraceEventNode::Id id(threadIndex);
+        TraceAggregateNode::Id id(threadIndex);
         it->second.emplace_back(id, key, e.GetTimeStamp());
     }
 }
@@ -247,7 +251,7 @@ TraceReporter::_OnEndEvent(
             // this new node.
 
             // Node needs a valid id to be printed in reports.
-            TraceEventNode::Id id(threadIndex);
+            TraceAggregateNode::Id id(threadIndex);
 
             _PendingEventNode pending(id, key, 0);
             swap(pending.children, stack.back().children);
@@ -261,8 +265,8 @@ TraceReporter::_OnEndEvent(
 }
 
 void
-TraceReporter::_OnCounterEvent(
-    const TraceThreadId& threadIndex, const TfToken& key, const TraceEvent& e) 
+TraceReporter::_OnCounterEvent( 
+    const TraceThreadId& threadIndex, const TfToken& key, const TraceEvent& e)
 {
     // For counter events, add the counter key to the map of counters
     // and create a new counter index, if necessary. Also, increment
@@ -271,6 +275,14 @@ TraceReporter::_OnCounterEvent(
     // counter values at the node. We will propagate these values to
     // the parents in a post-processing step in
     // _ComputeInclusiveCounterValues.
+
+    bool isDelta = false;
+    switch (e.GetType()) {
+        case TraceEvent::EventType::CounterDelta: isDelta = true; break;
+        case TraceEvent::EventType::CounterValue: break;
+        default: return;
+    }
+
     _ThreadStackMap::iterator it = _threadStacks.find(threadIndex);
     if (it != _threadStacks.end()) {
         _PendingNodeStack& stack = it->second;
@@ -279,7 +291,12 @@ TraceReporter::_OnCounterEvent(
         CounterMap::iterator it =
             _counters.insert(
                 std::make_pair(key, 0.0)).first;
-        it->second += e.GetCounterValue();
+
+        if (isDelta) {
+            it->second += e.GetCounterValue();
+        } else {
+            it->second = e.GetCounterValue();
+        }
 
         // Insert the counter index into the map, if one does not
         // already exist. If no counter index existed in the map, 
@@ -290,9 +307,14 @@ TraceReporter::_OnCounterEvent(
         if (res.second) {
             ++_counterIndex;
         }
-        // Set the counter value on the current node.
-        stack.back().counters.push_back(
-            {e.GetTimeStamp(), res.first->second, e.GetCounterValue()});
+
+        // It only makes sense to store delta values in the specific nodes at 
+        // the moment. This might need to be revisted in the future.
+        if (isDelta) {
+            // Set the counter value on the current node.
+            stack.back().counters.push_back(
+                {e.GetTimeStamp(), res.first->second, e.GetCounterValue()});
+        }
     }
 }
 
@@ -310,7 +332,7 @@ TraceReporter::_OnTimespanEvent(
         // this new node.
 
         // Node needs a valid id to be printed in reports.
-        TraceEventNode::Id id(threadIndex);
+        TraceAggregateNode::Id id(threadIndex);
 
         const TimeStamp start = e.GetStartTimeStamp();
         const TimeStamp end = e.GetEndTimeStamp();
@@ -368,7 +390,7 @@ TraceReporter::_OnDataEvent(
 {}
 
 void
-TraceReporter::_AccumulateTime(const TraceEventNodeRefPtr& node)
+TraceReporter::_AccumulateTime(const TraceAggregateNodeRefPtr& node)
 {
     if (node->GetInclusiveTime() > 0) {
         _eventTimes[node->GetKey()] += node->GetInclusiveTime();
@@ -449,13 +471,13 @@ TraceReporter::_PrintRecursionMarker(ostream &s, const std::string &label,
 
 // Used by std::sort
 static bool
-_InclusiveGreater(const TraceEventNodeRefPtr &a, const TraceEventNodeRefPtr &b)
+_InclusiveGreater(const TraceAggregateNodeRefPtr &a, const TraceAggregateNodeRefPtr &b)
 {
     return (a->GetInclusiveTime() > b->GetInclusiveTime());
 }
 
 void
-TraceReporter::_PrintNodeTimes(ostream &s, TraceEventNodeRefPtr node, int indent, 
+TraceReporter::_PrintNodeTimes(ostream &s, TraceAggregateNodeRefPtr node, int indent, 
                                int iterationCount)
 {
     // The root of the tree has id == -1, no useful stats there.
@@ -474,8 +496,8 @@ TraceReporter::_PrintNodeTimes(ostream &s, TraceEventNodeRefPtr node, int indent
     }
 
     // sort children by inclusive time on output
-    std::vector<TraceEventNodeRefPtr> sortedKids;
-    for (const TraceEventNodeRefPtr& it : node->GetChildrenRef()) {
+    std::vector<TraceAggregateNodeRefPtr> sortedKids;
+    for (const TraceAggregateNodeRefPtr& it : node->GetChildrenRef()) {
         sortedKids.push_back(it);
     }
     
@@ -483,7 +505,7 @@ TraceReporter::_PrintNodeTimes(ostream &s, TraceEventNodeRefPtr node, int indent
         std::sort(sortedKids.begin(), sortedKids.end(), _InclusiveGreater);
     }
 
-    for (const TraceEventNodeRefPtr& it : sortedKids) {
+    for (const TraceAggregateNodeRefPtr& it : sortedKids) {
         _PrintNodeTimes(s, it, indent+2, iterationCount);
     }
 }
@@ -543,11 +565,11 @@ TraceReporter::Report(
         iterationCount = 1;
     }
 
-    UpdateTree();
+    UpdateAggregateTree();
 
     // Fold recursive calls if we need to.
     if (GetFoldRecursiveCalls()) {
-        _rootNode->MarkRecursiveChildren();
+        _rootAggregateNode->MarkRecursiveChildren();
     }
 
     if (iterationCount > 1)
@@ -560,7 +582,7 @@ TraceReporter::Report(
         s << "  incl./iter   excl./iter       samples/iter\n";
     }
 
-    _PrintNodeTimes(s, _rootNode, 0, iterationCount);
+    _PrintNodeTimes(s, _rootAggregateNode, 0, iterationCount);
 
     s << "\n";
 }
@@ -568,7 +590,7 @@ TraceReporter::Report(
 void
 TraceReporter::ReportTimes(std::ostream &s)
 {
-    UpdateTree();
+    UpdateAggregateTree();
 
     s << "\nTotal time for each key ==============\n";
     _PrintTimes(s);
@@ -578,27 +600,29 @@ TraceReporter::ReportTimes(std::ostream &s)
 void 
 TraceReporter::ReportChromeTracing(std::ostream &s)
 {
-    UpdateSingleEventTree();
+    UpdateEventTree();
 
-    JsWriteToStream(JsValue(_singleEventGraph->CreateChromeTraceObject()), s);
+    JsWriteToStream(JsValue(_eventTree->CreateChromeTraceObject()), s);
 
 }
 
 
 void 
-TraceReporter::_UpdateTree(bool buildSingleEventGraph)
+TraceReporter::_UpdateTree(bool buildEventTree)
 {
     // Get the latest from the collector and process the events.
-    _collector->CreateCollection();
-    _ProcessCollections(buildSingleEventGraph);
+    {
+        TfScopedVar<bool> scope(_buildEventTree, buildEventTree);
+        _Update();
+    }
 
     // If MallocTags were enabled for the capture of this trace, add a dummy
     // warning node as an indicator that the trace may have been slowed down
     // by the memory tagging, unless there was nothing reported anyway.
     // XXX: add "WARNING" token that Spy can use.
-    if (_rootNode && !_rootNode->GetChildrenRef().empty() && 
+    if (_rootAggregateNode && !_rootAggregateNode->GetChildrenRef().empty() && 
         TfMallocTag::IsInitialized()) {
-        _rootNode->Append(TraceEventNode::Id(), 
+        _rootAggregateNode->Append(TraceAggregateNode::Id(), 
                           TfToken(
                               TraceReporterTokens->warningString.GetString() +
                               " MallocTags enabled"),
@@ -609,44 +633,49 @@ TraceReporter::_UpdateTree(bool buildSingleEventGraph)
 }
 
 void
-TraceReporter::UpdateTree()
+TraceReporter::UpdateAggregateTree()
 {
-    static const bool buildSingleEventGraph = true;
-    _UpdateTree(!buildSingleEventGraph);
+    static const bool buildEventTree = true;
+    _UpdateTree(!buildEventTree);
 }
 
 void
-TraceReporter::UpdateSingleEventTree()
+TraceReporter::UpdateEventTree()
 {
-    static const bool buildSingleEventGraph = true;
-    _UpdateTree(buildSingleEventGraph);
+    static const bool buildEventTree = true;
+    _UpdateTree(buildEventTree);
 }
 
 
 void 
 TraceReporter::ClearTree() 
 { 
-    _rootNode = TraceEventNode::New();
-    _singleEventGraph = TraceSingleEventGraph::New();
+    _rootAggregateNode = TraceAggregateNode::New();
+    _eventTree = TraceEventTree::New();
     _eventTimes.clear();
     _counters.clear();
     _counterIndexMap.clear();
-    ///XXX: This should really not be clearing the global collector here.
-    _collector->Clear();
-    _collections.clear();
+    _Clear();
 }
 
-TraceEventNodePtr
-TraceReporter::GetTreeRoot()
+TraceAggregateNodePtr
+TraceReporter::GetAggregateTreeRoot()
 {
-    return _rootNode;
+    return _rootAggregateNode;
 }
 
-TraceSingleEventNodeRefPtr
-TraceReporter::GetSingleEventRoot()
+TraceEventNodeRefPtr
+TraceReporter::GetEventRoot()
 {
-    return _singleEventGraph->GetRoot();
+    return _eventTree->GetRoot();
 }
+
+TraceEventTreeRefPtr
+TraceReporter::GetEventTree()
+{
+    return _eventTree;
+}
+
 
 const TraceReporter::CounterMap &
 TraceReporter::GetCounters() const
@@ -713,14 +742,14 @@ TraceReporter::GetFoldRecursiveCalls() const
 }
 
 /* static */
-TraceEventNode::Id
+TraceAggregateNode::Id
 TraceReporter::CreateValidEventId() 
 {
-    return TraceEventNode::Id(TraceGetThreadId());
+    return TraceAggregateNode::Id(TraceGetThreadId());
 }
 
 TraceReporter::_PendingEventNode::_PendingEventNode(
-    TraceEventNode::Id id, const TfToken& pkey, TimeStamp start)
+    TraceAggregateNode::Id id, const TfToken& pkey, TimeStamp start)
 : id(id)
 , key(pkey)
 , start(start)
@@ -730,8 +759,16 @@ TraceReporter::_PendingEventNode::_PendingEventNode(
 TraceReporter::_PendingEventNode::Child 
 TraceReporter::_PendingEventNode::Close(TimeStamp end)
 {
-    TraceEventNodeRefPtr node = 
-    TraceEventNode::New(id, key, end-start);
+    // The new node should have a time that is at least as long as the time of 
+    // its children.
+    TimeStamp childTime = std::accumulate(
+        children.begin(), children.end(), TimeStamp(0), 
+        [](TimeStamp ts, const Child& b) -> TimeStamp {
+            return ts + b.node->GetInclusiveTime();
+        });
+
+    TraceAggregateNodeRefPtr node = 
+        TraceAggregateNode::New(id, key, std::max(end-start, childTime));
     for (Child& child : children) {
         node->Append(child.node);
     }
@@ -742,28 +779,15 @@ TraceReporter::_PendingEventNode::Close(TimeStamp end)
     return Child{start, node};
 }
 
-void 
-TraceReporter::_OnTraceCollection(const TraceCollectionAvailable& notice) 
+void
+TraceReporter::_ProcessCollection(
+    const TraceReporterBase::CollectionPtr& collection)
 {
-    _collections.push(notice.GetCollection());
-}
-
-void TraceReporter::_ProcessCollections(bool buildSingleEventGraph) 
-{
-    // Create a temporary reporter for the singleEvent graph if its requested.
-    TraceSingleEventTreeReport singleGraphReport;
-
-    std::shared_ptr<TraceCollection> collection;
-    while (_collections.try_pop(collection)) {
-        if (collection) {
-            collection->Iterate(*this);
-            if (buildSingleEventGraph) {
-                collection->Iterate(singleGraphReport);
-            }
+    if (collection) {
+        collection->Iterate(*this);
+        if (_buildEventTree) {
+            _eventTree->Add(*collection);
         }
-    }
-    if (buildSingleEventGraph) {
-        _singleEventGraph->Merge(singleGraphReport.GetGraph());
     }
 }
 
@@ -777,8 +801,8 @@ public:
 
     _GlobalReporterHolder() {
         _globalReporter =
-            TraceReporter::New("Trace global reporter", 
-                TraceCollectorPtr(&TraceCollector::GetInstance()));
+            TraceReporter::New("Trace global reporter",
+                TraceReporterDataSourceCollector::New());
 
     }
 

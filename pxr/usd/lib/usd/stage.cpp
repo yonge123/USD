@@ -309,7 +309,7 @@ _CreatePathResolverContext(
 }
 
 static std::string
-_ResolveAssetPathRelativeToLayer(
+_AnchorAssetPathRelativeToLayer(
     const SdfLayerHandle& anchor,
     const std::string& assetPath)
 {
@@ -318,8 +318,16 @@ _ResolveAssetPathRelativeToLayer(
         return assetPath;
     }
 
+    return SdfComputeAssetPathRelativeToLayer(anchor, assetPath);
+}
+
+static std::string
+_ResolveAssetPathRelativeToLayer(
+    const SdfLayerHandle& anchor,
+    const std::string& assetPath)
+{
     const std::string computedAssetPath = 
-        SdfComputeAssetPathRelativeToLayer(anchor, assetPath);
+        _AnchorAssetPathRelativeToLayer(anchor, assetPath);
     if (computedAssetPath.empty()) {
         return computedAssetPath;
     }
@@ -327,18 +335,29 @@ _ResolveAssetPathRelativeToLayer(
     return ArGetResolver().Resolve(computedAssetPath);
 }
 
+// If anchorAssetPathsOnly is true, this function will only
+// update the authored assetPaths by anchoring them to the
+// anchor layer; it will not fill in the resolved path field.
 static void
 _MakeResolvedAssetPathsImpl(const SdfLayerRefPtr &anchor,
                             const ArResolverContext &context,
                             SdfAssetPath *assetPaths,
-                            size_t numAssetPaths)
+                            size_t numAssetPaths,
+                            bool anchorAssetPathsOnly)
 {
     ArResolverContextBinder binder(context);
     for (size_t i = 0; i != numAssetPaths; ++i) {
-        assetPaths[i] = SdfAssetPath(
-            assetPaths[i].GetAssetPath(),
-            _ResolveAssetPathRelativeToLayer(
-                anchor, assetPaths[i].GetAssetPath()));
+        if (anchorAssetPathsOnly) {
+            assetPaths[i] = SdfAssetPath(
+                _AnchorAssetPathRelativeToLayer(
+                    anchor, assetPaths[i].GetAssetPath()));
+        }
+        else {
+            assetPaths[i] = SdfAssetPath(
+                assetPaths[i].GetAssetPath(),
+                _ResolveAssetPathRelativeToLayer(
+                    anchor, assetPaths[i].GetAssetPath()));
+        }
     }
 }
 
@@ -346,34 +365,39 @@ void
 UsdStage::_MakeResolvedAssetPaths(UsdTimeCode time,
                                   const UsdAttribute& attr,
                                   SdfAssetPath *assetPaths,
-                                  size_t numAssetPaths) const
+                                  size_t numAssetPaths,
+                                  bool anchorAssetPathsOnly) const
 {
     // Get the layer providing the strongest value and use that to anchor the
     // resolve.
     auto anchor = _GetLayerWithStrongestValue(time, attr);
     if (anchor) {
         _MakeResolvedAssetPathsImpl(
-            anchor, GetPathResolverContext(), assetPaths, numAssetPaths);
+            anchor, GetPathResolverContext(), assetPaths, numAssetPaths,
+            anchorAssetPathsOnly);
     }
 }
 
 void
 UsdStage::_MakeResolvedAssetPaths(UsdTimeCode time,
                                   const UsdAttribute& attr,
-                                  VtValue* value) const
+                                  VtValue* value,
+                                  bool anchorAssetPathsOnly) const
 {
     if (value->IsHolding<SdfAssetPath>()) {
         SdfAssetPath assetPath;
         value->UncheckedSwap(assetPath);
-        _MakeResolvedAssetPaths(time, attr, &assetPath, 1);
+        _MakeResolvedAssetPaths(
+            time, attr, &assetPath, 1, anchorAssetPathsOnly);
         value->UncheckedSwap(assetPath);
             
     }
     else if (value->IsHolding<VtArray<SdfAssetPath>>()) {
         VtArray<SdfAssetPath> assetPaths;
         value->UncheckedSwap(assetPaths);
-        _MakeResolvedAssetPaths(time, attr, assetPaths.data(), 
-                                assetPaths.size());
+        _MakeResolvedAssetPaths(
+            time, attr, assetPaths.data(), assetPaths.size(), 
+            anchorAssetPathsOnly);
         value->UncheckedSwap(assetPaths);
     }
 }
@@ -1722,6 +1746,32 @@ UsdStage::GetPrimAtPath(const SdfPath &path) const
     return UsdPrim(primData, proxyPrimPath);
 }
 
+UsdObject
+UsdStage::GetObjectAtPath(const SdfPath &path) const
+{
+    // Maintain consistent behavior with GetPrimAtPath
+    if (!path.IsAbsolutePath()) {
+        return UsdObject();
+    }
+
+    const bool isPrimPath = path.IsPrimPath();
+    const bool isPropPath = !isPrimPath && path.IsPropertyPath();
+    if (!isPrimPath && !isPropPath) {
+        return UsdObject();
+    }
+
+    // A valid prim must be found to return either a prim or prop
+    if (isPrimPath) {
+        return GetPrimAtPath(path);
+    } else if (isPropPath) {
+        if (auto prim = GetPrimAtPath(path.GetPrimPath())) {
+            return prim.GetProperty(path.GetNameToken());
+        }
+    }
+
+    return UsdObject();
+}
+
 Usd_PrimDataConstPtr
 UsdStage::_GetPrimDataAtPath(const SdfPath &path) const
 {
@@ -2430,82 +2480,127 @@ UsdStage::_ComposeChildren(Usd_PrimDataPtr prim,
         }
     }
 
-    // Optimize for important special cases:
-    //
-    // 1) the prim has no children.
+    // If the prim has no children, simply destroy any existing child prims.
     if (nameOrder.empty()) {
         TF_DEBUG(USD_COMPOSITION).Msg("Children empty <%s>\n",
                                       prim->GetPath().GetText());
         _DestroyDescendents(prim);
         return;
     }
-    // 2) the prim had no children previously.
-    if (!prim->_firstChild) {
-        TF_DEBUG(USD_COMPOSITION).Msg("Children all new <%s>\n",
-                                      prim->GetPath().GetText());
-        SdfPath parentPath = prim->GetPath();
-        Usd_PrimDataPtr head = NULL, prev = NULL, cur = NULL;
-        for (const auto& child : nameOrder) {
-            cur = _InstantiatePrim(parentPath.AppendChild(child));
-            if (recurse) {
-                _ComposeChildSubtree(cur, prim, mask);
-            }
-            if (!prev) {
-                head = cur;
-            }
-            else {
-                prev->_SetSiblingLink(cur);
-            }
-            prev = cur;
-        }
-        prim->_firstChild = head;
-        cur->_SetParentLink(prim);
-        return;
+
+    // Find the first mismatch between the prim's current child prims and
+    // the new list of child prims specified in nameOrder.
+    Usd_PrimDataSiblingIterator
+        begin = prim->_ChildrenBegin(),
+        end = prim->_ChildrenEnd(),
+        cur = begin;
+    TfTokenVector::const_iterator
+        curName = nameOrder.begin(),
+        nameEnd = nameOrder.end();
+    for (; cur != end && curName != nameEnd; ++cur, ++curName) {
+        if ((*cur)->GetName() != *curName)
+            break;
     }
-    // 3) the prim's set of children and its order hasn't changed.
-    {
-        Usd_PrimDataSiblingIterator
-            begin = prim->_ChildrenBegin(),
-            end = prim->_ChildrenEnd(),
-            cur = begin;
-        TfTokenVector::const_iterator
-            curName = nameOrder.begin(),
-            nameEnd = nameOrder.end();
-        for (; cur != end && curName != nameEnd; ++cur, ++curName) {
-            if ((*cur)->GetName() != *curName)
-                break;
-        }
-        if (cur == end && curName == nameEnd) {
-            TF_DEBUG(USD_COMPOSITION).Msg("Children same in same order <%s>\n",
-                                          prim->GetPath().GetText());
-            if (recurse) {
-                for (cur = begin; cur != end; ++cur) {
-                    _ComposeChildSubtree(*cur, prim, mask);
-                }
-            }
-            return;
+
+    // The prims in [begin, cur) match the children specified in 
+    // [nameOrder.begin(), curName); recompose these child subtrees if needed.
+    if (recurse) {
+        for (Usd_PrimDataSiblingIterator it = begin; it != cur; ++it) {
+            _ComposeChildSubtree(*it, prim, mask);
         }
     }
 
+    // The prims in [cur, end) do not match the children specified in 
+    // [curName, nameEnd), so we need to process these trailing elements.
+
+    // No trailing elements means children are unchanged.
+    if (cur == end && curName == nameEnd) {
+        TF_DEBUG(USD_COMPOSITION).Msg("Children same in same order <%s>\n",
+                                      prim->GetPath().GetText());
+        return;
+    }
+        
+    // Trailing names only mean that children have been added to the end
+    // of the prim's existing children. Note this includes the case where
+    // the prim had no children previously.
+    if (cur == end && curName != nameEnd) {
+        const SdfPath& parentPath = prim->GetPath();
+        Usd_PrimDataPtr head = nullptr, prev = nullptr, tail = nullptr;
+        for (; curName != nameEnd; ++curName) {
+            tail = _InstantiatePrim(parentPath.AppendChild(*curName));
+            if (recurse) {
+                _ComposeChildSubtree(tail, prim, mask);
+            }
+            if (!prev) {
+                head = tail;
+            }
+            else {
+                prev->_SetSiblingLink(tail);
+            }
+            prev = tail;
+        }
+
+        if (cur == begin) {
+            TF_DEBUG(USD_COMPOSITION).Msg("Children all new <%s>\n",
+                                          prim->GetPath().GetText());
+            TF_VERIFY(!prim->_firstChild);
+            prim->_firstChild = head;
+            tail->_SetParentLink(prim);
+        }
+        else {
+            TF_DEBUG(USD_COMPOSITION).Msg("Children appended <%s>\n",
+                                          prim->GetPath().GetText());
+            Usd_PrimDataSiblingIterator lastChild = begin, next = begin;
+            for (++next; next != cur; lastChild = next, ++next) { }
+            
+            (*lastChild)->_SetSiblingLink(head);
+            tail->_SetParentLink(prim);
+        }
+        return;
+    }
+
+    // Trailing children only mean that children have been removed from
+    // the end of the prim's existing children.
+    if (cur != end && curName == nameEnd) {
+        TF_DEBUG(USD_COMPOSITION).Msg("Children removed from end <%s>\n",
+                                      prim->GetPath().GetText());
+        for (Usd_PrimDataSiblingIterator it = cur; it != end; ) {
+            // Make sure we advance to the next sibling before we destroy
+            // the current child so we don't read from a deleted prim.
+            _DestroyPrim(*it++);
+        }
+
+        if (cur == begin) {
+            prim->_firstChild = nullptr;
+        }
+        else {
+            Usd_PrimDataSiblingIterator lastChild = begin, next = begin;
+            for (++next; next != cur; lastChild = next, ++next) { }
+            (*lastChild)->_SetParentLink(prim);
+        }
+        return;
+    }
+
+    // Otherwise, both trailing children and names mean there was some 
+    // other change to the prim's list of children. Do the general form 
+    // of preserving preexisting children and ordering them according 
+    // to nameOrder.
     TF_DEBUG(USD_COMPOSITION).Msg(
         "Require general children recomposition <%s>\n",
         prim->GetPath().GetText());
 
-    // Otherwise we do the general form of preserving preexisting children and
-    // ordering them according to nameOrder.
-
-    // Make a vector of iterators into nameOrder.
+    // Make a vector of iterators into nameOrder from [curName, nameEnd).
     typedef vector<TfTokenVector::const_iterator> TokenVectorIterVec;
-    TokenVectorIterVec nameOrderIters(nameOrder.size());
-    for (size_t i = 0, sz = nameOrder.size(); i != sz; ++i)
-        nameOrderIters[i] = nameOrder.begin() + i;
+    TokenVectorIterVec nameOrderIters(std::distance(curName, nameEnd));
+    for (size_t i = 0, sz = nameOrderIters.size(); i != sz; ++i) {
+        nameOrderIters[i] = curName + i;
+    }
 
     // Sort the name order iterators *by name*.
     sort(nameOrderIters.begin(), nameOrderIters.end(), _DerefIterLess());
 
     // Make a vector of the existing prim children and sort them by name.
-    vector<Usd_PrimDataPtr> oldChildren(
-        prim->_ChildrenBegin(), prim->_ChildrenEnd());
+    vector<Usd_PrimDataPtr> oldChildren(cur, end);
     sort(oldChildren.begin(), oldChildren.end(), _PrimNameLess());
 
     vector<Usd_PrimDataPtr>::const_iterator
@@ -2520,7 +2615,7 @@ UsdStage::_ComposeChildren(Usd_PrimDataPtr prim,
     // iterators.  This lets us re-sort by original order once we're finished.
     vector<pair<Usd_PrimDataPtr, TfTokenVector::const_iterator> >
         tempChildren;
-    tempChildren.reserve(nameOrder.size());
+    tempChildren.reserve(nameOrderIters.size());
 
     const SdfPath &parentPath = prim->GetPath();
 
@@ -2551,7 +2646,7 @@ UsdStage::_ComposeChildren(Usd_PrimDataPtr prim,
 
         // Walk newly-added names up to the next old name, adding them.
         for (; newNameItersIt != newNameItersEnd &&
-                 (oldChildIt == oldChildEnd      ||
+                 (oldChildIt == oldChildEnd ||
                   **newNameItersIt < (*oldChildIt)->GetName());
              ++newNameItersIt) {
             SdfPath newChildPath = parentPath.AppendChild(**newNameItersIt);
@@ -2566,15 +2661,33 @@ UsdStage::_ComposeChildren(Usd_PrimDataPtr prim,
         }
     }
 
+    // tempChildren should never be empty at this point. If it were, it means
+    // that the above loop would have only deleted existing children, but that
+    // case is covered by optimization 4 above.
+    if (!TF_VERIFY(!tempChildren.empty())) {
+        return;
+    }
+
     // Now all the new children are in lexicographical order by name, paired
     // with their name's iterator in the original name order.  Recover the
     // original order by sorting by the iterators natural order.
     sort(tempChildren.begin(), tempChildren.end(), _SecondLess());
 
-    // Now copy the correctly ordered children into place.
-    prim->_firstChild = nullptr;
-    TF_REVERSE_FOR_ALL(i, tempChildren)
-        prim->_AddChild(i->first);
+    // Now all the new children are correctly ordered.  Set the 
+    // sibling and parent links to add them to the prim's children.
+    for (size_t i = 0, e = tempChildren.size() - 1; i < e; ++i) {
+        tempChildren[i].first->_SetSiblingLink(tempChildren[i+1].first);
+    }
+    tempChildren.back().first->_SetParentLink(prim);
+
+    if (cur == begin) {
+        prim->_firstChild = tempChildren.front().first;
+    }
+    else {
+        Usd_PrimDataSiblingIterator lastChild = begin, next = begin;
+        for (++next; next != cur; lastChild = next, ++next) { }
+        (*lastChild)->_SetSiblingLink(tempChildren.front().first);
+    }
 }
 
 void 
@@ -4295,13 +4408,34 @@ UsdStage::_GetDefiningSpecType(const UsdPrim& prim,
 // Flatten & Export Utilities
 // ------------------------------------------------------------------------- //
 
+class Usd_FlattenAccess
+{
+public:
+    static void GetAllMetadata(
+        const UsdObject &obj, bool useFallbacks,
+        UsdMetadataValueMap* resultMap, bool anchorAssetPathsOnly)
+    {
+        obj.GetStage()->_GetAllMetadata(
+            obj, useFallbacks, resultMap, anchorAssetPathsOnly);
+    }
+
+    static void MakeResolvedAssetPaths(
+        UsdTimeCode time, const UsdAttribute& attr,
+        VtValue* value, bool anchorAssetPathsOnly)
+    {
+        attr.GetStage()->_MakeResolvedAssetPaths(
+            time, attr, value, anchorAssetPathsOnly);
+    }
+};
+
 namespace {
 
 // Populates the time sample map with the resolved values for the given 
 // attribute and returns true if time samples exist, false otherwise.
 bool 
 _GetTimeSampleMap(const UsdAttribute &attr, SdfTimeSampleMap *out,
-                  const SdfLayerOffset& offset = SdfLayerOffset())
+                  const SdfLayerOffset& offset = SdfLayerOffset(),
+                  bool anchorAssetPathsOnly = false)
 {
     UsdAttributeQuery attrQuery(attr);
 
@@ -4310,6 +4444,8 @@ _GetTimeSampleMap(const UsdAttribute &attr, SdfTimeSampleMap *out,
         for (const auto& timeSample : timeSamples) {
             VtValue value;
             if (attrQuery.Get(&value, timeSample)) {
+                Usd_FlattenAccess::MakeResolvedAssetPaths(
+                    timeSample, attr, &value, anchorAssetPathsOnly);
                 (*out)[offset * timeSample].Swap(value);
             }
             else {
@@ -4433,7 +4569,12 @@ _CopyAuthoredMetadata(const UsdObject &source, const SdfSpecHandle& dest)
 {
     // GetAllMetadata returns all non-private metadata fields (it excludes
     // composition arcs and values), which is exactly what we want here.
-    _CopyMetadata(dest, source.GetAllAuthoredMetadata());
+    UsdMetadataValueMap metadata;
+    Usd_FlattenAccess::GetAllMetadata(
+        source, /* useFallbacks = */ false, &metadata,
+        /* anchorAssetPathsOnly = */ true);
+
+    _CopyMetadata(dest, metadata);
 }
 
 void
@@ -4469,13 +4610,19 @@ _CopyProperty(const UsdProperty &prop,
         if (attr.GetBracketingTimeSamples(
             0.0, &lower, &upper, &hasSamples) && hasSamples) {
             SdfTimeSampleMap ts;
-            if (_GetTimeSampleMap(attr, &ts, timeOffset)) {
+            if (_GetTimeSampleMap(attr, &ts, timeOffset, 
+                                  /* anchorAssetPathsOnly = */ true)) {
                 sdfAttr->SetInfo(SdfFieldKeys->TimeSamples, VtValue::Take(ts));
             }
         }
         if (attr.HasAuthoredMetadata(SdfFieldKeys->Default)) {
             VtValue defaultValue;
-            if (!attr.Get(&defaultValue)) {
+            if (attr.Get(&defaultValue)) {
+                Usd_FlattenAccess::MakeResolvedAssetPaths(
+                    UsdTimeCode::Default(), attr, &defaultValue, 
+                    /* anchorAssetPathsOnly = */ true);
+            }
+            else {
                 defaultValue = SdfValueBlock();
             }
             sdfAttr->SetInfo(SdfFieldKeys->Default, defaultValue);
@@ -4882,21 +5029,22 @@ static void _ApplyLayerOffset(Storage storage,
 template <class Storage>
 static void _MakeResolvedAssetPaths(Storage storage,
                                     const PcpNodeRef &node,
-                                    const SdfLayerRefPtr &layer)
+                                    const SdfLayerRefPtr &layer,
+                                    bool anchorAssetPathsOnly)
 {
     if (_IsHolding<SdfAssetPath>(storage)) {
         SdfAssetPath assetPath;
         _UncheckedSwap(storage, assetPath);
         _MakeResolvedAssetPathsImpl(
             layer, node.GetLayerStack()->GetIdentifier().pathResolverContext,
-            &assetPath, 1);
+            &assetPath, 1,  anchorAssetPathsOnly);
         _UncheckedSwap(storage, assetPath);
     } else if (_IsHolding<VtArray<SdfAssetPath>>(storage)) {
         VtArray<SdfAssetPath> assetPaths;
         _UncheckedSwap(storage, assetPaths);
         _MakeResolvedAssetPathsImpl(
             layer, node.GetLayerStack()->GetIdentifier().pathResolverContext,
-            assetPaths.data(), assetPaths.size());
+            assetPaths.data(), assetPaths.size(), anchorAssetPathsOnly);
         _UncheckedSwap(storage, assetPaths);
     }
 }
@@ -4907,18 +5055,20 @@ static void _MakeResolvedAssetPaths(Storage storage,
 static void
 _ResolveAssetPathsInDictionary(const SdfLayerRefPtr &anchor,
                                const PcpNodeRef &node,
-                               VtDictionary *dict)
+                               VtDictionary *dict,
+                               bool anchorAssetPathsOnly)
 {
     for (auto& entry : *dict) {
         VtValue& v = entry.second;
         if (v.IsHolding<VtDictionary>()) {
             VtDictionary resolvedDict;
             v.UncheckedSwap(resolvedDict);
-            _ResolveAssetPathsInDictionary(anchor, node, &resolvedDict);
+            _ResolveAssetPathsInDictionary(
+                anchor, node, &resolvedDict, anchorAssetPathsOnly);
             v.UncheckedSwap(resolvedDict);
         }
         else {
-            _MakeResolvedAssetPaths(&v, node, anchor);
+            _MakeResolvedAssetPaths(&v, node, anchor, anchorAssetPathsOnly);
         }
     }
 }
@@ -4930,7 +5080,11 @@ struct StrongestValueComposer
 {
     static const bool ProducesValue = true;
 
-    explicit StrongestValueComposer(Storage s) : _value(s), _done(false) {}
+    explicit StrongestValueComposer(Storage s, 
+                                    bool anchorAssetPathsOnly = false)
+        : _value(s), _done(false), _anchorAssetPathsOnly(anchorAssetPathsOnly) 
+        {}
+
     const std::type_info& GetHeldTypeid() const { return _GetTypeid(_value); }
     bool IsDone() const { return _done; }
     bool ConsumeAuthored(const PcpNodeRef &node,
@@ -4959,7 +5113,8 @@ struct StrongestValueComposer
             if (_IsHolding<VtDictionary>(_value)) {
                 VtDictionary resolvedDict;
                 _UncheckedSwap(_value, resolvedDict);
-                _ResolveAssetPathsInDictionary(layer, node, &resolvedDict);
+                _ResolveAssetPathsInDictionary(
+                    layer, node, &resolvedDict, _anchorAssetPathsOnly);
                 _UncheckedSwap(_value, resolvedDict);                
 
                 // Continue composing if we got a dictionary.
@@ -4974,7 +5129,8 @@ struct StrongestValueComposer
             } else if (_IsHolding<SdfTimeSampleMap>(_value)) {
                 _ApplyLayerOffset(_value, node, layer);
             } else {
-                _MakeResolvedAssetPaths(_value, node, layer);
+                _MakeResolvedAssetPaths(
+                    _value, node, layer, _anchorAssetPathsOnly);
             }
         }
         return _done;
@@ -5016,6 +5172,7 @@ struct StrongestValueComposer
 protected:
     Storage _value;
     bool _done;
+    bool _anchorAssetPathsOnly;
 };
 
 
@@ -5424,9 +5581,7 @@ UsdStage::_GetPrimSpecifierImpl(Usd_PrimDataConstPtr primData,
     // Iterate over all prims, strongest to weakest.
     SdfSpecifier curSpecifier = SdfSpecifierOver;
 
-    SdfPath localPath;
-    SdfLayerRefPtr layer;
-    PcpNodeRef node;
+    Usd_Resolver::Position specPos;
 
     const PcpPrimIndex &primIndex = primData->GetPrimIndex();
     for (Usd_Resolver res(&primIndex); res.IsValid(); res.NextLayer()) {
@@ -5434,9 +5589,8 @@ UsdStage::_GetPrimSpecifierImpl(Usd_PrimDataConstPtr primData,
         _SpecifierStrength curStrength = _SpecifierStrengthDefining;
         if (res.GetLayer()->HasField(
                 res.GetLocalPath(), SdfFieldKeys->Specifier, &curSpecifier)) {
-            node = res.GetNode();
-            layer = res.GetLayer();
-            localPath = res.GetLocalPath();
+            specPos = res.GetPosition();
+
             if (SdfIsDefiningSpecifier(curSpecifier)) {
                 // Compute strength.
                 if (curSpecifier == SdfSpecifierClass) {
@@ -5483,11 +5637,12 @@ UsdStage::_GetPrimSpecifierImpl(Usd_PrimDataConstPtr primData,
 
     // Verify we found *something*.  We should never have PrimData without at
     // least one PrimSpec, and 'specifier' is required, so it must be present.
-    if (TF_VERIFY(layer, "No PrimSpecs for '%s'",
+    if (TF_VERIFY(specPos.GetLayer(), "No PrimSpecs for '%s'",
                   primData->GetPath().GetText())) {
         // Let the composer see the deciding opinion.
         composer->ConsumeAuthored(
-            node, layer, SdfAbstractDataSpecId(&localPath),
+            specPos.GetNode(), specPos.GetLayer(), 
+            SdfAbstractDataSpecId(&specPos.GetLocalPath()),
             SdfFieldKeys->Specifier, TfToken());
     }
     return true;
@@ -5773,7 +5928,8 @@ UsdStage::_ListMetadataFields(const UsdObject &obj, bool useFallbacks) const
 void
 UsdStage::_GetAllMetadata(const UsdObject &obj,
                           bool useFallbacks,
-                          UsdMetadataValueMap* resultMap) const
+                          UsdMetadataValueMap* resultMap,
+                          bool anchorAssetPathsOnly) const
 {
     TRACE_FUNCTION();
 
@@ -5782,7 +5938,7 @@ UsdStage::_GetAllMetadata(const UsdObject &obj,
     TfTokenVector fieldNames = _ListMetadataFields(obj, useFallbacks);
     for (const auto& fieldName : fieldNames) {
         VtValue val;
-        StrongestValueComposer<VtValue *> composer(&val);
+        StrongestValueComposer<VtValue *> composer(&val, anchorAssetPathsOnly);
         _GetMetadataImpl(obj, fieldName, TfToken(), useFallbacks, &composer);
         result[fieldName] = val;
     }

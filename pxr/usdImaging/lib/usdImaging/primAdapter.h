@@ -34,7 +34,7 @@
 
 #include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/imaging/hd/texture.h"
-#include "pxr/imaging/hdx/selectionTracker.h"
+#include "pxr/imaging/hd/selection.h"
 #include "pxr/usd/usd/attribute.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/timeCode.h"
@@ -303,10 +303,10 @@ public:
     /// \name Selection
     // ---------------------------------------------------------------------- //
     USDIMAGING_API
-    virtual bool PopulateSelection(HdxSelectionHighlightMode const& highlightMode,
+    virtual bool PopulateSelection(HdSelection::HighlightMode const& highlightMode,
                                    SdfPath const &usdPath,
                                    VtIntArray const &instanceIndices,
-                                   HdxSelectionSharedPtr const &result);
+                                   HdSelectionSharedPtr const &result);
 
     // ---------------------------------------------------------------------- //
     /// \name Texture resources
@@ -380,7 +380,6 @@ public:
     }
 
 protected:
-    typedef std::vector<UsdImagingValueCache::PrimvarInfo> PrimvarInfoVector;
     typedef UsdImagingValueCache::Key Keys;
 
     template <typename T>
@@ -422,6 +421,19 @@ protected:
 
     UsdTimeCode _GetTimeWithOffset(float offset) const;
 
+    // Converts \p stagePath to the path in the render index
+    SdfPath _GetPathForIndex(SdfPath const& usdPath) const;
+
+    // Returns the rprim paths in the renderIndex rooted at \p indexPath.
+    SdfPathVector _GetRprimSubtree(SdfPath const& indexPath) const;
+
+    // Returns whether or not the render delegate can handle material networks.
+    bool _CanComputeMaterialNetworks() const;
+
+    // Returns \c true if \p usdPath is included in the scene delegate's
+    // invised path list.
+    bool _IsInInvisedPaths(SdfPath const& usdPath) const;
+
     // Determines if an attribute is varying and if so, sets the given
     // \p dirtyFlag in the \p dirtyFlags and increments a perf counter. Returns
     // true if the attribute is varying.
@@ -429,6 +441,9 @@ protected:
     bool _IsVarying(UsdPrim prim, TfToken const& attrName, 
            HdDirtyBits dirtyFlag, TfToken const& perfToken,
            HdDirtyBits* dirtyFlags, bool isInherited) const;
+
+    // Returns whether or not the rprim at \p cachePath is refined.
+    bool _IsRefined(SdfPath const& cachePath) const;
 
     // Determines if the prim's transform (CTM) is varying and if so, sets the 
     // given \p dirtyFlag in the \p dirtyFlags and increments a perf counter. 
@@ -439,14 +454,22 @@ protected:
                              TfToken const& perfToken,
                              HdDirtyBits* dirtyFlags) const;
 
+    // Convenience method for adding or updating a primvar descriptor.
+    // Role defaults to empty token (none).
     USDIMAGING_API
-    void _MergePrimvar(UsdImagingValueCache::PrimvarInfo const& primvar, 
-                       PrimvarInfoVector* vec) const;
+    void _MergePrimvar(
+        HdPrimvarDescriptorVector* vec,
+        TfToken const& name,
+        HdInterpolation interp,
+        TfToken const& role = TfToken()) const;
 
     virtual void _RemovePrim(SdfPath const& cachePath,
                              UsdImagingIndexProxy* index) = 0;
 
+private:
+
     UsdImagingDelegate* _delegate;
+
 };
 
 class UsdImagingPrimAdapterFactoryBase : public TfType::FactoryBase {

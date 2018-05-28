@@ -24,6 +24,8 @@
 
 #include "usdMaya/MayaParticleWriter.h"
 
+#include "usdMaya/adaptor.h"
+
 #include "pxr/usd/usdGeom/points.h"
 #include "pxr/usd/usd/timeCode.h"
 #include "pxr/base/vt/array.h"
@@ -43,6 +45,9 @@
 #include <set>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+PXRUSDMAYA_REGISTER_ADAPTOR_SCHEMA(MFn::kParticle, UsdGeomPoints);
+PXRUSDMAYA_REGISTER_ADAPTOR_SCHEMA(MFn::kNParticle, UsdGeomPoints);
 
 namespace {
     template <typename T>
@@ -112,10 +117,13 @@ namespace {
     }
 
     template <typename T>
-    inline void _addAttr(UsdGeomPoints& points, const TfToken& name, const SdfValueTypeName& typeName,
-                         const VtArray<T>& a, const UsdTimeCode& usdTime) {
+    inline void _addAttr(UsdGeomPoints& points, const TfToken& name, 
+                         const SdfValueTypeName& typeName,
+                         const VtArray<T>& a, const UsdTimeCode& usdTime,
+                         UsdUtilsSparseValueWriter *valueWriter) {
         auto attr = points.GetPrim().CreateAttribute(name, typeName, false, SdfVariabilityVarying);
-        attr.Set(a, usdTime);
+        VtValue val(a);
+        valueWriter->SetAttribute(attr, &val, usdTime);
     }
 
     const TfToken _rgbName("rgb");
@@ -125,10 +133,13 @@ namespace {
     const TfToken _massName("mass");
 
     template <typename T>
-    void _addAttrVec(UsdGeomPoints& points, const SdfValueTypeName& typeName, const _strVecPairVec<T>& a,
-                     const UsdTimeCode& usdTime) {
+    void _addAttrVec(UsdGeomPoints& points, const SdfValueTypeName& typeName, 
+                     const _strVecPairVec<T>& a,
+                     const UsdTimeCode& usdTime,
+                     UsdUtilsSparseValueWriter *valueWriter) {
         for (const auto& v : a) {
-            _addAttr(points, v.first, typeName, *v.second, usdTime);
+            _addAttr(points, v.first, typeName, *v.second, usdTime, 
+                     valueWriter);
         }
     }
 
@@ -309,19 +320,22 @@ void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& 
     radii->resize(minSize);
     masses->resize(minSize);
 
-    points.GetPointsAttr().Set(*positions, usdTime);
-    points.GetVelocitiesAttr().Set(*velocities, usdTime);
-    points.GetIdsAttr().Set(*ids, usdTime);
+    _SetAttribute(points.GetPointsAttr(), positions.get(), usdTime);
+    _SetAttribute(points.GetVelocitiesAttr(), velocities.get(), usdTime);
+    _SetAttribute(points.GetIdsAttr(), ids.get(), usdTime);
     // radius -> width conversion
     for (auto& r : *radii) { r = r * 2.0f; }
-    points.GetWidthsAttr().Set(*radii, usdTime);
+    _SetAttribute(points.GetWidthsAttr(), radii.get(), usdTime);
 
-
-    _addAttr(points, _massName, SdfValueTypeNames->FloatArray, *masses, usdTime);
+    _addAttr(points, _massName, SdfValueTypeNames->FloatArray, *masses, usdTime,
+             _GetSparseValueWriter());
     // TODO: check if we need the array suffix!!
-    _addAttrVec(points, SdfValueTypeNames->Vector3fArray, vectors, usdTime);
-    _addAttrVec(points, SdfValueTypeNames->FloatArray, floats, usdTime);
-    _addAttrVec(points, SdfValueTypeNames->IntArray, ints, usdTime);
+    _addAttrVec(points, SdfValueTypeNames->Vector3fArray, vectors, usdTime,
+                _GetSparseValueWriter());
+    _addAttrVec(points, SdfValueTypeNames->FloatArray, floats, usdTime,
+                _GetSparseValueWriter());
+    _addAttrVec(points, SdfValueTypeNames->IntArray, ints, usdTime, 
+                _GetSparseValueWriter());
 }
 
 void MayaParticleWriter::initializeUserAttributes() {

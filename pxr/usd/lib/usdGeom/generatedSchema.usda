@@ -1,18 +1,22 @@
 #usda 1.0
 (
     "WARNING: THIS FILE IS GENERATED.  DO NOT EDIT."
+    customLayerData = {
+        string[] appliedAPISchemas = ["GeomModelAPI", "MotionAPI"]
+        string[] multipleApplyAPISchemas = []
+    }
 )
 
 class "Imageable" (
-    doc = '''Base class for all prims that may require rendering or 
+    doc = """Base class for all prims that may require rendering or 
     visualization of some sort. The primary attributes of Imageable 
     are visibility and purpose, which each provide instructions for
     what geometry should be included for processing by rendering and other
     computations.
-    
-    Imageable also introduces the concept (and API) of geometric
-    "primitive variables", as UsdGeomPrimvar, which interpolate across a 
-    primitive and can override shader inputs.'''
+
+    <Deprecated> Imageable also provides API for accessing primvars, which
+    have been moved to the UsdGeomPrimvarsAPI schema.  This API is planned
+    to be removed, UsdGeomPrimvarsAPI should be used directly instead."""
 )
 {
     rel proxyPrim (
@@ -84,6 +88,14 @@ class "Imageable" (
         deactivating geometry prims, invisible geometry is still 
         available for inspection, for positioning, for defining volumes, etc.'''
     )
+}
+
+class "PrimvarsAPI" (
+    doc = """UsdGeomPrimvarsAPI encodes geometric \"primitive variables\",
+    as UsdGeomPrimvar, which interpolate across a primitive's topology,
+    can override shader inputs, and inherit down namespace."""
+)
+{
 }
 
 class "Xformable" (
@@ -1561,11 +1573,11 @@ class "PointBased" (
         during traversal."""
     )
     normal3f[] normals (
-        doc = """Provide orientation for individual points, which, depending on
-        subclass, may define a surface, curve, or free points.  Note that in
-        general you should not need or want to provide 'normals' for any
-        Mesh that is subdivided, as the subdivision scheme will provide smooth
-        normals.  'normals' is not a generic Primvar,
+        doc = """Provide an object-space orientation for individual points, 
+        which, depending on subclass, may define a surface, curve, or free 
+        points.  Note that in general you should not need or want to provide
+        'normals' for any Mesh that is subdivided, as the subdivision scheme 
+        will provide smooth normals.  'normals' is not a generic Primvar,
         but the number of elements in this attribute will be determined by
         its 'interpolation'.  See \\ref SetNormalsInterpolation()"""
     )
@@ -1809,11 +1821,11 @@ class Mesh "Mesh" (
         "edgeAndCorner" (the default), or "edgeOnly".'''
     )
     normal3f[] normals (
-        doc = """Provide orientation for individual points, which, depending on
-        subclass, may define a surface, curve, or free points.  Note that in
-        general you should not need or want to provide 'normals' for any
-        Mesh that is subdivided, as the subdivision scheme will provide smooth
-        normals.  'normals' is not a generic Primvar,
+        doc = """Provide an object-space orientation for individual points, 
+        which, depending on subclass, may define a surface, curve, or free 
+        points.  Note that in general you should not need or want to provide
+        'normals' for any Mesh that is subdivided, as the subdivision scheme 
+        will provide smooth normals.  'normals' is not a generic Primvar,
         but the number of elements in this attribute will be determined by
         its 'interpolation'.  See \\ref SetNormalsInterpolation()"""
     )
@@ -2101,11 +2113,11 @@ class NurbsPatch "NurbsPatch" (
         during traversal."""
     )
     normal3f[] normals (
-        doc = """Provide orientation for individual points, which, depending on
-        subclass, may define a surface, curve, or free points.  Note that in
-        general you should not need or want to provide 'normals' for any
-        Mesh that is subdivided, as the subdivision scheme will provide smooth
-        normals.  'normals' is not a generic Primvar,
+        doc = """Provide an object-space orientation for individual points, 
+        which, depending on subclass, may define a surface, curve, or free 
+        points.  Note that in general you should not need or want to provide
+        'normals' for any Mesh that is subdivided, as the subdivision scheme 
+        will provide smooth normals.  'normals' is not a generic Primvar,
         but the number of elements in this attribute will be determined by
         its 'interpolation'.  See \\ref SetNormalsInterpolation()"""
     )
@@ -2369,11 +2381,11 @@ class "Curves" (
         during traversal."""
     )
     normal3f[] normals (
-        doc = """Provide orientation for individual points, which, depending on
-        subclass, may define a surface, curve, or free points.  Note that in
-        general you should not need or want to provide 'normals' for any
-        Mesh that is subdivided, as the subdivision scheme will provide smooth
-        normals.  'normals' is not a generic Primvar,
+        doc = """Provide an object-space orientation for individual points, 
+        which, depending on subclass, may define a surface, curve, or free 
+        points.  Note that in general you should not need or want to provide
+        'normals' for any Mesh that is subdivided, as the subdivision scheme 
+        will provide smooth normals.  'normals' is not a generic Primvar,
         but the number of elements in this attribute will be determined by
         its 'interpolation'.  See \\ref SetNormalsInterpolation()"""
     )
@@ -2660,11 +2672,11 @@ class BasisCurves "BasisCurves" (
         during traversal."""
     )
     normal3f[] normals (
-        doc = """Provide orientation for individual points, which, depending on
-        subclass, may define a surface, curve, or free points.  Note that in
-        general you should not need or want to provide 'normals' for any
-        Mesh that is subdivided, as the subdivision scheme will provide smooth
-        normals.  'normals' is not a generic Primvar,
+        doc = """Provide an object-space orientation for individual points, 
+        which, depending on subclass, may define a surface, curve, or free 
+        points.  Note that in general you should not need or want to provide
+        'normals' for any Mesh that is subdivided, as the subdivision scheme 
+        will provide smooth normals.  'normals' is not a generic Primvar,
         but the number of elements in this attribute will be determined by
         its 'interpolation'.  See \\ref SetNormalsInterpolation()"""
     )
@@ -2877,11 +2889,11 @@ class NurbsCurves "NurbsCurves" (
         entries must take on monotonically increasing values."""
     )
     normal3f[] normals (
-        doc = """Provide orientation for individual points, which, depending on
-        subclass, may define a surface, curve, or free points.  Note that in
-        general you should not need or want to provide 'normals' for any
-        Mesh that is subdivided, as the subdivision scheme will provide smooth
-        normals.  'normals' is not a generic Primvar,
+        doc = """Provide an object-space orientation for individual points, 
+        which, depending on subclass, may define a surface, curve, or free 
+        points.  Note that in general you should not need or want to provide
+        'normals' for any Mesh that is subdivided, as the subdivision scheme 
+        will provide smooth normals.  'normals' is not a generic Primvar,
         but the number of elements in this attribute will be determined by
         its 'interpolation'.  See \\ref SetNormalsInterpolation()"""
     )
@@ -3078,11 +3090,11 @@ class Points "Points" (
                  primvar."""
     )
     normal3f[] normals (
-        doc = """Provide orientation for individual points, which, depending on
-        subclass, may define a surface, curve, or free points.  Note that in
-        general you should not need or want to provide 'normals' for any
-        Mesh that is subdivided, as the subdivision scheme will provide smooth
-        normals.  'normals' is not a generic Primvar,
+        doc = """Provide an object-space orientation for individual points, 
+        which, depending on subclass, may define a surface, curve, or free 
+        points.  Note that in general you should not need or want to provide
+        'normals' for any Mesh that is subdivided, as the subdivision scheme 
+        will provide smooth normals.  'normals' is not a generic Primvar,
         but the number of elements in this attribute will be determined by
         its 'interpolation'.  See \\ref SetNormalsInterpolation()"""
     )
@@ -3841,7 +3853,7 @@ class "GeomModelAPI" (
     If the metadata cannot be read in the right format, or the matrix can't
     be inverted, the card face is not drawn.
 
-    All card faces are drawn and textured as double-sided.
+    All card faces are drawn and textured as single-sided.
 
     \\todo CreatePayload() """
 )

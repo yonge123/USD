@@ -24,6 +24,35 @@ over "GLOBAL" (
 {
 }
 
+class "NonAppliedAPI" (
+    inherits = </APISchemaBase>
+    customData = {
+        token apiSchemaType = "nonApplied"
+    }
+)
+{
+}
+
+class "SingleApplyAPI" (
+    inherits = </APISchemaBase>
+    customData = {
+        token apiSchemaType = "singleApply"
+        bool isPrivateApply = false
+    }
+)
+{
+}
+
+class "MultipleApplyAPI" (
+    inherits = </APISchemaBase>
+    customData = {
+        token apiSchemaType = "multipleApply"
+        bool isPrivateApply = true
+    }
+)
+{
+}
+
 class "Base" (
     inherits = </Typed>
     doc = "This doc should only exist on the \"Base\" class."
@@ -237,6 +266,13 @@ class TestPxHairman "TestPxHairman" (
         doc = """This exercises custom API naming."""
         customData = {
             string apiName = "Gofur_GeomOnHairdensity"
+        }
+    )
+
+    float attrWithoutGeneratedAccessorAPI (
+        doc = """This exercises empty apiName to skip accessor generation."""
+        customData = {
+            string apiName = ""
         }
     )
 }

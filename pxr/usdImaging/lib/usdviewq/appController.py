@@ -358,6 +358,14 @@ class AppController(QtCore.QObject):
             self._filterObj = AppEventFilter(self)
             QtWidgets.QApplication.instance().installEventFilter(self._filterObj)
 
+            # Setup Usdview API and optionally load plugins.  We do this before
+            # loading the stage in case a plugin wants to modify global settings
+            # that affect stage loading.
+            self._plugRegistry = None
+            self._usdviewApi = UsdviewApi(self)
+            if not self._noPlugins:
+                self._configurePlugins()
+
             # read the stage here
             stage = self._openStage(
                 self._parserData.usdFile, self._parserData.populationMask)
@@ -378,8 +386,6 @@ class AppController(QtCore.QObject):
             self._primViewSelectionBlocker = Blocker()
             self._propertyViewSelectionBlocker = Blocker()
 
-            self._dataModel.selection.signalPointSelectionChanged.connect(
-                self._pointSelectionChanged)
             self._dataModel.selection.signalPrimSelectionChanged.connect(
                 self._primSelectionChanged)
             self._dataModel.selection.signalPropSelectionChanged.connect(
@@ -989,12 +995,6 @@ class AppController(QtCore.QObject):
 
             self._setupDebugMenu()
 
-            # Setup Usdview API and optionally load plugins
-            self._plugRegistry = None
-            self._usdviewApi = UsdviewApi(self)
-            if not self._noPlugins:
-                self._configurePlugins()
-
             # timer for slider. when user stops scrubbing for 0.5s, update stuff.
             self._sliderTimer = QtCore.QTimer(self)
             self._sliderTimer.setInterval(500)
@@ -1211,7 +1211,13 @@ class AppController(QtCore.QObject):
     # Render plugin support
     def _rendererPluginChanged(self, plugin):
         if self._stageView:
-            self._stageView.SetRendererPlugin(plugin)
+            if not self._stageView.SetRendererPlugin(plugin):
+                # If SetRendererPlugin failed, we need to reset the check mark
+                # to whatever the currently loaded renderer is.
+                for action in self._ui.rendererPluginActionGroup.actions():
+                    if action.text() == self._stageView.rendererPluginName:
+                        action.setChecked(True)
+                        break
 
     def _configureRendererPlugins(self):
         if self._stageView:
@@ -1282,7 +1288,6 @@ class AppController(QtCore.QObject):
                 self._stageView.fpsHUDInfo = self._fpsHUDInfo
                 self._stageView.fpsHUDKeys = self._fpsHUDKeys
 
-                self._stageView.signalPointSelected.connect(self.onPointSelected)
                 self._stageView.signalPrimSelected.connect(self.onPrimSelected)
                 self._stageView.signalPrimRollover.connect(self.onRollover)
                 self._stageView.signalMouseDrag.connect(self.onStageViewMouseDrag)
@@ -2580,13 +2585,26 @@ class AppController(QtCore.QObject):
 
             # now populate down to the child
             for parent in reversed(childList):
-                item = self._primToItemMap[parent]
-                self._populateChildren(item)
-                if ensureExpanded:
-                    item.setExpanded(True)
+                try:
+                    item = self._primToItemMap[parent]
+                    self._populateChildren(item)
+                    if ensureExpanded:
+                        item.setExpanded(True)
+                except:
+                    item = None
 
-        # finally, return the requested item, which now must be in the map
-        return self._primToItemMap[self._dataModel.stage.GetPrimAtPath(path)]
+        # finally, return the requested item, which now should be in
+        # the map. If something has been added, this can fail. Not
+        # sure how to rebuild or add this to the map in a minimal way,
+        # but after the first hiccup, I don't see any ill
+        # effects. Would love to know a better way... 
+        # - wave 04.17.2018
+        prim = self._dataModel.stage.GetPrimAtPath(path)
+        try:
+            item = self._primToItemMap[prim]
+        except:
+            item = None
+        return item
 
     def selectPseudoroot(self):
         """Selects only the pseudoroot."""
@@ -2674,9 +2692,6 @@ class AppController(QtCore.QObject):
         ### from registering /Canopies/Twig as prefix
         return commonPrefix.rsplit('/', 1)[0]
 
-    def _pointSelectionChanged(self, point):
-        if self._stageView:
-            self._stageView.updateView()
 
     def _primSelectionChanged(self, added, removed):
         """Called when the prim selection is updated in the data model. Updates
@@ -3879,11 +3894,7 @@ class AppController(QtCore.QObject):
     def onStageViewMouseDrag(self):
         return
 
-    def onPointSelected(self, point, button, modifiers):
-        self._dataModel.selection.setPoint(point)
-        return
-
-    def onPrimSelected(self, path, instanceIndex, button, modifiers):
+    def onPrimSelected(self, path, instanceIndex, point, button, modifiers):
 
         # Ignoring middle button until we have something
         # meaningfully different for it to do
@@ -3902,6 +3913,8 @@ class AppController(QtCore.QObject):
                         doSelection = False
                         break
             if doSelection:
+                self._dataModel.selection.setPoint(point)
+
                 shiftPressed = modifiers & QtCore.Qt.ShiftModifier
                 ctrlPressed = modifiers & QtCore.Qt.ControlModifier
 

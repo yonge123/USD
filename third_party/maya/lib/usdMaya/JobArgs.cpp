@@ -45,6 +45,12 @@ TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
 TF_DEFINE_PUBLIC_TOKENS(PxUsdExportJobArgsTokens, 
         PXRUSDMAYA_JOBARGS_TOKENS);
 
+TF_DEFINE_PRIVATE_TOKENS(
+    _defaultIncludeMetadataKeys, 
+    (hidden)
+    (instanceable)
+    (kind)
+);
 
 JobExportArgs::JobExportArgs()
     :
@@ -53,7 +59,7 @@ JobExportArgs::JobExportArgs()
         shadingMode(PxrUsdMayaShadingModeTokens->displayColor),
         mergeTransformAndShape(true),
         exportInstances(true),
-        exportAnimation(false),
+        timeInterval(/* empty interval (no animation) */),
         excludeInvisible(false),
         exportDefaultCameras(false),
         exportSkin(false),
@@ -65,7 +71,6 @@ JobExportArgs::JobExportArgs()
         exportCollectionBasedBindings(false),
         normalizeNurbs(false),
         exportNurbsExplicitUV(true),
-        nurbsExplicitUVType(PxUsdExportJobArgsTokens->Uniform),
         exportColorSets(true),
         renderLayerMode(PxUsdExportJobArgsTokens->defaultLayer),
         defaultMeshScheme(UsdGeomTokens->catmullClark),
@@ -74,42 +79,30 @@ JobExportArgs::JobExportArgs()
 {
 }
 
-static
-std::string
-_StringifyBool(const bool value)
-{
-    if (value) {
-        return "true";
-    }
-
-    return "false";
-}
-
 std::ostream&
 operator <<(std::ostream& out, const JobExportArgs& exportArgs)
 {
-    out << "exportRefsAsInstanceable: " << _StringifyBool(exportArgs.exportRefsAsInstanceable) << std::endl
-        << "exportDisplayColor: " << _StringifyBool(exportArgs.exportDisplayColor) << std::endl
+    out << "exportRefsAsInstanceable: " << TfStringify(exportArgs.exportRefsAsInstanceable) << std::endl
+        << "exportDisplayColor: " << TfStringify(exportArgs.exportDisplayColor) << std::endl
         << "shadingMode: " << exportArgs.shadingMode << std::endl
-        << "mergeTransformAndShape: " << _StringifyBool(exportArgs.mergeTransformAndShape) << std::endl
-        << "exportInstances: " << _StringifyBool(exportArgs.exportInstances) << std::endl
-        << "exportAnimation: " << _StringifyBool(exportArgs.exportAnimation) << std::endl
-        << "excludeInvisible: " << _StringifyBool(exportArgs.excludeInvisible) << std::endl
-        << "exportDefaultCameras: " << _StringifyBool(exportArgs.exportDefaultCameras) << std::endl
-        << "exportSkin: " << _StringifyBool(exportArgs.exportSkin) << std::endl
-        << "autoSkelRoots: " << _StringifyBool(exportArgs.autoSkelRoots) << std::endl
-        << "exportMeshUVs: " << _StringifyBool(exportArgs.exportMeshUVs) << std::endl
-        << "normalizeMeshUVs: " << _StringifyBool(exportArgs.normalizeMeshUVs) << std::endl
-        << "exportMaterialCollections: " << _StringifyBool(exportArgs.exportMaterialCollections) << std::endl
+        << "mergeTransformAndShape: " << TfStringify(exportArgs.mergeTransformAndShape) << std::endl
+        << "exportInstances: " << TfStringify(exportArgs.exportInstances) << std::endl
+        << "timeInterval: " << exportArgs.timeInterval << std::endl
+        << "excludeInvisible: " << TfStringify(exportArgs.excludeInvisible) << std::endl
+        << "exportDefaultCameras: " << TfStringify(exportArgs.exportDefaultCameras) << std::endl
+        << "exportSkin: " << TfStringify(exportArgs.exportSkin) << std::endl
+        << "autoSkelRoots: " << TfStringify(exportArgs.autoSkelRoots) << std::endl
+        << "exportMeshUVs: " << TfStringify(exportArgs.exportMeshUVs) << std::endl
+        << "normalizeMeshUVs: " << TfStringify(exportArgs.normalizeMeshUVs) << std::endl
+        << "exportMaterialCollections: " << TfStringify(exportArgs.exportMaterialCollections) << std::endl
         << "materialCollectionsPath: " << exportArgs.materialCollectionsPath << std::endl
-        << "exportCollectionBasedBindings: " << _StringifyBool(exportArgs.exportCollectionBasedBindings) << std::endl
-        << "normalizeNurbs: " << _StringifyBool(exportArgs.normalizeNurbs) << std::endl
-        << "exportNurbsExplicitUV: " << _StringifyBool(exportArgs.exportNurbsExplicitUV) << std::endl
-        << "nurbsExplicitUVType: " << exportArgs.nurbsExplicitUVType << std::endl
-        << "exportColorSets: " << _StringifyBool(exportArgs.exportColorSets) << std::endl
+        << "exportCollectionBasedBindings: " << TfStringify(exportArgs.exportCollectionBasedBindings) << std::endl
+        << "normalizeNurbs: " << TfStringify(exportArgs.normalizeNurbs) << std::endl
+        << "exportNurbsExplicitUV: " << TfStringify(exportArgs.exportNurbsExplicitUV) << std::endl
+        << "exportColorSets: " << TfStringify(exportArgs.exportColorSets) << std::endl
         << "renderLayerMode: " << exportArgs.renderLayerMode << std::endl
         << "defaultMeshScheme: " << exportArgs.defaultMeshScheme << std::endl
-        << "exportVisibility: " << _StringifyBool(exportArgs.exportVisibility) << std::endl
+        << "exportVisibility: " << TfStringify(exportArgs.exportVisibility) << std::endl
         << "parentScope: " << exportArgs.getParentScope() << std::endl;
 
     out << "melPerFrameCallback: " << exportArgs.melPerFrameCallback << std::endl
@@ -154,27 +147,23 @@ void JobExportArgs::setParentScope(const std::string& ps) {
 JobImportArgs::JobImportArgs()
     :
         shadingMode(PxrUsdMayaShadingModeTokens->displayColor),
-        defaultMeshScheme(UsdGeomTokens->catmullClark),
         assemblyRep(PxrUsdMayaTranslatorTokens->Collapsed),
-        readAnimData(true),
-        useCustomFrameRange(false),
-        startTime(1.0),
-        endTime(1.0),
-        importWithProxyShapes(false)
+        timeInterval(GfInterval::GetFullInterval()),
+        importWithProxyShapes(false),
+        includeMetadataKeys(
+                _defaultIncludeMetadataKeys->allTokens.begin(),
+                _defaultIncludeMetadataKeys->allTokens.end()),
+        includeAPINames(/*empty*/)
 {
 }
 
 std::ostream&
-operator <<(std::ostream& out, const JobImportArgs& exportArgs)
+operator <<(std::ostream& out, const JobImportArgs& importArgs)
 {
-    out << "shadingMode: " << exportArgs.shadingMode << std::endl
-        << "defaultMeshScheme: " << exportArgs.defaultMeshScheme << std::endl
-        << "assemblyRep: " << exportArgs.assemblyRep << std::endl
-        << "readAnimData: " << _StringifyBool(exportArgs.readAnimData) << std::endl
-        << "useCustomFrameRange: " << _StringifyBool(exportArgs.useCustomFrameRange) << std::endl
-        << "startTime: " << exportArgs.startTime << std::endl
-        << "endTime: " << exportArgs.endTime << std::endl
-        << "importWithProxyShapes: " << _StringifyBool(exportArgs.importWithProxyShapes) << std::endl;
+    out << "shadingMode: " << importArgs.shadingMode << std::endl
+        << "assemblyRep: " << importArgs.assemblyRep << std::endl
+        << "timeInterval: " << importArgs.timeInterval << std::endl
+        << "importWithProxyShapes: " << TfStringify(importArgs.importWithProxyShapes) << std::endl;
 
     return out;
 }
