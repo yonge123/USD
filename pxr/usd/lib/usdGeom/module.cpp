@@ -34,6 +34,7 @@ TF_WRAP_MODULE
     TF_WRAP(UsdGeomFaceSetAPI);
     TF_WRAP(UsdGeomModelAPI);
     TF_WRAP(UsdGeomPrimvar);
+    TF_WRAP(UsdGeomPrimvarsAPI);
     TF_WRAP(UsdGeomTokens);
     TF_WRAP(UsdGeomXformOp);
     TF_WRAP(UsdGeomXformCommonAPI);
@@ -49,8 +50,8 @@ TF_WRAP_MODULE
             TF_WRAP(UsdGeomXform);
             TF_WRAP(UsdGeomCamera);
             TF_WRAP(UsdGeomBoundable);
-                TF_WRAP(UsdGeomImagePlane);
                 TF_WRAP(UsdGeomGprim);
+                    TF_WRAP(UsdGeomImagePlane);
                     TF_WRAP(UsdGeomCapsule);
                     TF_WRAP(UsdGeomCone);
                     TF_WRAP(UsdGeomCube);

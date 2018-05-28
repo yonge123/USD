@@ -34,8 +34,11 @@
 #include "pxr/base/tf/token.h"
 #include "pxr/usd/sdf/path.h"
 
+#include <maya/MString.h>
+
 #include <map>
 #include <ostream>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -56,10 +59,12 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
         PXRUSDMAYA_TRANSLATOR_TOKENS);
 
 #define PXRUSDMAYA_JOBARGS_TOKENS \
-    (Uniform) \
     (defaultLayer) \
     (currentLayer) \
-    (modelingVariant)
+    (modelingVariant) \
+    (none) \
+    ((auto_, "auto")) \
+    ((explicit_, "explicit"))
 
 TF_DECLARE_PUBLIC_TOKENS(PxUsdExportJobArgsTokens, 
         PXRUSDMAYA_JOBARGS_TOKENS);
@@ -76,7 +81,12 @@ struct JobExportArgs
     bool mergeTransformAndShape;
     bool exportInstances;
 
-    bool exportAnimation;
+    /// The interval over which to export animated data.
+    /// An empty interval (<tt>GfInterval::IsEmpty()</tt>) means that no
+    /// animated (time-sampled) data should be exported.
+    /// Otherwise, animated data should be exported at times contained in the
+    /// interval.
+    GfInterval timeInterval;
     bool exportAsClip;
     UsdTimeCode clipStartTime;
     bool eulerFilter;
@@ -94,7 +104,6 @@ struct JobExportArgs
 
     bool normalizeNurbs;
     bool exportNurbsExplicitUV;
-    TfToken nurbsExplicitUVType;
     
     bool exportColorSets;
     bool exportReferenceObjects;
@@ -125,8 +134,6 @@ struct JobExportArgs
     // Optionally specified path to use as top level prim in
     // place of the scene root.
     std::string exportRootPath;
-    // store a computed SdfPath path for reuse in mayaPrimWriter
-    SdfPath exportRootSdfPath;
 
     TfToken rootKind;
 
@@ -136,8 +143,27 @@ struct JobExportArgs
     const SdfPath& getParentScope() const {
         return parentScope;
     }
+
+    PXRUSDMAYA_API
+    void addFilteredTypeName(const MString& typeName);
+
+    const std::set<unsigned int>& getFilteredTypeIds() const {
+        return filteredTypeIds;
+    }
+
+    void clearFilteredTypeIds() {
+        filteredTypeIds.clear();
+    }
+
 private:
     SdfPath parentScope;
+
+    // Maya type ids to avoid exporting; these are
+    // EXACT types, though the only exposed way to modify this,
+    // addFilteredTypeName, will also add all inherited types
+    // (so if you exclude "constraint", it will also exclude
+    // "parentConstraint")
+    std::set<unsigned int> filteredTypeIds;
 };
 
 PXRUSDMAYA_API
@@ -150,13 +176,18 @@ struct JobImportArgs
     JobImportArgs();
 
     TfToken shadingMode;
-    TfToken defaultMeshScheme;
     TfToken assemblyRep;
-    bool readAnimData;
-    bool useCustomFrameRange;
-    double startTime;
-    double endTime;
+    /// The interval over which to import animated data.
+    /// An empty interval (<tt>GfInterval::IsEmpty()</tt>) means that no
+    /// animated (time-sampled) data should be imported.
+    /// A full interval (<tt>timeInterval == GfInterval::GetFullInterval()</tt>)
+    /// means to import all available data, though this does not need to be
+    /// special-cased because USD will accept full intervals like any other
+    /// non-empty interval.
+    GfInterval timeInterval;
     bool importWithProxyShapes;
+    TfToken::Set includeMetadataKeys;
+    TfToken::Set includeAPINames;
 };
 
 PXRUSDMAYA_API

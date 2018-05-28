@@ -5,16 +5,41 @@
 
 #include "pxr/usdImaging/usdImaging/delegate.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
+#include "pxr/usdImaging/usdImaging/indexProxy.h"
 
-#include "pxr/imaging/hd/imagePlane.h"
+#include "pxr/usd/usdGeom/imagePlane.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+TF_DEFINE_ENV_SETTING(USD_IMAGING_ENABLE_IMAGEPLANES, true,
+                      "Enables/disables the use of image planes in hydra until the code matures enough.");
+
+namespace {
+
+// Simplest right handed vertex counts and vertex indices.
+const VtIntArray _faceVertexCounts = {
+    3, 3
+};
+
+const VtIntArray _faceVertexIndices = {
+    0, 1, 2, 0, 2, 3
+};
+
+const VtIntArray _holeIndices;
+
+bool
+_isImagePlaneEnabled() {
+    static const auto _enabled = TfGetEnvSetting(USD_IMAGING_ENABLE_IMAGEPLANES);
+    return _enabled;
+}
+
+}
 
 TF_REGISTRY_FUNCTION(TfType)
 {
     typedef UsdImagingImagePlaneAdapter Adapter;
-    /*TfType t = */TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter> >();
-    //t.SetFactory< UsdImagingPrimAdapterFactory<Adapter> >();
+    TfType t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter> >();
+    t.SetFactory< UsdImagingPrimAdapterFactory<Adapter> >();
 }
 
 UsdImagingImagePlaneAdapter::~UsdImagingImagePlaneAdapter() {
@@ -26,7 +51,7 @@ UsdImagingImagePlaneAdapter::Populate(
     const UsdPrim& prim,
     UsdImagingIndexProxy* index,
     const UsdImagingInstancerContext* instancerContext /*= nullptr*/){
-    return HdImagePlane::IsEnabled() ? _AddRprim(HdPrimTypeTokens->imagePlane,
+    return _isImagePlaneEnabled() ? _AddRprim(HdPrimTypeTokens->mesh,
                      prim, index, GetMaterialId(prim), instancerContext) : SdfPath();
 }
 
@@ -38,26 +63,9 @@ UsdImagingImagePlaneAdapter::TrackVariability(
     const UsdImagingInstancerContext* instancerContext) const {
     BaseAdapter::TrackVariability(
         prim, cachePath, timeVaryingBits, instancerContext);
-
-    _IsVarying(
-        prim,
-        UsdGeomTokens->points,
-        HdChangeTracker::DirtyPoints,
-        UsdImagingTokens->usdVaryingPrimVar,
-        timeVaryingBits, false);
-
-    if (!_IsVarying(
-            prim,
-            UsdGeomTokens->faceVertexCounts,
-            HdChangeTracker::DirtyTopology,
-            UsdImagingTokens->usdVaryingTopology,
-            timeVaryingBits, false)) {
-        _IsVarying(prim,
-            UsdGeomTokens->faceVertexIndices,
-            HdChangeTracker::DirtyTopology,
-            UsdImagingTokens->usdVaryingTopology,
-            timeVaryingBits, false);
-    }
+    // We can check here if coverage or coverage origin is animated and
+    // turn off varying for primvars.
+    *timeVaryingBits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyExtent;
 }
 
 void
@@ -72,52 +80,66 @@ UsdImagingImagePlaneAdapter::UpdateForTime(
 
     UsdImagingValueCache* valueCache = _GetValueCache();
 
-    if (requestedBits & HdChangeTracker::DirtyPoints) {
-        static const VtVec3fArray vertices = {
-            GfVec3f(-1.0f ,  1.0f , 0.0f),
-            GfVec3f( 1.0f ,  1.0f , 0.0f),
-            GfVec3f( 1.0f , -1.0f , 0.0f),
-            GfVec3f(-1.0f , -1.0f , 0.0f),
-        };
+    if (requestedBits & HdChangeTracker::DirtyTransform) {
+        // Update the transform with the size authored for the sphere.
+        GfMatrix4d& ctm = valueCache->GetTransform(cachePath);
+        GfMatrix4d xf; xf.SetIdentity();
+        ctm = xf * ctm;
+    }
 
-        VtValue& pointsValues = valueCache->GetPoints(cachePath);
-        pointsValues = vertices;
+    if (requestedBits & (HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyExtent)) {
+        UsdGeomImagePlane imagePlane(prim);
+        VtVec3fArray vertices;
+        VtVec2fArray uvs;
+        imagePlane.CalculateGeometryForViewport(
+            &vertices, &uvs, time);
 
+        if (requestedBits & HdChangeTracker::DirtyPoints) {
+            valueCache->GetPoints(cachePath) = vertices;
 
-        UsdImagingValueCache::PrimvarInfo primvar;
-        primvar.name = HdTokens->points;
-        primvar.interpolation = UsdGeomTokens->vertex;
+            _MergePrimvar(
+                &valueCache->GetPrimvars(cachePath),
+                HdTokens->points,
+                HdInterpolationVertex,
+                HdPrimvarRoleTokens->point);
+        }
 
-        PrimvarInfoVector& primvars = valueCache->GetPrimvars(cachePath);
-        _MergePrimvar(primvar, &primvars);
+        if (requestedBits & HdChangeTracker::DirtyPrimvar) {
+            valueCache->GetPrimvar(cachePath, TfToken("st")) = uvs;
+
+            _MergePrimvar(
+                &valueCache->GetPrimvars(cachePath),
+                TfToken("st"),
+                HdInterpolationVertex);
+        }
+
+        if (requestedBits & HdChangeTracker::DirtyExtent) {
+            // This does not change the extent representation in the viewport,
+            // but affects the frustrum culling.
+            // This also freaks out the min / max depth calculation.
+            GfRange3d extent;
+            for (const auto& vertex: vertices) {
+                extent.ExtendBy(vertex);
+            }
+            valueCache->GetExtent(cachePath) = extent;
+        }
     }
 
     if (requestedBits & HdChangeTracker::DirtyTopology) {
         VtValue& topology = valueCache->GetTopology(cachePath);
 
-        // Simplest right handed vertex counts and vertex indices.
-        static const VtIntArray faceVertexCounts = {
-            3, 3
-        };
-
-        static const VtIntArray faceVertexIndices = {
-            0, 1, 2, 0, 2, 3
-        };
-
-        static const VtIntArray holeIndices;
-
         topology = HdMeshTopology(
             UsdGeomTokens->triangleSubdivisionRule,
             UsdGeomTokens->rightHanded,
-            faceVertexCounts,
-            faceVertexIndices,
-            holeIndices, 0);
+            _faceVertexCounts,
+            _faceVertexIndices,
+            _holeIndices, 0);
     }
 }
 
 bool
 UsdImagingImagePlaneAdapter::IsSupported(const UsdImagingIndexProxy* index) const {
-    return index->IsRprimTypeSupported(HdPrimTypeTokens->imagePlane);
+    return index->IsRprimTypeSupported(HdPrimTypeTokens->mesh);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -25,6 +25,7 @@
 #include "usdMaya/debugCodes.h"
 #include "usdMaya/MayaMeshWriter.h"
 
+#include "usdMaya/adaptor.h"
 #include "usdMaya/meshUtil.h"
 #include "usdMaya/writeUtil.h"
 
@@ -37,56 +38,81 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+PXRUSDMAYA_REGISTER_ADAPTOR_SCHEMA(MFn::kMesh, UsdGeomMesh);
+
 namespace {
-    void _exportReferenceMesh(UsdGeomMesh& primSchema, MObject obj) {
-        MStatus status = MS::kSuccess;
-        MFnDependencyNode dNode(obj, &status);
-        if (!status) { return; }
-    
-        auto referencePlug = dNode.findPlug("referenceObject", &status);
-        if (!status || referencePlug.isNull()) { return; }
-    
-        MPlugArray conns;
-        referencePlug.connectedTo(conns, true, false);
-        if (conns.length() == 0) { return; }
-    
-        auto referenceObject = conns[0].node();
-        if (!referenceObject.hasFn(MFn::kMesh)) { return; }
-    
-        MFnMesh referenceMesh(referenceObject, &status);
-        if (!status) { return; }
-    
-        const auto* mayaRawPoints = referenceMesh.getRawPoints(&status);
-        const auto numVertices = referenceMesh.numVertices();
-        VtArray<GfVec3f> points(numVertices);
-        for (auto i = decltype(numVertices){0}; i < numVertices; ++i) {
-            const auto floatIndex = i * 3;
-            points[i].Set(mayaRawPoints[floatIndex],
-                          mayaRawPoints[floatIndex + 1],
-                          mayaRawPoints[floatIndex + 2]);
+
+void _exportReferenceMesh(UsdGeomMesh& primSchema, MObject obj) {
+    MStatus status = MS::kSuccess;
+    MFnDependencyNode dNode(obj, &status);
+    if (!status) { return; }
+
+    auto referencePlug = dNode.findPlug("referenceObject", &status);
+    if (!status || referencePlug.isNull()) { return; }
+
+    MPlugArray conns;
+    referencePlug.connectedTo(conns, true, false);
+    if (conns.length() == 0) { return; }
+
+    auto referenceObject = conns[0].node();
+    if (!referenceObject.hasFn(MFn::kMesh)) { return; }
+
+    MFnMesh referenceMesh(referenceObject, &status);
+    if (!status) { return; }
+
+    const auto* mayaRawPoints = referenceMesh.getRawPoints(&status);
+    const auto numVertices = referenceMesh.numVertices();
+    VtArray<GfVec3f> points(numVertices);
+    for (auto i = decltype(numVertices){0}; i < numVertices; ++i) {
+        const auto floatIndex = i * 3;
+        points[i].Set(mayaRawPoints[floatIndex],
+                        mayaRawPoints[floatIndex + 1],
+                        mayaRawPoints[floatIndex + 2]);
+    }
+
+    static const TfToken _prefToken("Pref");
+    auto primVar = primSchema.CreatePrimvar(
+        _prefToken,
+        SdfValueTypeNames->Point3fArray,
+        UsdGeomTokens->varying);
+
+    if (!primVar) { return; }
+
+    primVar.GetAttr().Set(VtValue(points));
+}
+
+template <typename T>
+void _prependValue(UsdAttribute& attr, const UsdTimeCode& usdTime, const T& value) {
+    VtArray<T> arr;
+    if (attr.Get(&arr, usdTime)) {
+        const auto arrSize = arr.size();
+        arr.resize(arrSize + 1);
+        for (auto i = decltype(arrSize){arrSize}; i > 0; --i) {
+            arr[i] = arr[i - 1];
         }
-    
-        static const TfToken _prefToken("Pref");
-        auto primVar = primSchema.CreatePrimvar(
-            _prefToken,
-            SdfValueTypeNames->Point3fArray,
-            UsdGeomTokens->varying);
-    
-        if (!primVar) { return; }
-    
-        primVar.GetAttr().Set(VtValue(points));
+        arr[0] = value;
+        attr.Set(arr, usdTime);
     }
 }
 
+}
 
-const GfVec2f MayaMeshWriter::_DefaultUV = GfVec2f(-1.234567);
+const GfVec2f MayaMeshWriter::_DefaultUV = GfVec2f(0.f);
 
 const GfVec3f MayaMeshWriter::_ShaderDefaultRGB = GfVec3f(0.5);
 const float MayaMeshWriter::_ShaderDefaultAlpha = 0.0;
 
 const GfVec3f MayaMeshWriter::_ColorSetDefaultRGB = GfVec3f(1.0);
 const float MayaMeshWriter::_ColorSetDefaultAlpha = 1.0;
+const GfVec4f MayaMeshWriter::_ColorSetDefaultRGBA = GfVec4f(
+    MayaMeshWriter::_ColorSetDefaultRGB[0],
+    MayaMeshWriter::_ColorSetDefaultRGB[1],
+    MayaMeshWriter::_ColorSetDefaultRGB[2],
+    MayaMeshWriter::_ColorSetDefaultAlpha);
 
+const std::vector<std::string> MayaMeshWriter::_MotionVectorNames = {
+    "velocityPV", "velocity", "v"
+};
 
 MayaMeshWriter::MayaMeshWriter(
         const MDagPath & iDag,
@@ -106,6 +132,82 @@ MayaMeshWriter::MayaMeshWriter(
     TF_AXIOM(mUsdPrim);
 }
 
+void MayaMeshWriter::_prependDefaultValue(UsdAttribute& attr, const UsdTimeCode& usdTime) {
+    const auto typeName = attr.GetTypeName();
+    if (typeName == SdfValueTypeNames->FloatArray) {
+        _prependValue(attr, usdTime, attr.GetName() == UsdGeomTokens->primvarsDisplayOpacity ?
+                                     MayaMeshWriter::_ShaderDefaultAlpha :
+                                     MayaMeshWriter::_ColorSetDefaultAlpha);
+    } else if (typeName == (PxrUsdMayaWriteUtil::WriteUVAsFloat2() ?
+                            SdfValueTypeNames->Float2Array : SdfValueTypeNames->TexCoord2fArray)) {
+        _prependValue(attr, usdTime, MayaMeshWriter::_DefaultUV);
+    } else if (typeName == SdfValueTypeNames->Color3fArray) {
+        _prependValue(attr, usdTime, attr.GetName() == UsdGeomTokens->primvarsDisplayColor ?
+                                     MayaMeshWriter::_ShaderDefaultRGB :
+                                     MayaMeshWriter::_ColorSetDefaultRGB);
+    } else if (typeName == SdfValueTypeNames->Color4fArray) {
+        _prependValue(attr, usdTime, MayaMeshWriter::_ColorSetDefaultRGBA);
+    }
+};
+
+// virtual
+void MayaMeshWriter::postExport()
+{
+    auto shiftPrimvar = [](const UsdGeomPrimvar& primvar) {
+        if (!primvar) {
+            return;
+        }
+        auto shiftIndices = [](UsdAttribute& attr, const UsdTimeCode& usdTime) {
+            VtArray<int> indices;
+            if (attr.Get(&indices, usdTime)) {
+                for (auto& id: indices) {
+                    id += 1;
+                }
+                attr.Set(indices, usdTime);
+            }
+        };
+
+        const auto unauthoredValueIndex = primvar.GetUnauthoredValuesIndex();
+        if (unauthoredValueIndex == -1) {
+            return;
+        }
+
+        // Either 0 or -1.
+        TF_AXIOM(unauthoredValueIndex == 0);
+
+        // At least one of the samples contain an unassigned value,
+        // we have to increase the indices by one, so unassigned values get to be 0
+        // and the rest shifts by one.
+        if (primvar.IsIndexed()) {
+            auto indicesAttr = primvar.GetIndicesAttr();
+            shiftIndices(indicesAttr, UsdTimeCode::Default());
+
+            std::vector<double> timeSamples;
+            if (indicesAttr.GetTimeSamples(&timeSamples)) {
+                for (auto timeSample: timeSamples) {
+                    shiftIndices(indicesAttr, timeSample);
+                }
+            }
+        }
+
+        // Also we have to prepend the default value to all the time samples.
+        auto attr = primvar.GetAttr();
+        _prependDefaultValue(attr, UsdTimeCode::Default());
+        std::vector<double> timeSamples;
+        if (attr.GetTimeSamples(&timeSamples)) {
+            for (auto timeSample: timeSamples) {
+                _prependDefaultValue(attr, timeSample);
+            }
+        }
+    };
+
+    UsdGeomMesh primSchema(mUsdPrim);
+
+    for (auto& primvar: primSchema.GetPrimvars()) {
+        shiftPrimvar(primvar);
+    }
+}
+
 //virtual 
 void MayaMeshWriter::write(const UsdTimeCode &usdTime)
 {
@@ -117,7 +219,6 @@ void MayaMeshWriter::write(const UsdTimeCode &usdTime)
 // virtual
 bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &primSchema)
 {
-
     MStatus status = MS::kSuccess;
 
     // Write parent class attrs
@@ -185,12 +286,13 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
                       mayaRawPoints[floatIndex+1],
                       mayaRawPoints[floatIndex+2]);
     }
-    PxrUsdMayaWriteUtil::SetAttributeKey(primSchema.GetPointsAttr(), VtValue(points), usdTime); // ANIMATED
 
-    // Compute the extent using the raw points
     VtArray<GfVec3f> extent(2);
+    // Compute the extent using the raw points
     UsdGeomPointBased::ComputeExtent(points, &extent);
-    primSchema.CreateExtentAttr().Set(extent, usdTime);
+
+    _SetAttribute(primSchema.GetPointsAttr(), &points, usdTime);
+    _SetAttribute(primSchema.CreateExtentAttr(), &extent, usdTime);
 
     // Get faceVertexIndices
     unsigned int numFaceVertices = geomMesh.numFaceVertices(&status);
@@ -206,39 +308,47 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             curFaceVertexIndex++;
         }
     }
-    PxrUsdMayaWriteUtil::SetAttributeKey(primSchema.GetFaceVertexCountsAttr(), VtValue(faceVertexCounts), usdTime); // ANIMATED
-    PxrUsdMayaWriteUtil::SetAttributeKey(primSchema.GetFaceVertexIndicesAttr(), VtValue(faceVertexIndices), usdTime); // ANIMATED
+    _SetAttribute(primSchema.GetFaceVertexCountsAttr(), &faceVertexCounts, usdTime);
+    _SetAttribute(primSchema.GetFaceVertexIndicesAttr(), &faceVertexIndices, usdTime);
 
-    // Read usdSdScheme attribute. If not set, we default to defaultMeshScheme
-    // flag that can be user defined and initialized to catmullClark
-    TfToken sdScheme = PxrUsdMayaMeshUtil::getSubdivScheme(finalMesh, getArgs().defaultMeshScheme);
+    // Read subdiv scheme tagging. If not set, we default to defaultMeshScheme
+    // flag (this is specified by the job args but defaults to catmullClark).
+    TfToken sdScheme = PxrUsdMayaMeshUtil::GetSubdivScheme(finalMesh);
+    if (sdScheme.IsEmpty()) {
+        sdScheme = getArgs().defaultMeshScheme;
+    }
     primSchema.CreateSubdivisionSchemeAttr(VtValue(sdScheme), true);
 
     if (sdScheme == UsdGeomTokens->none) {
-        // Polygonal Mesh Case
-        if (PxrUsdMayaMeshUtil::getEmitNormals(finalMesh, sdScheme)) {
+        // Polygonal mesh - export normals.
+        bool emitNormals = true; // Default to emitting normals if no tagging.
+        PxrUsdMayaMeshUtil::GetEmitNormalsTag(finalMesh, &emitNormals);
+        if (emitNormals) {
             VtArray<GfVec3f> meshNormals;
             TfToken normalInterp;
 
             if (PxrUsdMayaMeshUtil::GetMeshNormals(geomMesh,
                                                    &meshNormals,
                                                    &normalInterp)) {
-                PxrUsdMayaWriteUtil::SetAttributeKey(primSchema.GetNormalsAttr(), VtValue(meshNormals), usdTime);
+                _SetAttribute(primSchema.GetNormalsAttr(), &meshNormals, 
+                              usdTime);
                 primSchema.SetNormalsInterpolation(normalInterp);
             }
         }
     } else {
-        TfToken sdInterpBound = PxrUsdMayaMeshUtil::getSubdivInterpBoundary(
-            finalMesh, UsdGeomTokens->edgeAndCorner);
-
-        primSchema.CreateInterpolateBoundaryAttr(VtValue(sdInterpBound), true);
+        // Subdivision surface - export subdiv-specific attributes.
+        TfToken sdInterpBound = PxrUsdMayaMeshUtil::GetSubdivInterpBoundary(
+            finalMesh);
+        if (!sdInterpBound.IsEmpty()) {
+            _SetAttribute(primSchema.CreateInterpolateBoundaryAttr(), 
+                          sdInterpBound);
+        }
         
         TfToken sdFVLinearInterpolation =
-            PxrUsdMayaMeshUtil::getSubdivFVLinearInterpolation(finalMesh);
-
+            PxrUsdMayaMeshUtil::GetSubdivFVLinearInterpolation(finalMesh);
         if (!sdFVLinearInterpolation.IsEmpty()) {
-            primSchema.CreateFaceVaryingLinearInterpolationAttr(
-                VtValue(sdFVLinearInterpolation), true);
+            _SetAttribute(primSchema.CreateFaceVaryingLinearInterpolationAttr(),
+                          sdFVLinearInterpolation);
         }
 
         assignSubDivTagsToUSDPrim(finalMesh, primSchema);
@@ -252,7 +362,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             subdHoles[i] = mayaHoles[i];
         }
         // not animatable in Maya, so we'll set default only
-        primSchema.GetHoleIndicesAttr().Set(subdHoles);
+        _SetAttribute(primSchema.GetHoleIndicesAttr(), &subdHoles);
     }
 
     // == Write UVSets as Vec2f Primvars
@@ -273,36 +383,40 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             continue;
         }
 
-        // The unassigned value can't be animated! Which is a big problem
-        // when you are working with varying meshes.
-        PxrUsdMayaUtil::AddUnassignedUVIfNeeded(&uvValues,
-                                                 &assignmentIndices,
-                                                 _DefaultUV);
+        int unassignedValueIndex = -1;
+        PxrUsdMayaUtil::SetUnassignedValueIndex(&assignmentIndices,
+                                                &unassignedValueIndex);
 
         // XXX:bug 118447
         // We should be able to configure the UV map name that triggers this
         // behavior, and the name to which it exports.
         // The UV Set "map1" is renamed st. This is a Pixar/USD convention.
-
-        // LUMA: we are following MtoA's convention to quickly hotfix the thing.
         TfToken setName(uvSetNames[i].asChar());
-        if (i == 0) {
+        if (setName == "map1") {
             setName = UsdUtilsGetPrimaryUVSetName();
         }
 
         _createUVPrimVar(primSchema,
-                         usdTime,
                          setName,
+                         usdTime,
                          uvValues,
                          interpolation,
-                         assignmentIndices);
+                         assignmentIndices,
+                         unassignedValueIndex);
     }
 
     // == Gather ColorSets
-    MStringArray colorSetNames;
+    std::vector<std::string> colorSetNames;
     if (getArgs().exportColorSets) {
-        status = finalMesh.getColorSetNames(colorSetNames);
+        MStringArray mayaColorSetNames;
+        status = finalMesh.getColorSetNames(mayaColorSetNames);
+        colorSetNames.reserve(mayaColorSetNames.length());
+        for (unsigned int i = 0; i < mayaColorSetNames.length(); i++) {
+            colorSetNames.emplace_back(mayaColorSetNames[i].asChar());
+        }
     }
+
+    std::set<std::string> colorSetNamesSet(colorSetNames.begin(), colorSetNames.end());
 
     VtArray<GfVec3f> shadersRGBData;
     VtArray<float> shadersAlphaData;
@@ -313,7 +427,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
     // opacities from the shaders assigned to the mesh and/or its faces.
     // If we find a displayColor color set, the shader colors and opacities
     // will be used to fill in unauthored/unpainted faces in the color set.
-    if (getArgs().exportDisplayColor || colorSetNames.length() > 0) {
+    if (getArgs().exportDisplayColor || colorSetNames.size() > 0) {
         PxrUsdMayaUtil::GetLinearShaderColor(finalMesh,
                                              &shadersRGBData,
                                              &shadersAlphaData,
@@ -321,28 +435,27 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
                                              &shadersAssignmentIndices);
     }
 
-    for (unsigned int i=0; i < colorSetNames.length(); ++i) {
-
-        if (colorSetNames[i] == "velocityPV" ||
-            colorSetNames[i] == "velocity" ||
-            colorSetNames[i] == "v") {
-            _writeMotionVector(primSchema,
-                               usdTime,
-                               finalMesh,
-                               colorSetNames[i]);
+    for (const std::string& colorSetName: colorSetNames) {
+        if (std::find(
+            _MotionVectorNames.begin(),
+            _MotionVectorNames.end(),
+            colorSetName) != _MotionVectorNames.end()) {
+            _writeMotionVectors(primSchema,
+                                usdTime,
+                                finalMesh,
+                                colorSetName);
             continue;
         }
-
         bool isDisplayColor = false;
 
-        if (colorSetNames[i] == PxrUsdMayaMeshColorSetTokens->DisplayColorColorSetName.GetText()) {
+        if (colorSetName == PxrUsdMayaMeshColorSetTokens->DisplayColorColorSetName.GetString()) {
             if (!getArgs().exportDisplayColor) {
                 continue;
             }
             isDisplayColor=true;
         }
         
-        if (colorSetNames[i] == PxrUsdMayaMeshColorSetTokens->DisplayOpacityColorSetName.GetText()) {
+        if (colorSetName == PxrUsdMayaMeshColorSetTokens->DisplayOpacityColorSetName.GetString()) {
             MGlobal::displayWarning("Mesh \"" + finalMesh.fullPathName() +
                 "\" has a color set named \"" +
                 MString(PxrUsdMayaMeshColorSetTokens->DisplayOpacityColorSetName.GetText()) +
@@ -354,11 +467,12 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
         VtArray<float> AlphaData;
         TfToken interpolation;
         VtArray<int> assignmentIndices;
+        int unassignedValueIndex = -1;
         MFnMesh::MColorRepresentation colorSetRep;
         bool clamped = false;
 
         if (!_GetMeshColorSetData(finalMesh,
-                                     colorSetNames[i],
+                                     MString(colorSetName.c_str()),
                                      isDisplayColor,
                                      shadersRGBData,
                                      shadersAlphaData,
@@ -369,58 +483,72 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
                                      &assignmentIndices,
                                      &colorSetRep,
                                      &clamped)) {
-            MGlobal::displayWarning("Unable to retrieve colorSet data: " +
-                colorSetNames[i] + " on mesh: " + finalMesh.fullPathName() +
-                ". Skipping...");
+            const std::string warning = TfStringPrintf(
+                    "Unable to retrieve colorSet data: %s on mesh: %s.  Skipping...",
+                    colorSetName.c_str(), finalMesh.fullPathName().asChar());
+            MGlobal::displayWarning(MString(warning.c_str()));
             continue;
         }
 
-        PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
-            &RGBData,
-            &AlphaData,
+        PxrUsdMayaUtil::SetUnassignedValueIndex(
             &assignmentIndices,
-            _ColorSetDefaultRGB,
-            _ColorSetDefaultAlpha);
+            &unassignedValueIndex);
 
         if (isDisplayColor) {
             // We tag the resulting displayColor/displayOpacity primvar as
             // authored to make sure we reconstruct the color set on import.
             _addDisplayPrimvars(primSchema,
+                                usdTime,
                                 colorSetRep,
                                 RGBData,
                                 AlphaData,
                                 interpolation,
                                 assignmentIndices,
+                                unassignedValueIndex,
                                 clamped,
                                 true);
         } else {
-            TfToken colorSetNameToken = TfToken(
-                PxrUsdMayaUtil::SanitizeColorSetName(
-                    std::string(colorSetNames[i].asChar())));
+            const std::string sanitizedName = PxrUsdMayaUtil::SanitizeColorSetName(colorSetName);
+            // if our sanitized name is different than our current one and the
+            // sanitized name already exists, it means 2 things are trying to
+            // write to the same primvar.  warn and continue.
+            if (colorSetName != sanitizedName
+                    && colorSetNamesSet.count(sanitizedName) > 0) {
+                const std::string warning = TfStringPrintf(
+                        "Skipping colorSet '%s' as the colorSet '%s' exists as well.",
+                        colorSetName.c_str(), sanitizedName.c_str());
+                MGlobal::displayWarning(MString(warning.c_str()));
+                continue;
+            }
+
+            TfToken colorSetNameToken = TfToken(sanitizedName);
             if (colorSetRep == MFnMesh::kAlpha) {
                 _createAlphaPrimVar(primSchema,
-                                    usdTime,
                                     colorSetNameToken,
+                                    usdTime,
                                     AlphaData,
                                     interpolation,
                                     assignmentIndices,
+                                    unassignedValueIndex,
                                     clamped);
             } else if (colorSetRep == MFnMesh::kRGB) {
                 _createRGBPrimVar(primSchema,
-                                  usdTime,
                                   colorSetNameToken,
+                                  usdTime,
                                   RGBData,
                                   interpolation,
                                   assignmentIndices,
+                                  unassignedValueIndex,
                                   clamped);
             } else if (colorSetRep == MFnMesh::kRGBA) {
                 _createRGBAPrimVar(primSchema,
-                                   usdTime,
                                    colorSetNameToken,
+                                   usdTime,
                                    RGBData,
                                    AlphaData,
                                    interpolation,
                                    assignmentIndices,
+                                   unassignedValueIndex,
                                    clamped);
             }
         }
@@ -433,23 +561,23 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
         // Using the shader default values (an alpha of zero, in particular)
         // results in Gprims rendering the same way in usdview as they do in
         // Maya (i.e. unassigned components are invisible).
-        PxrUsdMayaUtil::AddUnassignedColorAndAlphaIfNeeded(
-                &shadersRGBData,
-                &shadersAlphaData,
+        int unassignedValueIndex = -1;
+        PxrUsdMayaUtil::SetUnassignedValueIndex(
                 &shadersAssignmentIndices,
-                _ShaderDefaultRGB,
-                _ShaderDefaultAlpha);
+                &unassignedValueIndex);
 
         // Since these colors come from the shaders and not a colorset, we are
         // not adding the clamp attribute as custom data. We also don't need to
         // reconstruct a color set from them on import since they originated
         // from the bound shader(s), so the authored flag is set to false.
         _addDisplayPrimvars(primSchema,
+                            usdTime,
                             MFnMesh::kRGBA,
                             shadersRGBData,
                             shadersAlphaData,
                             shadersInterpolation,
                             shadersAssignmentIndices,
+                            unassignedValueIndex,
                             false,
                             false);
     }
@@ -491,29 +619,6 @@ bool
 MayaMeshWriter::exportsGprims() const
 {
     return true;
-}
-
-void
-MayaMeshWriter::postExport()
-{
-    UsdGeomMesh primSchema(mUsdPrim);
-    const auto keepSample = mWriteJobCtx.getArgs().exportAsClip;
-    // TODO: Use TBB to run these tasks in parallel
-    if (primSchema) {
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetPointsAttr(), keepSample);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetNormalsAttr(), keepSample);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetVelocitiesAttr(), keepSample);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexCountsAttr(), keepSample, UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFaceVertexIndicesAttr(), keepSample, UsdInterpolationTypeHeld);
-    }
-
-    UsdGeomGprim gprimSchema(mUsdPrim);
-    if (gprimSchema) {
-        // All created primvars are authored at this point
-        for (const auto& primvar : gprimSchema.GetPrimvars()) {
-            PxrUsdMayaWriteUtil::CleanupPrimvarKeys(primvar, keepSample);
-        }
-    }
 }
 
 

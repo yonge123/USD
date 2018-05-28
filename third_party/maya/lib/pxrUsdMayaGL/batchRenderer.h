@@ -46,11 +46,11 @@
 #include "pxr/usd/sdf/path.h"
 
 #include <maya/M3dView.h>
-#include <maya/MBoundingBox.h>
+#include <maya/MDrawContext.h>
 #include <maya/MDrawContext.h>
 #include <maya/MDrawRequest.h>
 #include <maya/MObjectHandle.h>
-#include <maya/MPxSurfaceShapeUI.h>
+#include <maya/MMessage.h>
 #include <maya/MSelectionContext.h>
 #include <maya/MTypes.h>
 #include <maya/MUserData.h>
@@ -78,8 +78,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///
 /// In preparation for drawing, the shape adapter should be synchronized to
 /// populate it with data from its shape and from the viewport display state.
-/// A batch draw data object should also be created for the shape by calling
-/// CreateBatchDrawData().
+/// A user data object should also be created/obtained for the shape by calling
+/// the shape adapter's GetMayaUserData() method.
 ///
 /// In the draw stage, Draw() must be called for each draw request to complete
 /// the render.
@@ -134,44 +134,6 @@ public:
     PXRUSDMAYAGL_API
     bool RemoveShapeAdapter(PxrMayaHdShapeAdapter* shapeAdapter);
 
-    /// Create the batch draw data for drawing in the legacy viewport.
-    ///
-    /// This draw data is attached to the given \p drawRequest. Its lifetime is
-    /// *not* managed by Maya, so it must be deleted manually at the end of a
-    /// legacy viewport Draw().
-    ///
-    /// \p boxToDraw may be set to nullptr if no box is desired to be drawn.
-    ///
-    PXRUSDMAYAGL_API
-    void CreateBatchDrawData(
-            MPxSurfaceShapeUI* shapeUI,
-            MDrawRequest& drawRequest,
-            const PxrMayaHdRenderParams& params,
-            const bool drawShape,
-            const MBoundingBox* boxToDraw = nullptr);
-
-    /// Create the batch draw data for drawing in Viewport 2.0.
-    ///
-    /// \p oldData should be the same \p oldData parameter that Maya passed
-    /// into the calling prepareForDraw() method. The return value from this
-    /// method should then be returned back to Maya in the calling
-    /// prepareForDraw().
-    ///
-    /// Note that this version of CreateBatchDrawData() is also invoked by the
-    /// legacy viewport version, in which case we expect oldData to be nullptr.
-    ///
-    /// \p boxToDraw may be set to nullptr if no box is desired to be drawn.
-    ///
-    /// Returns a pointer to a new MUserData object populated with the given
-    /// parameters if oldData is nullptr, otherwise returns oldData after
-    /// having re-populated it.
-    PXRUSDMAYAGL_API
-    MUserData* CreateBatchDrawData(
-            MUserData* oldData,
-            const PxrMayaHdRenderParams& params,
-            const bool drawShape,
-            const MBoundingBox* boxToDraw = nullptr);
-
     /// Reset the internal state of the global UsdMayaGLBatchRenderer.
     ///
     /// In particular, it's important that this happen when switching to a new
@@ -193,11 +155,11 @@ public:
             const MDagPath& dagPath,
             HdRprimCollection& collection);
 
-    /// Render batch or bounds in the legacy viewport based on \p request
+    /// Render batch or bounding box in the legacy viewport based on \p request
     PXRUSDMAYAGL_API
     void Draw(const MDrawRequest& request, M3dView& view);
 
-    /// Render batch or bounds in Viewport 2.0 based on \p userData
+    /// Render batch or bounding box in Viewport 2.0 based on \p userData
     PXRUSDMAYAGL_API
     void Draw(
             const MHWRender::MDrawContext& context,
@@ -257,6 +219,13 @@ public:
             const GfMatrix4d& projectionMatrix,
             GfVec3d* hitPoint);
 
+    /// Gets the UsdMayaGLSoftSelectHelper that this batchRenderer maintains.
+    ///
+    /// This should only be used by PxrMayaHdShapeAdapter.
+    PXRUSDMAYAGL_API
+    inline bool GetObjectSoftSelectEnabled()
+    { return _objectSoftSelectEnabled; }
+
 private:
 
     friend class TfSingleton<UsdMayaGLBatchRenderer>;
@@ -273,7 +242,8 @@ private:
     PXRUSDMAYAGL_API
     const UsdMayaGLSoftSelectHelper& GetSoftSelectHelper();
 
-    /// Allow shape adapters access to the soft selection helper.
+    /// Allow shape adapters access to the soft selection helper, and to the
+    /// _UpdateLegacyRenderPending() method.
     friend PxrMayaHdShapeAdapter;
 
     typedef std::pair<PxrMayaHdRenderParams, HdRprimCollectionVector>
@@ -286,8 +256,7 @@ private:
             const GfMatrix4d& worldToViewMatrix,
             const GfMatrix4d& projectionMatrix,
             const GfVec4d& viewport,
-            const std::vector<_RenderItem>& items,
-            const bool gammaCorrect = false);
+            const std::vector<_RenderItem>& items);
 
     /// Call to render all queued batches. May be called safely without
     /// performance hit when no batches are queued.
@@ -318,6 +287,12 @@ private:
     static void _OnMayaEndRenderCallback(
             MHWRender::MDrawContext& context,
             void* clientData);
+
+    /// Record changes to soft select options
+    ///
+    /// This callback is just so we don't have to query the soft selection
+    /// options through mel every time we have a selection event.
+    static void _OnSoftSelectOptionsChangedCallback(void* clientData);
 
     /// Perform post-render state cleanup.
     ///
@@ -366,14 +341,18 @@ private:
     /// to simply pass through or re-use cached data.
     ///
     /// The legacy viewport however does not provide a context we can query for
-    /// the frameStamp, so we simulate it with bools instead. The first call to
-    /// CreateBatchDrawData() indicates that we are prepping for a render, so
-    /// we know then that a render is pending. Rendering invalidates selection,
-    /// so when a render completes, we mark selection as pending.
+    /// the frameStamp, so we simulate it with bools instead. Shape adapters
+    /// should call _UpdateLegacyRenderPending(true) during the legacy viewport
+    /// draw prep phase (sometime during MPxSurfaceShapeUI::getDrawRequests())
+    /// to indicate that we are prepping for a legacy viewport render.
+    /// Rendering invalidates selection, so when a render completes, we mark
+    /// selection as pending.
     MUint64 _lastRenderFrameStamp;
     MUint64 _lastSelectionFrameStamp;
     bool _legacyRenderPending;
     bool _legacySelectionPending;
+    bool _objectSoftSelectEnabled;
+    MCallbackId _softSelectOptionsCallbackId;
 
     /// Type definition for a set of pointers to shape adapters.
     typedef std::unordered_set<PxrMayaHdShapeAdapter*> _ShapeAdapterSet;

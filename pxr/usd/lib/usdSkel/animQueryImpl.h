@@ -68,6 +68,12 @@ public:
     virtual bool ComputeJointLocalTransforms(VtMatrix4dArray* xforms,
                                              UsdTimeCode time) const = 0;
 
+    virtual bool ComputeJointLocalTransformComponents(
+                     VtVec3fArray* translations,
+                     VtQuatfArray* rotations,
+                     VtVec3hArray* scales,
+                     UsdTimeCode time) const = 0;
+
     virtual bool
     GetJointTransformTimeSamples(const GfInterval& interval,
                                  std::vector<double>* times) const = 0;
@@ -83,10 +89,16 @@ public:
     ComputeTransform(GfMatrix4d* xform,
                      UsdTimeCode time=UsdTimeCode::Default()) const = 0;
 
+    virtual bool
+    ComputeBlendShapeWeights(VtFloatArray* weights,
+                             UsdTimeCode time=UsdTimeCode::Default()) const = 0;
+
     const VtTokenArray& GetJointOrder() const { return _jointOrder; }
 
+    const VtTokenArray& GetBlendShapeOrder() const { return _blendShapeOrder; }
+
 protected:
-    VtTokenArray _jointOrder;
+    VtTokenArray _jointOrder, _blendShapeOrder;
 };
 
 

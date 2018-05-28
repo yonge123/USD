@@ -167,7 +167,7 @@ void wrapUsdGeomImagePlane()
 {
     typedef UsdGeomImagePlane This;
 
-    class_<This, bases<UsdGeomBoundable> >
+    class_<This, bases<UsdGeomGprim> >
         cls("ImagePlane");
 
     cls

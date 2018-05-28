@@ -23,6 +23,10 @@
 //
 #include "pxr/pxr.h"
 #include "usdMaya/writeUtil.h"
+
+#include "usdMaya/colorSpace.h"
+#include "usdMaya/translatorUtil.h"
+#include "usdMaya/adaptor.h"
 #include "usdMaya/UserTaggedAttribute.h"
 #include "usdMaya/userAttributeWriterRegistry.h"
 
@@ -31,6 +35,7 @@
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/token.h"
 #include "pxr/base/vt/types.h"
+#include "pxr/base/tf/envSetting.h"
 #include "pxr/usd/sdf/valueTypeName.h"
 #include "pxr/usd/usd/attribute.h"
 #include "pxr/usd/usd/inherits.h"
@@ -41,6 +46,7 @@
 #include "pxr/usd/usdGeom/primvar.h"
 #include "pxr/usd/usdGeom/tokens.h"
 #include "pxr/usd/usdRi/statementsAPI.h"
+#include "pxr/usd/usdUtils/sparseValueWriter.h"
 
 #include <maya/MDagPath.h>
 #include <maya/MDoubleArray.h>
@@ -71,6 +77,13 @@
 #include <vector>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+TF_DEFINE_ENV_SETTING(
+        PIXMAYA_WRITE_UV_AS_FLOAT2, true,
+        "Set to true to write uv sets as Float2Array types "
+        " and set to false to write Texture Coordinate value types "
+        "(TexCoord2h, TexCoord2f, TexCoord2d, TexCoord3h, "
+        " TexCoord3f, TexCoord3d and their associated Array types)");
 
 static
 bool
@@ -110,6 +123,14 @@ _GetMayaAttributeNumericTypedAndUnitDataTypes(
     }
 
     return true;
+}
+
+bool
+PxrUsdMayaWriteUtil::WriteUVAsFloat2()
+{
+    static const bool writeUVAsFloat2 = 
+        TfGetEnvSetting(PIXMAYA_WRITE_UV_AS_FLOAT2);
+    return writeUVAsFloat2;
 }
 
 SdfValueTypeName
@@ -376,37 +397,97 @@ UsdGeomPrimvar PxrUsdMayaWriteUtil::GetOrCreatePrimvar(
     return primvar;
 }
 
-template <typename T>
-bool
-_SetVec(
-        const UsdAttribute& attr,
-        const T& val,
-        const UsdTimeCode& time) {
-    return attr.Set((attr.GetRoleName() == SdfValueRoleNames->Color)
-                        ? GfConvertDisplayToLinear(val)
-                        : val,
-                    time);
-}
-
-bool
-PxrUsdMayaWriteUtil::SetUsdAttr(
+/* static */
+UsdAttribute PxrUsdMayaWriteUtil::GetOrCreateUsdRiAttribute(
         const MPlug& attrPlug,
-        const UsdAttribute& usdAttr,
-        const UsdTimeCode& usdTime,
-        const bool writeIfConstant,
+        const UsdPrim& usdPrim,
+        const std::string& attrName,
+        const std::string& nameSpace,
         const bool translateMayaDoubleToUsdSinglePrecision)
 {
-    if (!usdAttr || attrPlug.isNull()) {
-        return false;
+    UsdAttribute usdAttr;
+
+    if (!usdPrim) {
+        return usdAttr;
     }
 
-    bool isAnimated = attrPlug.isDestination();
-    // If attr is animated, we will never write the default value.
-    // If attr is not animated, we will write the default value or the first frame of a clip.
-    if ((usdTime.IsDefault() && isAnimated) || (!writeIfConstant && !isAnimated)){
-        return true;
+    MObject attrObj(attrPlug.attribute());
+
+    TfToken riAttrNameToken(attrName);
+    if (riAttrNameToken.IsEmpty()) {
+        MGlobal::displayError(
+            TfStringPrintf("Invalid UsdRi attribute name '%s' for Maya plug '%s'",
+                           attrName.c_str(),
+                           attrPlug.name().asChar()).c_str());
+        return usdAttr;
     }
 
+    UsdRiStatementsAPI riStatements(usdPrim);
+
+    // See if a UsdRi attribute with this name already exists. If so, return it.
+    // XXX: There isn't currently API for looking for a specific UsdRi attribute
+    // by name, so we have to get them all and then see if one matches.
+    const std::vector<UsdProperty>& riAttrs = riStatements.GetRiAttributes(nameSpace);
+    TF_FOR_ALL(iter, riAttrs) {
+        if (iter->GetBaseName() == riAttrNameToken) {
+            // Re-get the attribute from the prim so we can return it as a
+            // UsdAttribute rather than a UsdProperty.
+            return usdPrim.GetAttribute(iter->GetName());
+        }
+    }
+
+    const SdfValueTypeName& typeName =
+        PxrUsdMayaWriteUtil::GetUsdTypeName(attrPlug,
+                                            translateMayaDoubleToUsdSinglePrecision);
+    if (typeName) {
+        riStatements = PxrUsdMayaTranslatorUtil::GetAPISchemaForAuthoring<
+                UsdRiStatementsAPI>(usdPrim);
+        usdAttr = riStatements.CreateRiAttribute(riAttrNameToken,
+                                                 typeName.GetType(),
+                                                 nameSpace);
+    }
+
+    return usdAttr;
+}
+
+template <typename T>
+static bool
+_SetAttribute(const UsdAttribute& usdAttr, 
+              const T &value, 
+              const UsdTimeCode &usdTime, 
+              UsdUtilsSparseValueWriter *valueWriter)
+{
+    return valueWriter ?
+           valueWriter->SetAttribute(usdAttr, VtValue(value), usdTime) :
+           usdAttr.Set(value, usdTime);
+}
+
+/// Converts a vec from display to linear color if its role is color.
+template <typename T>
+static VtValue
+_ConvertVec(
+        const TfToken& role,
+        const T& val) {
+    return VtValue(role == SdfValueRoleNames->Color
+            ? PxrUsdMayaColorSpace::ConvertMayaToLinear(val)
+            : val);
+}
+
+VtValue
+PxrUsdMayaWriteUtil::GetVtValue(
+        const MPlug& attrPlug,
+        const SdfValueTypeName& typeName)
+{
+    const TfType type = typeName.GetType();
+    const TfToken role = typeName.GetRole();;
+    return GetVtValue(attrPlug, type, role);
+}
+VtValue
+PxrUsdMayaWriteUtil::GetVtValue(
+        const MPlug& attrPlug,
+        const TfType& type,
+        const TfToken& role)
+{
     // We perform a similar set of type-infererence acrobatics here as we do up
     // above in GetUsdTypeName(). See the comments there for more detail on a
     // few type-related oddities.
@@ -414,7 +495,7 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
     MObject attrObj(attrPlug.attribute());
 
     if (attrObj.hasFn(MFn::kEnumAttribute)) {
-        return usdAttr.Set(attrPlug.asInt(), usdTime);
+        return VtValue(attrPlug.asInt());
     }
 
     MFnNumericData::Type numericDataType;
@@ -430,66 +511,114 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
         typedDataType = MFnData::kMatrix;
     }
 
+    // For the majority of things, we don't care about the role, just about
+    // the type, e.g. we import normal3f/vector3f/float3 the same.
+    // We do care about colors and points because those can be specially-marked
+    // in Maya.
     switch (typedDataType) {
         case MFnData::kString: {
             MFnStringData stringDataFn(attrPlug.asMObject());
             const std::string usdVal(stringDataFn.string().asChar());
-            return usdAttr.Set(usdVal, usdTime);
+            if (type.IsA<SdfAssetPath>()) {
+                return VtValue(SdfAssetPath(usdVal));
+            }
+            else if (type.IsA<std::string>()) {
+                return VtValue(usdVal);
+            }
+            else if (type.IsA<TfToken>()) {
+                return VtValue(TfToken(usdVal));
+            }
             break;
         }
         case MFnData::kMatrix: {
-            MFnMatrixData matrixDataFn(attrPlug.asMObject());
-            const GfMatrix4d usdVal(matrixDataFn.matrix().matrix);
-            return usdAttr.Set(usdVal, usdTime);
+            if (type.IsA<GfMatrix4d>()) {
+                MFnMatrixData matrixDataFn(attrPlug.asMObject());
+                const GfMatrix4d usdVal(matrixDataFn.matrix().matrix);
+                return VtValue(usdVal);
+            }
             break;
         }
         case MFnData::kStringArray: {
-            MFnStringArrayData stringArrayDataFn(attrPlug.asMObject());
-            VtStringArray usdVal(stringArrayDataFn.length());
-            for (unsigned int i = 0; i < stringArrayDataFn.length(); ++i) {
-                usdVal[i] = std::string(stringArrayDataFn[i].asChar());
+            if (type.IsA<VtStringArray>()) {
+                MFnStringArrayData stringArrayDataFn(attrPlug.asMObject());
+                VtStringArray usdVal(stringArrayDataFn.length());
+                for (unsigned int i = 0; i < stringArrayDataFn.length(); ++i) {
+                    usdVal[i] = std::string(stringArrayDataFn[i].asChar());
+                }
+                return VtValue(usdVal);
             }
-            return usdAttr.Set(usdVal, usdTime);
+            else if (type.IsA<VtTokenArray>()) {
+                MFnStringArrayData stringArrayDataFn(attrPlug.asMObject());
+                VtTokenArray usdVal(stringArrayDataFn.length());
+                for (unsigned int i = 0; i < stringArrayDataFn.length(); ++i) {
+                    usdVal[i] = TfToken(stringArrayDataFn[i].asChar());
+                }
+                return VtValue(usdVal);
+            }
+            else if (type.IsA<SdfStringListOp>()) {
+                MFnStringArrayData stringArrayDataFn(attrPlug.asMObject());
+                std::vector<std::string> prepended(stringArrayDataFn.length());
+                for (unsigned int i = 0; i < stringArrayDataFn.length(); ++i) {
+                    prepended[i] = std::string(stringArrayDataFn[i].asChar());
+                }
+                SdfStringListOp listOp;
+                listOp.SetPrependedItems(prepended);
+                return VtValue(listOp);
+            }
+            else if (type.IsA<SdfTokenListOp>()) {
+                MFnStringArrayData stringArrayDataFn(attrPlug.asMObject());
+                TfTokenVector prepended(stringArrayDataFn.length());
+                for (unsigned int i = 0; i < stringArrayDataFn.length(); ++i) {
+                    prepended[i] = TfToken(stringArrayDataFn[i].asChar());
+                }
+                SdfTokenListOp listOp;
+                listOp.SetPrependedItems(prepended);
+                return VtValue(listOp);
+            }
             break;
         }
         case MFnData::kDoubleArray: {
             MFnDoubleArrayData doubleArrayDataFn(attrPlug.asMObject());
-            if (translateMayaDoubleToUsdSinglePrecision) {
+            if (type.IsA<VtFloatArray>()) {
                 VtFloatArray usdVal(doubleArrayDataFn.length());
                 for (unsigned int i = 0; i < doubleArrayDataFn.length(); ++i) {
                     usdVal[i] = (float)doubleArrayDataFn[i];
                 }
-                return usdAttr.Set(usdVal, usdTime);
-            } else {
+                return VtValue(usdVal);
+            } else if (type.IsA<VtDoubleArray>()) {
                 VtDoubleArray usdVal(doubleArrayDataFn.length());
                 for (unsigned int i = 0; i < doubleArrayDataFn.length(); ++i) {
                     usdVal[i] = doubleArrayDataFn[i];
                 }
-                return usdAttr.Set(usdVal, usdTime);
+                return VtValue(usdVal);
             }
             break;
         }
         case MFnData::kFloatArray: {
-            MFnFloatArrayData floatArrayDataFn(attrPlug.asMObject());
-            VtFloatArray usdVal(floatArrayDataFn.length());
-            for (unsigned int i = 0; i < floatArrayDataFn.length(); ++i) {
-                usdVal[i] = floatArrayDataFn[i];
+            if (type.IsA<VtFloatArray>()) {
+                MFnFloatArrayData floatArrayDataFn(attrPlug.asMObject());
+                VtFloatArray usdVal(floatArrayDataFn.length());
+                for (unsigned int i = 0; i < floatArrayDataFn.length(); ++i) {
+                    usdVal[i] = floatArrayDataFn[i];
+                }
+                return VtValue(usdVal);
             }
-            return usdAttr.Set(usdVal, usdTime);
             break;
         }
         case MFnData::kIntArray: {
-            MFnIntArrayData intArrayDataFn(attrPlug.asMObject());
-            VtIntArray usdVal(intArrayDataFn.length());
-            for (unsigned int i = 0; i < intArrayDataFn.length(); ++i) {
-                usdVal[i] = intArrayDataFn[i];
+            if (type.IsA<VtIntArray>()) {
+                MFnIntArrayData intArrayDataFn(attrPlug.asMObject());
+                VtIntArray usdVal(intArrayDataFn.length());
+                for (unsigned int i = 0; i < intArrayDataFn.length(); ++i) {
+                    usdVal[i] = intArrayDataFn[i];
+                }
+                return VtValue(usdVal);
             }
-            return usdAttr.Set(usdVal, usdTime);
             break;
         }
         case MFnData::kPointArray: {
             MFnPointArrayData pointArrayDataFn(attrPlug.asMObject());
-            if (translateMayaDoubleToUsdSinglePrecision) {
+            if (type.IsA<VtVec3fArray>()) {
                 VtVec3fArray usdVal(pointArrayDataFn.length());
                 for (unsigned int i = 0; i < pointArrayDataFn.length(); ++i) {
                     MPoint tmpMayaVal = pointArrayDataFn[i];
@@ -500,8 +629,8 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
                                         (float)tmpMayaVal[1],
                                         (float)tmpMayaVal[2]);
                 }
-                return usdAttr.Set(usdVal, usdTime);
-            } else {
+                return VtValue(usdVal);
+            } else if (type.IsA<VtVec3dArray>()) {
                 VtVec3dArray usdVal(pointArrayDataFn.length());
                 for (unsigned int i = 0; i < pointArrayDataFn.length(); ++i) {
                     MPoint tmpMayaVal = pointArrayDataFn[i];
@@ -512,13 +641,13 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
                                         tmpMayaVal[1],
                                         tmpMayaVal[2]);
                 }
-                return usdAttr.Set(usdVal, usdTime);
+                return VtValue(usdVal);
             }
             break;
         }
         case MFnData::kVectorArray: {
             MFnVectorArrayData vectorArrayDataFn(attrPlug.asMObject());
-            if (translateMayaDoubleToUsdSinglePrecision) {
+            if (type.IsA<VtVec3fArray>()) {
                 VtVec3fArray usdVal(vectorArrayDataFn.length());
                 for (unsigned int i = 0; i < vectorArrayDataFn.length(); ++i) {
                     MVector tmpMayaVal = vectorArrayDataFn[i];
@@ -526,8 +655,8 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
                                         (float)tmpMayaVal[1],
                                         (float)tmpMayaVal[2]);
                 }
-                return usdAttr.Set(usdVal, usdTime);
-            } else {
+                return VtValue(usdVal);
+            } else if (type.IsA<VtVec3dArray>()) {
                 VtVec3dArray usdVal(vectorArrayDataFn.length());
                 for (unsigned int i = 0; i < vectorArrayDataFn.length(); ++i) {
                     MVector tmpMayaVal = vectorArrayDataFn[i];
@@ -535,7 +664,7 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
                                         tmpMayaVal[1],
                                         tmpMayaVal[2]);
                 }
-                return usdAttr.Set(usdVal, usdTime);
+                return VtValue(usdVal);
             }
             break;
         }
@@ -545,79 +674,101 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
 
     switch (numericDataType) {
         case MFnNumericData::kBoolean: {
-            const bool usdVal(attrPlug.asBool());
-            return usdAttr.Set(usdVal, usdTime);
+            if (type.IsA<bool>()) {
+                const bool usdVal(attrPlug.asBool());
+                return VtValue(usdVal);
+            }
             break;
         }
         case MFnNumericData::kByte:
         case MFnNumericData::kChar: {
-            const int usdVal(attrPlug.asChar());
-            return usdAttr.Set(usdVal, usdTime);
+            if (type.IsA<int>()) {
+                const int usdVal(attrPlug.asChar());
+                return VtValue(usdVal);
+            }
             break;
         }
         case MFnNumericData::kShort: {
-            const int usdVal(attrPlug.asShort());
-            return usdAttr.Set(usdVal, usdTime);
+            if (type.IsA<int>()) {
+                const int usdVal(attrPlug.asShort());
+                return VtValue(usdVal);
+            }
             break;
         }
         case MFnNumericData::kInt: {
-            const int usdVal(attrPlug.asInt());
-            return usdAttr.Set(usdVal, usdTime);
+            if (type.IsA<int>()) {
+                const int usdVal(attrPlug.asInt());
+                return VtValue(usdVal);
+            }
             break;
         }
         case MFnNumericData::k2Short: {
-            short tmp1, tmp2;
-            MFnNumericData numericDataFn(attrPlug.asMObject());
-            numericDataFn.getData(tmp1, tmp2);
-            return usdAttr.Set(GfVec2i(tmp1, tmp2), usdTime);
+            if (type.IsA<GfVec2i>()) {
+                short tmp1, tmp2;
+                MFnNumericData numericDataFn(attrPlug.asMObject());
+                numericDataFn.getData(tmp1, tmp2);
+                return VtValue(GfVec2i(tmp1, tmp2));
+            }
             break;
         }
         case MFnNumericData::k2Int: {
-            int tmp1, tmp2;
-            MFnNumericData numericDataFn(attrPlug.asMObject());
-            numericDataFn.getData(tmp1, tmp2);
-            return usdAttr.Set(GfVec2i(tmp1, tmp2), usdTime);
+            if (type.IsA<GfVec2i>()) {
+                int tmp1, tmp2;
+                MFnNumericData numericDataFn(attrPlug.asMObject());
+                numericDataFn.getData(tmp1, tmp2);
+                return VtValue(GfVec2i(tmp1, tmp2));
+            }
             break;
         }
         case MFnNumericData::k3Short: {
-            short tmp1, tmp2, tmp3;
-            MFnNumericData numericDataFn(attrPlug.asMObject());
-            numericDataFn.getData(tmp1, tmp2, tmp3);
-            return usdAttr.Set(GfVec3i(tmp1, tmp2, tmp3), usdTime);
+            if (type.IsA<GfVec3i>()) {
+                short tmp1, tmp2, tmp3;
+                MFnNumericData numericDataFn(attrPlug.asMObject());
+                numericDataFn.getData(tmp1, tmp2, tmp3);
+                return VtValue(GfVec3i(tmp1, tmp2, tmp3));
+            }
             break;
         }
         case MFnNumericData::k3Int: {
-            int tmp1, tmp2, tmp3;
-            MFnNumericData numericDataFn(attrPlug.asMObject());
-            numericDataFn.getData(tmp1, tmp2, tmp3);
-            return usdAttr.Set(GfVec3i(tmp1, tmp2, tmp3), usdTime);
+            if (type.IsA<GfVec3i>()) {
+                int tmp1, tmp2, tmp3;
+                MFnNumericData numericDataFn(attrPlug.asMObject());
+                numericDataFn.getData(tmp1, tmp2, tmp3);
+                return VtValue(GfVec3i(tmp1, tmp2, tmp3));
+            }
             break;
         }
         case MFnNumericData::kFloat: {
-            const float usdVal(attrPlug.asFloat());
-            return usdAttr.Set(usdVal, usdTime);
+            if (type.IsA<float>()) {
+                const float usdVal(attrPlug.asFloat());
+                return VtValue(usdVal);
+            }
             break;
         }
         case MFnNumericData::k2Float: {
-            float tmp1, tmp2;
-            MFnNumericData numericDataFn(attrPlug.asMObject());
-            numericDataFn.getData(tmp1, tmp2);
-            return usdAttr.Set(GfVec2f(tmp1, tmp2), usdTime);
+            if (type.IsA<GfVec2f>()) {
+                float tmp1, tmp2;
+                MFnNumericData numericDataFn(attrPlug.asMObject());
+                numericDataFn.getData(tmp1, tmp2);
+                return VtValue(GfVec2f(tmp1, tmp2));
+            }
             break;
         }
         case MFnNumericData::k3Float: {
-            float tmp1, tmp2, tmp3;
-            MFnNumericData numericDataFn(attrPlug.asMObject());
-            numericDataFn.getData(tmp1, tmp2, tmp3);
-            return _SetVec(usdAttr, GfVec3f(tmp1, tmp2, tmp3), usdTime);
+            if (type.IsA<GfVec3f>()) {
+                float tmp1, tmp2, tmp3;
+                MFnNumericData numericDataFn(attrPlug.asMObject());
+                numericDataFn.getData(tmp1, tmp2, tmp3);
+                return _ConvertVec(role, GfVec3f(tmp1, tmp2, tmp3));
+            }
             break;
         }
         case MFnNumericData::kDouble: {
             const double usdVal(attrPlug.asDouble());
-            if (translateMayaDoubleToUsdSinglePrecision) {
-                return usdAttr.Set((float)usdVal, usdTime);
-            } else {
-                return usdAttr.Set(usdVal, usdTime);
+            if (type.IsA<float>()) {
+                return VtValue((float)usdVal);
+            } else if (type.IsA<double>()) {
+                return VtValue(usdVal);
             }
             break;
         }
@@ -625,10 +776,10 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
             double tmp1, tmp2;
             MFnNumericData numericDataFn(attrPlug.asMObject());
             numericDataFn.getData(tmp1, tmp2);
-            if (translateMayaDoubleToUsdSinglePrecision) {
-                return usdAttr.Set(GfVec2f((float)tmp1, (float)tmp2), usdTime);
-            } else {
-                return usdAttr.Set(GfVec2d(tmp1, tmp2), usdTime);
+            if (type.IsA<GfVec2f>()) {
+                return VtValue(GfVec2f((float)tmp1, (float)tmp2));
+            } else if (type.IsA<GfVec2d>()) {
+                return VtValue(GfVec2d(tmp1, tmp2));
             }
             break;
         }
@@ -636,14 +787,11 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
             double tmp1, tmp2, tmp3;
             MFnNumericData numericDataFn(attrPlug.asMObject());
             numericDataFn.getData(tmp1, tmp2, tmp3);
-            if (translateMayaDoubleToUsdSinglePrecision) {
-                return _SetVec(usdAttr,
-                               GfVec3f((float)tmp1,
-                                       (float)tmp2,
-                                       (float)tmp3),
-                               usdTime);
-            } else {
-                return _SetVec(usdAttr, GfVec3d(tmp1, tmp2, tmp3), usdTime);
+            if (type.IsA<GfVec3f>()) {
+                return _ConvertVec(role,
+                        GfVec3f((float)tmp1, (float)tmp2, (float)tmp3));
+            } else if (type.IsA<GfVec3d>()) {
+                return _ConvertVec(role, GfVec3d(tmp1, tmp2, tmp3));
             }
             break;
         }
@@ -651,17 +799,22 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
             double tmp1, tmp2, tmp3, tmp4;
             MFnNumericData numericDataFn(attrPlug.asMObject());
             numericDataFn.getData(tmp1, tmp2, tmp3, tmp4);
-            if (translateMayaDoubleToUsdSinglePrecision) {
-                return _SetVec(usdAttr,
-                               GfVec4f((float)tmp1,
-                                       (float)tmp2,
-                                       (float)tmp3,
-                                       (float)tmp4),
-                               usdTime);
-            } else {
-                return _SetVec(usdAttr,
-                               GfVec4d(tmp1, tmp2, tmp3, tmp4),
-                               usdTime);
+            if (type.IsA<GfVec4f>()) {
+                return _ConvertVec(role,
+                        GfVec4f((float)tmp1,
+                                (float)tmp2,
+                                (float)tmp3,
+                                (float)tmp4));
+            } else if (type.IsA<GfVec4d>()) {
+                return _ConvertVec(role, GfVec4d(tmp1, tmp2, tmp3, tmp4));
+            } else if (type.IsA<GfQuatf>()) {
+                float re = tmp1;
+                GfVec3f im(tmp2, tmp3, tmp4);
+                return VtValue(GfQuatf(re, im));
+            } else if (type.IsA<GfQuatd>()) {
+                double re = tmp1;
+                GfVec3d im(tmp2, tmp3, tmp4);
+                return VtValue(GfQuatd(re, im));
             }
             break;
         }
@@ -672,19 +825,46 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
     switch (unitDataType) {
         case MFnUnitAttribute::kAngle:
         case MFnUnitAttribute::kDistance:
-            if (translateMayaDoubleToUsdSinglePrecision) {
+            if (type.IsA<float>()) {
                 const float usdVal(attrPlug.asFloat());
-                return usdAttr.Set(usdVal, usdTime);
-            } else {
+                return VtValue(usdVal);
+            } else if (type.IsA<double>()) {
                 const double usdVal(attrPlug.asDouble());
-                return usdAttr.Set(usdVal, usdTime);
+                return VtValue(usdVal);
             }
             break;
         default:
             break;
     }
 
-    return false;
+    return VtValue();
+}
+
+bool
+PxrUsdMayaWriteUtil::SetUsdAttr(
+        const MPlug& attrPlug,
+        const UsdAttribute& usdAttr,
+        const UsdTimeCode& usdTime,
+        const bool writeIfConstant,
+        UsdUtilsSparseValueWriter *valueWriter)
+{
+    if (!usdAttr || attrPlug.isNull()) {
+        return false;
+    }
+
+    bool isAnimated = attrPlug.isDestination();
+    if ((usdTime.IsDefault() == isAnimated) || (!writeIfConstant && !isAnimated)) {
+        return true;
+    }
+
+    VtValue val = GetVtValue(
+            attrPlug,
+            usdAttr.GetTypeName());
+    if (val.IsEmpty()) {
+        return false;
+    }
+
+    return _SetAttribute(usdAttr, val, usdTime, valueWriter);
 }
 
 // This method inspects the JSON blob stored in the 'USD_UserExportedAttributesJson'
@@ -727,7 +907,8 @@ PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
         const MDagPath& dagPath,
         const UsdPrim& usdPrim,
         const UsdTimeCode& usdTime,
-        const bool writeIfConstant)
+        const bool writeIfConstant,
+        UsdUtilsSparseValueWriter *valueWriter)
 {
     std::vector<PxrUsdMayaUserTaggedAttribute> exportedAttributes =
         PxrUsdMayaUserTaggedAttribute::GetUserTaggedAttributesForNode(dagPath);
@@ -780,10 +961,10 @@ PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
 
         if (usdAttr) {
             if (!PxrUsdMayaWriteUtil::SetUsdAttr(attrPlug,
-                                                    usdAttr,
-                                                    usdTime,
-                                                    writeIfConstant,
-                                                    translateMayaDoubleToUsdSinglePrecision)) {
+                                                 usdAttr,
+                                                 usdTime,
+                                                 writeIfConstant,
+                                                 valueWriter)) {
                 MGlobal::displayError(
                     TfStringPrintf("Could not set value for attribute: '%s'",
                                    usdAttr.GetPath().GetText()).c_str());
@@ -799,6 +980,122 @@ PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
     }
 
     return true;
+}
+
+/* static */
+bool
+PxrUsdMayaWriteUtil::WriteMetadataToPrim(
+    const MObject& mayaObject,
+    const UsdPrim& prim)
+{
+    PxrUsdMayaAdaptor adaptor(mayaObject);
+    if (!adaptor) {
+        return false;
+    }
+
+    for (const auto& keyValue : adaptor.GetAllAuthoredMetadata()) {
+        prim.SetMetadata(keyValue.first, keyValue.second);
+    }
+    return true;
+}
+
+/* static */
+bool
+PxrUsdMayaWriteUtil::WriteAPISchemaAttributesToPrim(
+    const MObject& mayaObject,
+    const UsdPrim& prim,
+    UsdUtilsSparseValueWriter *valueWriter)    
+{
+    PxrUsdMayaAdaptor adaptor(mayaObject);
+    if (!adaptor) {
+        return false;
+    }
+
+    for (const TfToken& schemaName : adaptor.GetAppliedSchemas()) {
+        if (const PxrUsdMayaAdaptor::SchemaAdaptor schemaAdaptor =
+                adaptor.GetSchemaByName(schemaName)) {
+            for (const TfToken& attrName :
+                    schemaAdaptor.GetAuthoredAttributeNames()) {
+                if (const PxrUsdMayaAdaptor::AttributeAdaptor attrAdaptor =
+                        schemaAdaptor.GetAttribute(attrName)) {
+                    VtValue value;
+                    if (attrAdaptor.Get(&value)) {
+                        const SdfAttributeSpecHandle attrDef =
+                                attrAdaptor.GetAttributeDefinition();
+                        UsdAttribute attr = prim.CreateAttribute(
+                                    attrDef->GetNameToken(),
+                                    attrDef->GetTypeName(),
+                                    /*custom*/ false,
+                                    attrDef->GetVariability());
+                        const UsdTimeCode usdTime = UsdTimeCode::Default();
+                        _SetAttribute(attr, value, usdTime, valueWriter);
+                    }
+                }
+            }
+        }
+    }
+    return true;
+}
+
+/* static */
+size_t
+PxrUsdMayaWriteUtil::WriteSchemaAttributesToPrim(
+    const MObject& shapeObject,
+    const MObject& transformObject,
+    const UsdPrim& prim,
+    const TfType& schemaType,
+    const std::vector<TfToken>& attributeNames,
+    const UsdTimeCode& usdTime,
+    UsdUtilsSparseValueWriter *valueWriter)
+{
+    PxrUsdMayaAdaptor::SchemaAdaptor shapeSchema;
+    if (PxrUsdMayaAdaptor adaptor = PxrUsdMayaAdaptor(shapeObject)) {
+        shapeSchema = adaptor.GetSchemaOrInheritedSchema(schemaType);
+    }
+    PxrUsdMayaAdaptor::SchemaAdaptor transformSchema;
+    if (PxrUsdMayaAdaptor adaptor = PxrUsdMayaAdaptor(transformObject)) {
+        transformSchema = adaptor.GetSchemaOrInheritedSchema(schemaType);
+    }
+    if (!shapeSchema && !transformSchema) {
+        return 0;
+    }
+
+    size_t count = 0;
+    for (const TfToken& attrName : attributeNames) {
+        VtValue value;
+        SdfAttributeSpecHandle attrDef;
+
+        // Prefer value on shape node.
+        if (shapeSchema) {
+            if (PxrUsdMayaAdaptor::AttributeAdaptor attr =
+                    shapeSchema.GetAttribute(attrName)) {
+                attr.Get(&value);
+                attrDef = attr.GetAttributeDefinition();
+            }
+        }
+
+        // If we don't have a value yet, go on to the transform.
+        if (value.IsEmpty() && transformSchema) {
+            if (PxrUsdMayaAdaptor::AttributeAdaptor attr =
+                    transformSchema.GetAttribute(attrName)) {
+                attr.Get(&value);
+                attrDef = attr.GetAttributeDefinition();
+            }
+        }
+
+        if (!value.IsEmpty() && attrDef) {
+            UsdAttribute attr = prim.CreateAttribute(
+                    attrDef->GetNameToken(),
+                    attrDef->GetTypeName(),
+                    /*custom*/ false,
+                    attrDef->GetVariability());
+            if (_SetAttribute(attr, value, usdTime, valueWriter)) {
+                count++;
+            }
+        }
+    }
+
+    return count;
 }
 
 // static
@@ -848,7 +1145,8 @@ PxrUsdMayaWriteUtil::WriteArrayAttrsToInstancer(
     MFnArrayAttrsData& inputPointsData,
     const UsdGeomPointInstancer& instancer,
     const size_t numPrototypes,
-    const UsdTimeCode& usdTime)
+    const UsdTimeCode& usdTime,
+    UsdUtilsSparseValueWriter *valueWriter)
 {
     MStatus status;
 
@@ -868,7 +1166,7 @@ PxrUsdMayaWriteUtil::WriteArrayAttrsToInstancer(
             [](double x) {
                 return (int64_t) x;
             });
-        instancer.CreateIdsAttr().Set(vtArray, usdTime);
+        _SetAttribute(instancer.CreateIdsAttr(), vtArray, usdTime, valueWriter);
         numInstances = vtArray.size();
     }
     else {
@@ -896,12 +1194,14 @@ PxrUsdMayaWriteUtil::WriteArrayAttrsToInstancer(
                     return (int) numPrototypes - 1;
                 }
             });
-        instancer.CreateProtoIndicesAttr().Set(vtArray, usdTime);
+        _SetAttribute(instancer.CreateProtoIndicesAttr(), vtArray, 
+                      usdTime, valueWriter);
     }
     else {
         VtArray<int> vtArray;
         vtArray.assign(numInstances, 0);
-        instancer.CreateProtoIndicesAttr().Set(vtArray, usdTime);
+        _SetAttribute(instancer.CreateProtoIndicesAttr(), 
+                      vtArray, usdTime, valueWriter);
     }
 
     if (inputPointsData.checkArrayExist("position", type) &&
@@ -916,12 +1216,14 @@ PxrUsdMayaWriteUtil::WriteArrayAttrsToInstancer(
             [](const MVector& v) {
                 return GfVec3f(v.x, v.y, v.z);
             });
-        instancer.CreatePositionsAttr().Set(vtArray, usdTime);
+        _SetAttribute(instancer.CreatePositionsAttr(), vtArray, usdTime,
+                      valueWriter);
     }
     else {
         VtVec3fArray vtArray;
         vtArray.assign(numInstances, GfVec3f(0.0f));
-        instancer.CreatePositionsAttr().Set(vtArray, usdTime);
+        _SetAttribute(instancer.CreatePositionsAttr(),
+                      vtArray, usdTime, valueWriter);
     }
 
     if (inputPointsData.checkArrayExist("rotation", type) &&
@@ -939,12 +1241,14 @@ PxrUsdMayaWriteUtil::WriteArrayAttrsToInstancer(
                         * GfRotation(GfVec3d::ZAxis(), v.z);
                 return GfQuath(rot.GetQuat());
             });
-        instancer.CreateOrientationsAttr().Set(vtArray, usdTime);
+        _SetAttribute(instancer.CreateOrientationsAttr(),
+                      vtArray, usdTime, valueWriter);
     }
     else {
         VtQuathArray vtArray;
         vtArray.assign(numInstances, GfQuath(0.0f));
-        instancer.CreateOrientationsAttr().Set(vtArray, usdTime);
+        _SetAttribute(instancer.CreateOrientationsAttr(), 
+                      vtArray, usdTime, valueWriter);
     }
 
     if (inputPointsData.checkArrayExist("scale", type) &&
@@ -959,12 +1263,14 @@ PxrUsdMayaWriteUtil::WriteArrayAttrsToInstancer(
             [](const MVector& v) {
                 return GfVec3f(v.x, v.y, v.z);
             });
-        instancer.CreateScalesAttr().Set(vtArray, usdTime);
+        _SetAttribute(instancer.CreateScalesAttr(), vtArray, usdTime,
+                      valueWriter);
     }
     else {
         VtVec3fArray vtArray;
         vtArray.assign(numInstances, GfVec3f(1.0));
-        instancer.CreateScalesAttr().Set(vtArray, usdTime);
+        _SetAttribute(instancer.CreateScalesAttr(), vtArray, usdTime,
+                      valueWriter);
     }
 
     return true;
@@ -1123,151 +1429,6 @@ PxrUsdMayaWriteUtil::ReadMayaAttribute(
     }
 
     return false;
-}
-
-
-void
-PxrUsdMayaWriteUtil::CleanupAttributeKeys(UsdAttribute attribute,
-                                          bool keepSingleSample,
-                                          UsdInterpolationType parameterInterpolation)
-{
-    if (!attribute) {
-        return;
-    }
-    static thread_local std::vector<double> time_samples;
-    time_samples.clear();
-    attribute.GetTimeSamples(&time_samples);
-    std::sort(time_samples.begin(), time_samples.end());
-    const auto num_time_samples = time_samples.size();
-    if (num_time_samples <= 1) {
-        return; // Either default or one time sample which we want to keep
-    }
-
-    if (num_time_samples > 2) {
-        const auto max_num_time_samples = num_time_samples - 1;
-        VtValue first;
-        attribute.Get(&first, time_samples[0]);
-        if (parameterInterpolation == UsdInterpolationTypeHeld) {
-            // we don't want to cleanup when there are only two samples, that
-            // state is going to be checked later on!
-            for (size_t i = 1; i < max_num_time_samples; ++i) {
-                VtValue next;
-                const auto next_time = time_samples[i];
-                attribute.Get(&next, next_time);
-                if (first.operator==(next)) {
-                    attribute.ClearAtTime(next_time);
-                } else {
-                    first = next;
-                }
-            }
-        } else {
-            for (size_t i = 1; i < max_num_time_samples; ++i) {
-                VtValue middle, last;
-                const auto middle_time = time_samples[i];
-                attribute.Get(&middle, middle_time);
-                attribute.Get(&last, time_samples[i + 1]);
-                if (first.operator==(middle) && first.operator==(last)) {
-                    attribute.ClearAtTime(middle_time);
-                } else {
-                    first = middle;
-                }
-            }
-        }
-    }
-
-    const auto recent_num_time_samples = attribute.GetNumTimeSamples();
-    if (recent_num_time_samples == 2) {
-        time_samples.clear();
-        attribute.GetTimeSamples(&time_samples);
-        std::sort(time_samples.begin(), time_samples.end());
-        VtValue first, last;
-        attribute.Get(&first, time_samples[0]);
-        attribute.Get(&last, time_samples[1]);
-        if (first == last) {
-            if (keepSingleSample){
-                attribute.ClearAtTime(time_samples[1]);
-            } else {
-                attribute.Set(first);
-                attribute.ClearAtTime(time_samples[0]);
-                attribute.ClearAtTime(time_samples[1]);
-            }
-        }
-    // clear if there is only one time sample
-    } else if (recent_num_time_samples == 1 && !keepSingleSample) {
-        time_samples.clear();
-        attribute.GetTimeSamples(&time_samples);
-        VtValue first;
-        attribute.Get(&first, time_samples[0]);
-        attribute.Set(first);
-        attribute.ClearAtTime(time_samples[0]);
-    }
-}
-
-void
-PxrUsdMayaWriteUtil::CleanupPrimvarKeys(
-    UsdGeomPrimvar primvar,
-    bool keepSingleSample,
-    UsdInterpolationType parameterInterpolation) {
-    if (!primvar) {
-        return;
-    }
-
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primvar.GetAttr(), keepSingleSample, parameterInterpolation);
-    PxrUsdMayaWriteUtil::CleanupAttributeKeys(primvar._GetIndicesAttr(false), keepSingleSample, UsdInterpolationTypeHeld);
-}
-
-void
-PxrUsdMayaWriteUtil::SetAttributeKey(
-    UsdAttribute attribute,
-    const VtValue& value,
-    const UsdTimeCode& usdTime) {
-    if (!attribute || value.IsEmpty()) { return; }
-
-    if (usdTime.IsDefault()) { attribute.Set(value); }
-
-    static thread_local std::vector<double> time_samples;
-    time_samples.clear();
-    attribute.GetTimeSamples(&time_samples);
-    std::sort(time_samples.begin(), time_samples.end());
-    const auto num_time_samples = time_samples.size();
-    if (num_time_samples <= 1) {
-        attribute.Set(value, usdTime);
-        return; // We need to set the value anyway, to keep the time ranges.
-    }
-
-    const auto prev_time = time_samples.back();
-    if (usdTime.GetValue() <= prev_time) {
-        attribute.Set(value, usdTime);
-        return; // Just set the sample.
-    }
-
-    VtValue prev;
-    attribute.Get(&prev, prev_time);
-
-    if (prev.operator==(value)) {
-        // We already made sure that there are at least 2 elements.
-        const auto prev_prev_time = time_samples[time_samples.size() - 2];
-        attribute.Get(&prev, prev_prev_time);
-        if (prev.operator==(value)) {
-            attribute.ClearAtTime(prev_time);
-        }
-    }
-
-    attribute.Set(value, usdTime);
-}
-
-void
-PxrUsdMayaWriteUtil::SetPrimvarKey(
-            UsdGeomPrimvar primvar,
-            const VtValue& value,
-            const VtValue& indices,
-            const UsdTimeCode& usdTime) {
-    if (!primvar) { return; }
-
-    PxrUsdMayaWriteUtil::SetAttributeKey(primvar.GetAttr(), value, usdTime);
-    if (!indices.IsEmpty()) {
-        PxrUsdMayaWriteUtil::SetAttributeKey(primvar._GetIndicesAttr(true), indices, usdTime);
-    }
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

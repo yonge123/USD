@@ -89,7 +89,8 @@ class testUsdExportPointInstancer(unittest.TestCase):
         cmds.usdExport(mergeTransformAndShape=True,
             file=usdFilePath,
             shadingMode='none',
-            frameRange=(cls.START_TIMECODE, cls.END_TIMECODE))
+            frameRange=(cls.START_TIMECODE, cls.END_TIMECODE),
+            kind='component')
 
         cls.stage = Usd.Stage.Open(usdFilePath)
 
@@ -142,17 +143,23 @@ class testUsdExportPointInstancer(unittest.TestCase):
 
         # Check that the USD prims have correct type name, references, kinds,
         # kinds, instancerTranslate xformOps.
-        prototypesPrim = self.stage.GetPrimAtPath(
-                "/InstancerTest/%s/Prototypes" % instancerName)
-        self.assertEqual(len(prototypesPrim.GetChildren()), 3)
+        instancerPrim = self.stage.GetPrimAtPath(
+                "/InstancerTest/%s" % instancerName)
+        self.assertEqual(Usd.ModelAPI(instancerPrim).GetKind(),
+                Kind.Tokens.subcomponent)
 
-        prototype0 = prototypesPrim.GetChild("prototype_0")
+        prototypesPrim = instancerPrim.GetChild("Prototypes")
+        self.assertEqual(len(prototypesPrim.GetChildren()), 3)
+        self.assertEqual(Usd.ModelAPI(prototypesPrim).GetKind(),
+                Kind.Tokens.subcomponent)
+
+        prototype0 = prototypesPrim.GetChild("pCube1_0")
         self._AssertPrototype(prototype0, "Xform", 2, True)
 
-        prototype1 = prototypesPrim.GetChild("prototype_1")
+        prototype1 = prototypesPrim.GetChild("prototypeUnderInstancer_1")
         self._AssertPrototype(prototype1, "Mesh", 0, False)
 
-        prototype2 = prototypesPrim.GetChild("prototype_2")
+        prototype2 = prototypesPrim.GetChild("referencePrototype_2")
         self._AssertPrototype(prototype2, "Xform", 1, True)
         self.assertEqual(
                 Usd.ModelAPI(prototype2).GetAssetName(),

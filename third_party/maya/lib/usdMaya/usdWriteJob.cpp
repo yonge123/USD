@@ -98,10 +98,7 @@ usdWriteJob::~usdWriteJob()
 {
 }
 
-bool usdWriteJob::beginJob(const std::string &iFileName,
-                         bool append,
-                         double startTime,
-                         double endTime)
+bool usdWriteJob::beginJob(const std::string &iFileName, bool append)
 {
     // Check for DAG nodes that are a child of an already specified DAG node to export
     // if that's the case, report the issue and skip the export
@@ -149,9 +146,11 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
         return false;
     }
 
-    // Set time range for the USD file
-    mJobCtx.mStage->SetStartTimeCode(startTime);
-    mJobCtx.mStage->SetEndTimeCode(endTime);
+    // Set time range for the USD file if we're exporting animation.
+    if (!mJobCtx.mArgs.timeInterval.IsEmpty()) {
+        mJobCtx.mStage->SetStartTimeCode(mJobCtx.mArgs.timeInterval.GetMin());
+        mJobCtx.mStage->SetEndTimeCode(mJobCtx.mArgs.timeInterval.GetMax());
+    }
 
     mModelKindWriter.Reset();
 
@@ -180,6 +179,12 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
                                         defaultLayer.name(), false, false);
     }
 
+    MDagPath curLeafDagPath;
+    MDagPath rootDagPath;
+    if (!mJobCtx.exportRootSdfPath.IsEmpty()) {
+        PxrUsdMayaUtil::GetDagPathByName(mJobCtx.mArgs.exportRootPath, rootDagPath);
+    }
+
     // Pre-process the argument dagPath path names into two sets. One set
     // contains just the arg dagPaths, and the other contains all parents of
     // arg dagPaths all the way up to the world root. Partial path names are
@@ -200,6 +205,24 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
         std::string curDagPathStr(curDagPath.partialPathName(&status).asChar());
         if (status != MS::kSuccess) {
             continue;
+        }
+
+        // If we have an export root, check if this arg is either a parent or
+        // child of the root - if it's not, we ignore it
+        if (rootDagPath.isValid()) {
+            // If it's a parent of the exportRoot, we not only keep this node, we set
+            // it to be the curLeafDagPath - normally, we would set this while iterating
+            // through the dag tree, with itDag below, but if we have an export root,
+            // we might skip beneath all the mArgs.dagPaths... but we still
+            // need to set curLeafDagPath so we know we're underneath a
+            // requested path
+            if (MFnDagNode(rootDagPath).hasParent(curDagPath.node())) {
+                curLeafDagPath = curDagPath;
+            }
+            else if (!(rootDagPath == curDagPath
+                       || MFnDagNode(curDagPath).hasParent(rootDagPath.node()))) {
+                continue;
+            }
         }
 
         argDagPaths.insert(curDagPathStr);
@@ -232,12 +255,18 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
 
     // Now do a depth-first traversal of the Maya DAG from the world root.
     // We keep a reference to arg dagPaths as we encounter them.
-    MDagPath curLeafDagPath;
     MItDag itDag(MItDag::kDepthFirst, MFn::kInvalid);
 
     itDag.traverseUnderWorld(true);
+    if (rootDagPath.isValid()) {
+        // Check if there was no intersection between the given arg paths
+        // and the root dag path, and error if they don't overlap at all
+        if (argDagPaths.size() == 0) {
+            MGlobal::displayError("Given export root was neither a parent or child of"
+                    " any of the items to export; export aborting");
+            return false;
+        }
 
-    if (!mJobCtx.mArgs.exportRootPath.empty()) {
         // If a root is specified, start iteration there
         MDagPath rootDagPath;
         PxrUsdMayaUtil::GetDagPathByName(mJobCtx.mArgs.exportRootPath, rootDagPath);
@@ -253,13 +282,13 @@ bool usdWriteJob::beginJob(const std::string &iFileName,
             // This dagPath is a parent of one of the arg dagPaths. It should
             // be included in the export, but not necessarily all of its
             // children should be, so we continue to traverse down.
-            if (!mJobCtx.mArgs.exportRootSdfPath.IsEmpty() && curDagPath.length() > 0){
+            if (rootDagPath.isValid() && curDagPath.length() > 0){
                 // However if an export root is specified, we skip any dag
                 // parents that are above that root.
                 SdfPath sdfDagPath = SdfPath(PxrUsdMayaUtil::MDagPathToUsdPath(curDagPath, false,
                                                                                mJobCtx.mArgs.stripNamespaces));
-                if (mJobCtx.mArgs.exportRootSdfPath.GetCommonPrefix(sdfDagPath) !=
-                    mJobCtx.mArgs.exportRootSdfPath) {
+                if (mJobCtx.exportRootSdfPath.GetCommonPrefix(sdfDagPath) !=
+                    mJobCtx.exportRootSdfPath) {
                     continue;
                 }
             }

@@ -51,13 +51,19 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+class UsdUtilsSparseValueWriter;
 
-
+/// This struct contains helpers for writing USD (thus reading Maya data).
 struct PxrUsdMayaWriteUtil
 {
     /// \name Helpers for writing USD
     /// \{
 
+    /// Returns whether the environment setting for writing the TexCoord 
+    /// types is set to true
+    PXRUSDMAYA_API
+    static bool WriteUVAsFloat2();
+    
     /// Get the SdfValueTypeName that corresponds to the given plug \p attrPlug.
     /// If \p translateMayaDoubleToUsdSinglePrecision is true, Maya plugs that
     /// contain double data will return the appropriate float-based type.
@@ -102,21 +108,49 @@ struct PxrUsdMayaWriteUtil
             const bool translateMayaDoubleToUsdSinglePrecision =
                 PxrUsdMayaUserTaggedAttribute::GetFallbackTranslateMayaDoubleToUsdSinglePrecision());
 
+    /// Given an \p attrPlug, try to create a UsdRi attribute on \p usdPrim with
+    /// the name \p attrName. Note, it's value will not be set.
+    ///
+    /// If \p translateMayaDoubleToUsdSinglePrecision is true, Maya plugs that
+    /// contain double data will result in UsdRi attributes of the appropriate
+    /// float-based type. Otherwise, their type will be double-based.
+    PXRUSDMAYA_API
+    static UsdAttribute GetOrCreateUsdRiAttribute(
+            const MPlug& attrPlug,
+            const UsdPrim& usdPrim,
+            const std::string& attrName,
+            const std::string& nameSpace = "user",
+            const bool translateMayaDoubleToUsdSinglePrecision =
+                PxrUsdMayaUserTaggedAttribute::GetFallbackTranslateMayaDoubleToUsdSinglePrecision());
+
+    /// Given an \p attrPlug, reads its value and returns it as a wrapped
+    /// VtValue. The type of the value is determined by consulting the given
+    /// \p typeName; if the value cannot be converted into a \p typeName, then
+    /// returns an empty VtValue.
+    PXRUSDMAYA_API
+    static VtValue GetVtValue(
+            const MPlug& attrPlug,
+            const SdfValueTypeName& typeName);
+
+    PXRUSDMAYA_API
+    static VtValue GetVtValue(
+            const MPlug& attrPlug,
+            const TfType& type,
+            const TfToken& role);
+
     /// Given an \p attrPlug, determine it's value and set it on \p usdAttr at
     /// \p usdTime.
     ///
-    /// If \p translateMayaDoubleToUsdSinglePrecision is true, Maya plugs that
-    /// contain double data will be set on \p usdAttr as the appropriate
-    /// float-based type. Otherwise, their data will be set as the appropriate
-    /// double-based type.
+    /// Whether to export Maya attributes as single-precision or
+    /// double-precision floating point is determined by consulting the type
+    /// name of the USD attribute.
     PXRUSDMAYA_API
     static bool SetUsdAttr(
             const MPlug& attrPlug,
             const UsdAttribute& usdAttr,
             const UsdTimeCode& usdTime,
             const bool writeIfConstant,
-            const bool translateMayaDoubleToUsdSinglePrecision =
-                PxrUsdMayaUserTaggedAttribute::GetFallbackTranslateMayaDoubleToUsdSinglePrecision());
+            UsdUtilsSparseValueWriter *valueWriter=nullptr);
 
     /// Given a Maya node at \p dagPath, inspect it for attributes tagged by
     /// the user for export to USD and write them onto \p usdPrim at time
@@ -126,7 +160,65 @@ struct PxrUsdMayaWriteUtil
             const MDagPath& dagPath,
             const UsdPrim& usdPrim,
             const UsdTimeCode& usdTime,
-            const bool writeIfConstant);
+            const bool writeIfConstant,
+            UsdUtilsSparseValueWriter *valueWriter=nullptr);
+
+    /// Writes all of the adaptor metadata from \p mayaObject onto the \p prim.
+    /// Returns true if successful (even if there was nothing to export).
+    PXRUSDMAYA_API
+    static bool WriteMetadataToPrim(
+            const MObject& mayaObject,
+            const UsdPrim& prim);
+
+    /// Writes all of the adaptor API schema attributes from \p mayaObject onto
+    /// the \p prim. Only attributes on applied schemas will be written to
+    /// \p prim.
+    /// Returns true if successful (even if there was nothing to export).
+    /// \sa PxrUsdMayaAdaptor::GetAppliedSchemas
+    PXRUSDMAYA_API
+    static bool WriteAPISchemaAttributesToPrim(
+            const MObject& mayaObject,
+            const UsdPrim& prim,
+            UsdUtilsSparseValueWriter *valueWriter=nullptr);
+
+    template <typename T>
+    static size_t WriteSchemaAttributesToPrim(
+            const MObject& shapeObject,
+            const MObject& transformObject,
+            const UsdPrim& prim,
+            const std::vector<TfToken>& attributeNames,
+            const UsdTimeCode& usdTime = UsdTimeCode::Default(),
+            UsdUtilsSparseValueWriter *valueWriter=nullptr)
+    {
+        return WriteSchemaAttributesToPrim(
+                shapeObject,
+                transformObject,
+                prim,
+                TfType::Find<T>(),
+                attributeNames,
+                usdTime,
+                valueWriter);
+    }
+
+    /// Writes schema attributes specified by \attributeNames for the schema
+    /// with type \p schemaType to the prim \p prim.
+    /// Values are resolved by consulting the \p shapeObject first, and then,
+    /// if the \p shapeObject had no authored value for the attribute,
+    /// consulting the \p transformObject. (This means that attribute collisions
+    /// will always be handled by taking the shape node's value if we're merging
+    /// transforms and shapes.)
+    /// Values are read at the current Maya time, and are written into the USD
+    /// stage at time \p usdTime. If the optional \p valueWriter is provided,
+    /// it will be used to write the values.
+    /// Returns the number of attributes actually written to the USD stage.
+    static size_t WriteSchemaAttributesToPrim(
+            const MObject& shapeObject,
+            const MObject& transformObject,
+            const UsdPrim& prim,
+            const TfType& schemaType,
+            const std::vector<TfToken>& attributeNames,
+            const UsdTimeCode& usdTime = UsdTimeCode::Default(),
+            UsdUtilsSparseValueWriter *valueWriter=nullptr);
 
     /// Authors class inherits on \p usdPrim.  \p inheritClassNames are
     /// specified as names (not paths).  For example, they should be
@@ -145,7 +237,8 @@ struct PxrUsdMayaWriteUtil
             MFnArrayAttrsData& inputPointsData,
             const UsdGeomPointInstancer& instancer,
             const size_t numPrototypes,
-            const UsdTimeCode& usdTime);
+            const UsdTimeCode& usdTime,
+            UsdUtilsSparseValueWriter *valueWriter=nullptr);
 
     /// \}
 
@@ -187,38 +280,6 @@ struct PxrUsdMayaWriteUtil
             VtVec3fArray* val);
     /// \}
 
-    /// \brief Cleans up duplicate keys on \p attribute based on \p parameterInterpolation.
-    /// If \p keepSingleSample is true, will stop short of converting a time sampled attr
-    /// to a constant one.
-    PXRUSDMAYA_API
-    static void CleanupAttributeKeys(
-        UsdAttribute attribute,
-        bool keepSingleSample = false,
-        UsdInterpolationType parameterInterpolation = UsdInterpolationTypeLinear);
-
-    /// \brief Cleans up duplicate keys on \p primvar based on \p parameterInterpolation.
-    PXRUSDMAYA_API
-    static void CleanupPrimvarKeys(
-        UsdGeomPrimvar primvar,
-        bool keepSingleSample = false,
-        UsdInterpolationType parameterInterpolation = UsdInterpolationTypeLinear);
-
-    /// \brief Appends new VtValue to a USDAttribute. The function does cleanup and
-    /// removes extra keys on the fly, so it's useful to decrease memory usage during export.
-    PXRUSDMAYA_API
-    static void SetAttributeKey(
-            UsdAttribute attribute,
-            const VtValue& value,
-            const UsdTimeCode& usdTime);
-
-    /// \brief Appends new VtValue and indices to a USDGeomPrimvar. The function does cleanup and
-    ///  removes extra keys on the fly, so it's useful to decrease memory usage during export.
-    PXRUSDMAYA_API
-    static void SetPrimvarKey(
-            UsdGeomPrimvar primvar,
-            const VtValue& value,
-            const VtValue& indices,
-            const UsdTimeCode& usdTime);
 };
 
 

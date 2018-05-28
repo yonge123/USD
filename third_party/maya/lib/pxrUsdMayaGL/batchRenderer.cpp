@@ -32,6 +32,7 @@
 #include "pxrUsdMayaGL/sceneDelegate.h"
 #include "pxrUsdMayaGL/shapeAdapter.h"
 #include "pxrUsdMayaGL/softSelectHelper.h"
+#include "pxrUsdMayaGL/userData.h"
 
 #include "px_vp20/utils.h"
 #include "px_vp20/utils_legacy.h"
@@ -62,15 +63,15 @@
 #include "pxr/usd/sdf/path.h"
 
 #include <maya/M3dView.h>
-#include <maya/MBoundingBox.h>
 #include <maya/MDagPath.h>
 #include <maya/MDrawContext.h>
 #include <maya/MDrawData.h>
 #include <maya/MDrawRequest.h>
+#include <maya/MEventMessage.h>
+#include <maya/MFileIO.h>
 #include <maya/MFrameContext.h>
 #include <maya/MGlobal.h>
 #include <maya/MMatrix.h>
-#include <maya/MPxSurfaceShapeUI.h>
 #include <maya/MSceneMessage.h>
 #include <maya/MSelectionContext.h>
 #include <maya/MStatus.h>
@@ -79,7 +80,6 @@
 #include <maya/MUserData.h>
 #include <maya/MViewport2Renderer.h>
 
-#include <memory>
 #include <utility>
 
 
@@ -103,29 +103,6 @@ TF_DEFINE_PRIVATE_TOKENS(
     ((Viewport2, "Viewport2"))
     ((MayaEndRenderNotificationName, "UsdMayaEndRenderNotification"))
 );
-
-
-/// Struct to hold all the information needed for a draw request in the legacy
-/// viewport or Viewport 2.0, without requiring shape querying at draw time.
-///
-/// Note that we set deleteAfterUse=false when calling the MUserData
-/// constructor. This ensures that the draw data survives across multiple draw
-/// passes in Viewport 2.0 (e.g. a shadow pass and a color pass).
-class _BatchDrawUserData : public MUserData
-{
-    public:
-
-        bool drawShape;
-        std::unique_ptr<MBoundingBox> bounds;
-        std::unique_ptr<GfVec4f> wireframeColor;
-
-        _BatchDrawUserData() :
-            MUserData(/* deleteAfterUse = */ false),
-            drawShape(true) {}
-
-        // Make sure everything gets freed!
-        virtual ~_BatchDrawUserData() override {}
-};
 
 
 TF_INSTANTIATE_SINGLETON(UsdMayaGLBatchRenderer);
@@ -333,74 +310,6 @@ UsdMayaGLBatchRenderer::RemoveShapeAdapter(PxrMayaHdShapeAdapter* shapeAdapter)
     return (numErased > 0u);
 }
 
-void
-UsdMayaGLBatchRenderer::CreateBatchDrawData(
-        MPxSurfaceShapeUI* shapeUI,
-        MDrawRequest& drawRequest,
-        const PxrMayaHdRenderParams& params,
-        const bool drawShape,
-        const MBoundingBox* boxToDraw)
-{
-    // Legacy viewport implementation.
-
-    // If we're in this method, we must be prepping for a legacy viewport
-    // render, so mark a legacy render as pending.
-    _UpdateLegacyRenderPending(true);
-
-    // The legacy viewport never has an old MUserData we can reuse.
-    MUserData* userData = CreateBatchDrawData(nullptr,
-                                              params,
-                                              drawShape,
-                                              boxToDraw);
-
-    // Note that the legacy viewport does not manage the data allocated in the
-    // MDrawData object, so we must remember to delete the MUserData object at
-    // the end of our Draw() call.
-    MDrawData drawData;
-    shapeUI->getDrawData(userData, drawData);
-
-    drawRequest.setDrawData(drawData);
-}
-
-MUserData*
-UsdMayaGLBatchRenderer::CreateBatchDrawData(
-        MUserData* oldData,
-        const PxrMayaHdRenderParams& params,
-        const bool drawShape,
-        const MBoundingBox* boxToDraw)
-{
-    // Viewport 2.0 implementation (also called by legacy viewport
-    // implementation).
-    //
-    // Our internal _BatchDrawUserData can be used to signify whether we are
-    // requesting a shape to be rendered, a bounding box, both, or neither.
-    //
-    // In the Viewport 2.0 prepareForDraw() usage, any MUserData object passed
-    // into the function will be deleted by Maya. In the legacy viewport usage,
-    // the object gets deleted in UsdMayaGLBatchRenderer::Draw().
-
-    if (!drawShape && !boxToDraw) {
-        return nullptr;
-    }
-
-    _BatchDrawUserData* newData = static_cast<_BatchDrawUserData*>(oldData);
-    if (!newData) {
-        newData = new _BatchDrawUserData();
-    }
-
-    newData->drawShape = drawShape;
-
-    if (boxToDraw) {
-        newData->bounds.reset(new MBoundingBox(*boxToDraw));
-        newData->wireframeColor.reset(new GfVec4f(params.wireframeColor));
-    } else {
-        newData->bounds.reset();
-        newData->wireframeColor.reset();
-    }
-
-    return newData;
-}
-
 /* static */
 void
 UsdMayaGLBatchRenderer::Reset()
@@ -455,6 +364,10 @@ static
 void
 _OnMayaNewOrOpenSceneCallback(void* clientData)
 {
+    if (MFileIO::isImportingFile() || MFileIO::isReferencingFile()) {
+        return;
+    }
+
     UsdMayaGLBatchRenderer::Reset();
 }
 
@@ -471,11 +384,31 @@ UsdMayaGLBatchRenderer::_OnMayaEndRenderCallback(
     }
 }
 
+/* static */
+void
+UsdMayaGLBatchRenderer::_OnSoftSelectOptionsChangedCallback(void* clientData)
+{
+    auto batchRenderer = static_cast<UsdMayaGLBatchRenderer*>(clientData);
+    int commandResult;
+    // -sse == -softSelectEnabled
+    MGlobal::executeCommand("softSelect -q -sse", commandResult);
+    if (!commandResult) {
+        batchRenderer->_objectSoftSelectEnabled = false;
+        return;
+    }
+    // -ssf == -softSelectFalloff
+    MGlobal::executeCommand("softSelect -q -ssf", commandResult);
+    // fallbackMode 3 == object mode
+    batchRenderer->_objectSoftSelectEnabled = (commandResult == 3);
+}
+
 UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer() :
         _lastRenderFrameStamp(0u),
         _lastSelectionFrameStamp(0u),
         _legacyRenderPending(false),
-        _legacySelectionPending(false)
+        _legacySelectionPending(false),
+        _objectSoftSelectEnabled(false),
+        _softSelectOptionsCallbackId(0)
 {
     _viewport2UsesLegacySelection = TfGetenvBool("MAYA_VP2_USE_VP1_SELECTION",
                                                  false);
@@ -520,9 +453,13 @@ UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer() :
 
     // The batch renderer needs to be reset when changing scenes (either by
     // switching to a new empty scene or by opening a different scene). We
-    // listen for those two messages and *not* for kSceneUpdate messages since
+    // listen for these two messages and *not* for kSceneUpdate messages since
     // those are also emitted after a SaveAs operation, in which case we
-    // actually do not want to reset the batch renderer.
+    // actually do not want to reset the batch renderer. We listen for
+    // kBeforeFileRead messages because those fire at the right time (after any
+    // existing scene has been closed but before the new scene has been opened),
+    // but they are also emitted when a file is imported or referenced, so we
+    // must be sure *not* to reset the batch renderer in those cases.
     static MCallbackId afterNewCallbackId = 0;
     if (afterNewCallbackId == 0) {
         afterNewCallbackId =
@@ -530,10 +467,10 @@ UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer() :
                                        _OnMayaNewOrOpenSceneCallback);
     }
 
-    static MCallbackId afterOpenCallbackId = 0;
-    if (afterOpenCallbackId == 0) {
-        afterOpenCallbackId =
-            MSceneMessage::addCallback(MSceneMessage::kAfterOpen,
+    static MCallbackId beforeFileReadCallbackId = 0;
+    if (beforeFileReadCallbackId == 0) {
+        beforeFileReadCallbackId =
+            MSceneMessage::addCallback(MSceneMessage::kBeforeFileRead,
                                        _OnMayaNewOrOpenSceneCallback);
     }
 
@@ -550,6 +487,18 @@ UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer() :
             MHWRender::MPassContext::kEndRenderSemantic,
             nullptr);
     }
+
+    // We call _OnSoftSelectOptionsChangedCallback manually once, to initalize
+    // _objectSoftSelectEnabled; because of this, it's setup is slightly
+    // different - since we're calling from within the constructor, we don't
+    // use CurrentlyExists()/GetInstance(), but instead pass this as clientData;
+    // this also means we should clean up the callback in the destructor.
+    _OnSoftSelectOptionsChangedCallback(this);
+    _softSelectOptionsCallbackId =
+        MEventMessage::addEventCallback(
+                "softSelectOptionsChanged",
+                _OnSoftSelectOptionsChangedCallback,
+                this);
 }
 
 /* virtual */
@@ -558,6 +507,12 @@ UsdMayaGLBatchRenderer::~UsdMayaGLBatchRenderer()
     _selectionTracker.reset();
     _intersector.reset();
     _taskDelegate.reset();
+
+    // We remove the softSelectOptionsChanged callback because it's passed
+    // a this pointer, while others aren't.  We do that, instead of just
+    // using CurrentlyExists()/GetInstance() because we call it within the
+    // constructor
+    MMessage::removeCallback(_softSelectOptionsCallbackId);
 }
 
 const UsdMayaGLSoftSelectHelper&
@@ -646,9 +601,9 @@ UsdMayaGLBatchRenderer::Draw(const MDrawRequest& request, M3dView& view)
 
     MDrawData drawData = request.drawData();
 
-    const _BatchDrawUserData* batchData =
-        static_cast<const _BatchDrawUserData*>(drawData.geometry());
-    if (!batchData) {
+    const PxrMayaHdUserData* hdUserData =
+        static_cast<const PxrMayaHdUserData*>(drawData.geometry());
+    if (!hdUserData) {
         return;
     }
 
@@ -656,17 +611,24 @@ UsdMayaGLBatchRenderer::Draw(const MDrawRequest& request, M3dView& view)
     view.projectionMatrix(projectionMat);
     const GfMatrix4d projectionMatrix(projectionMat.matrix);
 
-    if (batchData->bounds) {
+    if (hdUserData->boundingBox) {
         MMatrix modelViewMat;
         view.modelViewMatrix(modelViewMat);
 
-        px_vp20Utils::RenderBoundingBox(*(batchData->bounds),
-                                        *(batchData->wireframeColor),
+        // For the legacy viewport, apply a framebuffer gamma correction when
+        // drawing bounding boxes, just like we do when drawing geometry via
+        // Hydra.
+        glEnable(GL_FRAMEBUFFER_SRGB_EXT);
+
+        px_vp20Utils::RenderBoundingBox(*(hdUserData->boundingBox),
+                                        *(hdUserData->wireframeColor),
                                         modelViewMat,
                                         projectionMat);
+
+        glDisable(GL_FRAMEBUFFER_SRGB_EXT);
     }
 
-    if (batchData->drawShape && _UpdateLegacyRenderPending(false)) {
+    if (hdUserData->drawShape && _UpdateLegacyRenderPending(false)) {
         GfMatrix4d worldToViewMatrix;
         _GetWorldToViewMatrix(view, &worldToViewMatrix);
 
@@ -676,8 +638,8 @@ UsdMayaGLBatchRenderer::Draw(const MDrawRequest& request, M3dView& view)
         _RenderBatches(nullptr, worldToViewMatrix, projectionMatrix, viewport);
     }
 
-    // Clean up the _BatchDrawUserData!
-    delete batchData;
+    // Clean up the user data.
+    delete hdUserData;
 }
 
 void
@@ -693,9 +655,9 @@ UsdMayaGLBatchRenderer::Draw(
         return;
     }
 
-    const _BatchDrawUserData* batchData =
-        static_cast<const _BatchDrawUserData*>(userData);
-    if (!batchData) {
+    const PxrMayaHdUserData* hdUserData =
+        dynamic_cast<const PxrMayaHdUserData*>(userData);
+    if (!hdUserData) {
         return;
     }
 
@@ -705,12 +667,12 @@ UsdMayaGLBatchRenderer::Draw(
         context.getMatrix(MHWRender::MFrameContext::kProjectionMtx, &status);
     const GfMatrix4d projectionMatrix(projectionMat.matrix);
 
-    if (batchData->bounds) {
+    if (hdUserData->boundingBox) {
         const MMatrix worldViewMat =
             context.getMatrix(MHWRender::MFrameContext::kWorldViewMtx, &status);
 
-        px_vp20Utils::RenderBoundingBox(*(batchData->bounds),
-                                        *(batchData->wireframeColor),
+        px_vp20Utils::RenderBoundingBox(*(hdUserData->boundingBox),
+                                        *(hdUserData->wireframeColor),
                                         worldViewMat,
                                         projectionMat);
     }
@@ -727,7 +689,7 @@ UsdMayaGLBatchRenderer::Draw(
 
     const MUint64 frameStamp = context.getFrameStamp();
 
-    if (batchData->drawShape && _UpdateRenderFrameStamp(frameStamp)) {
+    if (hdUserData->drawShape && _UpdateRenderFrameStamp(frameStamp)) {
         GfMatrix4d worldToViewMatrix;
         _GetWorldToViewMatrix(context, &worldToViewMatrix);
 
@@ -753,8 +715,7 @@ void UsdMayaGLBatchRenderer::DrawCustomCollection(
         {paramsCopy, HdRprimCollectionVector({collection})}
     };
 
-    // Currently, we're just using the existing lighting settings and not
-    // enabling gamma correction here.
+    // Currently, we're just using the existing lighting settings.
     _Render(viewMatrix, projectionMatrix, viewport, items);
 }
 
@@ -889,7 +850,15 @@ UsdMayaGLBatchRenderer::TestIntersection(
         return false;
     }
 
-    if (_UpdateSelectionFrameStamp(context.getFrameStamp())) {
+    // FIXME: fix so we don't re-run the same selection query
+    // for every single proxyShape .getFrameStep() does not
+    // uniquely identify the selection event, though - just
+    // the last render. We would either need to also save all
+    // the selection info, do something similar to what
+    // is done for legacy selection.
+    // Going to leave this to Pixar to fix for now, though.
+//    if (_UpdateSelectionFrameStamp(context.getFrameStamp())) {
+    {
         _ComputeSelection(_shapeAdapterBuckets,
                           viewMatrix,
                           projectionMatrix,
@@ -1123,10 +1092,10 @@ UsdMayaGLBatchRenderer::_ComputeSelection(
     }
 
     // Populate the Hydra selection from the selection results.
-    HdxSelectionSharedPtr selection(new HdxSelection);
+    HdSelectionSharedPtr selection(new HdSelection);
 
-    const HdxSelectionHighlightMode selectionMode =
-        HdxSelectionHighlightModeSelect;
+    const HdSelection::HighlightMode selectionMode =
+        HdSelection::HighlightModeSelect;
 
     for (const auto& selectPair : _selectResults) {
         const SdfPath& path = selectPair.first;
@@ -1164,8 +1133,7 @@ UsdMayaGLBatchRenderer::_Render(
         const GfMatrix4d& worldToViewMatrix,
         const GfMatrix4d& projectionMatrix,
         const GfVec4d& viewport,
-        const std::vector<_RenderItem>& items,
-        const bool gammaCorrect)
+        const std::vector<_RenderItem>& items)
 {
     _taskDelegate->SetCameraState(worldToViewMatrix,
                                   projectionMatrix,
@@ -1189,9 +1157,14 @@ UsdMayaGLBatchRenderer::_Render(
     glDisable(GL_BLEND);
     glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 
-    if (gammaCorrect) {
-        glEnable(GL_FRAMEBUFFER_SRGB_EXT);
-    }
+    // In all cases, we can should enable gamma correction:
+    // - in viewport 1.0, we're expected to do it
+    // - in viewport 2.0 without color correction, we're expected to do it
+    // - in viewport 2.0 with color correction, the render target ignores this
+    //   bit meaning we properly are blending linear colors in the render
+    //   target.  The color management pipeline is responsible for the final
+    //   correction.
+    glEnable(GL_FRAMEBUFFER_SRGB_EXT);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -1220,9 +1193,7 @@ UsdMayaGLBatchRenderer::_Render(
 
     _hdEngine.Execute(*_renderIndex, tasks);
 
-    if (gammaCorrect) {
-        glDisable(GL_FRAMEBUFFER_SRGB_EXT);
-    }
+    glDisable(GL_FRAMEBUFFER_SRGB_EXT);
 
     glPopAttrib(); // GL_LIGHTING_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT |
                    // GL_DEPTH_BUFFER_BIT | GL_VIEWPORT_BIT
@@ -1299,16 +1270,10 @@ UsdMayaGLBatchRenderer::_RenderBatches(
         glPopAttrib(); // GL_LIGHTING_BIT
     }
 
-    // The legacy viewport does not support color management,
-    // so we roll our own gamma correction by GL means (only in
-    // non-highlight mode)
-    const bool gammaCorrect = !vp2Context;
-
     _Render(worldToViewMatrix,
             projectionMatrix,
             viewport,
-            items,
-            gammaCorrect);
+            items);
 
     // Viewport 2 may be rendering in multiple passes, and we want to make sure
     // we draw once (and only once) for each of those passes, so we delay

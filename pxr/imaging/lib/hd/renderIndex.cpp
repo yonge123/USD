@@ -28,7 +28,6 @@
 #include "pxr/imaging/hd/drawItem.h"
 #include "pxr/imaging/hd/enums.h"
 #include "pxr/imaging/hd/extComputation.h"
-#include "pxr/imaging/hd/imagePlane.h"
 #include "pxr/imaging/hd/instancer.h"
 #include "pxr/imaging/hd/mesh.h"
 #include "pxr/imaging/hd/perfLog.h"
@@ -575,19 +574,6 @@ HdRenderIndex::_ConfigureReprs()
                             HdPointsGeomStylePoints);
     HdPoints::ConfigureRepr(HdTokens->refinedWireOnSurf,
                             HdPointsGeomStylePoints);
-
-    HdImagePlane::ConfigureRepr(HdTokens->hull,
-                                HdImagePlaneGeomStyleTextured);
-    HdImagePlane::ConfigureRepr(HdTokens->smoothHull,
-                                HdImagePlaneGeomStyleTextured);
-    HdImagePlane::ConfigureRepr(HdTokens->wire,
-                                HdImagePlaneGeomStyleTextured);
-    HdImagePlane::ConfigureRepr(HdTokens->refined,
-                                HdImagePlaneGeomStyleTextured);
-    HdImagePlane::ConfigureRepr(HdTokens->refinedWire,
-                                HdImagePlaneGeomStyleTextured);
-    HdImagePlane::ConfigureRepr(HdTokens->refinedWireOnSurf,
-                                HdImagePlaneGeomStyleTextured);
 }
 // -------------------------------------------------------------------------- //
 /// \name Draw Item Handling
@@ -1117,7 +1103,8 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector const &tasks,
 
         {
             _SyncRPrims workerState(sceneDelegate, r, reprs, _tracker, renderParam);
-            if (!TfDebug::IsEnabled(HD_DISABLE_MULTITHREADED_RPRIM_SYNC) && !HdImagePlane::IsEnabled() &&
+
+            if (!TfDebug::IsEnabled(HD_DISABLE_MULTITHREADED_RPRIM_SYNC) &&
                   sceneDelegate->IsEnabled(HdOptionTokens->parallelRprimSync)) {
                 TRACE_SCOPE("Parallel Rprim Sync");
                 // In the lambda below, we capture workerState by value and 

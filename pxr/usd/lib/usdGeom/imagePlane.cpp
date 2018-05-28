@@ -30,11 +30,14 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+TF_DEFINE_PUBLIC_TOKENS(UsdGeomImagePlaneFitTokens,
+        USDGEOM_IMAGEPLANE_FIT_TOKENS);
+
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
     TfType::Define<UsdGeomImagePlane,
-        TfType::Bases< UsdGeomBoundable > >();
+        TfType::Bases< UsdGeomGprim > >();
     
     // Register the usd prim typename as an alias under UsdSchemaBase. This
     // enables one to call
@@ -418,7 +421,7 @@ UsdGeomImagePlane::GetSchemaAttributeNames(bool includeInherited)
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
-            UsdGeomBoundable::GetSchemaAttributeNames(true),
+            UsdGeomGprim::GetSchemaAttributeNames(true),
             localNames);
 
     if (includeInherited)
@@ -437,3 +440,195 @@ PXR_NAMESPACE_CLOSE_SCOPE
 // 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
+
+#include "pxr/usd/usdGeom/camera.h"
+#include <OpenImageIO/imageio.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+namespace {
+
+constexpr float inch_to_mm = 25.4f;
+
+template <typename T>
+T getAttr(const UsdAttribute& attr, const UsdTimeCode& usdTime, const T& defaultValue) {
+    auto r = defaultValue;
+    attr.Get(&r, usdTime);
+    return r;
+}
+
+}
+
+void
+UsdGeomImagePlane::CalculateGeometryForViewport(
+    VtVec3fArray* vertices,
+    VtVec2fArray* uvs,
+    const UsdTimeCode& usdTime) const {
+    if (ARCH_UNLIKELY(vertices == nullptr)) { return; }
+    float depth = 100.0f;
+    GetDepthAttr().Get(&depth, usdTime);
+
+    SdfPathVector cameras;
+    GetCameraRel().GetTargets(&cameras);
+
+    if (cameras.size() != 1) { return; }
+    UsdGeomCamera usdCamera(this->GetPrim().GetStage()->GetPrimAtPath(cameras[0]));
+    if (!usdCamera) { return; }
+
+    GfVec2f aperture {1.0f, 1.0f};
+    usdCamera.GetHorizontalApertureAttr().Get(&aperture[0], usdTime);
+    usdCamera.GetVerticalApertureAttr().Get(&aperture[1], usdTime);
+    const auto focalLength = getAttr(usdCamera.GetFocalLengthAttr(), usdTime, 1.0f);
+
+    // The trick here is to take the image plane size (if not valid the camera aperture),
+    // and try to fit the aperture to the image ratio, based on the fit parameter on the image plane.
+    // We don't need the viewport aspect ratio / size, because it's already affecting the image by
+    // affecting the projection matrix.
+
+    // Size is exported in inches
+    // while aperture is in millimeters.
+    // TODO: fix this in the maya image plane writer / translator.
+    auto size = getAttr(GetSizeAttr(), usdTime, GfVec2f(-1.0f, -1.0f)) * inch_to_mm;
+    if (size[0] <= 0.0f) {
+        size[0] = aperture[0];
+    }
+    if (size[1] <= 0.0f) {
+        size[1] = aperture[1];
+    }
+
+    // Doesn't matter where we divide, we'll just multiply values anyway.
+    size[0] *= 0.5f;
+    size[1] *= 0.5f;
+
+    GfVec2f imageSize {100.0f, 100.0f};
+    const auto fileName = getAttr(GetFilenameAttr(), usdTime, SdfAssetPath(""));
+    {
+        auto* in = OIIO::ImageInput::open(fileName.GetResolvedPath());
+        if (in) {
+            in->close();
+            const auto& spec = in->spec();
+            imageSize[0] = static_cast<float>(spec.width);
+            imageSize[1] = static_cast<float>(spec.height);
+            OIIO::ImageInput::destroy(in);
+        }
+    }
+    const auto imageRatio = imageSize[0] / imageSize[1];
+    const auto sizeRatio = size[0] / size[1];
+
+    const auto fit = getAttr(GetFitAttr(), usdTime, UsdGeomImagePlaneFitTokens->best);
+    if (fit == UsdGeomImagePlaneFitTokens->fill) {
+        if (imageRatio > sizeRatio) {
+            size[0] = size[1] * imageRatio;
+        } else {
+            size[1] = size[0] / imageRatio;
+        }
+    } else if (fit == UsdGeomImagePlaneFitTokens->best) {
+        if (imageRatio > sizeRatio) {
+            size[1] = size[0] / imageRatio;
+        } else {
+            size[0] = size[1] * imageRatio;
+        }
+    } else if (fit == UsdGeomImagePlaneFitTokens->horizontal) {
+        size[1] = size[0] / imageRatio;
+    } else if (fit == UsdGeomImagePlaneFitTokens->vertical) {
+        size[0] = size[1] * imageRatio;
+    } else if (fit == UsdGeomImagePlaneFitTokens->toSize) {
+    } else { assert("Invalid value passed to UsdGeomImagePlane.fit!"); }
+
+    GfVec2f upperLeft  { -size[0],  size[1]};
+    GfVec2f upperRight {  size[0],  size[1]};
+    GfVec2f lowerLeft  { -size[0], -size[1]};
+    GfVec2f lowerRight {  size[0], -size[1]};
+
+    const auto rotate = getAttr(GetRotateAttr(), usdTime, 0.0f);
+    if (!GfIsClose(rotate, 0.0f, 0.001f)) {
+        const float rsin = sinf(-rotate);
+        const float rcos = cosf(-rotate);
+
+        auto rotateCorner = [rsin, rcos] (GfVec2f& corner) {
+            const float t = corner[0] * rcos - corner[1] * rsin;
+            corner[1] = corner[0] * rsin + corner[1] * rcos;
+            corner[0] = t;
+        };
+
+        rotateCorner(upperLeft);
+        rotateCorner(upperRight);
+        rotateCorner(lowerLeft);
+        rotateCorner(lowerRight);
+    }
+
+    // FIXME: Offset doesn't work properly!
+    const auto offset = getAttr(GetOffsetAttr(), usdTime, GfVec2f(0.0f, 0.0f)) * inch_to_mm;
+
+    upperLeft  += offset;
+    upperRight += offset;
+    lowerLeft  += offset;
+    lowerRight += offset;
+    // Both aperture and focal length should be in millimeters,
+    auto projectVertex = [focalLength, depth] (GfVec2f& vertex) {
+        vertex[0] = depth * vertex[0] / focalLength;
+        vertex[1] = depth * vertex[1] / focalLength;
+    };
+
+    projectVertex(upperLeft);
+    projectVertex(upperRight);
+    projectVertex(lowerLeft);
+    projectVertex(lowerRight);
+
+    vertices->resize(4);
+    vertices->operator[](0) = GfVec3f(upperLeft[0] , upperLeft[1] , -depth);
+    vertices->operator[](1) = GfVec3f(upperRight[0], upperRight[1], -depth);
+    vertices->operator[](2) = GfVec3f(lowerRight[0], lowerRight[1], -depth);
+    vertices->operator[](3) = GfVec3f(lowerLeft[0] , lowerLeft[1] , -depth);
+
+    auto lerp = [] (float v, float lo, float hi) -> float {
+        return lo * (1.0f - v) + hi * v;
+    };
+
+    auto clamp = [] (float v, float lo, float hi) -> float {
+        if (v < lo) { return lo; }
+        else if (v > hi) { return hi; }
+        return v;
+    };
+
+    if (ARCH_UNLIKELY(uvs == nullptr)) { return; }
+    GfVec2f coverage = getAttr(GetCoverageAttr(),
+        usdTime, GfVec2i(static_cast<int>(imageSize[0]), static_cast<int>(imageSize[1])));
+    coverage[0] = clamp(coverage[0], 0.0f, imageSize[0]);
+    coverage[1] = clamp(coverage[1], 0.0f, imageSize[1]);
+    GfVec2f coverageOrigin = getAttr(GetCoverageOriginAttr(), usdTime, GfVec2i(0, 0));
+    coverageOrigin[0] = clamp(coverageOrigin[0], -imageSize[0], imageSize[0]);
+    coverageOrigin[1] = clamp(coverageOrigin[1], -imageSize[1], imageSize[1]);
+
+    GfVec2f minUV = {0.0f, 0.0f};
+    GfVec2f maxUV = {1.0f, 1.0f};
+
+    if (coverageOrigin[0] > 0) {
+        minUV[0] = coverageOrigin[0] / imageSize[0];
+        maxUV[0] = lerp(std::min(coverage[0], imageSize[0] - coverageOrigin[0]) /
+                            (imageSize[0] - coverageOrigin[0]), minUV[0], 1.0f);
+    } else if (coverageOrigin[0] < 0) {
+        maxUV[0] = coverage[0] * (imageSize[0] + coverageOrigin[0]) / (imageSize[0] * imageSize[0]);
+    } else {
+        maxUV[0] = coverage[0] / imageSize[0];
+    }
+
+    if (coverageOrigin[1] > 0) {
+        maxUV[1] = (imageSize[1] - coverageOrigin[1]) / imageSize[1];
+        minUV[1] = lerp(std::min(coverage[1], imageSize[1] - coverageOrigin[1]) /
+                            (imageSize[1] - coverageOrigin[1]), maxUV[1], 0.0f);
+    } else if (coverageOrigin[1] < 0) {
+        minUV[1] = std::min(1.0f, -coverageOrigin[1] / imageSize[1] +
+                                  (1.0f - coverage[1] / imageSize[1]));
+    } else {
+        minUV[1] = 1.0f - coverage[1] / imageSize[1];
+    }
+
+    uvs->resize(4);
+    uvs->operator[](0) = GfVec2f(minUV[0], minUV[1]);
+    uvs->operator[](1) = GfVec2f(maxUV[0], minUV[1]);
+    uvs->operator[](2) = GfVec2f(maxUV[0], maxUV[1]);
+    uvs->operator[](3) = GfVec2f(minUV[0], maxUV[1]);
+}
+
+PXR_NAMESPACE_CLOSE_SCOPE

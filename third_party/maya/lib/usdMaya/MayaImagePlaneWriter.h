@@ -7,6 +7,10 @@
 
 #include "pxr/pxr.h"
 #include "usdMaya/MayaTransformWriter.h"
+#include "pxr/usd/usd/prim.h"
+
+// Generating extra shader definitions for real-time display.
+#define GENERATE_SHADERS
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -17,27 +21,17 @@ public:
     MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx);
     virtual ~MayaImagePlaneWriter();
 
-    virtual void postExport() override;    
     virtual void write(const UsdTimeCode& usdTime) override;
     virtual bool isShapeAnimated() const override;
 
-    enum {
-        IMAGE_PLANE_FIT_FILL,
-        IMAGE_PLANE_FIT_BEST,
-        IMAGE_PLANE_FIT_HORIZONTAL,
-        IMAGE_PLANE_FIT_VERTICAL,
-        IMAGE_PLANE_FIT_TO_SIZE
-    };
-
-    static const TfToken image_plane_fill;
-    static const TfToken image_plane_best;
-    static const TfToken image_plane_horizontal;
-    static const TfToken image_plane_vertical;
-    static const TfToken image_plane_to_size;
 protected:
     bool writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdGeomImagePlane& primSchema);
 
     bool mIsShapeAnimated;
+
+#ifdef GENERATE_SHADERS
+    UsdPrim mTexture;
+#endif
 };
 
 using MayaImagePlaneWriterPtr = std::shared_ptr<MayaImagePlaneWriter>;

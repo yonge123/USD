@@ -28,7 +28,7 @@
 
 #include "pxr/pxr.h"
 #include "pxr/usd/usdGeom/api.h"
-#include "pxr/usd/usdGeom/boundable.h"
+#include "pxr/usd/usdGeom/gprim.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usdGeom/tokens.h"
@@ -43,6 +43,18 @@
 #include "pxr/base/tf/type.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+/// \hideinitializer
+#define USDGEOM_IMAGEPLANE_FIT_TOKENS \
+    (fill) \
+    (best) \
+    (horizontal) \
+    (vertical) \
+    ((toSize, "to size"))
+
+TF_DECLARE_PUBLIC_TOKENS(UsdGeomImagePlaneFitTokens, USDGEOM_API,
+        USDGEOM_IMAGEPLANE_FIT_TOKENS);
+
 
 class SdfAssetPath;
 
@@ -61,9 +73,17 @@ class SdfAssetPath;
 /// So to set an attribute to the value "rightHanded", use UsdGeomTokens->rightHanded
 /// as the value.
 ///
-class UsdGeomImagePlane : public UsdGeomBoundable
+class UsdGeomImagePlane : public UsdGeomGprim
 {
 public:
+    enum FitType {
+        FIT_FILL,
+        FIT_BEST,
+        FIT_HORIZONTAL,
+        FIT_VERTICAL,
+        FIT_TO_SIZE
+    };
+
     /// Compile-time constant indicating whether or not this class corresponds
     /// to a concrete instantiable prim type in scene description.  If this is
     /// true, GetStaticPrimDefinition() will return a valid prim definition with
@@ -80,7 +100,7 @@ public:
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
     explicit UsdGeomImagePlane(const UsdPrim& prim=UsdPrim())
-        : UsdGeomBoundable(prim)
+        : UsdGeomGprim(prim)
     {
     }
 
@@ -88,7 +108,7 @@ public:
     /// Should be preferred over UsdGeomImagePlane(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
     explicit UsdGeomImagePlane(const UsdSchemaBase& schemaObj)
-        : UsdGeomBoundable(schemaObj)
+        : UsdGeomGprim(schemaObj)
     {
     }
 
@@ -516,6 +536,12 @@ public:
     //  - Close the include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
+
+    USDGEOM_API
+    void CalculateGeometryForViewport(
+        VtVec3fArray* vertices,
+        VtVec2fArray* uvs,
+        const UsdTimeCode& usdTime = UsdTimeCode::Default()) const;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

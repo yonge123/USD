@@ -1,26 +1,50 @@
 #include "MayaImagePlaneWriter.h"
 
-#include "pxr/usd/usdGeom/tokens.h"
-#include "pxr/usd/usdGeom/imagePlane.h"
+#include <pxr/usd/usdGeom/tokens.h>
+#include <pxr/usd/usdGeom/imagePlane.h>
+#include <pxr/base/gf/range3f.h>
 #include <maya/MBoundingBox.h>
 #include <maya/MFnDependencyNode.h>
+#include <maya/MRenderUtil.h>
 
 #include "writeUtil.h"
+
+#ifdef GENERATE_SHADERS
+#include <pxr/imaging/glf/glslfx.h>
+#include <pxr/usd/usdShade/material.h>
+#include <pxr/usd/usdShade/materialBindingAPI.h>
+#include <pxr/usd/usdShade/shader.h>
+#include <pxr/usd/usdShade/connectableAPI.h>
+#include <pxr/usd/usdHydra/tokens.h>
+#include <pxr/usd/usdGeom/camera.h>
+
+#include <maya/MRenderUtil.h>
+#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-const TfToken MayaImagePlaneWriter::image_plane_fill("fill");
-const TfToken MayaImagePlaneWriter::image_plane_best("best");
-const TfToken MayaImagePlaneWriter::image_plane_horizontal("horizontal");
-const TfToken MayaImagePlaneWriter::image_plane_vertical("vertical");
-const TfToken MayaImagePlaneWriter::image_plane_to_size("to size");
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    ((defaultOutputName, "out"))
+#ifdef GENERATE_SHADERS
+    ((materialName, "HdMaterial"))
+    ((shaderName, "HdShader"))
+    ((primvarName, "HdPrimvar"))
+    ((textureName, "HdTexture"))
+    (st)
+    (uv)
+    (result)
+    (baseColor)
+    (color)
+#endif
+);
 
 MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx)
     : MayaTransformWriter(iDag, uPath, instanceSource, jobCtx),
       mIsShapeAnimated(false)
 {
-    if (getArgs().exportAnimation) {
+    if (!getArgs().timeInterval.IsEmpty()) {
         MObject obj = getDagPath().node();
         mIsShapeAnimated = PxrUsdMayaUtil::isAnimated(obj);
     }
@@ -65,11 +89,10 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
         // ...or only one of those are... or neither are.
 
         // Currently, the parent MayaTransformWriter will handle the merging of the imagePlane
-        // shape with the image plane transform.  Now, we just need to worry about (possilby)
+        // shape with the image plane transform.  Now, we just need to worry about (possibly)
         // popping out the camera shape from our usd path...
 
-        if (getDagPath().pathCount() > 1)
-        {
+        if (getDagPath().pathCount() > 1) {
             auto cameraXformDag = getDagPath();
 
             // We're in the underworld, get the first xform before the underworld (should be the
@@ -104,8 +127,7 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
             cameraXformDag.pop(underworldLength + 2);
 
             // Now we test THIS to see if it is merged...
-            if (hasOnlyOneShapeBelow(cameraXformDag))
-            {
+            if (hasOnlyOneShapeBelow(cameraXformDag)) {
                 // Ok, cameraShape was merged... need to remove the appropriate element from our
                 // usd path...
 
@@ -113,8 +135,7 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
                 // processing done by MDagPathToUsdPath, and we avoid the hash from
                 // token re-creation
                 SdfPath cameraShapePath = getUsdPath();
-                for (auto i = 0u; i < underworldLength; ++i)
-                {
+                for (auto i = 0u; i < underworldLength - 1; ++i) {
                     cameraShapePath = cameraShapePath.GetParentPath();
                 }
                 auto cameraXformPath = cameraShapePath.GetParentPath();
@@ -124,36 +145,65 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
         }
     }
 
-    UsdGeomImagePlane primSchema =
+    auto primSchema =
         UsdGeomImagePlane::Define(getUsdStage(), getUsdPath());
     TF_AXIOM(primSchema);
     mUsdPrim = primSchema.GetPrim();
     TF_AXIOM(mUsdPrim);
+
+#ifdef GENERATE_SHADERS
+    const auto materialPath = getUsdPath().AppendChild(_tokens->materialName);
+    auto material = UsdShadeMaterial::Define(getUsdStage(), materialPath);
+    auto shader = UsdShadeShader::Define(getUsdStage(), materialPath.AppendChild(_tokens->shaderName));
+    auto primvar = UsdShadeShader::Define(getUsdStage(), materialPath.AppendChild(_tokens->primvarName));
+    auto texture = UsdShadeShader::Define(getUsdStage(), materialPath.AppendChild(_tokens->textureName));
+    mTexture = texture.GetPrim();
+    TF_AXIOM(mTexture);
+
+    UsdShadeMaterialBindingAPI(mUsdPrim)
+        .Bind(material);
+
+    UsdShadeConnectableAPI::ConnectToSource(
+        UsdShadeMaterial(material).CreateSurfaceOutput(GlfGLSLFXTokens->glslfx),
+        UsdShadeMaterial(shader).CreateOutput(_tokens->defaultOutputName, SdfValueTypeNames->Token));
+
+    shader.GetPrim()
+        .CreateAttribute(UsdHydraTokens->infoFilename, SdfValueTypeNames->Asset, SdfVariabilityUniform)
+        .Set(SdfAssetPath("shaders/simpleTexturedSurface.glslfx"));
+
+    primvar.CreateIdAttr().Set(UsdHydraTokens->HwPrimvar_1);
+    primvar.GetPrim()
+        .CreateAttribute(UsdHydraTokens->infoVarname, SdfValueTypeNames->Token, SdfVariabilityUniform)
+        .Set(_tokens->st);
+
+    texture.CreateIdAttr().Set(UsdHydraTokens->HwUvTexture_1);
+    texture.GetPrim()
+        .CreateAttribute(UsdHydraTokens->textureMemory, SdfValueTypeNames->Float, SdfVariabilityUniform)
+        .Set(10.0f * 1024.0f * 1024.0f);
+
+    UsdShadeConnectableAPI shaderApi(shader);
+    UsdShadeConnectableAPI primvarApi(primvar);
+    UsdShadeConnectableAPI textureApi(texture);
+
+    UsdShadeConnectableAPI::ConnectToSource(
+        textureApi.CreateInput(_tokens->uv, SdfValueTypeNames->Float2),
+        primvarApi.CreateOutput(_tokens->result, SdfValueTypeNames->Float2));
+
+    UsdShadeConnectableAPI::ConnectToSource(
+        shaderApi.CreateInput(_tokens->baseColor, SdfValueTypeNames->Color4f),
+        textureApi.CreateOutput(_tokens->color, SdfValueTypeNames->Color4f));
+
+    for (auto pt = getUsdPath(); !pt.IsEmpty(); pt = pt.GetParentPath()) {
+        auto pr = getUsdStage()->GetPrimAtPath(pt);
+        if (pr && pr.IsA<UsdGeomCamera>()) {
+            primSchema.CreateCameraRel().AddTarget(pt);
+            break;
+        }
+    }
+#endif
 }
 
 MayaImagePlaneWriter::~MayaImagePlaneWriter() {
-}
-
-// virtual override
-void MayaImagePlaneWriter::postExport() {
-    UsdGeomImagePlane primSchema(mUsdPrim);
-
-    if (primSchema) {
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFilenameAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetUseFrameExtensionAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetFrameOffsetAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetWidthAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetHeightAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetAlphaGainAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetAlphaGainAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetDepthAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetSqueezeCorrectionAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetOffsetAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetSizeAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetRotateAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetCoverageAttr(), UsdInterpolationTypeHeld);
-        PxrUsdMayaWriteUtil::CleanupAttributeKeys(primSchema.GetCoverageOriginAttr(), UsdInterpolationTypeHeld);
-    }
 }
 
 void MayaImagePlaneWriter::write(const UsdTimeCode& usdTime) {
@@ -175,43 +225,63 @@ bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdG
         return true;
     }
 
-    // Write extent
+    // Write extent, just the default for now. It should be setup in the adapter for drawing.
     MFnDagNode dnode(getDagPath());
-    VtArray<GfVec3f> extent(2);
-    auto boundingBox = dnode.boundingBox();
-    extent[0] = GfVec3f(boundingBox.min().x, boundingBox.min().y, boundingBox.min().z);
-    extent[1] = GfVec3f(boundingBox.max().x, boundingBox.max().y, boundingBox.max().z);
-    primSchema.CreateExtentAttr().Set(extent, usdTime);
-
+    
+    auto imageNameExtracted = MRenderUtil::exactImagePlaneFileName(dnode.object());
+    const SdfAssetPath imageNameExtractedPath(std::string(imageNameExtracted.asChar()));
     const auto sizePlug = dnode.findPlug("size");
-    primSchema.GetFilenameAttr().Set(SdfAssetPath(std::string(dnode.findPlug("imageName").asString().asChar())));
+    const auto imageName = SdfAssetPath(std::string(dnode.findPlug("imageName").asString().asChar()));
+    primSchema.GetFilenameAttr().Set(imageName);
+    primSchema.GetFilenameAttr().Set(imageNameExtractedPath, usdTime);
+#ifdef GENERATE_SHADERS
+    UsdShadeShader textureShader(mTexture);
+    auto filenameAttr = textureShader.GetPrim()
+        .CreateAttribute(UsdHydraTokens->infoFilename, SdfValueTypeNames->Asset, SdfVariabilityVarying);
+    filenameAttr.Set(imageNameExtractedPath, usdTime);
+    filenameAttr.Set(imageName);
+#endif
     const auto fit = dnode.findPlug("fit").asShort();
-    if (fit == IMAGE_PLANE_FIT_BEST) {
-        primSchema.GetFitAttr().Set(image_plane_best);
-    } else if (fit == IMAGE_PLANE_FIT_FILL) {
-        primSchema.GetFitAttr().Set(image_plane_fill);
-    } else if (fit == IMAGE_PLANE_FIT_HORIZONTAL) {
-        primSchema.GetFitAttr().Set(image_plane_horizontal);
-    } else if (fit == IMAGE_PLANE_FIT_VERTICAL) {
-        primSchema.GetFitAttr().Set(image_plane_vertical);
-    } else if (fit == IMAGE_PLANE_FIT_TO_SIZE) {
-        primSchema.GetFitAttr().Set(image_plane_to_size);
+    if (fit == UsdGeomImagePlane::FIT_BEST) {
+        primSchema.GetFitAttr().Set(UsdGeomImagePlaneFitTokens->best);
+    } else if (fit == UsdGeomImagePlane::FIT_FILL) {
+        primSchema.GetFitAttr().Set(UsdGeomImagePlaneFitTokens->fill);
+    } else if (fit == UsdGeomImagePlane::FIT_HORIZONTAL) {
+        primSchema.GetFitAttr().Set(UsdGeomImagePlaneFitTokens->horizontal);
+    } else if (fit == UsdGeomImagePlane::FIT_VERTICAL) {
+        primSchema.GetFitAttr().Set(UsdGeomImagePlaneFitTokens->vertical);
+    } else if (fit == UsdGeomImagePlane::FIT_TO_SIZE) {
+        primSchema.GetFitAttr().Set(UsdGeomImagePlaneFitTokens->toSize);
     }
     primSchema.GetUseFrameExtensionAttr().Set(dnode.findPlug("useFrameExtension").asBool());
-    primSchema.GetFrameOffsetAttr().Set(dnode.findPlug("frameOffset").asInt(), usdTime);
-    primSchema.GetWidthAttr().Set(dnode.findPlug("width").asFloat(), usdTime);
-    primSchema.GetHeightAttr().Set(dnode.findPlug("height").asFloat(), usdTime);
-    primSchema.GetAlphaGainAttr().Set(dnode.findPlug("alphaGain").asFloat(), usdTime);
-    primSchema.GetDepthAttr().Set(dnode.findPlug("depth").asFloat(), usdTime);
-    primSchema.GetSqueezeCorrectionAttr().Set(dnode.findPlug("squeezeCorrection").asFloat(), usdTime);
+    _SetAttribute(primSchema.GetFrameOffsetAttr(), dnode.findPlug("frameOffset").asInt(), usdTime);
+    _SetAttribute(primSchema.GetWidthAttr(), dnode.findPlug("width").asFloat(), usdTime);
+    _SetAttribute(primSchema.GetHeightAttr(), dnode.findPlug("height").asFloat(), usdTime);
+    _SetAttribute(primSchema.GetAlphaGainAttr(), dnode.findPlug("alphaGain").asFloat(), usdTime);
+    _SetAttribute(primSchema.GetDepthAttr(), dnode.findPlug("depth").asFloat(), usdTime);
+    _SetAttribute(primSchema.GetSqueezeCorrectionAttr(), dnode.findPlug("squeezeCorrection").asFloat(), usdTime);
     const auto offsetPlug = dnode.findPlug("offset");
-    primSchema.GetOffsetAttr().Set(GfVec2f(offsetPlug.child(0).asFloat(), offsetPlug.child(1).asFloat()), usdTime);
-    primSchema.GetSizeAttr().Set(GfVec2f(sizePlug.child(0).asFloat(), sizePlug.child(1).asFloat()), usdTime);
-    primSchema.GetRotateAttr().Set(dnode.findPlug("rotate").asFloat(), usdTime);
+    _SetAttribute(primSchema.GetOffsetAttr(),
+                  GfVec2f(offsetPlug.child(0).asFloat(), offsetPlug.child(1).asFloat()), usdTime);
+    _SetAttribute(primSchema.GetSizeAttr(),
+                  GfVec2f(sizePlug.child(0).asFloat(), sizePlug.child(1).asFloat()), usdTime);
+    _SetAttribute(primSchema.GetRotateAttr(), dnode.findPlug("rotate").asFloat(), usdTime);
     const auto coveragePlug = dnode.findPlug("coverage");
-    primSchema.GetCoverageAttr().Set(GfVec2i(coveragePlug.child(0).asInt(), coveragePlug.child(1).asInt()), usdTime);
+    _SetAttribute(primSchema.GetCoverageAttr(),
+                  GfVec2i(coveragePlug.child(0).asInt(), coveragePlug.child(1).asInt()), usdTime);
     const auto coverageOriginPlug = dnode.findPlug("coverageOrigin");
-    primSchema.GetCoverageOriginAttr().Set(GfVec2i(coverageOriginPlug.child(0).asInt(), coverageOriginPlug.child(1).asInt()), usdTime);
+    _SetAttribute(primSchema.GetCoverageOriginAttr(),
+                  GfVec2i(coverageOriginPlug.child(0).asInt(), coverageOriginPlug.child(1).asInt()), usdTime);
+    VtVec3fArray positions;
+    primSchema.CalculateGeometryForViewport(&positions, nullptr, usdTime);
+    GfRange3f extent;
+    for (const auto& vertex: positions) {
+        extent.ExtendBy(vertex);
+    }
+    VtArray<GfVec3f> extents(2);
+    extents[0] = extent.GetMin();
+    extents[1] = extent.GetMax();
+    _SetAttribute(primSchema.CreateExtentAttr(), extents, usdTime);
     return true;
 }
 

@@ -177,6 +177,12 @@ MStatus GetMObjectByName(const std::string& nodeName, MObject& mObj);
 PXRUSDMAYA_API
 MStatus GetDagPathByName(const std::string& nodeName, MDagPath& dagPath);
 
+/// Gets the Maya MPlug for the given \p attrPath.
+/// The attribute path should be specified as "nodeName.attrName" (the format
+/// used by MEL).
+PXRUSDMAYA_API
+MStatus GetPlugByName(const std::string& attrPath, MPlug& plug);
+
 /// Get the MPlug for the output time attribute of Maya's global time object
 ///
 /// The Maya API does not appear to provide any facilities for getting a handle
@@ -313,30 +319,15 @@ void CompressFaceVaryingPrimvarIndices(
         PXR_NS::TfToken *interpolation,
         PXR_NS::VtArray<int>* assignmentIndices);
 
-/// If any components in \p assignmentIndices are unassigned (-1), the given
-/// default value will be added to uvData and all of those components will be
-/// assigned that index, which is returned in \p unassignedValueIndex.
-/// Returns true if unassigned values were added and indices were updated, or
-/// false otherwise.
+/// If any of the components in \p assignmentIndices are unassigned (<0), the
+/// \p unassignedValueIndex will be set to zero and all those indices will be
+/// set to -1. Otherwise \p unassignedValueIndices is set to -1.
+/// Returns true if there were any unassigned values and indices were updated,
+/// or false otherwise.
 PXRUSDMAYA_API
-bool AddUnassignedUVIfNeeded(
-        PXR_NS::VtArray<PXR_NS::GfVec2f>* uvData,
+bool SetUnassignedValueIndex(
         PXR_NS::VtArray<int>* assignmentIndices,
-        const PXR_NS::GfVec2f& defaultUV);
-
-/// If any components in \p assignmentIndices are unassigned (-1), the given
-/// default values will be added to RGBData and AlphaData and all of those
-/// components will be assigned that index, which is returned in
-/// \p unassignedValueIndex.
-/// Returns true if unassigned values were added and indices were updated, or
-/// false otherwise.
-PXRUSDMAYA_API
-bool AddUnassignedColorAndAlphaIfNeeded(
-        PXR_NS::VtArray<PXR_NS::GfVec3f>* RGBData,
-        PXR_NS::VtArray<float>* AlphaData,
-        PXR_NS::VtArray<int>* assignmentIndices,
-        const PXR_NS::GfVec3f& defaultRGB,
-        const float defaultAlpha);
+        int* unassignedValueIndex);
 
 /// Get whether \p plug is authored in the Maya scene.
 ///

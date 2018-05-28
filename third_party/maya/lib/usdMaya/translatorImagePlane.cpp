@@ -7,25 +7,28 @@
 #include <maya/MTimeArray.h>
 #include <maya/MFnAnimCurve.h>
 
+#include "pxr/usd/usdGeom/imagePlane.h"
+
 #include "usdMaya/translatorUtil.h"
-#include "MayaImagePlaneWriter.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-namespace {
-    // From the camera translator code, cleaned the code up a bit
-    const TfToken frameOffsetToken("frameOffset");
-    const TfToken widthToken("width");
-    const TfToken heightToken("height");
-    const TfToken alphaGainToken("alphaGain");
-    const TfToken depthToken("depth");
-    const TfToken squeezeCorrectionToken("squeezeCorrection");
-    const TfToken sizeToken("size");
-    const TfToken offsetToken("offset");
-    const TfToken rotateToken("rotate");
-    const TfToken coverageToken("coverage");
-    const TfToken coverageOriginToken("coverageOrigin");
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    (frameOffset)
+    (width)
+    (height)
+    (alphaGain)
+    (depth)
+    (squeezeCorrection)
+    (size)
+    (offset)
+    (rotate)
+    (coverage)
+    (coverageOrigin)
+);
 
+namespace {
     const TfType floatType = TfType::Find<float>();
     const TfType intType = TfType::Find<int>();
     const TfType float2Type = TfType::Find<GfVec2f>();
@@ -40,8 +43,8 @@ namespace {
         MTimeArray* timeArray,
         MDoubleArray* valueArray)
     {
-        if (!PxrUsdMayaTranslatorUtil::GetTimeSamples(usdAttr, args,
-                                                      &timeSamples)) {
+        if (!usdAttr.GetTimeSamplesInInterval(
+                args.GetTimeInterval(), &timeSamples)) {
             return false;
         }
 
@@ -198,7 +201,7 @@ namespace {
                                   const PxrUsdMayaPrimReaderArgs& args,
                                   PxrUsdMayaPrimReaderContext* context)
     {
-        if (!args.GetReadAnimData()) {
+        if (args.GetTimeInterval().IsEmpty()) {
             return false;
         }
 
@@ -224,7 +227,7 @@ namespace {
                                   const PxrUsdMayaPrimReaderArgs& args,
                                   PxrUsdMayaPrimReaderContext* context)
     {
-        if (!args.GetReadAnimData()) {
+        if (args.GetTimeInterval().IsEmpty()) {
             return false;
         }
 
@@ -256,7 +259,7 @@ namespace {
                                   const PxrUsdMayaPrimReaderArgs& args,
                                   PxrUsdMayaPrimReaderContext* context)
     {
-        if (!args.GetReadAnimData()) {
+        if (args.GetTimeInterval().IsEmpty()) {
             return false;
         }
 
@@ -288,7 +291,7 @@ namespace {
                                 const PxrUsdMayaPrimReaderArgs& args,
                                 PxrUsdMayaPrimReaderContext* context)
     {
-        if (!args.GetReadAnimData()) {
+        if (args.GetTimeInterval().IsEmpty()) {
             return false;
         }
 
@@ -394,20 +397,20 @@ bool PxrUsdMayaTranslatorImagePlane::Read(
 
     TfToken fit;
     usdImagePlane.GetFitAttr().Get(&fit, earliestTimeCode);
-    if (fit == MayaImagePlaneWriter::image_plane_best) {
-        fitPlug.setShort(MayaImagePlaneWriter::IMAGE_PLANE_FIT_BEST);
-    } else if (fit == MayaImagePlaneWriter::image_plane_fill) {
-        fitPlug.setShort(MayaImagePlaneWriter::IMAGE_PLANE_FIT_FILL);
-    } else if (fit == MayaImagePlaneWriter::image_plane_horizontal) {
-        fitPlug.setShort(MayaImagePlaneWriter::IMAGE_PLANE_FIT_HORIZONTAL);
-    } else if (fit == MayaImagePlaneWriter::image_plane_vertical) {
-        fitPlug.setShort(MayaImagePlaneWriter::IMAGE_PLANE_FIT_VERTICAL);
-    } else if (fit == MayaImagePlaneWriter::image_plane_to_size) {
-        fitPlug.setShort(MayaImagePlaneWriter::IMAGE_PLANE_FIT_TO_SIZE);
+    if (fit == UsdGeomImagePlaneFitTokens->best) {
+        fitPlug.setShort(UsdGeomImagePlane::FIT_BEST);
+    } else if (fit == UsdGeomImagePlaneFitTokens->fill) {
+        fitPlug.setShort(UsdGeomImagePlane::FIT_FILL);
+    } else if (fit == UsdGeomImagePlaneFitTokens->horizontal) {
+        fitPlug.setShort(UsdGeomImagePlane::FIT_HORIZONTAL);
+    } else if (fit == UsdGeomImagePlaneFitTokens->vertical) {
+        fitPlug.setShort(UsdGeomImagePlane::FIT_VERTICAL);
+    } else if (fit == UsdGeomImagePlaneFitTokens->toSize) {
+        fitPlug.setShort(UsdGeomImagePlane::FIT_TO_SIZE);
     }
 
     SdfAssetPath imageAssetPath;
-    usdImagePlane.GetFilenameAttr().Get(&imageAssetPath, earliestTimeCode);
+    usdImagePlane.GetFilenameAttr().Get(&imageAssetPath, UsdTimeCode::Default());
     imagePlaneNode.findPlug("imageName").setString(imageAssetPath.GetAssetPath().c_str());
     bool useFrameExtension = false;
     usdImagePlane.GetUseFrameExtensionAttr().Get(&useFrameExtension, earliestTimeCode);
@@ -416,17 +419,17 @@ bool PxrUsdMayaTranslatorImagePlane::Read(
     auto set_attribute = [&imagePlaneNode, &args, &context] (const UsdAttribute& attr, const TfToken& token) {
         translate_usd_attribute(attr, imagePlaneNode, token, args, context);
     };
-    set_attribute(usdImagePlane.GetFrameOffsetAttr(), frameOffsetToken);
-    set_attribute(usdImagePlane.GetWidthAttr(), widthToken);
-    set_attribute(usdImagePlane.GetHeightAttr(), heightToken);
-    set_attribute(usdImagePlane.GetAlphaGainAttr(), alphaGainToken);
-    set_attribute(usdImagePlane.GetDepthAttr(), depthToken);
-    set_attribute(usdImagePlane.GetSqueezeCorrectionAttr(), squeezeCorrectionToken);
-    set_attribute(usdImagePlane.GetSizeAttr(), sizeToken);
-    set_attribute(usdImagePlane.GetOffsetAttr(), offsetToken);
-    set_attribute(usdImagePlane.GetRotateAttr(), rotateToken);
-    set_attribute(usdImagePlane.GetCoverageAttr(), coverageToken);
-    set_attribute(usdImagePlane.GetCoverageOriginAttr(), coverageOriginToken);
+    set_attribute(usdImagePlane.GetFrameOffsetAttr(), _tokens->frameOffset);
+    set_attribute(usdImagePlane.GetWidthAttr(), _tokens->width);
+    set_attribute(usdImagePlane.GetHeightAttr(), _tokens->height);
+    set_attribute(usdImagePlane.GetAlphaGainAttr(), _tokens->alphaGain);
+    set_attribute(usdImagePlane.GetDepthAttr(), _tokens->depth);
+    set_attribute(usdImagePlane.GetSqueezeCorrectionAttr(), _tokens->squeezeCorrection);
+    set_attribute(usdImagePlane.GetSizeAttr(), _tokens->size);
+    set_attribute(usdImagePlane.GetOffsetAttr(), _tokens->offset);
+    set_attribute(usdImagePlane.GetRotateAttr(), _tokens->rotate);
+    set_attribute(usdImagePlane.GetCoverageAttr(), _tokens->coverage);
+    set_attribute(usdImagePlane.GetCoverageOriginAttr(), _tokens->coverageOrigin);
 
     return true;
 }

@@ -51,6 +51,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (doubleSided)                               \
     (dispatchBuffer)                            \
     (dispatchCount)                             \
+    (displayStyle)                              \
     (drawDispatch)                              \
     (drawCommandIndex)                          \
     (drawIndirect)                              \
@@ -93,12 +94,11 @@ PXR_NAMESPACE_OPEN_SCOPE
     (points)                                    \
     (pointsIndices)                             \
     (power)                                     \
-    (primVar)                                   \
+    (primvar)                                   \
     (primID)                                    \
     (primitiveParam)                            \
     (proxy)                                     \
     (quadInfo)                                  \
-    (refineLevel)                               \
     (refined)                                   \
     (refinedWire)                               \
     (refinedWireOnSurf)                         \
@@ -143,6 +143,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (gpuMemoryUsed)                             \
     (instBasisCurvesTopology)                   \
     (instBasisCurvesTopologyRange)              \
+    (instExtComputationDataRange)               \
     (instMeshTopology)                          \
     (instMeshTopologyRange)                     \
     (instPrimvarRange)                          \
@@ -176,7 +177,6 @@ PXR_NAMESPACE_OPEN_SCOPE
     (fragmentShader)                            \
     (geometryShader)                            \
     (lightingBlendAmount)                       \
-    (material)                                  \
     (overrideColor)                             \
     (projectionMatrix)                          \
     (tessControlShader)                         \
@@ -200,7 +200,6 @@ PXR_NAMESPACE_OPEN_SCOPE
     (mesh)                                      \
     (basisCurves)                               \
     (points)                                    \
-    (imagePlane)                                \
                                                 \
     /* Sprims */                                \
     (camera)                                    \
@@ -208,6 +207,9 @@ PXR_NAMESPACE_OPEN_SCOPE
     (material)                                  \
     /* Sprims Lights */                         \
     (simpleLight)                               \
+    (cylinderLight)                             \
+    (diskLight)                                 \
+    (distantLight)                              \
     (domeLight)                                 \
     (rectLight)                                 \
     (sphereLight)                               \
@@ -217,12 +219,19 @@ PXR_NAMESPACE_OPEN_SCOPE
     /* Bprims */                                \
     (texture)
 
+#define HD_PRIMVAR_ROLE_TOKENS                  \
+    ((none, ""))                                \
+    (color)                                     \
+    (vector)                                    \
+    (normal)                                    \
+    (point)
+
 TF_DECLARE_PUBLIC_TOKENS(HdTokens, HD_API, HD_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdPerfTokens, HD_API, HD_PERF_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdShaderTokens, HD_API, HD_SHADER_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdOptionTokens, HD_API, HD_OPTION_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdPrimTypeTokens, HD_API, HD_PRIMTYPE_TOKENS);
-
+TF_DECLARE_PUBLIC_TOKENS(HdPrimvarRoleTokens, HD_API, HD_PRIMVAR_ROLE_TOKENS);
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

@@ -44,7 +44,6 @@ pxr_library(hd
         extCompPrimvarBufferSource
         extComputation
         extComputationContext
-        imagePlane
         geomSubset
         instancer
         instanceRegistry
@@ -63,6 +62,7 @@ pxr_library(hd
         renderIndex
         renderPass
         renderPassState
+        renderThread
         repr
         resource
         resourceRegistry
@@ -71,6 +71,7 @@ pxr_library(hd
         rprimSharedData
         sceneDelegate
         sceneExtCompInputSource
+        selection
         smoothNormals
         sortedIds                   
         sprim

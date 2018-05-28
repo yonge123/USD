@@ -26,6 +26,7 @@
 #include "pxr/usdImaging/usdImaging/debugCodes.h"
 #include "pxr/usdImaging/usdImaging/delegate.h"
 #include "pxr/usdImaging/usdImaging/debugCodes.h"
+#include "pxr/usdImaging/usdImaging/indexProxy.h"
 #include "pxr/usdImaging/usdImaging/instancerContext.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 #include "pxr/usdImaging/usdImaging/version.h"
@@ -592,15 +593,16 @@ UsdImagingPointInstancerAdapter::TrackVariability(UsdPrim const& prim,
             if (!positions.empty()) {
                 valueCache->GetPrimvar(cachePath, _tokens->translate) =
                     positions;
-                UsdImagingValueCache::PrimvarInfo primvar;
-                primvar.name = _tokens->translate;
-                primvar.interpolation = _tokens->instance;
-                _MergePrimvar(primvar, &valueCache->GetPrimvars(cachePath));
+                _MergePrimvar(
+                    &valueCache->GetPrimvars(cachePath),
+                    _tokens->translate,
+                    HdInterpolationInstance,
+                    HdPrimvarRoleTokens->vector);
             }
 
             anyVarying = _IsVarying(prim,
                                     UsdGeomTokens->positions,
-                                    HdChangeTracker::DirtyPrimVar,
+                                    HdChangeTracker::DirtyPrimvar,
                                     _tokens->instancer,
                                     timeVaryingBits,
                                     false);
@@ -625,16 +627,17 @@ UsdImagingPointInstancerAdapter::TrackVariability(UsdPrim const& prim,
 
                 valueCache->GetPrimvar(cachePath, _tokens->rotate) =
                     rotations;
-                UsdImagingValueCache::PrimvarInfo primvar;
-                primvar.name = _tokens->rotate;
-                primvar.interpolation = _tokens->instance;
-                _MergePrimvar(primvar, &valueCache->GetPrimvars(cachePath));
+
+                _MergePrimvar(
+                    &valueCache->GetPrimvars(cachePath),
+                    _tokens->rotate,
+                    HdInterpolationInstance);
             }
 
             anyVarying = anyVarying ||
                 _IsVarying(prim,
                            UsdGeomTokens->orientations,
-                           HdChangeTracker::DirtyPrimVar,
+                           HdChangeTracker::DirtyPrimvar,
                            _tokens->instancer,
                            timeVaryingBits,
                            false);
@@ -644,16 +647,16 @@ UsdImagingPointInstancerAdapter::TrackVariability(UsdPrim const& prim,
         if (instancer.GetScalesAttr().Get(&scales, time)) {
             if (!scales.empty()) {
                 valueCache->GetPrimvar(cachePath, _tokens->scale) = scales;
-                UsdImagingValueCache::PrimvarInfo primvar;
-                primvar.name = _tokens->scale;
-                primvar.interpolation = _tokens->instance;
-                _MergePrimvar(primvar, &valueCache->GetPrimvars(cachePath));
+                _MergePrimvar(
+                    &valueCache->GetPrimvars(cachePath),
+                    _tokens->scale,
+                    HdInterpolationInstance);
             }
 
             anyVarying = anyVarying ||
                 _IsVarying(prim,
                            UsdGeomTokens->scales,
-                           HdChangeTracker::DirtyPrimVar,
+                           HdChangeTracker::DirtyPrimvar,
                            _tokens->instancer,
                            timeVaryingBits,
                            false);
@@ -863,7 +866,7 @@ UsdImagingPointInstancerAdapter::UpdateForTime(UsdPrim const& prim,
                     requestedBits |= HdChangeTracker::DirtyInstanceIndex;
                 }
                 requestedBits |= HdChangeTracker::DirtyTransform;
-                requestedBits |= HdChangeTracker::DirtyPrimVar;
+                requestedBits |= HdChangeTracker::DirtyPrimvar;
                 
                 inst->second.initialized = true;
             }
@@ -892,9 +895,9 @@ UsdImagingPointInstancerAdapter::UpdateForTime(UsdPrim const& prim,
         }
 
         // For the instancer itself, we only send translate, rotate and scale
-        // back as primvars, which all fall into the DirtyPrimVar bucket
+        // back as primvars, which all fall into the DirtyPrimvar bucket
         // currently.
-        if (requestedBits & HdChangeTracker::DirtyPrimVar) {
+        if (requestedBits & HdChangeTracker::DirtyPrimvar) {
             UsdGeomPointInstancer instancer(prim);
 
             // PERFORMANCE: It would be nice to track variability of individual
@@ -904,10 +907,11 @@ UsdImagingPointInstancerAdapter::UpdateForTime(UsdPrim const& prim,
             if (instancer.GetPositionsAttr().Get(&positions, time)) {
                 valueCache->GetPrimvar(cachePath, _tokens->translate) = 
                                                                     positions;
-                UsdImagingValueCache::PrimvarInfo primvar;
-                primvar.name = _tokens->translate;
-                primvar.interpolation = _tokens->instance;
-                _MergePrimvar(primvar, &valueCache->GetPrimvars(cachePath));
+                _MergePrimvar(
+                    &valueCache->GetPrimvars(cachePath),
+                    _tokens->translate,
+                    HdInterpolationInstance,
+                    HdPrimvarRoleTokens->vector);
             }
 
             VtQuathArray orientations;
@@ -927,20 +931,19 @@ UsdImagingPointInstancerAdapter::UpdateForTime(UsdPrim const& prim,
                 }
 
                 valueCache->GetPrimvar(cachePath, _tokens->rotate) = rotations;
-                UsdImagingValueCache::PrimvarInfo primvar;
-                primvar.name = _tokens->rotate;
-                primvar.interpolation = _tokens->instance;
-                _MergePrimvar(primvar, &valueCache->GetPrimvars(cachePath));
+                _MergePrimvar(
+                    &valueCache->GetPrimvars(cachePath),
+                    _tokens->rotate,
+                    HdInterpolationInstance);
             }
-
 
             VtVec3fArray scales;
             if (instancer.GetScalesAttr().Get(&scales, time)) {
                 valueCache->GetPrimvar(cachePath, _tokens->scale) = scales;
-                UsdImagingValueCache::PrimvarInfo primvar;
-                primvar.name = _tokens->scale;
-                primvar.interpolation = _tokens->instance;
-                _MergePrimvar(primvar, &valueCache->GetPrimvars(cachePath));
+                _MergePrimvar(
+                    &valueCache->GetPrimvars(cachePath),
+                    _tokens->scale,
+                    HdInterpolationInstance);
             }
         }
 
@@ -1258,17 +1261,25 @@ UsdImagingPointInstancerAdapter::_UnloadInstancer(SdfPath const& instancerPath,
                                             UsdImagingIndexProxy* index)
 {
     _InstancerDataMap::iterator instIt = _instancerData.find(instancerPath);
+
+    // Calling the adapter below can invalidate the iterator, so we need to
+    // deference now.
+    const _ProtoRPrimMap &protoPrimMap = instIt->second.protoRprimMap;
+
     // First, we need to make sure all proto rprims are removed.
-    TF_FOR_ALL(protoRprimIt, instIt->second.protoRprimMap) {
-        SdfPath const& cachePath = protoRprimIt->first;
-        index->RemoveRprim(cachePath);
-        index->RemovePrimInfo(cachePath);
+    TF_FOR_ALL(protoRprimIt, protoPrimMap) {
+        SdfPath     const& cachePath = protoRprimIt->first;
+        _ProtoRprim const& proto     = protoRprimIt->second;
+
+        proto.adapter->ProcessPrimRemoval(cachePath, index);
     }
 
     // Blow away the instancer and the associated local data.
     index->RemoveInstancer(instancerPath);
     index->RemovePrimInfo(instancerPath);
-    _instancerData.erase(instIt);
+
+    // Don't use instIt as it may be invalid!
+    _instancerData.erase(instancerPath);
 }
 
 // -------------------------------------------------------------------------- //
@@ -1597,7 +1608,7 @@ UsdImagingPointInstancerAdapter::_ComputeProtoVisibility(
     }
 
     // if it's in invised list, set vis to false
-    if (_delegate->IsInInvisedPaths(protoGprim.GetPath())) {
+    if (_IsInInvisedPaths(protoGprim.GetPath())) {
         *vis = false;
         return;
     }
@@ -1801,8 +1812,8 @@ UsdImagingPointInstancerAdapter::SampleInstancerTransform(
     } else {
         // if not nested, simply put the transform of the instancer.
         for (size_t i=0; i < numSamples; ++i) {
-            UsdTimeCode sceneTime =
-                _delegate->GetTimeWithOffset(configuredSampleTimes[i]);
+            UsdTimeCode sceneTime = 
+                _GetTimeWithOffset(configuredSampleTimes[i]);
             times[i] = configuredSampleTimes[i];
             samples[i] = GetRelativeInstancerTransform(
                 parentInstancerPath, instancerPath, sceneTime);
@@ -1846,14 +1857,13 @@ UsdImagingPointInstancerAdapter::SamplePrimvar(
 /*virtual*/
 bool
 UsdImagingPointInstancerAdapter::PopulateSelection(
-    HdxSelectionHighlightMode const& highlightMode,
+    HdSelection::HighlightMode const& highlightMode,
     SdfPath const &path,
     VtIntArray const &instanceIndices,
-    HdxSelectionSharedPtr const &result)
+    HdSelectionSharedPtr const &result)
 {
-    SdfPath indexPath = _delegate->GetPathForIndex(path);
-    SdfPathVector const& ids =
-        _delegate->GetRenderIndex().GetRprimSubtree(indexPath);
+    SdfPath indexPath = _GetPathForIndex(path);
+    SdfPathVector const& ids = _GetRprimSubtree(indexPath);
 
     bool added = false;
     TF_FOR_ALL (it, ids){

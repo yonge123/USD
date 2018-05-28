@@ -24,6 +24,7 @@
 #include "pxr/pxr.h"
 #include "usdMaya/MayaMeshWriter.h"
 
+#include "usdMaya/colorSpace.h"
 #include "usdMaya/roundTripUtil.h"
 #include "usdMaya/util.h"
 #include "usdMaya/writeUtil.h"
@@ -106,6 +107,7 @@ MayaMeshWriter::_GetMeshUVSetData(
     PxrUsdMayaUtil::CompressFaceVaryingPrimvarIndices(mesh,
                                                       interpolation,
                                                       assignmentIndices);
+
     return true;
 }
 
@@ -180,7 +182,7 @@ _LinearColorFromColorSet(
     // need to convert it to linear.
     GfVec3f c(mayaColor[0], mayaColor[1], mayaColor[2]);
     if (shouldConvertToLinear) {
-        return GfConvertDisplayToLinear(c);
+        return PxrUsdMayaColorSpace::ConvertMayaToLinear(c);
     }
     return c;
 }
@@ -356,11 +358,12 @@ bool MayaMeshWriter::_GetMeshColorSetData(
 
 bool MayaMeshWriter::_createAlphaPrimVar(
         UsdGeomGprim &primSchema,
-        const UsdTimeCode& usdTime,
         const TfToken& name,
+        const UsdTimeCode& usdTime,
         const VtArray<float>& data,
         const TfToken& interpolation,
         const VtArray<int>& assignmentIndices,
+        const int unassignedValueIndex,
         bool clamped)
 {
     unsigned int numValues = data.size();
@@ -377,10 +380,14 @@ bool MayaMeshWriter::_createAlphaPrimVar(
         primSchema.CreatePrimvar(name,
                                  SdfValueTypeNames->FloatArray,
                                  interp);
+    _SetAttribute(primVar.GetAttr(), data, usdTime);
 
-    PxrUsdMayaWriteUtil::SetPrimvarKey(
-        primVar, VtValue(data),
-        assignmentIndices.empty() ? VtValue() : VtValue(assignmentIndices), usdTime);
+    if (!assignmentIndices.empty()) {
+        _SetAttribute(primVar.CreateIndicesAttr(), assignmentIndices, usdTime);
+        if (unassignedValueIndex == 0) {
+           primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
+        }
+    }
 
     if (clamped) {
         PxrUsdMayaRoundTripUtil::MarkPrimvarAsClamped(primVar);
@@ -391,11 +398,12 @@ bool MayaMeshWriter::_createAlphaPrimVar(
 
 bool MayaMeshWriter::_createRGBPrimVar(
         UsdGeomGprim &primSchema,
-        const UsdTimeCode& usdTime,
         const TfToken& name,
+        const UsdTimeCode& usdTime,
         const VtArray<GfVec3f>& data,
         const TfToken& interpolation,
         const VtArray<int>& assignmentIndices,
+        const int unassignedValueIndex,
         bool clamped)
 {
     unsigned int numValues = data.size();
@@ -412,9 +420,14 @@ bool MayaMeshWriter::_createRGBPrimVar(
         primSchema.CreatePrimvar(name,
                                  SdfValueTypeNames->Color3fArray,
                                  interp);
-    PxrUsdMayaWriteUtil::SetPrimvarKey(
-        primVar, VtValue(data),
-        assignmentIndices.empty() ? VtValue() : VtValue(assignmentIndices), usdTime);
+    _SetAttribute(primVar.GetAttr(), data, usdTime);
+
+    if (!assignmentIndices.empty()) {
+        _SetAttribute(primVar.CreateIndicesAttr(), assignmentIndices, usdTime);
+        if (unassignedValueIndex == 0) {
+           primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
+        }
+    }
 
     if (clamped) {
         PxrUsdMayaRoundTripUtil::MarkPrimvarAsClamped(primVar);
@@ -425,12 +438,13 @@ bool MayaMeshWriter::_createRGBPrimVar(
 
 bool MayaMeshWriter::_createRGBAPrimVar(
         UsdGeomGprim &primSchema,
-        const UsdTimeCode& usdTime,
         const TfToken& name,
+        const UsdTimeCode& usdTime,
         const VtArray<GfVec3f>& rgbData,
         const VtArray<float>& alphaData,
         const TfToken& interpolation,
         const VtArray<int>& assignmentIndices,
+        const int unassignedValueIndex,
         bool clamped)
 {
     unsigned int numValues = rgbData.size();
@@ -453,10 +467,14 @@ bool MayaMeshWriter::_createRGBAPrimVar(
         rgbaData[i] = GfVec4f(rgbData[i][0], rgbData[i][1], rgbData[i][2],
                               alphaData[i]);
     }
+    _SetAttribute(primVar.GetAttr(), rgbaData, usdTime);
 
-    PxrUsdMayaWriteUtil::SetPrimvarKey(
-        primVar, VtValue(rgbaData),
-        assignmentIndices.empty() ? VtValue() : VtValue(assignmentIndices), usdTime);
+    if (!assignmentIndices.empty()) {
+        _SetAttribute(primVar.CreateIndicesAttr(), assignmentIndices, usdTime);
+        if (unassignedValueIndex == 0) {
+           primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
+        }
+    }
 
     if (clamped) {
         PxrUsdMayaRoundTripUtil::MarkPrimvarAsClamped(primVar);
@@ -465,11 +483,12 @@ bool MayaMeshWriter::_createRGBAPrimVar(
     return true;
 }
 
-void MayaMeshWriter::_writeMotionVector(
+void MayaMeshWriter::_writeMotionVectors(
     UsdGeomMesh& primSchema,
     const UsdTimeCode& usdTime,
     MFnMesh& mesh,
-    const MString& colorSetName) {
+    const std::string& colorSetName) {
+    const MString colorSetNameMS(colorSetName.c_str());
     VtArray<GfVec3f> motionVectors;
     motionVectors.resize(static_cast<size_t>(mesh.numVertices()));
 
@@ -493,7 +512,7 @@ void MayaMeshWriter::_writeMotionVector(
 
             for (auto f = decltype(flen){0}; f < flen; ++f) {
                 MColor col;
-                if (itVertex.getColor(col, faces[f], &colorSetName)) {
+                if (itVertex.getColor(col, faces[f], &colorSetNameMS)) {
                     v[0] += col[0];
                     v[1] += col[1];
                     v[2] += col[2];
@@ -506,16 +525,17 @@ void MayaMeshWriter::_writeMotionVector(
         }
     }
 
-    PxrUsdMayaWriteUtil::SetAttributeKey(primSchema.GetVelocitiesAttr(), VtValue(motionVectors), usdTime);
+    _SetAttribute(primSchema.GetVelocitiesAttr(), motionVectors, usdTime);
 }
 
 bool MayaMeshWriter::_createUVPrimVar(
         UsdGeomGprim &primSchema,
-        const UsdTimeCode& usdTime,
         const TfToken& name,
+        const UsdTimeCode& usdTime,
         const VtArray<GfVec2f>& data,
         const TfToken& interpolation,
-        const VtArray<int>& assignmentIndices)
+        const VtArray<int>& assignmentIndices,
+        const int unassignedValueIndex)
 {
     unsigned int numValues = data.size();
     if (numValues == 0) {
@@ -527,38 +547,52 @@ bool MayaMeshWriter::_createUVPrimVar(
         interp = TfToken();
     }
 
-    UsdGeomPrimvar primVar =
-        primSchema.CreatePrimvar(name,
-                                 SdfValueTypeNames->Float2Array,
-                                 interp);
+    SdfValueTypeName uvValueType = (PxrUsdMayaWriteUtil::WriteUVAsFloat2())?
+        (SdfValueTypeNames->Float2Array) : (SdfValueTypeNames->TexCoord2fArray); 
+    UsdGeomPrimvar primVar = 
+        primSchema.CreatePrimvar(name, uvValueType, interp);
+    
+    _SetAttribute(primVar.GetAttr(), data, usdTime);
 
-    PxrUsdMayaWriteUtil::SetPrimvarKey(
-        primVar, VtValue(data),
-        assignmentIndices.empty() ? VtValue() : VtValue(assignmentIndices), usdTime);
+    if (!assignmentIndices.empty()) {
+        _SetAttribute(primVar.CreateIndicesAttr(), assignmentIndices, usdTime);
+        if (unassignedValueIndex == 0) {
+           primVar.SetUnauthoredValuesIndex(unassignedValueIndex);
+        }
+    }
 
     return true;
 }
 
 bool MayaMeshWriter::_addDisplayPrimvars(
         UsdGeomGprim &primSchema,
+        const UsdTimeCode& usdTime,
         const MFnMesh::MColorRepresentation colorRep,
         const VtArray<GfVec3f>& RGBData,
         const VtArray<float>& AlphaData,
         const TfToken& interpolation,
         const VtArray<int>& assignmentIndices,
+        const int unassignedValueIndex,
         const bool clamped,
         const bool authored)
 {
+    // We are appending the default value to the primvar in the post export function
+    // so if the dataset is empty and the assignment indices are not, we still
+    // have to set an empty array.
     // If we already have an authored value, don't try to write a new one.
     UsdAttribute colorAttr = primSchema.GetDisplayColorAttr();
-    if (!colorAttr.HasAuthoredValueOpinion() && !RGBData.empty()) {
+    if (!colorAttr.HasAuthoredValueOpinion() && (!RGBData.empty() || !assignmentIndices.empty())) {
         UsdGeomPrimvar displayColor = primSchema.CreateDisplayColorPrimvar();
         if (interpolation != displayColor.GetInterpolation()) {
             displayColor.SetInterpolation(interpolation);
         }
-        displayColor.Set(RGBData);
+        _SetAttribute(displayColor.GetAttr(), RGBData, usdTime);
+
         if (!assignmentIndices.empty()) {
-            displayColor.SetIndices(assignmentIndices);
+            _SetAttribute(displayColor.CreateIndicesAttr(), assignmentIndices, usdTime);
+            if (unassignedValueIndex == 0) {
+               displayColor.SetUnauthoredValuesIndex(unassignedValueIndex);
+            }
         }
         bool authRGB = authored;
         if (colorRep == MFnMesh::kAlpha) {
@@ -575,7 +609,7 @@ bool MayaMeshWriter::_addDisplayPrimvars(
     }
 
     UsdAttribute alphaAttr = primSchema.GetDisplayOpacityAttr();
-    if (!alphaAttr.HasAuthoredValueOpinion() && !AlphaData.empty()) {
+    if (!alphaAttr.HasAuthoredValueOpinion() && (!AlphaData.empty() || !assignmentIndices.empty())) {
         // we consider a single alpha value that is 1.0 to be the "default"
         // value.  We only want to write values that are not the "default".
         bool hasDefaultAlpha = AlphaData.size() == 1 && GfIsClose(AlphaData[0], 1.0, 1e-9);
@@ -584,9 +618,13 @@ bool MayaMeshWriter::_addDisplayPrimvars(
             if (interpolation != displayOpacity.GetInterpolation()) {
                 displayOpacity.SetInterpolation(interpolation);
             }
-            displayOpacity.Set(AlphaData);
+            _SetAttribute(displayOpacity.GetAttr(), AlphaData, usdTime);
+
             if (!assignmentIndices.empty()) {
-                displayOpacity.SetIndices(assignmentIndices);
+                _SetAttribute(displayOpacity.CreateIndicesAttr(), assignmentIndices, usdTime);
+                if (unassignedValueIndex == 0) {
+                   displayOpacity.SetUnauthoredValuesIndex(unassignedValueIndex);
+                }
             }
             bool authAlpha = authored;
             if (colorRep == MFnMesh::kRGB) {

@@ -59,13 +59,16 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
     inline
-    SdfPath& rootOverridePath(const JobExportArgs& args, SdfPath& path) {
-        if (!args.usdModelRootOverridePath.IsEmpty() && !path.IsEmpty()) {
-            path = path.ReplacePrefix(path.GetPrefixes()[0], args.usdModelRootOverridePath);
-        }
-        if (!args.exportRootPath.empty()) {
-            static const SdfPath _emptySdfPath("/");
-            path = path.ReplacePrefix(args.exportRootSdfPath.GetParentPath(), _emptySdfPath);
+    SdfPath& rootOverridePath(SdfPath& path, const SdfPath& usdModelRootOverridePath,
+            const SdfPath& exportRootSdfPath) {
+        if (!path.IsEmpty()) {
+            if (!usdModelRootOverridePath.IsEmpty()) {
+                path = path.ReplacePrefix(path.GetPrefixes()[0], usdModelRootOverridePath);
+            }
+            if (!exportRootSdfPath.IsEmpty()) {
+                path = path.ReplacePrefix(exportRootSdfPath.GetParentPath(),
+                        SdfPath::AbsoluteRootPath());
+            }
         }
         return path;
     }
@@ -75,7 +78,20 @@ namespace {
 
 usdWriteJobCtx::usdWriteJobCtx(const JobExportArgs& args) : mArgs(args), mNoInstances(true)
 {
-
+    if (!mArgs.exportRootPath.empty()) {
+        MDagPath rootDagPath;
+        PxrUsdMayaUtil::GetDagPathByName(mArgs.exportRootPath, rootDagPath);
+        if (rootDagPath.isValid()){
+            SdfPath rootSdfPath;
+            PxrUsdMayaUtil::GetDagPathByName(mArgs.exportRootPath, rootDagPath);
+            exportRootSdfPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false,
+                    mArgs.stripNamespaces);
+        } else {
+            MGlobal::displayError(MString("Invalid dag path provided for root: ")
+                    + mArgs.exportRootPath.c_str());
+            mArgs.exportRootPath = "";
+        }
+    }
 }
 
 SdfPath usdWriteJobCtx::getOrCreateMasterPath(const MDagPath& dg)
@@ -156,6 +172,14 @@ bool usdWriteJobCtx::needToTraverse(const MDagPath& curDag)
         }
     }
 
+    if (mArgs.getFilteredTypeIds().size() > 0) {
+        MFnDependencyNode mfnNode(ob);
+        if (mArgs.getFilteredTypeIds().find(mfnNode.typeId().id())
+                != mArgs.getFilteredTypeIds().end()) {
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -211,7 +235,8 @@ SdfPath usdWriteJobCtx::getUsdPathFromDagPath(const MDagPath& dagPath, bool inst
                     mParentScopePath);
         }
     }
-    return rootOverridePath(mArgs, path);
+    return rootOverridePath(path, mArgs.usdModelRootOverridePath,
+            exportRootSdfPath);
 }
 
 bool usdWriteJobCtx::openFile(const std::string& filename, bool append)

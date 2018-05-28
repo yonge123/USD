@@ -104,6 +104,13 @@
                         "isInternal": true,
                         "primTypeName": "Sphere"
                     },
+                    "UsdImagingImagePlaneAdapter": {
+                        "bases": [
+                            "UsdImagingGprimAdapter"
+                        ],
+                        "isInternal": true,
+                        "primTypeName": "ImagePlane"
+                    },
                     "UsdImagingDomeLightAdapter": {
                         "bases": [
                             "UsdImagingLightAdapter"
@@ -124,6 +131,27 @@
                         ],
                         "isInternal": true,
                         "primTypeName": "SphereLight"
+                    },
+                    "UsdImagingCylinderLightAdapter": {
+                        "bases": [
+                            "UsdImagingLightAdapter"
+                        ],
+                        "isInternal": true,
+                        "primTypeName": "CylinderLight"
+                    },
+                    "UsdImagingDiskLightAdapter": {
+                        "bases": [
+                            "UsdImagingLightAdapter"
+                        ],
+                        "isInternal": true,
+                        "primTypeName": "DiskLight"
+                    },
+                    "UsdImagingDistantLightAdapter": {
+                        "bases": [
+                            "UsdImagingLightAdapter"
+                        ],
+                        "isInternal": true,
+                        "primTypeName": "DistantLight"
                     }
                 }
             },
