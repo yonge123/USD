@@ -111,7 +111,7 @@ loadAllPlugins(std::once_flag& once_flag, const std::vector<TfToken>& scope, con
     std::call_once(once_flag, [&scope, &table, &pluginType](){
         for (const auto& plug: PlugRegistry::GetInstance().GetAllPlugins()) {
             if (hasPlugin(plug, scope, pluginType)) {
-                TF_DEBUG(PXRUSDHOUDINI_REGISTRY).Msg(
+                TF_DEBUG(GUSD_SHADINGMODEREGISTRY).Msg(
                     "Found UsdHoudini plugin %s: Loading from: %s",
                     plug->GetName().c_str(),
                     plug->GetPath().c_str());
