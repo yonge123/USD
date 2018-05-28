@@ -1,0 +1,2 @@
+From: Pal Mezei <palm@lumapictures.com>
+Subject: [usdHoudini] Fixing treeview on usd import and not installing the gusd pymodule files twice.
