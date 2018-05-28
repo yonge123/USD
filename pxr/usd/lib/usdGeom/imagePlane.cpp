@@ -496,6 +496,10 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
         size[1] = aperture[1];
     }
 
+    // Doesn't matter where we divide, we'll just multiply values anyway.
+    size[0] *= 0.5f;
+    size[1] *= 0.5f;
+
     GfVec2f imageSize {100.0f, 100.0f};
     const auto fileName = getAttr(GetFilenameAttr(), usdTime, SdfAssetPath(""));
     {
@@ -561,10 +565,9 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
     lowerLeft  += offset;
     lowerRight += offset;
     // Both aperture and focal length should be in millimeters,
-    // so no need of conversion, because they will equal out in the division.
     auto projectVertex = [focalLength, depth] (GfVec2f& vertex) {
-        vertex[0] = sinf(atanf(vertex[0] / (2.0f * focalLength))) * depth;
-        vertex[1] = sinf(atanf(vertex[1] / (2.0f * focalLength))) * depth;
+        vertex[0] = depth * vertex[0] / focalLength;
+        vertex[1] = depth * vertex[1] / focalLength;
     };
 
     projectVertex(upperLeft);
