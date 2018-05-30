@@ -223,6 +223,8 @@ JobExportArgs::JobExportArgs(
                     UsdGeomTokens->bilinear,
                     UsdGeomTokens->none
                 })),
+        eulerFilter(
+            _Boolean(userArgs, PxrUsdExportJobArgsTokens->eulerFilter)),
         excludeInvisible(
             _Boolean(userArgs, PxrUsdExportJobArgsTokens->renderableOnly)),
         exportCollectionBasedBindings(
@@ -413,6 +415,7 @@ const VtDictionary& JobExportArgs::GetDefaultDictionary()
                 PxrUsdExportJobArgsTokens->defaultLayer.GetString();
         d[PxrUsdExportJobArgsTokens->shadingMode] =
                 PxrUsdMayaShadingModeTokens->displayColor.GetString();
+        d[PxrUsdExportJobArgsTokens->eulerFilter] = false;
 
         // plugInfo.json site defaults.
         // The defaults dict should be correctly-typed, so enable
