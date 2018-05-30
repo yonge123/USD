@@ -407,6 +407,7 @@ const VtDictionary& JobExportArgs::GetDefaultDictionary()
                 PxrUsdExportJobArgsTokens->defaultLayer.GetString();
         d[PxrUsdExportJobArgsTokens->shadingMode] =
                 PxrUsdMayaShadingModeTokens->displayColor.GetString();
+        d[PxrUsdExportJobArgsTokens->exportReferenceObjects] = false;
 
         // plugInfo.json site defaults.
         // The defaults dict should be correctly-typed, so enable
