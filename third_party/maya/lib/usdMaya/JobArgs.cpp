@@ -248,6 +248,9 @@ JobExportArgs::JobExportArgs(
         exportRefsAsInstanceable(
             _Boolean(userArgs,
                 PxrUsdExportJobArgsTokens->exportRefsAsInstanceable)),
+        exportReferenceObjects(
+            _Boolean(userArgs,
+                PxrUsdExportJobArgsTokens->exportReferenceObjects)),
         exportSkin(
             _Token(userArgs,
                 PxrUsdExportJobArgsTokens->exportSkin,
@@ -419,6 +422,7 @@ const VtDictionary& JobExportArgs::GetDefaultDictionary()
                 PxrUsdMayaShadingModeTokens->displayColor.GetString();
         d[PxrUsdExportJobArgsTokens->eulerFilter] = false;
         d[PxrUsdExportJobArgsTokens->stripNamespaces] = false;
+        d[PxrUsdExportJobArgsTokens->exportReferenceObjects] = false;
 
         // plugInfo.json site defaults.
         // The defaults dict should be correctly-typed, so enable
