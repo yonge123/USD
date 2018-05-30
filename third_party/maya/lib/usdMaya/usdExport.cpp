@@ -93,7 +93,7 @@ MSyntax usdExport::createSyntax()
                    PxrUsdExportJobArgsTokens->exportColorSets.GetText(),
                    MSyntax::kBoolean);
     syntax.addFlag("-sn",
-                   PxrUsdExportJobArgsTokens->stripNamespaces,
+                   PxrUsdExportJobArgsTokens->stripNamespaces.GetText(),
                    MSyntax::kBoolean);
     syntax.addFlag("-dms",
                    PxrUsdExportJobArgsTokens->defaultMeshScheme.GetText(),
