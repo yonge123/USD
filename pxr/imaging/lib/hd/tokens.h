@@ -84,6 +84,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (layout)                                    \
     (leftHanded)                                \
     (linear)                                    \
+    (lightLink)                                 \
     (materialParams)                            \
     (nonperiodic)                               \
     (normals)                                   \
@@ -109,6 +110,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (ulocDrawRangeNDC)                          \
     (rightHanded)                               \
     (segmented)                                 \
+    (shadowLink)                                \
     (smoothHull)                                \
     (subdivTags)                                \
     (taskState)                                 \
@@ -176,18 +178,20 @@ PXR_NAMESPACE_OPEN_SCOPE
     (environmentMap)                            \
     (fragmentShader)                            \
     (geometryShader)                            \
+    (indicatorColor)                            \
     (lightingBlendAmount)                       \
     (overrideColor)                             \
+    (maskColor)                                 \
     (projectionMatrix)                          \
+    (pointColor)                                \
+    (pointSize)                                 \
+    (pointSelectedSize)                         \
     (tessControlShader)                         \
     (tessEvalShader)                            \
     (tessLevel)                                 \
     (viewport)                                  \
     (vertexShader)                              \
     (wireframeColor)                            \
-    (pointColor)                                \
-    (pointSize)                                 \
-    (pointSelectedSize)                         \
     (worldToViewMatrix)                         \
     (worldToViewInverseMatrix)
 
@@ -224,7 +228,8 @@ PXR_NAMESPACE_OPEN_SCOPE
     (color)                                     \
     (vector)                                    \
     (normal)                                    \
-    (point)
+    (point)                                     \
+    (textureCoordinate)
 
 TF_DECLARE_PUBLIC_TOKENS(HdTokens, HD_API, HD_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdPerfTokens, HD_API, HD_PERF_TOKENS);
