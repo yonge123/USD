@@ -266,6 +266,9 @@ JobExportArgs::JobExportArgs(
                 PxrUsdExportJobArgsTokens->mergeTransformAndShape)),
         normalizeNurbs(
             _Boolean(userArgs, PxrUsdExportJobArgsTokens->normalizeNurbs)),
+        stripNamespaces(
+            _Boolean(userArgs,
+                PxrUsdExportJobArgsTokens->stripNamespaces)),
         parentScope(
             _AbsolutePath(userArgs, PxrUsdExportJobArgsTokens->parentScope)),
         renderLayerMode(
@@ -283,7 +286,6 @@ JobExportArgs::JobExportArgs(
                 PxrUsdExportJobArgsTokens->shadingMode,
                 PxrUsdMayaShadingModeTokens->none,
                 PxrUsdMayaShadingModeRegistry::ListExporters())),
-
         chaserNames(
             _Vector<std::string>(userArgs, PxrUsdExportJobArgsTokens->chaser)),
         allChaserArgs(
@@ -416,6 +418,7 @@ const VtDictionary& JobExportArgs::GetDefaultDictionary()
         d[PxrUsdExportJobArgsTokens->shadingMode] =
                 PxrUsdMayaShadingModeTokens->displayColor.GetString();
         d[PxrUsdExportJobArgsTokens->eulerFilter] = false;
+        d[PxrUsdExportJobArgsTokens->stripNamespaces] = false;
 
         // plugInfo.json site defaults.
         // The defaults dict should be correctly-typed, so enable

@@ -95,6 +95,8 @@ MSyntax usdExport::createSyntax()
                    MSyntax::kBoolean);
     syntax.addFlag("-ef" ,
                    PxrUsdExportJobArgsTokens->eulerFilter.GetText(),
+    syntax.addFlag("-sn",
+                   PxrUsdExportJobArgsTokens->stripNamespaces.GetText(),
                    MSyntax::kBoolean);
     syntax.addFlag("-dms",
                    PxrUsdExportJobArgsTokens->defaultMeshScheme.GetText(),
