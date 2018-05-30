@@ -27,35 +27,16 @@
 --- This is what an import might look like.
 --- #import $TOOLS/hdx/shaders/renderPass.glslfx
 
--- glsl HdxRenderPass.ShouldCullFaceShadows
-
-bool ShouldCullFace(bool frontFacing, bool doubleSided)
-{
-    const uint HdCullStyleDontCare               = uint(0);
-    const uint HdCullStyleNothing                = uint(1);
-    const uint HdCullStyleBack                   = uint(2);
-    const uint HdCullStyleFront                  = uint(3);
-    const uint HdCullStyleBackUnlessDoubleSided  = uint(4);
-    const uint HdCullStyleFrontUnlessDoubleSided = uint(5);
-
-#if defined(HD_HAS_cullStyle)
-    uint cullStyle = HdGet_cullStyle();
-#else
-    uint cullStyle = HdCullStyleNothing;
-#endif
-
-    // Invert the cullstyle so we can render shadows correctly
-    return ((cullStyle == HdCullStyleBack                   && frontFacing) ||
-            (cullStyle == HdCullStyleFront                  && !frontFacing) ||
-            (cullStyle == HdCullStyleBackUnlessDoubleSided  && frontFacing && !doubleSided) ||
-            (cullStyle == HdCullStyleFrontUnlessDoubleSided && !frontFacing && !doubleSided));
-}
-
 -- glsl HdxRenderPass.RenderColorShadowsOutput
 
 layout (location = 0) out vec4 colorOut;
 
 vec4 ApplyColorOverrides(vec4 color)
+{
+    return color;
+}
+
+vec4 ApplyColorOverridesPostLighting(vec4 color)
 {
     return color;
 }
@@ -328,6 +309,9 @@ vec4 ApplySelectionColor(vec4 color)
     return color;
 }
 
+// XXX: Make sure to update hdSt/shaders/renderPass.glslfx when editing these
+// color override methods, since they're currently duplicated. This is because
+// we don't have a mixin token for color overrides in a render pass yet.
 vec4 ApplyColorOverrides(vec4 color)
 {
 #if defined(HD_HAS_scalarOverride)
@@ -356,6 +340,27 @@ vec4 ApplyColorOverrides(vec4 color)
     return ApplySelectionColor(color);
 }
 
+vec3 ApplyMaskColor(vec4 color, float weight, vec4 maskColor)
+{
+    float strength = maskColor.a * clamp(weight, 0, 1);
+    return mix(color.rgb, maskColor.rgb, strength);
+}
+
+vec4 ApplyColorOverridesPostLighting(vec4 color)
+{
+    #if defined(HD_HAS_maskWeight)
+        float maskWeight = HdGet_maskWeight();
+        vec4 maskColor = GetMaskColor();
+        color.rgb = ApplyMaskColor(color, maskWeight, maskColor);
+    #endif
+    #if defined(HD_HAS_indicatorWeight)
+        float indicatorWeight = HdGet_indicatorWeight();
+        vec4 indicatorColor = GetIndicatorColor();
+        color.rgb = ApplyMaskColor(color, indicatorWeight, indicatorColor);
+    #endif
+    return color;
+}
+
 layout (location = 0) out vec4 colorOut;
 
 void RenderColor(vec4 color)
@@ -380,6 +385,12 @@ int GetPointId();
 bool IsFragmentOnPoint();
 
 vec4 ApplyColorOverrides(vec4 color)
+{
+    // Don't apply overrides during ID render pass.
+    return color;
+}
+
+vec4 ApplyColorOverridesPostLighting(vec4 color)
 {
     // Don't apply overrides during ID render pass.
     return color;
