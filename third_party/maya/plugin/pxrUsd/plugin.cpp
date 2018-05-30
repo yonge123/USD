@@ -32,6 +32,7 @@
 #include "pxrUsdMayaGL/proxyShapeUI.h"
 
 #include "usdMaya/pluginStaticData.h"
+#include "usdMaya/undoHelperCmd.h"
 #include "usdMaya/usdImport.h"
 #include "usdMaya/usdExport.h"
 #include "usdMaya/usdListShadingModes.h"
@@ -165,28 +166,37 @@ MStatus initializePlugin(
     if (!status) {
         status.perror("registerCommand usdListUserAttributeWriters");
     }
+
+    status = plugin.registerCommand("usdUndoHelperCmd",
+                                    PxrUsdMayaUndoHelperCmd::creator,
+                                    PxrUsdMayaUndoHelperCmd::createSyntax);
+
+    if (!status) {
+        status.perror("registerCommand usdUndoHelperCmd");
+    }
     
     status = plugin.registerFileTranslator("pxrUsdImport", 
-                                    "", 
-                                    []() { 
-                                        return usdTranslatorImport::creator(
-                                            _data.referenceAssembly.typeName.asChar(),
-                                            _data.proxyShape.typeName.asChar());
-                                    }, 
-                                    "usdTranslatorImport", // options script name
-                                    const_cast<char*>(usdTranslatorImportDefaults), 
-                                    false);
+            "", 
+            []() { 
+                return usdTranslatorImport::creator(
+                    _data.referenceAssembly.typeName.asChar(),
+                    _data.proxyShape.typeName.asChar());
+            }, 
+            "usdTranslatorImport", // options script name
+            const_cast<char*>(usdTranslatorImport::GetDefaultOptions().c_str()), 
+            false);
 
     if (!status) {
         status.perror("pxrUsd: unable to register USD Import translator.");
     }
     
-    status = plugin.registerFileTranslator("pxrUsdExport", 
-                                    "", 
-                                    usdTranslatorExport::creator,
-                                    "usdTranslatorExport", // options script name
-                                    const_cast<char*>(usdTranslatorExportDefaults), 
-                                    true);
+    status = plugin.registerFileTranslator(
+            "pxrUsdExport", 
+            "", 
+            usdTranslatorExport::creator,
+            "usdTranslatorExport", // options script name
+            const_cast<char*>(usdTranslatorExport::GetDefaultOptions().c_str()), 
+            true);
 
     if (!status) {
         status.perror("pxrUsd: unable to register USD Export translator.");
@@ -220,6 +230,11 @@ MStatus uninitializePlugin(
     status = plugin.deregisterCommand("usdListUserAttributeWriters");
     if (!status) {
         status.perror("deregisterCommand usdListUserAttributeWriters");
+    }
+
+    status = plugin.deregisterCommand("usdUndoHelperCmd");
+    if (!status) {
+        status.perror("deregisterCommand usdUndoHelperCmd");
     }
 
     status = plugin.deregisterFileTranslator("pxrUsdImport");
