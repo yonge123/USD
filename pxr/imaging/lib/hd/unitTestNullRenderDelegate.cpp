@@ -218,7 +218,7 @@ public:
     }
 
 
-    virtual HdDirtyBits _GetInitialDirtyBits() const override
+    virtual HdDirtyBits GetInitialDirtyBitsMask() const override
     {
         // Set all bits except the varying flag
         return  (HdChangeTracker::AllSceneDirtyBits) &
@@ -263,10 +263,6 @@ public:
     {
         *dirtyBits = HdMaterial::Clean;
     };
-
-    virtual VtValue Get(TfToken const &token) const override {
-        return VtValue();
-    }
 
     virtual HdDirtyBits GetInitialDirtyBitsMask() const override {
         return HdMaterial::AllDirty;
