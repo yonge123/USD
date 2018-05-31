@@ -29,6 +29,7 @@ pxr_library(usdImaging
 
     PUBLIC_CLASSES
         adapterRegistry
+        collectionCache
         debugCodes
         delegate
         indexProxy
