@@ -57,6 +57,7 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
 
 #define PXRUSDMAYA_JOBEXPORTARGS_TOKENS \
     /* Dictionary keys */ \
+    (asClip) \
     (chaser) \
     (chaserArgs) \
     (defaultCameras) \
@@ -129,6 +130,7 @@ struct JobExportArgs
     const bool exportNurbsExplicitUV;
     const bool exportRefsAsInstanceable;
     const bool exportReferenceObjects;
+    const bool exportAsClip;
     const TfToken exportSkin;
     const bool exportVisibility;
     const SdfPath materialCollectionsPath;
@@ -160,6 +162,8 @@ struct JobExportArgs
     // Optionally specified path to use as top level prim in
     // place of the scene root.
     std::string exportRootPath;
+
+    const UsdTimeCode clipStartTime;
 
     // This path is provided when dealing with variants
     // where a _BaseModel_ root path is used instead of

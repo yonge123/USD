@@ -251,6 +251,9 @@ JobExportArgs::JobExportArgs(
         exportReferenceObjects(
             _Boolean(userArgs,
                 PxrUsdExportJobArgsTokens->exportReferenceObjects)),
+        exportAsClip(
+            _Boolean(userArgs,
+                PxrUsdExportJobArgsTokens->asClip)),
         exportSkin(
             _Token(userArgs,
                 PxrUsdExportJobArgsTokens->exportSkin,
@@ -307,7 +310,8 @@ JobExportArgs::JobExportArgs(
         dagPaths(dagPaths),
         timeInterval(timeInterval),
         exportRootPath(
-            _String(userArgs, PxrUsdExportJobArgsTokens->root))
+            _String(userArgs, PxrUsdExportJobArgsTokens->root)),
+        clipStartTime(timeInterval.GetMin())
 {
 }
 
@@ -426,6 +430,7 @@ const VtDictionary& JobExportArgs::GetDefaultDictionary()
         d[PxrUsdExportJobArgsTokens->stripNamespaces] = false;
         d[PxrUsdExportJobArgsTokens->exportReferenceObjects] = false;
         d[PxrUsdExportJobArgsTokens->root] = std::string();
+        d[PxrUsdExportJobArgsTokens->asClip] = false;
 
         // plugInfo.json site defaults.
         // The defaults dict should be correctly-typed, so enable

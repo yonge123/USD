@@ -106,6 +106,8 @@ MSyntax usdExport::createSyntax()
                    MSyntax::kBoolean);
     syntax.addFlag("-ero" ,
                    PxrUsdExportJobArgsTokens->exportReferenceObjects.GetText(),
+    syntax.addFlag("-ac",
+                   PxrUsdExportJobArgsTokens->asClip.GetText(),
                    MSyntax::kBoolean);
     syntax.addFlag("-skn",
                    PxrUsdExportJobArgsTokens->exportSkin.GetText(),
