@@ -95,6 +95,7 @@ MSyntax usdExport::createSyntax()
                    MSyntax::kBoolean);
     syntax.addFlag("-ef" ,
                    PxrUsdExportJobArgsTokens->eulerFilter.GetText(),
+                   MSyntax::kBoolean);
     syntax.addFlag("-sn",
                    PxrUsdExportJobArgsTokens->stripNamespaces.GetText(),
                    MSyntax::kBoolean);
@@ -106,6 +107,7 @@ MSyntax usdExport::createSyntax()
                    MSyntax::kBoolean);
     syntax.addFlag("-ero" ,
                    PxrUsdExportJobArgsTokens->exportReferenceObjects.GetText(),
+                   MSyntax::kBoolean);
     syntax.addFlag("-ac",
                    PxrUsdExportJobArgsTokens->asClip.GetText(),
                    MSyntax::kBoolean);
@@ -210,6 +212,22 @@ try
                 MGlobal::displayError(MString("Invalid dag path provided for root: ") + stringVal);
                 return MS::kFailure;
             }
+        }
+    }
+
+    if (argData.isFlagSet("shadingMode")) {
+        MString stringVal;
+        argData.getFlagArgument("shadingMode", 0, stringVal);
+        TfToken shadingMode(stringVal.asChar());
+
+        if (!shadingMode.IsEmpty() &&
+            PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode) == nullptr && 
+            shadingMode != PxrUsdMayaShadingModeTokens->none) {
+            MGlobal::displayError(TfStringPrintf(
+                    "No shadingMode '%s' found. "
+                    "Setting shadingMode='none'", 
+                    shadingMode.GetText()).c_str());
+            return MS::kFailure;
         }
     }
 
