@@ -305,7 +305,9 @@ JobExportArgs::JobExportArgs(
             _String(userArgs, PxrUsdExportJobArgsTokens->pythonPostCallback)),
 
         dagPaths(dagPaths),
-        timeInterval(timeInterval)
+        timeInterval(timeInterval),
+        exportRootPath(
+            _String(userArgs, PxrUsdExportJobArgsTokens->root))
 {
 }
 
@@ -423,6 +425,7 @@ const VtDictionary& JobExportArgs::GetDefaultDictionary()
         d[PxrUsdExportJobArgsTokens->eulerFilter] = false;
         d[PxrUsdExportJobArgsTokens->stripNamespaces] = false;
         d[PxrUsdExportJobArgsTokens->exportReferenceObjects] = false;
+        d[PxrUsdExportJobArgsTokens->root] = std::string();
 
         // plugInfo.json site defaults.
         // The defaults dict should be correctly-typed, so enable

@@ -96,6 +96,17 @@ usdTranslatorExport::writer(const MFileObject &file,
             else if (argName == "filterTypes") {
                 MStringArray filteredTypes;
                 theOption[1].split(',', filteredTypes);
+            else if (argName == "root") {
+                std::string exportRootPath = theOption[1].asChar();
+                userArgs[argName] = VtValue(exportRootPath);
+                if (!exportRootPath.empty()) {
+                    MDagPath rootDagPath;
+                    PxrUsdMayaUtil::GetDagPathByName(exportRootPath, rootDagPath);
+                    if (!rootDagPath.isValid()){
+                        MGlobal::displayError(MString("Invalid dag path provided for root: ") + theOption[1]);
+                        return MS::kFailure;
+                    }
+                }
             }
             else {
                 userArgs[argName] = PxrUsdMayaUtil::ParseArgumentValue(
