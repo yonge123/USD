@@ -143,10 +143,7 @@ UsdMayaProxyShape::initialize(PluginStaticData* psData)
         MFnData::kString,
         MObject::kNullObj,
         &retValue);
-    typedAttrFn.setCached(true);
     typedAttrFn.setReadable(false);
-    typedAttrFn.setStorable(true);
-    typedAttrFn.setWritable(true);
     typedAttrFn.setAffectsAppearance(true);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
     retValue = addAttribute(psData->filePath);
@@ -158,10 +155,6 @@ UsdMayaProxyShape::initialize(PluginStaticData* psData)
         MFnData::kString,
         MObject::kNullObj,
         &retValue);
-    typedAttrFn.setCached(true);
-    typedAttrFn.setReadable(true);
-    typedAttrFn.setStorable(true);
-    typedAttrFn.setWritable(true);
     typedAttrFn.setAffectsAppearance(true);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
     retValue = addAttribute(psData->primPath);
@@ -173,10 +166,6 @@ UsdMayaProxyShape::initialize(PluginStaticData* psData)
         MFnData::kString,
         MObject::kNullObj,
         &retValue);
-    typedAttrFn.setCached(true);
-    typedAttrFn.setReadable(true);
-    typedAttrFn.setStorable(true);
-    typedAttrFn.setWritable(true);
     typedAttrFn.setAffectsAppearance(true);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
     retValue = addAttribute(psData->excludePrimPaths);
@@ -188,11 +177,6 @@ UsdMayaProxyShape::initialize(PluginStaticData* psData)
         MFnUnitAttribute::kTime,
         0.0,
         &retValue);
-    unitAttrFn.setCached(true);
-    unitAttrFn.setConnectable(true);
-    unitAttrFn.setReadable(true);
-    unitAttrFn.setStorable(true);
-    unitAttrFn.setWritable(true);
     unitAttrFn.setAffectsAppearance(true);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
     retValue = addAttribute(psData->time);
@@ -204,10 +188,7 @@ UsdMayaProxyShape::initialize(PluginStaticData* psData)
         MFnData::kString,
         MObject::kNullObj,
         &retValue);
-    typedAttrFn.setCached(true);
     typedAttrFn.setReadable(false);
-    typedAttrFn.setStorable(true);
-    typedAttrFn.setWritable(true);
     typedAttrFn.setAffectsAppearance(true);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
     retValue = addAttribute(psData->variantKey);
@@ -219,8 +200,6 @@ UsdMayaProxyShape::initialize(PluginStaticData* psData)
         MFnNumericData::kInt,
         0,
         &retValue);
-    numericAttrFn.setWritable(true);
-    numericAttrFn.setKeyable(true);
     numericAttrFn.setMin(0);
     numericAttrFn.setSoftMax(4);
     numericAttrFn.setMax(8);
@@ -236,10 +215,8 @@ UsdMayaProxyShape::initialize(PluginStaticData* psData)
         psData->stageDataTypeId,
         MObject::kNullObj,
         &retValue);
-    typedAttrFn.setCached(true);
     typedAttrFn.setReadable(false);
     typedAttrFn.setStorable(false);
-    typedAttrFn.setWritable(true);
     typedAttrFn.setDisconnectBehavior(MFnNumericAttribute::kReset); // on disconnect, reset to Null
     typedAttrFn.setAffectsAppearance(true);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
@@ -253,8 +230,6 @@ UsdMayaProxyShape::initialize(PluginStaticData* psData)
         psData->stageDataTypeId,
         MObject::kNullObj,
         &retValue);
-    typedAttrFn.setCached(true);
-    typedAttrFn.setReadable(true);
     typedAttrFn.setStorable(false);
     typedAttrFn.setWritable(false);
     typedAttrFn.setAffectsAppearance(true);
@@ -269,10 +244,6 @@ UsdMayaProxyShape::initialize(PluginStaticData* psData)
         0,
         &retValue);
     numericAttrFn.setInternal(true);
-    numericAttrFn.setKeyable(false);
-    numericAttrFn.setReadable(true);
-    numericAttrFn.setStorable(true);
-    numericAttrFn.setWritable(true);
     numericAttrFn.setAffectsAppearance(true);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
     retValue = addAttribute(psData->fastPlayback);
@@ -285,10 +256,6 @@ UsdMayaProxyShape::initialize(PluginStaticData* psData)
         0,
         &retValue);
     numericAttrFn.setInternal(true);
-    numericAttrFn.setKeyable(false);
-    numericAttrFn.setReadable(true);
-    numericAttrFn.setStorable(true);
-    numericAttrFn.setWritable(true);
     numericAttrFn.setAffectsAppearance(true);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
     retValue = addAttribute(psData->tint);
@@ -298,11 +265,6 @@ UsdMayaProxyShape::initialize(PluginStaticData* psData)
         "tintColor",
         "tcol",
         &retValue);
-    numericAttrFn.setCached(true);
-    numericAttrFn.setKeyable(false);
-    numericAttrFn.setReadable(true);
-    numericAttrFn.setStorable(true);
-    numericAttrFn.setWritable(true);
     numericAttrFn.setAffectsAppearance(true);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
     retValue = addAttribute(psData->tintColor);
@@ -314,8 +276,6 @@ UsdMayaProxyShape::initialize(PluginStaticData* psData)
         psData->stageDataTypeId,
         MObject::kNullObj,
         &retValue);
-    typedAttrFn.setCached(true);
-    typedAttrFn.setReadable(true);
     typedAttrFn.setStorable(false);
     typedAttrFn.setWritable(false);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
@@ -329,11 +289,8 @@ UsdMayaProxyShape::initialize(PluginStaticData* psData)
         0.0,
         &retValue);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
-    numericAttrFn.setCached(true);
     numericAttrFn.setKeyable(true);
     numericAttrFn.setReadable(false);
-    numericAttrFn.setStorable(true);
-    numericAttrFn.setWritable(true);
     numericAttrFn.setAffectsAppearance(true);
     retValue = addAttribute(psData->displayGuides);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
@@ -345,11 +302,8 @@ UsdMayaProxyShape::initialize(PluginStaticData* psData)
         0.0,
         &retValue);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
-    numericAttrFn.setCached(true);
     numericAttrFn.setKeyable(true);
     numericAttrFn.setReadable(false);
-    numericAttrFn.setStorable(true);
-    numericAttrFn.setWritable(true);
     numericAttrFn.setAffectsAppearance(true);
     retValue = addAttribute(psData->displayRenderGuides);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
@@ -360,7 +314,6 @@ UsdMayaProxyShape::initialize(PluginStaticData* psData)
         MFnNumericData::kBoolean,
         0.0,
         &retValue);
-    numericAttrFn.setKeyable(false);
     numericAttrFn.setStorable(false);
     numericAttrFn.setAffectsAppearance(true);
     retValue = addAttribute(psData->softSelectable);
