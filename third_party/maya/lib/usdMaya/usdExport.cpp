@@ -95,6 +95,7 @@ MSyntax usdExport::createSyntax()
                    MSyntax::kBoolean);
     syntax.addFlag("-ef" ,
                    PxrUsdExportJobArgsTokens->eulerFilter.GetText(),
+                   MSyntax::kBoolean);
     syntax.addFlag("-sn",
                    PxrUsdExportJobArgsTokens->stripNamespaces.GetText(),
                    MSyntax::kBoolean);
@@ -106,6 +107,7 @@ MSyntax usdExport::createSyntax()
                    MSyntax::kBoolean);
     syntax.addFlag("-ero" ,
                    PxrUsdExportJobArgsTokens->exportReferenceObjects.GetText(),
+                   MSyntax::kBoolean);
     syntax.addFlag("-ac",
                    PxrUsdExportJobArgsTokens->asClip.GetText(),
                    MSyntax::kBoolean);
