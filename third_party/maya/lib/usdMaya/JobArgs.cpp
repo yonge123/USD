@@ -310,8 +310,7 @@ JobExportArgs::JobExportArgs(
         dagPaths(dagPaths),
         timeInterval(timeInterval),
         exportRootPath(
-            _String(userArgs, PxrUsdExportJobArgsTokens->root)),
-        clipStartTime(timeInterval.GetMin())
+            _String(userArgs, PxrUsdExportJobArgsTokens->root))
 {
 }
 
@@ -325,7 +324,6 @@ operator <<(std::ostream& out, const JobExportArgs& exportArgs)
         << "exportInstances: " << TfStringify(exportArgs.exportInstances) << std::endl
         << "timeInterval: " << exportArgs.timeInterval << std::endl
         << "exportAsClip: " << TfStringify(exportArgs.exportAsClip) << std::endl
-        << "clipStartTime: " << exportArgs.clipStartTime << std::endl
         << "eulerFilter: " << TfStringify(exportArgs.eulerFilter) << std::endl
         << "excludeInvisible: " << TfStringify(exportArgs.excludeInvisible) << std::endl
         << "exportDefaultCameras: " << TfStringify(exportArgs.exportDefaultCameras) << std::endl
