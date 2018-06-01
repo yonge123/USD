@@ -94,7 +94,6 @@ usdTranslatorExport::writer(const MFileObject &file,
                 frameSamples.insert(theOption[1].asDouble());
             }
             else if (argName == "filterTypes") {
-                MStringArray filteredTypes;
                 theOption[1].split(',', filteredTypes);
             }
             else {
