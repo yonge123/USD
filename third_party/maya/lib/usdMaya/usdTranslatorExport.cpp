@@ -95,6 +95,7 @@ usdTranslatorExport::writer(const MFileObject &file,
             }
             else if (argName == "filterTypes") {
                 theOption[1].split(',', filteredTypes);
+            }
             else if (argName == "root") {
                 std::string exportRootPath = theOption[1].asChar();
                 userArgs[argName] = VtValue(exportRootPath);
