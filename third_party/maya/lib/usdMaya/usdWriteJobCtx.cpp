@@ -158,7 +158,7 @@ bool usdWriteJobCtx::shouldWriteSample(const UsdTimeCode &usdTime, bool isAnimat
     if (mArgs.exportAsClip){
         // If exporting for use as a value clip, we always write a sample on the start frame and on other frames
         // if there is animation. Do not export a default sample.
-        if ((usdTime == mArgs.clipStartTime) || (isAnimated && !usdTime.IsDefault())){
+        if ((usdTime == mArgs.timeInterval.GetMin()) || (isAnimated && !usdTime.IsDefault())){
             return true;
         }
     // If there is no animation, then we only write a sample on the default. Otherwise we write them on each frame.

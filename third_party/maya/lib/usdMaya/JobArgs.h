@@ -148,7 +148,6 @@ struct JobExportArgs
     /// Otherwise, animated data should be exported at times contained in the
     /// interval.
     const GfInterval timeInterval;
-    const UsdTimeCode clipStartTime;
 
     // This path is provided when dealing with variants
     // where a _BaseModel_ root path is used instead of
