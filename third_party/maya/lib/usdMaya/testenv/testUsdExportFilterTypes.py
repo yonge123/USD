@@ -62,6 +62,8 @@ class testUsdExportFilterTypes(unittest.TestCase):
         if not nonExist:
             name += '_noNonExist'
             filter.append('nonExist')
+        if not mergeXform:
+            name += '_noMerge'
         if method == 'cmd':
             name += '.usda'
         elif method == 'translator':
@@ -91,7 +93,7 @@ class testUsdExportFilterTypes(unittest.TestCase):
                 'f': 1,
             }
             options = {
-                'mergeXForm': int(mergeXform),
+                'mergeTransformAndShape': int(mergeXform),
                 'shadingMode': 'none',
             }
             if filter:
