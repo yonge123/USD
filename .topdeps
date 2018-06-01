@@ -12,3 +12,4 @@ tg/bugfixes/testsuite_stability
 tg/customization/temporary_testsuite_changes
 tg/customization/disable_UpdateSelectionFrameStamp
 tg/customization/image_plane
+tg/sidefx/vol
