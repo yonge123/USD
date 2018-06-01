@@ -163,8 +163,6 @@ struct JobExportArgs
     // place of the scene root.
     std::string exportRootPath;
 
-    const UsdTimeCode clipStartTime;
-
     // This path is provided when dealing with variants
     // where a _BaseModel_ root path is used instead of
     // the model path. This to allow a proper internal reference.
