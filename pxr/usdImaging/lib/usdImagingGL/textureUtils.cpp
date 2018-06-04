@@ -151,12 +151,13 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
         filePath = TfToken(asset.GetAssetPath());
     }
 
-    const bool isPtex = GlfIsSupportedPtexTexture(filePath);
+    const bool isUdim = GlfIsSupportedUdimTexture(filePath);
 
-    if (!TfPathExists(filePath)) {
+    if (!TfPathExists(filePath) && !isUdim) {
+        const bool isPtex = GlfIsSupportedPtexTexture(filePath);
         if (isPtex) {
-            TF_WARN("Unable to find Texture '%s' with path '%s'. Fallback " 
-                    "textures are not supported for ptex", 
+            TF_WARN("Unable to find Texture '%s' with path '%s'. Fallback "
+                    "textures are not supported for ptex",
                     filePath.GetText(), usdPath.GetText());
             return HdTextureResource::ID(-1);
         } else {
