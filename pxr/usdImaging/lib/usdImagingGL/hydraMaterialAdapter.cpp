@@ -31,6 +31,7 @@
 
 #include "pxr/imaging/glf/glslfx.h"
 #include "pxr/imaging/glf/ptexTexture.h"
+#include "pxr/imaging/glf/udimTexture.h"
 
 #include "pxr/imaging/hd/material.h"
 #include "pxr/imaging/hd/tokens.h"
@@ -214,7 +215,8 @@ IsPtexTexture(TfToken const& id)
 static bool
 IsTextureFamilyNode(TfToken const& id)
 {
-    return (id == UsdHydraTokens->HwUvTexture_1 || 
+    return (id == UsdHydraTokens->HwUvTexture_1 ||
+            id == UsdHydraTokens->HwUdimTexture_1 ||
             id == UsdHydraTokens->HwPtexTexture_1);
 }
 
@@ -232,7 +234,8 @@ GetPrimvars(TfToken const& id)
     TfTokenVector t;
     if (id == UsdHydraTokens->HwPrimvar_1){
         t.push_back(UsdHydraTokens->infoVarname);
-    } else if(id == UsdHydraTokens->HwUvTexture_1) {
+    } else if(id == UsdHydraTokens->HwUvTexture_1 ||
+              id == UsdHydraTokens->HwUdimTexture_1) {
         t.push_back(UsdHydraTokens->uv);
     } else if(id == UsdHydraTokens->HwPtexTexture_1) {
         t.push_back(UsdImagingTokens->faceIndexPrimvar);
@@ -592,6 +595,7 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetworkDeprecated(
         SdfPath connection;
         TfTokenVector samplerCoords;
         bool isPtex = false;
+        bool isUdim = false;
         TfToken t;
 
         if (!TF_VERIFY(attr.Get(&fallbackValue),
@@ -631,6 +635,7 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetworkDeprecated(
                     "\t\t\tFound primvar: <%s>\n", t.GetText());
 
             } else {
+                isUdim = GlfIsSupportedUdimTexture(TfToken(ap.GetAssetPath()));
                 texAttr.GetMetadata(UsdImagingTokens->uvPrimvar, &t);
                 primvars->push_back(t);
                 TF_DEBUG(USDIMAGING_SHADERS).Msg(
@@ -665,7 +670,8 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetworkDeprecated(
                                                   fallbackValue,
                                                   connection,
                                                   samplerCoords,
-                                                  isPtex));
+                                                  isPtex,
+                                                  isUdim));
     }
 }
 

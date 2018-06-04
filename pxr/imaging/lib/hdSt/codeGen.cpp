@@ -2544,6 +2544,18 @@ HdSt_CodeGen::_GenerateShaderParameters()
             accessors
                 << ")" << swizzle << ";\n"
                 << "}\n";
+        } else if (bindingType == HdBinding::BINDLESS_TEXTURE_UDIM) {
+            // a function returning sampler2D is allowed in 430 or later
+            if (caps.glslVersion >= 430) {
+
+            }
+            // UDIM: Implement udim sampling here.
+            // We are currently hardcoding the 10:10 tile setup used by mary.
+            accessors
+                << it->second.dataType
+                << " HdGet_" << it->second.name << "() {\n"
+                << " return " << it->second.dataType << "(0.0);"
+                << "}\n";
         } else if (bindingType == HdBinding::TEXTURE_2D) {
             declarations
                 << LayoutQualifier(it->first)
