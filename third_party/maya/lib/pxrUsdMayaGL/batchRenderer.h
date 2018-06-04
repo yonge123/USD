@@ -47,7 +47,6 @@
 
 #include <maya/M3dView.h>
 #include <maya/MDrawContext.h>
-#include <maya/MDrawContext.h>
 #include <maya/MDrawRequest.h>
 #include <maya/MObjectHandle.h>
 #include <maya/MMessage.h>
@@ -219,9 +218,7 @@ public:
             const GfMatrix4d& projectionMatrix,
             GfVec3d* hitPoint);
 
-    /// Gets the UsdMayaGLSoftSelectHelper that this batchRenderer maintains.
-    ///
-    /// This should only be used by PxrMayaHdShapeAdapter.
+    /// Returns whether soft selection for proxy shapes is currently enabled.
     PXRUSDMAYAGL_API
     inline bool GetObjectSoftSelectEnabled()
     { return _objectSoftSelectEnabled; }
