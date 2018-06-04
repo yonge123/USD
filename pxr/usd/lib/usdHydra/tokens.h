@@ -71,6 +71,11 @@ struct UsdHydraTokensType {
     /// The id value of a UvTexture shader.
     const TfToken HwUvTexture_1;
 
+    /// \brief "HwUdimTexture_1"
+    ///
+    /// The id value of a UdimTexture shader.
+    const TfToken HwUdimTexture_1;
+
     /// \brief "displayLook:bxdf"
     /// \deprecated This has been deprecated in favor of the glslfx:surface output.
     /// 
