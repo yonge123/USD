@@ -996,12 +996,12 @@ UsdMayaProxyShape::getShapeSelectionMask() const
 
     // Unfortunately, it is queried for both "normal" selection AND soft
     // selection if you are using "true" VP2 selection.  So in order to
-    // control soft seleciton, in both modes, we keep track of whether
+    // control soft selection, in both modes, we keep track of whether
     // we currently have object soft-select enabled, and then return an empty
     // selection mask if it is, but this object is set to be non-soft-selectable
 
-    static MSelectionMask emptyMask;
-    static MSelectionMask normalMask(MSelectionMask::kSelectMeshes);
+    const static MSelectionMask emptyMask;
+    const static MSelectionMask normalMask(MSelectionMask::kSelectMeshes);
 
     if (GetObjectSoftSelectEnabled() && !_CanBeSoftSelected()) {
         // Disable selection, to disable soft-selection
