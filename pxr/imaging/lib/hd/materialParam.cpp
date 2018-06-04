@@ -36,13 +36,15 @@ HdMaterialParam::HdMaterialParam(ParamType paramType,
                                  VtValue const& fallbackValue,
                                  SdfPath const& connection,
                                  TfTokenVector const& samplerCoords,
-                                 bool isPtex)
+                                 bool isPtex,
+                                 bool isUdim)
     : _paramType(paramType)
     , _name(name)
     , _fallbackValue(fallbackValue)
     , _connection(connection)
     , _samplerCoords(samplerCoords)
     , _isPtex(isPtex)
+    , _isUdim(isUdim)
 {
     /*NOTHING*/
 }
@@ -86,6 +88,12 @@ bool
 HdMaterialParam::IsPtex() const
 {
     return _isPtex;
+}
+
+bool
+HdMaterialParam::IsUdim() const
+{
+    return _isUdim;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
