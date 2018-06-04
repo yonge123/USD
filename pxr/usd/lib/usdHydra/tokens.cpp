@@ -29,6 +29,7 @@ UsdHydraTokensType::UsdHydraTokensType() :
     HwPrimvar_1("HwPrimvar_1", TfToken::Immortal),
     HwPtexTexture_1("HwPtexTexture_1", TfToken::Immortal),
     HwUvTexture_1("HwUvTexture_1", TfToken::Immortal),
+    HwUdimTexture_1("HwUdimTexture_1", TfToken::Immortal),
     displayLookBxdf("displayLook:bxdf", TfToken::Immortal),
     infoFilename("info:filename", TfToken::Immortal),
     infoVarname("info:varname", TfToken::Immortal),
