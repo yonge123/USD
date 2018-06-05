@@ -65,16 +65,25 @@ public:
     static GlfUdimTextureRefPtr New(const TfToken &imageFilePath);
 
     GLF_API
-    virtual GlfTexture::BindingVector GetBindings(
+    GlfTexture::BindingVector GetBindings(
         const TfToken& identifier,
-        GLuint samplerName) const;
+        GLuint samplerName) const override;
 
     GLF_API
-    virtual VtDictionary GetTextureInfo() const;
+    VtDictionary GetTextureInfo() const override;
 
 protected:
     GLF_API
     GlfUdimTexture(const TfToken& imageFilePath);
+
+    GLF_API
+    void _FreeTextureObject();
+
+    GLF_API
+    void _OnSetMemoryRequested(size_t targetMemory) override;
+
+    GLF_API
+    void _ReadImage(size_t targetMemory);
 
 private:
     TfToken _imagePath;

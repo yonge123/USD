@@ -120,6 +120,10 @@ public:
         return false;
     }
 
+    virtual bool IsUdim() const {
+        return false;
+    }
+
     virtual GLuint GetTexelsTextureId() {
         return _drawTarget->GetAttachment("color")->GetGlTextureName();
     }
