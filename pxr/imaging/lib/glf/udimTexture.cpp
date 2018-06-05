@@ -24,11 +24,16 @@
 /// \file glf/udimTexture.cpp
 
 #include "pxr/imaging/glf/glew.h"
+
+#include "pxr/imaging/glf/diagnostic.h"
+#include "pxr/imaging/glf/glContext.h"
 #include "pxr/imaging/glf/udimTexture.h"
 
 #include "pxr/base/tf/fileUtils.h"
 #include "pxr/base/tf/registryManager.h"
 #include "pxr/base/tf/stringUtils.h"
+
+#include "pxr/base/trace/trace.h"
 
 #include <iostream>
 
@@ -75,7 +80,7 @@ GlfUdimTexture::GlfUdimTexture(const TfToken& imageFilePath)
 }
 
 GlfUdimTexture::~GlfUdimTexture() {
-
+    _FreeTextureObject();
 }
 
 GlfUdimTextureRefPtr
@@ -90,7 +95,7 @@ GlfUdimTexture::GetBindings(
     BindingVector ret;
 
     ret.push_back(Binding(
-        TfToken(identifier.GetString() + "_Data"), GlfTextureTokens->texels,
+        TfToken(identifier.GetString() + "_Images"), GlfTextureTokens->texels,
         GL_TEXTURE_2D_ARRAY, _imageArray, samplerName));
 
     return ret;
@@ -111,5 +116,83 @@ GlfUdimTexture::GetTextureInfo() const {
     return ret;
 }
 
+
+void
+GlfUdimTexture::_FreeTextureObject() {
+    GlfSharedGLContextScopeHolder sharedGLContextScopeHolder;
+
+    if (glIsTexture(_imageArray)) {
+        glDeleteTextures(1, &_imageArray);
+    }
+}
+
+
+void
+GlfUdimTexture::_OnSetMemoryRequested(size_t targetMemory) {
+    _ReadImage(targetMemory);
+}
+
+void
+GlfUdimTexture::_ReadImage(size_t targetMemory) {
+    std::cerr << "Reading udim image: " << _imagePath << std::endl;
+    TRACE_FUNCTION();
+    _FreeTextureObject();
+
+    const auto numChannels = 4;
+    const auto type = GL_UNSIGNED_BYTE;
+
+    _format = GL_RGBA8;
+    auto sizePerElem = 1;
+    if (type == GL_FLOAT) {
+        constexpr GLenum floatFormats[] = {
+            GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F
+        };
+        _format = floatFormats[numChannels - 1];
+        sizePerElem = 4;
+    } else if (type == GL_UNSIGNED_SHORT) {
+        constexpr GLenum uint16Formats[] = {
+            GL_R16, GL_RG16, GL_RGB16, GL_RGBA16
+        };
+        _format = uint16Formats[numChannels - 1];
+        sizePerElem = 2;
+    } else if (type == GL_HALF_FLOAT_ARB) {
+        constexpr GLenum halfFormats[] = {
+            GL_R16F, GL_RG16F, GL_RGB16F, GL_RGBA16F
+        };
+        _format = halfFormats[numChannels - 1];
+        sizePerElem = 2;
+    } else if (type == GL_UNSIGNED_BYTE) {
+        constexpr GLenum uint8Formats[] = {
+            GL_R8, GL_RG8, GL_RGB8, GL_RGBA8
+        };
+        _format = uint8Formats[numChannels - 1];
+        sizePerElem = 1;
+    }
+
+    _width = 1;
+    _height = 1;
+    _depth = 100;
+
+    glGenTextures(1, &_imageArray);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, _imageArray);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    std::vector<uint8_t> textureData;
+    textureData.resize(_width * _height * _depth * numChannels, 255);
+
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0,
+                 _format,
+                 _width,
+                 _height,
+                 _depth,
+                 0, _format, type, textureData.data());
+
+    GLF_POST_PENDING_GL_ERRORS();
+
+    _SetMemoryUsed(_width * _height * _depth * sizePerElem * numChannels);
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
