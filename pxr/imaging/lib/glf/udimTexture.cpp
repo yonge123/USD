@@ -23,10 +23,11 @@
 //
 /// \file glf/udimTexture.cpp
 
-#include "pxr/imaging/glf/udimTexture.h"
 #include "pxr/imaging/glf/glew.h"
+#include "pxr/imaging/glf/udimTexture.h"
 
 #include "pxr/base/tf/fileUtils.h"
+#include "pxr/base/tf/registryManager.h"
 #include "pxr/base/tf/stringUtils.h"
 
 #include <iostream>
@@ -57,6 +58,55 @@ std::vector<std::tuple<int, std::string>> GlfGetUdimTiles(const std::string& ima
             ret.push_back(std::tuple<int, std::string>(t, ss.str()));
         }
     }
+
+    return ret;
+}
+
+TF_REGISTRY_FUNCTION(TfType)
+{
+    typedef GlfUdimTexture Type;
+    TfType t = TfType::Define<Type, TfType::Bases<GlfTexture> >();
+    t.SetFactory< GlfTextureFactory<Type> >();
+}
+
+GlfUdimTexture::GlfUdimTexture(const TfToken& imageFilePath)
+    : _imagePath(imageFilePath) {
+
+}
+
+GlfUdimTexture::~GlfUdimTexture() {
+
+}
+
+GlfUdimTextureRefPtr
+GlfUdimTexture::New(const TfToken& imageFilePath) {
+    return TfCreateRefPtr(new GlfUdimTexture(imageFilePath));
+}
+
+GlfTexture::BindingVector
+GlfUdimTexture::GetBindings(
+    const TfToken& identifier,
+    GLuint samplerName) const {
+    BindingVector ret;
+
+    ret.push_back(Binding(
+        TfToken(identifier.GetString() + "_Data"), GlfTextureTokens->texels,
+        GL_TEXTURE_2D_ARRAY, _imageArray, samplerName));
+
+    return ret;
+}
+
+VtDictionary
+GlfUdimTexture::GetTextureInfo() const {
+    VtDictionary ret;
+
+    ret["memoryUsed"] = GetMemoryUsed();
+    ret["width"] = (int)_width;
+    ret["height"] = (int)_height;
+    ret["depth"] = (int)_depth;
+    ret["format"] = (int)_format;
+    ret["imageFilePath"] = _imagePath;
+    ret["referenceCount"] = GetRefCount().Get();
 
     return ret;
 }
