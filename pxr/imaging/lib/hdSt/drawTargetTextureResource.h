@@ -44,6 +44,7 @@ public:
     // HdTextureResource API
     //
     virtual bool IsPtex() const override;
+    virtual bool IsUdim() const override;
     virtual size_t GetMemoryUsed() override;
 
     //
