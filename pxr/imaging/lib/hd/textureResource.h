@@ -50,6 +50,7 @@ public:
     virtual ~HdTextureResource();
 
     virtual bool IsPtex() const = 0;
+    virtual bool IsUdim() const = 0;
 
     virtual size_t GetMemoryUsed() = 0;
 };
