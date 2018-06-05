@@ -64,7 +64,7 @@ HdStSimpleTextureResource::HdStSimpleTextureResource(
 
     // When we are not using Ptex we will use samplers,
     // that includes both, bindless textures and no-bindless textures
-    if (!_isPtex) {
+    if (!_isPtex && !_isUdim) {
         // If the HdStSimpleTextureResource defines a wrap mode it will 
         // use it, otherwise it gives an opportunity to the texture to define
         // its own wrap mode. The fallback value is always HdWrapRepeat
@@ -136,6 +136,11 @@ HdStSimpleTextureResource::~HdStSimpleTextureResource()
 bool HdStSimpleTextureResource::IsPtex() const 
 { 
     return _isPtex; 
+}
+
+bool HdStSimpleTextureResource::IsUdim() const
+{
+    return _isUdim;
 }
 
 GLuint HdStSimpleTextureResource::GetTexelsTextureId() 

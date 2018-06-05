@@ -85,6 +85,12 @@ HdSt_DrawTargetTextureResource::IsPtex() const
     return false;
 }
 
+bool
+HdSt_DrawTargetTextureResource::IsUdim() const
+{
+    return false;
+}
+
 GLuint
 HdSt_DrawTargetTextureResource::GetTexelsTextureId()
 {
