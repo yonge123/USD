@@ -11,7 +11,6 @@ tg/simple_features/maya_pref_export
 tg/simple_features/filterTypes
 tg/simple_features/default_value_for_hydra_parameters
 tg/simple_features/animated_textures_for_hydra
-tg/bugfixes/fix_selection_VP2
 tg/bugfixes/oiio_read_with_asserts
 tg/bugfixes/ubuntu_katana_build_fix
 tg/bugfixes/katana_testsuite_precision
