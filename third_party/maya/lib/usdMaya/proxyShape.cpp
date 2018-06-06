@@ -998,8 +998,8 @@ UsdMayaProxyShape::getShapeSelectionMask() const
     // we currently have object soft-select enabled, and then return an empty
     // selection mask if it is, but this object is set to be non-soft-selectable
 
-    const static MSelectionMask emptyMask;
-    const static MSelectionMask normalMask(MSelectionMask::kSelectMeshes);
+    static const MSelectionMask emptyMask;
+    static const MSelectionMask normalMask(MSelectionMask::kSelectMeshes);
 
     if (GetObjectSoftSelectEnabled() && !_CanBeSoftSelected()) {
         // Disable selection, to disable soft-selection
