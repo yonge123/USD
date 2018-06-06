@@ -173,9 +173,9 @@ GLuint64EXT HdStSimpleTextureResource::GetTexelsTextureHandle()
         return 0;
     }
 
-    if (_isPtex) {
+    if (_isPtex || _isUdim) {
         return textureId ? glGetTextureHandleARB(textureId) : 0;
-    } 
+    }
 
     return textureId ? glGetTextureSamplerHandleARB(textureId, samplerId) : 0;
 }
