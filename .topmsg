@@ -1,0 +1,18 @@
+From: Paul Molodowitch <pm@stanfordalumni.org>
+Subject: [usdMaya] fix for VP2 selection when MAYA_VP2_USE_VP1_SELECTION is off
+
+Currently, if using "pure" VP2 selection (ie, MAYA_VP2_USE_VP1_SELECTION is not
+set), then if the "softSelectable" attribute is off, the object cannot be
+selected by clicking on it in the viewport.
+
+This is because proxyShape attempts to control soft-selection via
+MPxSurfaceShape::getShapeSelectionMask().  Unfortunately, the intent of this
+function is to control which selection filters the shape responds to, for any
+selection (ie, normal + soft selection), and it is only a quirk / bug of
+MAYA_VP2_USE_VP1_SELECTION mode that this setting is queried for soft selection,
+but not normal selection.
+
+To make the softSelectable attr work in both pure VP2 and
+MAYA_VP2_USE_VP1_SELECTION modes, we now check if object-mode soft-selection is
+currently on, and if the object is set to be not selectable; if so, we return
+an empty mask, disabling selection.
