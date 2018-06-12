@@ -43,6 +43,9 @@ pxr_library(usdImaging
         coneAdapter
         cubeAdapter
         cylinderAdapter
+        cylinderLightAdapter
+        diskLightAdapter
+        distantLightAdapter
         domeLightAdapter
         fieldAdapter
 	field3dAssetAdapter
