@@ -116,8 +116,7 @@ UsdImagingDelegate::UsdImagingDelegate(
     , _cullStyleFallback(HdCullStyleDontCare)
     , _xformCache(GetTime())
     , _materialBindingImplData(parentIndex->GetRenderDelegate()->
-            CanComputeMaterialNetworks() ? UsdShadeTokens->full 
-                                         : UsdShadeTokens->preview)
+                               GetMaterialBindingPurpose())
     , _materialBindingCache(GetTime(), &_materialBindingImplData)
     , _visCache(GetTime())
     , _drawModeCache(GetTime())
@@ -231,9 +230,10 @@ UsdImagingDelegate::_AdapterLookup(UsdPrim const& prim, bool ignoreInstancing)
         // treated like Materials. When not using networks,
         // we want Shaders to be treated like HydraPbsSurface
         // for backwards compatibility.
-        bool useMaterialNetworks = GetRenderIndex().
-            GetRenderDelegate()->CanComputeMaterialNetworks();
-        if (!useMaterialNetworks && adapterKey == _tokens->Material) {
+        TfToken bindingPurpose = GetRenderIndex().
+            GetRenderDelegate()->GetMaterialBindingPurpose();
+        if (bindingPurpose == HdTokens->preview &&
+            adapterKey == _tokens->Material) {
             adapterKey = _tokens->HydraPbsSurface;
         }
     }
@@ -2726,15 +2726,8 @@ UsdImagingDelegate::GetMaterialResource(SdfPath const &materialId)
     }
 
     SdfPath usdPath = GetPathForUsd(materialId);
-
-    if (!_valueCache.ExtractMaterialResource(usdPath, &vtMatResource)) {
-        TF_DEBUG(HD_SAFE_MODE).Msg(
-            "WARNING: Slow material resource fetch for %s\n",
-            materialId.GetText());
-        _UpdateSingleValue(usdPath, HdMaterial::DirtyResource);
-        TF_VERIFY(_valueCache.ExtractMaterialResource(usdPath, &vtMatResource));
-    }
-
+    _UpdateSingleValue(usdPath, HdMaterial::DirtyResource);
+    TF_VERIFY(_valueCache.FindMaterialResource(usdPath, &vtMatResource));
     return vtMatResource;
 }
 

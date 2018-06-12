@@ -32,6 +32,7 @@
 #include "usdMaya/JobArgs.h"
 #include "usdMaya/shadingModeRegistry.h"
 #include "usdMaya/usdWriteJob.h"
+#include "usdMaya/writeUtil.h"
 
 #include <maya/MAnimControl.h>
 #include <maya/MFileObject.h>
@@ -64,7 +65,7 @@ usdTranslatorExport::writer(const MFileObject &file,
     VtDictionary userArgs;
     bool exportAnimation = false;
     GfInterval timeInterval(1.0, 1.0);
-    std::set<double> frameSamples;
+    double frameStride = 1.0;
     bool append=false;
     
     MStringArray filteredTypes;
@@ -90,8 +91,8 @@ usdTranslatorExport::writer(const MFileObject &file,
             else if (argName == "endTime") {
                 timeInterval.SetMax(theOption[1].asDouble());
             }
-            else if (argName == "frameSample") {
-                frameSamples.insert(theOption[1].asDouble());
+            else if (argName == "frameStride") {
+                frameStride = theOption[1].asDouble();
             }
             else if (argName == "filterTypes") {
                 theOption[1].split(',', filteredTypes);
@@ -130,10 +131,6 @@ usdTranslatorExport::writer(const MFileObject &file,
         timeInterval = GfInterval();
     }
 
-    if (frameSamples.empty()) {
-        frameSamples.insert(0.0);
-    }
-
     MSelectionList objSelList;
     if(mode == MPxFileTranslator::kExportActiveAccessMode) {
         // Get selected objects
@@ -160,16 +157,14 @@ usdTranslatorExport::writer(const MFileObject &file,
         }
         usdWriteJob writeJob(jobArgs);
         if (writeJob.beginJob(fileName, append)) {
-            if (!jobArgs.timeInterval.IsEmpty()) {
+            std::vector<double> timeSamples =
+                    PxrUsdMayaWriteUtil::GetTimeSamples(
+                    jobArgs.timeInterval, std::set<double>(), frameStride);
+            if (!timeSamples.empty()) {
                 const MTime oldCurTime = MAnimControl::currentTime();
-                for (double i = jobArgs.timeInterval.GetMin();
-                        jobArgs.timeInterval.Contains(i);
-                        i += 1.0) {
-                    for (double sampleTime : frameSamples) {
-                        const double actualTime = i + sampleTime;
-                        MGlobal::viewFrame(actualTime);
-                        writeJob.evalJob(actualTime);
-                    }
+                for (double t : timeSamples) {
+                    MGlobal::viewFrame(t);
+                    writeJob.evalJob(t);
                 }
 
                 // Set the time back.
@@ -237,6 +232,7 @@ usdTranslatorExport::GetDefaultOptions()
         entries.push_back("animation=0");
         entries.push_back("startTime=1");
         entries.push_back("endTime=1");
+        entries.push_back("frameStride=1.0");
         defaultOptions = TfStringJoin(entries, ";");
     });
 
