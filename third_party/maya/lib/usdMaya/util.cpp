@@ -24,6 +24,7 @@
 #include "pxr/pxr.h"
 #include "usdMaya/colorSpace.h"
 #include "usdMaya/util.h"
+#include "usdMaya/debugCodes.h"
 
 #include "pxr/base/gf/gamma.h"
 #include "pxr/base/tf/hashmap.h"
@@ -749,9 +750,9 @@ _getMayaShadersColor(
         }
 
         if (shaderObjs[i].isNull()) {
-            MGlobal::displayError("Invalid Maya Shader Object at index: " +
-                                  MString(TfStringPrintf("%d", i).c_str()) +
-                                  ". Unable to retrieve ShaderBaseColor.");
+            TF_DEBUG(PXRUSDMAYA_SHADER_COLOR).
+                Msg("Invalid Maya Shader Object at index: %d. Unable to retrieve ShaderBaseColor.",
+                    i);
             continue;
         }
 
