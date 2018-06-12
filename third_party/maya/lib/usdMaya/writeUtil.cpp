@@ -28,6 +28,7 @@
 #include "usdMaya/translatorUtil.h"
 #include "usdMaya/adaptor.h"
 #include "usdMaya/UserTaggedAttribute.h"
+#include "usdMaya/userAttributeWriterRegistry.h"
 
 #include "pxr/base/gf/gamma.h"
 #include "pxr/base/gf/rotation.h"
@@ -938,20 +939,22 @@ PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
             if (primvar) {
                 usdAttr = primvar.GetAttr();
             }
-        } else if (usdAttrType ==
-                    PxrUsdMayaUserTaggedAttributeTokens->USDAttrTypeUsdRi) {
-            usdAttr =
-                PxrUsdMayaWriteUtil::GetOrCreateUsdRiAttribute(attrPlug,
-                                                               usdPrim,
-                                                               usdAttrName,
-                                                               "user",
-                                                               translateMayaDoubleToUsdSinglePrecision);
         } else {
-            usdAttr = PxrUsdMayaWriteUtil::GetOrCreateUsdAttr(attrPlug,
-                                                              usdPrim,
-                                                              usdAttrName,
-                                                              true,
-                                                              translateMayaDoubleToUsdSinglePrecision);
+            auto attributeWriter = PxrUsdMayaUserAttributeWriterRegistry::GetWriter(usdAttrType);
+            if (attributeWriter != nullptr) {
+                usdAttr = attributeWriter(attrPlug,
+                                          usdPrim,
+                                          usdAttrName,
+                                          "user",
+                                          translateMayaDoubleToUsdSinglePrecision);
+            } else {
+                usdAttr =
+                    PxrUsdMayaWriteUtil::GetOrCreateUsdAttr(attrPlug,
+                                                            usdPrim,
+                                                            usdAttrName,
+                                                            true,
+                                                            translateMayaDoubleToUsdSinglePrecision);
+            }
         }
 
         if (usdAttr) {

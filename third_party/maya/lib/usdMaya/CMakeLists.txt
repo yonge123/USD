@@ -63,6 +63,7 @@ pxr_shared_library(${PXR_PACKAGE}
         shadingModeExporterContext
         shadingModeImporter
         shadingModeRegistry
+        userAttributeWriterRegistry
         skelBindingsWriter
         util
         usdPrimProvider
@@ -108,6 +109,7 @@ pxr_shared_library(${PXR_PACKAGE}
         MayaParticleWriter
         MayaSkeletonWriter
         ModelKindWriter
+        usdListUserAttributeWriters
 
     PRIVATE_HEADERS
         shadingModePxrRis_rfm_map.h

@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Pixar
+// Copyright 2017 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -21,15 +21,14 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "usdMaya/usdListShadingModes.h"
 
-#include "usdMaya/shadingModeRegistry.h"
+#include "usdMaya/usdListUserAttributeWriters.h"
+
+#include "usdMaya/userAttributeWriterRegistry.h"
 #include "usdMaya/registryHelper.h"
 
 #include <maya/MSyntax.h>
 #include <maya/MStatus.h>
-#include <maya/MArgList.h>
-#include <maya/MArgDatabase.h>
 #include <maya/MGlobal.h>
 #include <maya/MString.h>
 
@@ -37,55 +36,25 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-usdListShadingModes::usdListShadingModes() {
+usdListUserAttributeWriters::usdListUserAttributeWriters() {
 
 }
 
-usdListShadingModes::~usdListShadingModes() {
+usdListUserAttributeWriters::~usdListUserAttributeWriters() {
 
 }
 
 MStatus
-usdListShadingModes::doIt(const MArgList& args) {    
-    MStatus status;
-    MArgDatabase argData(syntax(), args, &status);
-
-    if (status != MS::kSuccess) {
-        MGlobal::displayError("Invalid parameters detected. Exiting.");
-        return status;
-    }
-
-    TfTokenVector v;
-    if (argData.isFlagSet("export")) {
-        v = PxrUsdMayaShadingModeRegistry::ListExporters();
-    } else if (argData.isFlagSet("import")) {
-        v = PxrUsdMayaShadingModeRegistry::ListImporters();
-    }
-
-    // Always include the "none" shading mode.
-    appendToResult(PxrUsdMayaShadingModeTokens->none.GetText());
-
-    for (const auto& e : v) {
-        appendToResult(e.GetText());
+usdListUserAttributeWriters::doIt(const MArgList& args) {    
+    for (const auto& e : PxrUsdMayaUserAttributeWriterRegistry::ListWriters()) {
+        appendToResult(e.GetString().c_str());
     }
 
     return MS::kSuccess;
 }
 
-MSyntax
-usdListShadingModes::createSyntax() {
-    MSyntax syntax;
-    syntax.addFlag("-ex", "-export", MSyntax::kNoArg);
-    syntax.addFlag("-im", "-import", MSyntax::kNoArg);
-
-    syntax.enableQuery(false);
-    syntax.enableEdit(false);
-
-    return syntax;
-}
-
-void* usdListShadingModes::creator() {
-    return new usdListShadingModes();
+void* usdListUserAttributeWriters::creator() {
+    return new usdListUserAttributeWriters();
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
