@@ -70,6 +70,9 @@ const GfVec4f MayaMeshWriter::_ColorSetDefaultRGBA = GfVec4f(
     MayaMeshWriter::_ColorSetDefaultRGB[2],
     MayaMeshWriter::_ColorSetDefaultAlpha);
 
+const std::vector<std::string> MayaMeshWriter::_MotionVectorNames = {
+    "velocityPV", "velocity", "v"
+};
 
 MayaMeshWriter::MayaMeshWriter(
         const MDagPath & iDag,
@@ -388,6 +391,16 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
     }
 
     for (const std::string& colorSetName: colorSetNames) {
+        if (std::find(
+            _MotionVectorNames.begin(),
+            _MotionVectorNames.end(),
+            colorSetName) != _MotionVectorNames.end()) {
+            _writeMotionVectors(primSchema,
+                                usdTime,
+                                finalMesh,
+                                colorSetName);
+            continue;
+        }
         bool isDisplayColor = false;
 
         if (colorSetName == PxrUsdMayaMeshColorSetTokens->DisplayColorColorSetName.GetString()) {
