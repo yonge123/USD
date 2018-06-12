@@ -428,8 +428,11 @@ protected:
     // Returns the rprim paths in the renderIndex rooted at \p indexPath.
     SdfPathVector _GetRprimSubtree(SdfPath const& indexPath) const;
 
-    // Returns whether or not the render delegate can handle material networks.
-    bool _CanComputeMaterialNetworks() const;
+    // Returns the material binding purpose from the renderer delegate.
+    TfToken _GetMaterialBindingPurpose() const;
+
+    // Returns the material context from the renderer delegate.
+    TfToken _GetMaterialNetworkSelector() const;
 
     // Returns \c true if \p usdPath is included in the scene delegate's
     // invised path list.
