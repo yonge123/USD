@@ -49,6 +49,7 @@
 #include <maya/MDrawContext.h>
 #include <maya/MDrawRequest.h>
 #include <maya/MObjectHandle.h>
+#include <maya/MMessage.h>
 #include <maya/MSelectionContext.h>
 #include <maya/MTypes.h>
 #include <maya/MUserData.h>
@@ -217,6 +218,11 @@ public:
             const GfMatrix4d& projectionMatrix,
             GfVec3d* hitPoint);
 
+    /// Returns whether soft selection for proxy shapes is currently enabled.
+    PXRUSDMAYAGL_API
+    inline bool GetObjectSoftSelectEnabled()
+    { return _objectSoftSelectEnabled; }
+
 private:
 
     friend class TfSingleton<UsdMayaGLBatchRenderer>;
@@ -251,8 +257,12 @@ private:
 
     /// Call to render all queued batches. May be called safely without
     /// performance hit when no batches are queued.
+    /// If \p view3d is null, then considers any isolated selection in that view
+    /// when determining visibility. If it's null, then assumes that there's no
+    /// isolated selection.
     void _RenderBatches(
             const MHWRender::MDrawContext* vp2Context,
+            const M3dView* view3d,
             const GfMatrix4d& worldToViewMatrix,
             const GfMatrix4d& projectionMatrix,
             const GfVec4d& viewport);
@@ -278,6 +288,21 @@ private:
     static void _OnMayaEndRenderCallback(
             MHWRender::MDrawContext& context,
             void* clientData);
+
+    /// Record changes to soft select options
+    ///
+    /// This callback is just so we don't have to query the soft selection
+    /// options through mel every time we have a selection event.
+    static void _OnSoftSelectOptionsChangedCallback(void* clientData);
+
+    /// Tries to get the viewport for the given draw context.
+    /// Returns true if the viewport was found, in which case it is returned in
+    /// the \p view parameter.
+    /// Returns false if there's not a 3D viewport (e.g. we're drawing into a
+    /// render view).
+    static bool _GetViewFromDrawContext(
+            const MHWRender::MDrawContext& context,
+            M3dView* view);
 
     /// Perform post-render state cleanup.
     ///
@@ -336,6 +361,8 @@ private:
     MUint64 _lastSelectionFrameStamp;
     bool _legacyRenderPending;
     bool _legacySelectionPending;
+    bool _objectSoftSelectEnabled;
+    MCallbackId _softSelectOptionsCallbackId;
 
     /// Type definition for a set of pointers to shape adapters.
     typedef std::unordered_set<PxrMayaHdShapeAdapter*> _ShapeAdapterSet;
@@ -396,13 +423,18 @@ private:
     /// occluded shapes will be included in the selection.
     HdRprimCollectionVector _GetIntersectionRprimCollections(
             _ShapeAdapterBucketsMap& bucketsMap,
+            const MSelectionList& isolatedObjects,
             const bool useDepthSelection) const;
 
     /// Populates the selection results using the given parameters by
     /// performing intersection tests against all of the shapes in the given
     /// \p bucketsMap.
+    /// If \p view3d is null, then considers any isolated selection in that view
+    /// when determining visibility. If it's null, then assumes that there's no
+    /// isolated selection.
     void _ComputeSelection(
             _ShapeAdapterBucketsMap& bucketsMap,
+            const M3dView* view3d,
             const GfMatrix4d& viewMatrix,
             const GfMatrix4d& projectionMatrix,
             const bool singleSelection);
