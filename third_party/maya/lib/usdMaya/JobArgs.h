@@ -54,6 +54,7 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
 
 #define PXRUSDMAYA_JOBEXPORTARGS_TOKENS \
     /* Dictionary keys */ \
+    (asClip) \
     (chaser) \
     (chaserArgs) \
     (defaultCameras) \
@@ -120,6 +121,7 @@ struct JobExportArgs
     const bool exportMeshUVs;
     const bool exportNurbsExplicitUV;
     const bool exportRefsAsInstanceable;
+    const bool exportAsClip;
     const TfToken exportSkin;
     const bool exportVisibility;
     const SdfPath materialCollectionsPath;

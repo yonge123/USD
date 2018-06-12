@@ -244,6 +244,9 @@ JobExportArgs::JobExportArgs(
         exportRefsAsInstanceable(
             _Boolean(userArgs,
                 PxrUsdExportJobArgsTokens->exportRefsAsInstanceable)),
+        exportAsClip(
+            _Boolean(userArgs,
+                PxrUsdExportJobArgsTokens->asClip)),
         exportSkin(
             _Token(userArgs,
                 PxrUsdExportJobArgsTokens->exportSkin,
@@ -309,6 +312,7 @@ operator <<(std::ostream& out, const JobExportArgs& exportArgs)
         << "mergeTransformAndShape: " << TfStringify(exportArgs.mergeTransformAndShape) << std::endl
         << "exportInstances: " << TfStringify(exportArgs.exportInstances) << std::endl
         << "timeInterval: " << exportArgs.timeInterval << std::endl
+        << "exportAsClip: " << TfStringify(exportArgs.exportAsClip) << std::endl
         << "excludeInvisible: " << TfStringify(exportArgs.excludeInvisible) << std::endl
         << "exportDefaultCameras: " << TfStringify(exportArgs.exportDefaultCameras) << std::endl
         << "exportSkin: " << TfStringify(exportArgs.exportSkin) << std::endl
@@ -404,6 +408,7 @@ const VtDictionary& JobExportArgs::GetDefaultDictionary()
                 PxrUsdExportJobArgsTokens->defaultLayer.GetString();
         d[PxrUsdExportJobArgsTokens->shadingMode] =
                 PxrUsdMayaShadingModeTokens->displayColor.GetString();
+        d[PxrUsdExportJobArgsTokens->asClip] = false;
 
         // plugInfo.json site defaults.
         // The defaults dict should be correctly-typed, so enable
