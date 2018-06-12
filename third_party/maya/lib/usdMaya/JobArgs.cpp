@@ -221,6 +221,8 @@ JobExportArgs::JobExportArgs(
                     UsdGeomTokens->bilinear,
                     UsdGeomTokens->none
                 })),
+        eulerFilter(
+            _Boolean(userArgs, PxrUsdExportJobArgsTokens->eulerFilter)),
         excludeInvisible(
             _Boolean(userArgs, PxrUsdExportJobArgsTokens->renderableOnly)),
         exportCollectionBasedBindings(
@@ -309,6 +311,7 @@ operator <<(std::ostream& out, const JobExportArgs& exportArgs)
         << "mergeTransformAndShape: " << TfStringify(exportArgs.mergeTransformAndShape) << std::endl
         << "exportInstances: " << TfStringify(exportArgs.exportInstances) << std::endl
         << "timeInterval: " << exportArgs.timeInterval << std::endl
+        << "eulerFilter: " << TfStringify(exportArgs.eulerFilter) << std::endl
         << "excludeInvisible: " << TfStringify(exportArgs.excludeInvisible) << std::endl
         << "exportDefaultCameras: " << TfStringify(exportArgs.exportDefaultCameras) << std::endl
         << "exportSkin: " << TfStringify(exportArgs.exportSkin) << std::endl
@@ -404,6 +407,7 @@ const VtDictionary& JobExportArgs::GetDefaultDictionary()
                 PxrUsdExportJobArgsTokens->defaultLayer.GetString();
         d[PxrUsdExportJobArgsTokens->shadingMode] =
                 PxrUsdMayaShadingModeTokens->displayColor.GetString();
+        d[PxrUsdExportJobArgsTokens->eulerFilter] = false;
 
         // plugInfo.json site defaults.
         // The defaults dict should be correctly-typed, so enable

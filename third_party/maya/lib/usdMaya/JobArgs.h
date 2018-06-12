@@ -58,6 +58,7 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
     (chaserArgs) \
     (defaultCameras) \
     (defaultMeshScheme) \
+    (eulerFilter) \
     (exportCollectionBasedBindings) \
     (exportColorSets) \
     (exportDisplayColor) \
@@ -110,6 +111,7 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdImportJobArgsTokens,
 struct JobExportArgs
 {
     const TfToken defaultMeshScheme;
+    const bool eulerFilter;
     const bool excludeInvisible;
     const bool exportCollectionBasedBindings;
     const bool exportColorSets;

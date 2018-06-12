@@ -93,6 +93,9 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-cls",
                    PxrUsdExportJobArgsTokens->exportColorSets.GetText(),
                    MSyntax::kBoolean);
+    syntax.addFlag("-ef" ,
+                   PxrUsdExportJobArgsTokens->eulerFilter.GetText(),
+                   MSyntax::kBoolean);
     syntax.addFlag("-dms",
                    PxrUsdExportJobArgsTokens->defaultMeshScheme.GetText(),
                    MSyntax::kString);
