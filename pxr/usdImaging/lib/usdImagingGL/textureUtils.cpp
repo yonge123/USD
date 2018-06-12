@@ -29,6 +29,7 @@
 
 #include "pxr/imaging/glf/glslfx.h"
 #include "pxr/imaging/glf/ptexTexture.h"
+#include "pxr/imaging/glf/udimTexture.h"
 #include "pxr/imaging/glf/textureHandle.h"
 #include "pxr/imaging/glf/textureRegistry.h"
 
@@ -150,12 +151,13 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
         filePath = TfToken(asset.GetAssetPath());
     }
 
-    const bool isPtex = GlfIsSupportedPtexTexture(filePath);
+    const bool isUdim = GlfIsSupportedUdimTexture(filePath);
 
-    if (!TfPathExists(filePath)) {
+    if (!TfPathExists(filePath) && !isUdim) {
+        const bool isPtex = GlfIsSupportedPtexTexture(filePath);
         if (isPtex) {
-            TF_WARN("Unable to find Texture '%s' with path '%s'. Fallback " 
-                    "textures are not supported for ptex", 
+            TF_WARN("Unable to find Texture '%s' with path '%s'. Fallback "
+                    "textures are not supported for ptex",
                     filePath.GetText(), usdPath.GetText());
             return HdTextureResource::ID(-1);
         } else {
@@ -212,6 +214,7 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
     }
 
     const bool isPtex = GlfIsSupportedPtexTexture(filePath);
+    const bool isUdim = isPtex ? false : GlfIsSupportedUdimTexture(filePath);
 
     HdWrap wrapS = _GetWrapS(usdPrim);
     HdWrap wrapT = _GetWrapT(usdPrim);
@@ -220,11 +223,12 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
     float memoryLimit = _GetMemoryLimit(usdPrim);
 
     TF_DEBUG(USDIMAGING_TEXTURES).Msg(
-            "Loading texture: id(%s), isPtex(%s)\n",
+            "Loading texture: id(%s), isPtex(%s), isUdim(%s)\n",
             usdPath.GetText(),
-            isPtex ? "true" : "false");
+            isPtex ? "true" : "false",
+            isUdim ? "true" : "false");
  
-    if (!TfPathExists(filePath)) {
+    if (!isUdim && !TfPathExists(filePath)) {
         TF_DEBUG(USDIMAGING_TEXTURES).Msg(
                 "File does not exist, returning nullptr");
         TF_WARN("Unable to find Texture '%s' with path '%s'.", 
@@ -240,7 +244,7 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
     texture->AddMemoryRequest(memoryLimit);
 
     texResource = HdTextureResourceSharedPtr(
-        new HdStSimpleTextureResource(texture, isPtex, wrapS, wrapT,
+        new HdStSimpleTextureResource(texture, isPtex, isUdim, wrapS, wrapT,
                                       minFilter, magFilter));
     timer.Stop();
 

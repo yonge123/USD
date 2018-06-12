@@ -291,7 +291,7 @@ HdStMaterial::_GetTextureResource(
             GlfTextureRegistry::GetInstance().GetTextureHandle(texPtr);
         texture->AddMemoryRequest(0); 
         texResource.reset(
-            new HdStSimpleTextureResource(texture, false));
+            new HdStSimpleTextureResource(texture, false, false));
         _fallbackTextureResources.push_back(texResource);
     } else {
         HdInstance<HdTextureResource::ID,

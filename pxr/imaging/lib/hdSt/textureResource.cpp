@@ -38,8 +38,8 @@ HdStTextureResource::~HdStTextureResource()
 }
 
 HdStSimpleTextureResource::HdStSimpleTextureResource(
-    GlfTextureHandleRefPtr const &textureHandle, bool isPtex):
-        HdStSimpleTextureResource(textureHandle, isPtex, 
+    GlfTextureHandleRefPtr const &textureHandle, bool isPtex, bool isUdim):
+        HdStSimpleTextureResource(textureHandle, isPtex, isUdim,
         /*wrapS*/ HdWrapUseMetaDict, /*wrapT*/ HdWrapUseMetaDict, 
         /*minFilter*/ HdMinFilterNearestMipmapLinear, 
         /*magFilter*/ HdMagFilterLinear)
@@ -47,7 +47,7 @@ HdStSimpleTextureResource::HdStSimpleTextureResource(
 }
 
 HdStSimpleTextureResource::HdStSimpleTextureResource(
-    GlfTextureHandleRefPtr const &textureHandle, bool isPtex, 
+    GlfTextureHandleRefPtr const &textureHandle, bool isPtex, bool isUdim,
         HdWrap wrapS, HdWrap wrapT, 
         HdMinFilter minFilter, HdMagFilter magFilter)
             : _textureHandle(textureHandle)
@@ -56,6 +56,7 @@ HdStSimpleTextureResource::HdStSimpleTextureResource(
             , _maxAnisotropy(16.0)
             , _sampler(0)
             , _isPtex(isPtex)
+            , _isUdim(isUdim)
 {
     if (!glGenSamplers) { // GL initialization guard for headless unit test
         return;
@@ -63,7 +64,7 @@ HdStSimpleTextureResource::HdStSimpleTextureResource(
 
     // When we are not using Ptex we will use samplers,
     // that includes both, bindless textures and no-bindless textures
-    if (!_isPtex) {
+    if (!_isPtex && !_isUdim) {
         // If the HdStSimpleTextureResource defines a wrap mode it will 
         // use it, otherwise it gives an opportunity to the texture to define
         // its own wrap mode. The fallback value is always HdWrapRepeat
@@ -137,6 +138,11 @@ bool HdStSimpleTextureResource::IsPtex() const
     return _isPtex; 
 }
 
+bool HdStSimpleTextureResource::IsUdim() const
+{
+    return _isUdim;
+}
+
 GLuint HdStSimpleTextureResource::GetTexelsTextureId() 
 {
     if (_isPtex) {
@@ -167,9 +173,9 @@ GLuint64EXT HdStSimpleTextureResource::GetTexelsTextureHandle()
         return 0;
     }
 
-    if (_isPtex) {
+    if (_isPtex || _isUdim) {
         return textureId ? glGetTextureHandleARB(textureId) : 0;
-    } 
+    }
 
     return textureId ? glGetTextureSamplerHandleARB(textureId, samplerId) : 0;
 }
