@@ -38,6 +38,49 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 PXRUSDMAYA_REGISTER_ADAPTOR_SCHEMA(MFn::kMesh, UsdGeomMesh);
 
+namespace {
+
+void _exportReferenceMesh(UsdGeomMesh& primSchema, MObject obj) {
+    MStatus status = MS::kSuccess;
+    MFnDependencyNode dNode(obj, &status);
+    if (!status) { return; }
+
+    auto referencePlug = dNode.findPlug("referenceObject", &status);
+    if (!status || referencePlug.isNull()) { return; }
+
+    MPlugArray conns;
+    referencePlug.connectedTo(conns, true, false);
+    if (conns.length() == 0) { return; }
+
+    auto referenceObject = conns[0].node();
+    if (!referenceObject.hasFn(MFn::kMesh)) { return; }
+
+    MFnMesh referenceMesh(referenceObject, &status);
+    if (!status) { return; }
+
+    const auto* mayaRawPoints = referenceMesh.getRawPoints(&status);
+    const auto numVertices = referenceMesh.numVertices();
+    VtArray<GfVec3f> points(numVertices);
+    for (auto i = decltype(numVertices){0}; i < numVertices; ++i) {
+        const auto floatIndex = i * 3;
+        points[i].Set(mayaRawPoints[floatIndex],
+                        mayaRawPoints[floatIndex + 1],
+                        mayaRawPoints[floatIndex + 2]);
+    }
+
+    static const TfToken _prefToken("Pref");
+    auto primVar = primSchema.CreatePrimvar(
+        _prefToken,
+        SdfValueTypeNames->Point3fArray,
+        UsdGeomTokens->varying);
+
+    if (!primVar) { return; }
+
+    primVar.GetAttr().Set(VtValue(points));
+}
+
+}
+
 const GfVec2f MayaMeshWriter::_DefaultUV = GfVec2f(0.f);
 
 const GfVec3f MayaMeshWriter::_ShaderDefaultRGB = GfVec3f(0.5);
@@ -80,6 +123,11 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
 
     // Write parent class attrs
     writeTransformAttrs(usdTime, primSchema);
+
+    // Exporting reference object only once
+    if (usdTime.IsDefault() && getArgs().exportReferenceObjects) {
+        _exportReferenceMesh(primSchema, getDagPath().node());
+    }
 
     // Write UsdSkel skeletal skinning data first, since this function will
     // determine whether we use the "input" or "final" mesh when exporting
