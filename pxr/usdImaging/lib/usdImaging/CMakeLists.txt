@@ -16,7 +16,6 @@ pxr_library(usdImaging
         usd
         usdGeom
         usdLux
-        usdRi
         usdShade
         ar
         ${Boost_PYTHON_LIBRARY}
@@ -43,6 +42,9 @@ pxr_library(usdImaging
         coneAdapter
         cubeAdapter
         cylinderAdapter
+        cylinderLightAdapter
+        diskLightAdapter
+        distantLightAdapter
         domeLightAdapter
         gprimAdapter
         instanceAdapter

@@ -63,7 +63,8 @@ public:
                     VtValue const& fallbackValue,
                     SdfPath const& connection=SdfPath(),
                     TfTokenVector const& samplerCoords=TfTokenVector(),
-                    bool isPtex = false);
+                    bool isPtex = false,
+                    bool isUdim = false);
 
     HD_API
     ~HdMaterialParam();
@@ -99,6 +100,9 @@ public:
     bool IsPtex() const;
 
     HD_API
+    bool IsUdim() const;
+
+    HD_API
     TfTokenVector const& GetSamplerCoordinates() const;
 
 private:
@@ -108,6 +112,7 @@ private:
     SdfPath _connection;
     TfTokenVector _samplerCoords;
     bool _isPtex;
+    bool _isUdim;
 };
 
 

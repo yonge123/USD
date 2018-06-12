@@ -29,6 +29,8 @@
 #include "pxr/pxr.h"
 #include "pxr/imaging/glf/api.h"
 
+#include "pxr/imaging/glf/texture.h"
+
 #include <string>
 #include <vector>
 #include <tuple>
@@ -50,6 +52,47 @@ GLF_API bool GlfIsSupportedUdimTexture(const std::string& imageFilePath);
 /// and checks for the existence of the standard 100 UDIM tiles.
 ///
 GLF_API std::vector<std::tuple<int, std::string>> GlfGetUdimTiles(const std::string& imageFilePath);
+
+class GlfUdimTexture;
+TF_DECLARE_WEAK_AND_REF_PTRS(GlfUdimTexture);
+
+class GlfUdimTexture : public GlfTexture {
+public:
+    GLF_API
+    virtual ~GlfUdimTexture();
+
+    GLF_API
+    static GlfUdimTextureRefPtr New(const TfToken &imageFilePath);
+
+    GLF_API
+    GlfTexture::BindingVector GetBindings(
+        const TfToken& identifier,
+        GLuint samplerName) const override;
+
+    GLF_API
+    VtDictionary GetTextureInfo() const override;
+
+protected:
+    GLF_API
+    GlfUdimTexture(const TfToken& imageFilePath);
+
+    GLF_API
+    void _FreeTextureObject();
+
+    GLF_API
+    void _OnSetMemoryRequested(size_t targetMemory) override;
+
+    GLF_API
+    void _ReadImage(size_t targetMemory);
+
+private:
+    TfToken _imagePath;
+    GLsizei _width = 0;
+    GLsizei _height = 0;
+    GLsizei _depth = 0;
+    GLint _format = 0;
+    GLuint _imageArray = 0;
+};
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
