@@ -94,6 +94,18 @@ usdTranslatorExport::writer(const MFileObject &file,
                 frameStride = theOption[1].asDouble();
             }
             else {
+                if (argName == "shadingMode") {
+                    TfToken shadingMode(theOption[1].asChar());
+                    if (!shadingMode.IsEmpty() &&
+                        PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode) == nullptr &&
+                        shadingMode != PxrUsdMayaShadingModeTokens->none) {
+                        MGlobal::displayError(TfStringPrintf(
+                                "No shadingMode '%s' found. "
+                                "Setting shadingMode='none'", 
+                                shadingMode.GetText()).c_str());
+                        return MS::kFailure;
+                    }
+                }
                 userArgs[argName] = PxrUsdMayaUtil::ParseArgumentValue(
                     argName, theOption[1].asChar(),
                     JobExportArgs::GetDefaultDictionary());
