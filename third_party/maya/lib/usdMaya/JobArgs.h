@@ -78,6 +78,7 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
     (pythonPostCallback) \
     (renderableOnly) \
     (renderLayerMode) \
+    (root) \
     (shadingMode) \
     /* renderLayerMode values */ \
     (defaultLayer) \
@@ -146,6 +147,10 @@ struct JobExportArgs
     /// Otherwise, animated data should be exported at times contained in the
     /// interval.
     const GfInterval timeInterval;
+
+    // Optionally specified path to use as top level prim in
+    // place of the scene root.
+    std::string exportRootPath;
 
     // This path is provided when dealing with variants
     // where a _BaseModel_ root path is used instead of

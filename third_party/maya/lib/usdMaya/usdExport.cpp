@@ -41,6 +41,7 @@
 #include <maya/MTime.h>
 
 #include "pxr/usd/usdGeom/tokens.h"
+#include "JobArgs.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -140,6 +141,9 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-ppc",
                    PxrUsdExportJobArgsTokens->pythonPostCallback.GetText(),
                    MSyntax::kString);
+    syntax.addFlag("-rt" ,
+                   PxrUsdExportJobArgsTokens->root.GetText(),
+                   MSyntax::kString);
 
     // These are additional flags under our control.
     syntax.addFlag("-fr", "-frameRange", MSyntax::kDouble, MSyntax::kDouble);
@@ -181,6 +185,21 @@ try
     if (status != MS::kSuccess) {
         MGlobal::displayError("Invalid parameters detected.  Exiting.");
         return status;
+    }
+
+    if (argData.isFlagSet("root")) {
+        MString stringVal;
+        argData.getFlagArgument("root", 0, stringVal);
+        std::string rootPath = stringVal.asChar();
+
+        if (!rootPath.empty()) {
+            MDagPath rootDagPath;
+            PxrUsdMayaUtil::GetDagPathByName(rootPath, rootDagPath);
+            if (!rootDagPath.isValid()) {
+                MGlobal::displayError(MString("Invalid dag path provided for root: ") + stringVal);
+                return MS::kFailure;
+            }
+        }
     }
 
     // Read all of the dictionary args first.

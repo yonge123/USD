@@ -296,7 +296,9 @@ JobExportArgs::JobExportArgs(
             _String(userArgs, PxrUsdExportJobArgsTokens->pythonPostCallback)),
 
         dagPaths(dagPaths),
-        timeInterval(timeInterval)
+        timeInterval(timeInterval),
+        exportRootPath(
+            _String(userArgs, PxrUsdExportJobArgsTokens->root))
 {
 }
 
@@ -404,6 +406,7 @@ const VtDictionary& JobExportArgs::GetDefaultDictionary()
                 PxrUsdExportJobArgsTokens->defaultLayer.GetString();
         d[PxrUsdExportJobArgsTokens->shadingMode] =
                 PxrUsdMayaShadingModeTokens->displayColor.GetString();
+        d[PxrUsdExportJobArgsTokens->root] = std::string();
 
         // plugInfo.json site defaults.
         // The defaults dict should be correctly-typed, so enable
