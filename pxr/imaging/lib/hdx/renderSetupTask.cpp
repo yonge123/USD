@@ -244,6 +244,7 @@ std::ostream& operator<<(std::ostream& out, const HdxRenderTaskParams& pv)
         << pv.tessLevel << " "
         << pv.drawingRange << " "
         << pv.enableHardwareShading << " "
+        << pv.displayImagePlanes << " "
         << pv.depthBiasEnable << " "
         << pv.depthBiasConstantFactor << " "
         << pv.depthBiasSlopeFactor << " "
@@ -276,6 +277,7 @@ bool operator==(const HdxRenderTaskParams& lhs, const HdxRenderTaskParams& rhs)
            lhs.tessLevel               == rhs.tessLevel               &&
            lhs.drawingRange            == rhs.drawingRange            &&
            lhs.enableHardwareShading   == rhs.enableHardwareShading   &&
+           lhs.displayImagePlanes      == rhs.displayImagePlanes      &&
            lhs.depthBiasEnable         == rhs.depthBiasEnable         &&
            lhs.depthBiasConstantFactor == rhs.depthBiasConstantFactor &&
            lhs.depthBiasSlopeFactor    == rhs.depthBiasSlopeFactor    &&

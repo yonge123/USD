@@ -173,6 +173,7 @@ void wrapGL()
             .def_readwrite("highlight", &Params::highlight)
             .def_readwrite("enableHardwareShading", &Params::enableHardwareShading)
             .def_readwrite("enableUsdDrawModes", &Params::enableUsdDrawModes)
+            .def_readwrite("displayImagePlanes", &Params::displayImagePlanes)
         ;
 
         TfPyContainerConversions::from_python_sequence<
