@@ -29,7 +29,8 @@
 #include "pxr/imaging/hd/material.h"
 
 #include "pxr/usd/usdShade/connectableAPI.h"
-#include "pxr/usd/usdRi/materialAPI.h"
+#include "pxr/usd/usdShade/material.h"
+#include "pxr/usd/usdShade/shader.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -74,6 +75,15 @@ UsdImagingMaterialAdapter::Populate(UsdPrim const& prim,
                        cachePath,
                        prim, shared_from_this());
     HD_PERF_COUNTER_INCR(UsdImagingTokens->usdPopulatedPrimCount);
+
+    // Also register this adapter on behalf of any descendent
+    // UsdShadeShader prims, since they are consumed to
+    // create the material network.
+    for (UsdPrim const& child: prim.GetDescendants()) {
+        if (child.IsA<UsdShadeShader>()) {
+            index->AddPrimInfo(child.GetPath(), child, shared_from_this());
+        }
+    }
 
     return prim.GetPath();
 }
@@ -128,8 +138,9 @@ UsdImagingMaterialAdapter::ProcessPropertyChange(UsdPrim const& prim,
                                                SdfPath const& cachePath,
                                                TfToken const& propertyName)
 {
-    // XXX: This doesn't get notifications for dependent nodes.
-    return HdChangeTracker::AllDirty;
+    // The only meaningful change is to dirty the computed resource,
+    // an HdMaterialNetwork.
+    return HdMaterial::DirtyResource;
 }
 
 /* virtual */
@@ -139,7 +150,19 @@ UsdImagingMaterialAdapter::MarkDirty(UsdPrim const& prim,
                                    HdDirtyBits dirty,
                                    UsdImagingIndexProxy* index)
 {
-    index->MarkSprimDirty(cachePath, dirty);
+    // If this is invoked on behalf of a Shader prim underneath a
+    // Material prim, walk up to the enclosing Material.
+    SdfPath materialCachePath = cachePath;
+    UsdPrim materialPrim = prim;
+    while (materialPrim && !materialPrim.IsA<UsdShadeMaterial>()) {
+        materialPrim = materialPrim.GetParent();
+        materialCachePath = materialCachePath.GetParentPath();
+    }
+    if (!TF_VERIFY(materialPrim)) {
+        return;
+    }
+
+    index->MarkSprimDirty(materialCachePath, dirty);
 }
 
 /* virtual */
@@ -254,25 +277,20 @@ void
 UsdImagingMaterialAdapter::_GetMaterialNetworkMap(UsdPrim const &usdPrim, 
     HdMaterialNetworkMap *materialNetworkMap) const
 {
-    // This function expects a usdPrim of type Material. However, it will
-    // only be able to fill the HdMaterialNetwork structures if the Material
-    // contains a material network with a riLook relationship. Otherwise, it
-    // will return the HdMaterialNetwork structures without any change.
-    UsdRiMaterialAPI m(usdPrim);
-
-    // For each network type:
-    // Resolve the binding to the first node which
-    // is usually the standin node in the case of a UsdRi.
-    // If it fails to provide a relationship then we are not in a 
-    // usdPrim that contains a correct terminal to a UsdShade Shader node.
-    if (UsdShadeShader surfaceShader = m.GetSurface()) {
-        walkGraph(surfaceShader,
-                  &materialNetworkMap->map[UsdImagingTokens->bxdf]);
+    UsdShadeMaterial material(usdPrim);
+    if (!material) {
+        TF_RUNTIME_ERROR("Expected material prim at <%s> to be of type "
+                         "'UsdShadeMaterial', not type '%s'; ignoring",
+                         usdPrim.GetPath().GetText(),
+                         usdPrim.GetTypeName().GetText());
+        return;
     }
-
-    if (UsdShadeShader dispShader = m.GetDisplacement()) {
-        walkGraph(dispShader,
-                  &materialNetworkMap->map[UsdImagingTokens->displacement]);
+    const TfToken context = _GetMaterialNetworkSelector();
+    if (UsdShadeShader s = material.ComputeSurfaceSource(context)) {
+        walkGraph(s, &materialNetworkMap->map[UsdImagingTokens->bxdf]);
+    }
+    if (UsdShadeShader d = material.ComputeDisplacementSource(context)) {
+        walkGraph(d, &materialNetworkMap->map[UsdImagingTokens->displacement]);
     }
 }
 
