@@ -76,9 +76,8 @@ void _exportReferenceMesh(UsdGeomMesh& primSchema, MObject obj) {
                         mayaRawPoints[floatIndex + 2]);
     }
 
-    static const TfToken _prefToken("Pref");
     UsdGeomPrimvar primVar = primSchema.CreatePrimvar(
-        _prefToken,
+        UsdUtilsGetReferencePositionName(),
         SdfValueTypeNames->Point3fArray,
         UsdGeomTokens->varying);
 
