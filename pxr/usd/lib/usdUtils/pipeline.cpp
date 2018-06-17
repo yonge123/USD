@@ -36,6 +36,7 @@
 #include "pxr/base/plug/registry.h"
 
 #include "pxr/base/tf/diagnostic.h"
+#include "pxr/base/tf/envSetting.h"
 #include "pxr/base/tf/staticTokens.h"
 #include "pxr/base/tf/stringUtils.h"
 
@@ -43,7 +44,8 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-
+TF_DEFINE_ENV_SETTING(USD_UTILS_REFERENCE_POSITION_NAME, "pref",
+                      "Sets the reference position's name returned from UsdUtilsGetReferencePositionName()");
 
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
@@ -238,7 +240,8 @@ TfToken UsdUtilsGetPrimaryUVSetName()
 
 TfToken UsdUtilsGetReferencePositionName()
 {
-    return TfToken("pref");
+    static const std::string referencePositionName = TfGetEnvSetting(USD_UTILS_REFERENCE_POSITION_NAME);
+    return TfToken(referencePositionName);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
