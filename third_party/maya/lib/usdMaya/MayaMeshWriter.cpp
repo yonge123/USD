@@ -43,38 +43,48 @@ namespace {
 void _exportReferenceMesh(UsdGeomMesh& primSchema, MObject obj) {
     MStatus status = MS::kSuccess;
     MFnDependencyNode dNode(obj, &status);
-    if (!status) { return; }
+    if (!status) {
+        return;
+    }
 
-    auto referencePlug = dNode.findPlug("referenceObject", &status);
+    MPlug referencePlug = dNode.findPlug("referenceObject", &status);
     if (!status || referencePlug.isNull()) { return; }
 
     MPlugArray conns;
     referencePlug.connectedTo(conns, true, false);
-    if (conns.length() == 0) { return; }
+    if (conns.length() == 0) {
+        return;
+    }
 
-    auto referenceObject = conns[0].node();
-    if (!referenceObject.hasFn(MFn::kMesh)) { return; }
+    MObject referenceObject = conns[0].node();
+    if (!referenceObject.hasFn(MFn::kMesh)) {
+        return;
+    }
 
     MFnMesh referenceMesh(referenceObject, &status);
-    if (!status) { return; }
+    if (!status) {
+        return;
+    }
 
-    const auto* mayaRawPoints = referenceMesh.getRawPoints(&status);
-    const auto numVertices = referenceMesh.numVertices();
+    const float* mayaRawPoints = referenceMesh.getRawPoints(&status);
+    const int numVertices = referenceMesh.numVertices();
     VtArray<GfVec3f> points(numVertices);
-    for (auto i = decltype(numVertices){0}; i < numVertices; ++i) {
-        const auto floatIndex = i * 3;
+    for (int i = 0; i < numVertices; ++i) {
+        const int floatIndex = i * 3;
         points[i].Set(mayaRawPoints[floatIndex],
                         mayaRawPoints[floatIndex + 1],
                         mayaRawPoints[floatIndex + 2]);
     }
 
     static const TfToken _prefToken("Pref");
-    auto primVar = primSchema.CreatePrimvar(
+    UsdGeomPrimvar primVar = primSchema.CreatePrimvar(
         _prefToken,
         SdfValueTypeNames->Point3fArray,
         UsdGeomTokens->varying);
 
-    if (!primVar) { return; }
+    if (!primVar) {
+        return;
+    }
 
     primVar.GetAttr().Set(VtValue(points));
 }
