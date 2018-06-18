@@ -44,8 +44,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-TF_DEFINE_ENV_SETTING(USD_UTILS_REFERENCE_POSITION_NAME, "pref",
-                      "Sets the reference position's name returned from UsdUtilsGetReferencePositionName()");
 
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
@@ -240,8 +238,7 @@ TfToken UsdUtilsGetPrimaryUVSetName()
 
 TfToken UsdUtilsGetReferencePositionName()
 {
-    static const std::string referencePositionName = TfGetEnvSetting(USD_UTILS_REFERENCE_POSITION_NAME);
-    return TfToken(referencePositionName);
+    return TfToken("pref");
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
