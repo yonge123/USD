@@ -48,7 +48,9 @@ void _exportReferenceMesh(UsdGeomMesh& primSchema, MObject obj) {
     }
 
     MPlug referencePlug = dNode.findPlug("referenceObject", &status);
-    if (!status || referencePlug.isNull()) { return; }
+    if (!status || referencePlug.isNull()) {
+        return;
+    }
 
     MPlugArray conns;
     referencePlug.connectedTo(conns, true, false);
