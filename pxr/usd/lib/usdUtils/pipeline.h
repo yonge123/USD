@@ -112,8 +112,7 @@ USDUTILS_API
 TfToken UsdUtilsGetPrimaryUVSetName();
 
 /// Returns the name of the reference position used on meshes and nurbs.
-/// By default the name is "pref" and configurable using
-/// the USD_UTILS_REFERENCE_POSITION_NAME environment variable.
+/// By default the name is "pref".
 USDUTILS_API
 TfToken UsdUtilsGetReferencePositionName();
 
