@@ -66,7 +66,7 @@ class testUsdExportPref(unittest.TestCase):
         plane2 = UsdGeom.Mesh.Get(stage, plane2Path)
         self.assertTrue(plane2.GetPrim().IsValid())
 
-        self.assertFalse(plane1.GetPrimvar(UsdUtils.GetReferencePositionName()).IsDefined())
+        self.assertFalse(plane1.GetPrimvar(UsdUtils.GetPrefName()).IsDefined())
 
         usdFile = os.path.abspath('UsdExportPref_pref.usda')
         cmds.usdExport(mergeTransformAndShape=True, exportReferenceObjects=True,
@@ -79,8 +79,8 @@ class testUsdExportPref(unittest.TestCase):
         plane2 = UsdGeom.Mesh.Get(stage, plane2Path)
         self.assertTrue(plane2.GetPrim().IsValid())
 
-        self.assertTrue(plane1.GetPrimvar(UsdUtils.GetReferencePositionName()).IsDefined())
-        self.assertEqual(plane1.GetPrimvar(UsdUtils.GetReferencePositionName()).Get(), plane2.GetPointsAttr().Get())
+        self.assertTrue(plane1.GetPrimvar(UsdUtils.GetPrefName()).IsDefined())
+        self.assertEqual(plane1.GetPrimvar(UsdUtils.GetPrefName()).Get(), plane2.GetPointsAttr().Get())
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

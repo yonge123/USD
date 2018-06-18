@@ -81,7 +81,7 @@ void _exportReferenceMesh(UsdGeomMesh& primSchema, MObject obj) {
     }
 
     UsdGeomPrimvar primVar = primSchema.CreatePrimvar(
-        UsdUtilsGetReferencePositionName(),
+        UsdUtilsGetPrefName(),
         SdfValueTypeNames->Point3fArray,
         UsdGeomTokens->varying);
 

@@ -236,7 +236,7 @@ TfToken UsdUtilsGetPrimaryUVSetName()
     return TfToken("st");
 }
 
-TfToken UsdUtilsGetReferencePositionName()
+TfToken UsdUtilsGetPrefName()
 {
     return TfToken("pref");
 }
