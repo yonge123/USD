@@ -36,13 +36,13 @@
 #include "pxr/base/plug/registry.h"
 
 #include "pxr/base/tf/diagnostic.h"
-#include "pxr/base/tf/envSetting.h"
 #include "pxr/base/tf/staticTokens.h"
 #include "pxr/base/tf/stringUtils.h"
 
 #include <string>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
 
 
 TF_DEFINE_PRIVATE_TOKENS(
