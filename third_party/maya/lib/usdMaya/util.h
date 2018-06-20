@@ -54,7 +54,6 @@
 #include <map>
 #include <set>
 #include <string>
-#include <regex>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
