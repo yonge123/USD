@@ -247,6 +247,14 @@ JobExportArgs::JobExportArgs(
         exportAsClip(
             _Boolean(userArgs,
                 PxrUsdExportJobArgsTokens->asClip)),
+        exportSkels(
+            _Token(userArgs,
+                PxrUsdExportJobArgsTokens->exportSkels,
+                PxrUsdExportJobArgsTokens->none,
+                {
+                    PxrUsdExportJobArgsTokens->auto_,
+                    PxrUsdExportJobArgsTokens->explicit_
+                })),
         exportSkin(
             _Token(userArgs,
                 PxrUsdExportJobArgsTokens->exportSkin,
@@ -265,6 +273,9 @@ JobExportArgs::JobExportArgs(
                 PxrUsdExportJobArgsTokens->mergeTransformAndShape)),
         normalizeNurbs(
             _Boolean(userArgs, PxrUsdExportJobArgsTokens->normalizeNurbs)),
+        stripNamespaces(
+            _Boolean(userArgs,
+                PxrUsdExportJobArgsTokens->stripNamespaces)),
         parentScope(
             _AbsolutePath(userArgs, PxrUsdExportJobArgsTokens->parentScope)),
         renderLayerMode(
@@ -282,7 +293,6 @@ JobExportArgs::JobExportArgs(
                 PxrUsdExportJobArgsTokens->shadingMode,
                 PxrUsdMayaShadingModeTokens->none,
                 PxrUsdMayaShadingModeRegistry::ListExporters())),
-
         chaserNames(
             _Vector<std::string>(userArgs, PxrUsdExportJobArgsTokens->chaser)),
         allChaserArgs(
@@ -315,6 +325,7 @@ operator <<(std::ostream& out, const JobExportArgs& exportArgs)
         << "exportAsClip: " << TfStringify(exportArgs.exportAsClip) << std::endl
         << "excludeInvisible: " << TfStringify(exportArgs.excludeInvisible) << std::endl
         << "exportDefaultCameras: " << TfStringify(exportArgs.exportDefaultCameras) << std::endl
+        << "exportSkels: " << TfStringify(exportArgs.exportSkels) << std::endl
         << "exportSkin: " << TfStringify(exportArgs.exportSkin) << std::endl
         << "exportMeshUVs: " << TfStringify(exportArgs.exportMeshUVs) << std::endl
         << "exportMaterialCollections: " << TfStringify(exportArgs.exportMaterialCollections) << std::endl
@@ -326,6 +337,7 @@ operator <<(std::ostream& out, const JobExportArgs& exportArgs)
         << "renderLayerMode: " << exportArgs.renderLayerMode << std::endl
         << "defaultMeshScheme: " << exportArgs.defaultMeshScheme << std::endl
         << "exportVisibility: " << TfStringify(exportArgs.exportVisibility) << std::endl
+        << "stripNamespaces: " << TfStringify(exportArgs.stripNamespaces) << std::endl
         << "parentScope: " << exportArgs.parentScope << std::endl;
 
     out << "melPerFrameCallback: " << exportArgs.melPerFrameCallback << std::endl
@@ -392,6 +404,9 @@ const VtDictionary& JobExportArgs::GetDefaultDictionary()
         d[PxrUsdExportJobArgsTokens->exportRefsAsInstanceable] = false;
         d[PxrUsdExportJobArgsTokens->exportSkin] =
                 PxrUsdExportJobArgsTokens->none.GetString();
+        d[PxrUsdExportJobArgsTokens->exportSkels] =
+                PxrUsdExportJobArgsTokens->none.GetString();
+        
         d[PxrUsdExportJobArgsTokens->exportUVs] = true;
         d[PxrUsdExportJobArgsTokens->exportVisibility] = true;
         d[PxrUsdExportJobArgsTokens->kind] = std::string();
@@ -408,6 +423,7 @@ const VtDictionary& JobExportArgs::GetDefaultDictionary()
                 PxrUsdExportJobArgsTokens->defaultLayer.GetString();
         d[PxrUsdExportJobArgsTokens->shadingMode] =
                 PxrUsdMayaShadingModeTokens->displayColor.GetString();
+        d[PxrUsdExportJobArgsTokens->stripNamespaces] = false;
         d[PxrUsdExportJobArgsTokens->asClip] = false;
 
         // plugInfo.json site defaults.
