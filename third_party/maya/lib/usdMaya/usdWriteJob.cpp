@@ -383,8 +383,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName, bool append)
         return false;
     }
 
-    if (!mJobCtx.getSkelBindingsWriter().WriteSkelBindings(mJobCtx.mStage,
-        mJobCtx.mArgs.stripNamespaces)) {
+    if (!mJobCtx.getSkelBindingsWriter().PostProcessSkelBindings(
+            mJobCtx.mStage)) {
         return false;
     }
 
@@ -541,7 +541,8 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
         // Get the usdVariantRootPrimPath (optionally filter by renderLayer prefix)
         MayaPrimWriterPtr firstPrimWriterPtr = *mJobCtx.mMayaPrimWriterList.begin();
         std::string firstPrimWriterPathStr(PxrUsdMayaUtil::MDagPathToUsdPathString(
-            firstPrimWriterPtr->getDagPath(), mJobCtx.mArgs.stripNamespaces));
+            firstPrimWriterPtr->getDagPath(),
+            mJobCtx.getArgs().stripNamespaces));
         usdVariantRootPrimPath = SdfPath(firstPrimWriterPathStr).GetPrefixes()[0];
     }
     else {
