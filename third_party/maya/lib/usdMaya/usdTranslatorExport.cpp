@@ -153,7 +153,7 @@ usdTranslatorExport::writer(const MFileObject &file,
         JobExportArgs jobArgs = JobExportArgs::CreateFromDictionary(
                 userArgs, dagPaths, timeInterval);
         for (unsigned int i=0; i < filteredTypes.length(); ++i) {
-            jobArgs.addFilteredTypeName(filteredTypes[i].asChar());
+            jobArgs.AddFilteredTypeName(filteredTypes[i].asChar());
         }
         usdWriteJob writeJob(jobArgs);
         if (writeJob.beginJob(fileName, append)) {
