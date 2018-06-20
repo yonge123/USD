@@ -171,15 +171,18 @@ struct JobExportArgs
     PXRUSDMAYA_API
     static const VtDictionary& GetDefaultDictionary();
 
+    /// Adds type name to filter out during export. This will also add all
+    /// inherited types (so if you exclude "constraint", it will also exclude
+    /// "parentConstraint")
     PXRUSDMAYA_API
-    void addFilteredTypeName(const MString& typeName);
+    void AddFilteredTypeName(const MString& typeName);
 
-    const std::set<unsigned int>& getFilteredTypeIds() const {
-        return filteredTypeIds;
+    const std::set<unsigned int>& GetFilteredTypeIds() const {
+        return _filteredTypeIds;
     }
 
-    void clearFilteredTypeIds() {
-        filteredTypeIds.clear();
+    void ClearFilteredTypeIds() {
+        _filteredTypeIds.clear();
     }
 
 private:
@@ -191,10 +194,10 @@ private:
 
     // Maya type ids to avoid exporting; these are
     // EXACT types, though the only exposed way to modify this,
-    // addFilteredTypeName, will also add all inherited types
+    // AddFilteredTypeName, will also add all inherited types
     // (so if you exclude "constraint", it will also exclude
     // "parentConstraint")
-    std::set<unsigned int> filteredTypeIds;
+    std::set<unsigned int> _filteredTypeIds;
 };
 
 PXRUSDMAYA_API

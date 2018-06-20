@@ -149,10 +149,10 @@ bool usdWriteJobCtx::needToTraverse(const MDagPath& curDag)
         }
     }
 
-    if (mArgs.getFilteredTypeIds().size() > 0) {
+    if (mArgs.GetFilteredTypeIds().size() > 0) {
         MFnDependencyNode mfnNode(ob);
-        if (mArgs.getFilteredTypeIds().find(mfnNode.typeId().id())
-                != mArgs.getFilteredTypeIds().end()) {
+        if (mArgs.GetFilteredTypeIds().find(mfnNode.typeId().id())
+                != mArgs.GetFilteredTypeIds().end()) {
             return false;
         }
     }
