@@ -112,6 +112,9 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-ac",
                    PxrUsdExportJobArgsTokens->asClip.GetText(),
                    MSyntax::kBoolean);
+    syntax.addFlag("-skl",
+                   PxrUsdExportJobArgsTokens->exportSkels.GetText(),
+                   MSyntax::kString);
     syntax.addFlag("-skn",
                    PxrUsdExportJobArgsTokens->exportSkin.GetText(),
                    MSyntax::kString);
