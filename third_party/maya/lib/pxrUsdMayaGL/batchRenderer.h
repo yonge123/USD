@@ -32,6 +32,7 @@
 #include "pxrUsdMayaGL/sceneDelegate.h"
 #include "pxrUsdMayaGL/shapeAdapter.h"
 #include "pxrUsdMayaGL/softSelectHelper.h"
+#include "usdMaya/diagnosticDelegate.h"
 
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/gf/vec3f.h"
@@ -180,27 +181,33 @@ public:
     /// Tests the object from the given shape adapter for intersection with
     /// a given view using the legacy viewport.
     ///
-    /// \p hitPoint yields the point of intersection if \c true is returned.
+    /// Returns a pointer to a hit set if there was an intersection, or nullptr
+    /// otherwise.
     ///
+    /// The returned HitSet is owned by the batch renderer, and it will be
+    /// erased at the next selection, so clients should make copies if they
+    /// need the data to persist.
     PXRUSDMAYAGL_API
-    bool TestIntersection(
+    const HdxIntersector::HitSet* TestIntersection(
             const PxrMayaHdShapeAdapter* shapeAdapter,
             M3dView& view,
-            const bool singleSelection,
-            GfVec3f* hitPoint);
+            const bool singleSelection);
 
     /// Tests the object from the given shape adapter for intersection with
     /// a given draw context in Viewport 2.0.
     ///
-    /// \p hitPoint yields the point of intersection if \c true is returned.
+    /// Returns a pointer to a hit set if there was an intersection, or nullptr
+    /// otherwise.
     ///
+    /// The returned HitSet is owned by the batch renderer, and it will be
+    /// erased at the next selection, so clients should make copies if they
+    /// need the data to persist.
     PXRUSDMAYAGL_API
-    bool TestIntersection(
+    const HdxIntersector::HitSet* TestIntersection(
             const PxrMayaHdShapeAdapter* shapeAdapter,
             const MHWRender::MSelectionInfo& selectInfo,
             const MHWRender::MDrawContext& context,
-            const bool singleSelection,
-            GfVec3f* hitPoint);
+            const bool singleSelection);
 
     /// Tests the contents of the given custom collection (previously obtained
     /// via PopulateCustomCollection) for intersection with the current OpenGL
@@ -218,10 +225,24 @@ public:
             const GfMatrix4d& projectionMatrix,
             GfVec3d* hitPoint);
 
+    /// Utility function for finding the nearest hit (in terms of ndcDepth) in
+    /// the given \p hitSet.
+    ///
+    /// If \p hitSet is nullptr or is empty, nullptr is returned. Otherwise a
+    /// pointer to the nearest hit in \p hitSet is returned.
+    PXRUSDMAYAGL_API
+    static const HdxIntersector::Hit* GetNearestHit(
+            const HdxIntersector::HitSet* hitSet);
+
     /// Returns whether soft selection for proxy shapes is currently enabled.
     PXRUSDMAYAGL_API
     inline bool GetObjectSoftSelectEnabled()
     { return _objectSoftSelectEnabled; }
+
+    /// Starts batching all diagnostics until the end of the current frame draw.
+    /// The batch renderer will automatically release the diagnostics when Maya
+    /// is done rendering the frame.
+    void StartBatchingFrameDiagnostics();
 
 private:
 
@@ -449,11 +470,10 @@ private:
     /// ended.
     std::unordered_set<std::string> _drawnMayaRenderPasses;
 
-    typedef std::unordered_map<SdfPath, HdxIntersector::Hit, SdfPath::Hash> HitBatch;
-
     /// A cache of all selection results gathered since the last selection was
-    /// computed.
-    HitBatch _selectResults;
+    /// computed. It maps delegate IDs to a HitSet of all of the intersection
+    /// hits for that delegate ID.
+    std::unordered_map<SdfPath, HdxIntersector::HitSet, SdfPath::Hash> _selectResults;
 
     /// Hydra engine objects used to render batches.
     ///
@@ -485,6 +505,12 @@ private:
     HdxSelectionTrackerSharedPtr _selectionTracker;
 
     UsdMayaGLSoftSelectHelper _softSelectHelper;
+
+    /// Shared diagnostic batch context. Used for cases where we want to batch
+    /// diagnostics across multiple function calls, e.g., batching all of the
+    /// Sync() diagnostics across all prepareForDraw() callbacks in a single
+    /// frame.
+    std::unique_ptr<PxrUsdMayaDiagnosticBatchContext> _sharedDiagBatchCtx;
 };
 
 PXRUSDMAYAGL_API_TEMPLATE_CLASS(TfSingleton<UsdMayaGLBatchRenderer>);
