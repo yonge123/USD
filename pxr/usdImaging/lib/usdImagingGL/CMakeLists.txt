@@ -76,6 +76,7 @@ pxr_library(usdImagingGL
     RESOURCE_FILES
         plugInfo.json
         shaders/drawMode.glslfx
+        shaders/previewSurface.glslfx
 )
 
 if (X11_FOUND OR APPLE)
