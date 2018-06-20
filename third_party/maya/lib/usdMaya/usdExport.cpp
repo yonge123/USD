@@ -339,7 +339,7 @@ try
     for (unsigned int i=0; i < numFilteredTypes; i++) {
         MArgList tmpArgList;
         argData.getFlagArgumentList("filterTypes", i, tmpArgList);
-        jobArgs.addFilteredTypeName(tmpArgList.asString(0));
+        jobArgs.AddFilteredTypeName(tmpArgList.asString(0));
     }
 
     // Create WriteJob object
