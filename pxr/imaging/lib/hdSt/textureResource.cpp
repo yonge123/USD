@@ -37,27 +37,31 @@ HdStTextureResource::~HdStTextureResource()
     // nothing
 }
 
-HdStSimpleTextureResource::HdStSimpleTextureResource(
-    GlfTextureHandleRefPtr const &textureHandle, bool isPtex, bool isUdim):
-        HdStSimpleTextureResource(textureHandle, isPtex, isUdim,
-        /*wrapS*/ HdWrapUseMetaDict, /*wrapT*/ HdWrapUseMetaDict, 
-        /*minFilter*/ HdMinFilterNearestMipmapLinear, 
-        /*magFilter*/ HdMagFilterLinear)
-{
-}
 
 HdStSimpleTextureResource::HdStSimpleTextureResource(
-    GlfTextureHandleRefPtr const &textureHandle, bool isPtex, bool isUdim,
-        HdWrap wrapS, HdWrap wrapT, 
-        HdMinFilter minFilter, HdMagFilter magFilter)
-            : _textureHandle(textureHandle)
-            , _texture(textureHandle->GetTexture())
-            , _borderColor(0.0,0.0,0.0,0.0)
-            , _maxAnisotropy(16.0)
-            , _sampler(0)
-            , _isPtex(isPtex)
-            , _isUdim(isUdim)
+                                    GlfTextureHandleRefPtr const &textureHandle,
+                                    bool isPtex,
+                                    bool isUdim,
+                                    HdWrap wrapS,
+                                    HdWrap wrapT,
+                                    HdMinFilter minFilter,
+                                    HdMagFilter magFilter,
+                                    size_t memoryRequest)
+ : HdStTextureResource()
+ , _textureHandle(textureHandle)
+ , _texture(textureHandle->GetTexture())
+ , _borderColor(0.0,0.0,0.0,0.0)
+ , _maxAnisotropy(16.0)
+ , _sampler(0)
+ , _isPtex(isPtex)
+ , _isUdim(isUdim)
+ , _memoryRequest(memoryRequest)
 {
+    // Unconditionally add the memory request, before the early function exit
+    // so that the destructor doesn't need to figure out if the request was
+    // added or not.
+    _textureHandle->AddMemoryRequest(_memoryRequest);
+
     if (!glGenSamplers) { // GL initialization guard for headless unit test
         return;
     }
@@ -125,6 +129,8 @@ HdStSimpleTextureResource::HdStSimpleTextureResource(
 
 HdStSimpleTextureResource::~HdStSimpleTextureResource() 
 { 
+    _textureHandle->DeleteMemoryRequest(_memoryRequest);
+
     if (!_isPtex) {
         if (!glDeleteSamplers) { // GL initialization guard for headless unit test
             return;
