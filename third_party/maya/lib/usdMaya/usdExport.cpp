@@ -102,6 +102,9 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-vis",
                    PxrUsdExportJobArgsTokens->exportVisibility.GetText(),
                    MSyntax::kBoolean);
+    syntax.addFlag("-skl",
+                   PxrUsdExportJobArgsTokens->exportSkels.GetText(),
+                   MSyntax::kString);
     syntax.addFlag("-skn",
                    PxrUsdExportJobArgsTokens->exportSkin.GetText(),
                    MSyntax::kString);

@@ -316,8 +316,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName, bool append)
         return false;
     }
 
-    if (!mJobCtx.getSkelBindingsWriter().WriteSkelBindings(mJobCtx.mStage,
-        mJobCtx.mArgs.stripNamespaces)) {
+    if (!mJobCtx.getSkelBindingsWriter().PostProcessSkelBindings(
+            mJobCtx.mStage)) {
         return false;
     }
 
