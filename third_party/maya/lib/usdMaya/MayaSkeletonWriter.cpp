@@ -178,11 +178,6 @@ MayaSkeletonWriter::GetSkeletonInstancePath(
     return rootJointPath;
 }
 
-SdfPath
-MayaSkeletonWriter::GetAnimationPath(const MDagPath& rootJoint, bool stripNamespaces)
-{
-    return GetSkeletonPath(rootJoint, stripNamespaces).AppendChild(_tokens->Animation);
-}
 
 /// Gets all of the joints rooted at the given dag path.
 /// If \p includeRoot, the set of joints includes the given dag path as well.
