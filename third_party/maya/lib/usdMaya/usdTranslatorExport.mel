@@ -147,7 +147,7 @@ global proc int usdTranslatorExport (string $parent,
         checkBox -l "Renderable Only" renderableOnlyCheckBox;
 
         textFieldGrp -l "Filtered Node Types"
-            -annotation ("Do not filter nodes of this type, or their children;\n" +
+            -annotation ("Do not export nodes of this type, or their children;\n" +
                          "specify multiple types by separating with comma: 'constraint,place3dTexture'")
             filterTypesTextField;
          
