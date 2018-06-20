@@ -437,8 +437,8 @@ const VtDictionary& JobExportArgs::GetDefaultDictionary()
                 PxrUsdExportJobArgsTokens->defaultLayer.GetString();
         d[PxrUsdExportJobArgsTokens->shadingMode] =
                 PxrUsdMayaShadingModeTokens->displayColor.GetString();
-        d[PxrUsdExportJobArgsTokens->eulerFilter] = false;
         d[PxrUsdExportJobArgsTokens->stripNamespaces] = false;
+        d[PxrUsdExportJobArgsTokens->eulerFilter] = false;
         d[PxrUsdExportJobArgsTokens->exportReferenceObjects] = false;
         d[PxrUsdExportJobArgsTokens->root] = std::string();
         d[PxrUsdExportJobArgsTokens->asClip] = false;
