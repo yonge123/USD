@@ -94,11 +94,11 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-cls",
                    PxrUsdExportJobArgsTokens->exportColorSets.GetText(),
                    MSyntax::kBoolean);
-    syntax.addFlag("-ef" ,
-                   PxrUsdExportJobArgsTokens->eulerFilter.GetText(),
-                   MSyntax::kBoolean);
     syntax.addFlag("-sn",
                    PxrUsdExportJobArgsTokens->stripNamespaces.GetText(),
+                   MSyntax::kBoolean);
+    syntax.addFlag("-ef" ,
+                   PxrUsdExportJobArgsTokens->eulerFilter.GetText(),
                    MSyntax::kBoolean);
     syntax.addFlag("-dms",
                    PxrUsdExportJobArgsTokens->defaultMeshScheme.GetText(),
@@ -112,6 +112,9 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-ac",
                    PxrUsdExportJobArgsTokens->asClip.GetText(),
                    MSyntax::kBoolean);
+    syntax.addFlag("-skl",
+                   PxrUsdExportJobArgsTokens->exportSkels.GetText(),
+                   MSyntax::kString);
     syntax.addFlag("-skn",
                    PxrUsdExportJobArgsTokens->exportSkin.GetText(),
                    MSyntax::kString);

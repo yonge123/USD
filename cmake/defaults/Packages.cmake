@@ -166,6 +166,10 @@ if (PXR_BUILD_ALEMBIC_PLUGIN)
     endif()
 endif()
 
+if (PXR_BUILD_MATERIALX_PLUGIN)
+    find_package(MaterialX REQUIRED)
+endif()
+
 # ----------------------------------------------
 
 set(BUILD_SHARED_LIBS "${build_shared_libs}")

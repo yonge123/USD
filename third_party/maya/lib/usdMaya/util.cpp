@@ -1168,7 +1168,7 @@ PxrUsdMayaUtil::MDagPathToUsdPathString(const MDagPath& dagPath, bool stripNames
     itEnd = std::remove(itBegin, itEnd, '>');
     // Replacing MDagPath separators with the USD ones.
     std::replace(itBegin, itEnd, '|', '/');
-    std::replace(itBegin, itEnd, ':', '_');
+    std::replace(itBegin, itEnd, ':', '_'); // replace namespace ":" with "_"
     return std::string(itBegin, itEnd);
 }
 
