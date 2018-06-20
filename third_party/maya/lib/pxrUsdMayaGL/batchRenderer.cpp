@@ -884,7 +884,24 @@ UsdMayaGLBatchRenderer::TestIntersection(
     M3dView view;
     const bool hasView = _GetViewFromDrawContext(context, &view);
 
-    if (_UpdateSelectionFrameStamp(context.getFrameStamp())) {
+    // FIXME: fix so we don't re-run the same selection query
+    // for every single proxyShape .getFrameStep() does not
+    // uniquely identify the selection event, though - just
+    // the last render. We would either need to also save all
+    // the selection info, do something similar to what
+    // is done for legacy selection.
+    // Going to leave this to Pixar to fix for now, though.
+    // To fix properly, can't just use _UpdateLegacySelectionPending, as that
+    // has the same basic problem - it does not update on every new click,
+    // only on every render.  Only way I can think of to do this "right" is to:
+    //   1) in addition to frameStamp (or selectionPending), also store
+    //      selection info - ie, ray, or selection rect, whether we're doing
+    //      single or drag select, etc
+    //   2) Either also store all selection settings (mask, soft select, etc)
+    //      or add callbacks to selection-related events, that reset the
+    //      frameStamp / selectionPending whenever selection options change
+//    if (_UpdateSelectionFrameStamp(context.getFrameStamp())) {
+    {
         _ComputeSelection(_shapeAdapterBuckets,
                           hasView ? &view : nullptr,
                           viewMatrix,
