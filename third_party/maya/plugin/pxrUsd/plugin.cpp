@@ -31,6 +31,7 @@
 #include "pxrUsdMayaGL/proxyDrawOverride.h"
 #include "pxrUsdMayaGL/proxyShapeUI.h"
 
+#include "usdMaya/diagnosticDelegate.h"
 #include "usdMaya/pluginStaticData.h"
 #include "usdMaya/undoHelperCmd.h"
 #include "usdMaya/usdImport.h"
@@ -202,6 +203,8 @@ MStatus initializePlugin(
         status.perror("pxrUsd: unable to register USD Export translator.");
     }
 
+    PxrUsdMayaDiagnosticDelegate::InstallDelegate();
+
     return status;
 }
 
@@ -265,6 +268,8 @@ MStatus uninitializePlugin(
 
     status = plugin.deregisterData(_data.stageData.typeId);
     CHECK_MSTATUS(status);
+
+    PxrUsdMayaDiagnosticDelegate::RemoveDelegate();
 
     return status;
 }
