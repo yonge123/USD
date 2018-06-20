@@ -64,6 +64,7 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
     (exportInstances) \
     (exportMaterialCollections) \
     (exportRefsAsInstanceable) \
+    (exportSkels) \
     (exportSkin) \
     (exportUVs) \
     (exportVisibility) \
@@ -79,11 +80,12 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
     (renderableOnly) \
     (renderLayerMode) \
     (shadingMode) \
+    (stripNamespaces) \
     /* renderLayerMode values */ \
     (defaultLayer) \
     (currentLayer) \
     (modelingVariant) \
-    /* exportSkin values */ \
+    /* exportSkels/exportSkin values */ \
     (none) \
     ((auto_, "auto")) \
     ((explicit_, "explicit"))
@@ -120,11 +122,13 @@ struct JobExportArgs
     const bool exportMeshUVs;
     const bool exportNurbsExplicitUV;
     const bool exportRefsAsInstanceable;
+    const TfToken exportSkels;
     const TfToken exportSkin;
     const bool exportVisibility;
     const SdfPath materialCollectionsPath;
     const bool mergeTransformAndShape;
     const bool normalizeNurbs;
+    const bool stripNamespaces;
     const SdfPath parentScope;
     const TfToken renderLayerMode;
     const TfToken rootKind;
