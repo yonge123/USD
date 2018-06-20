@@ -69,6 +69,7 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
     (exportInstances) \
     (exportMaterialCollections) \
     (exportRefsAsInstanceable) \
+    (exportSkels) \
     (exportSkin) \
     (exportUVs) \
     (exportVisibility) \
@@ -91,7 +92,7 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
     (defaultLayer) \
     (currentLayer) \
     (modelingVariant) \
-    /* exportSkin values */ \
+    /* exportSkels/exportSkin values */ \
     (none) \
     ((auto_, "auto")) \
     ((explicit_, "explicit"))
@@ -131,6 +132,7 @@ struct JobExportArgs
     const bool exportRefsAsInstanceable;
     const bool exportReferenceObjects;
     const bool exportAsClip;
+    const TfToken exportSkels;
     const TfToken exportSkin;
     const bool exportVisibility;
     const SdfPath materialCollectionsPath;
