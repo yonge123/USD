@@ -198,6 +198,7 @@ private:
     void _CreateRenderTasks();
     void _CreateSelectionTask();
     void _CreateLightingTask();
+    void _CreateShadowTask();
 
     // A private scene delegate member variable backs the tasks this
     // controller generates. To keep _Delegate simple, the containing class
@@ -246,6 +247,7 @@ private:
     SdfPath _idRenderTaskId;
     SdfPath _selectionTaskId;
     SdfPath _simpleLightTaskId;
+    SdfPath _shadowTaskId;
 
     // Generated cameras
     SdfPath _cameraId;
