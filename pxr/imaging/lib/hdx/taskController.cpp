@@ -115,7 +115,7 @@ HdxTaskController::_CreateCamera()
         &_delegate, _cameraId);
 
     _delegate.SetParameter(_cameraId, HdCameraTokens->windowPolicy,
-        VtValue());
+        VtValue(CameraUtilFit));
     _delegate.SetParameter(_cameraId, HdCameraTokens->worldToViewMatrix,
         VtValue(GfMatrix4d(1.0)));
     _delegate.SetParameter(_cameraId, HdCameraTokens->projectionMatrix,
@@ -523,6 +523,19 @@ HdxTaskController::SetCameraClipPlanes(
             clipPlanes);
         GetRenderIndex()->GetChangeTracker().MarkSprimDirty(_cameraId,
             HdCamera::DirtyClipPlanes);
+    }
+}
+
+void
+HdxTaskController::SetCameraWindowPolicy(CameraUtilConformWindowPolicy windowPolicy) {
+    const auto oldPolicy = _delegate.GetParameter<CameraUtilConformWindowPolicy>(
+        _cameraId, HdCameraTokens->windowPolicy);
+
+    if (oldPolicy != windowPolicy) {
+        _delegate.SetParameter(_cameraId, HdCameraTokens->windowPolicy,
+            windowPolicy);
+        GetRenderIndex()->GetChangeTracker().MarkSprimDirty(_cameraId,
+            HdCamera::DirtyWindowPolicy);
     }
 }
 
