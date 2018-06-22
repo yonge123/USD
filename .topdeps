@@ -24,4 +24,5 @@ tg/simple_features/curve_issues_in_usdview
 tg/simple_features/separate_third_party_builds
 tg/simple_features/maya_export_for_clips
 tg/simple_features/maya_motion_vector_export
+tg/simple_features/imaging_shadow_support
 houdini_variant_selection_fix
