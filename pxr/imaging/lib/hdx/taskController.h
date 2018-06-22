@@ -35,6 +35,8 @@
 #include "pxr/imaging/hd/sceneDelegate.h"
 #include "pxr/imaging/hd/task.h"
 
+#include "pxr/imaging/cameraUtil/conformWindow.h"
+
 #include "pxr/imaging/glf/simpleLightingContext.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/base/tf/staticTokens.h"
@@ -136,6 +138,10 @@ public:
     /// Set the camera clip planes.
     HDX_API
     void SetCameraClipPlanes(std::vector<GfVec4d> const& clipPlanes);
+
+    /// Set the camera window policy.
+    HDX_API
+    void SetCameraWindowPolicy(CameraUtilConformWindowPolicy windowPolicy);
 
     /// -------------------------------------------------------
     /// Picking API
