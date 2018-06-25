@@ -28,7 +28,7 @@
 
 #include "pxr/pxr.h"
 #include "pxr/usd/usdSkel/api.h"
-#include "pxr/usd/usdGeom/imageable.h"
+#include "pxr/usd/usdGeom/boundable.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usdSkel/tokens.h"
@@ -54,15 +54,13 @@ class SdfAssetPath;
 
 /// \class UsdSkelSkeleton
 ///
-/// Describes a skeleton. A Skeleton is responsible both for
-/// establishing the _topology_ of a skeleton, as well as for identifying a
-/// rest pose.
+/// Describes a skeleton. 
 /// 
 /// See the extended \ref UsdSkel_Skeleton "Skeleton Schema" documentation for
 /// more information.
 /// 
 ///
-class UsdSkelSkeleton : public UsdGeomImageable
+class UsdSkelSkeleton : public UsdGeomBoundable
 {
 public:
     /// Compile-time constant indicating whether or not this class corresponds
@@ -81,7 +79,7 @@ public:
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
     explicit UsdSkelSkeleton(const UsdPrim& prim=UsdPrim())
-        : UsdGeomImageable(prim)
+        : UsdGeomBoundable(prim)
     {
     }
 
@@ -89,7 +87,7 @@ public:
     /// Should be preferred over UsdSkelSkeleton(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
     explicit UsdSkelSkeleton(const UsdSchemaBase& schemaObj)
-        : UsdGeomImageable(schemaObj)
+        : UsdGeomBoundable(schemaObj)
     {
     }
 
