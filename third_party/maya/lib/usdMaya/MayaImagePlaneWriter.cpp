@@ -7,6 +7,8 @@
 #include <maya/MFnDependencyNode.h>
 #include <maya/MRenderUtil.h>
 
+#include "usdMaya/adaptor.h"
+#include "usdMaya/primWriterRegistry.h"
 #include "usdMaya/usdWriteJobCtx.h"
 #include "usdMaya/writeUtil.h"
 
@@ -24,6 +26,8 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+PXRUSDMAYA_REGISTER_WRITER(imagePlane, MayaImagePlaneWriter);
+PXRUSDMAYA_REGISTER_ADAPTOR_SCHEMA(imagePlane, UsdGeomImagePlane);
 
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
