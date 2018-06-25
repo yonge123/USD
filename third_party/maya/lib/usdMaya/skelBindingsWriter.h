@@ -45,11 +45,11 @@ class PxrUsdMaya_SkelBindingsWriter {
 public:
     PxrUsdMaya_SkelBindingsWriter();
 
-    /// Mark \p path as containing bindings utilizing the skeleton instance
-    /// at \p selInstancePath.
+    /// Mark \p path as containing bindings utilizing the skeleton
+    /// at \p skelPath.
     /// Bindings are marked so that SkelRoots may be post-processed.
     void MarkBindings(const SdfPath& path,
-                      const SdfPath& skelInstancePath,
+                      const SdfPath& skelPath,
                       const TfToken& config);
 
     /// Performs final processing for skel bindings.
@@ -61,7 +61,7 @@ private:
 
     using _Entry = std::pair<SdfPath,TfToken>;
 
-    std::unordered_map<SdfPath, _Entry, SdfPath::Hash> _bindingToInstanceMap;
+    std::unordered_map<SdfPath, _Entry, SdfPath::Hash> _bindingToSkelMap;
 };
 
 
