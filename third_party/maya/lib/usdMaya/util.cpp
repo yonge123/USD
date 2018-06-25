@@ -45,6 +45,7 @@
 #include <maya/MFnNumericAttribute.h>
 #include <maya/MFnTypedAttribute.h>
 #include <maya/MFnSet.h>
+#include <maya/MGlobal.h>
 #include <maya/MItDependencyGraph.h>
 #include <maya/MItDependencyNodes.h>
 #include <maya/MItMeshFaceVertex.h>
@@ -191,15 +192,7 @@ bool PxrUsdMayaUtil::isAncestorDescendentRelationship(const MDagPath & path1,
 
     descendent.pop(diff);
 
-    bool ret = (ancestor == descendent);
-
-    if (ret)
-    {
-        MString err = path1.fullPathName() + " and ";
-        err += path2.fullPathName() + " have parenting relationships";
-        MGlobal::displayError(err);
-    }
-    return ret;
+    return ancestor == descendent;
 }
 
 
@@ -388,7 +381,7 @@ bool PxrUsdMayaUtil::isAnimated(MObject & object, bool checkParent)
 
     if (stat!= MS::kSuccess)
     {
-        MGlobal::displayError("Unable to create DG iterator ");
+        TF_RUNTIME_ERROR("Unable to create DG iterator");
     }
 
     // MAnimUtil::isAnimated(node) will search the history of the node
@@ -746,9 +739,10 @@ _getMayaShadersColor(
         }
 
         if (shaderObjs[i].isNull()) {
-            MGlobal::displayError("Invalid Maya Shader Object at index: " +
-                                  MString(TfStringPrintf("%d", i).c_str()) +
-                                  ". Unable to retrieve ShaderBaseColor.");
+            TF_RUNTIME_ERROR(
+                    "Invalid Maya shader object at index %d. "
+                    "Unable to retrieve shader base color.",
+                    i);
             continue;
         }
 
@@ -765,9 +759,10 @@ _getMayaShadersColor(
                 AlphaData ?  &(*AlphaData)[i] : NULL);
 
         if (!gotValues) {
-            MGlobal::displayError("Failed to get shaders colors at index: " +
-                                  MString(TfStringPrintf("%d", i).c_str()) +
-                                  ". Unable to retrieve ShaderBaseColor.");
+            TF_RUNTIME_ERROR(
+                    "Failed to get shaders colors at index %d. "
+                    "Unable to retrieve shader base color.",
+                    i);
         }
     }
 }
@@ -1178,8 +1173,9 @@ bool PxrUsdMayaUtil::GetBoolCustomData(UsdAttribute obj, TfToken key, bool defau
         if (data.IsHolding<bool>()) {
             return data.Get<bool>();
         } else {
-            MGlobal::displayError("Custom Data: " + MString(key.GetText()) +
-                                    " is not of type bool. Skipping...");
+            TF_RUNTIME_ERROR(
+                    "customData at key '%s' is not of type bool. Skipping...",
+                    key.GetText());
         }
     }
     return returnValue;
@@ -1498,4 +1494,69 @@ PxrUsdMayaUtil::ParseArgumentValue(
     }
 
     return VtValue();
+}
+
+std::vector<std::string>
+PxrUsdMayaUtil::GetAllAncestorMayaNodeTypes(const std::string& ty)
+{
+    const MString inheritedTypesMel = TfStringPrintf(
+            "nodeType -isTypeName -inherited %s", ty.c_str()).c_str();
+    MStringArray inheritedTypes;
+    if (!MGlobal::executeCommand(
+            inheritedTypesMel, inheritedTypes, false, false)) {
+        TF_RUNTIME_ERROR(
+                "Failed to query ancestor types of '%s' via MEL (does the type "
+                "exist?)",
+                ty.c_str());
+        return std::vector<std::string>();
+    }
+
+#if MAYA_API_VERSION < 201800
+    // In older versions of Maya, the MEL command
+    // "nodeType -isTypeName -inherited" returns an empty array (but does not
+    // fail) for some built-in types.
+    // The buggy built-in cases from Maya 2016 have been hard-coded below with
+    // the appropriate ancestors list. (The cases below all work with 2018.)
+    if (inheritedTypes.length() == 0) {
+        if (ty == "file") {
+            return {"shadingDependNode", "texture2d", "file"};
+        }
+        else if (ty == "mesh") {
+            return {
+                "containerBase", "entity", "dagNode", "shape", "geometryShape",
+                "deformableShape", "controlPoint", "surfaceShape", "mesh"
+            };
+        }
+        else if (ty == "nurbsCurve") {
+            return {
+                "containerBase", "entity", "dagNode", "shape", "geometryShape",
+                "deformableShape", "controlPoint", "curveShape", "nurbsCurve"
+            };
+        }
+        else if (ty == "nurbsSurface") {
+            return {
+                "containerBase", "entity", "dagNode", "shape", "geometryShape",
+                "deformableShape", "controlPoint", "surfaceShape",
+                "nurbsSurface"
+            };
+        }
+        else if (ty == "time") {
+            return {"time"};
+        }
+        else {
+            TF_RUNTIME_ERROR(
+                    "Type '%s' exists, but MEL returned empty ancestor type "
+                    "information for it",
+                    ty.c_str());
+            return {ty}; // Best that we can do without ancestor type info.
+        }
+    }
+#endif
+
+    std::vector<std::string> inheritedTypesVector;
+    inheritedTypesVector.reserve(inheritedTypes.length());
+    for (unsigned int i = 0; i < inheritedTypes.length(); ++i) {
+        inheritedTypesVector.push_back(inheritedTypes[i].asChar());
+    }
+    return inheritedTypesVector;
 }
