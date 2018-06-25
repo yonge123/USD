@@ -24,7 +24,7 @@
 #include "pxr/pxr.h"
 #include "usdMaya/usdImport.h"
 
-#include "usdMaya/JobArgs.h"
+#include "usdMaya/jobArgs.h"
 #include "usdMaya/shadingModeRegistry.h"
 #include "usdMaya/usdReadJob.h"
 
@@ -44,14 +44,12 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 
-usdImport::usdImport(const std::string& assemblyTypeName,
-                     const std::string& proxyShapeTypeName) :
-    mUsdReadJob(NULL),
-    _assemblyTypeName(assemblyTypeName),
-    _proxyShapeTypeName(proxyShapeTypeName)
+usdImport::usdImport() :
+    mUsdReadJob(nullptr)
 {
 }
 
+/* virtual */
 usdImport::~usdImport()
 {
     if (mUsdReadJob) {
@@ -59,11 +57,14 @@ usdImport::~usdImport()
     }
 }
 
-MSyntax usdImport::createSyntax()
+/* static */
+MSyntax
+usdImport::createSyntax()
 {
     MSyntax syntax;
 
-    // These flags correspond to entries in JobImportArgs::GetDefaultDictionary.
+    // These flags correspond to entries in
+    // PxrUsdMayaJobImportArgs::GetDefaultDictionary.
     syntax.addFlag("-shd",
                    PxrUsdImportJobArgsTokens->shadingMode.GetText(),
                    MSyntax::kString);
@@ -101,33 +102,34 @@ MSyntax usdImport::createSyntax()
     return syntax;
 }
 
-
-void* usdImport::creator(const std::string& assemblyTypeName,
-                         const std::string& proxyShapeTypeName)
+/* static */
+void*
+usdImport::creator()
 {
-    return new usdImport(assemblyTypeName, proxyShapeTypeName);
+    return new usdImport();
 }
 
-MStatus usdImport::doIt(const MArgList & args)
+/* virtual */
+MStatus
+usdImport::doIt(const MArgList & args)
 {
-
     MStatus status;
 
     MArgDatabase argData(syntax(), args, &status);
 
     // Check that all flags were valid
     if (status != MS::kSuccess) {
-        MGlobal::displayError("Invalid parameters detected.  Exiting.");
         return status;
     }
 
     // Get dictionary values.
-    const VtDictionary userArgs = PxrUsdMayaUtil::GetDictionaryFromArgDatabase(
-            argData, JobImportArgs::GetDefaultDictionary());
-    
+    const VtDictionary userArgs =
+        PxrUsdMayaUtil::GetDictionaryFromArgDatabase(
+            argData,
+            PxrUsdMayaJobImportArgs::GetDefaultDictionary());
+
     std::string mFileName;
-    if (argData.isFlagSet("file"))
-    {
+    if (argData.isFlagSet("file")) {
         // Get the value
         MString tmpVal;
         argData.getFlagArgument("file", 0, tmpVal);
@@ -135,18 +137,18 @@ MStatus usdImport::doIt(const MArgList & args)
 
         // Use the usd resolver for validation (but save the unresolved)
         if (ArGetResolver().Resolve(mFileName).empty()) {
-            MString msg = MString("File does not exist, or could not be resolved (")
-                    + tmpVal + ") - Exiting.";
-            MGlobal::displayError(msg);
+            TF_RUNTIME_ERROR(
+                    "File '%s' does not exist, or could not be resolved. "
+                    "Exiting.",
+                    mFileName.c_str());
             return MS::kFailure;
         }
 
-        MGlobal::displayInfo(MString("Importing ") + MString(mFileName.c_str()));
+        TF_STATUS("Importing '%s'", mFileName.c_str());
     }
-    
+
     if (mFileName.empty()) {
-        MString error = "Non empty file specified. Skipping...";
-        MGlobal::displayError(error);
+        TF_RUNTIME_ERROR("Empty file specified. Exiting.");
         return MS::kFailure;
     }
 
@@ -173,8 +175,7 @@ MStatus usdImport::doIt(const MArgList & args)
     }
 
     bool readAnimData = true;
-    if (argData.isFlagSet("readAnimData"))
-    {   
+    if (argData.isFlagSet("readAnimData")) {
         argData.getFlagArgument("readAnimData", 0, readAnimData);
     }
 
@@ -200,17 +201,16 @@ MStatus usdImport::doIt(const MArgList & args)
         delete mUsdReadJob;
     }
 
-    JobImportArgs jobArgs = JobImportArgs::CreateFromDictionary(
-            userArgs, /*importWithProxyShapes*/ false, timeInterval);
+    PxrUsdMayaJobImportArgs jobArgs =
+            PxrUsdMayaJobImportArgs::CreateFromDictionary(
+                userArgs,
+                /* importWithProxyShapes = */ false,
+                timeInterval);
 
-    // pass in assemblyTypeName and proxyShapeTypeName
-    mUsdReadJob = new usdReadJob(mFileName, mPrimPath, mVariants, jobArgs,
-            _assemblyTypeName, _proxyShapeTypeName);
-
+    mUsdReadJob = new usdReadJob(mFileName, mPrimPath, mVariants, jobArgs);
 
     // Add optional command params
-    if (argData.isFlagSet("parent"))
-    {
+    if (argData.isFlagSet("parent")) {
         // Get the value
         MString tmpVal;
         argData.getFlagArgument("parent", 0, tmpVal);
@@ -221,10 +221,9 @@ MStatus usdImport::doIt(const MArgList & args)
             MDagPath dagPath;
             status = selList.getDagPath(0, dagPath);
             if (status != MS::kSuccess) {
-                std::string errorStr = TfStringPrintf(
-                        "Invalid path \"%s\"for -parent.",
+                TF_RUNTIME_ERROR(
+                        "Invalid path '%s' for -parent.",
                         tmpVal.asChar());
-                MGlobal::displayError(MString(errorStr.c_str()));
                 return MS::kFailure;
             }
             mUsdReadJob->setMayaRootDagPath( dagPath );
@@ -242,8 +241,9 @@ MStatus usdImport::doIt(const MArgList & args)
     return (success) ? MS::kSuccess : MS::kFailure;
 }
 
-
-MStatus usdImport::redoIt()
+/* virtual */
+MStatus
+usdImport::redoIt()
 {
     if (!mUsdReadJob) {
         return MS::kFailure;
@@ -254,17 +254,18 @@ MStatus usdImport::redoIt()
     return (success) ? MS::kSuccess : MS::kFailure;
 }
 
-
-MStatus usdImport::undoIt()
+/* virtual */
+MStatus
+usdImport::undoIt()
 {
     if (!mUsdReadJob) {
         return MS::kFailure;
     }
-    
+
     bool success = mUsdReadJob->undoIt();
 
     return (success) ? MS::kSuccess : MS::kFailure;
 }
 
-PXR_NAMESPACE_CLOSE_SCOPE
 
+PXR_NAMESPACE_CLOSE_SCOPE
