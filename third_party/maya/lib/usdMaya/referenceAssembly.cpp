@@ -675,7 +675,6 @@ MStatus UsdMayaReferenceAssembly::computeInStageDataCached(MDataBlock& dataBlock
 
         if (SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(fileString)) {
             MFnDependencyNode depNodeFn(thisMObject());
-
             std::map<std::string, std::string> varSels;
             TfToken modelName = UsdUtilsGetModelNameFromRootLayer(rootLayer);
             const std::set<std::string> varSetNamesForCache = _GetVariantSetNamesForStageCache(depNodeFn);
@@ -810,8 +809,13 @@ MStatus UsdMayaReferenceAssembly::computeOutStageData(MDataBlock& dataBlock)
     // Get the prim
     // If no primPath string specified, then use the pseudo-root.
     UsdPrim usdPrim;
-    SdfPath primPath = getPrimPath(dataBlock, usdStage->GetRootLayer());
-    if (!primPath.IsEmpty()) {
+    std::string primPathStr = aPrimPath.asChar();
+    if (primPathStr.empty() && usdStage->GetDefaultPrim()) {
+        usdPrim = usdStage->GetDefaultPrim();
+    }
+    if (!usdPrim && !primPathStr.empty()) {
+        SdfPath primPath(primPathStr);
+
         // Validate assumption: primPath is descendent of passed-in stage primPath
         //   Make sure that the primPath is a child of the passed in stage's primpath
         //   This allows data for variants to flow down the hierarchy as expected
@@ -822,7 +826,7 @@ MStatus UsdMayaReferenceAssembly::computeOutStageData(MDataBlock& dataBlock)
             TF_WARN("%s: Assembly primPath <%s> is not a descendant of input "
                     "stage primPath <%s>. Skipping variant assignment.",
                     MPxNode::name().asChar(),
-                    primPath.GetText(),
+                    primPathStr.c_str(),
                     inData->primPath.GetText());
         }
     } else {
@@ -918,28 +922,6 @@ MStatus UsdMayaReferenceAssembly::computeOutStageData(MDataBlock& dataBlock)
     return MS::kSuccess;
 }
 
-SdfPath UsdMayaReferenceAssembly::getPrimPath(
-        MDataBlock& dataBlock,
-        SdfLayerRefPtr rootLayer)
-{
-    MStatus retValue = MS::kSuccess;
-    const MString aPrimPath = dataBlock.inputValue(primPathAttr, &retValue).asString();
-    CHECK_MSTATUS_AND_RETURN(retValue, SdfPath());
-
-    if (aPrimPath.length() == 0) {
-        TfToken name = rootLayer->GetDefaultPrim();
-        if (SdfPath::IsValidIdentifier(name)) {
-            return SdfPath::AbsoluteRootPath().AppendChild(name);
-        }
-    }
-    else {
-        // Note that if aPrimPath is an invalid path, this will just return
-        // and empty SdfPath
-        return SdfPath(aPrimPath.asChar());
-    }
-    return SdfPath();
-
-}
 
 bool UsdMayaReferenceAssembly::setInternalValueInContext( const MPlug& plug,
                                              const MDataHandle& dataHandle,
