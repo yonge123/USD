@@ -269,7 +269,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName, bool append)
             if (rootDagPath.isValid() && curDagPath.length() > 0){
                 // However if an export root is specified, we skip any dag
                 // parents that are above that root.
-                SdfPath sdfDagPath = SdfPath(PxrUsdMayaUtil::MDagPathToUsdPath(curDagPath, false));
+                SdfPath sdfDagPath = SdfPath(PxrUsdMayaUtil::MDagPathToUsdPath(curDagPath, false, mJobCtx.mArgs.stripNamespaces));
                 if (mJobCtx.exportRootSdfPath.GetCommonPrefix(sdfDagPath) !=
                     mJobCtx.exportRootSdfPath) {
                     continue;

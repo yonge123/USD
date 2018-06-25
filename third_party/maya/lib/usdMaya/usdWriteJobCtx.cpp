@@ -49,7 +49,7 @@ namespace {
     SdfPath& rootOverridePath(
             const PxrUsdMayaJobExportArgs& args,
             const SdfPath& exportRootSdfPath,
-            SdfPath& pathSdfPath& path) {
+            SdfPath& path) {
         if (!path.IsEmpty()) {
             if (!args.usdModelRootOverridePath.IsEmpty()) {
                 path = path.ReplacePrefix(path.GetPrefixes()[0], args.usdModelRootOverridePath);
@@ -74,10 +74,10 @@ usdWriteJobCtx::usdWriteJobCtx(const PxrUsdMayaJobExportArgs& args)
         if (rootDagPath.isValid()){
             SdfPath rootSdfPath;
             PxrUsdMayaUtil::GetDagPathByName(mArgs.exportRootPath, rootDagPath);
-            exportRootSdfPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false);
+            exportRootSdfPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false, mArgs.stripNamespaces);
         } else {
-            MGlobal::displayError(MString("Invalid dag path provided for root: ")
-                    + mArgs.exportRootPath.c_str());
+            TF_RUNTIME_ERROR("Invalid dag path provided for root: %s"
+                    , mArgs.exportRootPath.c_str());
             mArgs.exportRootPath = "";
         }
     }
