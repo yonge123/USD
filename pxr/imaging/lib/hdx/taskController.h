@@ -173,6 +173,13 @@ public:
     void SetSelectionColor(GfVec4f const& color);
 
     /// -------------------------------------------------------
+    /// Shadow API
+
+    /// Turns the shadow task on or off.
+    HDX_API
+    void SetEnableShadows(bool enable);
+
+    /// -------------------------------------------------------
     /// Progressive Image Generation
     
     /// Return whether the image has converged.
