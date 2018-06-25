@@ -29,13 +29,14 @@
 #include "pxr/pxr.h"
 #include "usdMaya/usdTranslatorExport.h"
 
-#include "usdMaya/JobArgs.h"
+#include "usdMaya/jobArgs.h"
 #include "usdMaya/shadingModeRegistry.h"
 #include "usdMaya/usdWriteJob.h"
 #include "usdMaya/writeUtil.h"
 
 #include <maya/MAnimControl.h>
 #include <maya/MFileObject.h>
+#include <maya/MGlobal.h>
 #include <maya/MSelectionList.h>
 #include <maya/MString.h>
 
@@ -124,7 +125,7 @@ usdTranslatorExport::writer(const MFileObject &file,
                 }
                 userArgs[argName] = PxrUsdMayaUtil::ParseArgumentValue(
                     argName, theOption[1].asChar(),
-                    JobExportArgs::GetDefaultDictionary());
+                    PxrUsdMayaJobExportArgs::GetDefaultDictionary());
             }
         }
     }
@@ -162,7 +163,8 @@ usdTranslatorExport::writer(const MFileObject &file,
     }
     
     if (dagPaths.size()) {
-        JobExportArgs jobArgs = JobExportArgs::CreateFromDictionary(
+        PxrUsdMayaJobExportArgs jobArgs =
+            PxrUsdMayaJobExportArgs::CreateFromDictionary(
                 userArgs, dagPaths, timeInterval);
         for (unsigned int i=0; i < filteredTypes.length(); ++i) {
             jobArgs.AddFilteredTypeName(filteredTypes[i].asChar());
@@ -188,7 +190,7 @@ usdTranslatorExport::writer(const MFileObject &file,
             return MS::kFailure;
         }
     } else {
-        MGlobal::displayWarning("No DAG nodes to export. Skipping");
+        TF_WARN("No DAG nodes to export. Skipping.");
     }
     
     return MS::kSuccess;
@@ -229,7 +231,7 @@ usdTranslatorExport::GetDefaultOptions()
     std::call_once(once, []() {
         std::vector<std::string> entries;
         for (const std::pair<std::string, VtValue> keyValue :
-                JobExportArgs::GetDefaultDictionary()) {
+                PxrUsdMayaJobExportArgs::GetDefaultDictionary()) {
             if (keyValue.second.IsHolding<bool>()) {
                 entries.push_back(TfStringPrintf("%s=%d",
                         keyValue.first.c_str(),
