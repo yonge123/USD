@@ -108,11 +108,11 @@ MSyntax usdExport::createSyntax()
     syntax.addFlag("-vis",
                    PxrUsdExportJobArgsTokens->exportVisibility.GetText(),
                    MSyntax::kBoolean);
-    syntax.addFlag("-ero" ,
-                   PxrUsdExportJobArgsTokens->exportReferenceObjects.GetText(),
-                   MSyntax::kBoolean);
     syntax.addFlag("-ac",
                    PxrUsdExportJobArgsTokens->asClip.GetText(),
+                   MSyntax::kBoolean);
+    syntax.addFlag("-ero" ,
+                   PxrUsdExportJobArgsTokens->exportReferenceObjects.GetText(),
                    MSyntax::kBoolean);
     syntax.addFlag("-skl",
                    PxrUsdExportJobArgsTokens->exportSkels.GetText(),
