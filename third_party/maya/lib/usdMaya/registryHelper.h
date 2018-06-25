@@ -71,6 +71,19 @@ struct PxrUsdMaya_RegistryHelper
     static void
         LoadShadingModePlugins();
 
+    /// Searches the plugInfos and looks for UserAttributeWriters.
+    /// 
+    /// "UsdMaya" : {
+    ///     "UserAttributeWriter" : {
+    ///         "mayaPlugin" : "arnoldShaderExporter"
+    ///     }
+    /// }
+    ///
+    /// At that scope, it expects a dictionary with one key: "mayaPlugin".
+    /// usdMaya will try to load the "mayaPlugin" when shading modes are first accessed.
+    static void
+    LoadUserAttributeWriterPlugins();
+
     /// Searches the plugInfos for metadata dictionaries at the given \p scope,
     /// and composes them together. 
     /// The scope are the nested keys to search through in the plugInfo (for

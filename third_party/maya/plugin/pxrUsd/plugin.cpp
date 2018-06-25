@@ -37,6 +37,7 @@
 #include "usdMaya/usdImport.h"
 #include "usdMaya/usdExport.h"
 #include "usdMaya/usdListShadingModes.h"
+#include "usdMaya/usdListUserAttributeWriters.h"
 #include "usdMaya/usdTranslatorImport.h"
 #include "usdMaya/usdTranslatorExport.h"
 
@@ -160,9 +161,18 @@ initializePlugin(MObject obj)
     }
 
     status = plugin.registerCommand(
+        "usdListUserAttributeWriters",
+        usdListUserAttributeWriters::creator);
+
+    if (!status) {
+        status.perror("registerCommand usdListUserAttributeWriters");
+    }
+
+    status = plugin.registerCommand(
         "usdUndoHelperCmd",
         PxrUsdMayaUndoHelperCmd::creator,
         PxrUsdMayaUndoHelperCmd::createSyntax);
+
     if (!status) {
         status.perror("registerCommand usdUndoHelperCmd");
     }
@@ -214,6 +224,11 @@ uninitializePlugin(MObject obj)
     status = plugin.deregisterCommand("usdListShadingModes");
     if (!status) {
         status.perror("deregisterCommand usdListShadingModes");
+    }
+
+    status = plugin.deregisterCommand("usdListUserAttributeWriters");
+    if (!status) {
+        status.perror("deregisterCommand usdListUserAttributeWriters");
     }
 
     status = plugin.deregisterCommand("usdUndoHelperCmd");
