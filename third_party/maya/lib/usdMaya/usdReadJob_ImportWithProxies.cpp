@@ -49,7 +49,6 @@
 
 #include <maya/MDagModifier.h>
 #include <maya/MFnDependencyNode.h>
-#include <maya/MGlobal.h>
 #include <maya/MObject.h>
 #include <maya/MPxRepresentation.h>
 #include <maya/MString.h>
@@ -57,6 +56,7 @@
 #include <map>
 #include <string>
 #include <vector>
+
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -141,9 +141,10 @@ _IsPxrGeomRoot(const UsdPrim& prim)
 
 static
 bool
-_CreateParentTransformNodes(const UsdPrim& usdPrim,
-                            const PxrUsdMayaPrimReaderArgs& args,
-                            PxrUsdMayaPrimReaderContext* context)
+_CreateParentTransformNodes(
+        const UsdPrim& usdPrim,
+        const PxrUsdMayaPrimReaderArgs& args,
+        PxrUsdMayaPrimReaderContext* context)
 {
     const UsdPrim parentPrim = usdPrim.GetParent();
     if (!parentPrim ||
@@ -195,11 +196,10 @@ usdReadJob::_ProcessProxyPrims(
 
         MObject parentNode = ctx.GetMayaNode(proxyPrim.GetPath().GetParentPath(), false);
         if (!PxrUsdMayaTranslatorModelAssembly::ReadAsProxy(proxyPrim,
-                                                               mVariants,
-                                                               parentNode,
-                                                               args,
-                                                               &ctx,
-                                                               _proxyShapeTypeName)) {
+                                                            mVariants,
+                                                            parentNode,
+                                                            args,
+                                                            &ctx)) {
             return false;
         }
     }
@@ -235,7 +235,8 @@ usdReadJob::_ProcessProxyPrims(
 }
 
 bool
-usdReadJob::_ProcessSubAssemblyPrims(const std::vector<UsdPrim>& subAssemblyPrims)
+usdReadJob::_ProcessSubAssemblyPrims(
+            const std::vector<UsdPrim>& subAssemblyPrims)
 {
     TF_FOR_ALL(iter, subAssemblyPrims) {
         const UsdPrim subAssemblyPrim = *iter;
@@ -254,13 +255,12 @@ usdReadJob::_ProcessSubAssemblyPrims(const std::vector<UsdPrim>& subAssemblyPrim
 
         MObject parentNode = ctx.GetMayaNode(subAssemblyPrim.GetPath().GetParentPath(), false);
         if (!PxrUsdMayaTranslatorModelAssembly::Read(subAssemblyPrim,
-                                                        subAssemblyUsdFilePath,
-                                                        subAssemblyUsdPrimPath,
-                                                        parentNode,
-                                                        args,
-                                                        &ctx,
-                                                        _assemblyTypeName,
-                                                        mArgs.assemblyRep)) {
+                                                     subAssemblyUsdFilePath,
+                                                     subAssemblyUsdPrimPath,
+                                                     parentNode,
+                                                     args,
+                                                     &ctx,
+                                                     mArgs.assemblyRep)) {
             return false;
         }
     }
@@ -336,19 +336,18 @@ usdReadJob::_DoImportWithProxies(UsdPrimRange& range)
         } else if (prim.GetTypeName() == _tokens->ScopePrimTypeName) {
             // XXX: This is completely wrong, but I don't want to deal
             // with the fallout of fixing it right now.
-            MGlobal::displayWarning(
-                TfStringPrintf("Scope \"%s\". Skipping all children.",
-                               prim.GetPath().GetText()).c_str());
+            TF_WARN("Encountered Scope <%s>; currently cannot handle Scopes. "
+                    "Skipping all children.",
+                    prim.GetPath().GetText());
             primIt.PruneChildren();
         } else if (prim.GetTypeName() != _tokens->XformTypeName) {
             // Don't complain about Xform prims being unsupported. For the
             // "Expanded" representation of assemblies, we'll only create the
             // transforms we need to in order to reach supported prims.
-            MGlobal::displayWarning(
-                TfStringPrintf("Prim type \"%s\" unsupported in 'Expanded' "
-                               "representation for prim \"%s\". Skipping...",
-                               prim.GetTypeName().GetText(),
-                               prim.GetPath().GetText()).c_str());
+            TF_WARN("Prim type '%s' unsupported in 'Expanded' "
+                    "representation for prim <%s>. Skipping...",
+                    prim.GetTypeName().GetText(),
+                    prim.GetPath().GetText());
         }
     }
 
@@ -372,5 +371,5 @@ usdReadJob::_DoImportWithProxies(UsdPrimRange& range)
     return true;
 }
 
-PXR_NAMESPACE_CLOSE_SCOPE
 
+PXR_NAMESPACE_CLOSE_SCOPE
