@@ -1,4 +1,4 @@
-#include "MayaImagePlaneWriter.h"
+#include "usdMaya/MayaImagePlaneWriter.h"
 
 #include <pxr/usd/usdGeom/tokens.h>
 #include <pxr/usd/usdGeom/imagePlane.h>
@@ -7,7 +7,8 @@
 #include <maya/MFnDependencyNode.h>
 #include <maya/MRenderUtil.h>
 
-#include "writeUtil.h"
+#include "usdMaya/usdWriteJobCtx.h"
+#include "usdMaya/writeUtil.h"
 
 #ifdef GENERATE_SHADERS
 #include <pxr/imaging/glf/glslfx.h>
