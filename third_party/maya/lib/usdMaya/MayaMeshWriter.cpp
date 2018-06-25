@@ -28,6 +28,7 @@
 #include "usdMaya/adaptor.h"
 #include "usdMaya/meshUtil.h"
 #include "usdMaya/primWriterRegistry.h"
+#include "usdMaya/writeUtil.h"
 
 #include "pxr/base/gf/vec3f.h"
 #include "pxr/usd/usdGeom/mesh.h"
@@ -40,60 +41,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 PXRUSDMAYA_REGISTER_WRITER(mesh, MayaMeshWriter);
 PXRUSDMAYA_REGISTER_ADAPTOR_SCHEMA(mesh, UsdGeomMesh);
-
-namespace {
-
-void _exportReferenceMesh(UsdGeomMesh& primSchema, MObject obj) {
-    MStatus status = MS::kSuccess;
-    MFnDependencyNode dNode(obj, &status);
-    if (!status) {
-        return;
-    }
-
-    MPlug referencePlug = dNode.findPlug("referenceObject", &status);
-    if (!status || referencePlug.isNull()) {
-        return;
-    }
-
-    MPlugArray conns;
-    referencePlug.connectedTo(conns, true, false);
-    if (conns.length() == 0) {
-        return;
-    }
-
-    MObject referenceObject = conns[0].node();
-    if (!referenceObject.hasFn(MFn::kMesh)) {
-        return;
-    }
-
-    MFnMesh referenceMesh(referenceObject, &status);
-    if (!status) {
-        return;
-    }
-
-    const float* mayaRawPoints = referenceMesh.getRawPoints(&status);
-    const int numVertices = referenceMesh.numVertices();
-    VtArray<GfVec3f> points(numVertices);
-    for (int i = 0; i < numVertices; ++i) {
-        const int floatIndex = i * 3;
-        points[i].Set(mayaRawPoints[floatIndex],
-                        mayaRawPoints[floatIndex + 1],
-                        mayaRawPoints[floatIndex + 2]);
-    }
-
-    UsdGeomPrimvar primVar = primSchema.CreatePrimvar(
-        UsdUtilsGetPrefName(),
-        SdfValueTypeNames->Point3fArray,
-        UsdGeomTokens->varying);
-
-    if (!primVar) {
-        return;
-    }
-
-    primVar.GetAttr().Set(VtValue(points));
-}
-
-}
 
 namespace {
 
