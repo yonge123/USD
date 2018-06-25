@@ -33,6 +33,7 @@
 #include "pxr/usd/usdGeom/tokens.h"
 
 #include <maya/MDagPath.h>
+#include <maya/MGlobal.h>
 #include <maya/MNodeClass.h>
 #include <maya/MTypeId.h>
 
