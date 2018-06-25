@@ -74,7 +74,6 @@ TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaTranslatorTokens,
     (exportSkin) \
     (exportUVs) \
     (exportVisibility) \
-    (exportReferenceObjects) \
     (kind) \
     (materialCollectionsPath) \
     (melPerFrameCallback) \
