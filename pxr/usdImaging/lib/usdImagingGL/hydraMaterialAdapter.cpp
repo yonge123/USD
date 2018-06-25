@@ -232,7 +232,7 @@ IsTextureFamilyNode(TfToken const& id)
     return (id == UsdHydraTokens->HwUvTexture_1 ||
             id == UsdHydraTokens->HwUdimTexture_1 ||
             id == UsdHydraTokens->HwPtexTexture_1 ||
-            id == UsdImagingTokens->UsdUVTexture));
+            id == UsdImagingTokens->UsdUVTexture);
 }
 
 // XXX : This should use the shader node registry
