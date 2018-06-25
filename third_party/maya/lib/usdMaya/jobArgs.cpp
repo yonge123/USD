@@ -249,9 +249,6 @@ PxrUsdMayaJobExportArgs::PxrUsdMayaJobExportArgs(
         exportRefsAsInstanceable(
             _Boolean(userArgs,
                 PxrUsdExportJobArgsTokens->exportRefsAsInstanceable)),
-        exportReferenceObjects(
-            _Boolean(userArgs,
-                PxrUsdExportJobArgsTokens->exportReferenceObjects)),
         exportAsClip(
             _Boolean(userArgs,
                 PxrUsdExportJobArgsTokens->asClip)),
