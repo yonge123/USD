@@ -28,6 +28,7 @@
 #include "usdMaya/adaptor.h"
 #include "usdMaya/meshUtil.h"
 #include "usdMaya/primWriterRegistry.h"
+#include "usdMaya/writeUtil.h"
 
 #include "pxr/base/gf/vec3f.h"
 #include "pxr/usd/usdGeom/mesh.h"
