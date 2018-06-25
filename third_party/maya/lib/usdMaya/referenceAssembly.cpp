@@ -822,7 +822,7 @@ MStatus UsdMayaReferenceAssembly::computeOutStageData(MDataBlock& dataBlock)
             TF_WARN("%s: Assembly primPath <%s> is not a descendant of input "
                     "stage primPath <%s>. Skipping variant assignment.",
                     MPxNode::name().asChar(),
-                    primPathStr.c_str(),
+                    primPath.GetText(),
                     inData->primPath.GetText());
         }
     } else {
@@ -923,7 +923,7 @@ SdfPath UsdMayaReferenceAssembly::getPrimPath(
         SdfLayerRefPtr rootLayer)
 {
     MStatus retValue = MS::kSuccess;
-    const MString aPrimPath = dataBlock.inputValue(_psData.primPath, &retValue).asString();
+    const MString aPrimPath = dataBlock.inputValue(primPathAttr, &retValue).asString();
     CHECK_MSTATUS_AND_RETURN(retValue, SdfPath());
 
     if (aPrimPath.length() == 0) {
