@@ -2446,21 +2446,25 @@ class AppController(QtCore.QObject):
         #       In the future, we should do this when a signal from
         #       ViewSettingsDataModel is emitted so the prim view always updates
         #       when they are changed.
+        self._dataModel.selection.removeInactivePrims()
         self._resetPrimView()
 
     def _toggleShowMasterPrims(self):
         self._dataModel.viewSettings.showAllMasterPrims = (
             self._ui.actionShow_All_Master_Prims.isChecked())
+        self._dataModel.selection.removeMasterPrims()
         self._resetPrimView()
 
     def _toggleShowUndefinedPrims(self):
         self._dataModel.viewSettings.showUndefinedPrims = (
             self._ui.actionShow_Undefined_Prims.isChecked())
+        self._dataModel.selection.removeUndefinedPrims()
         self._resetPrimView()
 
     def _toggleShowAbstractPrims(self):
         self._dataModel.viewSettings.showAbstractPrims = (
             self._ui.actionShow_Abstract_Prims.isChecked())
+        self._dataModel.selection.removeAbstractPrims()
         self._resetPrimView()
 
     def _toggleRolloverPrimInfo(self):
@@ -3293,6 +3297,16 @@ class AppController(QtCore.QObject):
                        else "Unknown"
         m["[path]"] = str(obj.GetPath())
 
+        clipMetadata = obj.GetMetadata("clips")
+        if clipMetadata is None:
+            clipMetadata = {}
+        numClipRows = 0
+        for (clip, data) in clipMetadata.items():
+            numClipRows += len(data)
+        m["clips"] = clipMetadata
+        
+        numMetadataRows = (len(m) - 1) + numClipRows
+
         variantSets = {}
         if (isinstance(obj, Usd.Prim)):
             variantSetNames = obj.GetVariantSets().GetNames()
@@ -3310,25 +3324,37 @@ class AppController(QtCore.QObject):
                 combo.setCurrentIndex(indexToSelect)
                 variantSets[variantSetName] = combo
 
-        tableWidget.setRowCount(len(m) + len(variantSets))
+        tableWidget.setRowCount(numMetadataRows + len(variantSets))
 
-        for i,key in enumerate(sorted(m.keys())):
-            attrName = QtWidgets.QTableWidgetItem(str(key))
-            tableWidget.setItem(i, 0, attrName)
-
-            # Get metadata value
-            if key == "customData":
-                val = obj.GetCustomData()
+        rowIndex = 0
+        for key in sorted(m.keys()):
+            if key == "clips":
+                for (clip, metadataGroup) in m[key].items():
+                    attrName = QtWidgets.QTableWidgetItem(str('clip:' + clip))
+                    tableWidget.setItem(rowIndex, 0, attrName)
+                    for metadata in metadataGroup.keys():
+                        dataPair = (metadata, metadataGroup[metadata])
+                        valStr, ttStr = self._formatMetadataValueView(dataPair)
+                        attrVal = QtWidgets.QTableWidgetItem(valStr)
+                        attrVal.setToolTip(ttStr)
+                        tableWidget.setItem(rowIndex, 1, attrVal)
+                        rowIndex += 1
             else:
-                val = m[key]
+                attrName = QtWidgets.QTableWidgetItem(str(key))
+                tableWidget.setItem(rowIndex, 0, attrName)
+                # Get metadata value
+                if key == "customData":
+                    val = obj.GetCustomData()
+                else:
+                    val = m[key]
 
-            valStr, ttStr = self._formatMetadataValueView(val)
-            attrVal = QtWidgets.QTableWidgetItem(valStr)
-            attrVal.setToolTip(ttStr)
+                valStr, ttStr = self._formatMetadataValueView(val)
+                attrVal = QtWidgets.QTableWidgetItem(valStr)
+                attrVal.setToolTip(ttStr)
 
-            tableWidget.setItem(i, 1, attrVal)
+                tableWidget.setItem(rowIndex, 1, attrVal)
+                rowIndex += 1
 
-        rowIndex = len(m)
         for variantSetName, combo in variantSets.iteritems():
             attrName = QtWidgets.QTableWidgetItem(str(variantSetName+ ' variant'))
             tableWidget.setItem(rowIndex, 0, attrName)
