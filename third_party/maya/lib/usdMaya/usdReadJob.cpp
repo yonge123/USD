@@ -31,7 +31,6 @@
 #include "usdMaya/translatorModelAssembly.h"
 #include "usdMaya/translatorXformable.h"
 
-#include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/token.h"
 #include "pxr/usd/sdf/layer.h"
 #include "pxr/usd/sdf/path.h"
@@ -48,7 +47,6 @@
 
 #include <maya/MAnimControl.h>
 #include <maya/MDagModifier.h>
-#include <maya/MGlobal.h>
 #include <maya/MObject.h>
 #include <maya/MTime.h>
 
@@ -57,8 +55,8 @@
 #include <unordered_map>
 #include <vector>
 
-PXR_NAMESPACE_OPEN_SCOPE
 
+PXR_NAMESPACE_OPEN_SCOPE
 
 
 // for now, we hard code this to use displayColor.  But maybe the more
@@ -67,22 +65,19 @@ PXR_NAMESPACE_OPEN_SCOPE
 // (usdMaya/referenceAssembly.cpp)
 const static TfToken ASSEMBLY_SHADING_MODE = PxrUsdMayaShadingModeTokens->displayColor;
 
+
 usdReadJob::usdReadJob(
-    const std::string &iFileName,
-    const std::string &iPrimPath,
-    const std::map<std::string, std::string>& iVariants,
-    const JobImportArgs &iArgs,
-    const std::string& assemblyTypeName,
-    const std::string& proxyShapeTypeName) :
+        const std::string &iFileName,
+        const std::string &iPrimPath,
+        const std::map<std::string, std::string>& iVariants,
+        const PxrUsdMayaJobImportArgs &iArgs) :
     mArgs(iArgs),
     mFileName(iFileName),
     mPrimPath(iPrimPath),
     mVariants(iVariants),
     mDagModifierUndo(),
     mDagModifierSeeded(false),
-    mMayaRootDagPath(),
-    _assemblyTypeName(assemblyTypeName),
-    _proxyShapeTypeName(proxyShapeTypeName)
+    mMayaRootDagPath()
 {
 }
 
@@ -90,7 +85,8 @@ usdReadJob::~usdReadJob()
 {
 }
 
-bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
+bool
+usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
 {
     MStatus status;
 
@@ -155,10 +151,10 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
         GfInterval stageInterval;
         if (mArgs.timeInterval.IsFinite()) {
             if (mArgs.timeInterval.GetMin() > mArgs.timeInterval.GetMax()) {
-                std::string errorMsg = TfStringPrintf(
-                    "Frame range start (%f) was greater than end (%f)",
-                    mArgs.timeInterval.GetMin(), mArgs.timeInterval.GetMax());
-                MGlobal::displayError(errorMsg.c_str());
+                TF_RUNTIME_ERROR(
+                        "Frame range start (%f) was greater than end (%f)",
+                        mArgs.timeInterval.GetMin(),
+                        mArgs.timeInterval.GetMax());
                 return false;
             }
             stageInterval = mArgs.timeInterval;
@@ -179,20 +175,19 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
     UsdPrim usdRootPrim = mPrimPath.empty() ? stage->GetDefaultPrim() :
         stage->GetPrimAtPath(primSdfPath);
     if (!usdRootPrim && !(mPrimPath.empty() || mPrimPath == "/")) {
-        std::string errorMsg = TfStringPrintf(
-            "Unable to set root prim to \"%s\" for USD file \"%s\" - using pseudo-root \"/\" instead",
-            mPrimPath.c_str(), mFileName.c_str());
-        MGlobal::displayError(errorMsg.c_str());
+        TF_RUNTIME_ERROR(
+                "Unable to set root prim to <%s> when reading USD file '%s'; "
+                "using the pseudo-root </> instead",
+                mPrimPath.c_str(), mFileName.c_str());
         usdRootPrim = stage->GetPseudoRoot();
     }
 
     bool isImportingPsuedoRoot = (usdRootPrim == stage->GetPseudoRoot());
 
     if (!usdRootPrim) {
-        std::string errorMsg = TfStringPrintf(
-            "No default prim found in USD file \"%s\"",
-            mFileName.c_str());
-        MGlobal::displayError(errorMsg.c_str());
+        TF_RUNTIME_ERROR(
+                "No default prim found in USD file '%s'",
+                mFileName.c_str());
         return false;
     }
 
@@ -270,8 +265,8 @@ bool usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
 }
 
 
-bool usdReadJob::_DoImport(UsdPrimRange& rootRange,
-                           const UsdPrim& usdRootPrim)
+bool
+usdReadJob::_DoImport(UsdPrimRange& rootRange, const UsdPrim& usdRootPrim)
 {
     // We want both pre- and post- visit iterations over the prims in this
     // method. To do so, iterate over all the root prims of the input range,
@@ -329,7 +324,6 @@ bool usdReadJob::_DoImport(UsdPrimRange& rootRange,
                             parentNode,
                             args,
                             &readCtx,
-                            _assemblyTypeName,
                             mArgs.assemblyRep)) {
                         if (readCtx.GetPruneChildren()) {
                             primIt.PruneChildren();
@@ -368,8 +362,8 @@ bool usdReadJob::_DoImport(UsdPrimRange& rootRange,
     return true;
 }
 
-
-bool usdReadJob::redoIt()
+bool
+usdReadJob::redoIt()
 {
     // Undo the undo
     MStatus status = mDagModifierUndo.undoIt();
@@ -378,8 +372,8 @@ bool usdReadJob::redoIt()
     return (status == MS::kSuccess);
 }
 
-
-bool usdReadJob::undoIt()
+bool
+usdReadJob::undoIt()
 {
     if (!mDagModifierSeeded) {
         mDagModifierSeeded = true;
@@ -412,4 +406,3 @@ bool usdReadJob::undoIt()
 
 
 PXR_NAMESPACE_CLOSE_SCOPE
-
