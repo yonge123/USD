@@ -25,11 +25,13 @@
 #include "usdMaya/MayaNurbsCurveWriter.h"
 
 #include "usdMaya/adaptor.h"
+#include "usdMaya/primWriterRegistry.h"
 
 #include "pxr/usd/usdGeom/curves.h"
 #include "pxr/usd/usdGeom/nurbsCurves.h"
 #include "pxr/usd/usd/stage.h"
 
+#include <maya/MDoubleArray.h>
 #include <maya/MFnDependencyNode.h>
 #include <maya/MFnNurbsCurve.h>
 #include <maya/MPointArray.h>
@@ -38,7 +40,8 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-PXRUSDMAYA_REGISTER_ADAPTOR_SCHEMA(MFn::kNurbsCurve, UsdGeomNurbsCurves);
+PXRUSDMAYA_REGISTER_WRITER(nurbsCurve, MayaNurbsCurveWriter);
+PXRUSDMAYA_REGISTER_ADAPTOR_SCHEMA(nurbsCurve, UsdGeomNurbsCurves);
 
 MayaNurbsCurveWriter::MayaNurbsCurveWriter(const MDagPath & iDag,
                                            const SdfPath& uPath,
@@ -83,9 +86,9 @@ bool MayaNurbsCurveWriter::writeNurbsCurveAttrs(const UsdTimeCode &usdTime, UsdG
 
     MFnNurbsCurve curveFn(getDagPath(), &status);
     if (!status) {
-        MGlobal::displayError(
-            "MayaNurbsCurveWriter: MFnNurbsCurve() failed for curve at dagPath: " +
-            getDagPath().fullPathName());
+        TF_RUNTIME_ERROR(
+                "MFnNurbsCurve() failed for curve at DAG path: %s",
+                getDagPath().fullPathName().asChar());
         return false;
     }
     
@@ -166,10 +169,10 @@ bool MayaNurbsCurveWriter::writeNurbsCurveAttrs(const UsdTimeCode &usdTime, UsdG
     else if (curveWidths.size() == expectedVaryingSize)
         primSchema.SetWidthsInterpolation(UsdGeomTokens->varying);
     else {
-        MGlobal::displayWarning(
-            "MayaNurbsCurveWriter: MFnNurbsCurve() has unsupported width size "
-            "for standard interpolation metadata: " +
-            getDagPath().fullPathName());
+        TF_WARN(
+            "MFnNurbsCurve has unsupported width size "
+            "for standard interpolation metadata: %s",
+            getDagPath().fullPathName().asChar());
     }
 
     // Curve

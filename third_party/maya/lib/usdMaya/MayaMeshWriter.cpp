@@ -27,7 +27,7 @@
 
 #include "usdMaya/adaptor.h"
 #include "usdMaya/meshUtil.h"
-#include "usdMaya/writeUtil.h"
+#include "usdMaya/primWriterRegistry.h"
 
 #include "pxr/base/gf/vec3f.h"
 #include "pxr/usd/usdGeom/mesh.h"
@@ -38,7 +38,62 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-PXRUSDMAYA_REGISTER_ADAPTOR_SCHEMA(MFn::kMesh, UsdGeomMesh);
+PXRUSDMAYA_REGISTER_WRITER(mesh, MayaMeshWriter);
+PXRUSDMAYA_REGISTER_ADAPTOR_SCHEMA(mesh, UsdGeomMesh);
+
+namespace {
+
+void _exportReferenceMesh(UsdGeomMesh& primSchema, MObject obj) {
+    MStatus status = MS::kSuccess;
+    MFnDependencyNode dNode(obj, &status);
+    if (!status) {
+        return;
+    }
+
+    MPlug referencePlug = dNode.findPlug("referenceObject", &status);
+    if (!status || referencePlug.isNull()) {
+        return;
+    }
+
+    MPlugArray conns;
+    referencePlug.connectedTo(conns, true, false);
+    if (conns.length() == 0) {
+        return;
+    }
+
+    MObject referenceObject = conns[0].node();
+    if (!referenceObject.hasFn(MFn::kMesh)) {
+        return;
+    }
+
+    MFnMesh referenceMesh(referenceObject, &status);
+    if (!status) {
+        return;
+    }
+
+    const float* mayaRawPoints = referenceMesh.getRawPoints(&status);
+    const int numVertices = referenceMesh.numVertices();
+    VtArray<GfVec3f> points(numVertices);
+    for (int i = 0; i < numVertices; ++i) {
+        const int floatIndex = i * 3;
+        points[i].Set(mayaRawPoints[floatIndex],
+                        mayaRawPoints[floatIndex + 1],
+                        mayaRawPoints[floatIndex + 2]);
+    }
+
+    UsdGeomPrimvar primVar = primSchema.CreatePrimvar(
+        UsdUtilsGetPrefName(),
+        SdfValueTypeNames->Point3fArray,
+        UsdGeomTokens->varying);
+
+    if (!primVar) {
+        return;
+    }
+
+    primVar.GetAttr().Set(VtValue(points));
+}
+
+}
 
 namespace {
 
@@ -252,9 +307,9 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
     // this mesh.
     MFnMesh finalMesh(getDagPath(), &status);
     if (!status) {
-        MGlobal::displayError(
-            "Failed to get final mesh at dagPath: " +
-            getDagPath().fullPathName());
+        TF_RUNTIME_ERROR(
+            "Failed to get final mesh at DAG path: %s",
+            getDagPath().fullPathName().asChar());
         return false;
     }
 
@@ -266,9 +321,9 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             finalMesh.object() : _skelInputMesh;
     MFnMesh geomMesh(geomMeshObj, &status);
     if (!status) {
-        MGlobal::displayError(
-            "Failed to get geom mesh at dagPath: " +
-            getDagPath().fullPathName());
+        TF_RUNTIME_ERROR(
+            "Failed to get geom mesh at DAG path: %s",
+            getDagPath().fullPathName().asChar());
         return false;
     }
 
@@ -471,10 +526,11 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
         }
         
         if (colorSetName == PxrUsdMayaMeshColorSetTokens->DisplayOpacityColorSetName.GetString()) {
-            MGlobal::displayWarning("Mesh \"" + finalMesh.fullPathName() +
-                "\" has a color set named \"" +
-                MString(PxrUsdMayaMeshColorSetTokens->DisplayOpacityColorSetName.GetText()) +
-                "\" which is a reserved Primvar name in USD. Skipping...");
+            TF_WARN("Mesh \"%s\" has a color set named \"%s\", "
+                "which is a reserved Primvar name in USD. Skipping...",
+                finalMesh.fullPathName().asChar(),
+                PxrUsdMayaMeshColorSetTokens->DisplayOpacityColorSetName
+                    .GetText());
             continue;
         }
 
@@ -498,10 +554,9 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
                                      &assignmentIndices,
                                      &colorSetRep,
                                      &clamped)) {
-            const std::string warning = TfStringPrintf(
-                    "Unable to retrieve colorSet data: %s on mesh: %s.  Skipping...",
+            TF_WARN("Unable to retrieve colorSet data: %s on mesh: %s. "
+                    "Skipping...",
                     colorSetName.c_str(), finalMesh.fullPathName().asChar());
-            MGlobal::displayWarning(MString(warning.c_str()));
             continue;
         }
 
@@ -529,10 +584,9 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
             // write to the same primvar.  warn and continue.
             if (colorSetName != sanitizedName
                     && colorSetNamesSet.count(sanitizedName) > 0) {
-                const std::string warning = TfStringPrintf(
-                        "Skipping colorSet '%s' as the colorSet '%s' exists as well.",
+                TF_WARN("Skipping colorSet '%s' as the colorSet '%s' exists as "
+                        "well.",
                         colorSetName.c_str(), sanitizedName.c_str());
-                MGlobal::displayWarning(MString(warning.c_str()));
                 continue;
             }
 
@@ -607,9 +661,9 @@ bool MayaMeshWriter::isMeshValid()
     // Sanity checks
     MFnMesh lMesh(getDagPath(), &status);
     if (!status) {
-        MGlobal::displayError(
-            "MayaMeshWriter: MFnMesh() failed for mesh at dagPath: " +
-            getDagPath().fullPathName());
+        TF_RUNTIME_ERROR(
+                "MFnMesh() failed for mesh at DAG path: %s",
+                getDagPath().fullPathName().asChar());
         return false;
     }
 
@@ -617,15 +671,13 @@ bool MayaMeshWriter::isMeshValid()
     unsigned int numPolygons = lMesh.numPolygons();
     if (numVertices < 3 && numVertices > 0)
     {
-        MString err = lMesh.fullPathName() +
-            " is not a valid mesh, because it only has ";
-        err += numVertices;
-        err += " points.";
-        MGlobal::displayError(err);
+        TF_RUNTIME_ERROR(
+                "%s is not a valid mesh, because it only has %u points,",
+                lMesh.fullPathName().asChar(), numVertices);
     }
     if (numPolygons == 0)
     {
-        MGlobal::displayWarning(lMesh.fullPathName() + " has no polygons.");
+        TF_WARN("%s has no polygons.", lMesh.fullPathName().asChar());
     }
     return true;
 }

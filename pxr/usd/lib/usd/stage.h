@@ -1400,7 +1400,7 @@ public:
     /// }
     /// \endcode
     ///
-    /// \sa \ref Usd_AttributeColorSpaceAPI
+    /// \sa \ref Usd_AttributeColorSpaceAPI "UsdAttribute ColorSpace API"
     /// 
     /// 
     /// @{
@@ -1410,28 +1410,28 @@ public:
     /// per-attribute color-spaces in the composed USD stage. This is specified
     /// as asset path which can be resolved to the color spec file.
     /// 
-    /// \ref Usd_ColorConfigurationAPI
+    /// \ref Usd_ColorConfigurationAPI "Color Configuration API"
     USD_API
     void SetColorConfiguration(const SdfAssetPath &colorConfig) const;
 
     /// Returns the default color configuration used to interpret the per-
     /// attribute color-spaces in the composed USD stage.
     /// 
-    /// \ref Usd_ColorConfigurationAPI
+    /// \ref Usd_ColorConfigurationAPI "Color Configuration API"
     USD_API
     SdfAssetPath GetColorConfiguration() const;
 
     /// Sets the name of the color management system used to interpret the 
     /// color configuration file pointed at by the colorConfiguration metadata.
     /// 
-    /// \ref Usd_ColorConfigurationAPI
+    /// \ref Usd_ColorConfigurationAPI "Color Configuration API"
     USD_API
     void SetColorManagementSystem(const TfToken &cms) const;
 
     /// Sets the name of the color management system to be used for loading 
     /// and interpreting the color configuration file.
     /// 
-    /// \ref Usd_ColorConfigurationAPI
+    /// \ref Usd_ColorConfigurationAPI "Color Configuration API"
     USD_API
     TfToken GetColorManagementSystem() const;
 
@@ -1443,8 +1443,9 @@ public:
     /// The python wrapping of this method returns a tuple containing 
     /// (colorConfiguration, colorManagementSystem).
     /// 
-    /// \ref Usd_ColorConfigurationAPI
-    /// \sa SetColorConfigFallbacks.
+    /// 
+    /// \sa SetColorConfigFallbacks,
+    /// \ref Usd_ColorConfigurationAPI "Color Configuration API"
     USD_API
     static void GetColorConfigFallbacks(SdfAssetPath *colorConfiguration,
                                         TfToken *colorManagementSystem);
@@ -1460,8 +1461,8 @@ public:
     /// at least one value must be non-empty. Additionally, these can't be
     /// reset to empty values.
     ///
-    /// \ref Usd_ColorConfigurationAPI
     /// \sa GetColorConfigFallbacks()
+    /// \ref Usd_ColorConfigurationAPI "Color Configuration API"
     USD_API
     static void
     SetColorConfigFallbacks(const SdfAssetPath &colorConfiguration, 
@@ -1738,7 +1739,7 @@ private:
     // either the builtin definition's spec type, if the indicated property is
     // builtin, otherwise it's the strongest authored spec's type if one exists,
     // otherwise it's SdfSpecTypeUnknown.
-    SdfSpecType _GetDefiningSpecType(const UsdPrim &prim,
+    SdfSpecType _GetDefiningSpecType(Usd_PrimDataConstPtr primData,
                                      const TfToken &propName) const;
 
     // Helper to apply Pcp changes and recompose the scenegraph accordingly,
