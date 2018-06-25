@@ -93,10 +93,6 @@ void _exportReferenceMesh(UsdGeomMesh& primSchema, MObject obj) {
     primVar.GetAttr().Set(VtValue(points));
 }
 
-}
-
-namespace {
-
 template <typename T>
 void _prependValue(UsdAttribute& attr, const UsdTimeCode& usdTime, const T& value) {
     VtArray<T> arr;
