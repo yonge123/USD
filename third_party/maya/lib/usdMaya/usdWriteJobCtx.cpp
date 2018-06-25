@@ -365,11 +365,6 @@ usdWriteJobCtx::_FindWriter(const std::string& mayaNodeType)
             mWriterFactoryCache[mayaNodeType] = primWriterFactory;
             return primWriterFactory;
         }
-    } else if (ob.hasFn(MFn::kImagePlane)) {
-        MayaImagePlaneWriterPtr primPtr(new MayaImagePlaneWriter(curDag, writePath, instanceSource, *this));
-        if (primPtr->isValid()) {
-            return primPtr;
-        }
     }
 
     // No writer found, so mark the type as unknown in the local cache.
