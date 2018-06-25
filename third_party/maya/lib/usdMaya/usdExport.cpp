@@ -28,6 +28,7 @@
 #include "usdMaya/usdWriteJob.h"
 #include "usdMaya/util.h"
 #include "usdMaya/writeUtil.h"
+#include "usdMaya/jobArgs.h"
 
 #include <maya/MFileObject.h>
 #include <maya/MItDependencyNodes.h>
@@ -42,7 +43,6 @@
 #include <maya/MTime.h>
 
 #include "pxr/usd/usdGeom/tokens.h"
-#include "JobArgs.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
