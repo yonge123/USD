@@ -131,7 +131,6 @@ struct PxrUsdMayaJobExportArgs
     const bool exportNurbsExplicitUV;
     const bool exportReferenceObjects;
     const bool exportRefsAsInstanceable;
-    const bool exportReferenceObjects;
     const bool exportAsClip;
     const TfToken exportSkels;
     const TfToken exportSkin;
