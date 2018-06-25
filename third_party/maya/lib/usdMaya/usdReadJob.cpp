@@ -101,20 +101,16 @@ usdReadJob::doIt(std::vector<MDagPath>* addedDagPaths)
         TfToken rootName = UsdUtilsGetModelNameFromRootLayer(rootLayer);
         primSdfPath = SdfPath(rootName);
         if (primSdfPath.IsEmpty()) {
-            std::string errorMsg = TfStringPrintf(
-                "Default prim \"%s\" was not a valid prim path",
+            TF_RUNTIME_ERROR("Default prim \"%s\" was not a valid prim path",
                 rootName.GetText());
-            MGlobal::displayError(errorMsg.c_str());
             return false;
         }
     }
     else {
         primSdfPath = SdfPath(mPrimPath);
         if (primSdfPath.IsEmpty()) {
-            std::string errorMsg = TfStringPrintf(
-                "Given root prim \"%s\" is not a valid prim path",
+            TF_RUNTIME_ERROR("Given root prim \"%s\" is not a valid prim path",
                 mPrimPath.c_str());
-            MGlobal::displayError(errorMsg.c_str());
             return false;
         }
     }
