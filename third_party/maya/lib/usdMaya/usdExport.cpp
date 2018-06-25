@@ -35,6 +35,7 @@
 #include <maya/MArgList.h>
 #include <maya/MArgDatabase.h>
 #include <maya/MComputation.h>
+#include <maya/MGlobal.h>
 #include <maya/MObjectArray.h>
 #include <maya/MSelectionList.h>
 #include <maya/MSyntax.h>
@@ -57,7 +58,8 @@ MSyntax usdExport::createSyntax()
 {
     MSyntax syntax;
 
-    // These flags correspond to entries in JobExportArgs::GetDefaultDictionary.
+    // These flags correspond to entries in
+    // PxrUsdMayaJobExportArgs::GetDefaultDictionary.
     syntax.addFlag("-mt",
                    PxrUsdExportJobArgsTokens->mergeTransformAndShape.GetText(),
                    MSyntax::kBoolean);
@@ -101,6 +103,9 @@ MSyntax usdExport::createSyntax()
                    MSyntax::kString);
     syntax.addFlag("-vis",
                    PxrUsdExportJobArgsTokens->exportVisibility.GetText(),
+                   MSyntax::kBoolean);
+    syntax.addFlag("-ero" ,
+                   PxrUsdExportJobArgsTokens->exportReferenceObjects.GetText(),
                    MSyntax::kBoolean);
     syntax.addFlag("-skl",
                    PxrUsdExportJobArgsTokens->exportSkels.GetText(),
@@ -185,7 +190,6 @@ try
 
     // Check that all flags were valid
     if (status != MS::kSuccess) {
-        MGlobal::displayError("Invalid parameters detected.  Exiting.");
         return status;
     }
 
@@ -207,7 +211,7 @@ try
 
     // Read all of the dictionary args first.
     const VtDictionary userArgs = PxrUsdMayaUtil::GetDictionaryFromArgDatabase(
-            argData, JobExportArgs::GetDefaultDictionary());
+            argData, PxrUsdMayaJobExportArgs::GetDefaultDictionary());
 
     // Now read all of the other args that are specific to this command.
     bool verbose = argData.isFlagSet("verbose");
@@ -235,8 +239,7 @@ try
         }
     }
     else {
-        MString error = "-file not specified.";
-        MGlobal::displayError(error);
+        TF_RUNTIME_ERROR("-file not specified.");
         return MS::kFailure;
     }
 
@@ -304,8 +307,9 @@ try
         }
     }
 
-    JobExportArgs jobArgs = JobExportArgs::CreateFromDictionary(
-            userArgs, dagPaths, timeInterval);
+    PxrUsdMayaJobExportArgs jobArgs =
+            PxrUsdMayaJobExportArgs::CreateFromDictionary(
+                userArgs, dagPaths, timeInterval);
 
     // Create WriteJob object
     usdWriteJob usdWriteJob(jobArgs);

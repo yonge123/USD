@@ -45,7 +45,6 @@
 #include <maya/MFnDependencyNode.h>
 #include <maya/MFnMesh.h>
 #include <maya/MFnNumericData.h>
-#include <maya/MGlobal.h>
 #include <maya/MObject.h>
 #include <maya/MPlug.h>
 #include <maya/MStatus.h>
@@ -57,6 +56,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+/// General utilities for working with the Maya API.
 namespace PxrUsdMayaUtil
 {
 
@@ -90,32 +90,6 @@ private:
     MDataHandleHolder(const MPlug& plug, MDataHandle dataHandle);
     ~MDataHandleHolder();
 };
-
-inline MStatus isFloat(MString str, const MString & usage)
-{
-    MStatus status = MS::kSuccess;
-
-    if (!str.isFloat())
-    {
-        MGlobal::displayInfo(usage);
-        status = MS::kFailure;
-    }
-
-    return status;
-}
-
-inline MStatus isUnsigned(MString str, const MString & usage)
-{
-    MStatus status = MS::kSuccess;
-
-    if (!str.isUnsigned())
-    {
-        MGlobal::displayInfo(usage);
-        status = MS::kFailure;
-    }
-
-    return status;
-}
 
 // safely inverse a scale component
 inline double inverseScale(double scale)
@@ -503,6 +477,15 @@ VtValue ParseArgumentValue(
     const std::string& key,
     const std::string& value,
     const VtDictionary& guideDict);
+
+/// Gets all Maya node types that are ancestors of the given Maya node type
+/// \p ty. If \p ty isn't registered in Maya's type system, issues a runtime
+/// error and returns an empty string.
+/// The returned list is sorted from furthest to closest ancestor. The returned
+/// list will always have the given type \p ty as the last item.
+/// Note that this calls out to MEL.
+PXRUSDMAYA_API
+std::vector<std::string> GetAllAncestorMayaNodeTypes(const std::string& ty);
 
 } // namespace PxrUsdMayaUtil
 
