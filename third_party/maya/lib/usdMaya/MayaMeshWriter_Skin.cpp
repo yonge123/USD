@@ -24,16 +24,18 @@
 #include "pxr/pxr.h"
 #include "usdMaya/MayaMeshWriter.h"
 #include "usdMaya/MayaSkeletonWriter.h"
+#include "usdMaya/translatorSkel.h"
 #include "usdMaya/translatorUtil.h"
+#include "usdMaya/usdWriteJobCtx.h"
 
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/tf/staticTokens.h"
-#include "pxr/base/tf/stringUtils.h"
 #include "pxr/usd/usdGeom/mesh.h"
 #include "pxr/usd/usdSkel/bindingAPI.h"
 #include "pxr/usd/usdSkel/root.h"
 #include "pxr/usd/usdSkel/utils.h"
 
+#include <maya/MDoubleArray.h>
 #include <maya/MFnSingleIndexedComponent.h>
 #include <maya/MFnSkinCluster.h>
 #include <maya/MItDependencyGraph.h>
@@ -69,11 +71,11 @@ _GetSkinCluster(const MDagPath& dagPath) {
     MObject skinClusterObj = itDG.currentItem();
     // If there's another skin cluster, then we have multiple skin clusters.
     if (itDG.next() && !itDG.isDone()) {
-        MGlobal::displayWarning(TfStringPrintf(
+        TF_WARN(
             "Multiple skinClusters upstream of '%s'; using closest "
             "skinCluster '%s'",
             dagPath.fullPathName().asChar(),
-            MFnDependencyNode(skinClusterObj).name().asChar()).c_str());
+            MFnDependencyNode(skinClusterObj).name().asChar());
     }
 
     return skinClusterObj;
@@ -113,10 +115,9 @@ _GetInputMesh(const MFnSkinCluster& skinCluster) {
     CHECK_MSTATUS_AND_RETURN(status, MObject());
 
     if (!inputGeometryObj.hasFn(MFn::kMesh)) {
-        MGlobal::displayWarning(TfStringPrintf(
+        TF_WARN(
                 "%s is not a mesh; unable to obtain input mesh for %s",
-                inputGeometry.name().asChar(), skinCluster.name().asChar())
-                .c_str());
+                inputGeometry.name().asChar(), skinCluster.name().asChar());
         return MObject();
     }
 
@@ -342,9 +343,9 @@ _GetGeomBindTransform(const MFnSkinCluster& skinCluster,
     if (!PxrUsdMayaUtil::getPlugMatrix(
             skinCluster, "geomMatrix", &geomWorldRestXf)) {
         // All skinClusters should have geomMatrix, but if not...
-        MGlobal::displayError(TfStringPrintf(
+        TF_RUNTIME_ERROR(
                 "Couldn't read geomMatrix from skinCluster '%s'",
-                skinCluster.name().asChar()).c_str());
+                skinCluster.name().asChar());
         return false;
     }
 
@@ -403,7 +404,7 @@ _WriteJointOrder(const MDagPath& rootJoint,
 MObject
 MayaMeshWriter::writeSkinningData(UsdGeomMesh& primSchema)
 {
-    const TfToken& exportSkin = mWriteJobCtx.getArgs().exportSkin;
+    const TfToken& exportSkin = getArgs().exportSkin;
     if (exportSkin != PxrUsdExportJobArgsTokens->auto_ &&
         exportSkin != PxrUsdExportJobArgsTokens->explicit_) {
         return MObject();
@@ -457,20 +458,13 @@ MayaMeshWriter::writeSkinningData(UsdGeomMesh& primSchema)
         return MObject();
     }
 
-    // Don't continue any further unless we are able to find or create a
-    // skel root that encapsulates both this mesh and the target
-    // skeleton instance.
-    const SdfPath skelInstancePath =
-        MayaSkeletonWriter::GetSkeletonInstancePath(
-            rootJoint, mWriteJobCtx.getArgs().stripNamespaces);
-
     // Write everything to USD once we know that we have OK data.
     const UsdSkelBindingAPI bindingAPI = PxrUsdMayaTranslatorUtil
         ::GetAPISchemaForAuthoring<UsdSkelBindingAPI>(primSchema.GetPrim());
 
     if (_WriteJointInfluences(skinCluster, inMesh, bindingAPI)) {
         _WriteJointOrder(rootJoint, jointDagPaths, bindingAPI,
-                         mWriteJobCtx.getArgs().stripNamespaces);
+                         getArgs().stripNamespaces);
     }
 
     GfMatrix4d geomBindTransform;
@@ -481,9 +475,13 @@ MayaMeshWriter::writeSkinningData(UsdGeomMesh& primSchema)
 
     _WarnForPostDeformationTransform(getUsdPath(), getDagPath(), skinCluster);
 
-    // Export will create a SkeletonInstance at the location corresponding to
-    // the root joint. Configure this mesh to be bound to the same instance.
-    bindingAPI.CreateSkeletonInstanceRel().SetTargets({skelInstancePath});
+    const SdfPath skelPath =
+        MayaSkeletonWriter::GetSkeletonPath(
+            rootJoint, mWriteJobCtx.getArgs().stripNamespaces);
+
+    // Export will create a Skeleton at the location corresponding to
+    // the root joint. Configure this mesh to be bound to the same skel.
+    bindingAPI.CreateSkeletonRel().SetTargets({skelPath});
 
     // Add all skel primvars to the exclude set.
     // We don't want later processing to stomp on any of our data.
@@ -494,7 +492,7 @@ MayaMeshWriter::writeSkinningData(UsdGeomMesh& primSchema)
     // Mark the bindings for post processing.
     mWriteJobCtx.getSkelBindingsWriter().MarkBindings(
         primSchema.GetPrim().GetPath(),
-        skelInstancePath, exportSkin);
+        skelPath, exportSkin);
 
     return inMeshObj;
 }

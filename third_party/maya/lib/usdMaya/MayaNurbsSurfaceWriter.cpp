@@ -26,6 +26,7 @@
 #include "usdMaya/MayaNurbsSurfaceWriter.h"
 
 #include "usdMaya/adaptor.h"
+#include "usdMaya/primWriterRegistry.h"
 #include "usdMaya/writeUtil.h"
 
 #include "pxr/usd/usdGeom/nurbsPatch.h"
@@ -34,6 +35,7 @@
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usdUtils/pipeline.h"
 
+#include <maya/MDoubleArray.h>
 #include <maya/MFnDependencyNode.h>
 #include <maya/MFnNurbsSurface.h>
 #include <maya/MFnNurbsCurve.h>
@@ -42,7 +44,8 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-PXRUSDMAYA_REGISTER_ADAPTOR_SCHEMA(MFn::kNurbsSurface, UsdGeomNurbsPatch);
+PXRUSDMAYA_REGISTER_WRITER(nurbsSurface, MayaNurbsSurfaceWriter);
+PXRUSDMAYA_REGISTER_ADAPTOR_SCHEMA(nurbsSurface, UsdGeomNurbsPatch);
 
 MayaNurbsSurfaceWriter::MayaNurbsSurfaceWriter(
         const MDagPath & iDag,
@@ -118,9 +121,9 @@ bool MayaNurbsSurfaceWriter::writeNurbsSurfaceAttrs(
 
     MFnNurbsSurface nurbs(getDagPath(), &status);
     if (!status) {
-        MGlobal::displayError(
-            "MayaNurbsSurfaceWriter: MFnNurbsSurface() failed for surface at dagPath: " +
-            getDagPath().fullPathName());
+        TF_RUNTIME_ERROR(
+                "MFnNurbsSurface() failed for surface at DAG path: %s",
+                getDagPath().fullPathName().asChar());
         return false;
     }
     
@@ -165,9 +168,11 @@ bool MayaNurbsSurfaceWriter::writeNurbsSurfaceAttrs(
     unsigned int numKnotsInU = nurbs.numKnotsInU();
     unsigned int numKnotsInV = nurbs.numKnotsInV();
     if (numKnotsInU < 2 || numKnotsInV < 2) {
-        MGlobal::displayError(
-            "MFnNurbsSurface() has degenerate knot vectors. Skippping..." );
-        return false;        
+        TF_RUNTIME_ERROR(
+                "MFnNurbsSurface '%s' has degenerate knot vectors. "
+                "Skipping...",
+                getDagPath().fullPathName().asChar());
+        return false;
     }
 
     MDoubleArray knotsInU;
