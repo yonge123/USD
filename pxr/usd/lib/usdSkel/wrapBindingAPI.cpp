@@ -179,11 +179,6 @@ void wrapUsdSkelBindingAPI()
         .def("CreateSkeletonRel",
              &This::CreateSkeletonRel)
         
-        .def("GetSkeletonInstanceRel",
-             &This::GetSkeletonInstanceRel)
-        .def("CreateSkeletonInstanceRel",
-             &This::CreateSkeletonInstanceRel)
-        
         .def("GetBlendShapeTargetsRel",
              &This::GetBlendShapeTargetsRel)
         .def("CreateBlendShapeTargetsRel",
@@ -215,6 +210,22 @@ void wrapUsdSkelBindingAPI()
 namespace {
 
 
+object
+_GetSkeleton(const UsdSkelBindingAPI& binding)
+{
+    UsdSkelSkeleton skel;
+    return binding.GetSkeleton(&skel) ? object(skel) : object();
+}
+
+
+object
+_GetAnimationSource(const UsdSkelBindingAPI& binding)
+{
+    UsdPrim prim;
+    return binding.GetAnimationSource(&prim) ? object(prim) : object();
+}
+
+
 WRAP_CUSTOM {
     using This = UsdSkelBindingAPI;
 
@@ -231,6 +242,14 @@ WRAP_CUSTOM {
 
         .def("SetRigidJointInfluence", &This::SetRigidJointInfluence,
              (arg("jointIndex"), arg("weight")=1.0f))
+
+        .def("GetSkeleton", &_GetSkeleton)
+
+        .def("GetAnimationSource", &_GetAnimationSource)
+        
+        .def("GetInheritedSkeleton", &This::GetInheritedSkeleton)
+        
+        .def("GetInheritedAnimationSource", &This::GetInheritedAnimationSource)
         ;
 }
 
