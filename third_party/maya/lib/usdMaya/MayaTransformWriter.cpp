@@ -595,7 +595,7 @@ bool MayaTransformWriter::_WriteXformableAttrs(
     // Write parent class attrs
     _WriteImageableAttrs(_xformDagPath, usdTime, xformSchema); // for the shape
 
-    computeXFormOps(xformSchema, _animChannels, usdTime, getArgs().eulerFilter,
+    computeXFormOps(xformSchema, _animChannels, usdTime, _GetExportArgs().eulerFilter,
             _previousRotates, _GetSparseValueWriter());
     return true;
 }
