@@ -79,7 +79,7 @@ bool MayaCameraWriter::writeCameraAttrs(const UsdTimeCode &usdTime, UsdGeomCamer
     //    OR
     // - We are at a non-default time and some attribute on the shape IS animated or
     //   we need to author a sample because this file will be used as a value clip.
-    if (!_ShouldWriteSample(usdTime, IsShapeAnimated())) {
+    if (!_ShouldWriteSample(usdTime, _IsShapeAnimated())) {
         return true;
     }
 
