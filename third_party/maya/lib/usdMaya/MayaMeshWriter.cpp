@@ -136,10 +136,10 @@ MayaMeshWriter::MayaMeshWriter(
     }
 
     // Get schema
-    UsdGeomMesh primSchema = UsdGeomMesh::Define(getUsdStage(), getUsdPath());
+    UsdGeomMesh primSchema = UsdGeomMesh::Define(GetUsdStage(), GetUsdPath());
     TF_AXIOM(primSchema);
-    mUsdPrim = primSchema.GetPrim();
-    TF_AXIOM(mUsdPrim);
+    _usdPrim = primSchema.GetPrim();
+    TF_AXIOM(_usdPrim);
 }
 
 void MayaMeshWriter::_prependDefaultValue(UsdAttribute& attr, const UsdTimeCode& usdTime) {
@@ -161,7 +161,7 @@ void MayaMeshWriter::_prependDefaultValue(UsdAttribute& attr, const UsdTimeCode&
 };
 
 // virtual
-void MayaMeshWriter::postExport()
+void MayaMeshWriter::PostExport()
 {
     auto shiftPrimvar = [](const UsdGeomPrimvar& primvar) {
         if (!primvar) {
@@ -211,7 +211,7 @@ void MayaMeshWriter::postExport()
         }
     };
 
-    UsdGeomMesh primSchema(mUsdPrim);
+    UsdGeomMesh primSchema(GetUsdPrim());
 
     for (auto& primvar: primSchema.GetPrimvars()) {
         shiftPrimvar(primvar);
@@ -219,9 +219,9 @@ void MayaMeshWriter::postExport()
 }
 
 //virtual 
-void MayaMeshWriter::write(const UsdTimeCode &usdTime)
+void MayaMeshWriter::Write(const UsdTimeCode &usdTime)
 {
-    UsdGeomMesh primSchema(mUsdPrim);
+    UsdGeomMesh primSchema(_usdPrim);
     // Write the attrs
     writeMeshAttrs(usdTime, primSchema);
 }
@@ -232,11 +232,11 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
     MStatus status = MS::kSuccess;
 
     // Write parent class attrs
-    writeTransformAttrs(usdTime, primSchema);
+    _WriteXformableAttrs(usdTime, primSchema);
 
     // Exporting reference object only once
-    if (usdTime.IsDefault() && getArgs().exportReferenceObjects) {
-        _exportReferenceMesh(primSchema, getDagPath().node());
+    if (usdTime.IsDefault() && _GetExportArgs().exportReferenceObjects) {
+        _exportReferenceMesh(primSchema, GetDagPath().node());
     }
 
     // Write UsdSkel skeletal skinning data first, since this function will
@@ -249,11 +249,11 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
     // This is the mesh that "lives" at the end of this dag node. We should
     // always pull user-editable "sidecar" data like color sets and tags from
     // this mesh.
-    MFnMesh finalMesh(getDagPath(), &status);
+    MFnMesh finalMesh(GetDagPath(), &status);
     if (!status) {
         TF_RUNTIME_ERROR(
             "Failed to get final mesh at DAG path: %s",
-            getDagPath().fullPathName().asChar());
+            GetDagPath().fullPathName().asChar());
         return false;
     }
 
@@ -267,16 +267,16 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
     if (!status) {
         TF_RUNTIME_ERROR(
             "Failed to get geom mesh at DAG path: %s",
-            getDagPath().fullPathName().asChar());
+            GetDagPath().fullPathName().asChar());
         return false;
     }
 
     // Return if usdTime does not match if shape is animated.
     // XXX In theory you could have an animated input mesh before the
     // skinCluster is applied but we don't support that right now.
-    // Note that isShapeAnimated() as computed by MayaTransformWriter is
+    // Note that _IsShapeAnimated() as computed by MayaTransformWriter is
     // whether the finalMesh is animated.
-    bool isAnimated = _skelInputMesh.isNull() ? isShapeAnimated() : false;
+    bool isAnimated = _skelInputMesh.isNull() ? _IsShapeAnimated() : false;
     if (!shouldWriteSample(usdTime, isAnimated)) {
         // skip shape as the usdTime does not match if shape isAnimated value
         return true; 
@@ -325,7 +325,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
     // flag (this is specified by the job args but defaults to catmullClark).
     TfToken sdScheme = PxrUsdMayaMeshUtil::GetSubdivScheme(finalMesh);
     if (sdScheme.IsEmpty()) {
-        sdScheme = getArgs().defaultMeshScheme;
+        sdScheme = _GetExportArgs().defaultMeshScheme;
     }
     primSchema.CreateSubdivisionSchemeAttr(VtValue(sdScheme), true);
 
@@ -377,7 +377,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
 
     // == Write UVSets as Vec2f Primvars
     MStringArray uvSetNames;
-    if (getArgs().exportMeshUVs) {
+    if (_GetExportArgs().exportMeshUVs) {
         status = finalMesh.getUVSetNames(uvSetNames);
     }
     for (unsigned int i = 0; i < uvSetNames.length(); ++i) {
@@ -417,7 +417,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
 
     // == Gather ColorSets
     std::vector<std::string> colorSetNames;
-    if (getArgs().exportColorSets) {
+    if (_GetExportArgs().exportColorSets) {
         MStringArray mayaColorSetNames;
         status = finalMesh.getColorSetNames(mayaColorSetNames);
         colorSetNames.reserve(mayaColorSetNames.length());
@@ -437,7 +437,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
     // opacities from the shaders assigned to the mesh and/or its faces.
     // If we find a displayColor color set, the shader colors and opacities
     // will be used to fill in unauthored/unpainted faces in the color set.
-    if (getArgs().exportDisplayColor || colorSetNames.size() > 0) {
+    if (_GetExportArgs().exportDisplayColor || colorSetNames.size() > 0) {
         PxrUsdMayaUtil::GetLinearShaderColor(finalMesh,
                                              &shadersRGBData,
                                              &shadersAlphaData,
@@ -453,7 +453,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
         bool isDisplayColor = false;
 
         if (colorSetName == PxrUsdMayaMeshColorSetTokens->DisplayColorColorSetName.GetString()) {
-            if (!getArgs().exportDisplayColor) {
+            if (!_GetExportArgs().exportDisplayColor) {
                 continue;
             }
             isDisplayColor=true;
@@ -560,7 +560,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
     // _addDisplayPrimvars() will only author displayColor and displayOpacity
     // if no authored opinions exist, so the code below only has an effect if
     // we did NOT find a displayColor color set above.
-    if (getArgs().exportDisplayColor) {
+    if (_GetExportArgs().exportDisplayColor) {
         // Using the shader default values (an alpha of zero, in particular)
         // results in Gprims rendering the same way in usdview as they do in
         // Maya (i.e. unassigned components are invisible).
@@ -593,11 +593,11 @@ bool MayaMeshWriter::isMeshValid()
     MStatus status = MS::kSuccess;
 
     // Sanity checks
-    MFnMesh lMesh(getDagPath(), &status);
+    MFnMesh lMesh(GetDagPath(), &status);
     if (!status) {
         TF_RUNTIME_ERROR(
                 "MFnMesh() failed for mesh at DAG path: %s",
-                getDagPath().fullPathName().asChar());
+                GetDagPath().fullPathName().asChar());
         return false;
     }
 
@@ -617,7 +617,7 @@ bool MayaMeshWriter::isMeshValid()
 }
 
 bool
-MayaMeshWriter::exportsGprims() const
+MayaMeshWriter::ExportsGprims() const
 {
     return true;
 }
