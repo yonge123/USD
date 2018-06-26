@@ -48,8 +48,7 @@ TF_DEFINE_PRIVATE_TOKENS(
 MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx)
     : MayaTransformWriter(iDag, uPath, instanceSource, jobCtx)
 {
-    // TODO inherit from the TransformWriter and handle it like the other shapes
-    if (getArgs().mergeTransformAndShape) {
+    if (_GetExportArgs().mergeTransformAndShape) {
         // TODO: Replicating logic from MayaTransformWriter... and MDagPathToUsdPath...
         // combine these!
         auto hasOnlyOneShapeBelow = [&jobCtx] (const MDagPath& path) {
@@ -91,8 +90,8 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
         // shape with the image plane transform.  Now, we just need to worry about (possibly)
         // popping out the camera shape from our usd path...
 
-        if (getDagPath().pathCount() > 1) {
-            auto cameraXformDag = getDagPath();
+        if (GetDagPath().pathCount() > 1) {
+            auto cameraXformDag = GetDagPath();
 
             // We're in the underworld, get the first xform before the underworld (should be the
             // camera's xform)
@@ -133,33 +132,33 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
                 // We use tokens from the already-created path - that way, we don't redo
                 // processing done by MDagPathToUsdPath, and we avoid the hash from
                 // token re-creation
-                SdfPath cameraShapePath = getUsdPath();
+                SdfPath cameraShapePath = GetUsdPath();
                 for (auto i = 0u; i < underworldLength - 1; ++i) {
                     cameraShapePath = cameraShapePath.GetParentPath();
                 }
                 auto cameraXformPath = cameraShapePath.GetParentPath();
 
-                setUsdPath(getUsdPath().ReplacePrefix(cameraShapePath, cameraXformPath));
+                _SetUsdPath(GetUsdPath().ReplacePrefix(cameraShapePath, cameraXformPath));
             }
         }
     }
 
     auto primSchema =
-        UsdGeomImagePlane::Define(getUsdStage(), getUsdPath());
+        UsdGeomImagePlane::Define(GetUsdStage(), GetUsdPath());
     TF_AXIOM(primSchema);
-    mUsdPrim = primSchema.GetPrim();
-    TF_AXIOM(mUsdPrim);
+    _usdPrim = primSchema.GetPrim();
+    TF_AXIOM(_usdPrim);
 
 #ifdef GENERATE_SHADERS
-    const auto materialPath = getUsdPath().AppendChild(_tokens->materialName);
-    auto material = UsdShadeMaterial::Define(getUsdStage(), materialPath);
-    auto shader = UsdShadeShader::Define(getUsdStage(), materialPath.AppendChild(_tokens->shaderName));
-    auto primvar = UsdShadeShader::Define(getUsdStage(), materialPath.AppendChild(_tokens->primvarName));
-    auto texture = UsdShadeShader::Define(getUsdStage(), materialPath.AppendChild(_tokens->textureName));
+    const auto materialPath = GetUsdPath().AppendChild(_tokens->materialName);
+    auto material = UsdShadeMaterial::Define(GetUsdStage(), materialPath);
+    auto shader = UsdShadeShader::Define(GetUsdStage(), materialPath.AppendChild(_tokens->shaderName));
+    auto primvar = UsdShadeShader::Define(GetUsdStage(), materialPath.AppendChild(_tokens->primvarName));
+    auto texture = UsdShadeShader::Define(GetUsdStage(), materialPath.AppendChild(_tokens->textureName));
     mTexture = texture.GetPrim();
     TF_AXIOM(mTexture);
 
-    UsdShadeMaterialBindingAPI(mUsdPrim)
+    UsdShadeMaterialBindingAPI(_usdPrim)
         .Bind(material);
 
     UsdShadeConnectableAPI::ConnectToSource(
@@ -192,8 +191,8 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
         shaderApi.CreateInput(_tokens->baseColor, SdfValueTypeNames->Color4f),
         textureApi.CreateOutput(_tokens->color, SdfValueTypeNames->Color4f));
 
-    for (auto pt = getUsdPath(); !pt.IsEmpty(); pt = pt.GetParentPath()) {
-        auto pr = getUsdStage()->GetPrimAtPath(pt);
+    for (auto pt = GetUsdPath(); !pt.IsEmpty(); pt = pt.GetParentPath()) {
+        auto pr = GetUsdStage()->GetPrimAtPath(pt);
         if (pr && pr.IsA<UsdGeomCamera>()) {
             primSchema.CreateCameraRel().AddTarget(pt);
             break;
@@ -205,8 +204,8 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
 MayaImagePlaneWriter::~MayaImagePlaneWriter() {
 }
 
-void MayaImagePlaneWriter::write(const UsdTimeCode& usdTime) {
-    UsdGeomImagePlane primSchema(mUsdPrim);
+void MayaImagePlaneWriter::Write(const UsdTimeCode& usdTime) {
+    UsdGeomImagePlane primSchema(_usdPrim);
 
     // Write the attrs
     writeImagePlaneAttrs(usdTime, primSchema);
@@ -214,14 +213,14 @@ void MayaImagePlaneWriter::write(const UsdTimeCode& usdTime) {
 
 bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdGeomImagePlane& primSchema) {
     // Write parent class attrs
-    writeTransformAttrs(usdTime, primSchema);
+    _WriteXformableAttrs(usdTime, primSchema);
 
-    if (usdTime.IsDefault() == isShapeAnimated()) {
+    if (usdTime.IsDefault() == _IsShapeAnimated()) {
         return true;
     }
 
     // Write extent, just the default for now. It should be setup in the adapter for drawing.
-    MFnDagNode dnode(getDagPath());
+    MFnDagNode dnode(GetDagPath());
     
     auto imageNameExtracted = MRenderUtil::exactImagePlaneFileName(dnode.object());
     const SdfAssetPath imageNameExtractedPath(std::string(imageNameExtracted.asChar()));
