@@ -208,10 +208,10 @@ void MayaImagePlaneWriter::Write(const UsdTimeCode& usdTime) {
     UsdGeomImagePlane primSchema(_usdPrim);
 
     // Write the attrs
-    writeImagePlaneAttrs(usdTime, primSchema);
+    _WriteImagePlaneAttrs(usdTime, primSchema);
 }
 
-bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdGeomImagePlane& primSchema) {
+bool MayaImagePlaneWriter::_WriteImagePlaneAttrs(const UsdTimeCode& usdTime, UsdGeomImagePlane& primSchema) {
     // Write parent class attrs
     _WriteXformableAttrs(usdTime, primSchema);
 

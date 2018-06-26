@@ -24,7 +24,7 @@ public:
     virtual void Write(const UsdTimeCode& usdTime) override;
 
 protected:
-    bool writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdGeomImagePlane& primSchema);
+    bool _WriteImagePlaneAttrs(const UsdTimeCode& usdTime, UsdGeomImagePlane& primSchema);
 
 #ifdef GENERATE_SHADERS
     UsdPrim mTexture;
