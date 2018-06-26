@@ -46,14 +46,8 @@ TF_DEFINE_PRIVATE_TOKENS(
 );
 
 MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx)
-    : MayaTransformWriter(iDag, uPath, instanceSource, jobCtx),
-      mIsShapeAnimated(false)
+    : MayaTransformWriter(iDag, uPath, instanceSource, jobCtx)
 {
-    if (!getArgs().timeInterval.IsEmpty()) {
-        MObject obj = getDagPath().node();
-        mIsShapeAnimated = PxrUsdMayaUtil::isAnimated(obj);
-    }
-
     // TODO inherit from the TransformWriter and handle it like the other shapes
     if (getArgs().mergeTransformAndShape) {
         // TODO: Replicating logic from MayaTransformWriter... and MDagPathToUsdPath...
@@ -216,10 +210,6 @@ void MayaImagePlaneWriter::write(const UsdTimeCode& usdTime) {
 
     // Write the attrs
     writeImagePlaneAttrs(usdTime, primSchema);
-}
-
-bool MayaImagePlaneWriter::isShapeAnimated() const {
-    return mIsShapeAnimated;
 }
 
 bool MayaImagePlaneWriter::writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdGeomImagePlane& primSchema) {

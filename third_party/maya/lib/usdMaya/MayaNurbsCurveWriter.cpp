@@ -76,7 +76,7 @@ bool MayaNurbsCurveWriter::writeNurbsCurveAttrs(const UsdTimeCode &usdTime, UsdG
     _WriteXformableAttrs(usdTime, primSchema);
 
     // Return if usdTime does not match if shape is animated
-    if (!_ShouldWriteSample(usdTime, IsShapeAnimated())) {
+    if (!_ShouldWriteSample(usdTime, _IsShapeAnimated())) {
         // skip shape as the usdTime does not match if shape isAnimated value
         return true; 
     }
