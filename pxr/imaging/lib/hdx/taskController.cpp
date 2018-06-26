@@ -241,11 +241,12 @@ HdxTaskController::GetTasks(TfToken const& taskSet)
     // Light - Only run simpleLightTask if the backend supports simpleLight...
     if (GetRenderIndex()->IsSprimTypeSupported(HdPrimTypeTokens->simpleLight)) {
         const HdxSimpleLightTaskParams& simpleLightParams =
-            _delegate.GetParameter<HdxSimpleLightTaskParams>(_simpleLightTaskId, HdTokens->params);
+            _delegate.GetParameter<HdxSimpleLightTaskParams>(
+                _simpleLightTaskId, HdTokens->params);
+        _tasks.push_back(GetRenderIndex()->GetTask(_simpleLightTaskId));
         if (simpleLightParams.enableShadows) {
             _tasks.push_back(GetRenderIndex()->GetTask(_shadowTaskId));
         }
-        _tasks.push_back(GetRenderIndex()->GetTask(_simpleLightTaskId));
     }
 
     // Render
@@ -491,7 +492,8 @@ HdxTaskController::SetLightingState(GlfSimpleLightingContextPtr const& src)
         lightParams.material = src->GetMaterial();
         lightParams.enableShadows = useShadows;
 
-        _delegate.SetParameter(_simpleLightTaskId, HdTokens->params, lightParams);
+        _delegate.SetParameter(
+            _simpleLightTaskId, HdTokens->params, lightParams);
         GetRenderIndex()->GetChangeTracker().MarkTaskDirty(
             _simpleLightTaskId, HdChangeTracker::DirtyParams);
     }
@@ -581,7 +583,8 @@ HdxTaskController::SetCameraClipPlanes(
 }
 
 void
-HdxTaskController::SetCameraWindowPolicy(CameraUtilConformWindowPolicy windowPolicy) {
+HdxTaskController::SetCameraWindowPolicy(
+    CameraUtilConformWindowPolicy windowPolicy) {
     const CameraUtilConformWindowPolicy oldPolicy =
         _delegate.GetParameter<CameraUtilConformWindowPolicy>(
             _cameraId, HdCameraTokens->windowPolicy);
