@@ -137,6 +137,8 @@ protected:
     /// elsewhere.
     virtual bool _IsShapeAnimated() const = 0;
 
+    /// Whether data should be written at this time code.
+    /// Based on animation and whether this will be used as a value clip
     bool _ShouldWriteSample(const UsdTimeCode &usdTime, bool isAnimated) const;
 
     /// Sets the path on the USD stage where this prim writer should define its
