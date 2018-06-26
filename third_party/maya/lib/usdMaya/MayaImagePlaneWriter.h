@@ -22,12 +22,9 @@ public:
     virtual ~MayaImagePlaneWriter();
 
     virtual void write(const UsdTimeCode& usdTime) override;
-    virtual bool isShapeAnimated() const override;
 
 protected:
     bool writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdGeomImagePlane& primSchema);
-
-    bool mIsShapeAnimated;
 
 #ifdef GENERATE_SHADERS
     UsdPrim mTexture;
