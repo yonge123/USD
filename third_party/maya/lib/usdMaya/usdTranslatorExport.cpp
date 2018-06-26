@@ -140,8 +140,8 @@ usdTranslatorExport::writer(const MFileObject &file,
     
     if (dagPaths.size()) {
         PxrUsdMayaJobExportArgs jobArgs =
-            PxrUsdMayaJobExportArgs::CreateFromDictionary(
-                userArgs, dagPaths, timeInterval);
+                PxrUsdMayaJobExportArgs::CreateFromDictionary(
+                    userArgs, dagPaths, timeInterval);
         for (unsigned int i=0; i < filteredTypes.length(); ++i) {
             jobArgs.AddFilteredTypeName(filteredTypes[i].asChar());
         }
