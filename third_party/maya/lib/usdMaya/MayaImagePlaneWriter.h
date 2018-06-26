@@ -21,7 +21,7 @@ public:
     MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx);
     virtual ~MayaImagePlaneWriter();
 
-    virtual void write(const UsdTimeCode& usdTime) override;
+    virtual void Write(const UsdTimeCode& usdTime) override;
 
 protected:
     bool writeImagePlaneAttrs(const UsdTimeCode& usdTime, UsdGeomImagePlane& primSchema);
