@@ -114,7 +114,7 @@ bool MayaNurbsSurfaceWriter::writeNurbsSurfaceAttrs(
     _WriteXformableAttrs(usdTimeCode, primSchema);
 
     // Return if usdTimeCode does not match if shape is animated
-    if (!_ShouldWriteSample(usdTimeCode, IsShapeAnimated())) {
+    if (!_ShouldWriteSample(usdTimeCode, _IsShapeAnimated())) {
         // skip shape as the usdTimeCode does not match if shape isAnimated value
         return true; 
     }
