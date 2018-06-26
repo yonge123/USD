@@ -343,6 +343,10 @@ HdxTaskController::SetSelectionColor(GfVec4f const& color)
 void
 HdxTaskController::SetEnableShadows(bool enable)
 {
+    if (!GetRenderIndex()->IsSprimTypeSupported(
+        HdPrimTypeTokens->simpleLight)) {
+        return;
+    }
     HdxSimpleLightTaskParams params =
         _delegate.GetParameter<HdxSimpleLightTaskParams>(
             _simpleLightTaskId, HdTokens->params);
@@ -555,14 +559,17 @@ HdxTaskController::SetCameraViewport(GfVec4d const& viewport)
             tasks[i], HdChangeTracker::DirtyParams);
     }
 
-    // The shadow and camera viewport should be the same
-    // so we don't have to double check what the shadow task has.
-    HdxShadowTaskParams params = _delegate.GetParameter<HdxShadowTaskParams>(
-        _shadowTaskId, HdTokens->params);
-    params.viewport = viewport;
-    _delegate.SetParameter(_shadowTaskId, HdTokens->params, params);
-    GetRenderIndex()->GetChangeTracker().MarkTaskDirty(
-        _shadowTaskId, HdChangeTracker::DirtyParams);
+    if (GetRenderIndex()->IsSprimTypeSupported(HdPrimTypeTokens->simpleLight)) {
+        // The shadow and camera viewport should be the same
+        // so we don't have to double check what the shadow task has.
+        HdxShadowTaskParams params =
+            _delegate.GetParameter<HdxShadowTaskParams>(
+                _shadowTaskId, HdTokens->params);
+        params.viewport = viewport;
+        _delegate.SetParameter(_shadowTaskId, HdTokens->params, params);
+        GetRenderIndex()->GetChangeTracker().MarkTaskDirty(
+            _shadowTaskId, HdChangeTracker::DirtyParams);
+    }
 }
 
 void
