@@ -120,7 +120,7 @@ MayaPrimWriter::_WriteImageableAttrs(const MDagPath &dagT, const UsdTimeCode &us
 
         TfToken const &visibilityTok = (isVisible ? UsdGeomTokens->inherited : 
                                         UsdGeomTokens->invisible);
-        if (shouldWriteSample(usdTime, isAnimated)) {
+        if (_ShouldWriteSample(usdTime, isAnimated)) {
             if (usdTime.IsDefault()) {
                 _SetAttribute(primSchema.CreateVisibilityAttr(VtValue(), true), 
                               visibilityTok, 
@@ -169,7 +169,7 @@ MayaPrimWriter::_WriteImageableAttrs(const MDagPath &dagT, const UsdTimeCode &us
     }
 
     // Check if samples should be written at time if attr has no animation.
-    bool writeIfConstant = shouldWriteSample(usdTime, false);
+    bool writeIfConstant = _ShouldWriteSample(usdTime, false);
     // Write API schema attributes, strongly-typed metadata, and user-tagged
     // export attributes.
     // Write attributes on the transform first, and then attributes on the shape
