@@ -201,7 +201,7 @@ void MayaParticleWriter::Write(const UsdTimeCode &usdTime) {
 }
 
 void MayaParticleWriter::writeParams(const UsdTimeCode& usdTime, UsdGeomPoints& points) {
-    if (usdTime.IsDefault() == _IsShapeAnimated()) {
+    if (!_ShouldWriteSample(usdTime, _IsShapeAnimated())) {
         return;
     }
 
