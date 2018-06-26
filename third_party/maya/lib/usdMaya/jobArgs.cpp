@@ -461,8 +461,8 @@ void PxrUsdMayaJobExportArgs::AddFilteredTypeName(const MString& typeName)
     MNodeClass cls(typeName);
     unsigned int id = cls.typeId().id();
     if (id == 0) {
-        MGlobal::displayWarning(MString("Given excluded node type '") + typeName
-                + "' does not exist; ignoring");
+        TF_WARN("Given excluded node type '%s' does not exist; ignoring",
+                typeName.asChar());
         return;
     }
     _filteredTypeIds.insert(id);
@@ -474,8 +474,8 @@ void PxrUsdMayaJobExportArgs::AddFilteredTypeName(const MString& typeName)
     MStringArray inheritedTypes;
     MStatus status = MGlobal::executeCommand(queryCommand, inheritedTypes, false, false);
     if (!status) {
-        MGlobal::displayWarning(MString("Error querying derived types for '") + typeName
-                + "': " + status.errorString());
+        TF_WARN("Error querying derived types for '%s': %s",
+                typeName.asChar(), status.errorString().asChar());
         return;
     }
 
