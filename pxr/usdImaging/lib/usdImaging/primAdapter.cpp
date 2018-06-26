@@ -469,6 +469,13 @@ UsdImagingPrimAdapter::_GetMaterialNetworkSelector() const
         GetMaterialNetworkSelector();
 }
 
+TfTokenVector 
+UsdImagingPrimAdapter::_GetShaderSourceTypes() const
+{
+    return _delegate->GetRenderIndex().GetRenderDelegate()->
+            GetShaderSourceTypes();
+}
+
 bool 
 UsdImagingPrimAdapter::_IsInInvisedPaths(SdfPath const& usdPath) const
 {
