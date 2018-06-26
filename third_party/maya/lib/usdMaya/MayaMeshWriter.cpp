@@ -280,7 +280,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
     // Note that _IsShapeAnimated() as computed by MayaTransformWriter is
     // whether the finalMesh is animated.
     bool isAnimated = _skelInputMesh.isNull() ? _IsShapeAnimated() : false;
-    if (!shouldWriteSample(usdTime, isAnimated)) {
+    if (!_ShouldWriteSample(usdTime, isAnimated)) {
         // skip shape as the usdTime does not match if shape isAnimated value
         return true; 
     }
