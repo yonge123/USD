@@ -48,7 +48,8 @@ MayaCameraWriter::MayaCameraWriter(
     const SdfPath& uPath,
     bool instanceSource,
     usdWriteJobCtx& jobCtx)
-    : MayaTransformWriter(iDag, uPath, instanceSource, jobCtx) 
+    // cameras are not instanced - may have image planes in underworld
+    : MayaTransformWriter(iDag, uPath, false, jobCtx) 
 {
     UsdGeomCamera primSchema =
         UsdGeomCamera::Define(GetUsdStage(), GetUsdPath());
