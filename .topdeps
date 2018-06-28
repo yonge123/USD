@@ -14,3 +14,4 @@ tg/customization/disable_UpdateSelectionFrameStamp
 tg/customization/image_plane
 tg/sidefx/vol
 tg/simple_features/glsl_type_info
+tg/simple_features/dont_fallback_to_build_locations
