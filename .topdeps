@@ -8,7 +8,6 @@ tg/simple_features/animated_textures_for_hydra
 tg/simple_features/imaging_shadow_support
 tg/bugfixes/katana_testsuite_precision
 tg/simple_features/export_root
-tg/simple_features/glsl_type_info
 tg/simple_features/katana_nurbs_curves
 tg/simple_features/point_based_interpolation
 tg/simple_features/usdRender
