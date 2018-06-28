@@ -303,6 +303,16 @@ MayaPrimWriterPtr usdWriteJobCtx::_createPrimWriter(
         return nullptr;
     }
 
+    if (curDag.pathCount() > 1) {
+        MDagPath underworldLeafPath;
+        curDag.getPath(underworldLeafPath, curDag.pathCount() - 1);
+        if (underworldLeafPath.length() == 0)
+        {
+            // This is an underworld "root" node - also skip
+            return nullptr;
+        }
+    }
+
     MObject ob = curDag.node();
     const SdfPath writePath = usdPath.IsEmpty() ?
             getUsdPathFromDagPath(curDag, instanceSource) : usdPath;
