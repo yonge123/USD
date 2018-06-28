@@ -9,7 +9,6 @@ tg/simple_features/filterTypes
 tg/simple_features/animated_textures_for_hydra
 tg/simple_features/imaging_shadow_support
 tg/bugfixes/oiio_read_with_asserts
-tg/bugfixes/ubuntu_katana_build_fix
 tg/bugfixes/katana_testsuite_precision
 tg/simple_features/export_root
 tg/simple_features/glsl_type_info
