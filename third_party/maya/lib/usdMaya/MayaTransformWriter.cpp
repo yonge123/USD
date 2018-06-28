@@ -462,16 +462,6 @@ MayaTransformWriter::MayaTransformWriter(
         this->_xformDagPath = MDagPath(); // make path invalid
     };
 
-    auto is_instanceable = [](const MDagPath& dagPath) -> bool {
-        return dagPath.isInstanced()
-                // Don't want to bother with instancing underworld nodes, too many
-                // headaches
-                && dagPath.pathCount() == 1
-                // Don't want to instance cameras, since they don't support it,
-                // and they may have underworld nodes we want to export (imagePlanes)
-                && !dagPath.hasFn(MFn::kCamera);
-    };
-
     // it's more straightforward to separate code
     if (_isInstanceSource) {
         if (!hasTransform) {
@@ -482,14 +472,14 @@ MayaTransformWriter::MayaTransformWriter(
             if (hasOnlyOneShapeBelow(iDag)) {
                 auto copyDag = iDag;
                 copyDag.extendToShapeDirectlyBelow(0);
-                if (is_instanceable(copyDag)) {
+                if (copyDag.isInstanced()) {
                     invalidate_transform();
                 } else if (_GetExportArgs().mergeTransformAndShape) {
                     invalidate_transform();
                 }
             }
         } else {
-            if (is_instanceable(iDag)) {
+            if (iDag.isInstanced()) {
                 isInstance = true;
                 setup_merged_shape();
             } else if (_GetExportArgs().mergeTransformAndShape) {
