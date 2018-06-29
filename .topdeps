@@ -7,7 +7,6 @@ tg/simple_features/imaging_shadow_support
 tg/bugfixes/katana_testsuite_precision
 tg/simple_features/export_root
 tg/simple_features/katana_nurbs_curves
-tg/simple_features/point_based_interpolation
 tg/simple_features/usdRender
 tg/simple_features/maya_call_once_deadlock
 tg/simple_features/face_varying_in_katana
