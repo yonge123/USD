@@ -164,33 +164,25 @@ HdxShadowTask::_Sync(HdTaskContext* ctx)
     SdfPathVector sprimPaths = renderIndex.GetSprimSubtree(
         HdPrimTypeTokens->simpleLight, SdfPath::AbsoluteRootPath());
 
-    HdPrimGather gather;
-
-    gather.Filter(sprimPaths,
-                  _params.lightIncludePaths,
-                  _params.lightExcludePaths,
-                  &lightPaths);
 
     HdStLightPtrConstVector lights;
-    TF_FOR_ALL (it, lightPaths) {
-         const HdStLight *light = static_cast<const HdStLight *>(
-                                     renderIndex.GetSprim(
-                                             HdPrimTypeTokens->simpleLight, 
-                                             *it));
-
-         if (light != nullptr) {
-            lights.push_back(light);
-        }
-    }
-
-    if (!TF_VERIFY(lights.size() == glfLights.size())) {
-        return;
+    lights.reserve(glfLights.size());
+    for (const auto& it: glfLights) {
+        const HdStLight* light = static_cast<const HdStLight*>(
+            renderIndex.GetSprim(HdPrimTypeTokens->simpleLight,
+                it.GetID()));
+        lights.push_back(light);
     }
     
     // Iterate through all lights and for those that have shadows enabled
     // and ensure we have enough passes to render the shadows.
     size_t passCount = 0;
     for (size_t lightId = 0; lightId < glfLights.size(); lightId++) {
+        // This happens if a non simple light is translated
+        // into the simple light without an SPrim in the render index.
+        if (lights[lightId] == nullptr) {
+            continue;
+        }
 
         if (!glfLights[lightId].HasShadow()) {
             continue;
