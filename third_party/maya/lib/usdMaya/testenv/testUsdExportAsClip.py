@@ -30,7 +30,7 @@ import unittest
 from maya import cmds
 from maya import standalone
 
-from pxr import Sdf, Usd, UsdGeom, Gf, UsdUtils
+from pxr import Sdf, Usd, UsdGeom, Gf, Vt, UsdUtils
 
 
 class testUsdExportAsClip(unittest.TestCase):
@@ -65,9 +65,17 @@ class testUsdExportAsClip(unittest.TestCase):
             return [attr.Get(time=tc) for tc in xrange(*frameRange)]
 
         for frame, x,y in zip(xrange(*frameRange), getValues(canonicalStage), getValues(testStage)):
-            self.assertEqual(x, y, msg='different values found on frame: {frame}\n'
-                                       'non clip: {x}\n'
-                                       'clips:    {y}'.format(**locals()))
+            msg = ('different values found on frame: {frame}\n'
+                   'non clip: {x}\n'
+                   'clips:    {y}'.format(frame=frame, x=x, y=y))
+            if isinstance(x, basestring):
+                self.assertEqual(x, y, msg=msg)
+            elif isinstance(x, Vt.Vec3fArray):
+                self.assertEqual(len(x), len(y), msg)
+                for xpart, ypart in zip(x,y):
+                    self.assertTrue(Gf.IsClose(xpart, ypart, 1e-6), msg=msg)
+            else:
+                self.assertTrue(Gf.IsClose(x, y, 1e-6), msg=msg)
 
     def testExportAsClip(self):
         # generate clip files and validate num samples on points attribute
@@ -75,55 +83,55 @@ class testUsdExportAsClip(unittest.TestCase):
         # first 5 frames have no animation
         usdFile = os.path.abspath('UsdExportAsClip_cube.001.usda')
         clipFiles.append(usdFile)
-        cmds.usdExport(mergeTransformAndShape=True, file=usdFile, asClip=True, frameRange=(1, 5))
+        cmds.usdExport(mergeTransformAndShape=True, file=usdFile, frameRange=(1, 5))
         stage = Usd.Stage.Open(usdFile)
-        self._ValidateNumSamples(stage,'/pCube1', 'points',  1)
+        self._ValidateNumSamples(stage,'/world/pCube1', 'points',  1)
 
         # next 5 frames have no animation
         usdFile = os.path.abspath('UsdExportAsClip_cube.005.usda')
         clipFiles.append(usdFile)
-        cmds.usdExport(mergeTransformAndShape=True, file=usdFile, asClip=True, frameRange=(5, 10))
+        cmds.usdExport(mergeTransformAndShape=True, file=usdFile, frameRange=(5, 10))
         stage = Usd.Stage.Open(usdFile)
-        self._ValidateNumSamples(stage, '/pCube1', 'points', 1)
+        self._ValidateNumSamples(stage, '/world/pCube1', 'points', 1)
 
         # next 5 frames have deformation animation
         usdFile = os.path.abspath('UsdExportAsClip_cube.010.usda')
         clipFiles.append(usdFile)
         frames = (10, 15)
-        cmds.usdExport(mergeTransformAndShape=True, file=usdFile, asClip=True, frameRange=frames)
+        cmds.usdExport(mergeTransformAndShape=True, file=usdFile, frameRange=frames)
         stage = Usd.Stage.Open(usdFile)
-        self._ValidateNumSamples(stage, '/pCube1', 'points', frames[1] + 1 - frames[0])
+        self._ValidateNumSamples(stage, '/world/pCube1', 'points', frames[1] + 1 - frames[0])
 
         # next 5 frames have no animation
         usdFile = os.path.abspath('UsdExportAsClip_cube.015.usda')
         clipFiles.append(usdFile)
-        cmds.usdExport(mergeTransformAndShape=True, file=usdFile, asClip=True, frameRange=(15, 20))
+        cmds.usdExport(mergeTransformAndShape=True, file=usdFile, frameRange=(15, 20))
         stage = Usd.Stage.Open(usdFile)
-        self._ValidateNumSamples(stage, '/pCube1', 'points', 1)
+        self._ValidateNumSamples(stage, '/world/pCube1', 'points', 1)
 
         stitchedPath = os.path.abspath('result.usda')
         stitchedLayer = Sdf.Layer.CreateNew(stitchedPath)
-        UsdUtils.StitchClips(stitchedLayer, clipFiles, '/pCube1', 1, 20, 'default')
+        UsdUtils.StitchClips(stitchedLayer, clipFiles, '/world', 1, 20, 'default')
 
         # export a non clip version for comparison
         canonicalUsdFile = os.path.abspath('canonical.usda')
-        cmds.usdExport(mergeTransformAndShape=True, file=canonicalUsdFile, asClip=False, frameRange=(1, 20))
+        cmds.usdExport(mergeTransformAndShape=True, file=canonicalUsdFile, frameRange=(1, 20))
 
         print 'comparing: \nnormal: {}\nstitched: {}'.format(canonicalUsdFile, stitchedPath)
         canonicalStage = Usd.Stage.Open(canonicalUsdFile)
         clipsStage = Usd.Stage.Open(stitchedPath)
         # visible
-        self._ValidateSamples(canonicalStage, clipsStage, '/pCube1', 'visibility', (0, 21))
+        self._ValidateSamples(canonicalStage, clipsStage, '/world/pCube1', 'visibility', (0, 21))
         # animated visibility
-        self._ValidateSamples(canonicalStage, clipsStage, '/pCube2', 'visibility', (0, 21))
+        self._ValidateSamples(canonicalStage, clipsStage, '/world/pCube2', 'visibility', (0, 21))
         # hidden, non animated:
-        self._ValidateSamples(canonicalStage, clipsStage, '/pCube4', 'visibility', (0, 21))
+        self._ValidateSamples(canonicalStage, clipsStage, '/world/pCube4', 'visibility', (0, 21))
         # constant points:
-        self._ValidateSamples(canonicalStage, clipsStage, '/pCube2', 'points', (0, 21))
+        self._ValidateSamples(canonicalStage, clipsStage, '/world/pCube2', 'points', (0, 21))
         # blend shape driven animated points:
-        self._ValidateSamples(canonicalStage, clipsStage, '/pCube3', 'points', (0, 21))
+        self._ValidateSamples(canonicalStage, clipsStage, '/world/pCube3', 'points', (0, 21))
         # animated points (fails)
-        self._ValidateSamples(canonicalStage, clipsStage, '/pCube1', 'points', (0, 21))
+        self._ValidateSamples(canonicalStage, clipsStage, '/world/pCube1', 'points', (0, 21))
 
         # TODO: These tests were intended to confirm that clip mode is necessary. The specific num of samples
         # are equivalent now, so we'll have to find something else to check.
