@@ -19,3 +19,4 @@ tg/simple_features/iterating_maya_underworld
 tg/simple_features/symlink_headers
 tg/simple_features/point_based_interpolation
 tg/simple_features/maya_call_once_deadlock
+tmp
