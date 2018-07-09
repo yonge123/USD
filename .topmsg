@@ -1,2 +1,2 @@
 From: Pal Mezei <palm@lumapictures.com>
-Subject: [PATCH] tg/simple_features/usdview_shader_search_path
+Subject: [UsdView] Adding the resource paths containing shaders to the default search path in usdview.
