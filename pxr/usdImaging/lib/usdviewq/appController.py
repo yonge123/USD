@@ -1071,16 +1071,6 @@ class AppController(QtCore.QObject):
         # Attempt to do specialized asset resolution based on the
         # UsdviewPlug installed plugin, otherwise use the configured
         # Ar instance for asset resolution.
-        # We are iterating through the plugin registry to add anything containing shaders to the
-        # default search path.
-        resourcePaths = set()
-        from pxr import Plug
-        pr = Plug.Registry()
-        for t in pr.GetAllPlugins():
-            if t.metadata.get('ShaderResources') is not None:
-                resourcePaths.add(t.resourcePath)
-        Ar.DefaultResolver.SetDefaultSearchPath(sorted(list(resourcePaths)))
-
         # We are iterating through the plugin registry to add anything
         # containing shaders to the default search path.
         resourcePaths = set()
