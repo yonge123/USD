@@ -27,6 +27,7 @@ pxr_shared_library(${PXR_PACKAGE}
         ${HOUDINI_UT_LIBRARY}
 
     INCLUDE_DIRS
+        ${Boost_INCLUDE_DIRS}
         ${HOUDINI_INCLUDE_DIRS}
 
     PUBLIC_CLASSES
