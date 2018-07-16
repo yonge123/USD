@@ -132,8 +132,6 @@ protected:
     std::vector<MayaPrimWriterSharedPtr> mMayaPrimWriterList;
     // Stage used to write out USD file
     UsdStageRefPtr mStage;
-    // Cache the conversion from string to SdfPath here
-    SdfPath exportRootSdfPath;
 
 private:
     /// A pair of paths, the first being the "export path", or where the
@@ -199,6 +197,9 @@ private:
     // resolved in this map).
     std::map<std::string, PxrUsdMayaPrimWriterRegistry::WriterFactoryFn>
             mWriterFactoryCache;
+
+    // Cache the conversion from string to SdfPath here
+    SdfPath _exportRootSdfPath;
 
     // PxrUsdMaya_InstancedNodeWriter is in a separate file, but functions as
     // an internal helper for usdWriteJobCtx.

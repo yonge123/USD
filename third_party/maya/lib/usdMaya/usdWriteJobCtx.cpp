@@ -88,7 +88,7 @@ usdWriteJobCtx::usdWriteJobCtx(const PxrUsdMayaJobExportArgs& args)
         if (rootDagPath.isValid()){
             SdfPath rootSdfPath;
             PxrUsdMayaUtil::GetDagPathByName(mArgs.exportRootPath, rootDagPath);
-            exportRootSdfPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false, mArgs.stripNamespaces);
+            _exportRootSdfPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false, mArgs.stripNamespaces);
         } else {
             TF_RUNTIME_ERROR("Invalid dag path provided for root: %s"
                     , mArgs.exportRootPath.c_str());
@@ -177,7 +177,7 @@ usdWriteJobCtx::ConvertDagToUsdPath(const MDagPath& dagPath) const
                 mParentScopePath);
     }
 
-    return _GetRootOverridePath(mArgs, exportRootSdfPath, path);
+    return _GetRootOverridePath(mArgs, _exportRootSdfPath, path);
 }
 
 usdWriteJobCtx::_ExportAndRefPaths
@@ -202,7 +202,7 @@ usdWriteJobCtx::_GetInstanceMasterPaths(const MDagPath& instancePath) const
     // This should make a valid path component.
     fullName = TfMakeValidIdentifier(fullName);
     const SdfPath path = _GetRootOverridePath(
-            mArgs, exportRootSdfPath,
+            mArgs, _exportRootSdfPath,
             mInstancesPrim.GetPath().AppendChild(TfToken(fullName)));
 
     // In Maya, you can directly instance gprims or transforms, but
