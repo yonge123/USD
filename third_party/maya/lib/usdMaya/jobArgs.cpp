@@ -211,7 +211,7 @@ _ChaserArgs(const VtDictionary& userArgs, const TfToken& key)
 
 PxrUsdMayaJobExportArgs::PxrUsdMayaJobExportArgs(
     const VtDictionary& userArgs,
-    const PxrUsdMayaUtil::ShapeSet& dagPaths,
+    const PxrUsdMayaUtil::MDagPathSet& dagPaths,
     const GfInterval& timeInterval) :
         defaultMeshScheme(
             _Token(userArgs,
@@ -222,6 +222,8 @@ PxrUsdMayaJobExportArgs::PxrUsdMayaJobExportArgs(
                     UsdGeomTokens->bilinear,
                     UsdGeomTokens->none
                 })),
+        eulerFilter(
+            _Boolean(userArgs, PxrUsdExportJobArgsTokens->eulerFilter)),
         excludeInvisible(
             _Boolean(userArgs, PxrUsdExportJobArgsTokens->renderableOnly)),
         exportCollectionBasedBindings(
@@ -326,6 +328,7 @@ operator <<(std::ostream& out, const PxrUsdMayaJobExportArgs& exportArgs)
         << "mergeTransformAndShape: " << TfStringify(exportArgs.mergeTransformAndShape) << std::endl
         << "exportInstances: " << TfStringify(exportArgs.exportInstances) << std::endl
         << "timeInterval: " << exportArgs.timeInterval << std::endl
+        << "eulerFilter: " << TfStringify(exportArgs.eulerFilter) << std::endl
         << "excludeInvisible: " << TfStringify(exportArgs.excludeInvisible) << std::endl
         << "exportDefaultCameras: " << TfStringify(exportArgs.exportDefaultCameras) << std::endl
         << "exportSkels: " << TfStringify(exportArgs.exportSkels) << std::endl
@@ -382,7 +385,7 @@ operator <<(std::ostream& out, const PxrUsdMayaJobExportArgs& exportArgs)
 /* static */
 PxrUsdMayaJobExportArgs PxrUsdMayaJobExportArgs::CreateFromDictionary(
     const VtDictionary& userArgs,
-    const PxrUsdMayaUtil::ShapeSet& dagPaths,
+    const PxrUsdMayaUtil::MDagPathSet& dagPaths,
     const GfInterval& timeInterval)
 {
     return PxrUsdMayaJobExportArgs(
@@ -432,6 +435,7 @@ const VtDictionary& PxrUsdMayaJobExportArgs::GetDefaultDictionary()
         d[PxrUsdExportJobArgsTokens->shadingMode] =
                 PxrUsdMayaShadingModeTokens->displayColor.GetString();
         d[PxrUsdExportJobArgsTokens->stripNamespaces] = false;
+        d[PxrUsdExportJobArgsTokens->eulerFilter] = false;
         d[PxrUsdExportJobArgsTokens->root] = std::string();
 
         // plugInfo.json site defaults.
@@ -506,6 +510,9 @@ PxrUsdMayaJobImportArgs::PxrUsdMayaJobImportArgs(
                 PxrUsdImportJobArgsTokens->shadingMode,
                 PxrUsdMayaShadingModeTokens->none,
                 PxrUsdMayaShadingModeRegistry::ListImporters())),
+        useAsAnimationCache(
+            _Boolean(userArgs,
+                PxrUsdImportJobArgsTokens->useAsAnimationCache)),
 
         importWithProxyShapes(importWithProxyShapes),
         timeInterval(timeInterval)
@@ -543,6 +550,7 @@ const VtDictionary& PxrUsdMayaJobImportArgs::GetDefaultDictionary()
                 });
         d[PxrUsdImportJobArgsTokens->shadingMode] =
                 PxrUsdMayaShadingModeTokens->displayColor.GetString();
+        d[PxrUsdImportJobArgsTokens->useAsAnimationCache] = false;
 
         // plugInfo.json site defaults.
         // The defaults dict should be correctly-typed, so enable
@@ -562,6 +570,7 @@ operator <<(std::ostream& out, const PxrUsdMayaJobImportArgs& importArgs)
     out << "shadingMode: " << importArgs.shadingMode << std::endl
         << "assemblyRep: " << importArgs.assemblyRep << std::endl
         << "timeInterval: " << importArgs.timeInterval << std::endl
+        << "useAsAnimationCache: " << TfStringify(importArgs.useAsAnimationCache) << std::endl
         << "importWithProxyShapes: " << TfStringify(importArgs.importWithProxyShapes) << std::endl;
 
     return out;
