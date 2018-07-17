@@ -149,7 +149,6 @@ struct PxrUsdMayaWriteUtil
             const MPlug& attrPlug,
             const UsdAttribute& usdAttr,
             const UsdTimeCode& usdTime,
-            const bool writeIfConstant,
             UsdUtilsSparseValueWriter *valueWriter=nullptr);
 
     /// Given a Maya node at \p dagPath, inspect it for attributes tagged by
@@ -160,7 +159,6 @@ struct PxrUsdMayaWriteUtil
             const MDagPath& dagPath,
             const UsdPrim& usdPrim,
             const UsdTimeCode& usdTime,
-            const bool writeIfConstant,
             UsdUtilsSparseValueWriter *valueWriter=nullptr);
 
     /// Writes all of the adaptor metadata from \p mayaObject onto the \p prim.
@@ -183,16 +181,14 @@ struct PxrUsdMayaWriteUtil
 
     template <typename T>
     static size_t WriteSchemaAttributesToPrim(
-            const MObject& shapeObject,
-            const MObject& transformObject,
+            const MObject& object,
             const UsdPrim& prim,
             const std::vector<TfToken>& attributeNames,
             const UsdTimeCode& usdTime = UsdTimeCode::Default(),
             UsdUtilsSparseValueWriter *valueWriter=nullptr)
     {
         return WriteSchemaAttributesToPrim(
-                shapeObject,
-                transformObject,
+                object,
                 prim,
                 TfType::Find<T>(),
                 attributeNames,
@@ -202,18 +198,12 @@ struct PxrUsdMayaWriteUtil
 
     /// Writes schema attributes specified by \attributeNames for the schema
     /// with type \p schemaType to the prim \p prim.
-    /// Values are resolved by consulting the \p shapeObject first, and then,
-    /// if the \p shapeObject had no authored value for the attribute,
-    /// consulting the \p transformObject. (This means that attribute collisions
-    /// will always be handled by taking the shape node's value if we're merging
-    /// transforms and shapes.)
     /// Values are read at the current Maya time, and are written into the USD
     /// stage at time \p usdTime. If the optional \p valueWriter is provided,
     /// it will be used to write the values.
     /// Returns the number of attributes actually written to the USD stage.
     static size_t WriteSchemaAttributesToPrim(
-            const MObject& shapeObject,
-            const MObject& transformObject,
+            const MObject& object,
             const UsdPrim& prim,
             const TfType& schemaType,
             const std::vector<TfToken>& attributeNames,
