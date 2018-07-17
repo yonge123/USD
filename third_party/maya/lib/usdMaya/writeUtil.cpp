@@ -849,7 +849,6 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
         const MPlug& attrPlug,
         const UsdAttribute& usdAttr,
         const UsdTimeCode& usdTime,
-        const bool writeIfConstant,
         UsdUtilsSparseValueWriter *valueWriter)
 {
     if (!usdAttr || attrPlug.isNull()) {
@@ -857,7 +856,7 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
     }
 
     bool isAnimated = attrPlug.isDestination();
-    if ((usdTime.IsDefault() == isAnimated) || (!writeIfConstant && !isAnimated)) {
+    if (usdTime.IsDefault() == isAnimated) {
         return true;
     }
 
@@ -911,7 +910,6 @@ PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
         const MDagPath& dagPath,
         const UsdPrim& usdPrim,
         const UsdTimeCode& usdTime,
-        const bool writeIfConstant,
         UsdUtilsSparseValueWriter *valueWriter)
 {
     std::vector<PxrUsdMayaUserTaggedAttribute> exportedAttributes =
@@ -967,7 +965,6 @@ PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
             if (!PxrUsdMayaWriteUtil::SetUsdAttr(attrPlug,
                                                  usdAttr,
                                                  usdTime,
-                                                 writeIfConstant,
                                                  valueWriter)) {
                 TF_RUNTIME_ERROR(
                         "Could not set value for attribute <%s>",
@@ -1044,23 +1041,18 @@ PxrUsdMayaWriteUtil::WriteAPISchemaAttributesToPrim(
 /* static */
 size_t
 PxrUsdMayaWriteUtil::WriteSchemaAttributesToPrim(
-    const MObject& shapeObject,
-    const MObject& transformObject,
+    const MObject& object,
     const UsdPrim& prim,
     const TfType& schemaType,
     const std::vector<TfToken>& attributeNames,
     const UsdTimeCode& usdTime,
     UsdUtilsSparseValueWriter *valueWriter)
 {
-    PxrUsdMayaAdaptor::SchemaAdaptor shapeSchema;
-    if (PxrUsdMayaAdaptor adaptor = PxrUsdMayaAdaptor(shapeObject)) {
-        shapeSchema = adaptor.GetSchemaOrInheritedSchema(schemaType);
+    PxrUsdMayaAdaptor::SchemaAdaptor schema;
+    if (PxrUsdMayaAdaptor adaptor = PxrUsdMayaAdaptor(object)) {
+        schema = adaptor.GetSchemaOrInheritedSchema(schemaType);
     }
-    PxrUsdMayaAdaptor::SchemaAdaptor transformSchema;
-    if (PxrUsdMayaAdaptor adaptor = PxrUsdMayaAdaptor(transformObject)) {
-        transformSchema = adaptor.GetSchemaOrInheritedSchema(schemaType);
-    }
-    if (!shapeSchema && !transformSchema) {
+    if (!schema) {
         return 0;
     }
 
@@ -1068,23 +1060,10 @@ PxrUsdMayaWriteUtil::WriteSchemaAttributesToPrim(
     for (const TfToken& attrName : attributeNames) {
         VtValue value;
         SdfAttributeSpecHandle attrDef;
-
-        // Prefer value on shape node.
-        if (shapeSchema) {
-            if (PxrUsdMayaAdaptor::AttributeAdaptor attr =
-                    shapeSchema.GetAttribute(attrName)) {
-                attr.Get(&value);
-                attrDef = attr.GetAttributeDefinition();
-            }
-        }
-
-        // If we don't have a value yet, go on to the transform.
-        if (value.IsEmpty() && transformSchema) {
-            if (PxrUsdMayaAdaptor::AttributeAdaptor attr =
-                    transformSchema.GetAttribute(attrName)) {
-                attr.Get(&value);
-                attrDef = attr.GetAttributeDefinition();
-            }
+        if (PxrUsdMayaAdaptor::AttributeAdaptor attr =
+                schema.GetAttribute(attrName)) {
+            attr.Get(&value);
+            attrDef = attr.GetAttributeDefinition();
         }
 
         if (!value.IsEmpty() && attrDef) {

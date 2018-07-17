@@ -74,6 +74,11 @@ setXformOp(const UsdGeomXformOp& op,
         const UsdTimeCode& usdTime,
         UsdUtilsSparseValueWriter *valueWriter)
 {
+    if (!op) {
+        TF_CODING_ERROR("Xform op is not valid");
+        return;
+    }
+    
     if (op.GetOpType() == UsdGeomXformOp::TypeTransform) {
         GfMatrix4d shearXForm(1.0);
         shearXForm[1][0] = value[0]; //xyVal
@@ -96,18 +101,18 @@ setXformOp(const UsdGeomXformOp& op,
 // from if needed and set the XFormOps values
 static void 
 computeXFormOps(
-        const UsdGeomXformable& usdXformable, 
         const std::vector<AnimChannel>& animChanList, 
         const UsdTimeCode &usdTime,
         bool eulerFilter,
-        MayaTransformWriter::TokenRotationMap& previousRotates,
+        MayaTransformWriter::TokenRotationMap* previousRotates,
         UsdUtilsSparseValueWriter *valueWriter)
 {
+    TF_AXIOM(previousRotates);
+
     // Iterate over each AnimChannel, retrieve the default value and pull the
     // Maya data if needed. Then store it on the USD Ops
-    for (unsigned int channelIdx = 0; channelIdx < animChanList.size(); ++channelIdx) {
+    for (const auto& animChannel : animChanList) {
 
-        const AnimChannel& animChannel = animChanList[channelIdx];
         if (animChannel.isInverse) {
             continue;
         }
@@ -140,14 +145,14 @@ computeXFormOps(
                     const TfToken& lookupName = animChannel.opName.IsEmpty() ?
                             UsdGeomXformOp::GetOpTypeToken(animChannel.usdOpType) :
                             animChannel.opName;
-                    auto findResult = previousRotates.find(lookupName);
-                    if (findResult == previousRotates.end()) {
+                    auto findResult = previousRotates->find(lookupName);
+                    if (findResult == previousRotates->end()) {
                         MEulerRotation::RotationOrder rotOrder =
                                 PxrUsdMayaXformStack::RotateOrderFromOpType(
                                         animChannel.usdOpType,
                                         MEulerRotation::kXYZ);
                         MEulerRotation currentRotate(value[0], value[1], value[2], rotOrder);
-                        previousRotates[lookupName] = currentRotate;
+                        (*previousRotates)[lookupName] = currentRotate;
                     }
                     else {
                         MEulerRotation& previousRotate = findResult->second;
@@ -160,7 +165,7 @@ computeXFormOps(
                         for (unsigned int i = 0; i<3; i++) {
                             value[i] = currentRotate[i];
                         }
-                        previousRotates[lookupName] = currentRotate;
+                        (*previousRotates)[lookupName] = currentRotate;
                     }
                 }
                 for (unsigned int i = 0; i<3; i++) {
@@ -183,7 +188,7 @@ _GatherAnimChannel(
         XFormOpType opType, 
         const MFnTransform& iTrans, 
         const TfToken& parentName,
-        MString xName, MString yName, MString zName, 
+        const MString& xName, const MString& yName, const MString& zName, 
         std::vector<AnimChannel>* oAnimChanList, 
         bool isWritingAnimation,
         bool setOpName)
@@ -433,223 +438,57 @@ void MayaTransformWriter::_PushTransformStack(
             animChan.usdOpType, animChan.precision,
             animChan.opName,
             animChan.isInverse);
+        if (!animChan.op) {
+            TF_CODING_ERROR("Could not add xform op");
+            animChan.op = UsdGeomXformOp();
+        }
     }
 }
 
 MayaTransformWriter::MayaTransformWriter(
         const MDagPath& iDag,
         const SdfPath& uPath,
-        bool instanceSource,
-        usdWriteJobCtx& jobCtx) :
-    MayaPrimWriter(iDag, uPath, jobCtx),
-    _xformDagPath(iDag),
-    _isShapeAnimated(false),
-    _isInstanceSource(instanceSource)
+        usdWriteJobCtx& jobCtx)
+        : MayaPrimWriter(iDag, uPath, jobCtx)
 {
-    auto isInstance = false;
-    auto hasTransform = iDag.hasFn(MFn::kTransform);
-    auto hasOnlyOneShapeBelow = [&jobCtx] (const MDagPath& path) {
-        auto numberOfShapesDirectlyBelow = 0u;
-        path.numberOfShapesDirectlyBelow(numberOfShapesDirectlyBelow);
-        if (numberOfShapesDirectlyBelow != 1) {
-            return false;
-        }
-        const auto childCount = path.childCount();
-        if (childCount == 1) {
-            return true;
-        }
-        // Make sure that the other objects are exportable - ie, still want
-        // to collapse if it has two shapes below, but one of them is an
-        // intermediateObject shape
-        MDagPath childDag(path);
-        auto numExportableChildren = 0u;
-        for (auto i = 0u; i < childCount; ++i) {
-            childDag.push(path.child(i));
-            if (jobCtx.needToTraverse(childDag)) {
-                ++numExportableChildren;
-                if (numExportableChildren > 1) {
-                    return false;
-                }
-            }
-            childDag.pop();
-        }
-        return (numExportableChildren == 1);
-    };
+    // Even though we define an Xform here, it's OK for subclassers to
+    // re-define the prim as another type.
+    UsdGeomXform primSchema = UsdGeomXform::Define(GetUsdStage(), GetUsdPath());
+    _usdPrim = primSchema.GetPrim();
+    TF_VERIFY(_usdPrim);
 
-    auto setup_merged_shape = [this, &isInstance, &iDag, &hasTransform, &hasOnlyOneShapeBelow] () {
-        // Use the parent transform if there is only a single shape under the shape's xform
-        this->_xformDagPath.pop();
-        if (hasOnlyOneShapeBelow(_xformDagPath)) {
-            // Use the parent path (xform) instead of the shape path
-            this->_SetUsdPath(GetUsdPath().GetParentPath() );
-            hasTransform = true;
-        } else if (isInstance) {
-            this->_xformDagPath = iDag;
-        } else {
-            this->_xformDagPath = MDagPath(); // make path invalid
-        }
-    };
-
-    auto invalidate_transform = [this] () {
-        this->_SetValid(false); // no need to iterate over this Writer, as not writing it out
-        this->_xformDagPath = MDagPath(); // make path invalid
-    };
-
-    // it's more straightforward to separate code
-    if (_isInstanceSource) {
-        if (!hasTransform) {
-            _xformDagPath = MDagPath();
-        }
-    } else if (_GetExportArgs().exportInstances) {
-        if (hasTransform) {
-            if (hasOnlyOneShapeBelow(iDag)) {
-                auto copyDag = iDag;
-                copyDag.extendToShapeDirectlyBelow(0);
-                if (copyDag.isInstanced()) {
-                    invalidate_transform();
-                } else if (_GetExportArgs().mergeTransformAndShape) {
-                    invalidate_transform();
-                }
-            }
-        } else {
-            if (iDag.isInstanced()) {
-                isInstance = true;
-                setup_merged_shape();
-            } else if (_GetExportArgs().mergeTransformAndShape) {
-                setup_merged_shape();
-            } else {
-                _xformDagPath = MDagPath();
-            }
-        }
-    } else {
-        // Merge shape and transform
-        // If is a transform, then do not write
-        // Return if has a single shape directly below xform
-        if (_GetExportArgs().mergeTransformAndShape) {
-            if (hasTransform) { // if is an actual transform
-                if (hasOnlyOneShapeBelow(iDag)) {
-                    invalidate_transform();
-                }
-            } else { // must be a shape then
-                setup_merged_shape();
-            }
-        } else {
-            if (!hasTransform) { // if is NOT an actual transform
-                _xformDagPath = MDagPath(); // make path invalid
-            }
-        }
-    }
-
-    // Determine if transform is animated
-    if (_xformDagPath.isValid()) {
-        UsdGeomXform primSchema = UsdGeomXform::Define(GetUsdStage(), GetUsdPath());
-        _usdPrim = primSchema.GetPrim();
-        if (!_usdPrim.IsValid()) {
-            _SetValid(false);
-            return;
-        }
-        if (!_isInstanceSource) {
-            if (hasTransform) {
-                MFnTransform transFn(_xformDagPath);
-                // Create a vector of AnimChannels based on the Maya transformation
-                // ordering
-                _PushTransformStack(transFn, primSchema,
-                        !_GetExportArgs().timeInterval.IsEmpty());
-            }
-
-            if (isInstance) {
-                const auto masterPath = _writeJobCtx.getOrCreateMasterPath(
-                        GetDagPath());
-                if (!masterPath.IsEmpty()){
-                    _usdPrim.GetReferences().AddReference(SdfReference("", masterPath));
-                    _usdPrim.SetInstanceable(true);
-                }
-            }
-        }
-    }
-
-    // Determine if shape is animated
-    // note that we can't use hasTransform, because we need to test the original
-    // dag, not the transform (if mergeTransformAndShape is on)!
-    if (!GetDagPath().hasFn(MFn::kTransform)) { // if is a shape
-        MObject obj = GetDagPath().node();
-        if (!_GetExportArgs().timeInterval.IsEmpty()) {
-            _isShapeAnimated = PxrUsdMayaUtil::isAnimated(obj);
-        }
+    // There are special cases where you might subclass MayaTransformWriter
+    // without actually having a transform (e.g. the internal
+    // PxrUsdMaya_FunctorPrimWriter), so accomodate those here.
+    if (iDag.hasFn(MFn::kTransform)) {
+        MFnTransform transFn(iDag);
+        // Create a vector of AnimChannels based on the Maya transformation
+        // ordering
+        _PushTransformStack(transFn, primSchema,
+                !_GetExportArgs().timeInterval.IsEmpty());
     }
 }
 
-//virtual 
-void MayaTransformWriter::Write(const UsdTimeCode &usdTime)
+void MayaTransformWriter::Write(const UsdTimeCode& usdTime)
 {
-    if (!_isInstanceSource) {
-        UsdGeomXform primSchema(_usdPrim);
-        // Set attrs
-        _WriteXformableAttrs(usdTime, primSchema);
-    }
-}
+    MayaPrimWriter::Write(usdTime);
 
-bool MayaTransformWriter::_WriteXformableAttrs(
-        const UsdTimeCode &usdTime, UsdGeomXformable &xformSchema)
-{
-    // Write parent class attrs
-    _WriteImageableAttrs(_xformDagPath, usdTime, xformSchema); // for the shape
-
-    computeXFormOps(xformSchema, _animChannels, usdTime, _GetExportArgs().eulerFilter,
-            _previousRotates, _GetSparseValueWriter());
-    return true;
-}
-
-bool MayaTransformWriter::_IsInstance() const
-{
-    // 1. Instance sources aren't instances.
-    // 2. Nothing is an instance if we're not exporting with instances.
-    // 3. Because we only currently do gprim-level instancing, transforms are
-    //    never instances. (This might change in the future.)
-    // 4. Only Maya-instanced things are instanced!
-    return !_isInstanceSource
-            && _GetExportArgs().exportInstances
-            && !GetDagPath().hasFn(MFn::kTransform)
-            && GetDagPath().isInstanced();
-}
-
-bool MayaTransformWriter::ExportsGprims() const
-{
-    if (_IsInstance()) {
-        MayaPrimWriterPtr primWriter = _writeJobCtx.getMasterPrimWriter(
-                GetDagPath());
-        if (primWriter) {
-            return primWriter->ExportsGprims();
+    // There are special cases where you might subclass MayaTransformWriter
+    // without actually having a transform (e.g. the internal
+    // PxrUsdMaya_FunctorPrimWriter), so accomodate those here.
+    if (GetDagPath().hasFn(MFn::kTransform)) {
+        if (UsdGeomXformable xformSchema = UsdGeomXformable(_usdPrim)) {
+            computeXFormOps(_animChannels, usdTime, 
+                    _GetExportArgs().eulerFilter, &_previousRotates, 
+                    _GetSparseValueWriter());
+        }
+        else {
+            TF_CODING_ERROR("'%s' has a transform, but <%s> is not Xformable",
+                    GetDagPath().fullPathName().asChar(),
+                    _usdPrim.GetPath().GetText());
         }
     }
-
-    return MayaPrimWriter::ExportsGprims();
 }
-    
-bool MayaTransformWriter::ExportsReferences() const
-{
-    if (_IsInstance()) {
-        MayaPrimWriterPtr primWriter = _writeJobCtx.getMasterPrimWriter(
-                GetDagPath());
-        if (primWriter) {
-            return primWriter->ExportsReferences();
-        }
-    }
-
-    return MayaPrimWriter::ExportsReferences();
-}
-
-const MDagPath&
-MayaTransformWriter::GetTransformDagPath()
-{
-    return _xformDagPath;
-};
-
-bool
-MayaTransformWriter::_IsShapeAnimated() const
-{
-    return _isShapeAnimated;
-};
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
