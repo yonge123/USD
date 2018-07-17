@@ -17,7 +17,6 @@ pxr_library(usdImaging
         usdGeom
         usdLux
         usdShade
-        ar
         ${Boost_PYTHON_LIBRARY}
         ${PYTHON_LIBRARY}
         ${TBB_tbb_LIBRARY}
@@ -58,6 +57,7 @@ pxr_library(usdImaging
         rectLightAdapter
         sphereAdapter
         sphereLightAdapter
+        imagePlaneAdapter
 
     PUBLIC_HEADERS
         api.h

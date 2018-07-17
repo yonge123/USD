@@ -112,6 +112,7 @@ public:
         bool enableHardwareShading;
         // Respect USD's model:drawMode attribute...
         bool enableUsdDrawModes;
+        bool displayImagePlanes;
 
         RenderParams() : 
             frame(UsdTimeCode::Default()),
@@ -134,7 +135,8 @@ public:
             alphaThreshold(-1),
             clipPlanes(),
             enableHardwareShading(true),
-            enableUsdDrawModes(true)
+            enableUsdDrawModes(true),
+            displayImagePlanes(true)
         {
         }
 
@@ -159,7 +161,8 @@ public:
                 && alphaThreshold              == other.alphaThreshold
                 && clipPlanes                  == other.clipPlanes
                 && enableHardwareShading       == other.enableHardwareShading
-                && enableUsdDrawModes          == other.enableUsdDrawModes;
+                && enableUsdDrawModes          == other.enableUsdDrawModes
+                && displayImagePlanes          == other.displayImagePlanes;
         }
         bool operator!=(const RenderParams &other) const {
             return !(*this == other);

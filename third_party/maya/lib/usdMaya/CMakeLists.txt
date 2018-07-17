@@ -4,6 +4,7 @@ pxr_shared_library(${PXR_PACKAGE}
     LIBRARIES
         ar
         gf
+        glf
         js
         kind
         plug
@@ -14,6 +15,7 @@ pxr_shared_library(${PXR_PACKAGE}
         usdLux
         usdRi
         usdShade
+        usdHydra
         usdSkel
         usdUtils
         vt
@@ -48,6 +50,7 @@ pxr_shared_library(${PXR_PACKAGE}
         primWriterRegistry
         query
         translatorCamera
+        translatorImagePlane
         translatorCurves
         translatorGprim
         translatorMaterial
@@ -105,6 +108,7 @@ pxr_shared_library(${PXR_PACKAGE}
         registryHelper
 
         MayaCameraWriter
+        MayaImagePlaneWriter
         MayaInstancerWriter
         MayaLocatorWriter
         MayaMeshWriter
@@ -121,6 +125,7 @@ pxr_shared_library(${PXR_PACKAGE}
         MayaMeshWriter_Skin.cpp
         MayaMeshWriter_SubDiv.cpp
         primReaderCamera.cpp
+        primReaderImagePlane.cpp
         primReaderMaterial.cpp
         primReaderMesh.cpp
         primReaderNurbsCurves.cpp
