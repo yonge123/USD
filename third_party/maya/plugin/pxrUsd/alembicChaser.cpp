@@ -241,7 +241,7 @@ _WritePrefixedAttrs(
         }
 
         if (usdAttr) {
-            PxrUsdMayaWriteUtil::SetUsdAttr(plg, usdAttr, usdTime, usdTime.IsDefault());
+            PxrUsdMayaWriteUtil::SetUsdAttr(plg, usdAttr, usdTime);
         }
         else {
             TF_RUNTIME_ERROR(
