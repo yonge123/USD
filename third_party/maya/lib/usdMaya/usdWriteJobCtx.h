@@ -78,9 +78,6 @@ public:
             const SdfPath& usdPath = SdfPath());
     PXRUSDMAYA_API
     bool needToTraverse(const MDagPath& curDag);
-    /// Whether data should be written at this time code.
-    /// Based on animation and whether this will be used as a value clip
-    bool shouldWriteSample(const UsdTimeCode& usdTime, bool isAnimated);
     PXRUSDMAYA_API
     PxrUsdMaya_SkelBindingsWriter& getSkelBindingsWriter()
     {
