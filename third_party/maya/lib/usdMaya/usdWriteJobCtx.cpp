@@ -159,6 +159,20 @@ usdWriteJobCtx::IsMergedTransform(const MDagPath& path) const
 SdfPath
 usdWriteJobCtx::ConvertDagToUsdPath(const MDagPath& dagPath) const
 {
+    if (dagPath.pathCount() > 1) {
+        // Join together all the sub-paths - that way we (potentially) collapse
+        // each shape at the end of each underworld sub-path
+        SdfPath currentPath = SdfPath::AbsoluteRootPath();
+        MDagPath subPath;
+        for (size_t i = 0, n = dagPath.pathCount(); i < n; ++i) {
+            dagPath.getPath(subPath, i);
+            currentPath = ConvertDagToUsdPath(subPath).ReplacePrefix(
+                    SdfPath::AbsoluteRootPath(),
+                    currentPath);
+        }
+        return currentPath;
+    }
+
     SdfPath path = PxrUsdMayaUtil::MDagPathToUsdPath(
             dagPath, false, mArgs.stripNamespaces);
 
