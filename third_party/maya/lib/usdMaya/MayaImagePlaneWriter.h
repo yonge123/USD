@@ -16,9 +16,9 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class UsdGeomImagePlane;
 
-class MayaImagePlaneWriter : public MayaTransformWriter {
+class MayaImagePlaneWriter : public MayaPrimWriter {
 public:
-    MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx);
+    MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, usdWriteJobCtx& jobCtx);
     virtual ~MayaImagePlaneWriter();
 
     virtual void Write(const UsdTimeCode& usdTime) override;
