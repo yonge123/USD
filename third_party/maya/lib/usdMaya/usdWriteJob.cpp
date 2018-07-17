@@ -166,7 +166,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName, bool append)
 
     MDagPath curLeafDagPath;
     MDagPath rootDagPath;
-    if (!mJobCtx.exportRootSdfPath.IsEmpty()) {
+    if (!mJobCtx._exportRootSdfPath.IsEmpty()) {
         PxrUsdMayaUtil::GetDagPathByName(mJobCtx.mArgs.exportRootPath, rootDagPath);
     }
 
@@ -271,8 +271,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName, bool append)
                 // parents that are above that root.
                 SdfPath sdfDagPath = SdfPath(PxrUsdMayaUtil::MDagPathToUsdPath(curDagPath, false,
                                                                                mJobCtx.mArgs.stripNamespaces));
-                if (mJobCtx.exportRootSdfPath.GetCommonPrefix(sdfDagPath) !=
-                    mJobCtx.exportRootSdfPath) {
+                if (mJobCtx._exportRootSdfPath.GetCommonPrefix(sdfDagPath) !=
+                    mJobCtx._exportRootSdfPath) {
                     continue;
                 }
             }
