@@ -103,8 +103,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName, bool append)
 {
     // Check for DAG nodes that are a child of an already specified DAG node to export
     // if that's the case, report the issue and skip the export
-    PxrUsdMayaUtil::ShapeSet::const_iterator m, n;
-    PxrUsdMayaUtil::ShapeSet::const_iterator endPath = mJobCtx.mArgs.dagPaths.end();
+    PxrUsdMayaUtil::MDagPathSet::const_iterator m, n;
+    PxrUsdMayaUtil::MDagPathSet::const_iterator endPath = mJobCtx.mArgs.dagPaths.end();
     for (m = mJobCtx.mArgs.dagPaths.begin(); m != endPath; ) {
         MDagPath path1 = *m; m++;
         for (n = m; n != endPath; n++) {
@@ -183,7 +183,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName, bool append)
 
     MDagPath curLeafDagPath;
     MDagPath rootDagPath;
-    if (!mJobCtx.exportRootSdfPath.IsEmpty()) {
+    if (!mJobCtx._exportRootSdfPath.IsEmpty()) {
         PxrUsdMayaUtil::GetDagPathByName(mJobCtx.mArgs.exportRootPath, rootDagPath);
     }
 
@@ -194,8 +194,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName, bool append)
     // less work to hash and compare than full path names.
     TfHashSet<std::string, TfHash> argDagPaths;
     TfHashSet<std::string, TfHash> argDagPathParents;
-    PxrUsdMayaUtil::ShapeSet::const_iterator end = mJobCtx.mArgs.dagPaths.end();
-    for (PxrUsdMayaUtil::ShapeSet::const_iterator it = mJobCtx.mArgs.dagPaths.begin();
+    PxrUsdMayaUtil::MDagPathSet::const_iterator end = mJobCtx.mArgs.dagPaths.end();
+    for (PxrUsdMayaUtil::MDagPathSet::const_iterator it = mJobCtx.mArgs.dagPaths.begin();
             it != end; ++it) {
         MDagPath curDagPath = *it;
         MStatus status;
@@ -289,8 +289,8 @@ bool usdWriteJob::beginJob(const std::string &iFileName, bool append)
                 // parents that are above that root.
                 SdfPath sdfDagPath = SdfPath(PxrUsdMayaUtil::MDagPathToUsdPath(curDagPath, false,
                                                                                mJobCtx.mArgs.stripNamespaces));
-                if (mJobCtx.exportRootSdfPath.GetCommonPrefix(sdfDagPath) !=
-                    mJobCtx.exportRootSdfPath) {
+                if (mJobCtx._exportRootSdfPath.GetCommonPrefix(sdfDagPath) !=
+                    mJobCtx._exportRootSdfPath) {
                     continue;
                 }
             }
@@ -309,7 +309,7 @@ bool usdWriteJob::beginJob(const std::string &iFileName, bool append)
             // This dagPath and all of its children should be pruned.
             itDag.prune();
         } else {
-            MayaPrimWriterPtr primWriter = mJobCtx.createPrimWriter(curDagPath);
+            MayaPrimWriterSharedPtr primWriter = mJobCtx.CreatePrimWriter(curDagPath);
 
             if (primWriter) {
                 mJobCtx.mMayaPrimWriterList.push_back(primWriter);
@@ -327,27 +327,21 @@ bool usdWriteJob::beginJob(const std::string &iFileName, bool append)
                                         .asChar());
                             return false;
                         }
-                        mUsdPathToDagPathMap[usdPrim.GetPath()] = primWriter->GetDagPath();
+                        // Note that mUsdPathToDagPathMap is _only_ used for
+                        // stripping namespaces, so we only need to populate it
+                        // when stripping namespaces. (This is different from
+                        // mDagPathToUsdPathMap!)
+                        mUsdPathToDagPathMap[usdPrim.GetPath()] =
+                                primWriter->GetDagPath();
                     }
 
                     primWriter->Write(UsdTimeCode::Default());
 
-                    MDagPath dag = primWriter->GetDagPath();
-                    mDagPathToUsdPathMap[dag] = usdPrim.GetPath();
+                    const PxrUsdMayaUtil::MDagPathMap<SdfPath>& mapping =
+                            primWriter->GetDagToUsdPathMapping();
+                    mDagPathToUsdPathMap.insert(mapping.begin(), mapping.end());
 
-                    // If we are merging transforms and the object derives from
-                    // MayaTransformWriter but isn't actually a transform node, we
-                    // need to add its parent.
-                    if (mJobCtx.mArgs.mergeTransformAndShape) {
-                        MayaTransformWriterPtr xformWriter =
-                            std::dynamic_pointer_cast<MayaTransformWriter>(primWriter);
-                        if (xformWriter) {
-                            MDagPath xformDag = xformWriter->GetTransformDagPath();
-                            mDagPathToUsdPathMap[xformDag] = usdPrim.GetPath();
-                        }
-                    }
-
-                     mModelKindWriter.OnWritePrim(usdPrim, primWriter);
+                    mModelKindWriter.OnWritePrim(usdPrim, primWriter);
                 }
 
                 if (primWriter->ShouldPruneChildren()) {
@@ -417,7 +411,7 @@ void usdWriteJob::evalJob(double iFrame)
 {
     const UsdTimeCode usdTime(iFrame);
 
-    for (const MayaPrimWriterPtr& primWriter : mJobCtx.mMayaPrimWriterList) {
+    for (const MayaPrimWriterSharedPtr& primWriter : mJobCtx.mMayaPrimWriterList) {
         const UsdPrim& usdPrim = primWriter->GetUsdPrim();
         if (usdPrim) {
             primWriter->Write(usdTime);
@@ -540,7 +534,7 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
     SdfPath usdVariantRootPrimPath;
     if (mJobCtx.mParentScopePath.IsEmpty()) {
         // Get the usdVariantRootPrimPath (optionally filter by renderLayer prefix)
-        MayaPrimWriterPtr firstPrimWriterPtr = *mJobCtx.mMayaPrimWriterList.begin();
+        MayaPrimWriterSharedPtr firstPrimWriterPtr = *mJobCtx.mMayaPrimWriterList.begin();
         std::string firstPrimWriterPathStr(PxrUsdMayaUtil::MDagPathToUsdPathString(
             firstPrimWriterPtr->GetDagPath(), mJobCtx.mArgs.stripNamespaces));
         usdVariantRootPrimPath = SdfPath(firstPrimWriterPathStr).GetPrefixes()[0];
@@ -619,14 +613,14 @@ TfToken usdWriteJob::writeVariants(const UsdPrim &usdRootPrim)
                     // For all xformable usdPrims...
                     if (usdPrim && usdPrim.IsA<UsdGeomXformable>()) {
                         bool isActive=false;
-                        for (size_t j=0;j<activePaths.size();j++) {
+                        for (const auto& activePath : activePaths) {
                             //primPathD.HasPrefix(primPathA);
-                            SdfPath activePath=activePaths[j];
-                            if (usdPrim.GetPath().HasPrefix(activePath) || activePath.HasPrefix(usdPrim.GetPath())) {
+                            if (usdPrim.GetPath().HasPrefix(activePath) ||
+                                    activePath.HasPrefix(usdPrim.GetPath())) {
                                 isActive=true; break;
                             }
                         }
-                        if (isActive==false) {
+                        if (!isActive) {
                             primsToDeactivate.push_back(usdPrim);
                             it.PruneChildren();
                         }
@@ -654,7 +648,7 @@ bool usdWriteJob::needToTraverse(const MDagPath& curDag)
     return mJobCtx.needToTraverse(curDag);
 }
 
-void usdWriteJob::perFrameCallback(double iFrame)
+void usdWriteJob::perFrameCallback(double  /*iFrame*/)
 {
     if (!mJobCtx.mArgs.melPerFrameCallback.empty()) {
         MGlobal::executeCommand(mJobCtx.mArgs.melPerFrameCallback.c_str(), true);

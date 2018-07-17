@@ -22,7 +22,6 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/pxr.h"
-#include "usdMaya/debugCodes.h"
 #include "usdMaya/MayaMeshWriter.h"
 
 #include "usdMaya/adaptor.h"
@@ -35,6 +34,7 @@
 #include "pxr/usd/usdGeom/pointBased.h"
 #include "pxr/usd/usdUtils/pipeline.h"
 
+#include <maya/MPlugArray.h>
 #include <maya/MUintArray.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -130,9 +130,8 @@ const std::vector<std::string> MayaMeshWriter::_MotionVectorNames = {
 MayaMeshWriter::MayaMeshWriter(
         const MDagPath & iDag,
         const SdfPath& uPath,
-        bool instanceSource,
         usdWriteJobCtx& jobCtx) :
-    MayaTransformWriter(iDag, uPath, instanceSource, jobCtx)
+    MayaPrimWriter(iDag, uPath, jobCtx)
 {
     if ( !isMeshValid() ) {
         return;
@@ -224,8 +223,9 @@ void MayaMeshWriter::PostExport()
 //virtual 
 void MayaMeshWriter::Write(const UsdTimeCode &usdTime)
 {
+    MayaPrimWriter::Write(usdTime);
+
     UsdGeomMesh primSchema(_usdPrim);
-    // Write the attrs
     writeMeshAttrs(usdTime, primSchema);
 }
 
@@ -233,9 +233,6 @@ void MayaMeshWriter::Write(const UsdTimeCode &usdTime)
 bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &primSchema)
 {
     MStatus status = MS::kSuccess;
-
-    // Write parent class attrs
-    _WriteXformableAttrs(usdTime, primSchema);
 
     // Exporting reference object only once
     if (usdTime.IsDefault() && _GetExportArgs().exportReferenceObjects) {
@@ -277,10 +274,10 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
     // Return if usdTime does not match if shape is animated.
     // XXX In theory you could have an animated input mesh before the
     // skinCluster is applied but we don't support that right now.
-    // Note that _IsShapeAnimated() as computed by MayaTransformWriter is
+    // Note that _HasAnimCurves() as computed by MayaTransformWriter is
     // whether the finalMesh is animated.
-    bool isAnimated = _skelInputMesh.isNull() ? _IsShapeAnimated() : false;
-    if (!_ShouldWriteSample(usdTime, isAnimated)) {
+    bool isAnimated = _skelInputMesh.isNull() ? _HasAnimCurves() : false;
+    if (usdTime.IsDefault() == isAnimated) {
         // skip shape as the usdTime does not match if shape isAnimated value
         return true; 
     }
@@ -440,7 +437,7 @@ bool MayaMeshWriter::writeMeshAttrs(const UsdTimeCode &usdTime, UsdGeomMesh &pri
     // opacities from the shaders assigned to the mesh and/or its faces.
     // If we find a displayColor color set, the shader colors and opacities
     // will be used to fill in unauthored/unpainted faces in the color set.
-    if (_GetExportArgs().exportDisplayColor || colorSetNames.size() > 0) {
+    if (_GetExportArgs().exportDisplayColor || !colorSetNames.empty()) {
         PxrUsdMayaUtil::GetLinearShaderColor(finalMesh,
                                              &shadersRGBData,
                                              &shadersAlphaData,
