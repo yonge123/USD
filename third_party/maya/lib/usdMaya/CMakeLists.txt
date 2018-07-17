@@ -169,7 +169,6 @@ pxr_shared_library(${PXR_PACKAGE}
 )
 
 pxr_test_scripts(
-        testenv/testUsdExportAsClip.py
         testenv/testPointBasedDeformerNode.py
         testenv/testUsdExportAssembly.py
         testenv/testUsdExportCamera.py
@@ -245,21 +244,6 @@ pxr_register_test(testPointBasedDeformerNode
     CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testPointBasedDeformerNode"
     TESTENV testPointBasedDeformerNode
-    ENV
-        MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
-        MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources
-        MAYA_DISABLE_CIP=1
-        MAYA_APP_DIR=<PXR_TEST_DIR>/maya_profile
-)
-
-pxr_install_test_dir(
-    SRC testenv/UsdExportAsClipTest
-    DEST testUsdExportAsClip
-)
-pxr_register_test(testUsdExportAsClip
-    CUSTOM_PYTHON "${MAYA_BASE_DIR}/bin/mayapy"
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdExportAsClip"
-    TESTENV testUsdExportAsClip
     ENV
         MAYA_PLUG_IN_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/plugin
         MAYA_SCRIPT_PATH=${CMAKE_INSTALL_PREFIX}/third_party/maya/share/usd/plugins/usdMaya/resources

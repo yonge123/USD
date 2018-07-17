@@ -120,16 +120,10 @@ MayaPrimWriter::_WriteImageableAttrs(const MDagPath &dagT, const UsdTimeCode &us
 
         TfToken const &visibilityTok = (isVisible ? UsdGeomTokens->inherited : 
                                         UsdGeomTokens->invisible);
-        if (_ShouldWriteSample(usdTime, isAnimated)) {
-            if (usdTime.IsDefault()) {
-                _SetAttribute(primSchema.CreateVisibilityAttr(VtValue(), true), 
-                              visibilityTok, 
-                              usdTime);
-            } else {
-                _SetAttribute(primSchema.CreateVisibilityAttr(), 
-                              visibilityTok, 
-                              usdTime);
-            }
+        if (usdTime.IsDefault() != isAnimated ) {
+            _SetAttribute(primSchema.CreateVisibilityAttr(VtValue(), true), 
+                          visibilityTok, 
+                          usdTime);
         }
     }
 
@@ -168,8 +162,6 @@ MayaPrimWriter::_WriteImageableAttrs(const MDagPath &dagT, const UsdTimeCode &us
                 &_valueWriter);
     }
 
-    // Check if samples should be written at time if attr has no animation.
-    bool writeIfConstant = _ShouldWriteSample(usdTime, false);
     // Write API schema attributes, strongly-typed metadata, and user-tagged
     // export attributes.
     // Write attributes on the transform first, and then attributes on the shape
@@ -182,7 +174,7 @@ MayaPrimWriter::_WriteImageableAttrs(const MDagPath &dagT, const UsdTimeCode &us
                     dagT.node(), usdPrim, _GetSparseValueWriter());
         }
         PxrUsdMayaWriteUtil::WriteUserExportedAttributes(dagT, usdPrim, usdTime,
-                writeIfConstant, _GetSparseValueWriter());
+                _GetSparseValueWriter());
     }
 
     if (usdTime.IsDefault()) {
@@ -191,7 +183,7 @@ MayaPrimWriter::_WriteImageableAttrs(const MDagPath &dagT, const UsdTimeCode &us
                 GetDagPath().node(), usdPrim, _GetSparseValueWriter());
     }
     PxrUsdMayaWriteUtil::WriteUserExportedAttributes(GetDagPath(), usdPrim, 
-            usdTime, writeIfConstant, _GetSparseValueWriter());
+            usdTime, _GetSparseValueWriter());
 
     return true;
 }
@@ -251,12 +243,6 @@ const SdfPath&
 MayaPrimWriter::GetUsdPath() const
 {
     return _usdPath;
-}
-
-bool
-MayaPrimWriter::_ShouldWriteSample(const UsdTimeCode& usdTime, bool isAnimated) const
-{
-    return _writeJobCtx.shouldWriteSample(usdTime, isAnimated);
 }
 
 void

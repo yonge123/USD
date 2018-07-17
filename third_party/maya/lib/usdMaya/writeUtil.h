@@ -149,7 +149,6 @@ struct PxrUsdMayaWriteUtil
             const MPlug& attrPlug,
             const UsdAttribute& usdAttr,
             const UsdTimeCode& usdTime,
-            const bool writeIfConstant,
             UsdUtilsSparseValueWriter *valueWriter=nullptr);
 
     /// Given a Maya node at \p dagPath, inspect it for attributes tagged by
@@ -160,7 +159,6 @@ struct PxrUsdMayaWriteUtil
             const MDagPath& dagPath,
             const UsdPrim& usdPrim,
             const UsdTimeCode& usdTime,
-            const bool writeIfConstant,
             UsdUtilsSparseValueWriter *valueWriter=nullptr);
 
     /// Writes all of the adaptor metadata from \p mayaObject onto the \p prim.
