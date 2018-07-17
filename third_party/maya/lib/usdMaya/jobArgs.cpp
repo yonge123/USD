@@ -250,9 +250,6 @@ PxrUsdMayaJobExportArgs::PxrUsdMayaJobExportArgs(
         exportRefsAsInstanceable(
             _Boolean(userArgs,
                 PxrUsdExportJobArgsTokens->exportRefsAsInstanceable)),
-        exportAsClip(
-            _Boolean(userArgs,
-                PxrUsdExportJobArgsTokens->asClip)),
         exportSkels(
             _Token(userArgs,
                 PxrUsdExportJobArgsTokens->exportSkels,
@@ -331,7 +328,6 @@ operator <<(std::ostream& out, const PxrUsdMayaJobExportArgs& exportArgs)
         << "mergeTransformAndShape: " << TfStringify(exportArgs.mergeTransformAndShape) << std::endl
         << "exportInstances: " << TfStringify(exportArgs.exportInstances) << std::endl
         << "timeInterval: " << exportArgs.timeInterval << std::endl
-        << "exportAsClip: " << TfStringify(exportArgs.exportAsClip) << std::endl
         << "eulerFilter: " << TfStringify(exportArgs.eulerFilter) << std::endl
         << "excludeInvisible: " << TfStringify(exportArgs.excludeInvisible) << std::endl
         << "exportDefaultCameras: " << TfStringify(exportArgs.exportDefaultCameras) << std::endl
@@ -442,7 +438,6 @@ const VtDictionary& PxrUsdMayaJobExportArgs::GetDefaultDictionary()
         d[PxrUsdExportJobArgsTokens->eulerFilter] = false;
         d[PxrUsdExportJobArgsTokens->exportReferenceObjects] = false;
         d[PxrUsdExportJobArgsTokens->root] = std::string();
-        d[PxrUsdExportJobArgsTokens->asClip] = false;
 
         // plugInfo.json site defaults.
         // The defaults dict should be correctly-typed, so enable

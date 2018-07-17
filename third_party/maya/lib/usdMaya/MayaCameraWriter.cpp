@@ -77,9 +77,8 @@ bool MayaCameraWriter::writeCameraAttrs(const UsdTimeCode &usdTime, UsdGeomCamer
     // transform, we only want to proceed here if:
     // - We are at the default time and NO attributes on the shape are animated.
     //    OR
-    // - We are at a non-default time and some attribute on the shape IS animated or
-    //   we need to author a sample because this file will be used as a value clip.
-    if (!_ShouldWriteSample(usdTime, _IsShapeAnimated())) {
+    // - We are at a non-default time and some attribute on the shape IS animated.
+    if (usdTime.IsDefault() == _IsShapeAnimated()) {
         return true;
     }
 
