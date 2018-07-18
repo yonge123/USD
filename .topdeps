@@ -14,3 +14,4 @@ tg/simple_features/separate_third_party_builds
 tg/simple_features/maya_motion_vector_export
 tg/simple_features/usdview_shader_search_path
 houdini_variant_selection_fix
+pr/valueCacheCrashFix
