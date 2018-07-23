@@ -80,17 +80,20 @@ shadowFilter(int index, vec4 coord, vec4 Peye)
 #endif
 
 float
-shadowing(int index, vec4 Peye)
+shadowing(int index, vec4 Peye, float slope)
 {
     float result = 1.0;
     vec4 coord = shadow[index].eyeToShadowMatrix * Peye;
 
+    // clamping at 1 because zero bias results in self shadowing, and
+    // clamping at 2 to avoid shadows from dissapearing as angle gets very steep.
+    slope = clamp(slope, 1.0, 2.0);
+
     // coord.xy : homogenius shadow uv coordinate
     // coord.z : cartisian receiver depth
     // coord.w : shadow projection w
-
     float dReceiver = coord.z/coord.w;
-    coord.z = min(1, dReceiver + shadow[index].bias);
+    coord.z = min(1, dReceiver + (shadow[index].bias * slope));
     return shadowFilter(index, coord, Peye);
 }
 

@@ -130,7 +130,7 @@ shadowFilter(int index, vec4 coord, vec4 Peye)
     for (int i=0; i<PCF_NUM_SAMPLES; ++i) { 
         vec2 offset = jitter[i] * filterWidth;
         sum += shadowCompare(index, vec4(coord.xy + offset, coord.z, coord.w));
-    } 
+    }
     return sum / float(PCF_NUM_SAMPLES);
 }
 
