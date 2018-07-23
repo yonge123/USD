@@ -30,6 +30,7 @@
 #include "pxr/imaging/hdx/intersector.h"
 #include "pxr/imaging/hdx/selectionTracker.h"
 #include "pxr/imaging/hdx/renderSetupTask.h"
+#include "pxr/imaging/hdx/shadowTask.h"
 
 #include "pxr/imaging/hd/renderIndex.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
@@ -113,6 +114,11 @@ public:
     /// correctly set GL_SAMPLE_ALPHA_TO_COVERAGE.
     HDX_API
     void SetRenderParams(HdxRenderTaskParams const& params);
+
+    /// Set the shadow params. Note: params.camera will
+    /// be overwritten, since they come from SetCameraState.
+    HDX_API
+    void SetShadowParams(HdxShadowTaskParams const& params);
 
     /// -------------------------------------------------------
     /// Lighting API
