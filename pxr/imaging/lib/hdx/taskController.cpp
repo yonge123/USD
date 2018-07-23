@@ -310,6 +310,20 @@ HdxTaskController::SetRenderParams(HdxRenderTaskParams const& params)
     }
 }
 
+void HdxTaskController::SetShadowParams(HdxShadowTaskParams const& params) {
+    HdxShadowTaskParams oldParams = _delegate.GetParameter<HdxShadowTaskParams>(
+        _shadowTaskId, HdTokens->params);
+
+    HdxShadowTaskParams mergedParams = params;
+    mergedParams.camera = oldParams.camera;
+
+    if (mergedParams != oldParams) {
+        _delegate.SetParameter(_shadowTaskId, HdTokens->params, mergedParams);
+        GetRenderIndex()->GetChangeTracker().MarkTaskDirty(
+            _shadowTaskId, HdChangeTracker::DirtyParams);
+    }
+}
+
 void
 HdxTaskController::SetEnableSelection(bool enable)
 {
