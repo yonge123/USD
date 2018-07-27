@@ -45,24 +45,24 @@ bool GlfIsSupportedUdimTexture(const std::string& imageFilePath) {
 }
 
 // TODO: improve and optimize this function!
-std::vector<std::tuple<int, std::string>> GlfGetUdimTiles(const std::string& imageFilePath) {
+std::vector<std::tuple<int, TfToken>> GlfGetUdimTiles(const std::string& imageFilePath) {
     auto pos = imageFilePath.find("<udim>");
     if (pos == std::string::npos) {
         pos = imageFilePath.find("<UDIM>");
     }
 
     if (pos == std::string::npos) { return {}; }
+    auto formatString = imageFilePath; formatString.replace(pos, 6, "%i");
 
-    const auto start = imageFilePath.substr(0, pos);
-    const auto end = imageFilePath.substr(pos + 6);
-
-    std::vector<std::tuple<int, std::string>> ret;
+    std::vector<std::tuple<int, TfToken>> ret;
+    ret.reserve(100);
     for (auto t = 1001; t <= 1100; ++t) {
-        std::stringstream ss; ss << start << t << end;
-        if (TfPathExists(ss.str())) {
-            ret.push_back(std::tuple<int, std::string>(t, ss.str()));
+        const auto path = TfStringPrintf(formatString.c_str(), t);
+        if (TfPathExists(path)) {
+            ret.emplace_back(t, TfToken(path));
         }
     }
+    ret.shrink_to_fit();
 
     return ret;
 }
