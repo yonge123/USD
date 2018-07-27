@@ -51,7 +51,7 @@ GLF_API bool GlfIsSupportedUdimTexture(const std::string& imageFilePath);
 /// This function simply replaces the <udim> or <UDIM> tag in the filepath
 /// and checks for the existence of the standard 100 UDIM tiles.
 ///
-GLF_API std::vector<std::tuple<int, std::string>> GlfGetUdimTiles(const std::string& imageFilePath);
+GLF_API std::vector<std::tuple<int, TfToken>> GlfGetUdimTiles(const std::string& imageFilePath);
 
 class GlfUdimTexture;
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfUdimTexture);
