@@ -134,43 +134,29 @@ GlfUdimTexture::_OnSetMemoryRequested(size_t targetMemory) {
 
 void
 GlfUdimTexture::_ReadImage(size_t targetMemory) {
-    std::cerr << "Reading udim image: " << _imagePath << std::endl;
     TRACE_FUNCTION();
     _FreeTextureObject();
 
     const auto numChannels = 4;
     const auto type = GL_UNSIGNED_BYTE;
 
-    _format = GL_RGBA8;
+    constexpr GLenum formats[] = {
+        GL_RED, GL_RG, GL_RGB, GL_RGBA
+    };
+    _format = formats[numChannels - 1];
     auto sizePerElem = 1;
     if (type == GL_FLOAT) {
-        constexpr GLenum floatFormats[] = {
-            GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F
-        };
-        _format = floatFormats[numChannels - 1];
         sizePerElem = 4;
     } else if (type == GL_UNSIGNED_SHORT) {
-        constexpr GLenum uint16Formats[] = {
-            GL_R16, GL_RG16, GL_RGB16, GL_RGBA16
-        };
-        _format = uint16Formats[numChannels - 1];
         sizePerElem = 2;
     } else if (type == GL_HALF_FLOAT_ARB) {
-        constexpr GLenum halfFormats[] = {
-            GL_R16F, GL_RG16F, GL_RGB16F, GL_RGBA16F
-        };
-        _format = halfFormats[numChannels - 1];
         sizePerElem = 2;
     } else if (type == GL_UNSIGNED_BYTE) {
-        constexpr GLenum uint8Formats[] = {
-            GL_R8, GL_RG8, GL_RGB8, GL_RGBA8
-        };
-        _format = uint8Formats[numChannels - 1];
         sizePerElem = 1;
     }
 
-    _width = 1;
-    _height = 1;
+    _width = 32;
+    _height = 32;
     _depth = 100;
 
     glGenTextures(1, &_imageArray);
@@ -185,14 +171,15 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     textureData.resize(numPixels * numChannels, 0);
     for (auto i = decltype(numPixels){0}; i < numPixels; ++i) {
         textureData[i * numChannels] = 255;
+        textureData[i * numChannels + numChannels - 1] = 255;
     }
 
     glTexImage3D(GL_TEXTURE_2D_ARRAY, 0,
-                 _format,
+                 numChannels,
                  _width,
                  _height,
                  _depth,
-                 0, _format, type, textureData.data());
+                 0, GL_RGBA, type, textureData.data());
 
     GLF_POST_PENDING_GL_ERRORS();
 
