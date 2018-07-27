@@ -181,7 +181,11 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     std::vector<uint8_t> textureData;
-    textureData.resize(_width * _height * _depth * numChannels, 255);
+    const auto numPixels = _width * _height * _depth;
+    textureData.resize(numPixels * numChannels, 0);
+    for (auto i = decltype(numPixels){0}; i < numPixels; ++i) {
+        textureData[i * numChannels] = 255;
+    }
 
     glTexImage3D(GL_TEXTURE_2D_ARRAY, 0,
                  _format,
