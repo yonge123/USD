@@ -67,6 +67,7 @@ HdMaterialParam::ComputeHash(HdMaterialParamVector const &params)
             boost::hash_combine(hash, coordIt->Hash());
         }
         boost::hash_combine(hash, paramIt->IsPtex());
+        boost::hash_combine(hash, paramIt->IsUdim());
     }
     return hash;
 }

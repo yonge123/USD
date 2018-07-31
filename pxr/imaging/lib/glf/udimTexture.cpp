@@ -94,7 +94,7 @@ GlfUdimTexture::GetBindings(
     GLuint samplerName) const {
     BindingVector ret;
     ret.push_back(Binding(
-        TfToken(identifier.GetString() + "_Data"), GlfTextureTokens->texels,
+        TfToken(identifier.GetString() + "_Images"), GlfTextureTokens->texels,
         GL_TEXTURE_2D_ARRAY, _imageArray, samplerName));
 
     return ret;
