@@ -192,6 +192,12 @@ IsPtexTexture(TfToken const& id)
     return (id == UsdHydraTokens->HwPtexTexture_1);
 }
 
+static bool
+IsUdimTexture(TfToken const& id)
+{
+    return (id == UsdHydraTokens->HwUdimTexture_1);
+}
+
 // XXX : This should use the shader node registry
 static bool
 IsTextureFamilyNode(TfToken const& id)
@@ -746,6 +752,7 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetwork(
         SdfPath _connectionPrimvar;
         TfTokenVector _samplerCoords;
         bool _isPtex;
+        bool _isUdim;
     };
     std::vector<_MaterialParams> params;
     TfToken id;
@@ -822,7 +829,8 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetwork(
                         connection,/*_connection*/
                         SdfPath(), /*_connectionPrimvar*/
                         TfTokenVector(), /*_samplerCoords*/
-                        false /*_isPtex*/};
+                        false, /*_isPtex*/
+                        false /*_isUdim*/};
                 params.push_back(matParam);
 
                 TF_DEBUG(USDIMAGING_SHADERS).Msg(
@@ -845,6 +853,7 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetwork(
                     "\t\tFound texture: <%s>\n", connection.GetText());
 
                 bool isPtex = false;
+                bool isUdim = false;
                 SdfPath connectionPrimvar;
                 if (IsPtexTexture(id)){
                     isPtex = true;
@@ -860,12 +869,14 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetwork(
                             }
                         }
                     }
+                    isUdim = IsUdimTexture(id);
                 }
 
                 for(auto &p : params) {
                     if (p._connection == shader.GetPath()){
                         p._paramType = HdMaterialParam::ParamTypeTexture;
                         p._isPtex = isPtex;
+                        p._isUdim = isUdim;
                         p._connectionPrimvar = connectionPrimvar;
                         p._connection = connection;
                     }
@@ -990,7 +1001,8 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetwork(
     for(_MaterialParams const & param : params) {
         materialParams->emplace_back(param._paramType,
                 param._name, param._fallbackValue,
-                param._connection, param._samplerCoords, param._isPtex);
+                param._connection, param._samplerCoords,
+                param._isPtex, param._isUdim);
     }
 }
 
