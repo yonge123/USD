@@ -75,7 +75,7 @@ HdStSimpleTextureResource::HdStSimpleTextureResource(
 
     // When we are not using Ptex we will use samplers,
     // that includes both, bindless textures and no-bindless textures
-    if (!_isPtex && !_isUdim) {
+    if (!_isPtex) {
         // If the HdStSimpleTextureResource defines a wrap mode it will 
         // use it, otherwise it gives an opportunity to the texture to define
         // its own wrap mode. The fallback value is always HdWrapRepeat

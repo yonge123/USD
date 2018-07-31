@@ -93,9 +93,8 @@ GlfUdimTexture::GetBindings(
     const TfToken& identifier,
     GLuint samplerName) const {
     BindingVector ret;
-
     ret.push_back(Binding(
-        TfToken(identifier.GetString() + "_Images"), GlfTextureTokens->texels,
+        TfToken(identifier.GetString() + "_Data"), GlfTextureTokens->texels,
         GL_TEXTURE_2D_ARRAY, _imageArray, samplerName));
 
     return ret;
@@ -109,7 +108,7 @@ GlfUdimTexture::GetTextureInfo() const {
     ret["width"] = (int)_width;
     ret["height"] = (int)_height;
     ret["depth"] = (int)_depth;
-    ret["format"] = (int)_format;
+    ret["format"] = _format;
     ret["imageFilePath"] = _imagePath;
     ret["referenceCount"] = GetRefCount().Get();
 
@@ -145,7 +144,7 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     };
     _format = formats[numChannels - 1];
     auto sizePerElem = 1;
-    if (type == GL_FLOAT) {
+    /*if (type == GL_FLOAT) {
         sizePerElem = 4;
     } else if (type == GL_UNSIGNED_SHORT) {
         sizePerElem = 2;
@@ -153,7 +152,7 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
         sizePerElem = 2;
     } else if (type == GL_UNSIGNED_BYTE) {
         sizePerElem = 1;
-    }
+    }*/
 
     _width = 32;
     _height = 32;
@@ -168,7 +167,9 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
 
     std::vector<uint8_t> textureData;
     const auto numPixels = _width * _height * _depth;
-    textureData.resize(numPixels * numChannels, 0);
+    const auto numBytes = numPixels * sizePerElem * numChannels;
+    textureData.resize(numBytes, 0);
+    // Setting up the texture data for debugging.
     for (auto i = decltype(numPixels){0}; i < numPixels; ++i) {
         textureData[i * numChannels] = 255;
         textureData[i * numChannels + numChannels - 1] = 255;
@@ -176,14 +177,14 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
 
     glTexImage3D(GL_TEXTURE_2D_ARRAY, 0,
                  numChannels,
-                 _width,
-                 _height,
-                 _depth,
+                 static_cast<GLsizei>(_width),
+                 static_cast<GLsizei>(_height),
+                 static_cast<GLsizei>(_depth),
                  0, GL_RGBA, type, textureData.data());
 
     GLF_POST_PENDING_GL_ERRORS();
 
-    _SetMemoryUsed(_width * _height * _depth * sizePerElem * numChannels);
+    _SetMemoryUsed(numBytes);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
