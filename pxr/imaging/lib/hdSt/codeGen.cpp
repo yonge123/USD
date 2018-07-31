@@ -247,7 +247,10 @@ _GetPackedTypeDefinitions()
            "int hd_int_get(int v)          { return v; }\n"
            "int hd_int_get(ivec2 v)        { return v.x; }\n"
            "int hd_int_get(ivec3 v)        { return v.x; }\n"
-           "int hd_int_get(ivec4 v)        { return v.x; }\n";
+           "int hd_int_get(ivec4 v)        { return v.x; }\n"
+        // TODO: LUMA implement this!
+        // udim helper function
+            "vec3 hd_sample_udim(vec2 v) { return vec3(v, 0.0); }\n";
 }
 
 static TfToken const &
@@ -1014,6 +1017,10 @@ static void _EmitDeclaration(std::stringstream &str,
     case HdBinding::TEXTURE_2D:
     case HdBinding::BINDLESS_TEXTURE_2D:
         str << "uniform sampler2D " << name.GetText() << ";\n";
+        break;
+    case HdBinding::TEXTURE_UDIM_ARRAY:
+    case HdBinding::BINDLESS_TEXTURE_UDIM_ARRAY:
+        str << "uniform sampler2DArray " << name.GetText() << ";\n";
         break;
     case HdBinding::TEXTURE_PTEX_TEXEL:
         str << "uniform sampler2DArray " << name.GetText() << "_Data;\n";
@@ -2565,6 +2572,42 @@ HdSt_CodeGen::_GenerateShaderParameters()
                 << " HdGet_" << it->second.name
                 << "(vec2 coord) { return texture(sampler2d_"
                 << it->second.name << ", coord)" << swizzle << ";}\n";
+            // vec4 HdGet_name() { return HdGet_name(HdGet_st().xy); }
+            accessors
+                << it->second.dataType
+                << " HdGet_" << it->second.name
+                << "() { return HdGet_" << it->second.name << "(";
+            if (!it->second.inPrimvars.empty()) {
+                accessors
+                    << "\n"
+                    << "#if defined(HD_HAS_" << it->second.inPrimvars[0] << ")\n"
+                    << "HdGet_" << it->second.inPrimvars[0] << "().xy\n"
+                    << "#else\n"
+                    << "vec2(0.0, 0.0)\n"
+                    << "#endif\n";
+            } else {
+                accessors
+                    << "vec2(0.0, 0.0)";
+            }
+            accessors << "); }\n";
+        } else if (bindingType == HdBinding::TEXTURE_UDIM_ARRAY) {
+            declarations
+                << LayoutQualifier(it->first)
+                << "uniform sampler2DArray sampler2dArray_" << it->second.name << ";\n";
+
+            if (caps.glslVersion >= 430) {
+                accessors
+                    << "sampler2DArray\n"
+                    << "HdGetSampler_" << it->second.name << "() {\n"
+                    << "  return sampler2dArray_" << it->second.name << ";"
+                    << "}\n";
+            }
+            // vec4 HdGet_name(vec2 coord) { return texture(sampler2dArray_name, hd_sample_udim(coord)).xyz; }
+            accessors
+                << it->second.dataType
+                << " HdGet_" << it->second.name
+                << "(vec2 coord) { return texture(sampler2dArray_"
+                << it->second.name << ", hd_sample_udim(coord))" << swizzle << ";}\n";
             // vec4 HdGet_name() { return HdGet_name(HdGet_st().xy); }
             accessors
                 << it->second.dataType
