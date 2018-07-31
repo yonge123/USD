@@ -28,6 +28,7 @@
 #include "pxr/imaging/glf/diagnostic.h"
 #include "pxr/imaging/glf/glContext.h"
 #include "pxr/imaging/glf/udimTexture.h"
+#include "pxr/imaging/glf/image.h"
 
 #include "pxr/base/tf/fileUtils.h"
 #include "pxr/base/tf/registryManager.h"
@@ -154,8 +155,8 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
         sizePerElem = 1;
     }*/
 
-    _width = 32;
-    _height = 32;
+    _width = 128;
+    _height = 128;
     _depth = 100;
 
     glGenTextures(1, &_imageArray);
@@ -173,6 +174,21 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     for (auto i = decltype(numPixels){0}; i < numPixels; ++i) {
         textureData[i * numChannels] = 255;
         textureData[i * numChannels + numChannels - 1] = 255;
+    }
+
+    for (const auto& tile: GlfGetUdimTiles(_imagePath)) {
+        auto image = GlfImage::OpenForReading(std::get<1>(tile));
+        if (image) {
+            GlfImage::StorageSpec spec;
+            spec.width = static_cast<int>(_width);
+            spec.height = static_cast<int>(_height);
+            spec.format = GL_RGBA;
+            spec.type = GL_UNSIGNED_BYTE;
+            spec.flipped = false;
+            spec.data = textureData.data() + (std::get<0>(tile) - 1001)
+                * _width * _height * sizePerElem * numChannels;
+            image->Read(spec);
+        }
     }
 
     glTexImage3D(GL_TEXTURE_2D_ARRAY, 0,
