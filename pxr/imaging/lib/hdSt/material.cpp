@@ -244,6 +244,22 @@ HdStMaterial::Sync(HdSceneDelegate *sceneDelegate,
                                                           tex.handle));
                         sources.push_back(source);
                     }
+                } else if (texResource->IsUdim()) {
+                    tex.type = HdStShaderCode::TextureDescriptor::TEXTURE_UDIM_ARRAY;
+                    tex.handle =
+                        bindless ? texResource->GetTexelsTextureHandle()
+                                 : texResource->GetTexelsTextureId();
+                    tex.sampler =  texResource->GetTexelsSamplerId();
+                    textures.push_back(tex);
+
+                    if (bindless) {
+                        HdBufferSourceSharedPtr source(
+                            new HdSt_BindlessSamplerBufferSource(
+                                tex.name,
+                                GL_SAMPLER_2D_ARRAY,
+                                tex.handle));
+                        sources.push_back(source);
+                    }
                 } else {
                     tex.type = HdStShaderCode::TextureDescriptor::TEXTURE_2D;
                     tex.handle =
