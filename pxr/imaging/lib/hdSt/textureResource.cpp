@@ -29,6 +29,7 @@
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/glf/baseTexture.h"
 #include "pxr/imaging/glf/ptexTexture.h"
+#include "pxr/imaging/glf/udimTexture.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -178,6 +179,15 @@ GLuint HdStSimpleTextureResource::GetTexelsTextureId()
             "This code path should be unreachable");
         return 0;
 #endif
+    }
+
+    if (_isUdim) {
+        auto udimTexture = TfDynamic_cast<GlfUdimTextureRefPtr>(_texture);
+        if (udimTexture) {
+            return udimTexture->GetGlTextureName();
+        }
+
+        return 0;
     }
 
     GlfBaseTextureRefPtr baseTexture =
