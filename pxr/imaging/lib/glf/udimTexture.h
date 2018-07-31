@@ -87,10 +87,10 @@ protected:
 
 private:
     TfToken _imagePath;
-    GLsizei _width = 0;
-    GLsizei _height = 0;
-    GLsizei _depth = 0;
-    GLint _format = 0;
+    size_t _width = 0;
+    size_t _height = 0;
+    size_t _depth = 0;
+    int _format = 0;
     GLuint _imageArray = 0;
 };
 
