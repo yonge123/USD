@@ -379,7 +379,7 @@ UsdImagingGLDrawModeAdapter::UpdateForTime(UsdPrim const& prim,
                     params.push_back(HdMaterialParam(
                                 HdMaterialParam::ParamTypeTexture,
                                 textureNames[i], fallback,
-                                attr.GetPath(), samplerParams, false));
+                                attr.GetPath(), samplerParams, false, false));
                 }
             }
             valueCache->GetMaterialParams(cachePath) = params;
