@@ -1022,7 +1022,7 @@ static void _EmitDeclaration(std::stringstream &str,
         break;
     case HdBinding::TEXTURE_UDIM_ARRAY:
     case HdBinding::BINDLESS_TEXTURE_UDIM_ARRAY:
-        str << "uniform sampler2DArray " << name.GetText() << ";\n";
+        str << "uniform sampler2DArray " << name.GetText() << "_Images;\n";
         break;
     case HdBinding::TEXTURE_PTEX_TEXEL:
         str << "uniform sampler2DArray " << name.GetText() << "_Data;\n";
