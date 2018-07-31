@@ -72,6 +72,10 @@ public:
     GLF_API
     VtDictionary GetTextureInfo() const override;
 
+    GLuint GetGlTextureName() const {
+        return _imageArray;
+    }
+
 protected:
     GLF_API
     GlfUdimTexture(const TfToken& imageFilePath);
