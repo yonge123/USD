@@ -40,13 +40,11 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-bool GlfIsSupportedUdimTexture(const std::string& imageFilePath) {
-    return TfStringContains(imageFilePath, "<udim>") ||
-           TfStringContains(imageFilePath, "<UDIM>");
-}
+namespace {
 
 // TODO: improve and optimize this function!
-std::vector<std::tuple<int, TfToken>> GlfGetUdimTiles(const std::string& imageFilePath) {
+std::vector<std::tuple<int, TfToken>>
+GlfGetUdimTiles(const std::string& imageFilePath, int maxLayerCount) {
     auto pos = imageFilePath.find("<udim>");
     if (pos == std::string::npos) {
         pos = imageFilePath.find("<UDIM>");
@@ -56,16 +54,25 @@ std::vector<std::tuple<int, TfToken>> GlfGetUdimTiles(const std::string& imageFi
     auto formatString = imageFilePath; formatString.replace(pos, 6, "%i");
 
     std::vector<std::tuple<int, TfToken>> ret;
-    ret.reserve(100);
-    for (auto t = 1001; t <= 1100; ++t) {
+    constexpr auto startTile = 1001;
+    const auto endTile = startTile + maxLayerCount;
+    ret.reserve(endTile - startTile + 1);
+    for (auto t = startTile; t <= endTile; ++t) {
         const auto path = TfStringPrintf(formatString.c_str(), t);
         if (TfPathExists(path)) {
-            ret.emplace_back(t, TfToken(path));
+            ret.emplace_back(t - startTile, TfToken(path));
         }
     }
     ret.shrink_to_fit();
 
     return ret;
+}
+
+}
+
+bool GlfIsSupportedUdimTexture(const std::string& imageFilePath) {
+    return TfStringContains(imageFilePath, "<udim>") ||
+           TfStringContains(imageFilePath, "<UDIM>");
 }
 
 TF_REGISTRY_FUNCTION(TfType)
@@ -137,27 +144,66 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     TRACE_FUNCTION();
     _FreeTextureObject();
 
-    const auto numChannels = 4;
-    const auto type = GL_UNSIGNED_BYTE;
+    // This is 2048 OGL 4.5
+    int maxArrayTextureLayers = 0;
+    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &maxArrayTextureLayers);
+    int max3dTextureSize = 0;
+    glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &max3dTextureSize);
 
-    constexpr GLenum formats[] = {
-        GL_RED, GL_RG, GL_RGB, GL_RGBA
-    };
-    _format = formats[numChannels - 1];
+    const auto tiles = GlfGetUdimTiles(_imagePath, maxArrayTextureLayers);
+    if (tiles.empty()) {
+        return;
+    }
+
+    auto firstImage = GlfImage::OpenForReading(std::get<1>(tiles[0]));
+    if (!firstImage) {
+        return;
+    }
+
+    // TODO: LUMA check for mipmaps
+    _format = firstImage->GetFormat();
+    const auto type = firstImage->GetType();
+    int numChannels;
+    if (_format == GL_RED || _format == GL_LUMINANCE) {
+        numChannels = 1;
+    } else if (_format == GL_RG) {
+        numChannels = 2;
+    } else if (_format == GL_RGB) {
+        numChannels = 3;
+    } else if (_format == GL_RGBA) {
+        numChannels = 4;
+    } else {
+        return;
+    }
+
+    auto _internalFormat = GL_RGBA8;
     auto sizePerElem = 1;
-    /*if (type == GL_FLOAT) {
+    if (type == GL_FLOAT) {
+        constexpr GLenum internalFormats[] =
+            { GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F };
+        _internalFormat = internalFormats[numChannels - 1];
         sizePerElem = 4;
     } else if (type == GL_UNSIGNED_SHORT) {
+        constexpr GLenum internalFormats[] =
+            { GL_R16, GL_RG16, GL_RGB16, GL_RGBA16 };
+        _internalFormat = internalFormats[numChannels - 1];
         sizePerElem = 2;
     } else if (type == GL_HALF_FLOAT_ARB) {
+        constexpr GLenum internalFormats[] =
+            { GL_R16F, GL_RG16F, GL_RGB16F, GL_RGBA16F };
+        _internalFormat = internalFormats[numChannels - 1];
         sizePerElem = 2;
     } else if (type == GL_UNSIGNED_BYTE) {
+        constexpr GLenum internalFormats[] =
+            { GL_R8, GL_RG8, GL_RGB8, GL_RGBA8 };
+        _internalFormat = internalFormats[numChannels - 1];
         sizePerElem = 1;
-    }*/
+    }
 
     _width = 128;
     _height = 128;
-    _depth = 100;
+    // TODO: LUMA sparse storage
+    _depth = static_cast<size_t>(std::get<0>(tiles.back()) + 1);
 
     glGenTextures(1, &_imageArray);
     glBindTexture(GL_TEXTURE_2D_ARRAY, _imageArray);
@@ -170,33 +216,28 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     const auto numPixels = _width * _height * _depth;
     const auto numBytes = numPixels * sizePerElem * numChannels;
     textureData.resize(numBytes, 0);
-    // Setting up the texture data for debugging.
-    for (auto i = decltype(numPixels){0}; i < numPixels; ++i) {
-        textureData[i * numChannels] = 255;
-        textureData[i * numChannels + numChannels - 1] = 255;
-    }
 
-    for (const auto& tile: GlfGetUdimTiles(_imagePath)) {
+    for (const auto& tile: tiles) {
         auto image = GlfImage::OpenForReading(std::get<1>(tile));
         if (image) {
             GlfImage::StorageSpec spec;
             spec.width = static_cast<int>(_width);
             spec.height = static_cast<int>(_height);
-            spec.format = GL_RGBA;
-            spec.type = GL_UNSIGNED_BYTE;
+            spec.format = _format;
+            spec.type = type;
             spec.flipped = false;
-            spec.data = textureData.data() + (std::get<0>(tile) - 1001)
-                * _width * _height * sizePerElem * numChannels;
+            spec.data = textureData.data() + (std::get<0>(tile)
+                * _width * _height * sizePerElem * numChannels);
             image->Read(spec);
         }
     }
 
     glTexImage3D(GL_TEXTURE_2D_ARRAY, 0,
-                 numChannels,
+                 _internalFormat,
                  static_cast<GLsizei>(_width),
                  static_cast<GLsizei>(_height),
                  static_cast<GLsizei>(_depth),
-                 0, GL_RGBA, type, textureData.data());
+                 0, _format, type, textureData.data());
 
     GLF_POST_PENDING_GL_ERRORS();
 
