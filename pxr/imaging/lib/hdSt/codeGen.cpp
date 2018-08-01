@@ -248,9 +248,11 @@ _GetPackedTypeDefinitions()
            "int hd_int_get(ivec2 v)        { return v.x; }\n"
            "int hd_int_get(ivec3 v)        { return v.x; }\n"
            "int hd_int_get(ivec4 v)        { return v.x; }\n"
-        // TODO: LUMA implement this!
         // udim helper function
-            "vec3 hd_sample_udim(vec2 v) { return vec3(v, 0.0); }\n";
+            "vec3 hd_sample_udim(vec2 v) {\n"
+            "vec2 vf = floor(v);\n"
+            "return vec3(v.x - vf.x, v.y - vf.y, clamp(vf.x, 0.0, 10.0) + 10.0 * vf.y);\n"
+            "}\n";
 }
 
 static TfToken const &
