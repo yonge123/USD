@@ -16,3 +16,4 @@ tg/simple_features/usdview_shader_search_path
 houdini_variant_selection_fix
 pr/valueCacheCrashFix
 pr/slope_based_shadow_bias
+tg/bugfixes/stripNamespaces_mergeTransform_fix
