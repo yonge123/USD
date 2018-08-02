@@ -516,8 +516,7 @@ HdSt_ResourceBinder::ResolveBindings(HdStDrawItem const *drawItem,
                     // XXX: same name ?
                     _bindingMap[layoutName] = layoutBinding; // used for non-bindless
                 } else if (it->IsUdim()) {
-                    // TODO: LUMA Add layout binding for udims.
-                    // 2d texture
+                    // Texture Array for UDIM
                     HdBinding textureBinding = bindless
                                                ? HdBinding(HdBinding::BINDLESS_TEXTURE_UDIM_ARRAY, bindlessTextureLocation++)
                                                : HdBinding(HdBinding::TEXTURE_UDIM_ARRAY, locator.uniformLocation++);
@@ -527,6 +526,20 @@ HdSt_ResourceBinder::ResolveBindings(HdStDrawItem const *drawItem,
                             /*type=*/glType,
                             /*inPrimvars=*/it->GetSamplerCoordinates());
                     _bindingMap[it->GetName()] = textureBinding; // used for non-bindless
+
+                    // Layout for UDIM
+                    TfToken layoutName = TfToken(std::string(it->GetName().GetText()) + "_layout");
+                    HdBinding layoutBinding = bindless
+                                              ? HdBinding(HdBinding::BINDLESS_TEXTURE_UDIM_LAYOUT, bindlessTextureLocation++)
+                                              : HdBinding(HdBinding::TEXTURE_UDIM_LAYOUT, locator.uniformLocation++);
+
+                    metaDataOut->shaderParameterBinding[layoutBinding] =
+                        MetaData::ShaderParameterAccessor(
+                            /*name=*/layoutName,
+                            /*type=*/HdStGLConversions::GetGLSLTypename(HdType::HdTypeFloat));
+
+                    // XXX: same name ?
+                    _bindingMap[layoutName] = layoutBinding; // used for non-bindless
                 } else {
                     // 2d texture
                     HdBinding textureBinding = bindless
