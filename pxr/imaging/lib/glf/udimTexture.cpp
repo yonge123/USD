@@ -130,6 +130,12 @@ GlfUdimTexture::_FreeTextureObject() {
 
     if (glIsTexture(_imageArray)) {
         glDeleteTextures(1, &_imageArray);
+        _imageArray = 0;
+    }
+
+    if (glIsTexture(_layout)) {
+        glDeleteTextures(1, &_layout);
+        _layout = 0;
     }
 }
 
@@ -202,8 +208,11 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
 
     _width = 128;
     _height = 128;
-    // TODO: LUMA sparse storage
-    _depth = static_cast<size_t>(std::get<0>(tiles.back()) + 1);
+    const auto maxTileCount = static_cast<size_t>(std::get<0>(tiles.back()) + 1);
+    _depth = tiles.size();
+    // Texture array queries will use a float as the array specifier.
+    std::vector<float> layoutData;
+    layoutData.resize(maxTileCount, 0);
 
     glGenTextures(1, &_imageArray);
     glBindTexture(GL_TEXTURE_2D_ARRAY, _imageArray);
@@ -217,6 +226,7 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     const auto numBytes = numPixels * sizePerElem * numChannels;
     textureData.resize(numBytes, 0);
 
+    int16_t tileId = 0;
     for (const auto& tile: tiles) {
         auto image = GlfImage::OpenForReading(std::get<1>(tile));
         if (image) {
@@ -226,9 +236,11 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
             spec.format = _format;
             spec.type = type;
             spec.flipped = false;
-            spec.data = textureData.data() + (std::get<0>(tile)
+            spec.data = textureData.data() + (static_cast<int>(tileId)
                 * _width * _height * sizePerElem * numChannels);
-            image->Read(spec);
+            if (image->Read(spec)) {
+                layoutData[std::get<0>(tile)] = static_cast<float>(tileId++);
+            }
         }
     }
 
@@ -238,6 +250,14 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
                  static_cast<GLsizei>(_height),
                  static_cast<GLsizei>(_depth),
                  0, _format, type, textureData.data());
+
+    glGenTextures(1, &_layout);
+    glBindTexture(GL_TEXTURE_1D, _layout);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, layoutData.size(), 0,
+        GL_RED, GL_FLOAT, layoutData.data());
 
     GLF_POST_PENDING_GL_ERRORS();
 
