@@ -68,6 +68,10 @@ public:
         return _imageArray;
     }
 
+    GLuint GetGlLayoutName() const {
+        return _layout;
+    }
+
 protected:
     GLF_API
     GlfUdimTexture(const TfToken& imageFilePath);
@@ -88,6 +92,7 @@ private:
     size_t _depth = 0;
     int _format = 0;
     GLuint _imageArray = 0;
+    GLuint _layout = 0;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
