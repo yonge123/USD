@@ -45,14 +45,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///
 GLF_API bool GlfIsSupportedUdimTexture(const std::string& imageFilePath);
 
-/// Returns the list of udim tiles on the disk if the file given by \p imageFilePath represents a udim file,
-/// and an empty vector otherwise.
-///
-/// This function simply replaces the <udim> or <UDIM> tag in the filepath
-/// and checks for the existence of the standard 100 UDIM tiles.
-///
-GLF_API std::vector<std::tuple<int, std::string>> GlfGetUdimTiles(const std::string& imageFilePath);
-
 class GlfUdimTexture;
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfUdimTexture);
 
@@ -72,6 +64,14 @@ public:
     GLF_API
     VtDictionary GetTextureInfo() const override;
 
+    GLuint GetGlTextureName() const {
+        return _imageArray;
+    }
+
+    GLuint GetGlLayoutName() const {
+        return _layout;
+    }
+
 protected:
     GLF_API
     GlfUdimTexture(const TfToken& imageFilePath);
@@ -87,11 +87,12 @@ protected:
 
 private:
     TfToken _imagePath;
-    GLsizei _width = 0;
-    GLsizei _height = 0;
-    GLsizei _depth = 0;
-    GLint _format = 0;
+    size_t _width = 0;
+    size_t _height = 0;
+    size_t _depth = 0;
+    int _format = 0;
     GLuint _imageArray = 0;
+    GLuint _layout = 0;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

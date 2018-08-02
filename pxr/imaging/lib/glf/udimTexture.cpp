@@ -28,6 +28,7 @@
 #include "pxr/imaging/glf/diagnostic.h"
 #include "pxr/imaging/glf/glContext.h"
 #include "pxr/imaging/glf/udimTexture.h"
+#include "pxr/imaging/glf/image.h"
 
 #include "pxr/base/tf/fileUtils.h"
 #include "pxr/base/tf/registryManager.h"
@@ -39,32 +40,39 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-bool GlfIsSupportedUdimTexture(const std::string& imageFilePath) {
-    return TfStringContains(imageFilePath, "<udim>") ||
-           TfStringContains(imageFilePath, "<UDIM>");
-}
+namespace {
 
 // TODO: improve and optimize this function!
-std::vector<std::tuple<int, std::string>> GlfGetUdimTiles(const std::string& imageFilePath) {
+std::vector<std::tuple<int, TfToken>>
+GlfGetUdimTiles(const std::string& imageFilePath, int maxLayerCount) {
     auto pos = imageFilePath.find("<udim>");
     if (pos == std::string::npos) {
         pos = imageFilePath.find("<UDIM>");
     }
 
     if (pos == std::string::npos) { return {}; }
+    auto formatString = imageFilePath; formatString.replace(pos, 6, "%i");
 
-    const auto start = imageFilePath.substr(0, pos);
-    const auto end = imageFilePath.substr(pos + 6);
-
-    std::vector<std::tuple<int, std::string>> ret;
-    for (auto t = 1001; t <= 1100; ++t) {
-        std::stringstream ss; ss << start << t << end;
-        if (TfPathExists(ss.str())) {
-            ret.push_back(std::tuple<int, std::string>(t, ss.str()));
+    std::vector<std::tuple<int, TfToken>> ret;
+    constexpr auto startTile = 1001;
+    const auto endTile = startTile + maxLayerCount;
+    ret.reserve(endTile - startTile + 1);
+    for (auto t = startTile; t <= endTile; ++t) {
+        const auto path = TfStringPrintf(formatString.c_str(), t);
+        if (TfPathExists(path)) {
+            ret.emplace_back(t - startTile, TfToken(path));
         }
     }
+    ret.shrink_to_fit();
 
     return ret;
+}
+
+}
+
+bool GlfIsSupportedUdimTexture(const std::string& imageFilePath) {
+    return TfStringContains(imageFilePath, "<udim>") ||
+           TfStringContains(imageFilePath, "<UDIM>");
 }
 
 TF_REGISTRY_FUNCTION(TfType)
@@ -93,7 +101,6 @@ GlfUdimTexture::GetBindings(
     const TfToken& identifier,
     GLuint samplerName) const {
     BindingVector ret;
-
     ret.push_back(Binding(
         TfToken(identifier.GetString() + "_Images"), GlfTextureTokens->texels,
         GL_TEXTURE_2D_ARRAY, _imageArray, samplerName));
@@ -109,7 +116,7 @@ GlfUdimTexture::GetTextureInfo() const {
     ret["width"] = (int)_width;
     ret["height"] = (int)_height;
     ret["depth"] = (int)_depth;
-    ret["format"] = (int)_format;
+    ret["format"] = _format;
     ret["imageFilePath"] = _imagePath;
     ret["referenceCount"] = GetRefCount().Get();
 
@@ -123,6 +130,12 @@ GlfUdimTexture::_FreeTextureObject() {
 
     if (glIsTexture(_imageArray)) {
         glDeleteTextures(1, &_imageArray);
+        _imageArray = 0;
+    }
+
+    if (glIsTexture(_layout)) {
+        glDeleteTextures(1, &_layout);
+        _layout = 0;
     }
 }
 
@@ -134,44 +147,72 @@ GlfUdimTexture::_OnSetMemoryRequested(size_t targetMemory) {
 
 void
 GlfUdimTexture::_ReadImage(size_t targetMemory) {
-    std::cerr << "Reading udim image: " << _imagePath << std::endl;
     TRACE_FUNCTION();
     _FreeTextureObject();
 
-    const auto numChannels = 4;
-    const auto type = GL_UNSIGNED_BYTE;
+    // This is 2048 OGL 4.5
+    int maxArrayTextureLayers = 0;
+    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &maxArrayTextureLayers);
+    int max3dTextureSize = 0;
+    glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &max3dTextureSize);
 
-    _format = GL_RGBA8;
+    const auto tiles = GlfGetUdimTiles(_imagePath, maxArrayTextureLayers);
+    if (tiles.empty()) {
+        return;
+    }
+
+    auto firstImage = GlfImage::OpenForReading(std::get<1>(tiles[0]));
+    if (!firstImage) {
+        return;
+    }
+
+    // TODO: LUMA check for mipmaps
+    _format = firstImage->GetFormat();
+    const auto type = firstImage->GetType();
+    int numChannels;
+    if (_format == GL_RED || _format == GL_LUMINANCE) {
+        numChannels = 1;
+    } else if (_format == GL_RG) {
+        numChannels = 2;
+    } else if (_format == GL_RGB) {
+        numChannels = 3;
+    } else if (_format == GL_RGBA) {
+        numChannels = 4;
+    } else {
+        return;
+    }
+
+    auto _internalFormat = GL_RGBA8;
     auto sizePerElem = 1;
     if (type == GL_FLOAT) {
-        constexpr GLenum floatFormats[] = {
-            GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F
-        };
-        _format = floatFormats[numChannels - 1];
+        constexpr GLenum internalFormats[] =
+            { GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F };
+        _internalFormat = internalFormats[numChannels - 1];
         sizePerElem = 4;
     } else if (type == GL_UNSIGNED_SHORT) {
-        constexpr GLenum uint16Formats[] = {
-            GL_R16, GL_RG16, GL_RGB16, GL_RGBA16
-        };
-        _format = uint16Formats[numChannels - 1];
+        constexpr GLenum internalFormats[] =
+            { GL_R16, GL_RG16, GL_RGB16, GL_RGBA16 };
+        _internalFormat = internalFormats[numChannels - 1];
         sizePerElem = 2;
     } else if (type == GL_HALF_FLOAT_ARB) {
-        constexpr GLenum halfFormats[] = {
-            GL_R16F, GL_RG16F, GL_RGB16F, GL_RGBA16F
-        };
-        _format = halfFormats[numChannels - 1];
+        constexpr GLenum internalFormats[] =
+            { GL_R16F, GL_RG16F, GL_RGB16F, GL_RGBA16F };
+        _internalFormat = internalFormats[numChannels - 1];
         sizePerElem = 2;
     } else if (type == GL_UNSIGNED_BYTE) {
-        constexpr GLenum uint8Formats[] = {
-            GL_R8, GL_RG8, GL_RGB8, GL_RGBA8
-        };
-        _format = uint8Formats[numChannels - 1];
+        constexpr GLenum internalFormats[] =
+            { GL_R8, GL_RG8, GL_RGB8, GL_RGBA8 };
+        _internalFormat = internalFormats[numChannels - 1];
         sizePerElem = 1;
     }
 
-    _width = 1;
-    _height = 1;
-    _depth = 100;
+    _width = 128;
+    _height = 128;
+    const auto maxTileCount = static_cast<size_t>(std::get<0>(tiles.back()) + 1);
+    _depth = tiles.size();
+    // Texture array queries will use a float as the array specifier.
+    std::vector<float> layoutData;
+    layoutData.resize(maxTileCount, 0);
 
     glGenTextures(1, &_imageArray);
     glBindTexture(GL_TEXTURE_2D_ARRAY, _imageArray);
@@ -181,18 +222,46 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     std::vector<uint8_t> textureData;
-    textureData.resize(_width * _height * _depth * numChannels, 255);
+    const auto numPixels = _width * _height * _depth;
+    const auto numBytes = numPixels * sizePerElem * numChannels;
+    textureData.resize(numBytes, 0);
+
+    int16_t tileId = 0;
+    for (const auto& tile: tiles) {
+        auto image = GlfImage::OpenForReading(std::get<1>(tile));
+        if (image) {
+            GlfImage::StorageSpec spec;
+            spec.width = static_cast<int>(_width);
+            spec.height = static_cast<int>(_height);
+            spec.format = _format;
+            spec.type = type;
+            spec.flipped = false;
+            spec.data = textureData.data() + (static_cast<int>(tileId)
+                * _width * _height * sizePerElem * numChannels);
+            if (image->Read(spec)) {
+                layoutData[std::get<0>(tile)] = static_cast<float>(tileId++);
+            }
+        }
+    }
 
     glTexImage3D(GL_TEXTURE_2D_ARRAY, 0,
-                 _format,
-                 _width,
-                 _height,
-                 _depth,
+                 _internalFormat,
+                 static_cast<GLsizei>(_width),
+                 static_cast<GLsizei>(_height),
+                 static_cast<GLsizei>(_depth),
                  0, _format, type, textureData.data());
+
+    glGenTextures(1, &_layout);
+    glBindTexture(GL_TEXTURE_1D, _layout);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, layoutData.size(), 0,
+        GL_RED, GL_FLOAT, layoutData.data());
 
     GLF_POST_PENDING_GL_ERRORS();
 
-    _SetMemoryUsed(_width * _height * _depth * sizePerElem * numChannels);
+    _SetMemoryUsed(numBytes);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

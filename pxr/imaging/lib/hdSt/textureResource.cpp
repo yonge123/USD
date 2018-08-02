@@ -29,6 +29,7 @@
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/glf/baseTexture.h"
 #include "pxr/imaging/glf/ptexTexture.h"
+#include "pxr/imaging/glf/udimTexture.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -75,7 +76,7 @@ HdStSimpleTextureResource::HdStSimpleTextureResource(
 
     // When we are not using Ptex we will use samplers,
     // that includes both, bindless textures and no-bindless textures
-    if (!_isPtex && !_isUdim) {
+    if (!_isPtex) {
         // If the HdStSimpleTextureResource defines a wrap mode it will 
         // use it, otherwise it gives an opportunity to the texture to define
         // its own wrap mode. The fallback value is always HdWrapRepeat
@@ -178,6 +179,15 @@ GLuint HdStSimpleTextureResource::GetTexelsTextureId()
             "This code path should be unreachable");
         return 0;
 #endif
+    }
+
+    if (_isUdim) {
+        auto udimTexture = TfDynamic_cast<GlfUdimTextureRefPtr>(_texture);
+        if (udimTexture) {
+            return udimTexture->GetGlTextureName();
+        }
+
+        return 0;
     }
 
     GlfBaseTextureRefPtr baseTexture =

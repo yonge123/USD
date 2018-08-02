@@ -232,8 +232,8 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
     const bool isPtex = GlfIsSupportedPtexTexture(filePath);
     const bool isUdim = isPtex ? false : GlfIsSupportedUdimTexture(filePath);
 
-    HdWrap wrapS = _GetWrapS(usdPrim);
-    HdWrap wrapT = _GetWrapT(usdPrim);
+    HdWrap wrapS = isUdim ? HdWrapClamp : _GetWrapS(usdPrim);
+    HdWrap wrapT = isUdim ? HdWrapClamp : _GetWrapT(usdPrim);
     HdMinFilter minFilter = _GetMinFilter(usdPrim);
     HdMagFilter magFilter = _GetMagFilter(usdPrim);
     float memoryLimit = _GetMemoryLimit(usdPrim);
@@ -255,7 +255,17 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
     HdTextureResourceSharedPtr texResource;
     TfStopwatch timer;
     timer.Start();
+    // Udim's can't be loaded through the texture registry, because you can't
+    // specify the udim loader based on file extension.
     GlfTextureHandleRefPtr texture =
+        isUdim ?
+        GlfTextureRegistry::GetInstance()
+            .GetTextureHandle(filePath, origin, [] (
+                const TfToken& filePath,
+                GlfImage::ImageOriginLocation) -> GlfTextureRefPtr {
+                return GlfUdimTexture::New(filePath);
+            })
+            :
         GlfTextureRegistry::GetInstance().GetTextureHandle(filePath, origin);
 
     texResource = HdTextureResourceSharedPtr(

@@ -537,11 +537,31 @@ public:
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
 
+    struct ImagePlaneParams {
+        float depth = 100.0f;
+        GfVec2f aperture {1.0f, 1.0f};
+        GfVec2f offset {0.0f, 0.0f};
+        float focalLength = 1.0f;
+        GfVec2f size {-1.0f, -1.0f};
+        GfVec2f coverage {-1.0f, -1.0f};
+        GfVec2f coverageOrigin {0, 0};
+        float rotate = 0.0f;
+        GfVec2f imageSize {100.0f, 100.0f};
+        SdfAssetPath fileName {""};
+        TfToken fit = UsdGeomImagePlaneFitTokens->best;
+    };
+
     USDGEOM_API
     void CalculateGeometryForViewport(
-        VtVec3fArray* vertices,
-        VtVec2fArray* uvs,
-        const UsdTimeCode& usdTime = UsdTimeCode::Default()) const;
+            VtVec3fArray* vertices,
+            VtVec2fArray* uvs,
+            const UsdTimeCode& usdTime = UsdTimeCode::Default()) const;
+
+    USDGEOM_API
+    static void CalculateGeometry(
+            VtVec3fArray* vertices,
+            VtVec2fArray* uvs,
+            ImagePlaneParams params);
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
