@@ -214,13 +214,6 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     std::vector<float> layoutData;
     layoutData.resize(maxTileCount, 0);
 
-    glGenTextures(1, &_imageArray);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, _imageArray);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
     std::vector<uint8_t> textureData;
     const auto numPixels = _width * _height * _depth;
     const auto numBytes = numPixels * sizePerElem * numChannels;
@@ -244,12 +237,19 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
         }
     }
 
+    glGenTextures(1, &_imageArray);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, _imageArray);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage3D(GL_TEXTURE_2D_ARRAY, 0,
                  _internalFormat,
                  static_cast<GLsizei>(_width),
                  static_cast<GLsizei>(_height),
                  static_cast<GLsizei>(_depth),
                  0, _format, type, textureData.data());
+    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
     glGenTextures(1, &_layout);
     glBindTexture(GL_TEXTURE_1D, _layout);
@@ -258,6 +258,7 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, layoutData.size(), 0,
         GL_RED, GL_FLOAT, layoutData.data());
+    glBindTexture(GL_TEXTURE_1D, 0);
 
     GLF_POST_PENDING_GL_ERRORS();
 
