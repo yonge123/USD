@@ -145,6 +145,31 @@ GlfTextureRegistry::GetTextureHandle(GlfTextureRefPtr texture)
     return textureHandle;
 }
 
+GlfTextureHandleRefPtr
+GlfTextureRegistry::GetTextureHandle(
+    const TfToken &texture,
+    GlfImage::ImageOriginLocation originLocation,
+    const std::function<GlfTextureRefPtr(
+        const TfToken&, GlfImage::ImageOriginLocation)>& loader) {
+    GlfTextureHandleRefPtr textureHandle;
+
+    _TextureMetadata md(texture);
+
+    std::map<std::pair<TfToken, GlfImage::ImageOriginLocation>,
+        _TextureMetadata>::iterator it =
+        _textureRegistry.find(std::make_pair(texture, originLocation));
+
+    if (it != _textureRegistry.end() && it->second.IsMetadataEqual(md)) {
+        textureHandle = it->second.GetHandle();
+    } else {
+        // if not exists, create it
+        textureHandle = GlfTextureHandle::New(loader(texture, originLocation));
+        md.SetHandle(textureHandle);
+        _textureRegistry[std::make_pair(texture, originLocation)] = md;
+    }
+    return textureHandle;
+}
+
 bool
 GlfTextureRegistry::HasTexture(const TfToken &texture,
                              GlfImage::ImageOriginLocation originLocation) const

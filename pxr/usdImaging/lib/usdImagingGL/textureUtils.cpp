@@ -260,7 +260,12 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
     GlfTextureHandleRefPtr texture =
         isUdim ?
         GlfTextureRegistry::GetInstance()
-            .GetTextureHandle(GlfUdimTexture::New(filePath)) :
+            .GetTextureHandle(filePath, origin, [] (
+                const TfToken& filePath,
+                GlfImage::ImageOriginLocation) -> GlfTextureRefPtr {
+                return GlfUdimTexture::New(filePath);
+            })
+            :
         GlfTextureRegistry::GetInstance().GetTextureHandle(filePath, origin);
 
     texResource = HdTextureResourceSharedPtr(
