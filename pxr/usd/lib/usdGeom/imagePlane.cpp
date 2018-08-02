@@ -465,8 +465,12 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
     VtVec2fArray* uvs,
     const UsdTimeCode& usdTime) const {
     if (ARCH_UNLIKELY(vertices == nullptr)) { return; }
-    float depth = 100.0f;
-    GetDepthAttr().Get(&depth, usdTime);
+
+    UsdGeomImagePlane::ImagePlaneParams params;
+
+    params.depth = 100.0f;
+    GetDepthAttr().Get(&params.depth, usdTime);
+
 
     SdfPathVector cameras;
     GetCameraRel().GetTargets(&cameras);
@@ -478,32 +482,54 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
     GfVec2f aperture {1.0f, 1.0f};
     usdCamera.GetHorizontalApertureAttr().Get(&aperture[0], usdTime);
     usdCamera.GetVerticalApertureAttr().Get(&aperture[1], usdTime);
-    const auto focalLength = getAttr(usdCamera.GetFocalLengthAttr(), usdTime, 1.0f);
+    params.aperture = aperture;
+    params.focalLength = getAttr(usdCamera.GetFocalLengthAttr(), usdTime, 1.0f);
 
+    // Size is exported in inches
+    // while aperture is in millimeters.
+    // TODO: fix this in the maya image plane writer / translator.
+    params.size = getAttr(GetSizeAttr(), usdTime, GfVec2f(-1.0f, -1.0f)) * inch_to_mm;
+    params.fileName = getAttr(GetFilenameAttr(), usdTime, SdfAssetPath(""));
+    params.fit = getAttr(GetFitAttr(), usdTime, UsdGeomImagePlaneFitTokens->best);
+    params.rotate = getAttr(GetRotateAttr(), usdTime, 0.0f);
+    params.offset = getAttr(GetOffsetAttr(), usdTime, GfVec2f(0.0f, 0.0f)) * inch_to_mm;
+
+    params.coverage = getAttr(GetCoverageAttr(), usdTime,  GfVec2i(-1, -1));
+    params.coverageOrigin = getAttr(GetCoverageOriginAttr(), usdTime, GfVec2i(0, 0));
+
+    UsdGeomImagePlane::CalculateGeometry(vertices, uvs, params);
+}
+
+
+void
+UsdGeomImagePlane::CalculateGeometry(
+        VtVec3fArray* vertices,
+        VtVec2fArray* uvs,
+        UsdGeomImagePlane::ImagePlaneParams params) {
+    if (ARCH_UNLIKELY(vertices == nullptr)) { return; }
     // The trick here is to take the image plane size (if not valid the camera aperture),
     // and try to fit the aperture to the image ratio, based on the fit parameter on the image plane.
     // We don't need the viewport aspect ratio / size, because it's already affecting the image by
     // affecting the projection matrix.
 
-    // Size is exported in inches
-    // while aperture is in millimeters.
-    // TODO: fix this in the maya image plane writer / translator.
-    auto size = getAttr(GetSizeAttr(), usdTime, GfVec2f(-1.0f, -1.0f)) * inch_to_mm;
-    if (size[0] <= 0.0f) {
-        size[0] = aperture[0];
+    if (params.size[0] <= 0.0f) {
+        params.size[0] = params.aperture[0];
     }
-    if (size[1] <= 0.0f) {
-        size[1] = aperture[1];
+    if (params.size[1] <= 0.0f) {
+        params.size[1] = params.aperture[1];
     }
 
     // Doesn't matter where we divide, we'll just multiply values anyway.
-    size[0] *= 0.5f;
-    size[1] *= 0.5f;
+    params.size[0] *= 0.5f;
+    params.size[1] *= 0.5f;
 
     GfVec2f imageSize {100.0f, 100.0f};
-    const auto fileName = getAttr(GetFilenameAttr(), usdTime, SdfAssetPath(""));
     {
-        auto* in = OIIO::ImageInput::open(fileName.GetResolvedPath());
+        auto pathString = params.fileName.GetResolvedPath();
+        if (pathString.empty()){
+            pathString = params.fileName.GetAssetPath();
+        }
+        auto* in = OIIO::ImageInput::open(pathString);
         if (in) {
             in->close();
             const auto& spec = in->spec();
@@ -513,37 +539,35 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
         }
     }
     const auto imageRatio = imageSize[0] / imageSize[1];
-    const auto sizeRatio = size[0] / size[1];
+    const auto sizeRatio = params.size[0] / params.size[1];
 
-    const auto fit = getAttr(GetFitAttr(), usdTime, UsdGeomImagePlaneFitTokens->best);
-    if (fit == UsdGeomImagePlaneFitTokens->fill) {
+    if (params.fit == UsdGeomImagePlaneFitTokens->fill) {
         if (imageRatio > sizeRatio) {
-            size[0] = size[1] * imageRatio;
+            params.size[0] = params.size[1] * imageRatio;
         } else {
-            size[1] = size[0] / imageRatio;
+            params.size[1] = params.size[0] / imageRatio;
         }
-    } else if (fit == UsdGeomImagePlaneFitTokens->best) {
+    } else if (params.fit == UsdGeomImagePlaneFitTokens->best) {
         if (imageRatio > sizeRatio) {
-            size[1] = size[0] / imageRatio;
+            params.size[1] = params.size[0] / imageRatio;
         } else {
-            size[0] = size[1] * imageRatio;
+            params.size[0] = params.size[1] * imageRatio;
         }
-    } else if (fit == UsdGeomImagePlaneFitTokens->horizontal) {
-        size[1] = size[0] / imageRatio;
-    } else if (fit == UsdGeomImagePlaneFitTokens->vertical) {
-        size[0] = size[1] * imageRatio;
-    } else if (fit == UsdGeomImagePlaneFitTokens->toSize) {
+    } else if (params.fit == UsdGeomImagePlaneFitTokens->horizontal) {
+        params.size[1] = params.size[0] / imageRatio;
+    } else if (params.fit == UsdGeomImagePlaneFitTokens->vertical) {
+        params.size[0] = params.size[1] * imageRatio;
+    } else if (params.fit == UsdGeomImagePlaneFitTokens->toSize) {
     } else { assert("Invalid value passed to UsdGeomImagePlane.fit!"); }
 
-    GfVec2f upperLeft  { -size[0],  size[1]};
-    GfVec2f upperRight {  size[0],  size[1]};
-    GfVec2f lowerLeft  { -size[0], -size[1]};
-    GfVec2f lowerRight {  size[0], -size[1]};
+    GfVec2f upperLeft  { -params.size[0],  params.size[1]};
+    GfVec2f upperRight {  params.size[0],  params.size[1]};
+    GfVec2f lowerLeft  { -params.size[0], -params.size[1]};
+    GfVec2f lowerRight {  params.size[0], -params.size[1]};
 
-    const auto rotate = getAttr(GetRotateAttr(), usdTime, 0.0f);
-    if (!GfIsClose(rotate, 0.0f, 0.001f)) {
-        const float rsin = sinf(-rotate);
-        const float rcos = cosf(-rotate);
+    if (!GfIsClose(params.rotate, 0.0f, 0.001f)) {
+        const float rsin = sinf(-params.rotate);
+        const float rcos = cosf(-params.rotate);
 
         auto rotateCorner = [rsin, rcos] (GfVec2f& corner) {
             const float t = corner[0] * rcos - corner[1] * rsin;
@@ -558,28 +582,28 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
     }
 
     // FIXME: Offset doesn't work properly!
-    const auto offset = getAttr(GetOffsetAttr(), usdTime, GfVec2f(0.0f, 0.0f)) * inch_to_mm;
-
-    upperLeft  += offset;
-    upperRight += offset;
-    lowerLeft  += offset;
-    lowerRight += offset;
+    upperLeft  += params.offset;
+    upperRight += params.offset;
+    lowerLeft  += params.offset;
+    lowerRight += params.offset;
     // Both aperture and focal length should be in millimeters,
-    auto projectVertex = [focalLength, depth] (GfVec2f& vertex) {
-        vertex[0] = depth * vertex[0] / focalLength;
-        vertex[1] = depth * vertex[1] / focalLength;
+    auto projectVertex = [params] (GfVec2f& vertex) {
+        vertex[0] = params.depth * vertex[0] / params.focalLength;
+        vertex[1] = params.depth * vertex[1] / params.focalLength;
     };
 
-    projectVertex(upperLeft);
-    projectVertex(upperRight);
-    projectVertex(lowerLeft);
-    projectVertex(lowerRight);
+    if (params.depth != 0.0f and params.focalLength != 0.0f){
+        projectVertex(upperLeft);
+        projectVertex(upperRight);
+        projectVertex(lowerLeft);
+        projectVertex(lowerRight);
+    }
 
     vertices->resize(4);
-    vertices->operator[](0) = GfVec3f(upperLeft[0] , upperLeft[1] , -depth);
-    vertices->operator[](1) = GfVec3f(upperRight[0], upperRight[1], -depth);
-    vertices->operator[](2) = GfVec3f(lowerRight[0], lowerRight[1], -depth);
-    vertices->operator[](3) = GfVec3f(lowerLeft[0] , lowerLeft[1] , -depth);
+    vertices->operator[](0) = GfVec3f(upperLeft[0] , upperLeft[1] , -params.depth);
+    vertices->operator[](1) = GfVec3f(upperRight[0], upperRight[1], -params.depth);
+    vertices->operator[](2) = GfVec3f(lowerRight[0], lowerRight[1], -params.depth);
+    vertices->operator[](3) = GfVec3f(lowerLeft[0] , lowerLeft[1] , -params.depth);
 
     auto lerp = [] (float v, float lo, float hi) -> float {
         return lo * (1.0f - v) + hi * v;
@@ -592,36 +616,39 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
     };
 
     if (ARCH_UNLIKELY(uvs == nullptr)) { return; }
-    GfVec2f coverage = getAttr(GetCoverageAttr(),
-        usdTime, GfVec2i(static_cast<int>(imageSize[0]), static_cast<int>(imageSize[1])));
-    coverage[0] = clamp(coverage[0], 0.0f, imageSize[0]);
-    coverage[1] = clamp(coverage[1], 0.0f, imageSize[1]);
-    GfVec2f coverageOrigin = getAttr(GetCoverageOriginAttr(), usdTime, GfVec2i(0, 0));
-    coverageOrigin[0] = clamp(coverageOrigin[0], -imageSize[0], imageSize[0]);
-    coverageOrigin[1] = clamp(coverageOrigin[1], -imageSize[1], imageSize[1]);
+    if (params.coverage[0] <= 0.0f) {
+        params.coverage[0] = imageSize[0];
+    }
+    if (params.coverage[1] <= 0.0f) {
+        params.coverage[1] = imageSize[1];
+    }
+    params.coverage[0] = clamp(params.coverage[0], 0.0f, imageSize[0]);
+    params.coverage[1] = clamp(params.coverage[1], 0.0f, imageSize[1]);
+    params.coverageOrigin[0] = clamp(params.coverageOrigin[0], -imageSize[0], imageSize[0]);
+    params.coverageOrigin[1] = clamp(params.coverageOrigin[1], -imageSize[1], imageSize[1]);
 
     GfVec2f minUV = {0.0f, 0.0f};
     GfVec2f maxUV = {1.0f, 1.0f};
 
-    if (coverageOrigin[0] > 0) {
-        minUV[0] = coverageOrigin[0] / imageSize[0];
-        maxUV[0] = lerp(std::min(coverage[0], imageSize[0] - coverageOrigin[0]) /
-                            (imageSize[0] - coverageOrigin[0]), minUV[0], 1.0f);
-    } else if (coverageOrigin[0] < 0) {
-        maxUV[0] = coverage[0] * (imageSize[0] + coverageOrigin[0]) / (imageSize[0] * imageSize[0]);
+    if (params.coverageOrigin[0] > 0) {
+        minUV[0] = params.coverageOrigin[0] / imageSize[0];
+        maxUV[0] = lerp(std::min(params.coverage[0], imageSize[0] - params.coverageOrigin[0]) /
+                        (imageSize[0] - params.coverageOrigin[0]), minUV[0], 1.0f);
+    } else if (params.coverageOrigin[0] < 0) {
+        maxUV[0] = params.coverage[0] * (imageSize[0] + params.coverageOrigin[0]) / (imageSize[0] * imageSize[0]);
     } else {
-        maxUV[0] = coverage[0] / imageSize[0];
+        maxUV[0] = params.coverage[0] / imageSize[0];
     }
 
-    if (coverageOrigin[1] > 0) {
-        maxUV[1] = (imageSize[1] - coverageOrigin[1]) / imageSize[1];
-        minUV[1] = lerp(std::min(coverage[1], imageSize[1] - coverageOrigin[1]) /
-                            (imageSize[1] - coverageOrigin[1]), maxUV[1], 0.0f);
-    } else if (coverageOrigin[1] < 0) {
-        minUV[1] = std::min(1.0f, -coverageOrigin[1] / imageSize[1] +
-                                  (1.0f - coverage[1] / imageSize[1]));
+    if (params.coverageOrigin[1] > 0) {
+        maxUV[1] = (imageSize[1] - params.coverageOrigin[1]) / imageSize[1];
+        minUV[1] = lerp(std::min(params.coverage[1], imageSize[1] - params.coverageOrigin[1]) /
+                        (imageSize[1] - params.coverageOrigin[1]), maxUV[1], 0.0f);
+    } else if (params.coverageOrigin[1] < 0) {
+        minUV[1] = std::min(1.0f, -params.coverageOrigin[1] / imageSize[1] +
+                                  (1.0f - params.coverage[1] / imageSize[1]));
     } else {
-        minUV[1] = 1.0f - coverage[1] / imageSize[1];
+        minUV[1] = 1.0f - params.coverage[1] / imageSize[1];
     }
 
     uvs->resize(4);
