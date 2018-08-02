@@ -120,6 +120,12 @@ HdStSurfaceShader::BindResources(HdSt_ResourceBinder const &binder, int program)
 
             glProgramUniform1i(program, binding.GetLocation(), samplerUnit);
             samplerUnit++;
+        } else if (binding.GetType() == HdBinding::TEXTURE_UDIM_LAYOUT) {
+            glActiveTexture(GL_TEXTURE0 + samplerUnit);
+            glBindTexture(GL_TEXTURE_1D, (GLuint)it->handle);
+
+            glProgramUniform1i(program, binding.GetLocation(), samplerUnit);
+            samplerUnit++;
         } else if (binding.GetType() == HdBinding::TEXTURE_PTEX_TEXEL) {
             glActiveTexture(GL_TEXTURE0 + samplerUnit);
             glBindTexture(GL_TEXTURE_2D_ARRAY, (GLuint)it->handle);
@@ -156,6 +162,10 @@ HdStSurfaceShader::UnbindResources(HdSt_ResourceBinder const &binder, int progra
             glActiveTexture(GL_TEXTURE0 + samplerUnit);
             glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
             glBindSampler(samplerUnit, 0);
+            samplerUnit++;
+        } else if (binding.GetType() == HdBinding::TEXTURE_UDIM_LAYOUT) {
+            glActiveTexture(GL_TEXTURE0 + samplerUnit);
+            glBindTexture(GL_TEXTURE_1D, 0);
             samplerUnit++;
         } else if (binding.GetType() == HdBinding::TEXTURE_PTEX_TEXEL) {
             glActiveTexture(GL_TEXTURE0 + samplerUnit);
