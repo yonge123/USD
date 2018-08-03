@@ -35,6 +35,7 @@
 #include "pxr/base/tf/stringUtils.h"
 
 #include "pxr/base/trace/trace.h"
+#include "pxr/base/work/loops.h"
 
 #include <iostream>
 
@@ -182,6 +183,9 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
         return;
     }
 
+    const auto max2DDimension = std::max(
+        firstImage->GetWidth(), firstImage->GetHeight());
+
     auto _internalFormat = GL_RGBA8;
     auto sizePerElem = 1;
     if (type == GL_FLOAT) {
@@ -209,8 +213,8 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     const auto maxTileCount = static_cast<size_t>(std::get<0>(tiles.back()) + 1);
     _depth = tiles.size();
 
-    _width = 128;
-    _height = 128;
+    _width = std::min(max2DDimension, 128);
+    _height = std::min(max2DDimension, 128);
 
     // Texture array queries will use a float as the array specifier.
     std::vector<float> layoutData;
@@ -221,23 +225,23 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     const auto numBytes = numBytesPerLayer * _depth;
     textureData.resize(numBytes, 0);
 
-    int16_t tileId = 0;
-    for (const auto& tile: tiles) {
-        auto image = GlfImage::OpenForReading(std::get<1>(tile));
-        if (image) {
-            GlfImage::StorageSpec spec;
-            spec.width = static_cast<int>(_width);
-            spec.height = static_cast<int>(_height);
-            spec.format = _format;
-            spec.type = type;
-            spec.flipped = false;
-            spec.data = textureData.data() + (static_cast<int>(tileId)
-                * numBytesPerLayer);
-            if (image->Read(spec)) {
-                layoutData[std::get<0>(tile)] = static_cast<float>(tileId++);
+    WorkParallelForN(tiles.size(), [&](size_t begin, size_t end) {
+        for (auto tileId = begin; tileId < end; ++tileId) {
+            const auto& tile = tiles[tileId];
+            auto image = GlfImage::OpenForReading(std::get<1>(tile));
+            if (image) {
+                GlfImage::StorageSpec spec;
+                spec.width = static_cast<int>(_width);
+                spec.height = static_cast<int>(_height);
+                spec.format = _format;
+                spec.type = type;
+                spec.flipped = false;
+                spec.data = textureData.data() + (tileId * numBytesPerLayer);
+                image->Read(spec);
+                layoutData[std::get<0>(tile)] = tileId;
             }
         }
-    }
+    }, 1);
 
     glGenTextures(1, &_imageArray);
     glBindTexture(GL_TEXTURE_2D_ARRAY, _imageArray);
@@ -264,7 +268,7 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
 
     GLF_POST_PENDING_GL_ERRORS();
 
-    _SetMemoryUsed(numBytes);
+    _SetMemoryUsed(numBytes + tiles.size() * sizeof(float));
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
