@@ -223,6 +223,13 @@ GLuint64EXT HdStSimpleTextureResource::GetTexelsTextureHandle()
 
 GLuint HdStSimpleTextureResource::GetLayoutTextureId() 
 {
+    if (_isUdim) {
+        auto udimTexture = TfDynamic_cast<GlfUdimTextureRefPtr>(_texture);
+        if (udimTexture) {
+            return udimTexture->GetGlLayoutName();
+        }
+        return 0;
+    }
 #ifdef PXR_PTEX_SUPPORT_ENABLED
     GlfPtexTextureRefPtr ptexTexture =
                                  TfDynamic_cast<GlfPtexTextureRefPtr>(_texture);
