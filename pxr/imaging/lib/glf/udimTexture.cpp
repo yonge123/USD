@@ -206,17 +206,19 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
         sizePerElem = 1;
     }
 
-    _width = 128;
-    _height = 128;
     const auto maxTileCount = static_cast<size_t>(std::get<0>(tiles.back()) + 1);
     _depth = tiles.size();
+
+    _width = 128;
+    _height = 128;
+
     // Texture array queries will use a float as the array specifier.
     std::vector<float> layoutData;
     layoutData.resize(maxTileCount, 0);
 
     std::vector<uint8_t> textureData;
-    const auto numPixels = _width * _height * _depth;
-    const auto numBytes = numPixels * sizePerElem * numChannels;
+    const auto numBytesPerLayer = _width * _height * sizePerElem * numChannels;
+    const auto numBytes = numBytesPerLayer * _depth;
     textureData.resize(numBytes, 0);
 
     int16_t tileId = 0;
@@ -230,7 +232,7 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
             spec.type = type;
             spec.flipped = false;
             spec.data = textureData.data() + (static_cast<int>(tileId)
-                * _width * _height * sizePerElem * numChannels);
+                * numBytesPerLayer);
             if (image->Read(spec)) {
                 layoutData[std::get<0>(tile)] = static_cast<float>(tileId++);
             }
