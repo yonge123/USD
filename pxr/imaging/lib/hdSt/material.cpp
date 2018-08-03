@@ -260,6 +260,24 @@ HdStMaterial::Sync(HdSceneDelegate *sceneDelegate,
                                 tex.handle));
                         sources.push_back(source);
                     }
+
+                    tex.name =
+                        TfToken(param.GetName().GetString() + "_layout");
+                    tex.type =
+                        HdStShaderCode::TextureDescriptor::TEXTURE_UDIM_LAYOUT;
+                    tex.handle =
+                        bindless ? texResource->GetLayoutTextureHandle()
+                                 : texResource->GetLayoutTextureId();
+                    textures.push_back(tex);
+
+                    if (bindless) {
+                        HdBufferSourceSharedPtr source(
+                            new HdSt_BindlessSamplerBufferSource(
+                                tex.name,
+                                GL_SAMPLER_1D,
+                                tex.handle));
+                        sources.push_back(source);
+                    }
                 } else {
                     tex.type = HdStShaderCode::TextureDescriptor::TEXTURE_2D;
                     tex.handle =
