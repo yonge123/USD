@@ -45,7 +45,7 @@ namespace {
 
 // TODO: improve and optimize this function!
 std::vector<std::tuple<int, TfToken>>
-GlfGetUdimTiles(const std::string& imageFilePath, int maxLayerCount) {
+GetUdimTiles(const std::string& imageFilePath, int maxLayerCount) {
     auto pos = imageFilePath.find("<udim>");
     if (pos == std::string::npos) {
         pos = imageFilePath.find("<UDIM>");
@@ -66,6 +66,19 @@ GlfGetUdimTiles(const std::string& imageFilePath, int maxLayerCount) {
     }
     ret.shrink_to_fit();
 
+    return ret;
+}
+
+std::vector<size_t>
+GetMipMaps(size_t resolution) {
+    std::vector<size_t> ret;
+    while (true) {
+        ret.push_back(resolution);
+        if (resolution == 1) {
+            break;
+        }
+        resolution = resolution / 2;
+    }
     return ret;
 }
 
@@ -114,8 +127,8 @@ GlfUdimTexture::GetTextureInfo() const {
     VtDictionary ret;
 
     ret["memoryUsed"] = GetMemoryUsed();
-    ret["width"] = (int)_width;
-    ret["height"] = (int)_height;
+    ret["width"] = (int)_mip0Size;
+    ret["height"] = (int)_mip0Size;
     ret["depth"] = (int)_depth;
     ret["format"] = _format;
     ret["imageFilePath"] = _imagePath;
@@ -157,7 +170,7 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     int max3dTextureSize = 0;
     glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &max3dTextureSize);
 
-    const auto tiles = GlfGetUdimTiles(_imagePath, maxArrayTextureLayers);
+    const auto tiles = GetUdimTiles(_imagePath, maxArrayTextureLayers);
     if (tiles.empty()) {
         return;
     }
@@ -183,8 +196,9 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
         return;
     }
 
-    const auto max2DDimension = std::max(
-        firstImage->GetWidth(), firstImage->GetHeight());
+    const auto max2DDimension = std::min(
+        std::max(firstImage->GetWidth(), firstImage->GetHeight()),
+        max3dTextureSize);
 
     auto _internalFormat = GL_RGBA8;
     auto sizePerElem = 1;
@@ -210,51 +224,74 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
         sizePerElem = 1;
     }
 
-    const auto maxTileCount = static_cast<size_t>(std::get<0>(tiles.back()) + 1);
+    const auto maxTileCount =
+        static_cast<size_t>(std::get<0>(tiles.back()) + 1);
     _depth = tiles.size();
+    // TODO: LUMA make this as big as possible based on the memory request
+    _mip0Size = std::min(max2DDimension, 128);
 
-    _width = std::min(max2DDimension, 128);
-    _height = std::min(max2DDimension, 128);
+    const auto mips = GetMipMaps(_mip0Size);
+    const auto mipCount = mips.size();
+    std::vector<std::vector<uint8_t>> mipData;
+    mipData.resize(mipCount);
 
     // Texture array queries will use a float as the array specifier.
     std::vector<float> layoutData;
     layoutData.resize(maxTileCount, 0);
 
-    std::vector<uint8_t> textureData;
-    const auto numBytesPerLayer = _width * _height * sizePerElem * numChannels;
-    const auto numBytes = numBytesPerLayer * _depth;
-    textureData.resize(numBytes, 0);
+    const auto numBytesPerPixel = sizePerElem * numChannels;
+    const auto numBytesPerPixelLayer = numBytesPerPixel * _depth;
+
+    glGenTextures(1, &_imageArray);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, _imageArray);
+    glTexStorage3D(GL_TEXTURE_2D_ARRAY,
+        mipCount, _internalFormat,
+        _mip0Size, _mip0Size, _depth);
+
+    size_t totalTextureMemory = 0;
+    for (auto mip = decltype(mipCount){0}; mip < mipCount; ++mip) {
+        const auto mipSize = mips[mip];
+        const auto currentMipMemory = mipSize * mipSize * numBytesPerPixelLayer;
+        mipData[mip].resize(currentMipMemory, 0);
+        totalTextureMemory += currentMipMemory;
+    }
 
     WorkParallelForN(tiles.size(), [&](size_t begin, size_t end) {
         for (auto tileId = begin; tileId < end; ++tileId) {
             const auto& tile = tiles[tileId];
+            layoutData[std::get<0>(tile)] = tileId;
+            // TODO: LUMA resample from the closest mip level from the file.
             auto image = GlfImage::OpenForReading(std::get<1>(tile));
             if (image) {
-                GlfImage::StorageSpec spec;
-                spec.width = static_cast<int>(_width);
-                spec.height = static_cast<int>(_height);
-                spec.format = _format;
-                spec.type = type;
-                spec.flipped = false;
-                spec.data = textureData.data() + (tileId * numBytesPerLayer);
-                image->Read(spec);
-                layoutData[std::get<0>(tile)] = tileId;
+                for (auto mip = decltype(mipCount){0}; mip < mipCount; ++mip) {
+                    const auto mipSize = mips[mip];
+                    const auto numBytesPerLayer =
+                        mipSize * mipSize * numBytesPerPixel;
+                    GlfImage::StorageSpec spec;
+                    spec.width = mipSize;
+                    spec.height = mipSize;
+                    spec.format = _format;
+                    spec.type = type;
+                    spec.flipped = false;
+                    spec.data = mipData[mip].data()
+                        + (tileId * numBytesPerLayer);
+                    image->Read(spec);
+                }
             }
         }
     }, 1);
 
-    glGenTextures(1, &_imageArray);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, _imageArray);
+    for (auto mip = decltype(mipCount){0}; mip < mipCount; ++mip) {
+        const auto mipSize = mips[mip];
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, mip, 0, 0, 0,
+                        mipSize, mipSize, _depth, _format, type,
+                        mipData[mip].data());
+    }
+
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0,
-                 _internalFormat,
-                 static_cast<GLsizei>(_width),
-                 static_cast<GLsizei>(_height),
-                 static_cast<GLsizei>(_depth),
-                 0, _format, type, textureData.data());
     glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
     glGenTextures(1, &_layout);
@@ -268,7 +305,7 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
 
     GLF_POST_PENDING_GL_ERRORS();
 
-    _SetMemoryUsed(numBytes + tiles.size() * sizeof(float));
+    _SetMemoryUsed(totalTextureMemory + tiles.size() * sizeof(float));
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
