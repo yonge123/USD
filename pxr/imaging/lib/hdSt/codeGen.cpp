@@ -1045,6 +1045,10 @@ static void _EmitDeclaration(std::stringstream &str,
     case HdBinding::BINDLESS_TEXTURE_UDIM_ARRAY:
         str << "uniform sampler2DArray " << name.GetText() << "_Images;\n";
         break;
+    case HdBinding::TEXTURE_UDIM_LAYOUT:
+    case HdBinding::BINDLESS_TEXTURE_UDIM_LAYOUT:
+        str << "uniform sampler1D " << name.GetText() << "_Layout;\n";
+        break;
     case HdBinding::TEXTURE_PTEX_TEXEL:
         str << "uniform sampler2DArray " << name.GetText() << "_Data;\n";
         break;
@@ -2625,12 +2629,17 @@ HdSt_CodeGen::_GenerateShaderParameters()
                     << "  return sampler2dArray_" << it->second.name << ";"
                     << "}\n";
             }
-            // vec4 HdGet_name(vec2 coord) { return texture(sampler2dArray_name, hd_sample_udim(coord)).xyz; }
+            // vec4 HdGet_name(vec2 coord) { vec3 c = hd_sample_udim(coord);
+            // c.z = texelFetch(sampler1d_name_layout, int(c.z), 0).x;
+            // return texture(sampler2dArray_name, hd_sample_udim(coord)).xyz; }
             accessors
                 << it->second.dataType
                 << " HdGet_" << it->second.name
-                << "(vec2 coord) { return texture(sampler2dArray_"
-                << it->second.name << ", hd_sample_udim(coord))" << swizzle << ";}\n";
+                << "(vec2 coord) { vec3 c = hd_sample_udim(coord);\n"
+                << "  c.z = texelFetch(sampler1d_" << it->second.name
+                << "_layout" << ", int(c.z), 0).x;\n"
+                << "  return texture(sampler2dArray_"
+                << it->second.name << ", c)" << swizzle << ";}\n";
             // vec4 HdGet_name() { return HdGet_name(HdGet_st().xy); }
             accessors
                 << it->second.dataType
@@ -2649,6 +2658,10 @@ HdSt_CodeGen::_GenerateShaderParameters()
                     << "vec2(0.0, 0.0)";
             }
             accessors << "); }\n";
+        } else if (bindingType == HdBinding::TEXTURE_UDIM_LAYOUT) {
+            declarations
+                << LayoutQualifier(it->first)
+                << "uniform sampler1D sampler1d_" << it->second.name << ";\n";
         } else if (bindingType == HdBinding::BINDLESS_TEXTURE_PTEX_TEXEL) {
             accessors
                 << it->second.dataType
