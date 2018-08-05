@@ -64,6 +64,9 @@ def PrintCommandOutput(output):
         sys.stdout.write(output)
 
 def PrintError(error):
+    if verbosity >= 3 and getattr(sys, "exc_value", None) is not None:
+        import traceback
+        traceback.print_exc()
     print "ERROR:", error
 
 # Helpers for determining platform
