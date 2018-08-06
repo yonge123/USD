@@ -260,7 +260,8 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
         for (auto tileId = begin; tileId < end; ++tileId) {
             const auto& tile = tiles[tileId];
             layoutData[std::get<0>(tile)] = tileId;
-            std::vector<std::tuple<int, GlfImageSharedPtr>> images;
+            using images_t = std::tuple<int, GlfImageSharedPtr>;
+            std::vector<images_t> images;
             while (true) {
                 auto image = GlfImage::OpenForReading(std::get<1>(tile), 0, images.size(), true);
                 if (image == nullptr) {
@@ -268,23 +269,24 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
                 }
                 images.emplace_back(std::max(image->GetWidth(), image->GetHeight()), image);
             }
-            // TODO: LUMA resample from the closest mip level from the file.
-            auto image = GlfImage::OpenForReading(std::get<1>(tile));
-            if (image) {
-                for (auto mip = decltype(mipCount){0}; mip < mipCount; ++mip) {
-                    const auto mipSize = mips[mip];
-                    const auto numBytesPerLayer =
-                        mipSize * mipSize * numBytesPerPixel;
-                    GlfImage::StorageSpec spec;
-                    spec.width = mipSize;
-                    spec.height = mipSize;
-                    spec.format = _format;
-                    spec.type = type;
-                    spec.flipped = false;
-                    spec.data = mipData[mip].data()
-                        + (tileId * numBytesPerLayer);
-                    image->Read(spec);
-                }
+            if (images.empty()) { continue; }
+            for (auto mip = decltype(mipCount){0}; mip < mipCount; ++mip) {
+                const auto mipSize = mips[mip];
+                const auto numBytesPerLayer =
+                    mipSize * mipSize * numBytesPerPixel;
+                GlfImage::StorageSpec spec;
+                spec.width = mipSize;
+                spec.height = mipSize;
+                spec.format = _format;
+                spec.type = type;
+                spec.flipped = false;
+                spec.data = mipData[mip].data()
+                            + (tileId * numBytesPerLayer);
+                const auto it = std::find_if(images.rbegin(), images.rend(),
+                    [mipSize](const images_t& i)
+                    { return mipSize <= std::get<0>(i);});
+                std::get<1>(it == images.rend() ? images.front() : *it)
+                    ->Read(spec);
             }
         }
     }, 1);
