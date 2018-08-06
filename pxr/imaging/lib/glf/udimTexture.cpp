@@ -69,12 +69,12 @@ GetUdimTiles(const std::string& imageFilePath, int maxLayerCount) {
     return ret;
 }
 
-std::vector<size_t>
-GetMipMaps(size_t resolution) {
-    std::vector<size_t> ret;
+std::vector<int>
+GetMipMaps(int resolution) {
+    std::vector<int> ret;
     while (true) {
         ret.push_back(resolution);
-        if (resolution == 1) {
+        if (resolution <= 1) {
             break;
         }
         resolution = resolution / 2;
@@ -127,9 +127,9 @@ GlfUdimTexture::GetTextureInfo() const {
     VtDictionary ret;
 
     ret["memoryUsed"] = GetMemoryUsed();
-    ret["width"] = (int)_mip0Size;
-    ret["height"] = (int)_mip0Size;
-    ret["depth"] = (int)_depth;
+    ret["width"] = _mip0Size;
+    ret["height"] = _mip0Size;
+    ret["depth"] = _depth;
     ret["format"] = _format;
     ret["imageFilePath"] = _imagePath;
     ret["referenceCount"] = GetRefCount().Get();
@@ -225,7 +225,7 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     }
 
     const auto maxTileCount =
-        static_cast<size_t>(std::get<0>(tiles.back()) + 1);
+        static_cast<int>(std::get<0>(tiles.back()) + 1);
     _depth = tiles.size();
     // TODO: LUMA make this as big as possible based on the memory request
     _mip0Size = std::min(max2DDimension, 128);
@@ -260,6 +260,14 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
         for (auto tileId = begin; tileId < end; ++tileId) {
             const auto& tile = tiles[tileId];
             layoutData[std::get<0>(tile)] = tileId;
+            std::vector<std::tuple<int, GlfImageSharedPtr>> images;
+            while (true) {
+                auto image = GlfImage::OpenForReading(std::get<1>(tile), 0, images.size(), true);
+                if (image == nullptr) {
+                    break;
+                }
+                images.emplace_back(std::max(image->GetWidth(), image->GetHeight()), image);
+            }
             // TODO: LUMA resample from the closest mip level from the file.
             auto image = GlfImage::OpenForReading(std::get<1>(tile));
             if (image) {
