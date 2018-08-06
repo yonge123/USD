@@ -101,9 +101,9 @@ shadowing(int index, vec4 Peye, float slope)
     // clamping at 2 to avoid shadows from dissapearing as angle gets very steep.
     slope = clamp(slope, 1.0, 2.0);
 
-    // coord.xy : homogenius shadow uv coordinate
-    // coord.z : cartisian receiver depth
-    // coord.w : shadow projection w
+    // coord.xy : homogenous shadow uv coordinate
+    // coord.z / coord.w : non-linear NDC "depth": -1 at near to 1 at far
+    // coord.w : z-depth cordinate of shadow receiver, from light
     coord /= coord.w;
     coord.z = min(1, coord.z + (shadow[index].bias * slope));
     return shadowFilter(index, coord.xyz, Peye);
