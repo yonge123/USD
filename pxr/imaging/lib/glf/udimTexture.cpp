@@ -315,7 +315,6 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
                     images.emplace_back(mipSize, image);
                     prevMipSize = mipSize;
                 }
-
             }
             if (images.empty()) { continue; }
             for (auto mip = decltype(mipCount){0}; mip < mipCount; ++mip) {
