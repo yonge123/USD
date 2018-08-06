@@ -17,4 +17,3 @@ houdini_variant_selection_fix
 pr/valueCacheCrashFix
 tg/bugfixes/stripNamespaces_mergeTransform_fix
 tg/simple_features/hd_pcss
-tg/simple_features/more_glslfx_debug_msgs
