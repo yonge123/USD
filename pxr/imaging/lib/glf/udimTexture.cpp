@@ -82,6 +82,41 @@ GetMipMaps(int resolution) {
     return ret;
 }
 
+// We need c++14 to make this constexpr.
+// Is there a nicer solution to this?
+constexpr int _MipPixelCountSize = 8192;
+const auto _MipPixelCount = []() -> std::array<int, _MipPixelCountSize> {
+    auto calcMipPixelCount = [](int mip) -> int {
+        int ret = 0;
+        while (true) {
+            ret += mip * mip;
+            if (mip <= 1) {
+                break;
+            }
+            mip = mip / 2;
+        }
+        return ret;
+    };
+
+    std::array<int, _MipPixelCountSize> ret {};
+    for (int i = 0; i < _MipPixelCountSize; ++i) {
+        ret[i] = calcMipPixelCount(i + 1);
+    }
+
+    return ret;
+}();
+
+inline
+int _MaximumMipSize(int targetSize) {
+    const auto it = std::upper_bound(_MipPixelCount.cbegin(),
+        _MipPixelCount.cend(), targetSize);
+    if (it == _MipPixelCount.cend()) {
+        return _MipPixelCountSize;
+    }
+    return std::max(1,
+        static_cast<int>(std::distance(_MipPixelCount.cbegin(), it)));
+}
+
 }
 
 bool GlfIsSupportedUdimTexture(const std::string& imageFilePath) {
@@ -117,7 +152,10 @@ GlfUdimTexture::GetBindings(
     BindingVector ret;
     ret.push_back(Binding(
         TfToken(identifier.GetString() + "_Images"), GlfTextureTokens->texels,
-        GL_TEXTURE_2D_ARRAY, _imageArray, samplerName));
+            GL_TEXTURE_2D_ARRAY, _imageArray, samplerName));
+    ret.push_back(Binding(
+        TfToken(identifier.GetString() + "_Layout"), GlfTextureTokens->layout,
+            GL_TEXTURE_1D, _layout, 0));
 
     return ret;
 }
@@ -201,7 +239,7 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
         max3dTextureSize);
 
     auto _internalFormat = GL_RGBA8;
-    auto sizePerElem = 1;
+    int sizePerElem = 1;
     if (type == GL_FLOAT) {
         constexpr GLenum internalFormats[] =
             { GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F };
@@ -225,10 +263,14 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     }
 
     const auto maxTileCount =
-        static_cast<int>(std::get<0>(tiles.back()) + 1);
-    _depth = tiles.size();
-    // TODO: LUMA make this as big as possible based on the memory request
-    _mip0Size = std::min(max2DDimension, 128);
+        std::get<0>(tiles.back()) + 1;
+    _depth = static_cast<int>(tiles.size());
+    const auto numBytesPerPixel = sizePerElem * numChannels;
+    const auto numBytesPerPixelLayer = numBytesPerPixel * _depth;
+
+    const auto targetPixelCount =
+        static_cast<int>(targetMemory / (_depth * numBytesPerPixel));
+    _mip0Size = std::min(max2DDimension, _MaximumMipSize(targetPixelCount));
 
     const auto mips = GetMipMaps(_mip0Size);
     const auto mipCount = mips.size();
@@ -238,9 +280,6 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     // Texture array queries will use a float as the array specifier.
     std::vector<float> layoutData;
     layoutData.resize(maxTileCount, 0);
-
-    const auto numBytesPerPixel = sizePerElem * numChannels;
-    const auto numBytesPerPixelLayer = numBytesPerPixel * _depth;
 
     glGenTextures(1, &_imageArray);
     glBindTexture(GL_TEXTURE_2D_ARRAY, _imageArray);
@@ -263,11 +302,13 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
             using images_t = std::tuple<int, GlfImageSharedPtr>;
             std::vector<images_t> images;
             while (true) {
-                auto image = GlfImage::OpenForReading(std::get<1>(tile), 0, images.size(), true);
+                auto image = GlfImage::OpenForReading(
+                    std::get<1>(tile), 0, images.size(), true);
                 if (image == nullptr) {
                     break;
                 }
-                images.emplace_back(std::max(image->GetWidth(), image->GetHeight()), image);
+                images.emplace_back(
+                    std::max(image->GetWidth(), image->GetHeight()), image);
             }
             if (images.empty()) { continue; }
             for (auto mip = decltype(mipCount){0}; mip < mipCount; ++mip) {
