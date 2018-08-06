@@ -98,6 +98,9 @@ computeShadowFilterWidth(vec4 Peye)
 #define USE_PCSS 1
 #endif
 
+#ifndef PCSS_USE_POISSON
+#define PCSS_USE_POISSON 1
+#endif
 
 struct LightSource {
     vec4 position;
@@ -267,6 +270,29 @@ float ZShadowToZLight(int index, float zShadow)
     return 2 * far * near / ( (far - near) * zNDC - far - near);
 }
 
+#if PCSS_USE_POISSON
+
+vec2 poissonCircle16[16] = vec2[] (
+    vec2(-0.4861386999911106, -0.8131017515698877),
+    vec2(-0.1379418757526687, -0.615688199407407),
+    vec2(-0.7564435654127604, -0.4784037191192021),
+    vec2(-0.3589654315656421, -0.20100347630994497),
+    vec2(0.14915414784025227, -0.2591274969466977),
+    vec2(0.576191505150637, -0.35634542228785826),
+    vec2(-0.8396598211188767, -0.03177255032506765),
+    vec2(-0.03149354030526419, 0.061258513133836345),
+    vec2(0.3048306955444662, 0.1445404519033291),
+    vec2(0.7678050733274815, 0.0771602092932755),
+    vec2(-0.9504236693518691, 0.30329165751818943),
+    vec2(-0.4886426883795304, 0.3260041612432061),
+    vec2(-0.6843564597722496, 0.6891387513886138),
+    vec2(-0.21954418320701996, 0.5975522182405921),
+    vec2(0.3026461552247486, 0.6521013441018921),
+    vec2(-0.13475166555549078, 0.917862124778025)
+);
+
+#endif // PCSS_USE_POISSON
+
 // Returns average blocker depth in the search region, as well as the number of found blockers.
 // Blockers are defined as shadow-map samples between the surface point and the light.
 // receiverPt is in (0,1) shadow space
@@ -276,6 +302,22 @@ void FindBlocker(out float avgBlockerDepth, out float numBlockers,
     float blockerSum = 0;
     numBlockers = 0;
 
+#if PCSS_USE_POISSON
+
+    for( int i = 0; i < poissonCircle16.length(); ++i )
+    {
+        vec2 offset = poissonCircle16[i] * blockerSearchSizeUV;
+        float shadowMapDepth = shadowSample(index, receiverPt.xy + offset);
+        // TODO: come up with a better bias method
+        float zBiased = receiverPt.z + shadow[index].bias;
+        if ( shadowMapDepth < zBiased )
+        {
+            blockerSum += shadowMapDepth;
+            numBlockers++;
+        }
+    }
+
+#else // PCSS_USE_POISSON
     vec2 stepUV = blockerSearchSizeUV / NUM_BLOCKER_SEARCH_SAMPLES;
     for( float x = -NUM_BLOCKER_SEARCH_SAMPLES; x <= NUM_BLOCKER_SEARCH_SAMPLES; ++x )
     {
@@ -292,6 +334,8 @@ void FindBlocker(out float avgBlockerDepth, out float numBlockers,
             }
         }
     }
+
+#endif // PCSS_USE_POISSON
 
     avgBlockerDepth = blockerSum / numBlockers;
 }
