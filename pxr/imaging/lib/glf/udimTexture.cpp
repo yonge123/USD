@@ -301,14 +301,21 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
             layoutData[std::get<0>(tile)] = tileId;
             using images_t = std::tuple<int, GlfImageSharedPtr>;
             std::vector<images_t> images;
-            while (true) {
+            // In cases where OpenForReading won't return false.
+            auto prevMipSize = std::numeric_limits<int>::max();
+            constexpr int maxMipTries = 32;
+            for (int i = 0; i < maxMipTries; ++i) {
                 auto image = GlfImage::OpenForReading(
                     std::get<1>(tile), 0, images.size(), true);
                 if (image == nullptr) {
                     break;
                 }
-                images.emplace_back(
-                    std::max(image->GetWidth(), image->GetHeight()), image);
+                const auto mipSize = std::max(image->GetWidth(), image->GetHeight());
+                if (mipSize < prevMipSize) {
+                    images.emplace_back(mipSize, image);
+                    prevMipSize = mipSize;
+                }
+
             }
             if (images.empty()) { continue; }
             for (auto mip = decltype(mipCount){0}; mip < mipCount; ++mip) {
