@@ -81,7 +81,7 @@ public:
 
 protected:
     virtual bool _OpenForReading(std::string const & filename, int subimage,
-                                 bool suppressErrors);
+                                 int mip, bool suppressErrors);
     virtual bool _OpenForWriting(std::string const & filename);
 
 private:
@@ -391,13 +391,14 @@ Glf_OIIOImage::GetNumMipLevels() const
 /* virtual */
 bool
 Glf_OIIOImage::_OpenForReading(std::string const & filename, int subimage,
-                               bool suppressErrors)
+                               int mip, bool suppressErrors)
 {
     _filename = filename;
     _subimage = subimage;
     _imagebuf.clear();
-    return _imagebuf.init_spec(_filename, subimage, /*mipmap*/0)
-           && (_imagebuf.nsubimages() > subimage);
+    return _imagebuf.init_spec(_filename, subimage, mip)
+           && (_imagebuf.nsubimages() > subimage)
+           && _imagebuf.nmiplevels() > mip;
 }
 
 /* virtual */
