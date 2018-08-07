@@ -176,8 +176,6 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
         return;
     }
 
-    std::cerr << "Num of udim tiles : " << tiles.size() << std::endl;
-
     struct _TextureSize {
         _TextureSize(int w, int h) : width(w), height(h) { }
         int width, height;
