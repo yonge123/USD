@@ -82,41 +82,6 @@ GetMipMaps(int resolution) {
     return ret;
 }
 
-// We need c++14 to make this constexpr.
-// Is there a nicer solution to this?
-constexpr int _MipPixelCountSize = 8192;
-const auto _MipPixelCount = []() -> std::array<int, _MipPixelCountSize> {
-    auto calcMipPixelCount = [](int mip) -> int {
-        int ret = 0;
-        while (true) {
-            ret += mip * mip;
-            if (mip <= 1) {
-                break;
-            }
-            mip = mip / 2;
-        }
-        return ret;
-    };
-
-    std::array<int, _MipPixelCountSize> ret {};
-    for (int i = 0; i < _MipPixelCountSize; ++i) {
-        ret[i] = calcMipPixelCount(i + 1);
-    }
-
-    return ret;
-}();
-
-inline
-int _MaximumMipSize(int targetSize) {
-    const auto it = std::upper_bound(_MipPixelCount.cbegin(),
-        _MipPixelCount.cend(), targetSize);
-    if (it == _MipPixelCount.cend()) {
-        return _MipPixelCountSize;
-    }
-    return std::max(1,
-        static_cast<int>(std::distance(_MipPixelCount.cbegin(), it)));
-}
-
 }
 
 bool GlfIsSupportedUdimTexture(const std::string& imageFilePath) {
