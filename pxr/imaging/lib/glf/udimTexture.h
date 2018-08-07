@@ -87,7 +87,8 @@ protected:
 
 private:
     TfToken _imagePath;
-    int _mip0Size = 0;
+    int _width = 0;
+    int _height = 0;
     int _depth = 0;
     int _format = 0;
     GLuint _imageArray = 0;
