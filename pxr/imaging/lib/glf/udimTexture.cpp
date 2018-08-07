@@ -176,6 +176,8 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
         return;
     }
 
+    std::cerr << "Num of udim tiles : " << tiles.size() << std::endl;
+
     struct _TextureSize {
         _TextureSize(int w, int h) : width(w), height(h) { }
         int width, height;
@@ -339,7 +341,7 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
                 spec.height = mipSize.height;
                 spec.format = _format;
                 spec.type = type;
-                spec.flipped = false;
+                spec.flipped = true;
                 spec.data = mipData[mip].data()
                             + (tileId * numBytesPerLayer);
                 const auto it = std::find_if(images.rbegin(), images.rend(),
