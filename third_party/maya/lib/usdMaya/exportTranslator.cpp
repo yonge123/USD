@@ -96,8 +96,8 @@ UsdMayaExportTranslator::writer(const MFileObject &file,
                 if (argName == "shadingMode") {
                     TfToken shadingMode(theOption[1].asChar());
                     if (!shadingMode.IsEmpty() &&
-                        PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode) == nullptr &&
-                        shadingMode != PxrUsdMayaShadingModeTokens->none) {
+                        UsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode) == nullptr &&
+                        shadingMode != UsdMayaShadingModeTokens->none) {
                         MGlobal::displayError(TfStringPrintf(
                                 "No shadingMode '%s' found. "
                                 "Setting shadingMode='none'", 

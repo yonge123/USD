@@ -205,8 +205,8 @@ try
         TfToken shadingMode(stringVal.asChar());
 
         if (!shadingMode.IsEmpty() &&
-            PxrUsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode) == nullptr && 
-            shadingMode != PxrUsdMayaShadingModeTokens->none) {
+            UsdMayaShadingModeRegistry::GetInstance().GetExporter(shadingMode) == nullptr &&
+            shadingMode != UsdMayaShadingModeTokens->none) {
             MGlobal::displayError(TfStringPrintf(
                     "No shadingMode '%s' found. "
                     "Setting shadingMode='none'", 
