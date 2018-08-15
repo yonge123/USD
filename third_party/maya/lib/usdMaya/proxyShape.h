@@ -26,13 +26,17 @@
 
 /// \file usdMaya/proxyShape.h
 
-#include "pxr/pxr.h"
 #include "usdMaya/api.h"
+#include "usdMaya/stageNoticeListener.h"
 #include "usdMaya/usdPrimProvider.h"
+
+#include "pxr/pxr.h"
 
 #include "pxr/base/gf/vec4f.h"
 #include "pxr/base/tf/staticTokens.h"
+
 #include "pxr/usd/sdf/path.h"
+#include "pxr/usd/usd/notice.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/timeCode.h"
 
@@ -59,7 +63,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 #define PXRUSDMAYA_PROXY_SHAPE_TOKENS \
     ((MayaTypeName, "pxrUsdProxyShape"))
 
-TF_DECLARE_PUBLIC_TOKENS(PxrUsdMayaProxyShapeTokens,
+TF_DECLARE_PUBLIC_TOKENS(UsdMayaProxyShapeTokens,
                          PXRUSDMAYA_API,
                          PXRUSDMAYA_PROXY_SHAPE_TOKENS);
 
@@ -70,7 +74,7 @@ bool UsdMayaIsBoundingBoxModeEnabled();
 
 
 class UsdMayaProxyShape : public MPxSurfaceShape,
-                          public PxrUsdMayaUsdPrimProvider
+                          public UsdMayaUsdPrimProvider
 {
     public:
         PXRUSDMAYA_API
@@ -169,7 +173,7 @@ class UsdMayaProxyShape : public MPxSurfaceShape,
         PXRUSDMAYA_API
         bool canMakeLive() const override;
 
-        // PxrUsdMayaUsdPrimProvider overrides:
+        // UsdMayaUsdPrimProvider overrides:
         /**
          * accessor to get the usdprim
          *
@@ -249,6 +253,11 @@ class UsdMayaProxyShape : public MPxSurfaceShape,
 
         bool _CanBeSoftSelected() const;
 
+        void _OnStageContentsChanged(
+                const UsdNotice::StageContentsChanged& notice);
+
+        UsdMayaStageNoticeListener _stageNoticeListener;
+
         std::map<UsdTimeCode, MBoundingBox> _boundingBoxCache;
 
         bool _useFastPlayback;
@@ -262,4 +271,4 @@ class UsdMayaProxyShape : public MPxSurfaceShape,
 PXR_NAMESPACE_CLOSE_SCOPE
 
 
-#endif // PXRUSDMAYA_PROXY_SHAPE_H
+#endif

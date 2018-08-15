@@ -1,6 +1,6 @@
 set(PXR_INSTALL_SUBDIR "third_party/maya")
 
-pxr_setup_plugins()
+pxr_add_extra_plugins(plugin)
 
 pxr_setup_third_party_python_init()
 
