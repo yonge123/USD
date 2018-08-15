@@ -21,7 +21,6 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/pxr.h"
 #include "usdMaya/translatorMesh.h"
 
 #include "usdMaya/meshUtil.h"
@@ -32,11 +31,13 @@
 #include "usdMaya/translatorGprim.h"
 #include "usdMaya/translatorMaterial.h"
 #include "usdMaya/translatorUtil.h"
+#include "usdMaya/util.h"
 
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/token.h"
 #include "pxr/base/vt/array.h"
 #include "pxr/base/vt/types.h"
+
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/sdf/tokens.h"
 #include "pxr/usd/usdGeom/mesh.h"
@@ -52,6 +53,7 @@
 #include <maya/MFnStringData.h>
 #include <maya/MFnTypedAttribute.h>
 #include <maya/MGlobal.h>
+#include <maya/MPlug.h>
 #include <maya/MPointArray.h>
 #include <maya/MUintArray.h>
 
@@ -67,7 +69,7 @@ bool
 _SetupPointBasedDeformerForMayaNode(
         MObject& mayaObj,
         const UsdPrim& prim,
-        PxrUsdMayaPrimReaderContext* context)
+        UsdMayaPrimReaderContext* context)
 {
     // We try to get the USD stage node from the context's registry, so if we
     // don't have a reader context, we can't continue.
@@ -77,21 +79,20 @@ _SetupPointBasedDeformerForMayaNode(
 
     MObject stageNode =
         context->GetMayaNode(
-            SdfPath(PxrUsdMayaStageNodeTokens->MayaTypeName.GetString()),
+            SdfPath(UsdMayaStageNodeTokens->MayaTypeName.GetString()),
             false);
     if (stageNode.isNull()) {
         return false;
     }
 
-    // Get the outTime plug for Maya's global time object.
-    MObject timeNode;
-    MStatus status = PxrUsdMayaUtil::GetMObjectByName("time1", timeNode);
-    CHECK_MSTATUS_AND_RETURN(status, false);
+    // Get the output time plug and node for Maya's global time object.
+    MPlug timePlug = UsdMayaUtil::GetMayaTimePlug();
+    if (timePlug.isNull()) {
+        return false;
+    }
 
-    MFnDependencyNode depNodeFn(timeNode, &status);
-    CHECK_MSTATUS_AND_RETURN(status, false);
-
-    MPlug timePlug = depNodeFn.findPlug("outTime", true, &status);
+    MStatus status;
+    MObject timeNode = timePlug.node(&status);
     CHECK_MSTATUS_AND_RETURN(status, false);
 
     // Clear the selection list so that the deformer command doesn't try to add
@@ -109,7 +110,7 @@ _SetupPointBasedDeformerForMayaNode(
     const std::string deformerCmd = TfStringPrintf(
         "from maya import cmds; cmds.deformer(name=\'%s\', type=\'%s\')[0]",
         pointBasedDeformerNodeName.c_str(),
-        PxrUsdMayaPointBasedDeformerNodeTokens->MayaTypeName.GetText());
+        UsdMayaPointBasedDeformerNodeTokens->MayaTypeName.GetText());
     MString newPointBasedDeformerName;
     status = MGlobal::executePythonCommand(deformerCmd.c_str(),
                                            newPointBasedDeformerName);
@@ -117,14 +118,14 @@ _SetupPointBasedDeformerForMayaNode(
 
     // Get the newly created point based deformer node.
     MObject pointBasedDeformerNode;
-    status = PxrUsdMayaUtil::GetMObjectByName(newPointBasedDeformerName.asChar(),
+    status = UsdMayaUtil::GetMObjectByName(newPointBasedDeformerName.asChar(),
                                               pointBasedDeformerNode);
     CHECK_MSTATUS_AND_RETURN(status, false);
 
     context->RegisterNewMayaNode(newPointBasedDeformerName.asChar(),
                                  pointBasedDeformerNode);
 
-    status = depNodeFn.setObject(pointBasedDeformerNode);
+    MFnDependencyNode depNodeFn(pointBasedDeformerNode, &status);
     CHECK_MSTATUS_AND_RETURN(status, false);
 
     MDGModifier dgMod;
@@ -205,11 +206,11 @@ _SetupPointBasedDeformerForMayaNode(
 
 /* static */
 bool
-PxrUsdMayaTranslatorMesh::Create(
+UsdMayaTranslatorMesh::Create(
         const UsdGeomMesh& mesh,
         MObject parentNode,
-        const PxrUsdMayaPrimReaderArgs& args,
-        PxrUsdMayaPrimReaderContext* context)
+        const UsdMayaPrimReaderArgs& args,
+        UsdMayaPrimReaderContext* context)
 {
     if (!mesh) {
         return false;
@@ -221,7 +222,7 @@ PxrUsdMayaTranslatorMesh::Create(
 
     // Create node (transform)
     MObject mayaNodeTransformObj;
-    if (!PxrUsdMayaTranslatorUtil::CreateTransformNode(prim,
+    if (!UsdMayaTranslatorUtil::CreateTransformNode(prim,
                                                        parentNode,
                                                        args,
                                                        context,
@@ -355,13 +356,13 @@ PxrUsdMayaTranslatorMesh::Create(
     // If a material is bound, create (or reuse if already present) and assign it
     // If no binding is present, assign the mesh to the default shader
     const TfToken& shadingMode = args.GetShadingMode();
-    PxrUsdMayaTranslatorMaterial::AssignMaterial(shadingMode,
+    UsdMayaTranslatorMaterial::AssignMaterial(shadingMode,
                                                  mesh,
                                                  meshObj,
                                                  context);
 
     // Mesh is a shape, so read Gprim properties
-    PxrUsdMayaTranslatorGprim::Read(mesh, meshObj, context);
+    UsdMayaTranslatorGprim::Read(mesh, meshObj, context);
 
     // Set normals if supplied
     MIntArray normalsFaceIds;
@@ -388,7 +389,7 @@ PxrUsdMayaTranslatorMesh::Create(
      }
 
     // Copy UsdGeomMesh schema attrs into Maya if they're authored.
-    PxrUsdMayaReadUtil::ReadSchemaAttributesFromPrim<UsdGeomMesh>(
+    UsdMayaReadUtil::ReadSchemaAttributesFromPrim<UsdGeomMesh>(
         prim,
         meshFn.object(),
         {
@@ -405,7 +406,7 @@ PxrUsdMayaTranslatorMesh::Create(
             subdScheme == UsdGeomTokens->none) {
         if (normals.size() == static_cast<size_t>(meshFn.numFaceVertices()) &&
                 mesh.GetNormalsInterpolation() == UsdGeomTokens->faceVarying) {
-            PxrUsdMayaMeshUtil::SetEmitNormalsTag(meshFn, true);
+            UsdMayaMeshUtil::SetEmitNormalsTag(meshFn, true);
         }
     } else {
         _AssignSubDivTagsToMesh(mesh, meshObj, meshFn);
@@ -434,6 +435,8 @@ PxrUsdMayaTranslatorMesh::Create(
         const TfToken name = primvar.GetBaseName();
         const TfToken fullName = primvar.GetPrimvarName();
         const SdfValueTypeName typeName = primvar.GetTypeName();
+        const TfToken& interpolation = primvar.GetInterpolation();
+
 
         // Exclude primvars using the full primvar name without "primvars:".
         // This applies to all primvars; we don't care if it's a color set, a
@@ -447,9 +450,9 @@ PxrUsdMayaTranslatorMesh::Create(
         // authored by the user, for example if it was generated by shader
         // values and not an authored colorset/entity.
         // If it was not really authored, we skip the primvar.
-        if (name == PxrUsdMayaMeshColorSetTokens->DisplayColorColorSetName ||
-                name == PxrUsdMayaMeshColorSetTokens->DisplayOpacityColorSetName) {
-            if (!PxrUsdMayaRoundTripUtil::IsAttributeUserAuthored(primvar)) {
+        if (name == UsdMayaMeshColorSetTokens->DisplayColorColorSetName ||
+                name == UsdMayaMeshColorSetTokens->DisplayOpacityColorSetName) {
+            if (!UsdMayaRoundTripUtil::IsAttributeUserAuthored(primvar)) {
                 continue;
             }
         }
@@ -459,7 +462,7 @@ PxrUsdMayaTranslatorMesh::Create(
         // float-typed arrays. Should we still consider other precisions
         // (double, half, ...) and/or numeric types (int)?
         if(typeName == SdfValueTypeNames->TexCoord2fArray ||
-                (PxrUsdMayaReadUtil::ReadFloat2AsUV() &&
+                (UsdMayaReadUtil::ReadFloat2AsUV() &&
                  typeName == SdfValueTypeNames->Float2Array)) {
             // Looks for TexCoord2fArray types for UV sets first
             // Otherwise, if env variable for reading Float2
@@ -482,7 +485,17 @@ PxrUsdMayaTranslatorMesh::Create(
                         name.GetText(),
                         mesh.GetPrim().GetPath().GetText());
             }
+        // 
+        // constant primvars get added as attributes on mesh
+        //
+        } else if (interpolation == UsdGeomTokens->constant){
+            if (!_AssignConstantPrimvarToMesh(primvar, meshFn)) {
+                TF_WARN("Unable to assign constant primvars as attributes, <%s> for mesh <%s>",
+                        name.GetText(),
+                        mesh.GetPrim().GetPath().GetText());
+            }
         }
+
     }
 
     // We only vizualize the colorset by default if it is "displayColor".
@@ -491,7 +504,7 @@ PxrUsdMayaTranslatorMesh::Create(
         for (unsigned int i = 0u; i < colorSetNames.length(); ++i) {
             const MString colorSetName = colorSetNames[i];
             if (std::string(colorSetName.asChar())
-                    == PxrUsdMayaMeshColorSetTokens->DisplayColorColorSetName.GetString()) {
+                    == UsdMayaMeshColorSetTokens->DisplayColorColorSetName.GetString()) {
                 const MFnMesh::MColorRepresentation csRep =
                     meshFn.getColorRepresentation(colorSetName);
                 if (csRep == MFnMesh::kRGB || csRep == MFnMesh::kRGBA) {
