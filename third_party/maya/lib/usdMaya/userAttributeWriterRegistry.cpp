@@ -32,13 +32,13 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
-    using _WriterRegistry = std::map<TfToken, PxrUsdMayaUserAttributeWriterRegistry::UserAttributeWriter>;
+    using _WriterRegistry = std::map<TfToken, UsdMayaUserAttributeWriterRegistry::UserAttributeWriter>;
     _WriterRegistry _writerReg;
 }
 
-TfTokenVector PxrUsdMayaUserAttributeWriterRegistry::_ListWriters() {
-    PxrUsdMaya_RegistryHelper::LoadUserAttributeWriterPlugins();
-    TfRegistryManager::GetInstance().SubscribeTo<PxrUsdMayaUserAttributeWriterRegistry>();
+TfTokenVector UsdMayaUserAttributeWriterRegistry::_ListWriters() {
+    UsdMaya_RegistryHelper::LoadUserAttributeWriterPlugins();
+    TfRegistryManager::GetInstance().SubscribeTo<UsdMayaUserAttributeWriterRegistry>();
     TfTokenVector ret;
     ret.reserve(_writerReg.size());
     for (const auto& e : _writerReg) {
@@ -47,31 +47,31 @@ TfTokenVector PxrUsdMayaUserAttributeWriterRegistry::_ListWriters() {
     return ret;
 }
 
-void PxrUsdMayaUserAttributeWriterRegistry::RegisterWriter(
+void UsdMayaUserAttributeWriterRegistry::RegisterWriter(
     const std::string& name,
     const UserAttributeWriter& fn) {
     _writerReg.insert(std::make_pair(TfToken(name), fn));
 }
 
-PxrUsdMayaUserAttributeWriterRegistry::UserAttributeWriter PxrUsdMayaUserAttributeWriterRegistry::_GetWriter(const TfToken& name) {
+UsdMayaUserAttributeWriterRegistry::UserAttributeWriter UsdMayaUserAttributeWriterRegistry::_GetWriter(const TfToken& name) {
     PxrUsdMaya_RegistryHelper::LoadUserAttributeWriterPlugins();
-    TfRegistryManager::GetInstance().SubscribeTo<PxrUsdMayaUserAttributeWriterRegistry>();
+    TfRegistryManager::GetInstance().SubscribeTo<UsdMayaUserAttributeWriterRegistry>();
     const auto it = _writerReg.find(name);
     return it == _writerReg.end() ? nullptr : it->second;
 }
 
-TF_INSTANTIATE_SINGLETON(PxrUsdMayaUserAttributeWriterRegistry);
+TF_INSTANTIATE_SINGLETON(UsdMayaUserAttributeWriterRegistry);
 
-PxrUsdMayaUserAttributeWriterRegistry&
-PxrUsdMayaUserAttributeWriterRegistry::GetInstance() {
-    return TfSingleton<PxrUsdMayaUserAttributeWriterRegistry>::GetInstance();
+UsdMayaUserAttributeWriterRegistry&
+UsdMayaUserAttributeWriterRegistry::GetInstance() {
+    return TfSingleton<UsdMayaUserAttributeWriterRegistry>::GetInstance();
 }
 
-PxrUsdMayaUserAttributeWriterRegistry::PxrUsdMayaUserAttributeWriterRegistry() {
+UsdMayaUserAttributeWriterRegistry::UsdMayaUserAttributeWriterRegistry() {
     
 }
 
-PxrUsdMayaUserAttributeWriterRegistry::~PxrUsdMayaUserAttributeWriterRegistry() {
+UsdMayaUserAttributeWriterRegistry::~UsdMayaUserAttributeWriterRegistry() {
     
 }
 
