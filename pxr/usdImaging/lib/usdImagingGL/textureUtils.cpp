@@ -154,9 +154,9 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
     }
 
     const bool isUdim = GlfIsSupportedUdimTexture(filePath);
+    const bool isPtex = isUdim ? false : GlfIsSupportedUdimTexture(filePath);
 
-    if (!TfPathExists(filePath) && !isUdim) {
-        const bool isPtex = GlfIsSupportedPtexTexture(filePath);
+    if (!isUdim && asset.GetResolvedPath().empty()) {
         if (isPtex) {
             TF_WARN("Unable to find Texture '%s' with path '%s'. Fallback "
                     "textures are not supported for ptex",
@@ -244,7 +244,7 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
             isPtex ? "true" : "false",
             isUdim ? "true" : "false");
  
-    if (!isUdim && !TfPathExists(filePath)) {
+    if (!isUdim && asset.GetResolvedPath().empty()) {
         TF_DEBUG(USDIMAGING_TEXTURES).Msg(
                 "File does not exist, returning nullptr");
         TF_WARN("Unable to find Texture '%s' with path '%s'.", 
