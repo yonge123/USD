@@ -21,11 +21,11 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/pxr.h"
 #include "usdMaya/translatorMesh.h"
 
 #include "usdMaya/colorSpace.h"
 #include "usdMaya/meshUtil.h"
+#include "usdMaya/readUtil.h"
 #include "usdMaya/roundTripUtil.h"
 #include "usdMaya/util.h"
 
@@ -35,6 +35,7 @@
 #include "pxr/base/gf/vec3f.h"
 #include "pxr/base/gf/vec4f.h"
 #include "pxr/base/vt/array.h"
+
 #include "pxr/usd/usdGeom/mesh.h"
 #include "pxr/usd/usdGeom/primvar.h"
 #include "pxr/usd/usdUtils/pipeline.h"
@@ -94,7 +95,7 @@ _GetMayaFaceVertexAssignmentIds(
 
 /* static */
 bool
-PxrUsdMayaTranslatorMesh::_AssignUVSetPrimvarToMesh(
+UsdMayaTranslatorMesh::_AssignUVSetPrimvarToMesh(
         const UsdGeomPrimvar& primvar,
         MFnMesh& meshFn)
 {
@@ -220,7 +221,7 @@ PxrUsdMayaTranslatorMesh::_AssignUVSetPrimvarToMesh(
 
 /* static */
 bool
-PxrUsdMayaTranslatorMesh::_AssignColorSetPrimvarToMesh(
+UsdMayaTranslatorMesh::_AssignColorSetPrimvarToMesh(
         const UsdGeomMesh& primSchema,
         const UsdGeomPrimvar& primvar,
         MFnMesh& meshFn)
@@ -237,17 +238,17 @@ PxrUsdMayaTranslatorMesh::_AssignColorSetPrimvarToMesh(
     // Note that if BOTH displayColor and displayOpacity are authored, they will
     // be imported as separate color sets. We do not attempt to combine them
     // into a single color set.
-    if (primvarName == PxrUsdMayaMeshColorSetTokens->DisplayOpacityColorSetName &&
+    if (primvarName == UsdMayaMeshColorSetTokens->DisplayOpacityColorSetName &&
             typeName == SdfValueTypeNames->FloatArray) {
-        if (!PxrUsdMayaRoundTripUtil::IsAttributeUserAuthored(primSchema.GetDisplayColorPrimvar())) {
-            colorSetName = PxrUsdMayaMeshColorSetTokens->DisplayColorColorSetName.GetText();
+        if (!UsdMayaRoundTripUtil::IsAttributeUserAuthored(primSchema.GetDisplayColorPrimvar())) {
+            colorSetName = UsdMayaMeshColorSetTokens->DisplayColorColorSetName.GetText();
         }
     }
 
     // We'll need to convert colors from linear to display if this color set is
     // for display colors.
     const bool isDisplayColor =
-        (colorSetName == PxrUsdMayaMeshColorSetTokens->DisplayColorColorSetName.GetText());
+        (colorSetName == UsdMayaMeshColorSetTokens->DisplayColorColorSetName.GetText());
 
     // Get the raw data before applying any indexing. We'll only populate one
     // of these arrays based on the primvar's typeName, and we'll also set the
@@ -363,7 +364,7 @@ PxrUsdMayaTranslatorMesh::_AssignColorSetPrimvarToMesh(
         }
 
         if (isDisplayColor) {
-            colorValue = PxrUsdMayaColorSpace::ConvertLinearToMaya(colorValue);
+            colorValue = UsdMayaColorSpace::ConvertLinearToMaya(colorValue);
         }
 
         MColor mColor(colorValue[0], colorValue[1], colorValue[2], colorValue[3]);
@@ -374,7 +375,7 @@ PxrUsdMayaTranslatorMesh::_AssignColorSetPrimvarToMesh(
     // have had their indices set to -1, so update the unauthored values index.
     unauthoredValuesIndex = -1;
 
-    const bool clamped = PxrUsdMayaRoundTripUtil::IsPrimvarClamped(primvar);
+    const bool clamped = UsdMayaRoundTripUtil::IsPrimvarClamped(primvar);
 
     status = meshFn.createColorSet(colorSetName, nullptr, clamped, colorRep);
     if (status != MS::kSuccess) {
@@ -412,6 +413,57 @@ PxrUsdMayaTranslatorMesh::_AssignColorSetPrimvarToMesh(
     }
 
     return true;
+}
+bool
+UsdMayaTranslatorMesh::_AssignConstantPrimvarToMesh(
+        const UsdGeomPrimvar& primvar, 
+        MFnMesh& meshFn)
+{
+
+    const TfToken& name = primvar.GetBaseName();
+    const SdfValueTypeName& typeName = primvar.GetTypeName();
+    const SdfVariability& variability = SdfVariabilityUniform;
+    const TfToken& interpolation = primvar.GetInterpolation();
+
+    if (interpolation != UsdGeomTokens->constant) {
+        return false;
+    }
+
+    // create attribute
+    MObject attrObj = 
+        UsdMayaReadUtil::FindOrCreateMayaAttr(
+            typeName, 
+            variability, 
+            meshFn, 
+            name.GetText(),
+            name.GetText());
+
+    if (attrObj.isNull()) {
+        return false;
+    }
+
+    // set attribute value
+    VtValue primvarData;
+    MDGModifier modifier;
+
+    primvar.Get(&primvarData);
+
+    MStatus status;
+    MPlug plug = meshFn.findPlug(
+        name.GetText(),
+        /* wantNetworkedPlug = */ true,
+        &status);
+
+    if (status != MS::kSuccess || plug.isNull()) {
+        return false;
+    }
+
+    if (!UsdMayaReadUtil::SetMayaAttr(plug, primvarData, modifier)) {
+        return false;
+    }
+
+    return true;
+
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
