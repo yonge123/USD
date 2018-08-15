@@ -38,12 +38,12 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-TF_DECLARE_WEAK_PTRS(PxrUsdMayaUserAttributeWriterRegistry);
+TF_DECLARE_WEAK_PTRS(UsdMayaUserAttributeWriterRegistry);
 
-/// \class PxrUsdMayaUserAttributeWriterRegistry
+/// \class UsdMayaUserAttributeWriterRegistry
 /// \brief This class provides access to the registered
 /// userAttributeWriters.
-class PxrUsdMayaUserAttributeWriterRegistry : public TfWeakBase {
+class UsdMayaUserAttributeWriterRegistry : public TfWeakBase {
 public:
     using UserAttributeWriter = std::function<UsdAttribute(
         const MPlug&,
@@ -53,7 +53,7 @@ public:
         const bool)>;
 
     PXRUSDMAYA_API
-    static PxrUsdMayaUserAttributeWriterRegistry& GetInstance();
+    static UsdMayaUserAttributeWriterRegistry& GetInstance();
 
     /// \brief registers a new user attribute writer.
     PXRUSDMAYA_API
@@ -74,10 +74,10 @@ public:
 private:
     TfTokenVector _ListWriters();
     UserAttributeWriter _GetWriter(const TfToken& name);
-    
-    PxrUsdMayaUserAttributeWriterRegistry();
-    ~PxrUsdMayaUserAttributeWriterRegistry();
-    friend class TfSingleton<PxrUsdMayaUserAttributeWriterRegistry>;
+
+    UsdMayaUserAttributeWriterRegistry();
+    ~UsdMayaUserAttributeWriterRegistry();
+    friend class TfSingleton<UsdMayaUserAttributeWriterRegistry>;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
