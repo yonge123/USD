@@ -21,8 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/pxr.h"
 #include "usdMaya/proxyShape.h"
+
 #include "usdMaya/query.h"
 #include "usdMaya/stageCache.h"
 #include "usdMaya/stageData.h"
@@ -39,6 +39,7 @@
 #include "pxr/base/tf/staticTokens.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/token.h"
+
 #include "pxr/usd/ar/resolver.h"
 #include "pxr/usd/sdf/layer.h"
 #include "pxr/usd/sdf/path.h"
@@ -46,8 +47,8 @@
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usd/stageCacheContext.h"
 #include "pxr/usd/usd/timeCode.h"
-#include "pxr/usd/usdGeom/imageable.h"
 #include "pxr/usd/usdGeom/bboxCache.h"
+#include "pxr/usd/usdGeom/imageable.h"
 #include "pxr/usd/usdGeom/tokens.h"
 #include "pxr/usd/usdUtils/stageCache.h"
 
@@ -62,14 +63,13 @@
 #include <maya/MFnEnumAttribute.h>
 #include <maya/MFnNumericAttribute.h>
 #include <maya/MFnPluginData.h>
-#include <maya/MFnStringData.h>
 #include <maya/MFnTypedAttribute.h>
 #include <maya/MFnUnitAttribute.h>
 #include <maya/MGlobal.h>
 #include <maya/MObject.h>
-#include <maya/MPoint.h>
 #include <maya/MPlug.h>
 #include <maya/MPlugArray.h>
+#include <maya/MPoint.h>
 #include <maya/MPxSurfaceShape.h>
 #include <maya/MSelectionMask.h>
 #include <maya/MStatus.h>
@@ -86,7 +86,7 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-TF_DEFINE_PUBLIC_TOKENS(PxrUsdMayaProxyShapeTokens,
+TF_DEFINE_PUBLIC_TOKENS(UsdMayaProxyShapeTokens,
                         PXRUSDMAYA_PROXY_SHAPE_TOKENS);
 
 
@@ -117,7 +117,7 @@ UsdMayaIsBoundingBoxModeEnabled()
 
 const MTypeId UsdMayaProxyShape::typeId(0x0010A259);
 const MString UsdMayaProxyShape::typeName(
-    PxrUsdMayaProxyShapeTokens->MayaTypeName.GetText());
+    UsdMayaProxyShapeTokens->MayaTypeName.GetText());
 
 // Attributes
 MObject UsdMayaProxyShape::filePathAttr;
@@ -575,6 +575,10 @@ UsdMayaProxyShape::computeOutStageData(MDataBlock& dataBlock)
 
     TfReset(_boundingBoxCache);
 
+    // Reset the stage listener until we determine that everything is valid.
+    _stageNoticeListener.SetStage(UsdStageWeakPtr());
+    _stageNoticeListener.SetStageContentsChangedCallback(nullptr);
+
     MDataHandle inDataCachedHandle =
         dataBlock.inputValue(inStageDataCachedAttr, &retValue);
     CHECK_MSTATUS_AND_RETURN_IT(retValue);
@@ -649,6 +653,13 @@ UsdMayaProxyShape::computeOutStageData(MDataBlock& dataBlock)
 
     outDataHandle.set(stageData);
     outDataHandle.setClean();
+
+    // Start listening for notices for the USD stage.
+    _stageNoticeListener.SetStage(usdStage);
+    _stageNoticeListener.SetStageContentsChangedCallback(
+        std::bind(&UsdMayaProxyShape::_OnStageContentsChanged,
+                  this,
+                  std::placeholders::_1));
 
     return MS::kSuccess;
 }
@@ -1043,8 +1054,17 @@ UsdMayaProxyShape::_CanBeSoftSelected() const
     if (!status) {
         return false;
     }
-    return softSelHandle.asBool();
 
+    return softSelHandle.asBool();
+}
+
+void
+UsdMayaProxyShape::_OnStageContentsChanged(
+        const UsdNotice::StageContentsChanged& notice)
+{
+    // If the USD stage this proxy represents changes without Maya's knowledge,
+    // we need to inform Maya that the shape is dirty and needs to be redrawn.
+    MHWRender::MRenderer::setGeometryDrawDirty(thisMObject());
 }
 
 bool
