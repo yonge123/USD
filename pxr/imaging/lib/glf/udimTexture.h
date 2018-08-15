@@ -64,11 +64,13 @@ public:
     GLF_API
     VtDictionary GetTextureInfo(bool forceLoad) override;
 
-    GLuint GetGlTextureName() const {
+    GLuint GetGlTextureName() {
+        _ReadImage();
         return _imageArray;
     }
 
-    GLuint GetGlLayoutName() const {
+    GLuint GetGlLayoutName() {
+        _ReadImage();
         return _layout;
     }
 
@@ -80,7 +82,10 @@ protected:
     void _FreeTextureObject();
 
     GLF_API
-    void _ReadImage(size_t targetMemory);
+    void _ReadImage();
+
+    GLF_API
+    void _OnMemoryRequestedDirty() override;
 
 private:
     TfToken _imagePath;
@@ -90,6 +95,7 @@ private:
     int _format = 0;
     GLuint _imageArray = 0;
     GLuint _layout = 0;
+    bool _loaded = false;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
