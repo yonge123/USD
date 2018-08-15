@@ -210,7 +210,7 @@ try
 
         if (!rootPath.empty()) {
             MDagPath rootDagPath;
-            PxrUsdMayaUtil::GetDagPathByName(rootPath, rootDagPath);
+            UsdMayaUtil::GetDagPathByName(rootPath, rootDagPath);
             if (!rootDagPath.isValid()) {
                 MGlobal::displayError(MString("Invalid dag path provided for root: ") + stringVal);
                 return MS::kFailure;
