@@ -59,7 +59,7 @@ namespace {
 // Iterating through all the connected texture parameters that are animated.
 // If f returns true, the function returns.
 inline
-void _iterateAnimatedTextures(const UsdPrim& prim, std::function<bool(const UsdAttribute&)> f) {
+void _iterateAnimatedTextures(const UsdPrim& prim, const std::function<bool(const UsdAttribute&)>& f) {
     UsdShadeConnectableAPI connectableAPI(prim);
     if (connectableAPI) {
         UsdShadeConnectableAPI source;
