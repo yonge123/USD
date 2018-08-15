@@ -1429,7 +1429,7 @@ void
 UsdMayaGLBatchRenderer::StartBatchingFrameDiagnostics()
 {
     if (!_sharedDiagBatchCtx) {
-        _sharedDiagBatchCtx.reset(new PxrUsdMayaDiagnosticBatchContext());
+        _sharedDiagBatchCtx.reset(new UsdMayaDiagnosticBatchContext());
     }
 }
 
