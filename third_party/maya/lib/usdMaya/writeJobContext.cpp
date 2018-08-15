@@ -86,11 +86,11 @@ UsdMayaWriteJobContext::UsdMayaWriteJobContext(const UsdMayaJobExportArgs& args)
 {
     if (!mArgs.exportRootPath.empty()) {
         MDagPath rootDagPath;
-        PxrUsdMayaUtil::GetDagPathByName(mArgs.exportRootPath, rootDagPath);
+        UsdMayaUtil::GetDagPathByName(mArgs.exportRootPath, rootDagPath);
         if (rootDagPath.isValid()){
             SdfPath rootSdfPath;
-            PxrUsdMayaUtil::GetDagPathByName(mArgs.exportRootPath, rootDagPath);
-            _exportRootSdfPath = PxrUsdMayaUtil::MDagPathToUsdPath(rootDagPath, false, mArgs.stripNamespaces);
+            UsdMayaUtil::GetDagPathByName(mArgs.exportRootPath, rootDagPath);
+            _exportRootSdfPath = UsdMayaUtil::MDagPathToUsdPath(rootDagPath, false, mArgs.stripNamespaces);
         } else {
             TF_RUNTIME_ERROR("Invalid dag path provided for root: %s"
                     , mArgs.exportRootPath.c_str());
