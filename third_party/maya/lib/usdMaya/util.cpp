@@ -1084,8 +1084,8 @@ _IsShape(const MDagPath& dagPath)
     return (numberOfShapesDirectlyBelow == 1);
 }
 
-SdfPath
-UsdMayaUtil::MDagPathToUsdPath(
+std::string
+UsdMayaUtil::MDagPathToUsdPathString(
         const MDagPath& dagPath,
         const bool mergeTransformAndShape,
         const bool stripNamespaces)
@@ -1112,9 +1112,9 @@ UsdMayaUtil::MDagPathToUsdPath(
 }
 
 SdfPath
-PxrUsdMayaUtil::MDagPathToUsdPath(const MDagPath& dagPath, bool mergeTransformAndShape, bool stripNamespaces)
+UsdMayaUtil::MDagPathToUsdPath(const MDagPath& dagPath, bool mergeTransformAndShape, bool stripNamespaces)
 {
-    SdfPath usdPath(MDagPathToUsdPathString(dagPath, stripNamespaces));
+    SdfPath usdPath(UsdMayaUtil::MDagPathToUsdPathString(dagPath, mergeTransformAndShape, stripNamespaces));
     if (mergeTransformAndShape && _IsShape(dagPath)) {
         usdPath = usdPath.GetParentPath();
     }
