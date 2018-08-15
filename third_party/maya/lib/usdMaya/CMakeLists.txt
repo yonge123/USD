@@ -73,6 +73,7 @@ pxr_shared_library(${PXR_PACKAGE}
         translatorXformable
         util
         usdPrimProvider
+        userAttributeWriterRegistry
         writeJobContext
         writeUtil
         xformStack
