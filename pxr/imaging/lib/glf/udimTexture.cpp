@@ -172,7 +172,7 @@ void
 GlfUdimTexture::_ReadImage() {
     TRACE_FUNCTION();
 
-    if (!_loaded) {
+    if (_loaded) {
         return;
     }
     _loaded = true;
