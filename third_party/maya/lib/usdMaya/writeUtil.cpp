@@ -952,7 +952,7 @@ UsdMayaWriteUtil::WriteUserExportedAttributes(
                                                                "user",
                                                                translateMayaDoubleToUsdSinglePrecision);
         } else {
-            auto attributeWriter = PxrUsdMayaUserAttributeWriterRegistry::GetWriter(usdAttrType);
+            auto attributeWriter = UsdMayaUserAttributeWriterRegistry::GetWriter(usdAttrType);
             if (attributeWriter != nullptr) {
                 usdAttr = attributeWriter(attrPlug,
                                           usdPrim,
@@ -961,11 +961,11 @@ UsdMayaWriteUtil::WriteUserExportedAttributes(
                                           translateMayaDoubleToUsdSinglePrecision);
             } else {
                 usdAttr =
-                    PxrUsdMayaWriteUtil::GetOrCreateUsdAttr(attrPlug,
-                                                            usdPrim,
-                                                            usdAttrName,
-                                                            true,
-                                                            translateMayaDoubleToUsdSinglePrecision);
+                    UsdMayaWriteUtil::GetOrCreateUsdAttr(attrPlug,
+                                                         usdPrim,
+                                                         usdAttrName,
+                                                         true,
+                                                         translateMayaDoubleToUsdSinglePrecision);
             }
         }
 
