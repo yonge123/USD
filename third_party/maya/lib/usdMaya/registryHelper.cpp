@@ -21,8 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/pxr.h"
 #include "usdMaya/registryHelper.h"
+
 #include "usdMaya/debugCodes.h"
 
 #include "pxr/base/js/converter.h"
@@ -196,7 +196,7 @@ _PluginDictScopeToDebugString(
 
 /* static */
 void
-PxrUsdMaya_RegistryHelper::FindAndLoadMayaPlug(
+UsdMaya_RegistryHelper::FindAndLoadMayaPlug(
         const std::vector<TfToken>& scope,
         const std::string& value)
 {
@@ -239,7 +239,7 @@ PxrUsdMaya_RegistryHelper::FindAndLoadMayaPlug(
 
 /* static */
 void
-PxrUsdMaya_RegistryHelper::LoadShadingModePlugins() {
+UsdMaya_RegistryHelper::LoadShadingModePlugins() {
     static std::once_flag _shadingModesLoaded;
     static std::vector<TfToken> scope = {_tokens->UsdMaya, _tokens->ShadingModePlugin};
     _LoadAllPlugins(_shadingModesLoaded, scope);
@@ -254,7 +254,7 @@ PxrUsdMaya_RegistryHelper::LoadUserAttributeWriterPlugins() {
 
 /* static */
 VtDictionary
-PxrUsdMaya_RegistryHelper::GetComposedInfoDictionary(
+UsdMaya_RegistryHelper::GetComposedInfoDictionary(
     const std::vector<TfToken>& scope)
 {
     VtDictionary result;

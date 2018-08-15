@@ -978,7 +978,7 @@ UsdSkelSkinPointsLBS(const GfMatrix4d& geomBindTransform,
                                     numInfluencesPerPoint,
                                     points->data(), points->size());
     } else {
-        TF_WARN("jointIndices.size() [%zu]! = jointWeights.size() [%zu].",
+        TF_WARN("jointIndices.size() [%zu] != jointWeights.size() [%zu].",
                 jointIndices.size(), jointWeights.size());
     }
     return false;
@@ -1019,17 +1019,16 @@ UsdSkelSkinTransformLBS(const GfMatrix4d& geomBindTransform,
     // apply normal point deformations, and then derive a skinned transform
     // from the deformed frame points.
 
-    // Scaling factor for how far to offset each basis vector.
-    // This should be a small number, but not so small that
-    // that the inversion (end of this function) has too much float error.
-    float size = 1e-3;
-
     GfVec3f pivot(geomBindTransform.ExtractTranslation());
 
+    // XXX: Note that if precision becomes an issue, the offset applied to
+    // produce the points that represent each of the basis vectors can be scaled
+    // up to improve precision, provided that the inverse scale is applied when
+    // constructing the final matrix.
     GfVec3f framePoints[4] = {
-        pivot + GfVec3f(geomBindTransform.GetRow3(0))*size, // i basis
-        pivot + GfVec3f(geomBindTransform.GetRow3(1))*size, // j basis
-        pivot + GfVec3f(geomBindTransform.GetRow3(2))*size, // k basis
+        pivot + GfVec3f(geomBindTransform.GetRow3(0)), // i basis
+        pivot + GfVec3f(geomBindTransform.GetRow3(1)), // j basis
+        pivot + GfVec3f(geomBindTransform.GetRow3(2)), // k basis
         pivot, // translate
     };
 
@@ -1059,9 +1058,8 @@ UsdSkelSkinTransformLBS(const GfMatrix4d& geomBindTransform,
 
     GfVec3f skinnedPivot = framePoints[3];
     xform->SetTranslate(skinnedPivot);
-    float sizeInv = 1/size;
     for(int i = 0; i < 3; ++i) {
-        xform->SetRow3(i, (framePoints[i]-skinnedPivot)*sizeInv);
+        xform->SetRow3(i, (framePoints[i]-skinnedPivot));
     }
     return true;
 }
@@ -1160,7 +1158,7 @@ _GetSkinningTimeSamples(const UsdPrim& prim,
 
     // Include time samples that affect the local-to-world transform
     // (necessary because world space transforms are used to push
-    //  defomrations in skeleton-space back into normal prim space.
+    //  deformations in skeleton-space back into normal prim space.
     //  See the notes in the deformation methods for more on why.
     if(_GetWorldTransformTimeSamples(prim, interval, &propertyTimes)) {
         _MergeTimeSamples(times, propertyTimes, &tmpTimes);
@@ -1259,14 +1257,8 @@ _BakeSkinnedPoints(const UsdPrim& prim,
             GfMatrix4d gprimLocalToWorld =
                 xfCache->GetLocalToWorldTransform(prim);
 
-            GfMatrix4d skelLocalToWorld;
-            if(!skelQuery.ComputeLocalToWorldTransform(
-                   &skelLocalToWorld, xfCache)) {
-                TF_DEBUG(USDSKEL_BAKESKINNING).Msg(
-                    "[UsdSkelBakeSkinning]   Failed computing "
-                    "skel local-to-world transform\n");
-                return false;
-            }
+            GfMatrix4d skelLocalToWorld =
+                xfCache->GetLocalToWorldTransform(skelQuery.GetPrim());
 
             GfMatrix4d skelToGprimXf =
                 skelLocalToWorld*gprimLocalToWorld.GetInverse();
@@ -1352,14 +1344,8 @@ _BakeSkinnedTransform(const UsdPrim& prim,
 
             xfCache->SetTime(time);
 
-            GfMatrix4d skelLocalToWorld;
-            if(!skelQuery.ComputeLocalToWorldTransform(
-                   &skelLocalToWorld, xfCache)) {
-                TF_DEBUG(USDSKEL_BAKESKINNING).Msg(
-                    "[UsdSkelBakeSkinning]   Failed computing "
-                    "skel local-to-world transform\n");
-                return false;
-            }
+            GfMatrix4d skelLocalToWorld =
+                xfCache->GetLocalToWorldTransform(skelQuery.GetPrim());
 
             GfMatrix4d newLocalXform;
             
