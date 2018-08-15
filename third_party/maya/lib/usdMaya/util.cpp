@@ -1112,7 +1112,7 @@ UsdMayaUtil::MDagPathToUsdPath(
 }
 
 SdfPath
-PxrUsdMayaUtil::MDagPathToUsdPath(const MDagPath& dagPath, bool mergeTransformAndShape, bool stripNamespaces)
+UsdMayaUtil::MDagPathToUsdPath(const MDagPath& dagPath, bool mergeTransformAndShape, bool stripNamespaces)
 {
     SdfPath usdPath(MDagPathToUsdPathString(dagPath, stripNamespaces));
     if (mergeTransformAndShape && _IsShape(dagPath)) {
