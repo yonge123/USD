@@ -1,7 +1,5 @@
 set(PXR_INSTALL_SUBDIR "third_party/katana")
 
-pxr_setup_plugins()
-
 pxr_setup_third_party_python_init()
 
 # Transform the KATANA_API versions into defines to be used by this code

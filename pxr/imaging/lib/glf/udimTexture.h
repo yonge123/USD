@@ -59,10 +59,10 @@ public:
     GLF_API
     GlfTexture::BindingVector GetBindings(
         const TfToken& identifier,
-        GLuint samplerName) const override;
+        GLuint samplerId) override;
 
     GLF_API
-    VtDictionary GetTextureInfo() const override;
+    VtDictionary GetTextureInfo(bool forceLoad) override;
 
     GLuint GetGlTextureName() const {
         return _imageArray;
@@ -78,9 +78,6 @@ protected:
 
     GLF_API
     void _FreeTextureObject();
-
-    GLF_API
-    void _OnSetMemoryRequested(size_t targetMemory) override;
 
     GLF_API
     void _ReadImage(size_t targetMemory);

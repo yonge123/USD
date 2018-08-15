@@ -113,11 +113,11 @@ GlfUdimTexture::New(const TfToken& imageFilePath) {
 GlfTexture::BindingVector
 GlfUdimTexture::GetBindings(
     const TfToken& identifier,
-    GLuint samplerName) const {
+    GLuint samplerId) {
     BindingVector ret;
     ret.push_back(Binding(
         TfToken(identifier.GetString() + "_Images"), GlfTextureTokens->texels,
-            GL_TEXTURE_2D_ARRAY, _imageArray, samplerName));
+            GL_TEXTURE_2D_ARRAY, _imageArray, samplerId));
     ret.push_back(Binding(
         TfToken(identifier.GetString() + "_Layout"), GlfTextureTokens->layout,
             GL_TEXTURE_1D, _layout, 0));
@@ -126,7 +126,7 @@ GlfUdimTexture::GetBindings(
 }
 
 VtDictionary
-GlfUdimTexture::GetTextureInfo() const {
+GlfUdimTexture::GetTextureInfo(bool forceLoad) {
     VtDictionary ret;
 
     ret["memoryUsed"] = GetMemoryUsed();
@@ -153,11 +153,6 @@ GlfUdimTexture::_FreeTextureObject() {
         glDeleteTextures(1, &_layout);
         _layout = 0;
     }
-}
-
-void
-GlfUdimTexture::_OnSetMemoryRequested(size_t targetMemory) {
-    _ReadImage(targetMemory);
 }
 
 void
