@@ -11,15 +11,15 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 /// \brief Provides helper functions for translating to/from UsdGeomImagePlane
-struct PxrUsdMayaTranslatorImagePlane
+struct UsdMayaTranslatorImagePlane
 {
     /// Reads a UsdGeomImagePlane \p usdCamera from USD and creates a Maya
     /// MFnImagePlane under \p parentNode.
     static bool Read(
         const UsdGeomImagePlane& usdImagePlane,
         MObject parentNode,
-        const PxrUsdMayaPrimReaderArgs& args,
-        PxrUsdMayaPrimReaderContext* context,
+        const UsdMayaPrimReaderArgs& args,
+        UsdMayaPrimReaderContext* context,
         bool isCompacted);
 };
 

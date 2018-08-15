@@ -37,7 +37,7 @@ namespace {
     bool
     resize_arrays(
         const UsdAttribute& usdAttr,
-        const PxrUsdMayaPrimReaderArgs& args,
+        const UsdMayaPrimReaderArgs& args,
         std::vector<double>& timeSamples,
         size_t array_count,
         MTimeArray* timeArray,
@@ -64,7 +64,7 @@ namespace {
     bool
     get_time_and_value_for_float(
         const UsdAttribute& usdAttr,
-        const PxrUsdMayaPrimReaderArgs& args,
+        const UsdMayaPrimReaderArgs& args,
         MTimeArray* timeArray,
         MDoubleArray* valueArray)
     {
@@ -92,7 +92,7 @@ namespace {
     bool
     get_time_and_value_for_float2(
         const UsdAttribute& usdAttr,
-        const PxrUsdMayaPrimReaderArgs& args,
+        const UsdMayaPrimReaderArgs& args,
         MTimeArray* timeArray,
         MDoubleArray* valueArray)
     {
@@ -121,7 +121,7 @@ namespace {
     bool
     get_time_and_value_for_int(
         const UsdAttribute& usdAttr,
-        const PxrUsdMayaPrimReaderArgs& args,
+        const UsdMayaPrimReaderArgs& args,
         MTimeArray* timeArray,
         MDoubleArray* valueArray)
     {
@@ -148,7 +148,7 @@ namespace {
     bool
     get_time_and_value_for_int2(
         const UsdAttribute& usdAttr,
-        const PxrUsdMayaPrimReaderArgs& args,
+        const UsdMayaPrimReaderArgs& args,
         MTimeArray* timeArray,
         MDoubleArray* valueArray)
     {
@@ -179,7 +179,7 @@ namespace {
         MPlug& plug,
         MTimeArray& timeArray,
         MDoubleArray& valueArray,
-        PxrUsdMayaPrimReaderContext* context)
+        UsdMayaPrimReaderContext* context)
     {
         MFnAnimCurve animFn;
         MStatus status;
@@ -198,8 +198,8 @@ namespace {
     }
 
     bool translate_animated_float(MPlug& plug, const UsdAttribute& usdAttr,
-                                  const PxrUsdMayaPrimReaderArgs& args,
-                                  PxrUsdMayaPrimReaderContext* context)
+                                  const UsdMayaPrimReaderArgs& args,
+                                  UsdMayaPrimReaderContext* context)
     {
         if (args.GetTimeInterval().IsEmpty()) {
             return false;
@@ -224,8 +224,8 @@ namespace {
     }
 
     bool translate_animated_float2(MPlug& plug, const UsdAttribute& usdAttr,
-                                  const PxrUsdMayaPrimReaderArgs& args,
-                                  PxrUsdMayaPrimReaderContext* context)
+                                  const UsdMayaPrimReaderArgs& args,
+                                  UsdMayaPrimReaderContext* context)
     {
         if (args.GetTimeInterval().IsEmpty()) {
             return false;
@@ -256,8 +256,8 @@ namespace {
     }
 
     bool translate_animated_int2(MPlug& plug, const UsdAttribute& usdAttr,
-                                  const PxrUsdMayaPrimReaderArgs& args,
-                                  PxrUsdMayaPrimReaderContext* context)
+                                  const UsdMayaPrimReaderArgs& args,
+                                  UsdMayaPrimReaderContext* context)
     {
         if (args.GetTimeInterval().IsEmpty()) {
             return false;
@@ -288,8 +288,8 @@ namespace {
     }
 
     bool translate_animated_int(MPlug& plug, const UsdAttribute& usdAttr,
-                                const PxrUsdMayaPrimReaderArgs& args,
-                                PxrUsdMayaPrimReaderContext* context)
+                                const UsdMayaPrimReaderArgs& args,
+                                UsdMayaPrimReaderContext* context)
     {
         if (args.GetTimeInterval().IsEmpty()) {
             return false;
@@ -317,8 +317,8 @@ namespace {
         const UsdAttribute& usdAttr,
         const MFnDependencyNode& depNode,
         TfToken plugName,
-        const PxrUsdMayaPrimReaderArgs& args,
-        PxrUsdMayaPrimReaderContext* context)
+        const UsdMayaPrimReaderArgs& args,
+        UsdMayaPrimReaderContext* context)
     {
         MStatus status;
 
@@ -348,11 +348,11 @@ namespace {
     }
 }
 
-bool PxrUsdMayaTranslatorImagePlane::Read(
+bool UsdMayaTranslatorImagePlane::Read(
     const UsdGeomImagePlane& usdImagePlane,
     MObject parentNode,
-    const PxrUsdMayaPrimReaderArgs& args,
-    PxrUsdMayaPrimReaderContext* context,
+    const UsdMayaPrimReaderArgs& args,
+    UsdMayaPrimReaderContext* context,
     bool isCompacted
 ) {
     MFnDependencyNode cameraNode(parentNode);
