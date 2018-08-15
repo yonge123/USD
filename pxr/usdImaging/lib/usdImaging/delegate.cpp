@@ -125,6 +125,7 @@ UsdImagingDelegate::UsdImagingDelegate(
     , _hasDrawModeAdapter( UsdImagingAdapterRegistry::GetInstance()
                            .HasAdapter(UsdImagingAdapterKeyTokens
                                        ->drawModeAdapterKey) )
+    , _hardwareShadingEnabled(true)
 {
     // Default to 2 samples: this frame and the next frame.
     // XXX In the future this should be configurable via negotation
@@ -1404,6 +1405,30 @@ UsdImagingDelegate::SetUsdDrawModesEnabled(bool enableUsdDrawModes)
     }
 }
 
+
+void
+UsdImagingDelegate::SetHardwareShadingEnabled(bool enable)
+{
+    if (_hardwareShadingEnabled != enable)
+    {
+        _hardwareShadingEnabled = enable;
+
+        UsdImagingIndexProxy indexProxy(this, nullptr);
+
+        // Mark dirty.
+        TF_FOR_ALL(it, _primInfoMap) {
+            const SdfPath &usdPath = it->first;
+            _PrimInfo &primInfo = it->second;
+            if (TF_VERIFY(primInfo.adapter, "%s", usdPath.GetText())) {
+                primInfo.adapter->MarkMaterialDirty(primInfo.usdPrim,
+                                                    usdPath,
+                                                    &indexProxy);
+            }
+        }
+    }
+}
+
+
 /*virtual*/
 TfToken
 UsdImagingDelegate::GetRenderTag(SdfPath const& id, TfToken const& reprName)
@@ -2500,7 +2525,11 @@ UsdImagingDelegate::GetSurfaceShaderSource(SdfPath const &materialId)
     HD_TRACE_FUNCTION();
 
     if (materialId.IsEmpty()) {
-        // Handle fallback shader
+        return std::string();
+    }
+
+    // If custom shading is disabled, use fallback
+    if (!_hardwareShadingEnabled) {
         return std::string();
     }
 
@@ -2525,7 +2554,11 @@ UsdImagingDelegate::GetDisplacementShaderSource(SdfPath const &materialId)
     HD_TRACE_FUNCTION();
 
     if (materialId.IsEmpty()) {
-        // Handle fallback shader
+        return std::string();
+    }
+
+    // If custom shading is disabled, use fallback
+    if (!_hardwareShadingEnabled) {
         return std::string();
     }
 
@@ -2581,9 +2614,14 @@ UsdImagingDelegate::GetMaterialParams(SdfPath const &materialId)
     HD_TRACE_FUNCTION();
 
     if (materialId.IsEmpty()) {
-        // Handle fallback material
         return HdMaterialParamVector();
     }
+
+    // If custom shading is disabled, use fallback
+    if (!_hardwareShadingEnabled) {
+        return HdMaterialParamVector();
+    }
+
 
     SdfPath usdPath = GetPathForUsd(materialId);
     HdMaterialParamVector params;

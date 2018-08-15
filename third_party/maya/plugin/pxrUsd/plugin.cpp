@@ -28,18 +28,17 @@
 #include "pxrUsdMayaGL/proxyShapeUI.h"
 
 #include "usdMaya/diagnosticDelegate.h"
+#include "usdMaya/exportCommand.h"
+#include "usdMaya/exportTranslator.h"
+#include "usdMaya/importCommand.h"
+#include "usdMaya/importTranslator.h"
+#include "usdMaya/listShadingModesCommand.h"
 #include "usdMaya/pointBasedDeformerNode.h"
 #include "usdMaya/proxyShape.h"
 #include "usdMaya/referenceAssembly.h"
 #include "usdMaya/stageData.h"
 #include "usdMaya/stageNode.h"
-#include "usdMaya/undoHelperCmd.h"
-#include "usdMaya/usdImport.h"
-#include "usdMaya/usdExport.h"
-#include "usdMaya/usdListShadingModes.h"
-#include "usdMaya/usdListUserAttributeWriters.h"
-#include "usdMaya/usdTranslatorImport.h"
-#include "usdMaya/usdTranslatorExport.h"
+#include "usdMaya/undoHelperCommand.h"
 
 #include <maya/MDrawRegistry.h>
 #include <maya/MFnPlugin.h>
@@ -138,24 +137,24 @@ initializePlugin(MObject obj)
 
     status = plugin.registerCommand(
         "usdExport",
-        usdExport::creator,
-        usdExport::createSyntax);
+        UsdMayaExportCommand::creator,
+        UsdMayaExportCommand::createSyntax);
     if (!status) {
         status.perror("registerCommand usdExport");
     }
 
     status = plugin.registerCommand(
         "usdImport",
-        usdImport::creator,
-        usdImport::createSyntax);
+        UsdMayaImportCommand::creator,
+        UsdMayaImportCommand::createSyntax);
     if (!status) {
         status.perror("registerCommand usdImport");
     }
 
     status = plugin.registerCommand(
         "usdListShadingModes",
-        usdListShadingModes::creator,
-        usdListShadingModes::createSyntax);
+        UsdMayaListShadingModesCommand::creator,
+        UsdMayaListShadingModesCommand::createSyntax);
     if (!status) {
         status.perror("registerCommand usdListShadingModes");
     }
@@ -170,9 +169,8 @@ initializePlugin(MObject obj)
 
     status = plugin.registerCommand(
         "usdUndoHelperCmd",
-        PxrUsdMayaUndoHelperCmd::creator,
-        PxrUsdMayaUndoHelperCmd::createSyntax);
-
+        UsdMayaUndoHelperCommand::creator,
+        UsdMayaUndoHelperCommand::createSyntax);
     if (!status) {
         status.perror("registerCommand usdUndoHelperCmd");
     }
@@ -180,9 +178,9 @@ initializePlugin(MObject obj)
     status = plugin.registerFileTranslator(
         "pxrUsdImport",
         "",
-        usdTranslatorImport::creator,
+        UsdMayaImportTranslator::creator,
         "usdTranslatorImport", // options script name
-        const_cast<char*>(usdTranslatorImport::GetDefaultOptions().c_str()),
+        const_cast<char*>(UsdMayaImportTranslator::GetDefaultOptions().c_str()),
         false);
     if (!status) {
         status.perror("pxrUsd: unable to register USD Import translator.");
@@ -191,15 +189,15 @@ initializePlugin(MObject obj)
     status = plugin.registerFileTranslator(
         "pxrUsdExport",
         "",
-        usdTranslatorExport::creator,
+        UsdMayaExportTranslator::creator,
         "usdTranslatorExport", // options script name
-        const_cast<char*>(usdTranslatorExport::GetDefaultOptions().c_str()),
+        const_cast<char*>(UsdMayaExportTranslator::GetDefaultOptions().c_str()),
         true);
     if (!status) {
         status.perror("pxrUsd: unable to register USD Export translator.");
     }
 
-    PxrUsdMayaDiagnosticDelegate::InstallDelegate();
+    UsdMayaDiagnosticDelegate::InstallDelegate();
 
     return status;
 }
@@ -269,7 +267,7 @@ uninitializePlugin(MObject obj)
     status = plugin.deregisterData(UsdMayaStageData::mayaTypeId);
     CHECK_MSTATUS(status);
 
-    PxrUsdMayaDiagnosticDelegate::RemoveDelegate();
+    UsdMayaDiagnosticDelegate::RemoveDelegate();
 
     return status;
 }
