@@ -123,7 +123,7 @@ const GfVec4f PxrUsdTranslators_MeshWriter::_ColorSetDefaultRGBA = GfVec4f(
     PxrUsdTranslators_MeshWriter::_ColorSetDefaultRGB[2],
     PxrUsdTranslators_MeshWriter::_ColorSetDefaultAlpha);
 
-const std::vector<std::string> MayaMeshWriter::_MotionVectorNames = {
+const std::vector<std::string> PxrUsdTranslators_MeshWriter::_MotionVectorNames = {
     "velocityPV", "velocity", "v"
 };
 

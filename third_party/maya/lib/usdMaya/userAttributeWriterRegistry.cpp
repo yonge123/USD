@@ -54,7 +54,7 @@ void UsdMayaUserAttributeWriterRegistry::RegisterWriter(
 }
 
 UsdMayaUserAttributeWriterRegistry::UserAttributeWriter UsdMayaUserAttributeWriterRegistry::_GetWriter(const TfToken& name) {
-    PxrUsdMaya_RegistryHelper::LoadUserAttributeWriterPlugins();
+    UsdMaya_RegistryHelper::LoadUserAttributeWriterPlugins();
     TfRegistryManager::GetInstance().SubscribeTo<UsdMayaUserAttributeWriterRegistry>();
     const auto it = _writerReg.find(name);
     return it == _writerReg.end() ? nullptr : it->second;
