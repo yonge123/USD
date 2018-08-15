@@ -2668,7 +2668,9 @@ HdSt_CodeGen::_GenerateShaderParameters()
                     << "#if defined(HD_HAS_" << it->second.inPrimvars[0] << ")\n"
                     << "  return HdGet_" << it->second.inPrimvars[0] << "();\n"
                     << "#else\n"
-                    << "  return " << it->second.dataType << "(0);\n"
+                    << "  int shaderCoord = GetDrawingCoord().shaderCoord;\n"
+                    << "  return shaderData[shaderCoord]." << it->second.name 
+                        << swizzle <<  ";\n"
                     << "#endif\n"
                     << "\n}\n"
                     ;
