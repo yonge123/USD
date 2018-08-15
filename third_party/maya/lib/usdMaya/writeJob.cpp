@@ -328,7 +328,7 @@ bool UsdMaya_WriteJob::BeginWriting(const std::string& fileName, bool append)
     // which is only used to do this validity / name collision check,
     // and so is only populated if stripNamespaces is on)
     auto checkStrippedNamespaceIsUnique = [this] (
-            const MayaPrimWriter& primWriter,
+            const UsdMayaPrimWriter& primWriter,
             const UsdPrim& usdPrim)
             -> bool {
         auto foundPair = mUsdPathToDagPathMap.find(usdPrim.GetPath());
