@@ -60,7 +60,7 @@ namespace {
 // Iterating through all the connected texture parameters that are animated.
 // If f returns true, the function returns.
 inline
-void _iterateAnimatedTextures(const UsdPrim& prim, std::function<bool(const UsdAttribute&)> f) {
+void _iterateAnimatedTextures(const UsdPrim& prim, const std::function<bool(const UsdAttribute&)>& f) {
     UsdShadeConnectableAPI connectableAPI(prim);
     if (connectableAPI) {
         UsdShadeConnectableAPI source;
@@ -552,18 +552,6 @@ UsdImagingGLHydraMaterialAdapter::MarkMaterialDirty(UsdPrim const& prim,
     if (!IsChildPath(cachePath)) {
         index->MarkSprimDirty(cachePath, HdMaterial::DirtySurfaceShader |
                                          HdMaterial::DirtyParams);
-    }
-}
-
-/* virtual */
-void
-UsdImagingGLHydraMaterialAdapter::_RemovePrim(SdfPath const& cachePath,
-                                 UsdImagingIndexProxy* index)
-{
-    if (IsChildPath(cachePath)) {
-        index->RemoveBprim(HdPrimTypeTokens->texture, cachePath);
-    } else {
-        index->RemoveSprim(HdPrimTypeTokens->material, cachePath);
     }
 }
 
