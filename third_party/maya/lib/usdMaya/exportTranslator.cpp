@@ -97,7 +97,7 @@ UsdMayaExportTranslator::writer(const MFileObject &file,
                 userArgs[argName] = VtValue(exportRootPath);
                 if (!exportRootPath.empty()) {
                     MDagPath rootDagPath;
-                    PxrUsdMayaUtil::GetDagPathByName(exportRootPath, rootDagPath);
+                    UsdMayaUtil::GetDagPathByName(exportRootPath, rootDagPath);
                     if (!rootDagPath.isValid()){
                         MGlobal::displayError(MString("Invalid dag path provided for root: ") + theOption[1]);
                         return MS::kFailure;

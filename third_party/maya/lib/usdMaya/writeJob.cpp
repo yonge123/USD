@@ -252,7 +252,7 @@ bool UsdMaya_WriteJob::BeginWriting(const std::string& fileName, bool append)
     MDagPath curLeafDagPath;
     MDagPath rootDagPath;
     if (!mJobCtx._exportRootSdfPath.IsEmpty()) {
-        PxrUsdMayaUtil::GetDagPathByName(mJobCtx.mArgs.exportRootPath, rootDagPath);
+        UsdMayaUtil::GetDagPathByName(mJobCtx.mArgs.exportRootPath, rootDagPath);
     }
 
     // Pre-process the argument dagPath path names into two sets. One set
@@ -398,7 +398,7 @@ bool UsdMaya_WriteJob::BeginWriting(const std::string& fileName, bool append)
 
         // If a root is specified, start iteration there
         MDagPath rootDagPath;
-        PxrUsdMayaUtil::GetDagPathByName(mJobCtx.mArgs.exportRootPath, rootDagPath);
+        UsdMayaUtil::GetDagPathByName(mJobCtx.mArgs.exportRootPath, rootDagPath);
         itDag.reset(rootDagPath, MItDag::kDepthFirst, MFn::kInvalid);
     }
 
@@ -414,8 +414,7 @@ bool UsdMaya_WriteJob::BeginWriting(const std::string& fileName, bool append)
             if (rootDagPath.isValid() && curDagPath.length() > 0){
                 // However if an export root is specified, we skip any dag
                 // parents that are above that root.
-                SdfPath sdfDagPath = SdfPath(PxrUsdMayaUtil::MDagPathToUsdPath(curDagPath, false,
-                                                                               mJobCtx.mArgs.stripNamespaces));
+                SdfPath sdfDagPath = SdfPath(UsdMayaUtil::MDagPathToUsdPath(curDagPath, false, mJobCtx.mArgs.stripNamespaces));
                 if (mJobCtx._exportRootSdfPath.GetCommonPrefix(sdfDagPath) !=
                     mJobCtx._exportRootSdfPath) {
                     continue;
