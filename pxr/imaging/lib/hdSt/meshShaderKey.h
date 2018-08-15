@@ -35,16 +35,26 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 struct HdSt_MeshShaderKey
 {
+    enum NormalSource
+    {
+        NormalSourceScene,
+        NormalSourceSmooth,
+        NormalSourceLimit,
+        NormalSourceFlat
+    };
+
     HdSt_MeshShaderKey(HdSt_GeometricShader::PrimitiveType primType,
                        TfToken shadingTerminal,
                        bool useCustomDisplacement,
-                       bool smoothNormals,
+                       NormalSource normalsSource,
+                       HdInterpolation normalsInterpolation,
                        bool doubleSided,
                        bool faceVarying,
                        bool blendWireframeColor,
                        HdCullStyle cullStyle,
                        HdMeshGeomStyle geomStyle,
                        float lineWidth,
+                       bool enableScalarOverride,
                        bool discardIfNotActiveSelected = false,
                        bool discardIfNotRolloverSelected = false);
 
@@ -79,8 +89,8 @@ struct HdSt_MeshShaderKey
     TfToken VS[7];
     TfToken TCS[3];
     TfToken TES[3];
-    TfToken GS[7];
-    TfToken FS[15];
+    TfToken GS[8];
+    TfToken FS[16];
 };
 
 
