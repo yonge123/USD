@@ -246,7 +246,7 @@ UsdMaya_RegistryHelper::LoadShadingModePlugins() {
 }
 
 void
-PxrUsdMaya_RegistryHelper::LoadUserAttributeWriterPlugins() {
+UsdMaya_RegistryHelper::LoadUserAttributeWriterPlugins() {
     static std::once_flag _userAttributeWritersLoaded;
     static std::vector<TfToken> scope = {_tokens->UsdMaya, _tokens->UserAttributeWriterPlugin};
     _LoadAllPlugins(_userAttributeWritersLoaded, scope);
