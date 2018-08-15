@@ -114,6 +114,7 @@ GlfTexture::BindingVector
 GlfUdimTexture::GetBindings(
     const TfToken& identifier,
     GLuint samplerId) {
+    _ReadImage();
     BindingVector ret;
     ret.push_back(Binding(
         TfToken(identifier.GetString() + "_Images"), GlfTextureTokens->texels,
@@ -129,14 +130,26 @@ VtDictionary
 GlfUdimTexture::GetTextureInfo(bool forceLoad) {
     VtDictionary ret;
 
-    ret["memoryUsed"] = GetMemoryUsed();
-    ret["width"] = _width;
-    ret["height"] = _height;
-    ret["depth"] = _depth;
-    ret["format"] = _format;
-    ret["imageFilePath"] = _imagePath;
-    ret["referenceCount"] = GetRefCount().Get();
+    if (forceLoad) {
+        _ReadImage();
+    }
 
+    if (_loaded) {
+        ret["memoryUsed"] = GetMemoryUsed();
+        ret["width"] = _width;
+        ret["height"] = _height;
+        ret["depth"] = _depth;
+        ret["format"] = _format;
+        ret["imageFilePath"] = _imagePath;
+        ret["referenceCount"] = GetRefCount().Get();
+    } else {
+        ret["memoryUsed"] = 0;
+        ret["width"] = 0;
+        ret["height"] = 0;
+        ret["depth"] = 1;
+        ret["format"] = _format;
+    }
+    ret["referenceCount"] = GetRefCount().Get();
     return ret;
 }
 
@@ -156,8 +169,13 @@ GlfUdimTexture::_FreeTextureObject() {
 }
 
 void
-GlfUdimTexture::_ReadImage(size_t targetMemory) {
+GlfUdimTexture::_ReadImage() {
     TRACE_FUNCTION();
+
+    if (!_loaded) {
+        return;
+    }
+    _loaded = true;
     _FreeTextureObject();
 
     // This is 2048 OGL 4.5
@@ -259,7 +277,7 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     const auto numBytesPerPixelLayer = numBytesPerPixel * _depth;
 
     auto targetPixelCount =
-        static_cast<int>(targetMemory / (_depth * numBytesPerPixel));
+        static_cast<int>(GetMemoryRequested() / (_depth * numBytesPerPixel));
 
     std::vector<_TextureSize> mips {};
     mips.reserve(firstImageMips.size());
@@ -371,6 +389,10 @@ GlfUdimTexture::_ReadImage(size_t targetMemory) {
     GLF_POST_PENDING_GL_ERRORS();
 
     _SetMemoryUsed(totalTextureMemory + tiles.size() * sizeof(float));
+}
+
+void GlfUdimTexture::_OnMemoryRequestedDirty() {
+    _loaded = false;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
