@@ -543,18 +543,6 @@ UsdImagingGLHydraMaterialAdapter::MarkMaterialDirty(UsdPrim const& prim,
     }
 }
 
-/* virtual */
-void
-UsdImagingGLHydraMaterialAdapter::MarkMaterialDirty(UsdPrim const& prim,
-                                                    SdfPath const& cachePath,
-                                                    UsdImagingIndexProxy* index)
-{
-    if (!IsChildPath(cachePath)) {
-        index->MarkSprimDirty(cachePath, HdMaterial::DirtySurfaceShader |
-                                         HdMaterial::DirtyParams);
-    }
-}
-
 std::string
 UsdImagingGLHydraMaterialAdapter::_GetShaderSource(
     UsdPrim const& shaderPrim, 
