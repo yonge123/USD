@@ -159,9 +159,9 @@ initializePlugin(MObject obj)
         status.perror("registerCommand usdListShadingModes");
     }
 
-    // status = plugin.registerCommand(
-    //     "usdListUserAttributeWriters",
-    //     usdListUserAttributeWriters::creator);
+    status = plugin.registerCommand(
+        "usdListUserAttributeWriters",
+        usdListUserAttributeWriters::creator);
 
     if (!status) {
         status.perror("registerCommand usdListUserAttributeWriters");
