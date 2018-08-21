@@ -2600,10 +2600,45 @@ HdSt_CodeGen::_GenerateShaderParameters()
                     << "vec2(0.0, 0.0)";
             }
             accessors << "); }\n";
+        } else if (bindingType == HdBinding::BINDLESS_TEXTURE_UDIM_ARRAY) {
+            // a function returning sampler2DArray is allowed in 430 or later
+            if (caps.glslVersion >= 430) {
+                accessors
+                    << "sampler2DArray\n"
+                    << "HdGetSampler_" << it->second.name << "() {\n"
+                    << "  int shaderCoord = GetDrawingCoord().shaderCoord; \n"
+                    << "  return sampler2DArray(shaderData[shaderCoord]."
+                    << it->second.name << ");\n"
+                    << "  }\n";
+            }
+            accessors
+                << it->second.dataType
+                << " HdGet_" << it->second.name << "()" << " {\n"
+                << "  int shaderCoord = GetDrawingCoord().shaderCoord;\n";
+
+            if (!it->second.inPrimvars.empty()) {
+                accessors
+                    << "#if defined(HD_HAS_"
+                    << it->second.inPrimvars[0] << ")\n"
+                    << "  vec3 c = hd_sample_udim(HdGet_"
+                    << it->second.inPrimvars[0] << "().xy);\n"
+                    << "  c.z = texelFetch(sampler1D(shaderData[shaderCoord]."
+                    << it->second.name << "_layout), int(c.z), 0).x;\n"
+                    << "#else\n"
+                    << "  vec3 c = vec3(0.0, 0.0, 0.0);\n"
+                    << "#endif\n";
+            } else {
+                accessors
+                    << "  vec3 c = vec3(0.0, 0.0, 0.0);\n";
+            }
+            accessors
+                << "  return texture(sampler2DArray(shaderData[shaderCoord]."
+                << it->second.name << "), c)" << swizzle << ";\n}\n";
         } else if (bindingType == HdBinding::TEXTURE_UDIM_ARRAY) {
             declarations
                 << LayoutQualifier(it->first)
-                << "uniform sampler2DArray sampler2dArray_" << it->second.name << ";\n";
+                << "uniform sampler2DArray sampler2dArray_"
+                << it->second.name << ";\n";
 
             if (caps.glslVersion >= 430) {
                 accessors
@@ -2631,7 +2666,8 @@ HdSt_CodeGen::_GenerateShaderParameters()
             if (!it->second.inPrimvars.empty()) {
                 accessors
                     << "\n"
-                    << "#if defined(HD_HAS_" << it->second.inPrimvars[0] << ")\n"
+                    << "#if defined(HD_HAS_"
+                    << it->second.inPrimvars[0] << ")\n"
                     << "HdGet_" << it->second.inPrimvars[0] << "().xy\n"
                     << "#else\n"
                     << "vec2(0.0, 0.0)\n"
