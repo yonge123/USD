@@ -22,7 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 
-#include "usdMaya/usdListUserAttributeWriters.h"
+#include "usdMaya/listUserAttributeWritersCommand.h"
 
 #include "usdMaya/userAttributeWriterRegistry.h"
 #include "usdMaya/registryHelper.h"
