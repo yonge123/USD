@@ -77,7 +77,6 @@ pxr_shared_library(${PXR_PACKAGE}
         writeJobContext
         writeUtil
         xformStack
-        usdListUserAttributeWriters
 
         exportCommand
         exportTranslator
@@ -87,6 +86,7 @@ pxr_shared_library(${PXR_PACKAGE}
         proxyShape
         referenceAssembly
         undoHelperCommand
+        listUserAttributeWritersCommand
 
         chaser
         chaserRegistry
