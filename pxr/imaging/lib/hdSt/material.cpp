@@ -285,6 +285,7 @@ HdStMaterial::Sync(HdSceneDelegate *sceneDelegate,
                     tex.handle =
                         bindless ? texResource->GetLayoutTextureHandle()
                                  : texResource->GetLayoutTextureId();
+                    tex.sampler = 0;
                     textures.push_back(tex);
 
                     if (bindless) {
