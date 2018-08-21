@@ -46,7 +46,7 @@ usdListUserAttributeWriters::~usdListUserAttributeWriters() {
 
 MStatus
 usdListUserAttributeWriters::doIt(const MArgList& args) {    
-    for (const auto& e : PxrUsdMayaUserAttributeWriterRegistry::ListWriters()) {
+    for (const auto& e : UsdMayaUserAttributeWriterRegistry::ListWriters()) {
         appendToResult(e.GetString().c_str());
     }
 
