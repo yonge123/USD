@@ -254,7 +254,7 @@ GLuint HdStSimpleTextureResource::GetLayoutTextureId()
 
 GLuint64EXT HdStSimpleTextureResource::GetLayoutTextureHandle() 
 {
-    if (!TF_VERIFY(_isPtex)) {
+    if (!TF_VERIFY(_isPtex || _isUdim)) {
         return 0;
     }
     
