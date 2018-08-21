@@ -39,6 +39,7 @@
 #include "usdMaya/stageData.h"
 #include "usdMaya/stageNode.h"
 #include "usdMaya/undoHelperCommand.h"
+#include "usdMaya/usdListUserAttributeWriters.h"
 
 #include <maya/MDrawRegistry.h>
 #include <maya/MFnPlugin.h>
