@@ -49,14 +49,9 @@ PXR_NAMESPACE_OPEN_SCOPE
     (culledInstanceIndices)                     \
     (cullStyle)                                 \
     (doubleSided)                               \
-    (dispatchBuffer)                            \
     (dispatchCount)                             \
     (displayStyle)                              \
     (drawDispatch)                              \
-    (drawCommandIndex)                          \
-    (drawIndirect)                              \
-    (drawIndirectCull)                          \
-    (drawIndirectResult)                        \
     (drawingShader)                             \
     (drawingCoord0)                             \
     (drawingCoord1)                             \
@@ -76,7 +71,6 @@ PXR_NAMESPACE_OPEN_SCOPE
     (instancer)                                 \
     (instancerTransform)                        \
     (instancerTransformInverse)                 \
-    (instanceCountInput)                        \
     (instanceIndices)                           \
     (instanceIndexBase)                         \
     (instanceTransform)                         \
@@ -89,7 +83,6 @@ PXR_NAMESPACE_OPEN_SCOPE
     (materialParams)                            \
     (nonperiodic)                               \
     (normals)                                   \
-    (packedNormals)                             \
     (params)                                    \
     (patchParam)                                \
     (periodic)                                  \
@@ -106,10 +99,6 @@ PXR_NAMESPACE_OPEN_SCOPE
     (refinedWire)                               \
     (refinedWireOnSurf)                         \
     (renderTags)                                \
-    (ulocDrawCommandNumUints)                   \
-    (ulocResetPass)                             \
-    (ulocCullMatrix)                            \
-    (ulocDrawRangeNDC)                          \
     (rightHanded)                               \
     (segmented)                                 \
     (shadowLink)                                \
@@ -232,6 +221,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (vector)                                    \
     (normal)                                    \
     (point)                                     \
+    (pointsVisibility)                          \
     (textureCoordinate)
 
 /* Schema for "Alternate Output Values" rendering,
