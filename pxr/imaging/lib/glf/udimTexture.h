@@ -40,8 +40,9 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// Returns true if the file given by \p imageFilePath represents a udim file,
 /// and false otherwise.
 ///
-/// This function simply checks the existence of the <udim> tag in the file name and does not
-/// otherwise guarantee that the file is in any way valid for reading.
+/// This function simply checks the existence of the <udim> tag in the
+/// file name and does not otherwise guarantee that
+/// the file is in any way valid for reading.
 ///
 GLF_API bool GlfIsSupportedUdimTexture(const std::string& imageFilePath);
 
