@@ -82,7 +82,7 @@ HdStSimpleTextureResource::HdStSimpleTextureResource(
             }
         }
 
-        if (_isPtex) {
+        if (_isPtex || _isUdim) {
             handle = GetLayoutTextureHandle();
             if (handle) {
                 if (!glIsTextureHandleResidentNV(handle)) {
