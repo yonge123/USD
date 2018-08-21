@@ -81,6 +81,7 @@ pxr_shared_library(${PXR_PACKAGE}
         writeJobContext
         writeUtil
         xformStack
+        usdListUserAttributeWriters
 
         exportCommand
         exportTranslator
