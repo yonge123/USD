@@ -44,7 +44,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// file name and does not otherwise guarantee that
 /// the file is in any way valid for reading.
 ///
-GLF_API bool GlfIsSupportedUdimTexture(const std::string& imageFilePath);
+GLF_API bool GlfIsSupportedUdimTexture(std::string const& imageFilePath);
 
 class GlfUdimTexture;
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfUdimTexture);
