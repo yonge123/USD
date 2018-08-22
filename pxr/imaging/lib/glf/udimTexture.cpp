@@ -46,11 +46,7 @@ namespace {
 // TODO: improve and optimize this function!
 std::vector<std::tuple<int, TfToken>>
 GetUdimTiles(const std::string& imageFilePath, int maxLayerCount) {
-    auto pos = imageFilePath.find("<udim>");
-    if (pos == std::string::npos) {
-        pos = imageFilePath.find("<UDIM>");
-    }
-
+    const auto pos = imageFilePath.find("<UDIM>");
     if (pos == std::string::npos) { return {}; }
     auto formatString = imageFilePath; formatString.replace(pos, 6, "%i");
 
