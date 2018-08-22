@@ -1014,7 +1014,18 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetwork(
                             }
                         }
                     }
-                    isUdim = IsUdimTexture(id);
+                    if (id == UsdImagingTokens->UsdUVTexture) {
+                        SdfAssetPath asset;
+                        if (TF_VERIFY(a.Get(&asset))) {
+                            std::string filePath = asset.GetResolvedPath();
+                            if (filePath.empty()) {
+                                filePath = asset.GetAssetPath();
+                            }
+                            isUdim = GlfIsSupportedUdimTexture(filePath);
+                        }
+                    } else {
+                        isUdim = IsUdimTexture(id);
+                    }
                 }
 
                 for(auto &p : params) {
