@@ -190,7 +190,7 @@ GlfUdimTexture::_ReadImage() {
     };
 
     struct _MipDesc {
-        _MipDesc(const _TextureSize& s, GlfImageSharedPtr i) :
+        _MipDesc(const _TextureSize& s, GlfImageSharedPtr&& i) :
             size(s), image(i) { }
         _TextureSize size;
         GlfImageSharedPtr image;
@@ -214,7 +214,7 @@ GlfUdimTexture::_ReadImage() {
                 currHeight < prevHeight) {
                 prevWidth = currWidth;
                 prevHeight = currHeight;
-                ret.push_back({{currWidth, currHeight}, image});
+                ret.push_back({{currWidth, currHeight}, std::move(image)});
             }
         }
         return ret;

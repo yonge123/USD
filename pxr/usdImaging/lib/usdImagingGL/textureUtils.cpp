@@ -232,8 +232,8 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
     const bool isPtex = GlfIsSupportedPtexTexture(filePath);
     const bool isUdim = isPtex ? false : GlfIsSupportedUdimTexture(filePath);
 
-    HdWrap wrapS = isUdim ? HdWrapClamp : _GetWrapS(usdPrim);
-    HdWrap wrapT = isUdim ? HdWrapClamp : _GetWrapT(usdPrim);
+    HdWrap wrapS = isUdim ? HdWrapBlack : _GetWrapS(usdPrim);
+    HdWrap wrapT = isUdim ? HdWrapBlack : _GetWrapT(usdPrim);
     HdMinFilter minFilter = _GetMinFilter(usdPrim);
     HdMagFilter magFilter = _GetMagFilter(usdPrim);
     float memoryLimit = _GetMemoryLimit(usdPrim);
