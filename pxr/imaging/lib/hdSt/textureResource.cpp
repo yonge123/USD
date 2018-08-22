@@ -136,7 +136,8 @@ GLuint HdStSimpleTextureResource::GetTexelsTextureId()
     }
 
     if (_isUdim) {
-        auto udimTexture = TfDynamic_cast<GlfUdimTextureRefPtr>(_texture);
+        GlfUdimTextureRefPtr udimTexture =
+            TfDynamic_cast<GlfUdimTextureRefPtr>(_texture);
         if (udimTexture) {
             return udimTexture->GetGlTextureName();
         }
@@ -231,7 +232,8 @@ GLuint64EXT HdStSimpleTextureResource::GetTexelsTextureHandle()
 GLuint HdStSimpleTextureResource::GetLayoutTextureId() 
 {
     if (_isUdim) {
-        auto udimTexture = TfDynamic_cast<GlfUdimTextureRefPtr>(_texture);
+        GlfUdimTextureRefPtr udimTexture =
+            TfDynamic_cast<GlfUdimTextureRefPtr>(_texture);
         if (udimTexture) {
             return udimTexture->GetGlLayoutName();
         }
