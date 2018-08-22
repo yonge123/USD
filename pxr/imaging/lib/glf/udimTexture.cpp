@@ -81,8 +81,7 @@ GetMipMaps(int resolution) {
 }
 
 bool GlfIsSupportedUdimTexture(const std::string& imageFilePath) {
-    return TfStringContains(imageFilePath, "<udim>") ||
-           TfStringContains(imageFilePath, "<UDIM>");
+    return TfStringContains(imageFilePath, "<UDIM>");
 }
 
 TF_REGISTRY_FUNCTION(TfType)
