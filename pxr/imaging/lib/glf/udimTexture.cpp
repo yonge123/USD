@@ -80,7 +80,7 @@ GetMipMaps(int resolution) {
 
 }
 
-bool GlfIsSupportedUdimTexture(const std::string& imageFilePath) {
+bool GlfIsSupportedUdimTexture(std::string const& imageFilePath) {
     return TfStringContains(imageFilePath, "<UDIM>");
 }
 
@@ -91,7 +91,7 @@ TF_REGISTRY_FUNCTION(TfType)
     t.SetFactory< GlfTextureFactory<Type> >();
 }
 
-GlfUdimTexture::GlfUdimTexture(const TfToken& imageFilePath)
+GlfUdimTexture::GlfUdimTexture(TfToken const& imageFilePath)
     : _imagePath(imageFilePath) {
 
 }
@@ -101,13 +101,13 @@ GlfUdimTexture::~GlfUdimTexture() {
 }
 
 GlfUdimTextureRefPtr
-GlfUdimTexture::New(const TfToken& imageFilePath) {
+GlfUdimTexture::New(TfToken const& imageFilePath) {
     return TfCreateRefPtr(new GlfUdimTexture(imageFilePath));
 }
 
 GlfTexture::BindingVector
 GlfUdimTexture::GetBindings(
-    const TfToken& identifier,
+    TfToken const& identifier,
     GLuint samplerId) {
     _ReadImage();
     BindingVector ret;
