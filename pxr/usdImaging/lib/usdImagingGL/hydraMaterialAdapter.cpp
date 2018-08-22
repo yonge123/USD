@@ -226,18 +226,11 @@ IsPtexTexture(TfToken const& id)
     return (id == UsdHydraTokens->HwPtexTexture_1);
 }
 
-static bool
-IsUdimTexture(TfToken const& id)
-{
-    return (id == UsdHydraTokens->HwUdimTexture_1);
-}
-
 // XXX : This should use the shader node registry
 static bool
 IsTextureFamilyNode(TfToken const& id)
 {
     return (id == UsdHydraTokens->HwUvTexture_1 ||
-            id == UsdHydraTokens->HwUdimTexture_1 ||
             id == UsdHydraTokens->HwPtexTexture_1 ||
             id == UsdImagingTokens->UsdUVTexture);
 }
@@ -308,8 +301,7 @@ GetPrimvars(TfToken const& id)
                id == UsdImagingTokens->UsdPrimvarReader_float4) {
         t.push_back(_tokens->varname);
         t.push_back(_tokens->fallback);
-    } else if (id == UsdHydraTokens->HwUvTexture_1 ||
-               id == UsdHydraTokens->HwUdimTexture_1) {
+    } else if (id == UsdHydraTokens->HwUvTexture_1) {
         t.push_back(UsdHydraTokens->uv);
     } else if (id == UsdImagingTokens->UsdUVTexture) {
         t.push_back(_tokens->st);
@@ -1023,8 +1015,6 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetwork(
                             }
                             isUdim = GlfIsSupportedUdimTexture(filePath);
                         }
-                    } else {
-                        isUdim = IsUdimTexture(id);
                     }
                 }
 
