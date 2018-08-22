@@ -91,15 +91,15 @@ _MipDescArray _GetMipLevels(const TfToken& filePath) {
     constexpr int maxMipReads = 32;
     _MipDescArray ret {};
     ret.reserve(maxMipReads);
-    auto prevWidth = std::numeric_limits<int>::max();
-    auto prevHeight = std::numeric_limits<int>::max();
+    int prevWidth = std::numeric_limits<int>::max();
+    int prevHeight = std::numeric_limits<int>::max();
     for (int mip = 0; mip < maxMipReads; ++mip) {
-        auto image = GlfImage::OpenForReading(filePath, 0, mip);
+        GlfImageSharedPtr image = GlfImage::OpenForReading(filePath, 0, mip);
         if (image == nullptr) {
             break;
         }
-        int currHeight = image->GetWidth();
-        int currWidth = image->GetHeight();
+        const int currHeight = image->GetWidth();
+        const int currWidth = image->GetHeight();
         if (currWidth < prevWidth &&
             currHeight < prevHeight) {
             prevWidth = currWidth;
@@ -224,7 +224,7 @@ GlfUdimTexture::_ReadImage() {
     }
 
     _format = firstImageMips[0].image->GetFormat();
-    const auto type = firstImageMips[0].image->GetType();
+    const GLenum type = firstImageMips[0].image->GetType();
     int numChannels;
     if (_format == GL_RED || _format == GL_LUMINANCE) {
         numChannels = 1;
@@ -238,37 +238,37 @@ GlfUdimTexture::_ReadImage() {
         return;
     }
 
-    auto _internalFormat = GL_RGBA8;
+    GLenum internalFormat = GL_RGBA8;
     int sizePerElem = 1;
     if (type == GL_FLOAT) {
         constexpr GLenum internalFormats[] =
             { GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F };
-        _internalFormat = internalFormats[numChannels - 1];
+        internalFormat = internalFormats[numChannels - 1];
         sizePerElem = 4;
     } else if (type == GL_UNSIGNED_SHORT) {
         constexpr GLenum internalFormats[] =
             { GL_R16, GL_RG16, GL_RGB16, GL_RGBA16 };
-        _internalFormat = internalFormats[numChannels - 1];
+        internalFormat = internalFormats[numChannels - 1];
         sizePerElem = 2;
     } else if (type == GL_HALF_FLOAT_ARB) {
         constexpr GLenum internalFormats[] =
             { GL_R16F, GL_RG16F, GL_RGB16F, GL_RGBA16F };
-        _internalFormat = internalFormats[numChannels - 1];
+        internalFormat = internalFormats[numChannels - 1];
         sizePerElem = 2;
     } else if (type == GL_UNSIGNED_BYTE) {
         constexpr GLenum internalFormats[] =
             { GL_R8, GL_RG8, GL_RGB8, GL_RGBA8 };
-        _internalFormat = internalFormats[numChannels - 1];
+        internalFormat = internalFormats[numChannels - 1];
         sizePerElem = 1;
     }
 
-    const auto maxTileCount =
+    const int maxTileCount =
         std::get<0>(tiles.back()) + 1;
     _depth = static_cast<int>(tiles.size());
-    const auto numBytesPerPixel = sizePerElem * numChannels;
-    const auto numBytesPerPixelLayer = numBytesPerPixel * _depth;
+    const int numBytesPerPixel = sizePerElem * numChannels;
+    const int numBytesPerPixelLayer = numBytesPerPixel * _depth;
 
-    auto targetPixelCount =
+    int targetPixelCount =
         static_cast<int>(GetMemoryRequested() / (_depth * numBytesPerPixel));
 
     std::vector<_TextureSize> mips {};
@@ -317,27 +317,27 @@ GlfUdimTexture::_ReadImage() {
     glGenTextures(1, &_imageArray);
     glBindTexture(GL_TEXTURE_2D_ARRAY, _imageArray);
     glTexStorage3D(GL_TEXTURE_2D_ARRAY,
-        mipCount, _internalFormat,
+        mipCount, internalFormat,
         _width, _height, _depth);
 
     size_t totalTextureMemory = 0;
-    for (auto mip = decltype(mipCount){0}; mip < mipCount; ++mip) {
+    for (int mip = 0; mip < mipCount; ++mip) {
         _TextureSize const& mipSize = mips[mip];
-        const auto currentMipMemory =
+        const int currentMipMemory =
             mipSize.width * mipSize.height * numBytesPerPixelLayer;
         mipData[mip].resize(currentMipMemory, 0);
         totalTextureMemory += currentMipMemory;
     }
 
     WorkParallelForN(tiles.size(), [&](size_t begin, size_t end) {
-        for (auto tileId = begin; tileId < end; ++tileId) {
+        for (size_t tileId = begin; tileId < end; ++tileId) {
             _UdimTile const& tile = tiles[tileId];
             layoutData[std::get<0>(tile)] = tileId;
             _MipDescArray images = _GetMipLevels(std::get<1>(tile));
             if (images.empty()) { continue; }
-            for (auto mip = decltype(mipCount){0}; mip < mipCount; ++mip) {
+            for (int mip = 0; mip < mipCount; ++mip) {
                 _TextureSize const& mipSize = mips[mip];
-                const auto numBytesPerLayer =
+                const int numBytesPerLayer =
                     mipSize.width * mipSize.height * numBytesPerPixel;
                 GlfImage::StorageSpec spec;
                 spec.width = mipSize.width;
@@ -356,7 +356,7 @@ GlfUdimTexture::_ReadImage() {
         }
     }, 1);
 
-    for (auto mip = decltype(mipCount){0}; mip < mipCount; ++mip) {
+    for (int mip = 0; mip < mipCount; ++mip) {
         _TextureSize const& mipSize = mips[mip];
         glTexSubImage3D(GL_TEXTURE_2D_ARRAY, mip, 0, 0, 0,
                         mipSize.width, mipSize.height, _depth, _format, type,
