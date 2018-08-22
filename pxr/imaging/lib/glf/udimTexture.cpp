@@ -43,19 +43,27 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
 
-// TODO: improve and optimize this function!
-std::vector<std::tuple<int, TfToken>>
-GetUdimTiles(const std::string& imageFilePath, int maxLayerCount) {
-    const auto pos = imageFilePath.find("<UDIM>");
-    if (pos == std::string::npos) { return {}; }
-    auto formatString = imageFilePath; formatString.replace(pos, 6, "%i");
+using _UdimTile = std::tuple<int, TfToken>;
+using _UdimTileArray = std::vector<_UdimTile>;
+
+_UdimTileArray
+GetUdimTiles(std::string const& imageFilePath, int maxLayerCount) {
+    if (ARCH_UNLIKELY(maxLayerCount < 1)) {
+        return {};
+    }
+    const std::string::size_type pos = imageFilePath.find("<UDIM>");
+    if (pos == std::string::npos) {
+        return {};
+    }
+    std::string formatString = imageFilePath;
+    formatString.replace(pos, 6, "%i");
 
     std::vector<std::tuple<int, TfToken>> ret;
-    constexpr auto startTile = 1001;
-    const auto endTile = startTile + maxLayerCount;
+    constexpr int startTile = 1001;
+    const int endTile = startTile + maxLayerCount;
     ret.reserve(endTile - startTile + 1);
-    for (auto t = startTile; t <= endTile; ++t) {
-        const auto path = TfStringPrintf(formatString.c_str(), t);
+    for (int t = startTile; t <= endTile; ++t) {
+        const std::string path = TfStringPrintf(formatString.c_str(), t);
         if (TfPathExists(path)) {
             ret.emplace_back(t - startTile, TfToken(path));
         }
@@ -65,18 +73,42 @@ GetUdimTiles(const std::string& imageFilePath, int maxLayerCount) {
     return ret;
 }
 
-std::vector<int>
-GetMipMaps(int resolution) {
-    std::vector<int> ret;
-    while (true) {
-        ret.push_back(resolution);
-        if (resolution <= 1) {
+struct _TextureSize {
+    _TextureSize(int w, int h) : width(w), height(h) { }
+    int width, height;
+};
+
+struct _MipDesc {
+    _MipDesc(const _TextureSize& s, GlfImageSharedPtr&& i) :
+        size(s), image(i) { }
+    _TextureSize size;
+    GlfImageSharedPtr image;
+};
+
+using _MipDescArray = std::vector<_MipDesc>;
+
+_MipDescArray _GetMipLevels(const TfToken& filePath) {
+    constexpr int maxMipReads = 32;
+    _MipDescArray ret {};
+    ret.reserve(maxMipReads);
+    auto prevWidth = std::numeric_limits<int>::max();
+    auto prevHeight = std::numeric_limits<int>::max();
+    for (int mip = 0; mip < maxMipReads; ++mip) {
+        auto image = GlfImage::OpenForReading(filePath, 0, mip);
+        if (image == nullptr) {
             break;
         }
-        resolution = resolution / 2;
+        int currHeight = image->GetWidth();
+        int currWidth = image->GetHeight();
+        if (currWidth < prevWidth &&
+            currHeight < prevHeight) {
+            prevWidth = currWidth;
+            prevHeight = currHeight;
+            ret.push_back({{currWidth, currHeight}, std::move(image)});
+        }
     }
     return ret;
-}
+};
 
 }
 
@@ -179,48 +211,13 @@ GlfUdimTexture::_ReadImage() {
     int max3dTextureSize = 0;
     glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &max3dTextureSize);
 
-    const auto tiles = GetUdimTiles(_imagePath, maxArrayTextureLayers);
+    const _UdimTileArray tiles =
+        GetUdimTiles(_imagePath, maxArrayTextureLayers);
     if (tiles.empty()) {
         return;
     }
 
-    struct _TextureSize {
-        _TextureSize(int w, int h) : width(w), height(h) { }
-        int width, height;
-    };
-
-    struct _MipDesc {
-        _MipDesc(const _TextureSize& s, GlfImageSharedPtr&& i) :
-            size(s), image(i) { }
-        _TextureSize size;
-        GlfImageSharedPtr image;
-    };
-
-    auto _GetMipLevels = [](const TfToken& filePath)
-        -> std::vector<_MipDesc> {
-        constexpr int maxMipReads = 32;
-        std::vector<_MipDesc> ret {};
-        ret.reserve(maxMipReads);
-        auto prevWidth = std::numeric_limits<int>::max();
-        auto prevHeight = std::numeric_limits<int>::max();
-        for (int mip = 0; mip < maxMipReads; ++mip) {
-            auto image = GlfImage::OpenForReading(filePath, 0, mip);
-            if (image == nullptr) {
-                break;
-            }
-            int currHeight = image->GetWidth();
-            int currWidth = image->GetHeight();
-            if (currWidth < prevWidth &&
-                currHeight < prevHeight) {
-                prevWidth = currWidth;
-                prevHeight = currHeight;
-                ret.push_back({{currWidth, currHeight}, std::move(image)});
-            }
-        }
-        return ret;
-    };
-
-    const auto firstImageMips = _GetMipLevels(std::get<1>(tiles[0]));
+    const _MipDescArray firstImageMips = _GetMipLevels(std::get<1>(tiles[0]));
 
     if (firstImageMips.empty()) {
         return;
@@ -297,7 +294,7 @@ GlfUdimTexture::_ReadImage() {
 
     int mipCount = 0;
     {
-        for (const auto& mip: mips) {
+        for (auto const& mip: mips) {
             ++mipCount;
             if ((targetPixelCount -= (mip.width * mip.height)) <= 0) {
                 break;
@@ -325,7 +322,7 @@ GlfUdimTexture::_ReadImage() {
 
     size_t totalTextureMemory = 0;
     for (auto mip = decltype(mipCount){0}; mip < mipCount; ++mip) {
-        const auto mipSize = mips[mip];
+        _TextureSize const& mipSize = mips[mip];
         const auto currentMipMemory =
             mipSize.width * mipSize.height * numBytesPerPixelLayer;
         mipData[mip].resize(currentMipMemory, 0);
@@ -334,12 +331,12 @@ GlfUdimTexture::_ReadImage() {
 
     WorkParallelForN(tiles.size(), [&](size_t begin, size_t end) {
         for (auto tileId = begin; tileId < end; ++tileId) {
-            const auto& tile = tiles[tileId];
+            _UdimTile const& tile = tiles[tileId];
             layoutData[std::get<0>(tile)] = tileId;
-            auto images = _GetMipLevels(std::get<1>(tile));
+            _MipDescArray images = _GetMipLevels(std::get<1>(tile));
             if (images.empty()) { continue; }
             for (auto mip = decltype(mipCount){0}; mip < mipCount; ++mip) {
-                const auto mipSize = mips[mip];
+                _TextureSize const& mipSize = mips[mip];
                 const auto numBytesPerLayer =
                     mipSize.width * mipSize.height * numBytesPerPixel;
                 GlfImage::StorageSpec spec;
@@ -360,7 +357,7 @@ GlfUdimTexture::_ReadImage() {
     }, 1);
 
     for (auto mip = decltype(mipCount){0}; mip < mipCount; ++mip) {
-        const auto mipSize = mips[mip];
+        _TextureSize const& mipSize = mips[mip];
         glTexSubImage3D(GL_TEXTURE_2D_ARRAY, mip, 0, 0, 0,
                         mipSize.width, mipSize.height, _depth, _format, type,
                         mipData[mip].data());
