@@ -153,15 +153,15 @@ bool MayaImagePlaneWriter::_WriteImagePlaneAttrs(
 #endif
     const auto fit = dnode.findPlug("fit").asShort();
     if (fit == UsdGeomImagePlane::FIT_BEST) {
-        primSchema.GetFitAttr().Set(UsdGeomImagePlaneFitTokens->best);
+        primSchema.GetFitAttr().Set(UsdGeomTokens->best);
     } else if (fit == UsdGeomImagePlane::FIT_FILL) {
-        primSchema.GetFitAttr().Set(UsdGeomImagePlaneFitTokens->fill);
+        primSchema.GetFitAttr().Set(UsdGeomTokens->fill);
     } else if (fit == UsdGeomImagePlane::FIT_HORIZONTAL) {
-        primSchema.GetFitAttr().Set(UsdGeomImagePlaneFitTokens->horizontal);
+        primSchema.GetFitAttr().Set(UsdGeomTokens->horizontal);
     } else if (fit == UsdGeomImagePlane::FIT_VERTICAL) {
-        primSchema.GetFitAttr().Set(UsdGeomImagePlaneFitTokens->vertical);
+        primSchema.GetFitAttr().Set(UsdGeomTokens->vertical);
     } else if (fit == UsdGeomImagePlane::FIT_TO_SIZE) {
-        primSchema.GetFitAttr().Set(UsdGeomImagePlaneFitTokens->toSize);
+        primSchema.GetFitAttr().Set(UsdGeomTokens->toSize);
     }
     primSchema.GetUseFrameExtensionAttr().Set(
         dnode.findPlug("useFrameExtension").asBool());
@@ -194,6 +194,11 @@ bool MayaImagePlaneWriter::_WriteImagePlaneAttrs(
     _SetAttribute(primSchema.GetCoverageOriginAttr(),
                   GfVec2i(coverageOriginPlug.child(0).asInt(),
                       coverageOriginPlug.child(1).asInt()), usdTime);
+    const auto imageCenterPlug = dnode.findPlug("imageCenter");
+    _SetAttribute(primSchema.GetImageCenterAttr(),
+                  GfVec3f(imageCenterPlug.child(0).asFloat(),
+                          imageCenterPlug.child(1).asFloat(),
+                          imageCenterPlug.child(2).asFloat()));
     VtVec3fArray positions;
     primSchema.CalculateGeometryForViewport(&positions, nullptr, usdTime);
     GfRange3f extent;
