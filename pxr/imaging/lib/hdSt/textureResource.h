@@ -74,8 +74,7 @@ public:
     /// this reference requires of the texture.  Set to 0 for unrestricted.
     HDST_API
     HdStSimpleTextureResource(GlfTextureHandleRefPtr const &textureHandle,
-                              bool isPtex,
-                              bool isUdim,
+                              HdTextureType textureType,
                               HdWrap wrapS,
                               HdWrap wrapT,
                               HdMinFilter minFilter,
@@ -85,8 +84,7 @@ public:
     HDST_API
     virtual ~HdStSimpleTextureResource();
 
-    virtual bool IsPtex() const override;
-    virtual bool IsUdim() const override;
+    virtual HdTextureType GetTextureType() const override;
     virtual size_t GetMemoryUsed() override;
 
     HDST_API virtual GLuint GetTexelsTextureId() override;
@@ -101,8 +99,7 @@ private:
     GfVec4f _borderColor;
     float _maxAnisotropy;
     GLuint _sampler;
-    bool _isPtex;
-    bool _isUdim;
+    HdTextureType _textureType;
     size_t _memoryRequest;
 
     HdWrap _wrapS;
