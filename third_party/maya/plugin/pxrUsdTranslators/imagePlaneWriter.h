@@ -6,7 +6,7 @@
 #define _usdExport_MayaImagePlaneWriter_h_
 
 #include "pxr/pxr.h"
-#include "usdMaya/MayaTransformWriter.h"
+#include "usdMaya/transformWriter.h"
 #include "pxr/usd/usd/prim.h"
 
 // Generating extra shader definitions for real-time display.
@@ -16,15 +16,18 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class UsdGeomImagePlane;
 
-class MayaImagePlaneWriter : public MayaPrimWriter {
+class MayaImagePlaneWriter : public UsdMayaPrimWriter {
 public:
-    MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, usdWriteJobCtx& jobCtx);
+    MayaImagePlaneWriter(
+        const MDagPath & iDag, const SdfPath& uPath,
+        UsdMayaWriteJobContext& jobCtx);
     virtual ~MayaImagePlaneWriter();
 
     virtual void Write(const UsdTimeCode& usdTime) override;
 
 protected:
-    bool _WriteImagePlaneAttrs(const UsdTimeCode& usdTime, UsdGeomImagePlane& primSchema);
+    bool _WriteImagePlaneAttrs(
+        const UsdTimeCode& usdTime, UsdGeomImagePlane& primSchema);
 
 #ifdef GENERATE_SHADERS
     UsdPrim mTexture;

@@ -1,4 +1,4 @@
-#include "usdMaya/MayaImagePlaneWriter.h"
+#include "pxrUsdTranslators/imagePlaneWriter.h"
 
 #include <pxr/usd/usdGeom/tokens.h>
 #include <pxr/usd/usdGeom/imagePlane.h>
@@ -9,7 +9,7 @@
 
 #include "usdMaya/adaptor.h"
 #include "usdMaya/primWriterRegistry.h"
-#include "usdMaya/usdWriteJobCtx.h"
+#include "usdMaya/writeJobContext.h"
 #include "usdMaya/writeUtil.h"
 
 #ifdef GENERATE_SHADERS
@@ -45,8 +45,9 @@ TF_DEFINE_PRIVATE_TOKENS(
 #endif
 );
 
-MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath& uPath, usdWriteJobCtx& jobCtx)
-    : MayaPrimWriter(iDag, uPath, jobCtx)
+MayaImagePlaneWriter::MayaImagePlaneWriter(
+    const MDagPath & iDag, const SdfPath& uPath, UsdMayaWriteJobContext& jobCtx)
+    : UsdMayaPrimWriter(iDag, uPath, jobCtx)
 {
     auto primSchema =
         UsdGeomImagePlane::Define(GetUsdStage(), GetUsdPath());
@@ -57,9 +58,12 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
 #ifdef GENERATE_SHADERS
     const auto materialPath = GetUsdPath().AppendChild(_tokens->materialName);
     auto material = UsdShadeMaterial::Define(GetUsdStage(), materialPath);
-    auto shader = UsdShadeShader::Define(GetUsdStage(), materialPath.AppendChild(_tokens->shaderName));
-    auto primvar = UsdShadeShader::Define(GetUsdStage(), materialPath.AppendChild(_tokens->primvarName));
-    auto texture = UsdShadeShader::Define(GetUsdStage(), materialPath.AppendChild(_tokens->textureName));
+    auto shader = UsdShadeShader::Define(GetUsdStage(),
+        materialPath.AppendChild(_tokens->shaderName));
+    auto primvar = UsdShadeShader::Define(GetUsdStage(),
+        materialPath.AppendChild(_tokens->primvarName));
+    auto texture = UsdShadeShader::Define(GetUsdStage(),
+        materialPath.AppendChild(_tokens->textureName));
     mTexture = texture.GetPrim();
     TF_AXIOM(mTexture);
 
@@ -68,20 +72,25 @@ MayaImagePlaneWriter::MayaImagePlaneWriter(const MDagPath & iDag, const SdfPath&
 
     UsdShadeConnectableAPI::ConnectToSource(
         UsdShadeMaterial(material).CreateSurfaceOutput(GlfGLSLFXTokens->glslfx),
-        UsdShadeMaterial(shader).CreateOutput(_tokens->defaultOutputName, SdfValueTypeNames->Token));
+        UsdShadeMaterial(shader).CreateOutput(
+            _tokens->defaultOutputName,
+            SdfValueTypeNames->Token));
 
     shader.GetPrim()
-        .CreateAttribute(UsdHydraTokens->infoFilename, SdfValueTypeNames->Asset, SdfVariabilityUniform)
+        .CreateAttribute(UsdHydraTokens->infoFilename, SdfValueTypeNames->Asset,
+            SdfVariabilityUniform)
         .Set(SdfAssetPath("shaders/simpleTexturedSurface.glslfx"));
 
     primvar.CreateIdAttr().Set(UsdHydraTokens->HwPrimvar_1);
     primvar.GetPrim()
-        .CreateAttribute(UsdHydraTokens->infoVarname, SdfValueTypeNames->Token, SdfVariabilityUniform)
+        .CreateAttribute(UsdHydraTokens->infoVarname, SdfValueTypeNames->Token,
+            SdfVariabilityUniform)
         .Set(_tokens->st);
 
     texture.CreateIdAttr().Set(UsdHydraTokens->HwUvTexture_1);
     texture.GetPrim()
-        .CreateAttribute(UsdHydraTokens->textureMemory, SdfValueTypeNames->Float, SdfVariabilityUniform)
+        .CreateAttribute(UsdHydraTokens->textureMemory,
+            SdfValueTypeNames->Float, SdfVariabilityUniform)
         .Set(10.0f * 1024.0f * 1024.0f);
 
     UsdShadeConnectableAPI shaderApi(shader);
@@ -116,7 +125,8 @@ void MayaImagePlaneWriter::Write(const UsdTimeCode& usdTime) {
     _WriteImagePlaneAttrs(usdTime, primSchema);
 }
 
-bool MayaImagePlaneWriter::_WriteImagePlaneAttrs(const UsdTimeCode& usdTime, UsdGeomImagePlane& primSchema) {
+bool MayaImagePlaneWriter::_WriteImagePlaneAttrs(
+    const UsdTimeCode& usdTime, UsdGeomImagePlane& primSchema) {
     if (usdTime.IsDefault() == _HasAnimCurves()) {
         return true;
     }
@@ -124,16 +134,20 @@ bool MayaImagePlaneWriter::_WriteImagePlaneAttrs(const UsdTimeCode& usdTime, Usd
     // Write extent, just the default for now. It should be setup in the adapter for drawing.
     MFnDagNode dnode(GetDagPath());
     
-    auto imageNameExtracted = MRenderUtil::exactImagePlaneFileName(dnode.object());
-    const SdfAssetPath imageNameExtractedPath(std::string(imageNameExtracted.asChar()));
+    auto imageNameExtracted =
+        MRenderUtil::exactImagePlaneFileName(dnode.object());
+    const SdfAssetPath imageNameExtractedPath(
+        std::string(imageNameExtracted.asChar()));
     const auto sizePlug = dnode.findPlug("size");
-    const auto imageName = SdfAssetPath(std::string(dnode.findPlug("imageName").asString().asChar()));
+    const auto imageName = SdfAssetPath(
+        std::string(dnode.findPlug("imageName").asString().asChar()));
     primSchema.GetFilenameAttr().Set(imageName);
     primSchema.GetFilenameAttr().Set(imageNameExtractedPath, usdTime);
 #ifdef GENERATE_SHADERS
     UsdShadeShader textureShader(mTexture);
     auto filenameAttr = textureShader.GetPrim()
-        .CreateAttribute(UsdHydraTokens->infoFilename, SdfValueTypeNames->Asset, SdfVariabilityVarying);
+        .CreateAttribute(UsdHydraTokens->infoFilename,
+            SdfValueTypeNames->Asset, SdfVariabilityVarying);
     filenameAttr.Set(imageNameExtractedPath, usdTime);
     filenameAttr.Set(imageName);
 #endif
@@ -149,25 +163,37 @@ bool MayaImagePlaneWriter::_WriteImagePlaneAttrs(const UsdTimeCode& usdTime, Usd
     } else if (fit == UsdGeomImagePlane::FIT_TO_SIZE) {
         primSchema.GetFitAttr().Set(UsdGeomImagePlaneFitTokens->toSize);
     }
-    primSchema.GetUseFrameExtensionAttr().Set(dnode.findPlug("useFrameExtension").asBool());
-    _SetAttribute(primSchema.GetFrameOffsetAttr(), dnode.findPlug("frameOffset").asInt(), usdTime);
-    _SetAttribute(primSchema.GetWidthAttr(), dnode.findPlug("width").asFloat(), usdTime);
-    _SetAttribute(primSchema.GetHeightAttr(), dnode.findPlug("height").asFloat(), usdTime);
-    _SetAttribute(primSchema.GetAlphaGainAttr(), dnode.findPlug("alphaGain").asFloat(), usdTime);
-    _SetAttribute(primSchema.GetDepthAttr(), dnode.findPlug("depth").asFloat(), usdTime);
-    _SetAttribute(primSchema.GetSqueezeCorrectionAttr(), dnode.findPlug("squeezeCorrection").asFloat(), usdTime);
+    primSchema.GetUseFrameExtensionAttr().Set(
+        dnode.findPlug("useFrameExtension").asBool());
+    _SetAttribute(primSchema.GetFrameOffsetAttr(),
+        dnode.findPlug("frameOffset").asInt(), usdTime);
+    _SetAttribute(primSchema.GetWidthAttr(),
+        dnode.findPlug("width").asFloat(), usdTime);
+    _SetAttribute(primSchema.GetHeightAttr(),
+        dnode.findPlug("height").asFloat(), usdTime);
+    _SetAttribute(primSchema.GetAlphaGainAttr(),
+        dnode.findPlug("alphaGain").asFloat(), usdTime);
+    _SetAttribute(primSchema.GetDepthAttr(),
+        dnode.findPlug("depth").asFloat(), usdTime);
+    _SetAttribute(primSchema.GetSqueezeCorrectionAttr(),
+        dnode.findPlug("squeezeCorrection").asFloat(), usdTime);
     const auto offsetPlug = dnode.findPlug("offset");
     _SetAttribute(primSchema.GetOffsetAttr(),
-                  GfVec2f(offsetPlug.child(0).asFloat(), offsetPlug.child(1).asFloat()), usdTime);
+                  GfVec2f(offsetPlug.child(0).asFloat(),
+                      offsetPlug.child(1).asFloat()), usdTime);
     _SetAttribute(primSchema.GetSizeAttr(),
-                  GfVec2f(sizePlug.child(0).asFloat(), sizePlug.child(1).asFloat()), usdTime);
-    _SetAttribute(primSchema.GetRotateAttr(), dnode.findPlug("rotate").asFloat(), usdTime);
+                  GfVec2f(sizePlug.child(0).asFloat(),
+                      sizePlug.child(1).asFloat()), usdTime);
+    _SetAttribute(primSchema.GetRotateAttr(),
+        dnode.findPlug("rotate").asFloat(), usdTime);
     const auto coveragePlug = dnode.findPlug("coverage");
     _SetAttribute(primSchema.GetCoverageAttr(),
-                  GfVec2i(coveragePlug.child(0).asInt(), coveragePlug.child(1).asInt()), usdTime);
+                  GfVec2i(coveragePlug.child(0).asInt(),
+                      coveragePlug.child(1).asInt()), usdTime);
     const auto coverageOriginPlug = dnode.findPlug("coverageOrigin");
     _SetAttribute(primSchema.GetCoverageOriginAttr(),
-                  GfVec2i(coverageOriginPlug.child(0).asInt(), coverageOriginPlug.child(1).asInt()), usdTime);
+                  GfVec2i(coverageOriginPlug.child(0).asInt(),
+                      coverageOriginPlug.child(1).asInt()), usdTime);
     VtVec3fArray positions;
     primSchema.CalculateGeometryForViewport(&positions, nullptr, usdTime);
     GfRange3f extent;
