@@ -44,7 +44,9 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-static HdWrap _GetWrapS(UsdPrim const &usdPrim)
+namespace {
+
+HdWrap _GetWrapS(UsdPrim const &usdPrim)
 {
     // XXX: This default value should come from the registry
     TfToken wrapS("black");
@@ -60,7 +62,7 @@ static HdWrap _GetWrapS(UsdPrim const &usdPrim)
     return wrapShd;
 }
 
-static HdWrap _GetWrapT(UsdPrim const &usdPrim)
+HdWrap _GetWrapT(UsdPrim const &usdPrim)
 {
     // XXX: This default value should come from the registry
     TfToken wrapT("black");
@@ -76,7 +78,7 @@ static HdWrap _GetWrapT(UsdPrim const &usdPrim)
     return wrapThd;
 }
 
-static HdMinFilter _GetMinFilter(UsdPrim const &usdPrim)
+HdMinFilter _GetMinFilter(UsdPrim const &usdPrim)
 {
     // XXX: This default value should come from the registry
     TfToken minFilter("linear");
@@ -99,7 +101,7 @@ static HdMinFilter _GetMinFilter(UsdPrim const &usdPrim)
     return minFilterHd;
 }
 
-static HdMagFilter _GetMagFilter(UsdPrim const &usdPrim)
+HdMagFilter _GetMagFilter(UsdPrim const &usdPrim)
 {
     // XXX: This default value should come from the registry
     TfToken magFilter("linear");
@@ -114,7 +116,7 @@ static HdMagFilter _GetMagFilter(UsdPrim const &usdPrim)
     return magFilterHd;
 }
 
-static float _GetMemoryLimit(UsdPrim const &usdPrim)
+float _GetMemoryLimit(UsdPrim const &usdPrim)
 {
     // XXX: This default value should come from the registry
     float memoryLimit = 0.0f;
@@ -124,6 +126,17 @@ static float _GetMemoryLimit(UsdPrim const &usdPrim)
         if (attr) attr.Get(&memoryLimit);
     }
     return memoryLimit;
+}
+
+HdTextureType _GetTextureType(std::string const& filePath) {
+    if (GlfIsSupportedPtexTexture(filePath)) {
+        return HdTextureType::Ptex;
+    } else if (GlfIsSupportedUdimTexture(filePath)) {
+        return HdTextureType::Udim;
+    }
+    return HdTextureType::Uv;
+}
+
 }
 
 HdTextureResource::ID
@@ -153,11 +166,10 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
         filePath = TfToken(asset.GetAssetPath());
     }
 
-    const bool isUdim = GlfIsSupportedUdimTexture(filePath);
-    const bool isPtex = isUdim ? false : GlfIsSupportedUdimTexture(filePath);
+    const HdTextureType textureType = _GetTextureType(filePath);
 
-    if (!isUdim && asset.GetResolvedPath().empty()) {
-        if (isPtex) {
+    if (textureType != HdTextureType::Udim && asset.GetResolvedPath().empty()) {
+        if (textureType == HdTextureType::Ptex) {
             TF_WARN("Unable to find Texture '%s' with path '%s'. Fallback "
                     "textures are not supported for ptex",
                     filePath.GetText(), usdPath.GetText());
@@ -229,22 +241,23 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
         origin = GlfImage::ImageOriginLocation::OriginLowerLeft;
     }
 
-    const bool isPtex = GlfIsSupportedPtexTexture(filePath);
-    const bool isUdim = isPtex ? false : GlfIsSupportedUdimTexture(filePath);
+    const HdTextureType textureType = _GetTextureType(filePath);
 
-    HdWrap wrapS = isUdim ? HdWrapBlack : _GetWrapS(usdPrim);
-    HdWrap wrapT = isUdim ? HdWrapBlack : _GetWrapT(usdPrim);
+    HdWrap wrapS = textureType == HdTextureType::Udim
+        ? HdWrapBlack : _GetWrapS(usdPrim);
+    HdWrap wrapT = textureType == HdTextureType::Udim
+        ? HdWrapBlack : _GetWrapT(usdPrim);
     HdMinFilter minFilter = _GetMinFilter(usdPrim);
     HdMagFilter magFilter = _GetMagFilter(usdPrim);
     float memoryLimit = _GetMemoryLimit(usdPrim);
 
     TF_DEBUG(USDIMAGING_TEXTURES).Msg(
-            "Loading texture: id(%s), isPtex(%s), isUdim(%s)\n",
+            "Loading texture: id(%s), type(%s)\n",
             usdPath.GetText(),
-            isPtex ? "true" : "false",
-            isUdim ? "true" : "false");
+            textureType == HdTextureType::Uv ? "Uv" :
+            textureType == HdTextureType::Ptex ? "Ptex" : "Udim");
  
-    if (!isUdim && asset.GetResolvedPath().empty()) {
+    if (textureType != HdTextureType::Udim && asset.GetResolvedPath().empty()) {
         TF_DEBUG(USDIMAGING_TEXTURES).Msg(
                 "File does not exist, returning nullptr");
         TF_WARN("Unable to find Texture '%s' with path '%s'.", 
@@ -258,7 +271,7 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
     // Udim's can't be loaded through the texture registry, because you can't
     // specify the udim loader based on file extension.
     GlfTextureHandleRefPtr texture =
-        isUdim ?
+        textureType == HdTextureType::Udim ?
         GlfTextureRegistry::GetInstance()
             .GetTextureHandle(filePath, origin, [] (
                 const TfToken& filePath,
@@ -269,7 +282,7 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
         GlfTextureRegistry::GetInstance().GetTextureHandle(filePath, origin);
 
     texResource = HdTextureResourceSharedPtr(
-        new HdStSimpleTextureResource(texture, isPtex, isUdim, wrapS, wrapT,
+        new HdStSimpleTextureResource(texture, textureType, wrapS, wrapT,
                                       minFilter, magFilter, memoryLimit));
     timer.Stop();
 
