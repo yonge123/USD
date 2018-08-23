@@ -44,6 +44,7 @@ pxr_plugin(${PXR_PACKAGE}
         scopeReader.cpp
         skelReader.cpp
         xformReader.cpp
+        imagePlaneReader.cpp
 
     PRIVATE_HEADERS
         api.h

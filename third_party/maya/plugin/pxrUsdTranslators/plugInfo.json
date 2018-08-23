@@ -29,7 +29,8 @@
                             "nParticle",
                             "nurbsCurve",
                             "nurbsSurface",
-                            "particle"
+                            "particle",
+                            "imagePlane"
                         ]
                     }
                 }
