@@ -488,34 +488,45 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
 
     UsdGeomImagePlane::ImagePlaneParams params;
 
-    params.depth = 100.0f;
-    GetDepthAttr().Get(&params.depth, usdTime);
-
+    params.fileName = getAttr(GetFilenameAttr(), usdTime, SdfAssetPath(""));
+    params.coverage = getAttr(GetCoverageAttr(), usdTime,  GfVec2i(-1, -1));
+    params.coverageOrigin = getAttr(GetCoverageOriginAttr(), usdTime, GfVec2i(0, 0));
 
     SdfPathVector cameras;
     GetCameraRel().GetTargets(&cameras);
 
-    if (cameras.size() != 1) { return; }
-    UsdGeomCamera usdCamera(this->GetPrim().GetStage()->GetPrimAtPath(cameras[0]));
-    if (!usdCamera) { return; }
+    const auto hasCamera = cameras.size() == 1;
+    if (hasCamera) {
+        UsdGeomCamera usdCamera(this->GetPrim().GetStage()->GetPrimAtPath(cameras[0]));
+        if (!usdCamera) { return; }
 
-    GfVec2f aperture {1.0f, 1.0f};
-    usdCamera.GetHorizontalApertureAttr().Get(&aperture[0], usdTime);
-    usdCamera.GetVerticalApertureAttr().Get(&aperture[1], usdTime);
-    params.aperture = aperture;
-    params.focalLength = getAttr(usdCamera.GetFocalLengthAttr(), usdTime, 1.0f);
+        GfVec2f aperture {1.0f, 1.0f};
+        usdCamera.GetHorizontalApertureAttr().Get(&aperture[0], usdTime);
+        usdCamera.GetVerticalApertureAttr().Get(&aperture[1], usdTime);
+        params.aperture = aperture;
+        params.focalLength = getAttr(usdCamera.GetFocalLengthAttr(), usdTime, 1.0f);
 
-    // Size is exported in inches
-    // while aperture is in millimeters.
-    // TODO: fix this in the maya image plane writer / translator.
-    params.size = getAttr(GetSizeAttr(), usdTime, GfVec2f(-1.0f, -1.0f)) * inch_to_mm;
-    params.fileName = getAttr(GetFilenameAttr(), usdTime, SdfAssetPath(""));
-    params.fit = getAttr(GetFitAttr(), usdTime, UsdGeomTokens->best);
-    params.rotate = getAttr(GetRotateAttr(), usdTime, 0.0f);
-    params.offset = getAttr(GetOffsetAttr(), usdTime, GfVec2f(0.0f, 0.0f)) * inch_to_mm;
+        // Size is exported in inches
+        // while aperture is in millimeters.
+        // TODO: fix this in the maya image plane writer / translator.
+        params.size = getAttr(GetSizeAttr(), usdTime, GfVec2f(-1.0f, -1.0f)) * inch_to_mm;
+        params.fit = getAttr(GetFitAttr(), usdTime, UsdGeomTokens->best);
+        params.rotate = getAttr(GetRotateAttr(), usdTime, 0.0f);
+        params.offset = getAttr(GetOffsetAttr(), usdTime, GfVec2f(0.0f, 0.0f)) * inch_to_mm;
 
-    params.coverage = getAttr(GetCoverageAttr(), usdTime,  GfVec2i(-1, -1));
-    params.coverageOrigin = getAttr(GetCoverageOriginAttr(), usdTime, GfVec2i(0, 0));
+        params.depth = 100.0f;
+        GetDepthAttr().Get(&params.depth, usdTime);
+    } else {
+        params.size[0] = getAttr(GetWidthAttr(), usdTime, 0.0f);
+        params.size[1] = getAttr(GetHeightAttr(), usdTime, 0.0f);
+        params.fit = UsdGeomTokens->toSize;
+        const auto imageCenter =
+            getAttr(GetImageCenterAttr(), usdTime, GfVec3f(0.0f, 0.0f, 0.0f));
+        params.offset[0] = imageCenter[0];
+        params.offset[1] = imageCenter[1];
+        params.depth = -imageCenter[2];
+        params.focalLength = 0.0f;
+    }
 
     UsdGeomImagePlane::CalculateGeometry(vertices, uvs, params);
 }
