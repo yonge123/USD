@@ -78,6 +78,13 @@ _CreateOffsetAttr(UsdGeomImagePlane &self,
 }
         
 static UsdAttribute
+_CreateImageCenterAttr(UsdGeomImagePlane &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateImageCenterAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float3), writeSparsely);
+}
+        
+static UsdAttribute
 _CreateSizeAttr(UsdGeomImagePlane &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateSizeAttr(
@@ -181,14 +188,6 @@ void wrapUsdGeomImagePlane()
         .def("Define", &This::Define, (arg("stage"), arg("path")))
         .staticmethod("Define")
 
-        .def("IsConcrete",
-            static_cast<bool (*)(void)>( [](){ return This::IsConcrete; }))
-        .staticmethod("IsConcrete")
-
-        .def("IsTyped",
-            static_cast<bool (*)(void)>( [](){ return This::IsTyped; } ))
-        .staticmethod("IsTyped")
-
         .def("GetSchemaAttributeNames",
              &This::GetSchemaAttributeNames,
              arg("includeInherited")=true,
@@ -227,6 +226,13 @@ void wrapUsdGeomImagePlane()
              &This::GetOffsetAttr)
         .def("CreateOffsetAttr",
              &_CreateOffsetAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetImageCenterAttr",
+             &This::GetImageCenterAttr)
+        .def("CreateImageCenterAttr",
+             &_CreateImageCenterAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         

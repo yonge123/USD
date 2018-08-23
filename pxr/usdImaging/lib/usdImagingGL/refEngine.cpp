@@ -105,15 +105,15 @@ struct ImagePlaneDef {
         image_plane.GetCoverageOriginAttr().Get(&coverage_origin, _params.frame);
         TfToken fit_token;
         image_plane.GetFitAttr().Get(&fit_token, _params.frame);
-        if (fit_token == UsdGeomImagePlaneFitTokens->fill) {
+        if (fit_token == UsdGeomTokens->fill) {
             fit = UsdGeomImagePlane::FIT_FILL;
-        } else if (fit_token == UsdGeomImagePlaneFitTokens->best) {
+        } else if (fit_token == UsdGeomTokens->best) {
             fit = UsdGeomImagePlane::FIT_BEST;
-        } else if (fit_token == UsdGeomImagePlaneFitTokens->horizontal) {
+        } else if (fit_token == UsdGeomTokens->horizontal) {
             fit = UsdGeomImagePlane::FIT_HORIZONTAL;
-        } else if (fit_token == UsdGeomImagePlaneFitTokens->vertical) {
+        } else if (fit_token == UsdGeomTokens->vertical) {
             fit = UsdGeomImagePlane::FIT_VERTICAL;
-        } else if (fit_token == UsdGeomImagePlaneFitTokens->toSize) {
+        } else if (fit_token == UsdGeomTokens->toSize) {
             fit = UsdGeomImagePlane::FIT_TO_SIZE;
         } else {
             fit = UsdGeomImagePlane::FIT_BEST;

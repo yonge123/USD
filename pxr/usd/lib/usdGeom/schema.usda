@@ -565,6 +565,9 @@ class ImagePlane "ImagePlane" (
     float2 offset = (0.0, 0.0) (
         doc = "Image plane offset in inches."
     )
+    float3 imageCenter = (0.0, 0.0, 0.0) (
+        doc = "3D offset for the image plane."
+    )
     float2 size = (-1.0, -1.0) (
         doc = "Image plane size in inches. Less than zero means equal to the camera aperture size."
     )
