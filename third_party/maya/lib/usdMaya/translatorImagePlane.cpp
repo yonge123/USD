@@ -397,15 +397,15 @@ bool UsdMayaTranslatorImagePlane::Read(
 
     TfToken fit;
     usdImagePlane.GetFitAttr().Get(&fit, earliestTimeCode);
-    if (fit == UsdGeomImagePlaneFitTokens->best) {
+    if (fit == UsdGeomTokens->best) {
         fitPlug.setShort(UsdGeomImagePlane::FIT_BEST);
-    } else if (fit == UsdGeomImagePlaneFitTokens->fill) {
+    } else if (fit == UsdGeomTokens->fill) {
         fitPlug.setShort(UsdGeomImagePlane::FIT_FILL);
-    } else if (fit == UsdGeomImagePlaneFitTokens->horizontal) {
+    } else if (fit == UsdGeomTokens->horizontal) {
         fitPlug.setShort(UsdGeomImagePlane::FIT_HORIZONTAL);
-    } else if (fit == UsdGeomImagePlaneFitTokens->vertical) {
+    } else if (fit == UsdGeomTokens->vertical) {
         fitPlug.setShort(UsdGeomImagePlane::FIT_VERTICAL);
-    } else if (fit == UsdGeomImagePlaneFitTokens->toSize) {
+    } else if (fit == UsdGeomTokens->toSize) {
         fitPlug.setShort(UsdGeomImagePlane::FIT_TO_SIZE);
     }
 
