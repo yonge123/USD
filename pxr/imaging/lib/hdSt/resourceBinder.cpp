@@ -32,6 +32,7 @@
 #include "pxr/imaging/hdSt/shaderCode.h"
 #include "pxr/imaging/hdSt/drawItem.h"
 #include "pxr/imaging/hd/bufferSpec.h"
+#include "pxr/imaging/hd/enums.h"
 #include "pxr/imaging/hd/tokens.h"
 
 #include "pxr/base/tf/staticTokens.h"
@@ -491,7 +492,7 @@ HdSt_ResourceBinder::ResolveBindings(HdStDrawItem const *drawItem,
                     = MetaData::ShaderParameterAccessor(it->GetName(),
                         /*type=*/glType);
             } else if (it->IsTexture()) {
-                if (it->IsPtex()) {
+                if (it->GetTextureType() == HdTextureType::Ptex) {
                     // ptex texture
                     HdBinding texelBinding = bindless
                         ? HdBinding(HdBinding::BINDLESS_TEXTURE_PTEX_TEXEL, bindlessTextureLocation++)
@@ -515,7 +516,7 @@ HdSt_ResourceBinder::ResolveBindings(HdStDrawItem const *drawItem,
 
                     // XXX: same name ?
                     _bindingMap[layoutName] = layoutBinding; // used for non-bindless
-                } else if (it->IsUdim()) {
+                } else if (it->GetTextureType() == HdTextureType::Udim) {
                     // Texture Array for UDIM
                     HdBinding textureBinding =
                         bindless
@@ -550,7 +551,7 @@ HdSt_ResourceBinder::ResolveBindings(HdStDrawItem const *drawItem,
 
                     // used for non-bindless
                     _bindingMap[layoutName] = layoutBinding;
-                } else {
+                } else if (it->GetTextureType() == HdTextureType::Uv) {
                     // 2d texture
                     HdBinding textureBinding = bindless
                         ? HdBinding(HdBinding::BINDLESS_TEXTURE_2D, bindlessTextureLocation++)
