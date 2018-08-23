@@ -30,6 +30,7 @@
 #include "pxr/usdImaging/usdImaging/indexProxy.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
+#include "pxr/imaging/hd/enums.h"
 #include "pxr/imaging/glf/glslfx.h"
 #include "pxr/imaging/glf/ptexTexture.h"
 #include "pxr/imaging/glf/udimTexture.h"
@@ -737,8 +738,7 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetworkDeprecated(
         VtValue fallbackValue;
         SdfPath connection;
         TfTokenVector samplerCoords;
-        bool isPtex = false;
-        bool isUdim = false;
+        HdTextureType textureType = HdTextureType::Uv;
         TfToken t;
 
         if (!TF_VERIFY(attr.Get(&fallbackValue),
@@ -760,8 +760,8 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetworkDeprecated(
             SdfAssetPath ap;
             texAttr.Get(&ap, UsdTimeCode::Default());
 
-            isPtex = GlfIsSupportedPtexTexture(TfToken(ap.GetAssetPath()));
-            if (isPtex) {
+            if (GlfIsSupportedPtexTexture(TfToken(ap.GetAssetPath()))) {
+                textureType = HdTextureType::Ptex;
                 t = UsdImagingTokens->ptexFaceIndex;
                 // Allow the client to override this name
                 texAttr.GetMetadata(UsdImagingTokens->faceIndexPrimvar, &t);
@@ -778,7 +778,9 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetworkDeprecated(
                     "\t\t\tFound primvar: <%s>\n", t.GetText());
 
             } else {
-                isUdim = GlfIsSupportedUdimTexture(TfToken(ap.GetAssetPath()));
+                if (GlfIsSupportedUdimTexture(TfToken(ap.GetAssetPath()))) {
+                    textureType = HdTextureType::Udim;
+                }
                 texAttr.GetMetadata(UsdImagingTokens->uvPrimvar, &t);
                 primvars->push_back(t);
                 TF_DEBUG(USDIMAGING_SHADERS).Msg(
@@ -813,8 +815,7 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetworkDeprecated(
                                                   fallbackValue,
                                                   connection,
                                                   samplerCoords,
-                                                  isPtex,
-                                                  isUdim));
+                                                  textureType));
     }
 }
 
@@ -839,8 +840,7 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetwork(
         SdfPath _connection;
         SdfPath _connectionPrimvar;
         TfTokenVector _samplerCoords;
-        bool _isPtex;
-        bool _isUdim;
+        HdTextureType _textureType;
     };
     std::vector<_MaterialParams> params;
     TfToken id;
@@ -924,8 +924,7 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetwork(
                         connection,/*_connection*/
                         SdfPath(), /*_connectionPrimvar*/
                         TfTokenVector(), /*_samplerCoords*/
-                        false, /*_isPtex*/
-                        false /*_isUdim*/};
+                        HdTextureType::Uv/*_textureType*/};
                 params.push_back(matParam);
 
                 TF_DEBUG(USDIMAGING_SHADERS).Msg(
@@ -954,12 +953,11 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetwork(
                 TF_DEBUG(USDIMAGING_SHADERS).Msg(
                     "\t\tFound texture: <%s>\n", connection.GetText());
 
-                bool isPtex = false;
-                bool isUdim = false;
+                HdTextureType textureType = HdTextureType::Uv;
                 SdfPath connectionPrimvar;
                 VtValue fallback;
                 if (IsPtexTexture(id)){
-                    isPtex = true;
+                    textureType = HdTextureType::Ptex;
 
                     TfToken varname;
                     TfToken trackPrimvar;
@@ -1013,7 +1011,9 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetwork(
                             if (filePath.empty()) {
                                 filePath = asset.GetAssetPath();
                             }
-                            isUdim = GlfIsSupportedUdimTexture(filePath);
+                            if (GlfIsSupportedUdimTexture(filePath)) {
+                                textureType = HdTextureType::Udim;
+                            }
                         }
                     }
                 }
@@ -1021,8 +1021,7 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetwork(
                 for(auto &p : params) {
                     if (p._connection == shader.GetPath()){
                         p._paramType = HdMaterialParam::ParamTypeTexture;
-                        p._isPtex = isPtex;
-                        p._isUdim = isUdim;
+                        p._textureType = textureType;
                         p._connectionPrimvar = connectionPrimvar;
                         p._connection = connection;
                         if (!fallback.IsEmpty()) {
@@ -1133,7 +1132,7 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetwork(
         materialParams->emplace_back(param._paramType,
                 param._name, param._fallbackValue,
                 param._connection, param._samplerCoords,
-                param._isPtex, param._isUdim);
+                param._textureType);
     }
 }
 
