@@ -26,6 +26,7 @@
 
 #include "pxr/pxr.h"
 #include "pxr/imaging/hd/api.h"
+#include "pxr/imaging/hd/enums.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/types.h"
 #include "pxr/usd/sdf/path.h"
@@ -63,8 +64,7 @@ public:
                     VtValue const& fallbackValue,
                     SdfPath const& connection=SdfPath(),
                     TfTokenVector const& samplerCoords=TfTokenVector(),
-                    bool isPtex = false,
-                    bool isUdim = false);
+                    HdTextureType textureType = HdTextureType::Uv);
 
     HD_API
     ~HdMaterialParam();
@@ -95,12 +95,9 @@ public:
         return GetParamType() == ParamTypeFallback;
     }
 
-    // XXX: we don't want this, we need a better way of supplying this answer.
-    HD_API
-    bool IsPtex() const;
-
-    HD_API
-    bool IsUdim() const;
+    HdTextureType GetTextureType() const {
+        return _textureType;
+    }
 
     HD_API
     TfTokenVector const& GetSamplerCoordinates() const;
@@ -111,8 +108,7 @@ private:
     VtValue _fallbackValue;
     SdfPath _connection;
     TfTokenVector _samplerCoords;
-    bool _isPtex;
-    bool _isUdim;
+    HdTextureType _textureType;
 };
 
 
