@@ -50,7 +50,7 @@ PXRUSDMAYA_DEFINE_READER(UsdGeomImagePlane, args, context)
     if (parentNode == MObject::kNullObj || !parentNode.hasFn(MFn::kCamera)) {
         return false;
     } else {
-        return PxrUsdMayaTranslatorImagePlane::Read(
+        return UsdMayaTranslatorImagePlane::Read(
             UsdGeomImagePlane(usdPrim),
             parentNode,
             args,
