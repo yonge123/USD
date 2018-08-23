@@ -224,7 +224,8 @@ HdStMaterial::Sync(HdSceneDelegate *sceneDelegate,
                 HdStShaderCode::TextureDescriptor tex;
                 tex.name = param.GetName();
 
-                if (texResource->IsPtex()) {
+                const HdTextureType textureType = texResource->GetTextureType();
+                if (textureType == HdTextureType::Ptex) {
                     hasPtex = true;
                     tex.type =
                         HdStShaderCode::TextureDescriptor::TEXTURE_PTEX_TEXEL;
@@ -261,7 +262,7 @@ HdStMaterial::Sync(HdSceneDelegate *sceneDelegate,
                                                           tex.handle));
                         sources.push_back(source);
                     }
-                } else if (texResource->IsUdim()) {
+                } else if (textureType == HdTextureType::Udim) {
                     tex.type = HdStShaderCode::TextureDescriptor::TEXTURE_UDIM_ARRAY;
                     tex.handle =
                         bindless ? texResource->GetTexelsTextureHandle()
@@ -296,7 +297,7 @@ HdStMaterial::Sync(HdSceneDelegate *sceneDelegate,
                                 tex.handle));
                         sources.push_back(source);
                     }
-                } else {
+                } else if (textureType == HdTextureType::Uv) {
                     tex.type = HdStShaderCode::TextureDescriptor::TEXTURE_2D;
                     tex.handle =
                                 bindless ? texResource->GetTexelsTextureHandle()
@@ -391,8 +392,7 @@ HdStMaterial::_GetTextureResource(
             GlfTextureRegistry::GetInstance().GetTextureHandle(texPtr);
         texResource.reset(
             new HdStSimpleTextureResource(texture,
-                                          false,
-                                          false,
+                                          HdTextureType::Uv,
                                           HdWrapClamp,
                                           HdWrapClamp,
                                           HdMinFilterNearest,
