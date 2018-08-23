@@ -29,6 +29,7 @@ pxr_plugin(${PXR_PACKAGE}
         nurbsCurveWriter
         nurbsSurfaceWriter
         particleWriter
+        imagePlaneWriter
 
     CPPFILES
         cameraReader.cpp
