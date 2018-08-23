@@ -44,18 +44,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-/// \hideinitializer
-#define USDGEOM_IMAGEPLANE_FIT_TOKENS \
-    (fill) \
-    (best) \
-    (horizontal) \
-    (vertical) \
-    ((toSize, "to size"))
-
-TF_DECLARE_PUBLIC_TOKENS(UsdGeomImagePlaneFitTokens, USDGEOM_API,
-        USDGEOM_IMAGEPLANE_FIT_TOKENS);
-
-
 class SdfAssetPath;
 
 // -------------------------------------------------------------------------- //
@@ -76,24 +64,10 @@ class SdfAssetPath;
 class UsdGeomImagePlane : public UsdGeomGprim
 {
 public:
-    enum FitType {
-        FIT_FILL,
-        FIT_BEST,
-        FIT_HORIZONTAL,
-        FIT_VERTICAL,
-        FIT_TO_SIZE
-    };
-
-    /// Compile-time constant indicating whether or not this class corresponds
-    /// to a concrete instantiable prim type in scene description.  If this is
-    /// true, GetStaticPrimDefinition() will return a valid prim definition with
-    /// a non-empty typeName.
-    static const bool IsConcrete = true;
-
-    /// Compile-time constant indicating whether or not this class inherits from
-    /// UsdTyped. Types which inherit from UsdTyped can impart a typename on a
-    /// UsdPrim.
-    static const bool IsTyped = true;
+    /// Compile time constant representing what kind of schema this class is.
+    ///
+    /// \sa UsdSchemaType
+    static const UsdSchemaType schemaType = UsdSchemaType::ConcreteTyped;
 
     /// Construct a UsdGeomImagePlane on UsdPrim \p prim .
     /// Equivalent to UsdGeomImagePlane::Get(prim.GetStage(), prim.GetPath())
@@ -161,6 +135,13 @@ public:
     USDGEOM_API
     static UsdGeomImagePlane
     Define(const UsdStagePtr &stage, const SdfPath &path);
+
+protected:
+    /// Returns the type of schema this class belongs to.
+    ///
+    /// \sa UsdSchemaType
+    USDGEOM_API
+    virtual UsdSchemaType _GetSchemaType() const;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -258,6 +239,27 @@ public:
     /// the default for \p writeSparsely is \c false.
     USDGEOM_API
     UsdAttribute CreateOffsetAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // IMAGECENTER 
+    // --------------------------------------------------------------------- //
+    /// 3D offset for the image plane.
+    ///
+    /// \n  C++ Type: GfVec3f
+    /// \n  Usd Type: SdfValueTypeNames->Float3
+    /// \n  Variability: SdfVariabilityVarying
+    /// \n  Fallback Value: (0, 0, 0)
+    USDGEOM_API
+    UsdAttribute GetImageCenterAttr() const;
+
+    /// See GetImageCenterAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
+    UsdAttribute CreateImageCenterAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // --------------------------------------------------------------------- //
@@ -537,6 +539,14 @@ public:
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
 
+    enum FitType {
+        FIT_FILL,
+        FIT_BEST,
+        FIT_HORIZONTAL,
+        FIT_VERTICAL,
+        FIT_TO_SIZE
+    };
+
     struct ImagePlaneParams {
         float depth = 100.0f;
         GfVec2f aperture {1.0f, 1.0f};
@@ -548,7 +558,7 @@ public:
         float rotate = 0.0f;
         GfVec2f imageSize {100.0f, 100.0f};
         SdfAssetPath fileName {""};
-        TfToken fit = UsdGeomImagePlaneFitTokens->best;
+        TfToken fit = UsdGeomTokens->best;
     };
 
     USDGEOM_API

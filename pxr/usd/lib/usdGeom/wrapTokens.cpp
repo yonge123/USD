@@ -131,6 +131,7 @@ void wrapUsdGeomTokens()
     _AddToken(cls, "horizontalAperture", UsdGeomTokens->horizontalAperture);
     _AddToken(cls, "horizontalApertureOffset", UsdGeomTokens->horizontalApertureOffset);
     _AddToken(cls, "ids", UsdGeomTokens->ids);
+    _AddToken(cls, "imageCenter", UsdGeomTokens->imageCenter);
     _AddToken(cls, "inactiveIds", UsdGeomTokens->inactiveIds);
     _AddToken(cls, "indices", UsdGeomTokens->indices);
     _AddToken(cls, "infoFilename", UsdGeomTokens->infoFilename);

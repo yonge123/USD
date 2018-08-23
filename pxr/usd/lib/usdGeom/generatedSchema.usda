@@ -876,6 +876,9 @@ class ImagePlane "ImagePlane" (
     float height = 0 (
         doc = "Height"
     )
+    float3 imageCenter = (0, 0, 0) (
+        doc = "3D offset for the image plane."
+    )
     asset info:filename = @@ (
         doc = "Asset path to the file containg the image data."
     )

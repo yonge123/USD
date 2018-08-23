@@ -30,9 +30,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-TF_DEFINE_PUBLIC_TOKENS(UsdGeomImagePlaneFitTokens,
-        USDGEOM_IMAGEPLANE_FIT_TOKENS);
-
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
@@ -75,6 +72,11 @@ UsdGeomImagePlane::Define(
     }
     return UsdGeomImagePlane(
         stage->DefinePrim(path, usdPrimTypeName));
+}
+
+/* virtual */
+UsdSchemaType UsdGeomImagePlane::_GetSchemaType() const {
+    return UsdGeomImagePlane::schemaType;
 }
 
 /* static */
@@ -162,6 +164,23 @@ UsdGeomImagePlane::CreateOffsetAttr(VtValue const &defaultValue, bool writeSpars
 {
     return UsdSchemaBase::_CreateAttr(UsdGeomTokens->offset,
                        SdfValueTypeNames->Float2,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
+UsdGeomImagePlane::GetImageCenterAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->imageCenter);
+}
+
+UsdAttribute
+UsdGeomImagePlane::CreateImageCenterAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->imageCenter,
+                       SdfValueTypeNames->Float3,
                        /* custom = */ false,
                        SdfVariabilityVarying,
                        defaultValue,
@@ -406,6 +425,7 @@ UsdGeomImagePlane::GetSchemaAttributeNames(bool includeInherited)
         UsdGeomTokens->frame,
         UsdGeomTokens->fit,
         UsdGeomTokens->offset,
+        UsdGeomTokens->imageCenter,
         UsdGeomTokens->size,
         UsdGeomTokens->rotate,
         UsdGeomTokens->coverage,
@@ -490,7 +510,7 @@ UsdGeomImagePlane::CalculateGeometryForViewport(
     // TODO: fix this in the maya image plane writer / translator.
     params.size = getAttr(GetSizeAttr(), usdTime, GfVec2f(-1.0f, -1.0f)) * inch_to_mm;
     params.fileName = getAttr(GetFilenameAttr(), usdTime, SdfAssetPath(""));
-    params.fit = getAttr(GetFitAttr(), usdTime, UsdGeomImagePlaneFitTokens->best);
+    params.fit = getAttr(GetFitAttr(), usdTime, UsdGeomTokens->best);
     params.rotate = getAttr(GetRotateAttr(), usdTime, 0.0f);
     params.offset = getAttr(GetOffsetAttr(), usdTime, GfVec2f(0.0f, 0.0f)) * inch_to_mm;
 
@@ -541,23 +561,23 @@ UsdGeomImagePlane::CalculateGeometry(
     const auto imageRatio = imageSize[0] / imageSize[1];
     const auto sizeRatio = params.size[0] / params.size[1];
 
-    if (params.fit == UsdGeomImagePlaneFitTokens->fill) {
+    if (params.fit == UsdGeomTokens->fill) {
         if (imageRatio > sizeRatio) {
             params.size[0] = params.size[1] * imageRatio;
         } else {
             params.size[1] = params.size[0] / imageRatio;
         }
-    } else if (params.fit == UsdGeomImagePlaneFitTokens->best) {
+    } else if (params.fit == UsdGeomTokens->best) {
         if (imageRatio > sizeRatio) {
             params.size[1] = params.size[0] / imageRatio;
         } else {
             params.size[0] = params.size[1] * imageRatio;
         }
-    } else if (params.fit == UsdGeomImagePlaneFitTokens->horizontal) {
+    } else if (params.fit == UsdGeomTokens->horizontal) {
         params.size[1] = params.size[0] / imageRatio;
-    } else if (params.fit == UsdGeomImagePlaneFitTokens->vertical) {
+    } else if (params.fit == UsdGeomTokens->vertical) {
         params.size[0] = params.size[1] * imageRatio;
-    } else if (params.fit == UsdGeomImagePlaneFitTokens->toSize) {
+    } else if (params.fit == UsdGeomTokens->toSize) {
     } else { assert("Invalid value passed to UsdGeomImagePlane.fit!"); }
 
     GfVec2f upperLeft  { -params.size[0],  params.size[1]};

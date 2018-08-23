@@ -330,6 +330,10 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomPointInstancer, UsdGeomPoints
     const TfToken ids;
+    /// \brief "imageCenter"
+    /// 
+    /// UsdGeomImagePlane
+    const TfToken imageCenter;
     /// \brief "inactiveIds"
     /// 
     /// int64listop prim metadata that specifies the PointInstancer ids that should be masked (unrenderable) over all time.
