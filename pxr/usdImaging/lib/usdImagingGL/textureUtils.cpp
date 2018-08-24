@@ -274,8 +274,8 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
     HdTextureResourceSharedPtr texResource;
     TfStopwatch timer;
     timer.Start();
-    // Udim's can't be loaded through the texture registry, because you can't
-    // specify the udim loader based on file extension.
+    // Udim's can't be loaded through like other textures, because
+    // we can't select the right factory based on the file type.
     GlfTextureHandleRefPtr texture;
     if (textureType == HdTextureType::Udim) {
         GlfUdimTextureFactory factory;
