@@ -149,11 +149,12 @@ GlfTextureRegistry::GetTextureHandle(GlfTextureRefPtr texture)
 
 GlfTextureHandleRefPtr
 GlfTextureRegistry::GetTextureHandle(
-    const TfToken &texture,
+    const TfToken& texture,
     GlfImage::ImageOriginLocation originLocation,
-    const std::function<GlfTextureRefPtr(
-        const TfToken&, GlfImage::ImageOriginLocation)>& loader) {
-    GlfTextureHandleRefPtr textureHandle;
+    const GlfTextureFactoryBase* textureFactory) {
+    if (!TF_VERIFY(textureFactory != nullptr)) {
+        return nullptr;
+    }
 
     _TextureMetadata md(texture);
 
@@ -162,14 +163,15 @@ GlfTextureRegistry::GetTextureHandle(
         _textureRegistry.find(std::make_pair(texture, originLocation));
 
     if (it != _textureRegistry.end() && it->second.IsMetadataEqual(md)) {
-        textureHandle = it->second.GetHandle();
+        return it->second.GetHandle();
     } else {
-        // if not exists, create it
-        textureHandle = GlfTextureHandle::New(loader(texture, originLocation));
+        GlfTextureHandleRefPtr textureHandle =
+            GlfTextureHandle::New(
+                textureFactory->New(texture, originLocation));
         md.SetHandle(textureHandle);
         _textureRegistry[std::make_pair(texture, originLocation)] = md;
+        return textureHandle;
     }
-    return textureHandle;
 }
 
 bool
