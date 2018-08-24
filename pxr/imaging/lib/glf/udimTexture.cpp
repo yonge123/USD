@@ -112,6 +112,20 @@ _MipDescArray _GetMipLevels(const TfToken& filePath) {
 
 }
 
+GlfTextureRefPtr
+GlfUdimTextureFactory::New(
+    TfToken const& texturePath,
+    GlfImage::ImageOriginLocation originLocation) const {
+    return GlfUdimTexture::New(texturePath, originLocation);
+}
+
+GlfTextureRefPtr
+GlfUdimTextureFactory::New(
+    TfTokenVector const& /*texturePaths*/,
+    GlfImage::ImageOriginLocation /*originLocation*/) const {
+    return nullptr;
+}
+
 bool GlfIsSupportedUdimTexture(std::string const& imageFilePath) {
     return TfStringContains(imageFilePath, "<UDIM>");
 }
@@ -119,13 +133,14 @@ bool GlfIsSupportedUdimTexture(std::string const& imageFilePath) {
 TF_REGISTRY_FUNCTION(TfType)
 {
     typedef GlfUdimTexture Type;
-    TfType t = TfType::Define<Type, TfType::Bases<GlfTexture> >();
-    t.SetFactory< GlfTextureFactory<Type> >();
+    TfType t = TfType::Define<Type, TfType::Bases<GlfTexture>>();
+    t.SetFactory<GlfUdimTextureFactory>();
 }
 
-GlfUdimTexture::GlfUdimTexture(TfToken const& imageFilePath)
-    : _imagePath(imageFilePath) {
-
+GlfUdimTexture::GlfUdimTexture(
+    TfToken const& imageFilePath,
+    GlfImage::ImageOriginLocation originLocation)
+    : GlfTexture(originLocation), _imagePath(imageFilePath) {
 }
 
 GlfUdimTexture::~GlfUdimTexture() {
@@ -133,8 +148,11 @@ GlfUdimTexture::~GlfUdimTexture() {
 }
 
 GlfUdimTextureRefPtr
-GlfUdimTexture::New(TfToken const& imageFilePath) {
-    return TfCreateRefPtr(new GlfUdimTexture(imageFilePath));
+GlfUdimTexture::New(
+    TfToken const& imageFilePath,
+    GlfImage::ImageOriginLocation originLocation) {
+    return TfCreateRefPtr(new GlfUdimTexture(
+        imageFilePath, originLocation));
 }
 
 GlfTexture::BindingVector

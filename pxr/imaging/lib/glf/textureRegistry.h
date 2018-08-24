@@ -65,15 +65,15 @@ public:
     GlfTextureHandleRefPtr GetTextureHandle(const TfTokenVector &textures,
                                   GlfImage::ImageOriginLocation originLocation = 
                                                      GlfImage::OriginUpperLeft);
+
     GLF_API
     GlfTextureHandleRefPtr GetTextureHandle(GlfTextureRefPtr texture);
 
     GLF_API
     GlfTextureHandleRefPtr GetTextureHandle(
-        const TfToken &texture,
+        const TfToken& texture,
         GlfImage::ImageOriginLocation originLocation,
-        const std::function<GlfTextureRefPtr(
-            const TfToken&, GlfImage::ImageOriginLocation)>& loader);
+        const GlfTextureFactoryBase* textureFactory);
 
     // garbage collection methods
     GLF_API
