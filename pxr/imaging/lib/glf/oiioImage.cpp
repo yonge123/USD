@@ -87,6 +87,7 @@ protected:
 private:
     std::string _filename;
     int _subimage;
+    int _miplevel;
     ImageBuf _imagebuf;
 };
 
@@ -269,7 +270,7 @@ _SetAttribute(ImageSpec * spec,
 }
 
 Glf_OIIOImage::Glf_OIIOImage()
-    : _subimage(0)
+    : _subimage(0), _miplevel(0)
 {
 }
 
@@ -395,6 +396,7 @@ Glf_OIIOImage::_OpenForReading(std::string const & filename, int subimage,
 {
     _filename = filename;
     _subimage = subimage;
+    _miplevel = mip;
     _imagebuf.clear();
     return _imagebuf.init_spec(_filename, subimage, mip)
            && (_imagebuf.nsubimages() > subimage)
@@ -422,7 +424,7 @@ Glf_OIIOImage::ReadCropped(int const cropTop,
 
     //// seek subimage
     ImageSpec spec = imageInput->spec();
-    if (!imageInput->seek_subimage(_subimage, 0, spec)){
+    if (!imageInput->seek_subimage(_subimage, _miplevel, spec)){
         imageInput->close();
         TF_CODING_ERROR("Unable to seek subimage");
         return false;
