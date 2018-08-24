@@ -178,11 +178,10 @@ struct GtDataToUsdTypename
             = SdfValueTypeNames->Float4;
         m_typeLookup[KeyType(GT_STORE_REAL32, GT_TYPE_VECTOR, 4, true)]
             = SdfValueTypeNames->Float4Array;
-        // Quatf
         m_typeLookup[KeyType(GT_STORE_REAL32, GT_TYPE_QUATERNION, 4, false)]
-            = SdfValueTypeNames->Quatf;
+            = SdfValueTypeNames->Float4;
         m_typeLookup[KeyType(GT_STORE_REAL32, GT_TYPE_QUATERNION, 4, true)]
-            = SdfValueTypeNames->QuatfArray;
+            = SdfValueTypeNames->Float4Array;
         // Color4f
         m_typeLookup[KeyType(GT_STORE_REAL32, GT_TYPE_COLOR, 4, false)]
             = SdfValueTypeNames->Color4f;
@@ -230,11 +229,10 @@ struct GtDataToUsdTypename
             = SdfValueTypeNames->Half4;
         m_typeLookup[KeyType(GT_STORE_REAL16, GT_TYPE_VECTOR, 4, true)]
             = SdfValueTypeNames->Half4Array;
-        // Quath
         m_typeLookup[KeyType(GT_STORE_REAL16, GT_TYPE_QUATERNION, 4, false)]
-            = SdfValueTypeNames->Quath;
+            = SdfValueTypeNames->Half4;
         m_typeLookup[KeyType(GT_STORE_REAL16, GT_TYPE_QUATERNION, 4, true)]
-            = SdfValueTypeNames->QuathArray;
+            = SdfValueTypeNames->Half4Array;
         // Color4h
         m_typeLookup[KeyType(GT_STORE_REAL16, GT_TYPE_COLOR, 4, false)]
             = SdfValueTypeNames->Color4h;
