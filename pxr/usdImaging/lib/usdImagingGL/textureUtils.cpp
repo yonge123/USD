@@ -46,7 +46,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
 
-HdWrap _GetWrapS(UsdPrim const &usdPrim)
+HdWrap
+_GetWrapS(UsdPrim const &usdPrim)
 {
     // XXX: This default value should come from the registry
     TfToken wrapS("black");
@@ -62,7 +63,8 @@ HdWrap _GetWrapS(UsdPrim const &usdPrim)
     return wrapShd;
 }
 
-HdWrap _GetWrapT(UsdPrim const &usdPrim)
+HdWrap
+_GetWrapT(UsdPrim const &usdPrim)
 {
     // XXX: This default value should come from the registry
     TfToken wrapT("black");
@@ -78,7 +80,8 @@ HdWrap _GetWrapT(UsdPrim const &usdPrim)
     return wrapThd;
 }
 
-HdMinFilter _GetMinFilter(UsdPrim const &usdPrim)
+HdMinFilter
+_GetMinFilter(UsdPrim const &usdPrim)
 {
     // XXX: This default value should come from the registry
     TfToken minFilter("linear");
@@ -101,7 +104,8 @@ HdMinFilter _GetMinFilter(UsdPrim const &usdPrim)
     return minFilterHd;
 }
 
-HdMagFilter _GetMagFilter(UsdPrim const &usdPrim)
+HdMagFilter
+_GetMagFilter(UsdPrim const &usdPrim)
 {
     // XXX: This default value should come from the registry
     TfToken magFilter("linear");
@@ -116,7 +120,8 @@ HdMagFilter _GetMagFilter(UsdPrim const &usdPrim)
     return magFilterHd;
 }
 
-float _GetMemoryLimit(UsdPrim const &usdPrim)
+float
+_GetMemoryLimit(UsdPrim const &usdPrim)
 {
     // XXX: This default value should come from the registry
     float memoryLimit = 0.0f;
@@ -128,7 +133,8 @@ float _GetMemoryLimit(UsdPrim const &usdPrim)
     return memoryLimit;
 }
 
-HdTextureType _GetTextureType(std::string const& filePath) {
+HdTextureType
+_GetTextureType(std::string const& filePath) {
     if (GlfIsSupportedPtexTexture(filePath)) {
         return HdTextureType::Ptex;
     } else if (GlfIsSupportedUdimTexture(filePath)) {
@@ -270,16 +276,15 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
     timer.Start();
     // Udim's can't be loaded through the texture registry, because you can't
     // specify the udim loader based on file extension.
-    GlfTextureHandleRefPtr texture =
-        textureType == HdTextureType::Udim ?
-        GlfTextureRegistry::GetInstance()
-            .GetTextureHandle(filePath, origin, [] (
-                const TfToken& filePath,
-                GlfImage::ImageOriginLocation) -> GlfTextureRefPtr {
-                return GlfUdimTexture::New(filePath);
-            })
-            :
-        GlfTextureRegistry::GetInstance().GetTextureHandle(filePath, origin);
+    GlfTextureHandleRefPtr texture;
+    if (textureType == HdTextureType::Udim) {
+        GlfUdimTextureFactory factory;
+        texture = GlfTextureRegistry::GetInstance().GetTextureHandle(
+            filePath, origin, &factory);
+    } else {
+        texture = GlfTextureRegistry::GetInstance().GetTextureHandle(
+            filePath, origin);
+    }
 
     texResource = HdTextureResourceSharedPtr(
         new HdStSimpleTextureResource(texture, textureType, wrapS, wrapT,
