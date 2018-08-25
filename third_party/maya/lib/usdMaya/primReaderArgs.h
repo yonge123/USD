@@ -24,31 +24,32 @@
 #ifndef PXRUSDMAYA_PRIMREADERARGS_H
 #define PXRUSDMAYA_PRIMREADERARGS_H
 
-/// \file primReaderArgs.h
+/// \file usdMaya/primReaderArgs.h
+
+#include "usdMaya/api.h"
+#include "usdMaya/jobArgs.h"
 
 #include "pxr/pxr.h"
 
-#include "usdMaya/api.h"
-#include "usdMaya/JobArgs.h"
-
 #include "pxr/base/gf/interval.h"
+
 #include "pxr/usd/usd/prim.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-/// \class PxrUsdMayaPrimReaderArgs
+/// \class UsdMayaPrimReaderArgs
 /// \brief This class holds read-only arguments that are passed into reader plugins for
 /// the usdMaya library.
 /// 
-/// \sa PxrUsdMayaPrimReaderContext
-class PxrUsdMayaPrimReaderArgs
+/// \sa UsdMayaPrimReaderContext
+class UsdMayaPrimReaderArgs
 {
 public:
     PXRUSDMAYA_API
-    PxrUsdMayaPrimReaderArgs(
+    UsdMayaPrimReaderArgs(
             const UsdPrim& prim,
-            const JobImportArgs& jobArgs);
+            const UsdMayaJobImportArgs& jobArgs);
 
     /// \brief return the usd prim that should be read.
     PXRUSDMAYA_API
@@ -71,6 +72,9 @@ public:
     PXRUSDMAYA_API
     const TfToken::Set& GetExcludePrimvarNames() const;
 
+    PXRUSDMAYA_API
+    bool GetUseAsAnimationCache() const;
+
     bool ShouldImportUnboundShaders() const {
         // currently this is disabled.
         return false;
@@ -78,10 +82,10 @@ public:
 
 private:
     const UsdPrim& _prim;
-    const JobImportArgs& _jobArgs;
+    const UsdMayaJobImportArgs& _jobArgs;
 };
 
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // PXRUSDMAYA_PRIMREADERARGS_H
+#endif

@@ -285,7 +285,14 @@ public:
     /// material network implementations.  The default is empty.
     ///
     HD_API
-    virtual TfToken GetMaterialNetworkSelector() const { return TfToken(); }
+    virtual TfToken GetMaterialNetworkSelector() const;
+
+    ///
+    /// Returns the ordered list of shader source types that the render delegate 
+    /// supports.
+    /// 
+    HD_API
+    virtual TfTokenVector GetShaderSourceTypes() const;
 
 protected:
     /// This class must be derived from

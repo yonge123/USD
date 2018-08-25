@@ -54,7 +54,7 @@ class testUsdExportSkeleton(unittest.TestCase):
                        shadingMode='none', exportSkels='auto')
         stage = Usd.Stage.Open(usdFile)
 
-        skeleton = UsdSkel.Skeleton.Get(stage, '/SkelChar/Hips/Skeleton')
+        skeleton = UsdSkel.Skeleton.Get(stage, '/SkelChar/Hips')
         self.assertTrue(skeleton)
 
         joints = skeleton.GetJointsAttr().Get()
@@ -96,6 +96,13 @@ class testUsdExportSkeleton(unittest.TestCase):
         # frameRange = [1, 30]
         frameRange = [1, 3]
 
+        # TODO: The joint hierarchy intentionally includes non-joint nodes,
+        # which are expected to be ignored. However, when we try to extract
+        # restTransforms from the dagPose, the intermediate transforms cause
+        # problems, since they are not members of the dagPose. As a result,
+        # no dag pose is exported. Need to come up with a way to handle this
+        # correctly in export.
+        print "Expect warnings about invalid restTransforms"
         usdFile = os.path.abspath('UsdExportSkeleton.usda')
         cmds.usdExport(mergeTransformAndShape=True, file=usdFile,
                        shadingMode='none', frameRange=frameRange,
@@ -108,7 +115,10 @@ class testUsdExportSkeleton(unittest.TestCase):
         skelCache = UsdSkel.Cache()
         skelCache.Populate(root)
 
-        skelQuery = skelCache.GetSkelQuery(stage.GetPrimAtPath('/SkelChar/Hips'))
+        skel = UsdSkel.Skeleton.Get(stage, '/SkelChar/Hips')
+        self.assertTrue(skel)
+
+        skelQuery = skelCache.GetSkelQuery(skel)
         self.assertTrue(skelQuery)
 
         xfCache = UsdGeom.XformCache()
@@ -117,8 +127,7 @@ class testUsdExportSkeleton(unittest.TestCase):
             cmds.currentTime(frame, edit=True)
             xfCache.SetTime(frame)
 
-            skelLocalToWorld = \
-                skelQuery.ComputeLocalToWorldTransform(xfCache)
+            skelLocalToWorld = xfCache.GetLocalToWorldTransform(skelQuery.GetPrim())
 
             usdJointXforms = skelQuery.ComputeJointSkelTransforms(frame)
 

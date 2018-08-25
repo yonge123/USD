@@ -469,6 +469,10 @@ void wrapLayer()
            arg("args") = boost::python::dict()),
          return_value_policy<TfPyRefPtrFactory<ThisHandle> >());
 
+    def("ComputeAssetPathRelativeToLayer", &SdfComputeAssetPathRelativeToLayer,
+        ( arg("anchor"),
+          arg("assetPath")));
+
     scope s = class_<This,
                      ThisHandle,
                      bases<SdfLayerBase>,
@@ -518,7 +522,8 @@ void wrapLayer()
              return_value_policy<TfPyRefPtrFactory<ThisHandle> >())
         .staticmethod("OpenAsAnonymous")
 
-        .def("Save", &This::Save)
+        .def("Save", &This::Save,
+             ( arg("force") = false ))
         .def("Export", &_Export,
              ( arg("filename"),
                arg("comment") = std::string(),

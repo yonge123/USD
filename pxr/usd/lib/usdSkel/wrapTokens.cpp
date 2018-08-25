@@ -64,6 +64,7 @@ void wrapUsdSkelTokens()
 {
     boost::python::class_<UsdSkelTokensType, boost::noncopyable>
         cls("Tokens", boost::python::no_init);
+    _AddToken(cls, "bindTransforms", UsdSkelTokens->bindTransforms);
     _AddToken(cls, "blendShapes", UsdSkelTokens->blendShapes);
     _AddToken(cls, "blendShapeWeights", UsdSkelTokens->blendShapeWeights);
     _AddToken(cls, "joints", UsdSkelTokens->joints);
@@ -80,7 +81,6 @@ void wrapUsdSkelTokens()
     _AddToken(cls, "skelBlendShapeTargets", UsdSkelTokens->skelBlendShapeTargets);
     _AddToken(cls, "skelJoints", UsdSkelTokens->skelJoints);
     _AddToken(cls, "skelSkeleton", UsdSkelTokens->skelSkeleton);
-    _AddToken(cls, "skelSkeletonInstance", UsdSkelTokens->skelSkeletonInstance);
     _AddToken(cls, "translations", UsdSkelTokens->translations);
     _AddToken(cls, "weight", UsdSkelTokens->weight);
 }

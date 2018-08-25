@@ -23,7 +23,6 @@
 # language governing permissions and limitations under the Apache License.
 #
 import unittest, os
-
 from pxr import Gf, Usd, UsdSkel
 
 from maya import cmds
@@ -126,6 +125,9 @@ class testUsdImportSkeleton(unittest.TestCase):
         bindPose = _GetDepNode(name)
         self.assertEqual(bindPose.typeName, "dagPose")
 
+        bindXforms = usdSkelQuery.GetJointWorldBindTransforms()
+        restXforms = usdSkelQuery.ComputeJointLocalTransforms(atRest=True)
+
         for i,joint in enumerate(joints):
 
             parentIdx = usdSkelQuery.GetTopology().GetParentIndices()[i]
@@ -135,10 +137,15 @@ class testUsdImportSkeleton(unittest.TestCase):
                 destination=False, source=True, plugs=True)
             self.assertEqual(connections, [u"%s.message"%joint.name()])
 
-            connections = cmds.listConnections(
-                "%s.worldMatrix[%d]"%(name, i),
-                destination=False, source=True, plugs=True)
-            self.assertEqual(connections, [u"%s.bindPose"%joint.name()])
+            worldMatrix = Gf.Matrix4d(
+                *cmds.getAttr("%s.worldMatrix[%d]"%(name,i)))
+
+            self.assertTrue(Gf.IsClose(bindXforms[i], worldMatrix, 1e-5))
+
+            xformMatrix = Gf.Matrix4d(
+                *cmds.getAttr("%s.xformMatrix[%d]"%(name,i)))
+            
+            self.assertTrue(Gf.IsClose(restXforms[i], xformMatrix, 1e-5))
 
             connections = cmds.listConnections(
                 "%s.parents[%d]"%(name, i),
@@ -149,7 +156,7 @@ class testUsdImportSkeleton(unittest.TestCase):
             else:
                 self.assertEqual(connections, [u"%s.world"%name])
 
-        self.assertTrue(cmds.getAttr("bindPose.bindPose"))
+        self.assertTrue(cmds.getAttr("%s.bindPose"%name))
 
 
     def _ValidateMeshTransform(self, name, usdSkinningQuery):
@@ -241,7 +248,11 @@ class testUsdImportSkeleton(unittest.TestCase):
         self.assertTrue(bindingSitePrim.IsA(UsdSkel.Root))
         
         skelCache.Populate(UsdSkel.Root(bindingSitePrim))
-        skelQuery = skelCache.GetSkelQuery(bindingSitePrim)
+
+        skel = UsdSkel.Skeleton.Get(stage, "/Root/Skeleton")
+        self.assertTrue(skel)
+
+        skelQuery = skelCache.GetSkelQuery(skel)
         self.assertTrue(skelQuery)
 
         meshPrim = stage.GetPrimAtPath("/Root/Cube")
@@ -258,7 +269,7 @@ class testUsdImportSkeleton(unittest.TestCase):
         self._ValidateJointTransforms(skelQuery, joints)
         self._ValidateJointBindPoses(skelQuery, joints)
 
-        self._ValidateBindPose("bindPose", skelQuery, joints)
+        self._ValidateBindPose("Skeleton_bindPose", skelQuery, joints)
 
         self._ValidateMeshTransform(meshPrim.GetName(), skinningQuery)
 
@@ -267,7 +278,7 @@ class testUsdImportSkeleton(unittest.TestCase):
             skinClusterName="skinCluster_{}".format(meshPrim.GetName()),
             groupPartsName="skinClusterGroupParts",
             groupIdName="skinClusterGroupId",
-            bindPoseName="bindPose",
+            bindPoseName="Skeleton_bindPose",
             meshName=meshPrim.GetName(),
             usdSkelQuery=skelQuery,
             usdSkinningQuery=skinningQuery)

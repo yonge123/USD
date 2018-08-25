@@ -154,7 +154,7 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
 
     const bool isPtex = GlfIsSupportedPtexTexture(filePath);
 
-    if (!TfPathExists(filePath)) {
+    if (asset.GetResolvedPath().empty()) {
         if (isPtex) {
             TF_WARN("Unable to find Texture '%s' with path '%s'. Fallback " 
                     "textures are not supported for ptex", 
@@ -213,6 +213,20 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
         filePath = TfToken(asset.GetAssetPath());
     }
 
+    // XXX : This is transitional code. Currently, only textures read
+    //       via UsdUVTexture have the origin at the lower left.
+    // Extract the id of the node and if it is a UsdUVTexture
+    // then we need to use the new coordinate system with (0,0)
+    // in the bottom left.
+    GlfImage::ImageOriginLocation origin = 
+        GlfImage::ImageOriginLocation::OriginUpperLeft;
+    TfToken id;
+    UsdAttribute attr1 = UsdShadeShader(usdPrim).GetIdAttr();
+    attr1.Get(&id);
+    if (id == UsdImagingTokens->UsdUVTexture) {
+        origin = GlfImage::ImageOriginLocation::OriginLowerLeft;
+    }
+
     const bool isPtex = GlfIsSupportedPtexTexture(filePath);
 
     HdWrap wrapS = _GetWrapS(usdPrim);
@@ -226,7 +240,7 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
             usdPath.GetText(),
             isPtex ? "true" : "false");
  
-    if (!TfPathExists(filePath)) {
+    if (asset.GetResolvedPath().empty()) {
         TF_DEBUG(USDIMAGING_TEXTURES).Msg(
                 "File does not exist, returning nullptr");
         TF_WARN("Unable to find Texture '%s' with path '%s'.", 
@@ -238,7 +252,7 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
     TfStopwatch timer;
     timer.Start();
     GlfTextureHandleRefPtr texture =
-        GlfTextureRegistry::GetInstance().GetTextureHandle(filePath);
+        GlfTextureRegistry::GetInstance().GetTextureHandle(filePath, origin);
 
     texResource = HdTextureResourceSharedPtr(
         new HdStSimpleTextureResource(texture, isPtex, wrapS, wrapT,

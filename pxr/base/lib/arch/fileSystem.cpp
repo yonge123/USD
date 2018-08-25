@@ -297,7 +297,7 @@ _NormPath(string const &inPath)
 } // anon
 
 string
-ArchNormPath(const string& inPath)
+ArchNormPath(const string& inPath, bool stripDriveSpecifier)
 {
 #if defined(ARCH_OS_WINDOWS)
     // Convert backslashes to forward slashes.
@@ -312,8 +312,10 @@ ArchNormPath(const string& inPath)
     // paths as keys in tables, etc.
     string prefix;
     if (path.size() >= 2 && path[1] == ':') {
-        prefix.assign(2, ':');
-        prefix[0] = std::tolower(path[0]);
+        if (!stripDriveSpecifier) {
+            prefix.assign(2, ':');
+            prefix[0] = std::tolower(path[0]);
+        }
         path.erase(0, 2);
     }
 
@@ -453,6 +455,51 @@ ArchGetFileLength(const char* fileName)
 }
 
 string
+ArchGetFileName(FILE *file)
+{
+#if defined (ARCH_OS_LINUX)
+    string result;
+    char buf[PATH_MAX];
+    ssize_t r = readlink(
+        ArchStringPrintf("/proc/self/fd/%d", fileno(file)).c_str(),
+        buf, sizeof(buf));
+    if (r != -1) {
+        result.assign(buf, buf + r);
+    }
+    return result;
+#elif defined (ARCH_OS_DARWIN)
+    string result;
+    char buf[MAXPATHLEN];
+    if (fcntl(fileno(file), F_GETPATH, buf) != -1) {
+        result = buf;
+    }
+    return result;
+#elif defined (ARCH_OS_WINDOWS)
+    static constexpr DWORD bufSize =
+        sizeof(FILE_NAME_INFO) + sizeof(WCHAR) * 4096;
+    HANDLE hfile = _FileToWinHANDLE(file);
+    auto fileNameInfo = reinterpret_cast<PFILE_NAME_INFO>(malloc(bufSize));
+    string result;
+    if (GetFileInformationByHandleEx(
+            hfile, FileNameInfo, static_cast<void *>(fileNameInfo), bufSize)) {
+        size_t outSize = WideCharToMultiByte(
+            CP_UTF8, 0, fileNameInfo->FileName,
+            fileNameInfo->FileNameLength/sizeof(WCHAR),
+            NULL, 0, NULL, NULL);
+        result.resize(outSize);
+        WideCharToMultiByte(
+            CP_UTF8, 0, fileNameInfo->FileName,
+            fileNameInfo->FileNameLength/sizeof(WCHAR),
+            &result.front(), outSize, NULL, NULL);
+    }
+    free(fileNameInfo);
+    return result;                                        
+#else
+#error Unknown system architecture
+#endif
+}
+
+string
 ArchMakeTmpFileName(const string& prefix, const string& suffix)
 {
     string  tmpDir = ArchGetTmpDir();
@@ -534,7 +581,7 @@ ArchMakeTmpFile(const std::string& tmpdir,
     int fd = -1;
     auto cTemplate =
         MakeUnique(sTemplate, [&fd](const char* name){
-            _sopen_s(&fd, name, _O_CREAT | _O_EXCL | _O_RDWR,
+            _sopen_s(&fd, name, _O_CREAT | _O_EXCL | _O_RDWR | _O_BINARY,
                      _SH_DENYNO, _S_IREAD | _S_IWRITE);
             return fd != -1;
         });
@@ -718,6 +765,49 @@ ArchMutableFileMapping
 ArchMapFileReadWrite(FILE *file, std::string *errMsg)
 {
     return Arch_MapFileImpl<ArchMutableFileMapping>(file, errMsg);
+}
+
+namespace
+{
+    
+struct _Fcloser
+{
+    void operator()(FILE *f) const
+    {
+        if (f) {
+            fclose(f);
+        }
+    }
+};
+
+using _UniqueFILE = std::unique_ptr<FILE, _Fcloser>;
+
+} // end anonymous namespace
+
+template <class Mapping>
+static inline Mapping
+Arch_MapFileImpl(std::string const& path, std::string *errMsg)
+{
+    _UniqueFILE f(ArchOpenFile(path.c_str(), "rb"));
+    if (!f) {
+        if (errMsg) {
+            *errMsg = ArchStrerror();
+        }
+        return Mapping();
+    }
+    return Arch_MapFileImpl<Mapping>(f.get(), errMsg);
+}
+
+ArchConstFileMapping
+ArchMapFileReadOnly(std::string const& path, std::string *errMsg)
+{
+    return Arch_MapFileImpl<ArchConstFileMapping>(path, errMsg);
+}
+
+ArchMutableFileMapping
+ArchMapFileReadWrite(std::string const& path, std::string *errMsg)
+{
+    return Arch_MapFileImpl<ArchMutableFileMapping>(path, errMsg);
 }
 
 ARCH_API

@@ -30,6 +30,8 @@
 #include "pxr/imaging/glf/textureHandle.h"
 #include "pxr/imaging/glf/image.h"
 
+#include "pxr/usd/ar/resolver.h"
+
 #include "pxr/base/arch/fileSystem.h"
 #include "pxr/base/tf/instantiateSingleton.h"
 #include "pxr/base/tf/stl.h"
@@ -124,7 +126,9 @@ GlfTextureRegistry::GetTextureHandle(GlfTextureRefPtr texture)
 {
     GlfTextureHandleRefPtr textureHandle;
 
-    {
+    // Texture maybe null if an error occured, don't
+    // add it to the registry in this case
+    if (texture) {
         std::map<GlfTexturePtr, GlfTextureHandlePtr>::iterator it =
             _textureRegistryNonShared.find(texture);
 
@@ -193,7 +197,7 @@ GlfTextureFactoryBase*
 GlfTextureRegistry::_GetTextureFactory(const TfToken &filename)
 {
     // Lookup the plug-in type name based on the file extension.
-    TfToken fileExtension(TfStringGetSuffix(filename));
+    TfToken fileExtension(ArGetResolver().GetExtension(filename));
 
     TfType pluginType = _typeMap->Find(fileExtension);
     if (!pluginType) {
@@ -298,19 +302,37 @@ GlfTextureRegistry::GetTextureInfos() const
 {
     std::vector<VtDictionary> result;
 
+    // In the event of errors, both texture handle or the texture the
+    // handle can point to can be null.
     for (TextureRegistryMap::value_type const& p : _textureRegistry) {
-        GlfTextureHandlePtr texture = p.second.GetHandle();
-        VtDictionary info = texture->GetTexture()->GetTextureInfo();
-        info["uniqueIdentifier"] = (uint64_t)texture.GetUniqueIdentifier();
-        result.push_back(info);
-    }
+        GlfTextureHandlePtr const &textureHandle = p.second.GetHandle();
+        if (textureHandle) {
+            GlfTexturePtr const &texture = textureHandle->GetTexture();
+            VtDictionary info;
+            if (texture) {
+                info = texture->GetTextureInfo(false);
+            }
 
-    for (TextureRegistryNonSharedMap::value_type const& p : _textureRegistryNonShared) {
+            info["uniqueIdentifier"] =
+                (uint64_t)textureHandle.GetUniqueIdentifier();
+            result.push_back(info);
+        }
+    }
+    for (TextureRegistryNonSharedMap::value_type const& p :
+            _textureRegistryNonShared) {
+        GlfTextureHandlePtr const &textureHandle = p.second;
+
         // note: Since textureRegistryNonShared stores weak ptr, we have to 
         // check whether it still exists here.
-        if (!p.second.IsExpired()) {
-            VtDictionary info = p.second->GetTexture()->GetTextureInfo();
-            info["uniqueIdentifier"] = (uint64_t)p.second->GetUniqueIdentifier();
+        if (!textureHandle.IsExpired()) {
+            GlfTexturePtr const &texture = textureHandle->GetTexture();
+
+            VtDictionary info;
+            if (texture) {
+                info = texture->GetTextureInfo(false);
+            }
+            info["uniqueIdentifier"] =
+                (uint64_t)textureHandle->GetUniqueIdentifier();
             result.push_back(info);
         }
     }

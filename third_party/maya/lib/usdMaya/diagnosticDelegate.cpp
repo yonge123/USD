@@ -39,7 +39,9 @@ TF_DEFINE_ENV_SETTING(PIXMAYA_DIAGNOSTICS_BATCH, true,
         "printed to stderr.");
 
 // Globally-shared delegate. Uses shared_ptr so we can have weak ptrs.
-static std::shared_ptr<PxrUsdMayaDiagnosticDelegate> _sharedDelegate;
+static std::shared_ptr<UsdMayaDiagnosticDelegate> _sharedDelegate;
+
+namespace {
 
 class _StatusOnlyDelegate : public UsdUtilsCoalescingDiagnosticDelegate {
     void IssueWarning(const TfWarning&) override {}
@@ -50,6 +52,8 @@ class _WarningOnlyDelegate : public UsdUtilsCoalescingDiagnosticDelegate {
     void IssueStatus(const TfStatus&) override {}
     void IssueFatalError(const TfCallContext&, const std::string&) override {}
 };
+
+} // anonymous namespace
 
 static MString
 _FormatDiagnostic(const TfDiagnosticBase& d)
@@ -84,12 +88,12 @@ _IsDiagnosticBatchingEnabled()
     return TfGetEnvSetting(PIXMAYA_DIAGNOSTICS_BATCH);
 }
 
-PxrUsdMayaDiagnosticDelegate::PxrUsdMayaDiagnosticDelegate() : _batchCount(0)
+UsdMayaDiagnosticDelegate::UsdMayaDiagnosticDelegate() : _batchCount(0)
 {
     TfDiagnosticMgr::GetInstance().AddDelegate(this);
 }
 
-PxrUsdMayaDiagnosticDelegate::~PxrUsdMayaDiagnosticDelegate()
+UsdMayaDiagnosticDelegate::~UsdMayaDiagnosticDelegate()
 {
     // If a batch context was open when the delegate is removed, we need to
     // flush all the batched diagnostics in order to avoid losing any.
@@ -100,7 +104,7 @@ PxrUsdMayaDiagnosticDelegate::~PxrUsdMayaDiagnosticDelegate()
 }
 
 void
-PxrUsdMayaDiagnosticDelegate::IssueError(const TfError& err)
+UsdMayaDiagnosticDelegate::IssueError(const TfError& err)
 {
     // Errors are never batched. They should be rare, and in those cases, we
     // want to see them separately.
@@ -115,7 +119,7 @@ PxrUsdMayaDiagnosticDelegate::IssueError(const TfError& err)
 }
 
 void
-PxrUsdMayaDiagnosticDelegate::IssueStatus(const TfStatus& status)
+UsdMayaDiagnosticDelegate::IssueStatus(const TfStatus& status)
 {
     if (_batchCount.load() > 0) {
         return; // Batched.
@@ -130,7 +134,7 @@ PxrUsdMayaDiagnosticDelegate::IssueStatus(const TfStatus& status)
 }
 
 void
-PxrUsdMayaDiagnosticDelegate::IssueWarning(const TfWarning& warning)
+UsdMayaDiagnosticDelegate::IssueWarning(const TfWarning& warning)
 {
     if (_batchCount.load() > 0) {
         return; // Batched.
@@ -145,7 +149,7 @@ PxrUsdMayaDiagnosticDelegate::IssueWarning(const TfWarning& warning)
 }
 
 void
-PxrUsdMayaDiagnosticDelegate::IssueFatalError(
+UsdMayaDiagnosticDelegate::IssueFatalError(
     const TfCallContext& context,
     const std::string& msg)
 {
@@ -160,17 +164,17 @@ PxrUsdMayaDiagnosticDelegate::IssueFatalError(
 
 /* static */
 void
-PxrUsdMayaDiagnosticDelegate::InstallDelegate()
+UsdMayaDiagnosticDelegate::InstallDelegate()
 {
     if (!ArchIsMainThread()) {
         TF_FATAL_CODING_ERROR("Cannot install delegate from secondary thread");
     }
-    _sharedDelegate.reset(new PxrUsdMayaDiagnosticDelegate());
+    _sharedDelegate.reset(new UsdMayaDiagnosticDelegate());
 }
 
 /* static */
 void
-PxrUsdMayaDiagnosticDelegate::RemoveDelegate()
+UsdMayaDiagnosticDelegate::RemoveDelegate()
 {
     if (!ArchIsMainThread()) {
         TF_FATAL_CODING_ERROR("Cannot remove delegate from secondary thread");
@@ -180,9 +184,9 @@ PxrUsdMayaDiagnosticDelegate::RemoveDelegate()
 
 /* static */
 int
-PxrUsdMayaDiagnosticDelegate::GetBatchCount()
+UsdMayaDiagnosticDelegate::GetBatchCount()
 {
-    if (std::shared_ptr<PxrUsdMayaDiagnosticDelegate> ptr = _sharedDelegate) {
+    if (std::shared_ptr<UsdMayaDiagnosticDelegate> ptr = _sharedDelegate) {
         return ptr->_batchCount.load();
     }
 
@@ -191,7 +195,7 @@ PxrUsdMayaDiagnosticDelegate::GetBatchCount()
 }
 
 void
-PxrUsdMayaDiagnosticDelegate::_StartBatch()
+UsdMayaDiagnosticDelegate::_StartBatch()
 {
     TF_AXIOM(ArchIsMainThread());
 
@@ -203,7 +207,7 @@ PxrUsdMayaDiagnosticDelegate::_StartBatch()
 }
 
 void
-PxrUsdMayaDiagnosticDelegate::_EndBatch()
+UsdMayaDiagnosticDelegate::_EndBatch()
 {
     TF_AXIOM(ArchIsMainThread());
 
@@ -221,7 +225,7 @@ PxrUsdMayaDiagnosticDelegate::_EndBatch()
 }
 
 void
-PxrUsdMayaDiagnosticDelegate::_FlushBatch()
+UsdMayaDiagnosticDelegate::_FlushBatch()
 {
     TF_AXIOM(ArchIsMainThread());
 
@@ -244,25 +248,25 @@ PxrUsdMayaDiagnosticDelegate::_FlushBatch()
     }
 }
 
-PxrUsdMayaDiagnosticBatchContext::PxrUsdMayaDiagnosticBatchContext()
+UsdMayaDiagnosticBatchContext::UsdMayaDiagnosticBatchContext()
     : _delegate(_IsDiagnosticBatchingEnabled() ? _sharedDelegate : nullptr)
 {
     TF_DEBUG(PXRUSDMAYA_DIAGNOSTICS).Msg(">> Entering batch context\n");
     if (!ArchIsMainThread()) {
         TF_FATAL_CODING_ERROR("Cannot construct context on secondary thread");
     }
-    if (std::shared_ptr<PxrUsdMayaDiagnosticDelegate> ptr = _delegate.lock()) {
+    if (std::shared_ptr<UsdMayaDiagnosticDelegate> ptr = _delegate.lock()) {
         ptr->_StartBatch();
     }
 }
 
-PxrUsdMayaDiagnosticBatchContext::~PxrUsdMayaDiagnosticBatchContext()
+UsdMayaDiagnosticBatchContext::~UsdMayaDiagnosticBatchContext()
 {
     TF_DEBUG(PXRUSDMAYA_DIAGNOSTICS).Msg("!! Exiting batch context\n");
     if (!ArchIsMainThread()) {
         TF_FATAL_CODING_ERROR("Cannot destruct context on secondary thread");
     }
-    if (std::shared_ptr<PxrUsdMayaDiagnosticDelegate> ptr = _delegate.lock()) {
+    if (std::shared_ptr<UsdMayaDiagnosticDelegate> ptr = _delegate.lock()) {
         ptr->_EndBatch();
     }
 }

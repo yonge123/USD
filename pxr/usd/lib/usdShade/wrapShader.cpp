@@ -83,14 +83,6 @@ void wrapUsdShadeShader()
         .def("Define", &This::Define, (arg("stage"), arg("path")))
         .staticmethod("Define")
 
-        .def("IsConcrete",
-            static_cast<bool (*)(void)>( [](){ return This::IsConcrete; }))
-        .staticmethod("IsConcrete")
-
-        .def("IsTyped",
-            static_cast<bool (*)(void)>( [](){ return This::IsTyped; } ))
-        .staticmethod("IsTyped")
-
         .def("GetSchemaAttributeNames",
              &This::GetSchemaAttributeNames,
              arg("includeInherited")=true,
@@ -143,6 +135,7 @@ void wrapUsdShadeShader()
 // --(BEGIN CUSTOM CODE)--
 
 #include "pxr/usd/usdShade/connectableAPI.h"
+#include <boost/python/return_internal_reference.hpp>
 
 namespace {
 
@@ -180,6 +173,8 @@ _WrapGetSourceCode(const UsdShadeShader &shader,
 
 WRAP_CUSTOM {
     _class
+        .def(init<UsdShadeConnectableAPI>(arg("connectable")))
+
         .def("ConnectableAPI", &UsdShadeShader::ConnectableAPI)
 
         .def("GetImplementationSource", &UsdShadeShader::GetImplementationSource)
@@ -198,6 +193,28 @@ WRAP_CUSTOM {
         .def("GetSourceCode", _WrapGetSourceCode, 
              arg("sourceType")=UsdShadeTokens->universalSourceType)
 
+        .def("GetShaderMetadata", &UsdShadeShader::GetShaderMetadata)
+        .def("GetShaderMetadataByKey", &UsdShadeShader::GetShaderMetadataByKey,
+             (arg("key")))
+
+        .def("SetShaderMetadata", &UsdShadeShader::SetShaderMetadata,
+             (arg("shaderMetadata")))
+        .def("SetShaderMetadataByKey", &UsdShadeShader::SetShaderMetadataByKey,
+             (arg("key"), arg("value")))
+
+        .def("HasShaderMetadata", &UsdShadeShader::HasShaderMetadata)
+        .def("HasShaderMetadataByKey", &UsdShadeShader::HasShaderMetadataByKey,
+             (arg("key")))
+
+        .def("ClearShaderMetadata", &UsdShadeShader::ClearShaderMetadata)
+        .def("ClearShaderMetadataByKey", 
+             &UsdShadeShader::ClearShaderMetadataByKey, (arg("key")))
+
+        .def("GetShaderNodeForSourceType", 
+             &UsdShadeShader::GetShaderNodeForSourceType,
+             (arg("sourceType")),
+             return_internal_reference<>())
+
         .def("CreateOutput", &UsdShadeShader::CreateOutput,
              (arg("name"), arg("type")))
         .def("GetOutput", &UsdShadeShader::GetOutput, arg("name"))
@@ -211,8 +228,6 @@ WRAP_CUSTOM {
              return_value_policy<TfPySequenceToList>())
 
         ;
-
-    implicitly_convertible<UsdShadeShader, UsdShadeConnectableAPI>();
 }
 
 } // anonymous namespace

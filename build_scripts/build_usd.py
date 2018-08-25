@@ -102,7 +102,15 @@ def GetVisualStudioCompilerAndVersion():
             return (msvcCompiler, tuple(int(v) for v in match.groups()))
     return None
 
-MSVC_2017_COMPILER_VERSION = (19, 10, 00000)
+
+def IsVisualStudio2017OrGreater():
+    MSVC_2017_COMPILER_VERSION = (19, 10, 00000)
+    msvcCompilerAndVersion = GetVisualStudioCompilerAndVersion()
+    if msvcCompilerAndVersion:
+        _, version = msvcCompilerAndVersion
+        return version >= MSVC_2017_COMPILER_VERSION
+    return False
+
 
 def GetCPUCount():
     try:
@@ -196,13 +204,10 @@ def RunCMake(context, force, extraArgs = None):
     # On Windows, we need to explicitly specify the generator to ensure we're
     # building a 64-bit project. (Surely there is a better way to do this?)
     if generator is None and Windows():
-        msvcCompilerAndVersion = GetVisualStudioCompilerAndVersion()
-        if msvcCompilerAndVersion:
-            _, version = msvcCompilerAndVersion
-            if version >= MSVC_2017_COMPILER_VERSION:
-                generator = "Visual Studio 15 2017 Win64"
-            else:
-                generator = "Visual Studio 14 2015 Win64"
+        if IsVisualStudio2017OrGreater():
+            generator = "Visual Studio 15 2017 Win64"
+        else:
+            generator = "Visual Studio 14 2015 Win64"
 
     if generator is not None:
         generator = '-G "{gen}"'.format(gen=generator)
@@ -442,8 +447,24 @@ ZLIB = Dependency("zlib", InstallZlib, "include/zlib.h")
 
 if Linux():
     BOOST_URL = "http://downloads.sourceforge.net/project/boost/boost/1.55.0/boost_1_55_0.tar.gz"
-elif Windows() or MacOS():
+    BOOST_VERSION_FILE = "include/boost/version.hpp"
+elif MacOS():
     BOOST_URL = "http://downloads.sourceforge.net/project/boost/boost/1.61.0/boost_1_61_0.tar.gz"
+    BOOST_VERSION_FILE = "include/boost/version.hpp"
+elif Windows():
+    BOOST_URL = "http://downloads.sourceforge.net/project/boost/boost/1.61.0/boost_1_61_0.tar.gz"
+    # The default installation of boost on Windows puts headers in a versioned 
+    # subdirectory, which we have to account for here. In theory, specifying 
+    # "layout=system" would make the Windows install match Linux/MacOS, but that 
+    # causes problems for other dependencies that look for boost.
+    BOOST_VERSION_FILE = "include/boost-1_61/boost/version.hpp"
+
+    # On Visual Studio 2017 we need at least boost 1.65.1
+    if IsVisualStudio2017OrGreater():
+        BOOST_URL = "http://downloads.sourceforge.net/project/boost/boost/1.65.1/boost_1_65_1.tar.gz"
+        BOOST_VERSION_FILE = "include/boost-1_65_1/boost/version.hpp"
+
+
 
 def InstallBoost(context, force, buildArgs):
     # Documentation files in the boost archive can have exceptionally
@@ -488,20 +509,11 @@ def InstallBoost(context, force, buildArgs):
             b2_settings.append("-a")
 
         if Windows():
-            b2_settings.append("toolset=msvc-14.0")
-            
-            # Boost 1.61 doesn't support Visual Studio 2017.  If that's what 
-            # we're using then patch the project-config.jam file to hack in 
-            # support. We'll get a lot of messages about an unknown compiler 
-            # version but it will build.
-            msvcCompilerAndVersion = GetVisualStudioCompilerAndVersion()
-            if msvcCompilerAndVersion:
-                compiler, version = msvcCompilerAndVersion
-                if version >= MSVC_2017_COMPILER_VERSION:
-                    PatchFile('project-config.jam',
-                              [('using msvc', 
-                                'using msvc : 14.0 : "{compiler}"'
-                                .format(compiler=compiler))])
+
+            if IsVisualStudio2017OrGreater():
+                b2_settings.append("toolset=msvc-14.1")
+            else:
+                b2_settings.append("toolset=msvc-14.0")
 
         if MacOS():
             # Must specify toolset=clang to ensure install_name for boost
@@ -515,14 +527,7 @@ def InstallBoost(context, force, buildArgs):
         Run('{b2} {options} install'
             .format(b2=b2, options=" ".join(b2_settings)))
 
-# The default installation of boost on Windows puts headers in a versioned 
-# subdirectory, which we have to account for here. In theory, specifying 
-# "layout=system" would make the Windows install match Linux/MacOS, but that 
-# causes problems for other dependencies that look for boost.
-if Windows():
-    BOOST = Dependency("boost", InstallBoost, "include/boost-1_61/boost/version.hpp")
-else:
-    BOOST = Dependency("boost", InstallBoost, "include/boost/version.hpp")
+BOOST = Dependency("boost", InstallBoost, BOOST_VERSION_FILE)
 
 ############################################################
 # Intel TBB
@@ -896,7 +901,7 @@ ALEMBIC = Dependency("Alembic", InstallAlembic, "include/Alembic/Abc/Base.h")
 ############################################################
 # MaterialX
 
-MATERIALX_URL = "https://github.com/materialx/MaterialX/archive/v1.35.5.zip"
+MATERIALX_URL = "https://github.com/materialx/MaterialX/archive/v1.36.0.zip"
 
 def InstallMaterialX(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(MATERIALX_URL, context, force)):
@@ -945,6 +950,12 @@ def InstallUSD(context, force, buildArgs):
                 extraArgs.append('-DPXR_BUILD_EMBREE_PLUGIN=ON')
             else:
                 extraArgs.append('-DPXR_BUILD_EMBREE_PLUGIN=OFF')
+            
+            if context.buildOIIO:
+                extraArgs.append('-DPXR_BUILD_OPENIMAGEIO_PLUGIN=ON')
+            else:
+                extraArgs.append('-DPXR_BUILD_OPENIMAGEIO_PLUGIN=OFF')
+                
         else:
             extraArgs.append('-DPXR_BUILD_IMAGING=OFF')
 
@@ -1159,6 +1170,12 @@ subgroup.add_argument("--no-embree", dest="build_embree", action="store_false",
                       help="Do not build Embree sample imaging plugin (default)")
 group.add_argument("--embree-location", type=str,
                    help="Directory where Embree is installed.")
+subgroup = group.add_mutually_exclusive_group()
+subgroup.add_argument("--openimageio", dest="build_oiio", action="store_true", 
+                      default=False,
+                      help="Build OpenImageIO plugin for USD")
+subgroup.add_argument("--no-openimageio", dest="build_oiio", action="store_false",
+                      help="Do not build OpenImageIO plugin for USD (default)")
 
 group = parser.add_argument_group(title="Alembic Plugin Options")
 subgroup = group.add_mutually_exclusive_group()
@@ -1300,6 +1317,7 @@ class InstallContext:
         self.buildEmbree = self.buildImaging and args.build_embree
         self.embreeLocation = (os.path.abspath(args.embree_location)
                                if args.embree_location else None)
+        self.buildOIIO = args.build_oiio
 
         # - Alembic Plugin
         self.buildAlembic = args.build_alembic
@@ -1373,8 +1391,11 @@ if context.buildImaging:
     if context.enablePtex:
         requiredDependencies += [PTEX]
 
-    requiredDependencies += [JPEG, TIFF, PNG, OPENEXR, GLEW, 
-                             OPENIMAGEIO, OPENSUBDIV]
+    requiredDependencies += [OPENEXR, GLEW, 
+                             OPENSUBDIV]
+    
+    if context.buildOIIO:
+        requiredDependencies += [JPEG, TIFF, PNG, OPENIMAGEIO]
                              
 if context.buildUsdview:
     requiredDependencies += [PYOPENGL, PYSIDE]
@@ -1493,6 +1514,7 @@ Building with settings:
   Building                      {buildType}
     Imaging                     {buildImaging}
       Ptex support:             {enablePtex}
+      OpenImageIO support:      {buildOIIO} 
     UsdImaging                  {buildUsdImaging}
       usdview:                  {buildUsdview}
     Python support              {buildPython}
@@ -1538,6 +1560,7 @@ summaryMsg = summaryMsg.format(
                else ""),
     buildImaging=("On" if context.buildImaging else "Off"),
     enablePtex=("On" if context.enablePtex else "Off"),
+    buildOIIO=("On" if context.buildOIIO else "Off"),
     buildUsdImaging=("On" if context.buildUsdImaging else "Off"),
     buildUsdview=("On" if context.buildUsdview else "Off"),
     buildPython=("On" if context.buildPython else "Off"),

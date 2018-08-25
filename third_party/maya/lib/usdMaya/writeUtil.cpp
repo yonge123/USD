@@ -27,11 +27,10 @@
 #include "usdMaya/colorSpace.h"
 #include "usdMaya/translatorUtil.h"
 #include "usdMaya/adaptor.h"
-#include "usdMaya/UserTaggedAttribute.h"
+#include "usdMaya/userTaggedAttribute.h"
 
 #include "pxr/base/gf/gamma.h"
 #include "pxr/base/gf/rotation.h"
-#include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/token.h"
 #include "pxr/base/vt/types.h"
 #include "pxr/base/tf/envSetting.h"
@@ -64,7 +63,6 @@
 #include <maya/MFnUnitAttribute.h>
 #include <maya/MFnVectorArrayData.h>
 #include <maya/MFnAttribute.h>
-#include <maya/MGlobal.h>
 #include <maya/MMatrix.h>
 #include <maya/MPlug.h>
 #include <maya/MPoint.h>
@@ -126,7 +124,7 @@ _GetMayaAttributeNumericTypedAndUnitDataTypes(
 }
 
 bool
-PxrUsdMayaWriteUtil::WriteUVAsFloat2()
+UsdMayaWriteUtil::WriteUVAsFloat2()
 {
     static const bool writeUVAsFloat2 = 
         TfGetEnvSetting(PIXMAYA_WRITE_UV_AS_FLOAT2);
@@ -134,7 +132,7 @@ PxrUsdMayaWriteUtil::WriteUVAsFloat2()
 }
 
 SdfValueTypeName
-PxrUsdMayaWriteUtil::GetUsdTypeName(
+UsdMayaWriteUtil::GetUsdTypeName(
         const MPlug& attrPlug,
         const bool translateMayaDoubleToUsdSinglePrecision)
 {
@@ -317,7 +315,7 @@ PxrUsdMayaWriteUtil::GetUsdTypeName(
 
 /* static */
 UsdAttribute
-PxrUsdMayaWriteUtil::GetOrCreateUsdAttr(
+UsdMayaWriteUtil::GetOrCreateUsdAttr(
         const MPlug& attrPlug,
         const UsdPrim& usdPrim,
         const std::string& attrName,
@@ -334,10 +332,10 @@ PxrUsdMayaWriteUtil::GetOrCreateUsdAttr(
 
     TfToken usdAttrNameToken(attrName);
     if (usdAttrNameToken.IsEmpty()) {
-        MGlobal::displayError(
-            TfStringPrintf("Invalid USD attribute name '%s' for Maya plug '%s'",
-                           attrName.c_str(),
-                           attrPlug.name().asChar()).c_str());
+        TF_RUNTIME_ERROR(
+                "Invalid USD attribute name '%s' for Maya plug '%s'",
+                attrName.c_str(),
+                attrPlug.name().asChar());
         return usdAttr;
     }
 
@@ -348,7 +346,7 @@ PxrUsdMayaWriteUtil::GetOrCreateUsdAttr(
     }
 
     const SdfValueTypeName& typeName =
-        PxrUsdMayaWriteUtil::GetUsdTypeName(attrPlug,
+        UsdMayaWriteUtil::GetUsdTypeName(attrPlug,
                                             translateMayaDoubleToUsdSinglePrecision);
     if (typeName) {
         usdAttr = usdPrim.CreateAttribute(usdAttrNameToken, typeName, custom);
@@ -358,7 +356,7 @@ PxrUsdMayaWriteUtil::GetOrCreateUsdAttr(
 }
 
 /* static */
-UsdGeomPrimvar PxrUsdMayaWriteUtil::GetOrCreatePrimvar(
+UsdGeomPrimvar UsdMayaWriteUtil::GetOrCreatePrimvar(
         const MPlug& attrPlug,
         UsdGeomImageable& imageable,
         const std::string& primvarName,
@@ -376,10 +374,10 @@ UsdGeomPrimvar PxrUsdMayaWriteUtil::GetOrCreatePrimvar(
 
     TfToken primvarNameToken(primvarName);
     if (primvarNameToken.IsEmpty()) {
-        MGlobal::displayError(
-            TfStringPrintf("Invalid primvar name '%s' for Maya plug '%s'",
-                           primvarName.c_str(),
-                           attrPlug.name().asChar()).c_str());
+        TF_RUNTIME_ERROR(
+                "Invalid primvar name '%s' for Maya plug '%s'",
+                primvarName.c_str(),
+                attrPlug.name().asChar());
         return primvar;
     }
 
@@ -390,7 +388,7 @@ UsdGeomPrimvar PxrUsdMayaWriteUtil::GetOrCreatePrimvar(
     }
 
     const SdfValueTypeName& typeName =
-        PxrUsdMayaWriteUtil::GetUsdTypeName(attrPlug,
+        UsdMayaWriteUtil::GetUsdTypeName(attrPlug,
                                             translateMayaDoubleToUsdSinglePrecision);
     if (typeName) {
         primvar = imageable.CreatePrimvar(primvarNameToken,
@@ -403,7 +401,7 @@ UsdGeomPrimvar PxrUsdMayaWriteUtil::GetOrCreatePrimvar(
 }
 
 /* static */
-UsdAttribute PxrUsdMayaWriteUtil::GetOrCreateUsdRiAttribute(
+UsdAttribute UsdMayaWriteUtil::GetOrCreateUsdRiAttribute(
         const MPlug& attrPlug,
         const UsdPrim& usdPrim,
         const std::string& attrName,
@@ -420,10 +418,10 @@ UsdAttribute PxrUsdMayaWriteUtil::GetOrCreateUsdRiAttribute(
 
     TfToken riAttrNameToken(attrName);
     if (riAttrNameToken.IsEmpty()) {
-        MGlobal::displayError(
-            TfStringPrintf("Invalid UsdRi attribute name '%s' for Maya plug '%s'",
-                           attrName.c_str(),
-                           attrPlug.name().asChar()).c_str());
+        TF_RUNTIME_ERROR(
+                "Invalid UsdRi attribute name '%s' for Maya plug '%s'",
+                attrName.c_str(),
+                attrPlug.name().asChar());
         return usdAttr;
     }
 
@@ -442,10 +440,10 @@ UsdAttribute PxrUsdMayaWriteUtil::GetOrCreateUsdRiAttribute(
     }
 
     const SdfValueTypeName& typeName =
-        PxrUsdMayaWriteUtil::GetUsdTypeName(attrPlug,
+        UsdMayaWriteUtil::GetUsdTypeName(attrPlug,
                                             translateMayaDoubleToUsdSinglePrecision);
     if (typeName) {
-        riStatements = PxrUsdMayaTranslatorUtil::GetAPISchemaForAuthoring<
+        riStatements = UsdMayaTranslatorUtil::GetAPISchemaForAuthoring<
                 UsdRiStatementsAPI>(usdPrim);
         usdAttr = riStatements.CreateRiAttribute(riAttrNameToken,
                                                  typeName.GetType(),
@@ -474,12 +472,12 @@ _ConvertVec(
         const TfToken& role,
         const T& val) {
     return VtValue(role == SdfValueRoleNames->Color
-            ? PxrUsdMayaColorSpace::ConvertMayaToLinear(val)
+            ? UsdMayaColorSpace::ConvertMayaToLinear(val)
             : val);
 }
 
 VtValue
-PxrUsdMayaWriteUtil::GetVtValue(
+UsdMayaWriteUtil::GetVtValue(
         const MPlug& attrPlug,
         const SdfValueTypeName& typeName)
 {
@@ -488,7 +486,7 @@ PxrUsdMayaWriteUtil::GetVtValue(
     return GetVtValue(attrPlug, type, role);
 }
 VtValue
-PxrUsdMayaWriteUtil::GetVtValue(
+UsdMayaWriteUtil::GetVtValue(
         const MPlug& attrPlug,
         const TfType& type,
         const TfToken& role)
@@ -846,7 +844,7 @@ PxrUsdMayaWriteUtil::GetVtValue(
 }
 
 bool
-PxrUsdMayaWriteUtil::SetUsdAttr(
+UsdMayaWriteUtil::SetUsdAttr(
         const MPlug& attrPlug,
         const UsdAttribute& usdAttr,
         const UsdTimeCode& usdTime,
@@ -907,15 +905,15 @@ PxrUsdMayaWriteUtil::SetUsdAttr(
 // visited and warning about subsequent attribute tags.
 //
 bool
-PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
+UsdMayaWriteUtil::WriteUserExportedAttributes(
         const MDagPath& dagPath,
         const UsdPrim& usdPrim,
         const UsdTimeCode& usdTime,
         UsdUtilsSparseValueWriter *valueWriter)
 {
-    std::vector<PxrUsdMayaUserTaggedAttribute> exportedAttributes =
-        PxrUsdMayaUserTaggedAttribute::GetUserTaggedAttributesForNode(dagPath);
-    for (const PxrUsdMayaUserTaggedAttribute& attr : exportedAttributes) {
+    std::vector<UsdMayaUserTaggedAttribute> exportedAttributes =
+        UsdMayaUserTaggedAttribute::GetUserTaggedAttributesForNode(dagPath);
+    for (const UsdMayaUserTaggedAttribute& attr : exportedAttributes) {
         const std::string& usdAttrName = attr.GetUsdName();
         const TfToken& usdAttrType = attr.GetUsdType();
         const TfToken& interpolation = attr.GetUsdInterpolation();
@@ -925,17 +923,17 @@ PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
         UsdAttribute usdAttr;
 
         if (usdAttrType ==
-                    PxrUsdMayaUserTaggedAttributeTokens->USDAttrTypePrimvar) {
+                    UsdMayaUserTaggedAttributeTokens->USDAttrTypePrimvar) {
             UsdGeomImageable imageable(usdPrim);
             if (!imageable) {
-                MGlobal::displayError(
-                    TfStringPrintf(
-                        "Cannot create primvar for non-UsdGeomImageable USD prim: '%s'",
-                        usdPrim.GetPath().GetText()).c_str());
+                TF_RUNTIME_ERROR(
+                        "Cannot create primvar for non-UsdGeomImageable USD "
+                        "prim <%s>",
+                        usdPrim.GetPath().GetText());
                 continue;
             }
             UsdGeomPrimvar primvar =
-                PxrUsdMayaWriteUtil::GetOrCreatePrimvar(attrPlug,
+                UsdMayaWriteUtil::GetOrCreatePrimvar(attrPlug,
                                                         imageable,
                                                         usdAttrName,
                                                         interpolation,
@@ -945,15 +943,15 @@ PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
                 usdAttr = primvar.GetAttr();
             }
         } else if (usdAttrType ==
-                    PxrUsdMayaUserTaggedAttributeTokens->USDAttrTypeUsdRi) {
+                    UsdMayaUserTaggedAttributeTokens->USDAttrTypeUsdRi) {
             usdAttr =
-                PxrUsdMayaWriteUtil::GetOrCreateUsdRiAttribute(attrPlug,
+                UsdMayaWriteUtil::GetOrCreateUsdRiAttribute(attrPlug,
                                                                usdPrim,
                                                                usdAttrName,
                                                                "user",
                                                                translateMayaDoubleToUsdSinglePrecision);
         } else {
-            usdAttr = PxrUsdMayaWriteUtil::GetOrCreateUsdAttr(attrPlug,
+            usdAttr = UsdMayaWriteUtil::GetOrCreateUsdAttr(attrPlug,
                                                               usdPrim,
                                                               usdAttrName,
                                                               true,
@@ -961,21 +959,21 @@ PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
         }
 
         if (usdAttr) {
-            if (!PxrUsdMayaWriteUtil::SetUsdAttr(attrPlug,
+            if (!UsdMayaWriteUtil::SetUsdAttr(attrPlug,
                                                  usdAttr,
                                                  usdTime,
                                                  valueWriter)) {
-                MGlobal::displayError(
-                    TfStringPrintf("Could not set value for attribute: '%s'",
-                                   usdAttr.GetPath().GetText()).c_str());
+                TF_RUNTIME_ERROR(
+                        "Could not set value for attribute <%s>",
+                        usdAttr.GetPath().GetText());
                 continue;
             }
         } else {
-            MGlobal::displayError(
-                TfStringPrintf("Could not create attribute '%s' for USD prim: '%s'",
-                               usdAttrName.c_str(),
-                               usdPrim.GetPath().GetText()).c_str());
-                continue;
+            TF_RUNTIME_ERROR(
+                    "Could not create attribute '%s' for USD prim <%s>",
+                    usdAttrName.c_str(),
+                    usdPrim.GetPath().GetText());
+            continue;
         }
     }
 
@@ -984,11 +982,11 @@ PxrUsdMayaWriteUtil::WriteUserExportedAttributes(
 
 /* static */
 bool
-PxrUsdMayaWriteUtil::WriteMetadataToPrim(
+UsdMayaWriteUtil::WriteMetadataToPrim(
     const MObject& mayaObject,
     const UsdPrim& prim)
 {
-    PxrUsdMayaAdaptor adaptor(mayaObject);
+    UsdMayaAdaptor adaptor(mayaObject);
     if (!adaptor) {
         return false;
     }
@@ -1001,22 +999,22 @@ PxrUsdMayaWriteUtil::WriteMetadataToPrim(
 
 /* static */
 bool
-PxrUsdMayaWriteUtil::WriteAPISchemaAttributesToPrim(
+UsdMayaWriteUtil::WriteAPISchemaAttributesToPrim(
     const MObject& mayaObject,
     const UsdPrim& prim,
     UsdUtilsSparseValueWriter *valueWriter)    
 {
-    PxrUsdMayaAdaptor adaptor(mayaObject);
+    UsdMayaAdaptor adaptor(mayaObject);
     if (!adaptor) {
         return false;
     }
 
     for (const TfToken& schemaName : adaptor.GetAppliedSchemas()) {
-        if (const PxrUsdMayaAdaptor::SchemaAdaptor schemaAdaptor =
+        if (const UsdMayaAdaptor::SchemaAdaptor schemaAdaptor =
                 adaptor.GetSchemaByName(schemaName)) {
             for (const TfToken& attrName :
                     schemaAdaptor.GetAuthoredAttributeNames()) {
-                if (const PxrUsdMayaAdaptor::AttributeAdaptor attrAdaptor =
+                if (const UsdMayaAdaptor::AttributeAdaptor attrAdaptor =
                         schemaAdaptor.GetAttribute(attrName)) {
                     VtValue value;
                     if (attrAdaptor.Get(&value)) {
@@ -1039,24 +1037,19 @@ PxrUsdMayaWriteUtil::WriteAPISchemaAttributesToPrim(
 
 /* static */
 size_t
-PxrUsdMayaWriteUtil::WriteSchemaAttributesToPrim(
-    const MObject& shapeObject,
-    const MObject& transformObject,
+UsdMayaWriteUtil::WriteSchemaAttributesToPrim(
+    const MObject& object,
     const UsdPrim& prim,
     const TfType& schemaType,
     const std::vector<TfToken>& attributeNames,
     const UsdTimeCode& usdTime,
     UsdUtilsSparseValueWriter *valueWriter)
 {
-    PxrUsdMayaAdaptor::SchemaAdaptor shapeSchema;
-    if (PxrUsdMayaAdaptor adaptor = PxrUsdMayaAdaptor(shapeObject)) {
-        shapeSchema = adaptor.GetSchemaOrInheritedSchema(schemaType);
+    UsdMayaAdaptor::SchemaAdaptor schema;
+    if (UsdMayaAdaptor adaptor = UsdMayaAdaptor(object)) {
+        schema = adaptor.GetSchemaOrInheritedSchema(schemaType);
     }
-    PxrUsdMayaAdaptor::SchemaAdaptor transformSchema;
-    if (PxrUsdMayaAdaptor adaptor = PxrUsdMayaAdaptor(transformObject)) {
-        transformSchema = adaptor.GetSchemaOrInheritedSchema(schemaType);
-    }
-    if (!shapeSchema && !transformSchema) {
+    if (!schema) {
         return 0;
     }
 
@@ -1064,23 +1057,10 @@ PxrUsdMayaWriteUtil::WriteSchemaAttributesToPrim(
     for (const TfToken& attrName : attributeNames) {
         VtValue value;
         SdfAttributeSpecHandle attrDef;
-
-        // Prefer value on shape node.
-        if (shapeSchema) {
-            if (PxrUsdMayaAdaptor::AttributeAdaptor attr =
-                    shapeSchema.GetAttribute(attrName)) {
-                attr.Get(&value);
-                attrDef = attr.GetAttributeDefinition();
-            }
-        }
-
-        // If we don't have a value yet, go on to the transform.
-        if (value.IsEmpty() && transformSchema) {
-            if (PxrUsdMayaAdaptor::AttributeAdaptor attr =
-                    transformSchema.GetAttribute(attrName)) {
-                attr.Get(&value);
-                attrDef = attr.GetAttributeDefinition();
-            }
+        if (UsdMayaAdaptor::AttributeAdaptor attr =
+                schema.GetAttribute(attrName)) {
+            attr.Get(&value);
+            attrDef = attr.GetAttributeDefinition();
         }
 
         if (!value.IsEmpty() && attrDef) {
@@ -1100,7 +1080,7 @@ PxrUsdMayaWriteUtil::WriteSchemaAttributesToPrim(
 
 // static
 bool
-PxrUsdMayaWriteUtil::WriteClassInherits(
+UsdMayaWriteUtil::WriteClassInherits(
         const UsdPrim& prim,
         const std::vector<std::string>& classNamesToInherit)
 {
@@ -1141,7 +1121,7 @@ _MapMayaToVtArray(
 
 // static
 bool
-PxrUsdMayaWriteUtil::WriteArrayAttrsToInstancer(
+UsdMayaWriteUtil::WriteArrayAttrsToInstancer(
     MFnArrayAttrsData& inputPointsData,
     const UsdGeomPointInstancer& instancer,
     const size_t numPrototypes,
@@ -1305,7 +1285,7 @@ PxrUsdMayaWriteUtil::WriteArrayAttrsToInstancer(
 }
 
 bool
-PxrUsdMayaWriteUtil::ReadMayaAttribute(
+UsdMayaWriteUtil::ReadMayaAttribute(
         const MFnDependencyNode& depNode,
         const MString& name,
         std::string* val)
@@ -1329,7 +1309,7 @@ PxrUsdMayaWriteUtil::ReadMayaAttribute(
 }
 
 bool
-PxrUsdMayaWriteUtil::ReadMayaAttribute(
+UsdMayaWriteUtil::ReadMayaAttribute(
         const MFnDependencyNode& depNode,
         const MString& name,
         std::vector<std::string>* val)
@@ -1361,7 +1341,7 @@ PxrUsdMayaWriteUtil::ReadMayaAttribute(
 }
 
 bool
-PxrUsdMayaWriteUtil::ReadMayaAttribute(
+UsdMayaWriteUtil::ReadMayaAttribute(
         const MFnDependencyNode& depNode,
         const MString& name,
         VtIntArray* val)
@@ -1393,7 +1373,7 @@ PxrUsdMayaWriteUtil::ReadMayaAttribute(
 }
 
 bool
-PxrUsdMayaWriteUtil::ReadMayaAttribute(
+UsdMayaWriteUtil::ReadMayaAttribute(
         const MFnDependencyNode& depNode,
         const MString& name,
         VtFloatArray* val)
@@ -1425,7 +1405,7 @@ PxrUsdMayaWriteUtil::ReadMayaAttribute(
 }
 
 bool
-PxrUsdMayaWriteUtil::ReadMayaAttribute(
+UsdMayaWriteUtil::ReadMayaAttribute(
         const MFnDependencyNode& depNode,
         const MString& name,
         VtVec3fArray* val)
@@ -1460,7 +1440,7 @@ PxrUsdMayaWriteUtil::ReadMayaAttribute(
 }
 
 std::vector<double>
-PxrUsdMayaWriteUtil::GetTimeSamples(
+UsdMayaWriteUtil::GetTimeSamples(
         const GfInterval& frameRange,
         const std::set<double>& subframeOffsets,
         const double stride)

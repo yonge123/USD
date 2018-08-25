@@ -1,11 +1,13 @@
 
 global proc usdTranslatorExport_AnimationCB() {
     if (`checkBox -q -v animationCheckBox` == 1) {
+        checkBox -e -vis true eulerFilterCheckBox;
         intFieldGrp -e -vis true startTimeField;
         intFieldGrp -e -vis true endTimeField;
         floatFieldGrp -e -vis true frameStrideField; 
         button -e -vis true animRangeButton;
     } else {
+        checkBox -e -vis false eulerFilterCheckBox;
         intFieldGrp -e -vis false startTimeField;
         intFieldGrp -e -vis false endTimeField;
         floatFieldGrp -e -vis false frameStrideField; 
@@ -138,12 +140,18 @@ global proc int usdTranslatorExport (string $parent,
         checkBox -l "Export UVs" exportUVsCheckBox;
 
         checkBox -l "Export ColorSets" exportColorSetsCheckBox;
+        checkBox -l "Export Reference Objects" exportReferenceObjectsCheckBox;
 
         checkBox -l "Export Visibility" exportVisibilityCheckBox;
 
         checkBox -l "Strip Namespaces" stripNamespacesCheckBox;
 
         checkBox -l "Renderable Only" renderableOnlyCheckBox;
+
+        textFieldGrp -l "Filtered Node Types"
+            -annotation ("Do not export nodes of this type, or their children;\n" +
+                         "specify multiple types by separating with comma: 'constraint,place3dTexture'")
+            filterTypesTextField;
          
         checkBox -l "Export all cameras" defaultCamerasCheckBox;
 
@@ -153,6 +161,10 @@ global proc int usdTranslatorExport (string $parent,
             menuItem -l "Use Default layer" -ann "defaultLayer";
             menuItem -l "Use Current layer" -ann "currentLayer";
             menuItem -l "Modeling Variant Per Layer" -ann "modelingVariant";
+
+        optionMenuGrp -l "Compatibility Profile:" compatibilityPopup;
+            menuItem -l "Standard" -ann "none";
+            menuItem -l "ARKit-compatible" -ann "appleArKit";
 
         checkBox -l "Merge Transform and Shape Nodes" mergeTransformAndShapeCheckBox;
         checkBox -l "Export Instances" exportInstancesCheckBox;
@@ -175,12 +187,14 @@ global proc int usdTranslatorExport (string $parent,
 
         checkBox -l "Export Animation" -cc ("usdTranslatorExport_AnimationCB") animationCheckBox;
 
+        checkBox -l "Apply Euler Filter" eulerFilterCheckBox;
+
         columnLayout -width 100 animOptsCol;
         intFieldGrp -l "Start Time:" -v1 1 startTimeField;
         intFieldGrp -l "End Time:" -v1 1 endTimeField;
         floatFieldGrp -l "Stride:" -v1 1 frameStrideField;
         button -l "Use Animation Range" -command ("usdTranslatorExport_AnimationRangeCB") animRangeButton;
-        
+
         setParent $parent;
         
         // Now set to current settings.
@@ -205,8 +219,12 @@ global proc int usdTranslatorExport (string $parent,
                     usdTranslatorExport_SetCheckbox($optionBreakDown[1], "exportCollectionBasedBindingsCheckBox");
                 } else if ($optionBreakDown[0] == "exportColorSets") {
                     usdTranslatorExport_SetCheckbox($optionBreakDown[1], "exportColorSetsCheckBox");
+                } else if ($optionBreakDown[0] == "exportReferenceObjects") {
+                    usdTranslatorExport_SetCheckbox($optionBreakDown[1], "exportReferenceObjectsCheckBox");
                 } else if ($optionBreakDown[0] == "renderableOnly") {
                     usdTranslatorExport_SetCheckbox($optionBreakDown[1], "renderableOnlyCheckBox");
+                } else if ($optionBreakDown[0] == "filterTypes") {
+                    usdTranslatorExport_SetTextField($optionBreakDown[1], "filterTypesTextField");
                 } else if ($optionBreakDown[0] == "defaultCameras") {
                     usdTranslatorExport_SetCheckbox($optionBreakDown[1], "defaultCamerasCheckBox");
                 } else if ($optionBreakDown[0] == "renderLayerMode") {
@@ -227,6 +245,8 @@ global proc int usdTranslatorExport (string $parent,
                     usdTranslatorExport_SetCheckbox($optionBreakDown[1], "stripNamespacesCheckBox");
                 } else if ($optionBreakDown[0] == "animation") {
                     usdTranslatorExport_SetCheckbox($optionBreakDown[1], "animationCheckBox");
+                } else if ($optionBreakDown[0] == "eulerFilter") {
+                    usdTranslatorExport_SetCheckbox($optionBreakDown[1], "eulerFilterCheckBox");
                 } else if ($optionBreakDown[0] == "startTime") {
                     int $startTime=$optionBreakDown[1];
                     intFieldGrp -e -v1 $startTime startTimeField;
@@ -238,7 +258,9 @@ global proc int usdTranslatorExport (string $parent,
                     floatFieldGrp -e -v1 $frameStride frameStrideField;
                 } else if ($optionBreakDown[0] == "parentScope") {
                     usdTranslatorExport_SetTextField($optionBreakDown[1], "parentScopeField");
-                }
+                } else if ($optionBreakDown[0] == "compatibility") {
+                    usdTranslatorExport_SetOptionMenuByAnnotation($optionBreakDown[1], "compatibilityPopup");
+                } 
             }
         }
         // Set visibility for anim widgets
@@ -256,7 +278,9 @@ global proc int usdTranslatorExport (string $parent,
         $currentOptions = usdTranslatorExport_AppendFromTextField($currentOptions, "materialCollectionsPath", "materialCollectionsPathField");
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "exportCollectionBasedBindings", "exportCollectionBasedBindingsCheckBox");
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "exportColorSets", "exportColorSetsCheckBox");
+        $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "exportReferenceObjects", "exportReferenceObjectsCheckBox");
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "renderableOnly", "renderableOnlyCheckBox");
+        $currentOptions = usdTranslatorExport_AppendFromTextField($currentOptions, "filterTypes", "filterTypesTextField");
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "defaultCameras", "defaultCamerasCheckBox");
         $currentOptions = usdTranslatorExport_AppendFromPopup($currentOptions, "renderLayerMode", "renderLayerModePopup");
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "mergeTransformAndShape", "mergeTransformAndShapeCheckBox");
@@ -267,10 +291,12 @@ global proc int usdTranslatorExport (string $parent,
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "exportVisibility", "exportVisibilityCheckBox");
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "stripNamespaces", "stripNamespacesCheckBox");
         $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "animation", "animationCheckBox");
+        $currentOptions = usdTranslatorExport_AppendFromCheckbox($currentOptions, "eulerFilter", "eulerFilterCheckBox");
         $currentOptions = usdTranslatorExport_AppendFromIntField($currentOptions, "startTime", "startTimeField");
         $currentOptions = usdTranslatorExport_AppendFromIntField($currentOptions, "endTime", "endTimeField");
         $currentOptions = usdTranslatorExport_AppendFromFloatField($currentOptions, "frameStride", "frameStrideField");
         $currentOptions = usdTranslatorExport_AppendFromTextField($currentOptions, "parentScope", "parentScopeField");
+        $currentOptions = usdTranslatorExport_AppendFromPopup($currentOptions, "compatibility", "compatibilityPopup");
                 
         eval($resultCallback+" \""+$currentOptions+"\"");
         $bResult = 1;

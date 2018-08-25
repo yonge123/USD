@@ -60,20 +60,15 @@ struct PxrUsdKatanaUtils {
     static void ConvertArrayToVector(const VtVec3fArray &a, std::vector<float> *r);
 
     /// Convert a VtValue to a Katana attribute.
-    /// If asShaderParam is true, it will use the special encoding
-    /// Katana uses for shading arguments.
-    /// The pathsAsModel argument is used when trying to resolve asset paths.
+    /// If asShaderParam is false, convert arrays to type + array pairs
     static FnKat::Attribute ConvertVtValueToKatAttr( const VtValue & val,
-                                                     bool asShaderParam,
-                                                     bool pathsAsModel = false,
-                                                     bool resolvePaths = true);
+                                                     bool asShaderParam = true);
 
     /// Extract the targets of a relationship to a Katana attribute.
-    /// If asShaderParam is true, it will use the special encoding
-    /// Katana uses for shading arguments.
+    /// If asShaderParam is false, convert arrays to type + array pairs
     static FnKat::Attribute ConvertRelTargetsToKatAttr(
             const UsdRelationship &rel, 
-            bool asShaderParam);
+            bool asShaderParam = true);
 
     /// Convert a VtValue to a Katana custom geometry attribute (primvar).
     /// Katana uses a different encoding here from other attributes, which
@@ -154,6 +149,16 @@ struct PxrUsdKatanaUtils {
     /// Creates the 'proxies' group attribute for consumption by the viewer.
     static FnKat::GroupAttribute GetViewerProxyAttr(
             const PxrUsdKatanaUsdInPrivateData& data);
+    
+    /// Creates the 'proxies' group attribute directly from fields
+    static FnKat::GroupAttribute GetViewerProxyAttr(
+            double currentTime,
+            const std::string & fileName,
+            const std::string & referencePath,
+            const std::string & rootLocation,
+            FnAttribute::GroupAttribute sessionAttr,
+            const std::string & ignoreLayerRegex);
+    
 
     /// Returns the asset name for the given prim.  It should be a model.  This
     /// will fallback to the name of the prim.

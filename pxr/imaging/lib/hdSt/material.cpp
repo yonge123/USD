@@ -24,6 +24,7 @@
 #include "pxr/imaging/glf/glew.h"
 
 #include "pxr/imaging/hdSt/material.h"
+#include "pxr/imaging/hdSt/package.h"
 #include "pxr/imaging/hdSt/resourceRegistry.h"
 #include "pxr/imaging/hdSt/shaderCode.h"
 #include "pxr/imaging/hdSt/surfaceShader.h"
@@ -36,10 +37,21 @@
 #include "pxr/imaging/glf/textureHandle.h"
 #include "pxr/imaging/glf/textureRegistry.h"
 #include "pxr/imaging/glf/uvTextureStorage.h"
+#include "pxr/imaging/glf/glslfx.h"
+
+#include "pxr/base/tf/staticTokens.h"
 
 #include <boost/pointer_cast.hpp>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    (limitSurfaceEvaluation)
+);
+
+GlfGLSLFX *HdStMaterial::_fallbackSurfaceShader = nullptr;
 
 // A bindless GL sampler buffer.
 // This identifies a texture as a 64-bit handle, passed to GLSL as "uvec2".
@@ -77,7 +89,7 @@ public:
     virtual int GetGLElementDataType() const {
         return GL_UNSIGNED_INT64_ARB;
     }
-    virtual int GetNumElements() const {
+    virtual size_t GetNumElements() const {
         return 1;
     }
     virtual short GetNumComponents() const {
@@ -107,6 +119,7 @@ HdStMaterial::HdStMaterial(SdfPath const &id)
  : HdMaterial(id)
  , _surfaceShader(new HdStSurfaceShader)
  , _hasPtex(false)
+ , _hasLimitSurfaceEvaluation(false)
 {
 }
 
@@ -129,22 +142,44 @@ HdStMaterial::Sync(HdSceneDelegate *sceneDelegate,
         sceneDelegate->GetRenderIndex().GetResourceRegistry();
     HdDirtyBits bits = *dirtyBits;
 
+    bool needsRprimMaterialStateUpdate = false;
+
     if(bits & DirtySurfaceShader) {
         const std::string &fragmentSource =
                 GetSurfaceShaderSource(sceneDelegate);
-
-        _surfaceShader->SetFragmentSource(fragmentSource);
-
-        const std::string &geometrySource = 
+        const std::string &geometrySource =
                 GetDisplacementShaderSource(sceneDelegate);
+        VtDictionary materialMetadata = GetMaterialMetadata(sceneDelegate);
 
-        _surfaceShader->SetGeometrySource(geometrySource);
+        if (fragmentSource.empty() && geometrySource.empty()) {
+            _InitFallbackShader();
+            _surfaceShader->SetFragmentSource(
+                                   _fallbackSurfaceShader->GetFragmentSource());
+            _surfaceShader->SetGeometrySource(
+                                   _fallbackSurfaceShader->GetGeometrySource());
+
+            materialMetadata = _fallbackSurfaceShader->GetMetadata();
+
+        } else {
+            _surfaceShader->SetFragmentSource(fragmentSource);
+            _surfaceShader->SetGeometrySource(geometrySource);
+        }
+
         
         // XXX Forcing collections to be dirty to reload everything
         //     Something more efficient can be done here
         HdChangeTracker& changeTracker =
                              sceneDelegate->GetRenderIndex().GetChangeTracker();
         changeTracker.MarkAllCollectionsDirty();
+
+        bool hasLimitSurfaceEvaluation =
+                                _GetHasLimitSurfaceEvaluation(materialMetadata);
+
+        if (_hasLimitSurfaceEvaluation != hasLimitSurfaceEvaluation) {
+            _hasLimitSurfaceEvaluation = hasLimitSurfaceEvaluation;
+            needsRprimMaterialStateUpdate = true;
+        }
+
     }
 
     if(bits & DirtyParams) {
@@ -159,8 +194,10 @@ HdStMaterial::Sync(HdSceneDelegate *sceneDelegate,
         bool hasPtex = false;
         for (HdMaterialParam const & param: params) {
             if (param.IsPrimvar()) {
-                // skip -- maybe not necessary, but more memory efficient
-                continue;
+                HdBufferSourceSharedPtr source(
+                    new HdVtBufferSource(param.GetName(), 
+                        param.GetFallbackValue()));
+                sources.push_back(source);
             } else if (param.IsFallback()) {
                 VtValue paramVt = GetMaterialParamValue(sceneDelegate,
                                                         param.GetName());
@@ -249,14 +286,17 @@ HdStMaterial::Sync(HdSceneDelegate *sceneDelegate,
 
         if (_hasPtex != hasPtex) {
             _hasPtex = hasPtex;
-
-            // XXX Forcing rprims to have a dirty material id to re-evaluate
-            // their material state as we don't know which rprims are bound to
-            // this one.
-            HdChangeTracker& changeTracker =
-                             sceneDelegate->GetRenderIndex().GetChangeTracker();
-            changeTracker.MarkAllRprimsDirty(HdChangeTracker::DirtyMaterialId);
+            needsRprimMaterialStateUpdate = true;
         }
+    }
+
+    if (needsRprimMaterialStateUpdate) {
+        // XXX Forcing rprims to have a dirty material id to re-evaluate
+        // their material state as we don't know which rprims are bound to
+        // this one.
+        HdChangeTracker& changeTracker =
+                         sceneDelegate->GetRenderIndex().GetChangeTracker();
+        changeTracker.MarkAllRprimsDirty(HdChangeTracker::DirtyMaterialId);
     }
 
     *dirtyBits = Clean;
@@ -270,21 +310,46 @@ HdStMaterial::_GetTextureResource(
     HdResourceRegistrySharedPtr const &resourceRegistry = 
         sceneDelegate->GetRenderIndex().GetResourceRegistry();
 
-    // Create a fallback texture resource when the texture doesn't
-    // have a valid connection path or if the scene delegate returns
-    // and invalidate ID
-    bool useFallback = param.GetConnection().IsEmpty();
-
-    HdTextureResource::ID texID = HdTextureResource::ID(-1);
-
-    if (!param.GetConnection().IsEmpty()) {
-         texID = GetTextureResourceID(sceneDelegate, param.GetConnection());
-    }
-    useFallback |= (texID == HdTextureResource::ID(-1));
-
-    // XXX todo handle fallback Ptex textures
     HdStTextureResourceSharedPtr texResource;
-    if (useFallback) {
+
+    SdfPath const &connection = param.GetConnection();
+    if (!connection.IsEmpty()) {
+        HdTextureResource::ID texID =
+            GetTextureResourceID(sceneDelegate, connection);
+
+        if (texID != HdTextureResource::ID(-1)) {
+            HdInstance<HdTextureResource::ID,
+                        HdTextureResourceSharedPtr> texInstance;
+
+            bool textureResourceFound = false;
+            std::unique_lock<std::mutex> regLock =
+                resourceRegistry->FindTextureResource
+                (texID, &texInstance, &textureResourceFound);
+
+            // A bad asset can cause the texture resource to not
+            // be found. Hence, issue a warning and continue onto the
+            // next param.
+            if (!textureResourceFound) {
+                TF_WARN("No texture resource found with path %s",
+                    param.GetConnection().GetText());
+            } else {
+                texResource =
+                    boost::dynamic_pointer_cast<HdStTextureResource>
+                    (texInstance.GetValue());
+            }
+        }
+    }
+
+    // There are many reasons why texResource could be null here:
+    // - A missing or invalid connection path,
+    // - A deliberate (-1) or accidental invalid texture id
+    // - Scene delegate failed to return a texture resource (due to asset error)
+    //
+    // In all these cases fallback to a simple texture with the provided
+    // fallback value
+    //
+    // XXX todo handle fallback Ptex textures
+    if (!texResource) {
         GlfUVTextureStorageRefPtr texPtr = 
             GlfUVTextureStorage::New(1,1, param.GetFallbackValue());
         GlfTextureHandleRefPtr texture =
@@ -298,34 +363,18 @@ HdStMaterial::_GetTextureResource(
                                           HdMagFilterNearest,
                                           0));
         _fallbackTextureResources.push_back(texResource);
-    } else {
-        HdInstance<HdTextureResource::ID,
-                   HdTextureResourceSharedPtr> texInstance;
-
-        bool textureResourceFound = false;
-        std::unique_lock<std::mutex> regLock =
-            resourceRegistry->FindTextureResource
-            (texID, &texInstance, &textureResourceFound);
-        // A bad asset can cause the texture resource to not 
-        // be found. Hence, issue a warning and continue onto the 
-        // next param.
-        if (!textureResourceFound) {
-            TF_WARN("No texture resource found with path %s",
-                param.GetConnection().GetText());
-            return HdStTextureResourceSharedPtr();
-        }
-
-        texResource =
-            boost::dynamic_pointer_cast<HdStTextureResource>
-            (texInstance.GetValue());
-        if (!TF_VERIFY(texResource,
-                "Incorrect texture resource with path %s",
-                param.GetConnection().GetText())) {
-            return HdStTextureResourceSharedPtr();
-        }
     }
 
     return texResource;
+}
+
+bool
+HdStMaterial::_GetHasLimitSurfaceEvaluation(VtDictionary const & metadata) const
+{
+    VtValue value = TfMapLookupByValue(metadata,
+                                       _tokens->limitSurfaceEvaluation,
+                                       VtValue());
+    return value.IsHolding<bool>() && value.Get<bool>();
 }
 
 // virtual
@@ -353,6 +402,24 @@ void
 HdStMaterial::SetSurfaceShader(HdStSurfaceShaderSharedPtr &shaderCode)
 {
     _surfaceShader = shaderCode;
+}
+
+void
+HdStMaterial::_InitFallbackShader()
+{
+    if (_fallbackSurfaceShader != nullptr) {
+        return;
+    }
+
+    const TfToken &filePath = HdStPackageFallbackSurfaceShader();
+
+    _fallbackSurfaceShader = new GlfGLSLFX(filePath);
+
+    // Check fallback shader loaded, if not continue with the invalid shader
+    // this would mean the shader compilation fails and the prim would not
+    // be drawn.
+    TF_VERIFY(_fallbackSurfaceShader->IsValid(),
+              "Failed to load fallback surface shader!");
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
