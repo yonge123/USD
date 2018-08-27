@@ -31,7 +31,7 @@
 
 #include "pxr/imaging/glf/texture.h"
 
-#include "pxr/usd/ar/resolverContext.h"
+#include "pxr/usd/sdf/layer.h"
 
 #include <string>
 #include <vector>
@@ -53,7 +53,7 @@ TF_DECLARE_WEAK_AND_REF_PTRS(GlfUdimTexture);
 
 class GlfUdimTextureFactory : public GlfTextureFactoryBase {
 public:
-    GlfUdimTextureFactory(ArResolverContext* resolverContext = nullptr);
+    GlfUdimTextureFactory(SdfLayerHandle layerHandle = SdfLayerHandle());
 
     virtual GlfTextureRefPtr New(
         TfToken const& texturePath,
@@ -65,7 +65,7 @@ public:
         GlfImage::ImageOriginLocation originLocation =
             GlfImage::OriginUpperLeft) const override;
 private:
-    ArResolverContext* _resolverContext;
+    SdfLayerHandle _layerHandle;
 };
 
 class GlfUdimTexture : public GlfTexture {
@@ -77,7 +77,7 @@ public:
     static GlfUdimTextureRefPtr New(
         TfToken const& imageFilePath,
         GlfImage::ImageOriginLocation originLocation,
-        ArResolverContext* resolverContext);
+        SdfLayerHandle layerHandle);
 
     GLF_API
     GlfTexture::BindingVector GetBindings(
@@ -102,7 +102,7 @@ protected:
     GlfUdimTexture(
         TfToken const& imageFilePath,
         GlfImage::ImageOriginLocation originLocation,
-        ArResolverContext* resolverContext);
+        SdfLayerHandle layerHandle);
 
     GLF_API
     void _FreeTextureObject();
@@ -119,7 +119,7 @@ protected:
     GLF_API
     static void _GetUdimTiles(
         std::string const& imageFilePath, _UdimTileArray& tiles,
-        ArResolverContext* resolverContext);
+        SdfLayerHandle layerHandle);
 private:
     _UdimTileArray _tiles;
     int _width = 0;
