@@ -40,6 +40,8 @@
 #include "pxr/base/trace/trace.h"
 #include "pxr/base/work/loops.h"
 
+#include "pxr/usd/sdf/layerUtils.h"
+
 #include <iostream>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -86,7 +88,7 @@ _MipDescArray _GetMipLevels(const TfToken& filePath) {
 }
 
 GlfUdimTextureFactory::GlfUdimTextureFactory(
-    ArResolverContext* resolverContext) : _resolverContext(resolverContext) {
+    SdfLayerHandle layerHandle) : _layerHandle(layerHandle) {
 }
 
 GlfTextureRefPtr
@@ -94,7 +96,7 @@ GlfUdimTextureFactory::New(
     TfToken const& texturePath,
     GlfImage::ImageOriginLocation originLocation) const {
     return GlfUdimTexture::New(
-        texturePath, originLocation, _resolverContext);
+        texturePath, originLocation, _layerHandle);
 }
 
 GlfTextureRefPtr
@@ -118,9 +120,9 @@ TF_REGISTRY_FUNCTION(TfType)
 GlfUdimTexture::GlfUdimTexture(
     TfToken const& imageFilePath,
     GlfImage::ImageOriginLocation originLocation,
-    ArResolverContext* resolverContext)
+    SdfLayerHandle layerHandle)
     : GlfTexture(originLocation) {
-    _GetUdimTiles(imageFilePath, _tiles, resolverContext);
+    _GetUdimTiles(imageFilePath, _tiles, layerHandle);
 }
 
 GlfUdimTexture::~GlfUdimTexture() {
@@ -131,9 +133,9 @@ GlfUdimTextureRefPtr
 GlfUdimTexture::New(
     TfToken const& imageFilePath,
     GlfImage::ImageOriginLocation originLocation,
-    ArResolverContext* resolverContext) {
+    SdfLayerHandle layerHandle) {
     return TfCreateRefPtr(new GlfUdimTexture(
-        imageFilePath, originLocation, resolverContext));
+        imageFilePath, originLocation, layerHandle));
 }
 
 GlfTexture::BindingVector
@@ -384,7 +386,7 @@ GlfUdimTexture::_OnMemoryRequestedDirty() {
 void
 GlfUdimTexture::_GetUdimTiles(
     std::string const& imageFilePath, _UdimTileArray& tiles,
-    ArResolverContext* resolverContext) {
+    SdfLayerHandle layerHandle) {
     tiles.clear();
     GlfContextCaps const &caps = GlfContextCaps::GetInstance();
     if (ARCH_UNLIKELY(!caps.arrayTexturesEnabled)) {
@@ -402,7 +404,11 @@ GlfUdimTexture::_GetUdimTiles(
     const int endTile = startTile + caps.maxArrayTextureLayers;
     tiles.reserve(endTile - startTile + 1);
     for (int t = startTile; t <= endTile; ++t) {
-        const std::string path = TfStringPrintf(formatString.c_str(), t);
+        const std::string path = layerHandle
+            ? SdfComputeAssetPathRelativeToLayer(
+                layerHandle,
+                TfStringPrintf(formatString.c_str(), t))
+            : TfStringPrintf(formatString.c_str(), t);
         if (TfPathExists(path)) {
             tiles.emplace_back(t - startTile, TfToken(path));
         }
