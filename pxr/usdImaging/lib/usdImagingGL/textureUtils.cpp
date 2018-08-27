@@ -276,9 +276,13 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
     timer.Start();
     // Udim's can't be loaded through like other textures, because
     // we can't select the right factory based on the file type.
+    // We also need to pass the resolver context to the factory,
+    // so each file gets resolved through the stage's context.
     GlfTextureHandleRefPtr texture;
     if (textureType == HdTextureType::Udim) {
-        GlfUdimTextureFactory factory;
+        ArResolverContext resolverContext =
+            usdPrim.GetStage()->GetPathResolverContext();
+        GlfUdimTextureFactory factory(&resolverContext);
         texture = GlfTextureRegistry::GetInstance().GetTextureHandle(
             filePath, origin, &factory);
     } else {
