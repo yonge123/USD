@@ -25,9 +25,12 @@
 
 #include "pxr/imaging/glf/glew.h"
 
+#include "pxr/imaging/glf/udimTexture.h"
+
+#include "pxr/imaging/glf/contextCaps.h"
 #include "pxr/imaging/glf/diagnostic.h"
 #include "pxr/imaging/glf/glContext.h"
-#include "pxr/imaging/glf/udimTexture.h"
+
 #include "pxr/imaging/glf/image.h"
 
 #include "pxr/base/tf/fileUtils.h"
@@ -42,36 +45,6 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
-
-using _UdimTile = std::tuple<int, TfToken>;
-using _UdimTileArray = std::vector<_UdimTile>;
-
-_UdimTileArray
-GetUdimTiles(std::string const& imageFilePath, int maxLayerCount) {
-    if (ARCH_UNLIKELY(maxLayerCount < 1)) {
-        return {};
-    }
-    const std::string::size_type pos = imageFilePath.find("<UDIM>");
-    if (pos == std::string::npos) {
-        return {};
-    }
-    std::string formatString = imageFilePath;
-    formatString.replace(pos, 6, "%i");
-
-    std::vector<std::tuple<int, TfToken>> ret;
-    constexpr int startTile = 1001;
-    const int endTile = startTile + maxLayerCount;
-    ret.reserve(endTile - startTile + 1);
-    for (int t = startTile; t <= endTile; ++t) {
-        const std::string path = TfStringPrintf(formatString.c_str(), t);
-        if (TfPathExists(path)) {
-            ret.emplace_back(t - startTile, TfToken(path));
-        }
-    }
-    ret.shrink_to_fit();
-
-    return ret;
-}
 
 struct _TextureSize {
     _TextureSize(int w, int h) : width(w), height(h) { }
@@ -112,11 +85,16 @@ _MipDescArray _GetMipLevels(const TfToken& filePath) {
 
 }
 
+GlfUdimTextureFactory::GlfUdimTextureFactory(
+    ArResolverContext* resolverContext) : _resolverContext(resolverContext) {
+}
+
 GlfTextureRefPtr
 GlfUdimTextureFactory::New(
     TfToken const& texturePath,
     GlfImage::ImageOriginLocation originLocation) const {
-    return GlfUdimTexture::New(texturePath, originLocation);
+    return GlfUdimTexture::New(
+        texturePath, originLocation, _resolverContext);
 }
 
 GlfTextureRefPtr
@@ -139,8 +117,10 @@ TF_REGISTRY_FUNCTION(TfType)
 
 GlfUdimTexture::GlfUdimTexture(
     TfToken const& imageFilePath,
-    GlfImage::ImageOriginLocation originLocation)
-    : GlfTexture(originLocation), _imagePath(imageFilePath) {
+    GlfImage::ImageOriginLocation originLocation,
+    ArResolverContext* resolverContext)
+    : GlfTexture(originLocation) {
+    _GetUdimTiles(imageFilePath, _tiles, resolverContext);
 }
 
 GlfUdimTexture::~GlfUdimTexture() {
@@ -150,9 +130,10 @@ GlfUdimTexture::~GlfUdimTexture() {
 GlfUdimTextureRefPtr
 GlfUdimTexture::New(
     TfToken const& imageFilePath,
-    GlfImage::ImageOriginLocation originLocation) {
+    GlfImage::ImageOriginLocation originLocation,
+    ArResolverContext* resolverContext) {
     return TfCreateRefPtr(new GlfUdimTexture(
-        imageFilePath, originLocation));
+        imageFilePath, originLocation, resolverContext));
 }
 
 GlfTexture::BindingVector
@@ -185,7 +166,9 @@ GlfUdimTexture::GetTextureInfo(bool forceLoad) {
         ret["height"] = _height;
         ret["depth"] = _depth;
         ret["format"] = _format;
-        ret["imageFilePath"] = _imagePath;
+        if (!_tiles.empty()) {
+            ret["imageFilePath"] = std::get<1>(_tiles.front());
+        }
         ret["referenceCount"] = GetRefCount().Get();
     } else {
         ret["memoryUsed"] = 0;
@@ -223,19 +206,11 @@ GlfUdimTexture::_ReadImage() {
     _loaded = true;
     _FreeTextureObject();
 
-    // This is 2048 OGL 4.5
-    int maxArrayTextureLayers = 0;
-    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &maxArrayTextureLayers);
-    int max3dTextureSize = 0;
-    glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &max3dTextureSize);
-
-    const _UdimTileArray tiles =
-        GetUdimTiles(_imagePath, maxArrayTextureLayers);
-    if (tiles.empty()) {
+    if (_tiles.empty()) {
         return;
     }
 
-    const _MipDescArray firstImageMips = _GetMipLevels(std::get<1>(tiles[0]));
+    const _MipDescArray firstImageMips = _GetMipLevels(std::get<1>(_tiles[0]));
 
     if (firstImageMips.empty()) {
         return;
@@ -281,8 +256,8 @@ GlfUdimTexture::_ReadImage() {
     }
 
     const int maxTileCount =
-        std::get<0>(tiles.back()) + 1;
-    _depth = static_cast<int>(tiles.size());
+        std::get<0>(_tiles.back()) + 1;
+    _depth = static_cast<int>(_tiles.size());
     const int numBytesPerPixel = sizePerElem * numChannels;
     const int numBytesPerPixelLayer = numBytesPerPixel * _depth;
 
@@ -347,9 +322,9 @@ GlfUdimTexture::_ReadImage() {
         totalTextureMemory += currentMipMemory;
     }
 
-    WorkParallelForN(tiles.size(), [&](size_t begin, size_t end) {
+    WorkParallelForN(_tiles.size(), [&](size_t begin, size_t end) {
         for (size_t tileId = begin; tileId < end; ++tileId) {
-            _UdimTile const& tile = tiles[tileId];
+            _UdimTile const& tile = _tiles[tileId];
             layoutData[std::get<0>(tile)] = tileId;
             _MipDescArray images = _GetMipLevels(std::get<1>(tile));
             if (images.empty()) { continue; }
@@ -398,11 +373,41 @@ GlfUdimTexture::_ReadImage() {
 
     GLF_POST_PENDING_GL_ERRORS();
 
-    _SetMemoryUsed(totalTextureMemory + tiles.size() * sizeof(float));
+    _SetMemoryUsed(totalTextureMemory + _tiles.size() * sizeof(float));
 }
 
-void GlfUdimTexture::_OnMemoryRequestedDirty() {
+void
+GlfUdimTexture::_OnMemoryRequestedDirty() {
     _loaded = false;
+}
+
+void
+GlfUdimTexture::_GetUdimTiles(
+    std::string const& imageFilePath, _UdimTileArray& tiles,
+    ArResolverContext* resolverContext) {
+    tiles.clear();
+    GlfContextCaps const &caps = GlfContextCaps::GetInstance();
+    if (ARCH_UNLIKELY(!caps.arrayTexturesEnabled)) {
+        return;
+    }
+
+    const std::string::size_type pos = imageFilePath.find("<UDIM>");
+    if (pos == std::string::npos) {
+        return;
+    }
+    std::string formatString = imageFilePath;
+    formatString.replace(pos, 6, "%i");
+
+    constexpr int startTile = 1001;
+    const int endTile = startTile + caps.maxArrayTextureLayers;
+    tiles.reserve(endTile - startTile + 1);
+    for (int t = startTile; t <= endTile; ++t) {
+        const std::string path = TfStringPrintf(formatString.c_str(), t);
+        if (TfPathExists(path)) {
+            tiles.emplace_back(t - startTile, TfToken(path));
+        }
+    }
+    tiles.shrink_to_fit();
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
