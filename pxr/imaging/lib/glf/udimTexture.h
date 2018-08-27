@@ -31,6 +31,8 @@
 
 #include "pxr/imaging/glf/texture.h"
 
+#include "pxr/usd/ar/resolverContext.h"
+
 #include <string>
 #include <vector>
 #include <tuple>
@@ -51,6 +53,8 @@ TF_DECLARE_WEAK_AND_REF_PTRS(GlfUdimTexture);
 
 class GlfUdimTextureFactory : public GlfTextureFactoryBase {
 public:
+    GlfUdimTextureFactory(ArResolverContext* resolverContext = nullptr);
+
     virtual GlfTextureRefPtr New(
         TfToken const& texturePath,
         GlfImage::ImageOriginLocation originLocation =
@@ -60,6 +64,8 @@ public:
         TfTokenVector const& texturePaths,
         GlfImage::ImageOriginLocation originLocation =
             GlfImage::OriginUpperLeft) const override;
+private:
+    ArResolverContext* _resolverContext;
 };
 
 class GlfUdimTexture : public GlfTexture {
@@ -70,7 +76,8 @@ public:
     GLF_API
     static GlfUdimTextureRefPtr New(
         TfToken const& imageFilePath,
-        GlfImage::ImageOriginLocation originLocation);
+        GlfImage::ImageOriginLocation originLocation,
+        ArResolverContext* resolverContext);
 
     GLF_API
     GlfTexture::BindingVector GetBindings(
@@ -94,7 +101,8 @@ protected:
     GLF_API
     GlfUdimTexture(
         TfToken const& imageFilePath,
-        GlfImage::ImageOriginLocation originLocation);
+        GlfImage::ImageOriginLocation originLocation,
+        ArResolverContext* resolverContext);
 
     GLF_API
     void _FreeTextureObject();
@@ -105,8 +113,15 @@ protected:
     GLF_API
     void _OnMemoryRequestedDirty() override;
 
+    using _UdimTile = std::tuple<int, TfToken>;
+    using _UdimTileArray = std::vector<_UdimTile>;
+
+    GLF_API
+    static void _GetUdimTiles(
+        std::string const& imageFilePath, _UdimTileArray& tiles,
+        ArResolverContext* resolverContext);
 private:
-    TfToken _imagePath;
+    _UdimTileArray _tiles;
     int _width = 0;
     int _height = 0;
     int _depth = 0;
