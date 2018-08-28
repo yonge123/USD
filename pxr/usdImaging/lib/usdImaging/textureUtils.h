@@ -42,7 +42,14 @@ std::vector<std::tuple<int, TfToken>>
 UsdImaging_GetUdimTiles(
     std::string const& basePath,
     int tileLimit,
-    const SdfLayerHandle& layerHandle = SdfLayerHandle());
+    SdfLayerHandle const& layerHandle = SdfLayerHandle());
+
+USDIMAGING_API
+bool
+UsdImaging_UdimTilesExist(
+    std::string const& basePath,
+    int tileLimit,
+    SdfLayerHandle const& layerHandle = SdfLayerHandle());
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
