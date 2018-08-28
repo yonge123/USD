@@ -135,16 +135,6 @@ _GetMemoryLimit(UsdPrim const &usdPrim)
     return memoryLimit;
 }
 
-HdTextureType
-_GetTextureType(std::string const& filePath) {
-    if (GlfIsSupportedPtexTexture(filePath)) {
-        return HdTextureType::Ptex;
-    } else if (GlfIsSupportedUdimTexture(filePath)) {
-        return HdTextureType::Udim;
-    }
-    return HdTextureType::Uv;
-}
-
 class UdimTextureFactory : public GlfTextureFactoryBase {
 public:
     UdimTextureFactory(
@@ -157,8 +147,7 @@ public:
         GlfImage::OriginUpperLeft) const override {
         const GlfContextCaps& caps = GlfContextCaps::GetInstance();
         return GlfUdimTexture::New(
-            texturePath, originLocation,
-            UsdImaging_GetUdimTiles(
+            texturePath, originLocation, UsdImaging_GetUdimTiles(
                 texturePath, caps.maxArrayTextureLayers, _layerHandle));
     }
 
@@ -171,6 +160,20 @@ public:
 private:
     const SdfLayerHandle& _layerHandle;
 };
+
+// We need to find the first layer that changes the value
+// of the parameter and anchor relative paths to that.
+SdfLayerHandle _FindLayerHandle(
+    const UsdAttribute& attr, const UsdTimeCode& time) {
+    for (const auto& spec: attr.GetPropertyStack(time)) {
+        if (spec->HasDefaultValue() ||
+            spec->GetLayer()->GetNumTimeSamplesForPath(
+                spec->GetPath()) > 0) {
+            return spec->GetLayer();
+        }
+    }
+    return {};
+}
 
 }
 
@@ -199,19 +202,24 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
     // Fallback to the literal path if it couldn't be resolved.
     if (filePath.IsEmpty()) {
         filePath = TfToken(asset.GetAssetPath());
-    }
-
-    const HdTextureType textureType = _GetTextureType(filePath);
-
-    if (textureType != HdTextureType::Udim && asset.GetResolvedPath().empty()) {
-        if (textureType == HdTextureType::Ptex) {
+        if (GlfIsSupportedUdimTexture(filePath)) {
+            const GlfContextCaps& caps = GlfContextCaps::GetInstance();
+            if (!UsdImaging_UdimTilesExist(
+                filePath, caps.maxArrayTextureLayers,
+                _FindLayerHandle(attr, time))) {
+                TF_WARN("Unable to find Texture '%s' with path '%s'. Fallback "
+                        "textures are not supported for udim",
+                        filePath.GetText(), usdPath.GetText());
+                return HdTextureResource::ID(-1);
+            }
+        } else if (GlfIsSupportedPtexTexture(filePath)) {
             TF_WARN("Unable to find Texture '%s' with path '%s'. Fallback "
                     "textures are not supported for ptex",
                     filePath.GetText(), usdPath.GetText());
             return HdTextureResource::ID(-1);
         } else {
-            TF_WARN("Unable to find Texture '%s' with path '%s'. A black " 
-                    "texture will be substituted in its place.", 
+            TF_WARN("Unable to find Texture '%s' with path '%s'. A black "
+                    "texture will be substituted in its place.",
                     filePath.GetText(), usdPath.GetText());
             return HdTextureResource::ID(-1);
         }
@@ -315,24 +323,9 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
     // so each file gets resolved properly.
     GlfTextureHandleRefPtr texture;
     if (textureType == HdTextureType::Udim) {
-        SdfLayerHandle layerHandle;
-        SdfPropertySpecHandleVector propStack = attr.GetPropertyStack(time);
-        if (!propStack.empty()) {
-            SdfSpecHandle owner = propStack.front()->GetOwner();
-            if (owner) {
-                layerHandle = owner->GetLayer();
-            }
-        }
-        UdimTextureFactory factory(layerHandle);
+        UdimTextureFactory factory(_FindLayerHandle(attr, time));
         texture = GlfTextureRegistry::GetInstance().GetTextureHandle(
             filePath, origin, &factory);
-        if (texture == nullptr) {
-            TF_DEBUG(USDIMAGING_TEXTURES).Msg(
-                    "File does not exist, returning nullptr");
-            TF_WARN("Unable to find Udim tiles '%s' with path '%s'.",
-                    filePath.GetText(), usdPath.GetText());
-            return {};
-        }
     } else {
         texture = GlfTextureRegistry::GetInstance().GetTextureHandle(
             filePath, origin);
