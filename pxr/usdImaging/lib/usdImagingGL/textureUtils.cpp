@@ -25,6 +25,7 @@
 
 #include "pxr/usdImaging/usdImaging/debugCodes.h"
 #include "pxr/usdImaging/usdImaging/delegate.h"
+#include "pxr/usdImaging/usdImaging/textureUtils.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
 #include "pxr/imaging/glf/glslfx.h"
@@ -32,6 +33,7 @@
 #include "pxr/imaging/glf/udimTexture.h"
 #include "pxr/imaging/glf/textureHandle.h"
 #include "pxr/imaging/glf/textureRegistry.h"
+#include "pxr/imaging/glf/contextCaps.h"
 
 #include "pxr/imaging/hd/material.h"
 #include "pxr/imaging/hd/tokens.h"
@@ -143,6 +145,33 @@ _GetTextureType(std::string const& filePath) {
     return HdTextureType::Uv;
 }
 
+class UdimTextureFactory : public GlfTextureFactoryBase {
+public:
+    UdimTextureFactory(
+        const SdfLayerHandle& layerHandle)
+        : _layerHandle(layerHandle) { }
+
+    virtual GlfTextureRefPtr New(
+        TfToken const& texturePath,
+        GlfImage::ImageOriginLocation originLocation =
+        GlfImage::OriginUpperLeft) const override {
+        const GlfContextCaps& caps = GlfContextCaps::GetInstance();
+        return GlfUdimTexture::New(
+            texturePath, originLocation,
+            UsdImaging_GetUdimTiles(
+                texturePath, caps.maxArrayTextureLayers, _layerHandle));
+    }
+
+    virtual GlfTextureRefPtr New(
+        TfTokenVector const& texturePaths,
+        GlfImage::ImageOriginLocation originLocation =
+        GlfImage::OriginUpperLeft) const override {
+        return nullptr;
+    }
+private:
+    const SdfLayerHandle& _layerHandle;
+};
+
 }
 
 HdTextureResource::ID
@@ -227,10 +256,26 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
         return HdTextureResourceSharedPtr();
     }
 
+    HdTextureType textureType = HdTextureType::Uv;
+
     TfToken filePath = TfToken(asset.GetResolvedPath());
-    // Fallback to the literal path if it couldn't be resolved.
+    // If the path can't be resolved, it's either an UDIM texture
+    // or the texture doesn't exists and we can to exit early.
     if (filePath.IsEmpty()) {
         filePath = TfToken(asset.GetAssetPath());
+        if (GlfIsSupportedUdimTexture(filePath)) {
+            textureType = HdTextureType::Udim;
+        } else {
+            TF_DEBUG(USDIMAGING_TEXTURES).Msg(
+                "File does not exist, returning nullptr");
+            TF_WARN("Unable to find Texture '%s' with path '%s'.",
+                    filePath.GetText(), usdPath.GetText());
+            return {};
+        }
+    } else {
+        if (GlfIsSupportedPtexTexture(filePath)) {
+            textureType = HdTextureType::Ptex;
+        }
     }
 
     // XXX : This is transitional code. Currently, only textures read
@@ -247,8 +292,6 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
         origin = GlfImage::ImageOriginLocation::OriginLowerLeft;
     }
 
-    const HdTextureType textureType = _GetTextureType(filePath);
-
     HdWrap wrapS = textureType == HdTextureType::Udim
         ? HdWrapBlack : _GetWrapS(usdPrim);
     HdWrap wrapT = textureType == HdTextureType::Udim
@@ -263,14 +306,6 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
             textureType == HdTextureType::Uv ? "Uv" :
             textureType == HdTextureType::Ptex ? "Ptex" : "Udim");
  
-    if (textureType != HdTextureType::Udim && asset.GetResolvedPath().empty()) {
-        TF_DEBUG(USDIMAGING_TEXTURES).Msg(
-                "File does not exist, returning nullptr");
-        TF_WARN("Unable to find Texture '%s' with path '%s'.", 
-            filePath.GetText(), usdPath.GetText());
-        return HdTextureResourceSharedPtr();
-    }
-
     HdTextureResourceSharedPtr texResource;
     TfStopwatch timer;
     timer.Start();
@@ -288,9 +323,16 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
                 layerHandle = owner->GetLayer();
             }
         }
-        GlfUdimTextureFactory factory(layerHandle);
+        UdimTextureFactory factory(layerHandle);
         texture = GlfTextureRegistry::GetInstance().GetTextureHandle(
             filePath, origin, &factory);
+        if (texture == nullptr) {
+            TF_DEBUG(USDIMAGING_TEXTURES).Msg(
+                    "File does not exist, returning nullptr");
+            TF_WARN("Unable to find Udim tiles '%s' with path '%s'.",
+                    filePath.GetText(), usdPath.GetText());
+            return {};
+        }
     } else {
         texture = GlfTextureRegistry::GetInstance().GetTextureHandle(
             filePath, origin);

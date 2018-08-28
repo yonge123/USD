@@ -55,7 +55,7 @@ struct _TextureSize {
 
 struct _MipDesc {
     _MipDesc(const _TextureSize& s, GlfImageSharedPtr&& i) :
-        size(s), image(i) { }
+        size(s), image(std::move(i)) { }
     _TextureSize size;
     GlfImageSharedPtr image;
 };
@@ -87,42 +87,20 @@ _MipDescArray _GetMipLevels(const TfToken& filePath) {
 
 }
 
-GlfUdimTextureFactory::GlfUdimTextureFactory(
-    SdfLayerHandle layerHandle) : _layerHandle(layerHandle) {
-}
-
-GlfTextureRefPtr
-GlfUdimTextureFactory::New(
-    TfToken const& texturePath,
-    GlfImage::ImageOriginLocation originLocation) const {
-    return GlfUdimTexture::New(
-        texturePath, originLocation, _layerHandle);
-}
-
-GlfTextureRefPtr
-GlfUdimTextureFactory::New(
-    TfTokenVector const& /*texturePaths*/,
-    GlfImage::ImageOriginLocation /*originLocation*/) const {
-    return nullptr;
-}
-
 bool GlfIsSupportedUdimTexture(std::string const& imageFilePath) {
     return TfStringContains(imageFilePath, "<UDIM>");
 }
 
 TF_REGISTRY_FUNCTION(TfType)
 {
-    typedef GlfUdimTexture Type;
-    TfType t = TfType::Define<Type, TfType::Bases<GlfTexture>>();
-    t.SetFactory<GlfUdimTextureFactory>();
+    TfType::Define<GlfUdimTexture, TfType::Bases<GlfTexture>>();
 }
 
 GlfUdimTexture::GlfUdimTexture(
     TfToken const& imageFilePath,
     GlfImage::ImageOriginLocation originLocation,
-    SdfLayerHandle layerHandle)
-    : GlfTexture(originLocation) {
-    _GetUdimTiles(imageFilePath, _tiles, layerHandle);
+    std::vector<std::tuple<int, TfToken>>&& tiles)
+    : GlfTexture(originLocation), _tiles(std::move(tiles)) {
 }
 
 GlfUdimTexture::~GlfUdimTexture() {
@@ -133,9 +111,9 @@ GlfUdimTextureRefPtr
 GlfUdimTexture::New(
     TfToken const& imageFilePath,
     GlfImage::ImageOriginLocation originLocation,
-    SdfLayerHandle layerHandle) {
+    std::vector<std::tuple<int, TfToken>>&& tiles) {
     return TfCreateRefPtr(new GlfUdimTexture(
-        imageFilePath, originLocation, layerHandle));
+        imageFilePath, originLocation, std::move(tiles)));
 }
 
 GlfTexture::BindingVector
@@ -326,7 +304,7 @@ GlfUdimTexture::_ReadImage() {
 
     WorkParallelForN(_tiles.size(), [&](size_t begin, size_t end) {
         for (size_t tileId = begin; tileId < end; ++tileId) {
-            _UdimTile const& tile = _tiles[tileId];
+            std::tuple<int, TfToken> const& tile = _tiles[tileId];
             layoutData[std::get<0>(tile)] = tileId;
             _MipDescArray images = _GetMipLevels(std::get<1>(tile));
             if (images.empty()) { continue; }
@@ -381,39 +359,6 @@ GlfUdimTexture::_ReadImage() {
 void
 GlfUdimTexture::_OnMemoryRequestedDirty() {
     _loaded = false;
-}
-
-void
-GlfUdimTexture::_GetUdimTiles(
-    std::string const& imageFilePath, _UdimTileArray& tiles,
-    SdfLayerHandle layerHandle) {
-    tiles.clear();
-    GlfContextCaps const &caps = GlfContextCaps::GetInstance();
-    if (ARCH_UNLIKELY(!caps.arrayTexturesEnabled)) {
-        return;
-    }
-
-    const std::string::size_type pos = imageFilePath.find("<UDIM>");
-    if (pos == std::string::npos) {
-        return;
-    }
-    std::string formatString = imageFilePath;
-    formatString.replace(pos, 6, "%i");
-
-    constexpr int startTile = 1001;
-    const int endTile = startTile + caps.maxArrayTextureLayers;
-    tiles.reserve(endTile - startTile + 1);
-    for (int t = startTile; t <= endTile; ++t) {
-        const std::string path = layerHandle
-            ? SdfComputeAssetPathRelativeToLayer(
-                layerHandle,
-                TfStringPrintf(formatString.c_str(), t))
-            : TfStringPrintf(formatString.c_str(), t);
-        if (TfPathExists(path)) {
-            tiles.emplace_back(t - startTile, TfToken(path));
-        }
-    }
-    tiles.shrink_to_fit();
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
