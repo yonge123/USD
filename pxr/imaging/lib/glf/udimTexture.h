@@ -31,8 +31,6 @@
 
 #include "pxr/imaging/glf/texture.h"
 
-#include "pxr/usd/sdf/layer.h"
-
 #include <string>
 #include <vector>
 #include <tuple>
@@ -51,23 +49,6 @@ GLF_API bool GlfIsSupportedUdimTexture(std::string const& imageFilePath);
 class GlfUdimTexture;
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfUdimTexture);
 
-class GlfUdimTextureFactory : public GlfTextureFactoryBase {
-public:
-    GlfUdimTextureFactory(SdfLayerHandle layerHandle = SdfLayerHandle());
-
-    virtual GlfTextureRefPtr New(
-        TfToken const& texturePath,
-        GlfImage::ImageOriginLocation originLocation =
-            GlfImage::OriginUpperLeft) const override;
-
-    virtual GlfTextureRefPtr New(
-        TfTokenVector const& texturePaths,
-        GlfImage::ImageOriginLocation originLocation =
-            GlfImage::OriginUpperLeft) const override;
-private:
-    SdfLayerHandle _layerHandle;
-};
-
 class GlfUdimTexture : public GlfTexture {
 public:
     GLF_API
@@ -77,7 +58,7 @@ public:
     static GlfUdimTextureRefPtr New(
         TfToken const& imageFilePath,
         GlfImage::ImageOriginLocation originLocation,
-        SdfLayerHandle layerHandle);
+        std::vector<std::tuple<int, TfToken>>&& tiles);
 
     GLF_API
     GlfTexture::BindingVector GetBindings(
@@ -102,7 +83,7 @@ protected:
     GlfUdimTexture(
         TfToken const& imageFilePath,
         GlfImage::ImageOriginLocation originLocation,
-        SdfLayerHandle layerHandle);
+        std::vector<std::tuple<int, TfToken>>&& tiles);
 
     GLF_API
     void _FreeTextureObject();
@@ -112,16 +93,8 @@ protected:
 
     GLF_API
     void _OnMemoryRequestedDirty() override;
-
-    using _UdimTile = std::tuple<int, TfToken>;
-    using _UdimTileArray = std::vector<_UdimTile>;
-
-    GLF_API
-    static void _GetUdimTiles(
-        std::string const& imageFilePath, _UdimTileArray& tiles,
-        SdfLayerHandle layerHandle);
 private:
-    _UdimTileArray _tiles;
+    std::vector<std::tuple<int, TfToken>> _tiles;
     int _width = 0;
     int _height = 0;
     int _depth = 0;
