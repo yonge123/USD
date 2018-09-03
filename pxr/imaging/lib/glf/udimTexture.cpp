@@ -33,16 +33,10 @@
 
 #include "pxr/imaging/glf/image.h"
 
-#include "pxr/base/tf/fileUtils.h"
-#include "pxr/base/tf/registryManager.h"
 #include "pxr/base/tf/stringUtils.h"
 
 #include "pxr/base/trace/trace.h"
 #include "pxr/base/work/loops.h"
-
-#include "pxr/usd/sdf/layerUtils.h"
-
-#include <iostream>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -62,7 +56,8 @@ struct _MipDesc {
 
 using _MipDescArray = std::vector<_MipDesc>;
 
-_MipDescArray _GetMipLevels(const TfToken& filePath) {
+_MipDescArray _GetMipLevels(const TfToken& filePath)
+{
     constexpr int maxMipReads = 32;
     _MipDescArray ret {};
     ret.reserve(maxMipReads);
@@ -87,7 +82,8 @@ _MipDescArray _GetMipLevels(const TfToken& filePath) {
 
 }
 
-bool GlfIsSupportedUdimTexture(std::string const& imageFilePath) {
+bool GlfIsSupportedUdimTexture(std::string const& imageFilePath)
+{
     return TfStringContains(imageFilePath, "<UDIM>");
 }
 
@@ -100,10 +96,12 @@ GlfUdimTexture::GlfUdimTexture(
     TfToken const& imageFilePath,
     GlfImage::ImageOriginLocation originLocation,
     std::vector<std::tuple<int, TfToken>>&& tiles)
-    : GlfTexture(originLocation), _tiles(std::move(tiles)) {
+    : GlfTexture(originLocation), _tiles(std::move(tiles))
+{
 }
 
-GlfUdimTexture::~GlfUdimTexture() {
+GlfUdimTexture::~GlfUdimTexture()
+{
     _FreeTextureObject();
 }
 
@@ -111,7 +109,8 @@ GlfUdimTextureRefPtr
 GlfUdimTexture::New(
     TfToken const& imageFilePath,
     GlfImage::ImageOriginLocation originLocation,
-    std::vector<std::tuple<int, TfToken>>&& tiles) {
+    std::vector<std::tuple<int, TfToken>>&& tiles)
+{
     return TfCreateRefPtr(new GlfUdimTexture(
         imageFilePath, originLocation, std::move(tiles)));
 }
@@ -119,7 +118,8 @@ GlfUdimTexture::New(
 GlfTexture::BindingVector
 GlfUdimTexture::GetBindings(
     TfToken const& identifier,
-    GLuint samplerId) {
+    GLuint samplerId)
+{
     _ReadImage();
     BindingVector ret;
     ret.push_back(Binding(
@@ -133,7 +133,8 @@ GlfUdimTexture::GetBindings(
 }
 
 VtDictionary
-GlfUdimTexture::GetTextureInfo(bool forceLoad) {
+GlfUdimTexture::GetTextureInfo(bool forceLoad)
+{
     VtDictionary ret;
 
     if (forceLoad) {
@@ -162,7 +163,8 @@ GlfUdimTexture::GetTextureInfo(bool forceLoad) {
 }
 
 void
-GlfUdimTexture::_FreeTextureObject() {
+GlfUdimTexture::_FreeTextureObject()
+{
     GlfSharedGLContextScopeHolder sharedGLContextScopeHolder;
 
     if (glIsTexture(_imageArray)) {
@@ -177,7 +179,8 @@ GlfUdimTexture::_FreeTextureObject() {
 }
 
 void
-GlfUdimTexture::_ReadImage() {
+GlfUdimTexture::_ReadImage()
+{
     TRACE_FUNCTION();
 
     if (_loaded) {
@@ -357,7 +360,8 @@ GlfUdimTexture::_ReadImage() {
 }
 
 void
-GlfUdimTexture::_OnMemoryRequestedDirty() {
+GlfUdimTexture::_OnMemoryRequestedDirty()
+{
     _loaded = false;
 }
 
