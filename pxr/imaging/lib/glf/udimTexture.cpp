@@ -152,7 +152,7 @@ GlfUdimTexture::GetTextureInfo(bool forceLoad)
         }
         ret["referenceCount"] = GetRefCount().Get();
     } else {
-        ret["memoryUsed"] = 0;
+        ret["memoryUsed"] = size_t{0};
         ret["width"] = 0;
         ret["height"] = 0;
         ret["depth"] = 1;
