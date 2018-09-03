@@ -219,6 +219,12 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
                         filePath.GetText(), usdPath.GetText());
                 return HdTextureResource::ID(-1);
             }
+            if (!caps.arrayTexturesEnabled) {
+                TF_WARN("OpenGL context does not support array textures, "
+                        "skipping UDIM Texture %s with path %s.",
+                        filePath.GetText(), usdPath.GetText());
+                return HdTextureResource::ID(-1);
+            }
             textureType = HdTextureType::Udim;
         } else if (GlfIsSupportedPtexTexture(filePath)) {
             TF_WARN("Unable to find Texture '%s' with path '%s'. Fallback "
