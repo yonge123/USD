@@ -49,8 +49,11 @@ PXR_NAMESPACE_OPEN_SCOPE
 namespace {
 
 HdWrap
-_GetWrapS(UsdPrim const &usdPrim)
+_GetWrapS(UsdPrim const &usdPrim, HdTextureType textureType)
 {
+    if (textureType == HdTextureType::Udim) {
+        return HdWrapBlack;
+    }
     // XXX: This default value should come from the registry
     TfToken wrapS("black");
     UsdShadeShader shader(usdPrim);
@@ -66,8 +69,11 @@ _GetWrapS(UsdPrim const &usdPrim)
 }
 
 HdWrap
-_GetWrapT(UsdPrim const &usdPrim)
+_GetWrapT(UsdPrim const &usdPrim, HdTextureType textureType)
 {
+    if (textureType == HdTextureType::Udim) {
+        return HdWrapBlack;
+    }
     // XXX: This default value should come from the registry
     TfToken wrapT("black");
     UsdShadeShader shader(usdPrim);
@@ -198,6 +204,7 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
         return HdTextureResource::ID(-1);
     }
 
+    HdTextureType textureType = HdTextureType::Uv;
     TfToken filePath = TfToken(asset.GetResolvedPath());
     // Fallback to the literal path if it couldn't be resolved.
     if (filePath.IsEmpty()) {
@@ -212,6 +219,7 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
                         filePath.GetText(), usdPath.GetText());
                 return HdTextureResource::ID(-1);
             }
+            textureType = HdTextureType::Udim;
         } else if (GlfIsSupportedPtexTexture(filePath)) {
             TF_WARN("Unable to find Texture '%s' with path '%s'. Fallback "
                     "textures are not supported for ptex",
@@ -223,14 +231,18 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
                     filePath.GetText(), usdPath.GetText());
             return HdTextureResource::ID(-1);
         }
+    } else {
+        if (GlfIsSupportedPtexTexture(filePath)) {
+            textureType = HdTextureType::Ptex;
+        }
     }
 
     // Hash on the texture filename.
     size_t hash = asset.GetHash();
 
     // Hash in wrapping and filtering metadata.
-    HdWrap wrapS = _GetWrapS(usdPrim);
-    HdWrap wrapT = _GetWrapT(usdPrim);
+    HdWrap wrapS = _GetWrapS(usdPrim, textureType);
+    HdWrap wrapT = _GetWrapT(usdPrim, textureType);
     HdMinFilter minFilter = _GetMinFilter(usdPrim);
     HdMagFilter magFilter = _GetMagFilter(usdPrim);
     float memoryLimit = _GetMemoryLimit(usdPrim);
@@ -300,10 +312,8 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
         origin = GlfImage::ImageOriginLocation::OriginLowerLeft;
     }
 
-    HdWrap wrapS = textureType == HdTextureType::Udim
-        ? HdWrapBlack : _GetWrapS(usdPrim);
-    HdWrap wrapT = textureType == HdTextureType::Udim
-        ? HdWrapBlack : _GetWrapT(usdPrim);
+    HdWrap wrapS = _GetWrapS(usdPrim, textureType);
+    HdWrap wrapT = _GetWrapT(usdPrim, textureType);
     HdMinFilter minFilter = _GetMinFilter(usdPrim);
     HdMagFilter magFilter = _GetMagFilter(usdPrim);
     float memoryLimit = _GetMemoryLimit(usdPrim);
