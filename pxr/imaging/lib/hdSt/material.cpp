@@ -386,7 +386,11 @@ HdStMaterial::_GetTextureResource(
     //
     // XXX todo handle fallback Ptex textures
     if (!texResource) {
-        GlfUVTextureStorageRefPtr texPtr = 
+        // Fallback texture are only supported for UV textures.
+        if (param.GetTextureType() != HdTextureType::Uv) {
+            return {};
+        }
+        GlfUVTextureStorageRefPtr texPtr =
             GlfUVTextureStorage::New(1,1, param.GetFallbackValue());
         GlfTextureHandleRefPtr texture =
             GlfTextureRegistry::GetInstance().GetTextureHandle(texPtr);
