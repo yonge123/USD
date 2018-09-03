@@ -25,6 +25,8 @@
 
 #include "pxr/base/tf/fileUtils.h"
 
+#include "pxr/usd/ar/resolver.h"
+
 #include "pxr/usd/sdf/layerUtils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -41,6 +43,11 @@ UsdImaging_GetUdimTiles(
     std::string formatString = basePath;
     formatString.replace(pos, 6, "%i");
 
+    ArResolver& resolver = ArGetResolver();
+    VtValue resolverCache;
+    if (layerHandle) {
+        resolver.BeginCacheScope(&resolverCache);
+    }
     constexpr int startTile = 1001;
     const int endTile = startTile + tileLimit;
     std::vector<std::tuple<int, TfToken>> ret;
@@ -54,6 +61,9 @@ UsdImaging_GetUdimTiles(
         if (TfPathExists(path)) {
             ret.emplace_back(t - startTile, TfToken(path));
         }
+    }
+    if (layerHandle) {
+        resolver.EndCacheScope(&resolverCache);
     }
     ret.shrink_to_fit();
     return ret;
@@ -71,6 +81,12 @@ UsdImaging_UdimTilesExist(
     std::string formatString = basePath;
     formatString.replace(pos, 6, "%i");
 
+    ArResolver& resolver = ArGetResolver();
+    VtValue resolverCache;
+    if (layerHandle) {
+        resolver.BeginCacheScope(&resolverCache);
+    }
+
     constexpr int startTile = 1001;
     const int endTile = startTile + tileLimit;
     for (int t = startTile; t <= endTile; ++t) {
@@ -82,6 +98,10 @@ UsdImaging_UdimTilesExist(
         if (TfPathExists(path)) {
             return true;
         }
+    }
+
+    if (layerHandle) {
+        resolver.EndCacheScope(&resolverCache);
     }
     return false;
 }
