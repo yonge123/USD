@@ -58,6 +58,7 @@ pxr_library(usdImaging
         rectLightAdapter
         sphereAdapter
         sphereLightAdapter
+        textureUtils
 
     PUBLIC_HEADERS
         api.h
