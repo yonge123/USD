@@ -49,19 +49,6 @@ GLF_API bool GlfIsSupportedUdimTexture(std::string const& imageFilePath);
 class GlfUdimTexture;
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfUdimTexture);
 
-class GlfUdimTextureFactory : public GlfTextureFactoryBase {
-public:
-    virtual GlfTextureRefPtr New(
-        TfToken const& texturePath,
-        GlfImage::ImageOriginLocation originLocation =
-            GlfImage::OriginUpperLeft) const override;
-
-    virtual GlfTextureRefPtr New(
-        TfTokenVector const& texturePaths,
-        GlfImage::ImageOriginLocation originLocation =
-            GlfImage::OriginUpperLeft) const override;
-};
-
 class GlfUdimTexture : public GlfTexture {
 public:
     GLF_API
@@ -70,7 +57,8 @@ public:
     GLF_API
     static GlfUdimTextureRefPtr New(
         TfToken const& imageFilePath,
-        GlfImage::ImageOriginLocation originLocation);
+        GlfImage::ImageOriginLocation originLocation,
+        std::vector<std::tuple<int, TfToken>>&& tiles);
 
     GLF_API
     GlfTexture::BindingVector GetBindings(
@@ -94,7 +82,8 @@ protected:
     GLF_API
     GlfUdimTexture(
         TfToken const& imageFilePath,
-        GlfImage::ImageOriginLocation originLocation);
+        GlfImage::ImageOriginLocation originLocation,
+        std::vector<std::tuple<int, TfToken>>&& tiles);
 
     GLF_API
     void _FreeTextureObject();
@@ -104,9 +93,8 @@ protected:
 
     GLF_API
     void _OnMemoryRequestedDirty() override;
-
 private:
-    TfToken _imagePath;
+    std::vector<std::tuple<int, TfToken>> _tiles;
     int _width = 0;
     int _height = 0;
     int _depth = 0;
