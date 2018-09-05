@@ -1183,7 +1183,7 @@ GusdPrimWrapper::loadPrimvars(
             loadPrimvar(stPrimvar, st);
         }
         else if (stPrimvar.GetTypeName() == SdfValueTypeNames->Float2Array ||
-+                stPrimvar.GetTypeName() == SdfValueTypeNames->TexCoord2fArray) {
+                 stPrimvar.GetTypeName() == SdfValueTypeNames->TexCoord2fArray) {
             // Need to read 'st' into 'uv' (and possibly do a type conversion)
             DBG(cerr << "Remapping st to uv with type conversion" << endl);
 
