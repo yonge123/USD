@@ -25,6 +25,7 @@
 #include "context.h"
 
 #include "UT_Gf.h"
+#include "UT_Version.h"
 #include "GT_VtArray.h"
 #include "USD_XformCache.h"
 #include "GU_USD.h"
@@ -1181,7 +1182,8 @@ GusdPrimWrapper::loadPrimvars(
             // 'uv' has already been read, so just read 'st' normally.
             loadPrimvar(stPrimvar, st);
         }
-        else if (stPrimvar.GetTypeName() == SdfValueTypeNames->Float2Array) {
+        else if (stPrimvar.GetTypeName() == SdfValueTypeNames->Float2Array ||
++                stPrimvar.GetTypeName() == SdfValueTypeNames->TexCoord2fArray) {
             // Need to read 'st' into 'uv' (and possibly do a type conversion)
             DBG(cerr << "Remapping st to uv with type conversion" << endl);
 
@@ -1204,18 +1206,22 @@ GusdPrimWrapper::loadPrimvars(
                 }
             }
 
-            // TODO: Use GT_TYPE_TEXTURE if it's available (16.5+)
             auto gtData = UT_IntrusivePtr<GusdGT_VtArray<GfVec3f>>(
-                    new GusdGT_VtArray<GfVec3f>(GT_TYPE_VECTOR));
+#if (GUSD_VER_CMP_2(>=, 16, 5))
+                    new GusdGT_VtArray<GfVec3f>(GT_TYPE_TEXTURE));
+#else
+                    new GusdGT_VtArray<GfVec3f>(GT_TYPE_NONE));
+#endif
             gtData->swap(destValue);
             applyGtData(stPrimvar, uv, gtData);
         }
         else {
             // TODO: Are we OK just allowing any other type through as-is?
             TF_WARN("Applying primvar 'st' to 'uv' attribute for prim %s, but "
-                    "'st' is not expected type %s.",
+                    "'st' is not one of the expected types: (%s, %s).",
                      primPath.c_str(),
-                     SdfValueTypeNames->Float2Array.GetAsToken().GetText());
+                     SdfValueTypeNames->Float2Array.GetAsToken().GetText(),
+                     SdfValueTypeNames->TexCoord2fArray.GetAsToken().GetText());
             loadPrimvar(stPrimvar, uv);
         }
     }
