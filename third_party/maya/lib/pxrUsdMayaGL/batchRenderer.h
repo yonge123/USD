@@ -57,7 +57,6 @@
 
 #include <memory>
 #include <utility>
-#include <string>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -216,14 +215,14 @@ public:
     /// context is available; this function is not appropriate for interesecting
     /// using the Maya viewport.
     ///
-    /// \p hitPoint yields the point of intersection if \c true is returned.
-    ///
+    /// If hit(s) are found, returns \c true and populates \p *outResult with
+    /// the intersection result.
     PXRUSDMAYAGL_API
     bool TestIntersectionCustomCollection(
             const HdRprimCollection& collection,
             const GfMatrix4d& viewMatrix,
             const GfMatrix4d& projectionMatrix,
-            GfVec3d* hitPoint);
+            HdxIntersector::Result* outResult);
 
     /// Utility function for finding the nearest hit (in terms of ndcDepth) in
     /// the given \p hitSet.
@@ -291,12 +290,11 @@ private:
     /// Private helper function for testing intersection on a single collection
     /// only.
     /// \returns True if there was at least one hit. All hits are returned in
-    /// the outHitSet.
+    /// the \p *result.
     bool _TestIntersection(
             const HdRprimCollection& rprimCollection,
             HdxIntersector::Params queryParams,
-            const bool singleSelection,
-            HdxIntersector::HitSet* outHitSet);
+            HdxIntersector::Result* result);
 
     /// Handler for Maya Viewport 2.0 end render notifications.
     ///
@@ -315,15 +313,6 @@ private:
     /// This callback is just so we don't have to query the soft selection
     /// options through mel every time we have a selection event.
     static void _OnSoftSelectOptionsChangedCallback(void* clientData);
-
-    /// Tries to get the viewport for the given draw context.
-    /// Returns true if the viewport was found, in which case it is returned in
-    /// the \p view parameter.
-    /// Returns false if there's not a 3D viewport (e.g. we're drawing into a
-    /// render view).
-    static bool _GetViewFromDrawContext(
-            const MHWRender::MDrawContext& context,
-            M3dView* view);
 
     /// Perform post-render state cleanup.
     ///
@@ -460,16 +449,6 @@ private:
             const GfMatrix4d& projectionMatrix,
             const bool singleSelection);
 
-    /// Container of Maya render pass identifiers of passes drawn so far during
-    /// a Viewport 2.0 render.
-    ///
-    /// Since all Hydra geometry is drawn at once, we only ever want to execute
-    /// the Hydra draw once per Maya render pass (shadow, color, etc.). This
-    /// container keeps track of which passes have been drawn by Hydra, and it
-    /// is reset when the batch renderer is notified that a Maya render has
-    /// ended.
-    std::unordered_set<std::string> _drawnMayaRenderPasses;
-
     /// A cache of all selection results gathered since the last selection was
     /// computed. It maps delegate IDs to a HitSet of all of the intersection
     /// hits for that delegate ID.
@@ -519,4 +498,4 @@ PXRUSDMAYAGL_API_TEMPLATE_CLASS(TfSingleton<UsdMayaGLBatchRenderer>);
 PXR_NAMESPACE_CLOSE_SCOPE
 
 
-#endif // PXRUSDMAYAGL_BATCH_RENDERER_H
+#endif
