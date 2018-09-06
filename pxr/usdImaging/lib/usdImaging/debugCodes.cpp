@@ -42,6 +42,8 @@ TF_REGISTRY_FUNCTION(TfDebug)
                                 "Report PI prototype stats as they are created");
     TF_DEBUG_ENVIRONMENT_SYMBOL(USDIMAGING_POINT_INSTANCER_PROTO_CULLING,
                                 "Report PI culling debug info");
+    TF_DEBUG_ENVIRONMENT_SYMBOL(USDIMAGING_PRIM_ACCESS,
+                                "Report primitive access warnings that don't cause errors otherwise");
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

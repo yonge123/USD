@@ -1226,7 +1226,7 @@ PxrUsdKatanaUtils::ConvertUsdPathToKatLocation(
                 return std::string();
             }
         }
-    } 
+    }
 
     // The rootPath is expected to be an absolute path or empty string.
     //
@@ -1761,7 +1761,7 @@ PxrUsdKatanaUtils::ConvertBoundsToAttribute(
         }
 
         if ( isinf(min[0]) || isinf(min[1]) || isinf(min[2]) ||
-            isinf(max[0]) || isinf(max[1]) || isinf(max[2]) ) {
+             isinf(max[0]) || isinf(max[1]) || isinf(max[2]) ) {
             *hasInfiniteBounds = true;
         }
 

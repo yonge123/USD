@@ -1,5 +1,5 @@
 //
-// Copyright 2018 Pixar
+// Copyright 2017 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -21,21 +21,40 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef GUSD_DEBUGCODES_H
-#define GUSD_DEBUGCODES_H
 
-#include "pxr/pxr.h"
-#include "pxr/base/tf/debug.h"
+#include "usdMaya/listUserAttributeWritersCommand.h"
+
+#include "usdMaya/userAttributeWriterRegistry.h"
+#include "usdMaya/registryHelper.h"
+
+#include <maya/MSyntax.h>
+#include <maya/MStatus.h>
+#include <maya/MGlobal.h>
+#include <maya/MString.h>
+
+#include <mutex>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+usdListUserAttributeWriters::usdListUserAttributeWriters() {
 
-TF_DEBUG_CODES(
-    GUSD_STAGECACHE,
-    GUSD_SHADINGMODEREGISTRY
-);
+}
 
+usdListUserAttributeWriters::~usdListUserAttributeWriters() {
+
+}
+
+MStatus
+usdListUserAttributeWriters::doIt(const MArgList& args) {    
+    for (const auto& e : UsdMayaUserAttributeWriterRegistry::ListWriters()) {
+        appendToResult(e.GetString().c_str());
+    }
+
+    return MS::kSuccess;
+}
+
+void* usdListUserAttributeWriters::creator() {
+    return new usdListUserAttributeWriters();
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
-
-#endif // GUSD_DEBUGCODES_H

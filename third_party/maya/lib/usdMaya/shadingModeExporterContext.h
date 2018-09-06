@@ -97,6 +97,12 @@ public:
     const SdfPathSet& GetBindableRoots() const {
         return _bindableRoots;
     }
+    bool GetStripNamespaces() const {
+        return _exportParams.stripNamespaces;
+    }
+    const SdfPath& GetParentScope() const {
+        return _exportParams.parentScope;
+    }
 
     PXRUSDMAYA_API
     void SetSurfaceShaderPlugName(const TfToken& surfaceShaderPlugName);

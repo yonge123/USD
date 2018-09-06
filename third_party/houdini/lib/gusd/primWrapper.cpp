@@ -25,6 +25,7 @@
 #include "context.h"
 
 #include "UT_Gf.h"
+#include "UT_Version.h"
 #include "GT_VtArray.h"
 #include "USD_XformCache.h"
 #include "GU_USD.h"
@@ -653,11 +654,32 @@ GusdPrimWrapper::updatePrimvarFromGTPrim(
 
         TfToken name( mapIt.name() );
 
-        updatePrimvarFromGTPrim( 
-                    TfToken( name ),
-                    owner, 
-                    interpolation, 
-                    time, 
+        // Write Houdini's `uv` attribute to the `st` primvar.
+        // TODO: Should we worry about double/half data?
+        if (name == GusdTokens->uv &&
+                attrData->getTupleSize() >= 2 &&
+                attrData->getStorage() == GT_STORE_REAL32 &&
+                (owner == GT_OWNER_POINT || owner == GT_OWNER_VERTEX))
+        {
+            VtArray<GfVec2f> tempArray;
+            tempArray.resize(static_cast<size_t>(attrData->entries()));
+            auto destPtr = reinterpret_cast<fpreal32*>(tempArray.data());
+            for (GT_Offset i = 0; i < attrData->entries(); i++, destPtr += 2) {
+                attrData->import(i, destPtr, 2);
+            }
+
+            auto stDataPtr = UT_IntrusivePtr<GusdGT_VtArray<GfVec2f>>(
+                    new GusdGT_VtArray<GfVec2f>(GT_TYPE_NONE));
+            stDataPtr->swap(tempArray);
+            attrData = stDataPtr;
+            name = TfToken(GusdTokens->st);
+        }
+
+        updatePrimvarFromGTPrim(
+                    name,
+                    owner,
+                    interpolation,
+                    time,
                     attrData );
     }
     return true;
@@ -762,6 +784,20 @@ GusdPrimWrapper::convertPrimvarData( const UsdGeomPrimvar& primvar, UsdTimeCode 
         primvar.Get( &usdVal, time );
 
         return new GT_Real64Array( usdVal.data(), 1, 3, GT_TYPE_COLOR );
+    }
+    else if( typeName == SdfValueTypeNames->Color4f )
+    {
+        GfVec4f usdVal;
+        primvar.Get( &usdVal, time );
+
+        return new GT_Real32Array( usdVal.data(), 1, 4, GT_TYPE_COLOR );
+    }
+    else if( typeName == SdfValueTypeNames->Color4d )
+    {
+        GfVec4d usdVal;
+        primvar.Get( &usdVal, time );
+
+        return new GT_Real64Array( usdVal.data(), 1, 4, GT_TYPE_COLOR );
     }
     else if( typeName == SdfValueTypeNames->Normal3f )
     {
@@ -876,6 +912,12 @@ GusdPrimWrapper::convertPrimvarData( const UsdGeomPrimvar& primvar, UsdTimeCode 
         primvar.ComputeFlattened( &usdVal, time );
         return new GusdGT_VtArray<double>(usdVal);
     }
+    else if( typeName == SdfValueTypeNames->Half2Array )
+    {
+        VtArray<GfVec2h> usdVal;
+        primvar.ComputeFlattened( &usdVal, time );
+        return new GusdGT_VtArray<GfVec2h>(usdVal);
+    }
     else if( typeName == SdfValueTypeNames->Float2Array )
     {
         VtArray<GfVec2f> usdVal;
@@ -887,6 +929,22 @@ GusdPrimWrapper::convertPrimvarData( const UsdGeomPrimvar& primvar, UsdTimeCode 
         VtArray<GfVec2d> usdVal;
         primvar.ComputeFlattened( &usdVal, time );
         return new GusdGT_VtArray<GfVec2d>(usdVal);
+    }
+    else if( typeName == SdfValueTypeNames->TexCoord2fArray )
+    {
+        VtArray<GfVec2f> usdVal;
+        primvar.ComputeFlattened( &usdVal, time );
+#if (GUSD_VER_CMP_2(>=, 16, 5))
+        return new GusdGT_VtArray<GfVec2f>(usdVal, GT_TYPE_TEXTURE);
+#else
+        return new GusdGT_VtArray<GfVec2f>(usdVal, GT_TYPE_NONE);
+#endif
+    }
+    else if( typeName == SdfValueTypeNames->Half3Array )
+    {
+        VtArray<GfVec3h> usdVal;
+        primvar.ComputeFlattened( &usdVal, time );
+        return new GusdGT_VtArray<GfVec3h>(usdVal);
     }
     else if( typeName == SdfValueTypeNames->Float3Array )
     {
@@ -900,17 +958,29 @@ GusdPrimWrapper::convertPrimvarData( const UsdGeomPrimvar& primvar, UsdTimeCode 
         primvar.ComputeFlattened( &usdVal, time );
         return new GusdGT_VtArray<GfVec3d>(usdVal);
     }
+    else if( typeName == SdfValueTypeNames->Color3hArray )
+    {
+        VtArray<GfVec3h> usdVal;
+        primvar.ComputeFlattened( &usdVal, time );
+        return new GusdGT_VtArray<GfVec3h>(usdVal, GT_TYPE_COLOR);
+    }
     else if( typeName == SdfValueTypeNames->Color3fArray )
     {
         VtArray<GfVec3f> usdVal;
         primvar.ComputeFlattened( &usdVal, time );
-        return new GusdGT_VtArray<GfVec3f>(usdVal,GT_TYPE_COLOR);
+        return new GusdGT_VtArray<GfVec3f>(usdVal, GT_TYPE_COLOR);
     }
     else if( typeName == SdfValueTypeNames->Color3dArray )
     {
         VtArray<GfVec3d> usdVal;
         primvar.ComputeFlattened( &usdVal, time );
-        return new GusdGT_VtArray<GfVec3d>(usdVal,GT_TYPE_COLOR);
+        return new GusdGT_VtArray<GfVec3d>(usdVal, GT_TYPE_COLOR);
+    }
+    else if( typeName == SdfValueTypeNames->Vector3hArray )
+    {
+        VtArray<GfVec3h> usdVal;
+        primvar.ComputeFlattened( &usdVal, time );
+        return new GusdGT_VtArray<GfVec3h>(usdVal, GT_TYPE_VECTOR);
     }
     else if( typeName == SdfValueTypeNames->Vector3fArray )
     {
@@ -948,6 +1018,16 @@ GusdPrimWrapper::convertPrimvarData( const UsdGeomPrimvar& primvar, UsdTimeCode 
         primvar.ComputeFlattened( &usdVal, time );
         return new GusdGT_VtArray<GfVec3d>(usdVal, GT_TYPE_POINT);
     }
+    else if( typeName == SdfValueTypeNames->TexCoord3fArray )
+    {
+        VtArray<GfVec3f> usdVal;
+        primvar.ComputeFlattened( &usdVal, time );
+#if (GUSD_VER_CMP_2(>=, 16, 5))
+        return new GusdGT_VtArray<GfVec3f>(usdVal, GT_TYPE_TEXTURE);
+#else
+        return new GusdGT_VtArray<GfVec3f>(usdVal, GT_TYPE_NONE);
+#endif
+    }
     else if( typeName == SdfValueTypeNames->Float4Array )
     {
         VtArray<GfVec4f> usdVal;
@@ -959,6 +1039,30 @@ GusdPrimWrapper::convertPrimvarData( const UsdGeomPrimvar& primvar, UsdTimeCode 
         VtArray<GfVec4d> usdVal;
         primvar.ComputeFlattened( &usdVal, time );
         return new GusdGT_VtArray<GfVec4d>(usdVal);
+    }
+    else if( typeName == SdfValueTypeNames->Half4Array )
+    {
+        VtArray<GfVec4h> usdVal;
+        primvar.ComputeFlattened( &usdVal, time );
+        return new GusdGT_VtArray<GfVec4h>(usdVal);
+    }
+    else if( typeName == SdfValueTypeNames->Color4hArray )
+    {
+        VtArray<GfVec4h> usdVal;
+        primvar.ComputeFlattened( &usdVal, time );
+        return new GusdGT_VtArray<GfVec4h>(usdVal, GT_TYPE_COLOR);
+    }
+    else if( typeName == SdfValueTypeNames->Color4fArray )
+    {
+        VtArray<GfVec4f> usdVal;
+        primvar.ComputeFlattened( &usdVal, time );
+        return new GusdGT_VtArray<GfVec4f>(usdVal, GT_TYPE_COLOR);
+    }
+    else if( typeName == SdfValueTypeNames->QuathArray )
+    {
+        VtArray<GfVec4h> usdVal;
+        primvar.ComputeFlattened( &usdVal, time );
+        return new GusdGT_VtArray<GfVec4h>(usdVal, GT_TYPE_QUATERNION);
     }
     else if( typeName == SdfValueTypeNames->QuatfArray )
     {
@@ -1014,10 +1118,15 @@ GusdPrimWrapper::loadPrimvars(
 
     std::vector<UsdGeomPrimvar> authoredPrimvars;
     bool hasCdPrimvar = false;
+    bool hasStPrimvar = false;
+    bool hasUvPrimvar = false;
+
+    const UT_String st(GusdTokens->st);
+    const UT_String uv(GusdTokens->uv);
+
+    UsdGeomImageable prim = getUsdPrim();
 
     {
-        UsdGeomImageable prim = getUsdPrim();
-
         UsdGeomPrimvar colorPrimvar = prim.GetPrimvar(GusdTokens->Cd);
         if (colorPrimvar && colorPrimvar.GetAttr().HasAuthoredValueOpinion()) {
             hasCdPrimvar = true;
@@ -1040,41 +1149,11 @@ GusdPrimWrapper::loadPrimvars(
         } else if (primvarPattern != "") {
             authoredPrimvars = prim.GetAuthoredPrimvars();
         }
-    }    
+    }
 
-    // Is it better to sort the attributes and build the attributes all at once.
-
-    for( const UsdGeomPrimvar &primvar : authoredPrimvars )
+    auto applyGtData = [&] (const UsdGeomPrimvar& primvar, const UT_String& name,
+                            GT_DataArrayHandle gtData)
     {
-        DBG(cerr << "loadPrimvar " << primvar.GetPrimvarName() << "\t" << primvar.GetTypeName() << "\t" << primvar.GetInterpolation() << endl);
-
-        UT_String name(primvar.GetPrimvarName());
-
-        // One special case we always handle here is to change
-        // the name of the USD "displayColor" primvar to "Cd",
-        // as long as there is not already a "Cd" primvar.
-        if (!hasCdPrimvar && 
-            primvar.GetName() == UsdGeomTokens->primvarsDisplayColor) {
-            name = Cd;
-        }
-
-        // If the name of this primvar doesn't
-        // match the primvarPattern, skip it.
-        if (!name.multiMatch(primvarPattern, 1, " ")) {
-            continue;
-        }
-
-        GT_DataArrayHandle gtData = convertPrimvarData( primvar, time );
-
-        if( !gtData )
-        {
-            TF_WARN( "Failed to convert primvar %s:%s %s.", 
-                        primPath.c_str(),
-                        primvar.GetPrimvarName().GetText(),
-                        primvar.GetTypeName().GetAsToken().GetText() );
-            continue;
-        }
-
         // usd vertex primvars are assigned to points
         if( primvar.GetInterpolation() == UsdGeomTokens->vertex )
         {
@@ -1125,6 +1204,107 @@ GusdPrimWrapper::loadPrimvars(
             if( constant ) {
                 *constant = (*constant)->addAttribute( name.c_str(), gtData, true );
             }
+        }
+    };
+
+    auto loadPrimvar = [&] (const UsdGeomPrimvar& primvar, const UT_String& name)
+    {
+        GT_DataArrayHandle gtData = convertPrimvarData( primvar, time );
+        if( !gtData )
+        {
+            TF_WARN( "Failed to convert primvar %s:%s %s.",
+                        primPath.c_str(),
+                        primvar.GetPrimvarName().GetText(),
+                        primvar.GetTypeName().GetAsToken().GetText() );
+            return;
+        }
+
+        applyGtData(primvar, name, gtData);
+    };
+
+
+    // Is it better to sort the attributes and build the attributes all at once.
+
+    for( const UsdGeomPrimvar &primvar : authoredPrimvars )
+    {
+        DBG(cerr << "loadPrimvar " << primvar.GetPrimvarName() << "\t" << primvar.GetTypeName() << "\t" << primvar.GetInterpolation() << endl);
+
+        UT_String name(primvar.GetPrimvarName());
+
+        // One special case we always handle here is to change
+        // the name of the USD "displayColor" primvar to "Cd",
+        // as long as there is not already a "Cd" primvar.
+        if (!hasCdPrimvar && 
+            primvar.GetName() == UsdGeomTokens->primvarsDisplayColor) {
+            name = Cd;
+        }
+
+        // If the name of this primvar doesn't
+        // match the primvarPattern, skip it.
+        if (!name.multiMatch(primvarPattern, 1, " ")) {
+            continue;
+        }
+
+        // If we may be converting 'st' to Houdini's 'uv' attribute, we'll need
+        // to handle it separately.
+        if (!hasUvPrimvar && name == st) {
+            hasStPrimvar = true;
+            continue;
+        }
+        else if (name == uv) {
+            hasUvPrimvar = true;
+        }
+
+        loadPrimvar(primvar, name);
+    }
+
+    if (hasStPrimvar) {
+        const UsdGeomPrimvar& stPrimvar = prim.GetPrimvar(GusdTokens->st);
+        if (hasUvPrimvar) {
+            // 'uv' has already been read, so just read 'st' normally.
+            loadPrimvar(stPrimvar, st);
+        }
+        else if (stPrimvar.GetTypeName() == SdfValueTypeNames->Float2Array ||
+                 stPrimvar.GetTypeName() == SdfValueTypeNames->TexCoord2fArray) {
+            // Need to read 'st' into 'uv' (and possibly do a type conversion)
+            DBG(cerr << "Remapping st to uv with type conversion" << endl);
+
+            // If 'st' is indexed, it might be nice to do the flattening and
+            // type conversion at the same time to cut down on copying, but
+            // that would currently require an awkward mishmash of custom
+            // and duplicated code. Currently just keeping it simple.
+            VtArray<GfVec2f> flatStValue;
+            stPrimvar.ComputeFlattened(&flatStValue, time);
+            VtArray<GfVec3f> destValue;
+            destValue.resize(flatStValue.size());
+
+            {
+                const GfVec2f* srcPtr = flatStValue.data();
+                const GfVec2f* srcEnd = srcPtr + flatStValue.size();
+                GfVec3f* destPtr = destValue.data();
+                while (srcPtr < srcEnd) {
+                    memcpy(destPtr, srcPtr++, sizeof(float) * 2);
+                    (*destPtr++)[2] = 0.f;
+                }
+            }
+
+            auto gtData = UT_IntrusivePtr<GusdGT_VtArray<GfVec3f>>(
+#if (GUSD_VER_CMP_2(>=, 16, 5))
+                    new GusdGT_VtArray<GfVec3f>(GT_TYPE_TEXTURE));
+#else
+                    new GusdGT_VtArray<GfVec3f>(GT_TYPE_NONE));
+#endif
+            gtData->swap(destValue);
+            applyGtData(stPrimvar, uv, gtData);
+        }
+        else {
+            // TODO: Are we OK just allowing any other type through as-is?
+            TF_WARN("Applying primvar 'st' to 'uv' attribute for prim %s, but "
+                    "'st' is not one of the expected types: (%s, %s).",
+                     primPath.c_str(),
+                     SdfValueTypeNames->Float2Array.GetAsToken().GetText(),
+                     SdfValueTypeNames->TexCoord2fArray.GetAsToken().GetText());
+            loadPrimvar(stPrimvar, uv);
         }
     }
 }

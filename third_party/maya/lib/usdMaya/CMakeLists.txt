@@ -26,6 +26,7 @@ pxr_shared_library(${PXR_PACKAGE}
         ${MAYA_OpenMayaUI_LIBRARY}
 
     INCLUDE_DIRS
+        ${Boost_INCLUDE_DIRS}
         ${MAYA_INCLUDE_DIRS}
 
     PUBLIC_HEADERS
@@ -73,6 +74,7 @@ pxr_shared_library(${PXR_PACKAGE}
         translatorXformable
         util
         usdPrimProvider
+        userAttributeWriterRegistry
         writeJobContext
         writeUtil
         xformStack
@@ -85,6 +87,7 @@ pxr_shared_library(${PXR_PACKAGE}
         proxyShape
         referenceAssembly
         undoHelperCommand
+        listUserAttributeWritersCommand
 
         chaser
         chaserRegistry

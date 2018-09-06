@@ -647,7 +647,6 @@ MStatus UsdMayaReferenceAssembly::computeInStageDataCached(MDataBlock& dataBlock
 
         if (SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(fileString)) {
             MFnDependencyNode depNodeFn(thisMObject());
-
             std::map<std::string, std::string> varSels;
             TfToken modelName = UsdUtilsGetModelNameFromRootLayer(rootLayer);
             const std::set<std::string> varSetNamesForCache = _GetVariantSetNamesForStageCache(depNodeFn);
