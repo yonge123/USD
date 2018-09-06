@@ -46,6 +46,7 @@ pxr_library(hd
         extComputation
         extComputationContext
 	field
+        flatNormals
         geomSubset
         instancer
         instanceRegistry
