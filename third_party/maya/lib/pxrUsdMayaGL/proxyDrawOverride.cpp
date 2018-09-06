@@ -27,12 +27,17 @@
 #include "pxrUsdMayaGL/batchRenderer.h"
 #include "pxrUsdMayaGL/renderParams.h"
 #include "pxrUsdMayaGL/usdProxyShapeAdapter.h"
+
+#include "px_vp20/utils.h"
+
 #include "usdMaya/proxyShape.h"
+#include "usdMaya/util.h"
 
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/gf/vec3f.h"
 #include "pxr/imaging/hdx/intersector.h"
 
+#include <maya/M3dView.h>
 #include <maya/MBoundingBox.h>
 #include <maya/MDagPath.h>
 #include <maya/MDrawContext.h>
@@ -69,10 +74,11 @@ UsdMayaProxyDrawOverride::UsdMayaProxyDrawOverride(const MObject& obj) :
         MHWRender::MPxDrawOverride(obj,
                                    UsdMayaProxyDrawOverride::draw
 #if MAYA_API_VERSION >= 201651
-                                   , /* isAlwaysDirty = */ false)
+                                   , /* isAlwaysDirty = */ false),
 #else
-                                   )
+                                   ),
 #endif
+        _originalDagPath(MDagPath::getAPathTo(obj))
 {
 }
 
@@ -131,7 +137,42 @@ UsdMayaProxyDrawOverride::isBounded(
         const MDagPath& objPath,
         const MDagPath& /* cameraPath */) const
 {
-    return UsdMayaIsBoundingBoxModeEnabled();
+    // XXX: Ideally, we'd be querying the shape itself using the code below to
+    // determine whether the object is bounded or not. Unfortunately, the
+    // shape's bounded-ness is based on the PIXMAYA_ENABLE_BOUNDING_BOX_MODE
+    // environment variable, which is almost never enabled. This is because we
+    // want Maya to bypass its own costly CPU-based frustum culling in favor
+    // of Hydra's higher performance implementation.
+    // However, this causes problems for features in Viewport 2.0 such as
+    // automatic computation of width focus for directional lights since it
+    // cannot get a bounding box for the shape.
+    // It would be preferable to just remove the use of
+    // PIXMAYA_ENABLE_BOUNDING_BOX_MODE in the shape's isBounded() method,
+    // especially since we instruct Maya not to draw bounding boxes in
+    // disableInternalBoundingBoxDraw() below, but trying to do that caused
+    // performance degradation in selection.
+    // So rather than ask the shape whether it is bounded or not, the draw
+    // override simply *always* considers the shape bounded. Hopefully at some
+    // point we can get Maya to fully bypass all of its frustum culling and
+    // remove PIXMAYA_ENABLE_BOUNDING_BOX_MODE.
+    return true;
+
+    // UsdMayaProxyShape* pShape = UsdMayaProxyShape::GetShapeAtDagPath(objPath);
+    // if (!pShape) {
+    //     return false;
+    // }
+
+    // return pShape->isBounded();
+}
+
+/* virtual */
+bool
+UsdMayaProxyDrawOverride::disableInternalBoundingBoxDraw() const
+{
+    // Hydra performs its own high-performance frustum culling, so we don't
+    // want to rely on Maya to do it on the CPU. As such, the best performance
+    // comes from telling Maya *not* to draw bounding boxes.
+    return true;
 }
 
 /* virtual */
@@ -142,6 +183,22 @@ UsdMayaProxyDrawOverride::prepareForDraw(
         const MHWRender::MFrameContext& frameContext,
         MUserData* oldData)
 {
+    // If a proxy shape is connected to a Maya instancer, a draw override will
+    // be generated for the proxy shape, but callbacks will get the instancer
+    // DAG path instead. Use this to our advantage by telling users to switch
+    // to "Full" representation to get instancer drawing.
+    if (objPath.apiType() == MFn::kInstancer) {
+        MDagPath assemblyDagPath;
+        if (UsdMayaUtil::FindAncestorSceneAssembly(
+                _originalDagPath, &assemblyDagPath)) {
+            TF_WARN("Switch '%s' to Full representation to use it with the "
+                    "instancer '%s'",
+                    assemblyDagPath.fullPathName().asChar(),
+                    objPath.fullPathName().asChar());
+        }
+        return nullptr;
+    }
+
     UsdMayaProxyShape* shape = UsdMayaProxyShape::GetShapeAtDagPath(objPath);
     if (!shape) {
         return nullptr;
@@ -198,6 +255,13 @@ UsdMayaProxyDrawOverride::userSelect(
         MPoint& hitPoint,
         const MUserData* data)
 {
+    M3dView view;
+    const bool hasView = px_vp20Utils::GetViewFromDrawContext(context, view);
+    if (hasView &&
+            !view.pluginObjectDisplay(UsdMayaProxyShape::displayFilterName)) {
+        return false;
+    }
+
     MSelectionMask objectsMask(MSelectionMask::kSelectObjectsMask);
     if (!selectInfo.selectable(objectsMask)) {
         return false;
