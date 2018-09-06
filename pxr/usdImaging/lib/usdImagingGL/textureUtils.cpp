@@ -48,44 +48,66 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
 
-HdWrap
-_GetWrapS(UsdPrim const &usdPrim, HdTextureType textureType)
+static HdWrap _GetWrap(UsdPrim const &usdPrim, HdTextureType textureType, const TfToken &wrapAttr)
 {
     if (textureType == HdTextureType::Udim) {
         return HdWrapBlack;
     }
-    // XXX: This default value should come from the registry
-    TfToken wrapS("black");
+    // The fallback, when the prim has no opinion is to use the metadata on
+    // the texture.
+    TfToken usdWrap = UsdHydraTokens->useMetadata;
     UsdShadeShader shader(usdPrim);
+
     if (shader) {
-        UsdAttribute attr = shader.GetInput(UsdHydraTokens->wrapS);
-        if (attr) attr.Get(&wrapS);
+        UsdAttribute attr = shader.GetInput(wrapAttr);
+        if (attr) {
+            attr.Get(&usdWrap);
+        }
     }
-    HdWrap wrapShd = (wrapS == UsdHydraTokens->clamp) ? HdWrapClamp
-                   : (wrapS == UsdHydraTokens->repeat) ? HdWrapRepeat
-                   : (wrapS == UsdHydraTokens->mirror) ? HdWrapMirror
-                   : HdWrapBlack; 
-    return wrapShd;
+
+    HdWrap hdWrap;
+    if (usdWrap == UsdHydraTokens->clamp) {
+        hdWrap = HdWrapClamp;
+    } else if (usdWrap == UsdHydraTokens->repeat) {
+        hdWrap = HdWrapRepeat;
+    } else if (usdWrap == UsdHydraTokens->mirror) {
+        hdWrap = HdWrapMirror;
+    } else if (usdWrap == UsdHydraTokens->black) {
+        hdWrap = HdWrapBlack;
+    } else {
+        if (usdWrap != UsdHydraTokens->useMetadata) {
+            TF_WARN("Unknown wrap mode on prim %s: %s",
+                    usdPrim.GetPath().GetText(),
+                    usdWrap.GetText());
+        }
+
+        hdWrap = HdWrapUseMetadata;
+
+        // For legacy reasons, there is two different behaviors for
+        // useMetadata.  The deprecated HwUvTexture_1 shader nodes
+        // use the legacy behavior, while new nodes should use the new
+        // behavior.
+        TfToken id;
+        UsdAttribute attr = shader.GetIdAttr();
+        if (attr.Get(&id)) {
+            if (id == UsdHydraTokens->HwUvTexture_1) {
+                hdWrap = HdWrapLegacy;
+            }
+        }
+    }
+
+    return hdWrap;
+}
+
+static HdWrap _GetWrapS(UsdPrim const &usdPrim, HdTextureType textureType)
+{
+    return _GetWrap(usdPrim, textureType, UsdHydraTokens->wrapS);
 }
 
 HdWrap
 _GetWrapT(UsdPrim const &usdPrim, HdTextureType textureType)
 {
-    if (textureType == HdTextureType::Udim) {
-        return HdWrapBlack;
-    }
-    // XXX: This default value should come from the registry
-    TfToken wrapT("black");
-    UsdShadeShader shader(usdPrim);
-    if (shader) {
-        UsdAttribute attr = shader.GetInput(UsdHydraTokens->wrapT);
-        if (attr) attr.Get(&wrapT);
-    }
-    HdWrap wrapThd = (wrapT == UsdHydraTokens->clamp) ? HdWrapClamp
-                   : (wrapT == UsdHydraTokens->repeat) ? HdWrapRepeat
-                   : (wrapT == UsdHydraTokens->mirror) ? HdWrapMirror
-                   : HdWrapBlack; 
-    return wrapThd;
+    return _GetWrap(usdPrim, textureType, UsdHydraTokens->wrapT);
 }
 
 HdMinFilter

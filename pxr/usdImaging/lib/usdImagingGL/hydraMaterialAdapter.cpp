@@ -41,8 +41,6 @@
 #include "pxr/usd/usdHydra/tokens.h"
 #include "pxr/usd/usdShade/connectableAPI.h"
 
-#include <functional>
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DEFINE_PRIVATE_TOKENS(
@@ -56,31 +54,6 @@ TF_DEFINE_PRIVATE_TOKENS(
     (varname)
     (fallback)
 );
-
-namespace {
-// Iterating through all the connected texture parameters that are animated.
-// If f returns true, the function returns.
-inline
-void _iterateAnimatedTextures(const UsdPrim& prim, const std::function<bool(const UsdAttribute&)>& f) {
-    UsdShadeConnectableAPI connectableAPI(prim);
-    if (connectableAPI) {
-        UsdShadeConnectableAPI source;
-        TfToken sourceName;
-        UsdShadeAttributeType sourceType;
-        for (auto& input: connectableAPI.GetInputs()) {
-            if (input.HasConnectedSource()) {
-                if (input.GetConnectedSource(&source, &sourceName, &sourceType)) {
-                    const auto textureAttr = source.GetPrim().GetAttribute(UsdHydraTokens->infoFilename);
-                    if (textureAttr && textureAttr.GetNumTimeSamples() > 1) {
-                        if (f(textureAttr)) { return; }
-                    }
-                }
-            }
-        }
-    }
-}
-
-}
 
 TF_REGISTRY_FUNCTION(TfType)
 {
@@ -164,42 +137,21 @@ UsdImagingGLHydraMaterialAdapter::Populate(UsdPrim const& prim,
     return prim.GetPath();
 }
 
-/* virtual */
-void
-UsdImagingGLHydraMaterialAdapter::TrackVariability(UsdPrim const& prim,
-                                          SdfPath const& cachePath,
-                                          HdDirtyBits* timeVaryingBits,
-                                          UsdImagingInstancerContext const*
-                                              instancerContext) const
+static bool
+_MightBeTimeVarying(UsdPrim const& prim)
 {
-    if (IsChildPath(cachePath)) {
-        // Textures aren't time-varying.
-        return;
-    }
-
-    UsdPrim surfaceShaderPrim = _GetSurfaceShaderPrim(UsdShadeMaterial(prim));
-    if (!surfaceShaderPrim)
-        return;
-
-    // XXX: This is terrifying. Run through all attributes of the prim,
-    // and if any are time varying, assume all shader params are time-varying.
-    for (const auto& attr: surfaceShaderPrim.GetAttributes()) {
-        if (attr.GetNumTimeSamples() > 1) {
-            *timeVaryingBits |= HdMaterial::DirtyParams;
-            return;
+    // Iterate the attributes to figure out if there is a time 
+    // varying attribute in this node.
+    for(UsdAttribute const& attr: prim.GetAttributes()) {
+        if (attr.ValueMightBeTimeVarying()) {
+            return true;
         }
     }
-
-    // Checking all the connected shaders for info:filename time samples, meaning
-    // animated textures.
-    _iterateAnimatedTextures(surfaceShaderPrim, [&timeVaryingBits] (const UsdAttribute&) -> bool {
-        *timeVaryingBits |= HdMaterial::DirtyParams;
-        return true;
-    });
+    return false;
 }
 
 static bool
-_IsLegacyTextureOrPrimvarInput(const UsdShadeInput &shaderInput)
+_IsLegacyTextureOrPrimvarInput(UsdShadeInput const& shaderInput)
 {
     UsdAttribute attr = shaderInput.GetAttr();
 
@@ -258,7 +210,6 @@ IsSupportedShaderInputType(SdfValueTypeName const& input)
     return true;
 }
 
-
 // XXX : This should use the shader node registry
 static TfToken
 GetFallbackPrimvar(TfToken const& id)
@@ -314,8 +265,7 @@ GetPrimvars(TfToken const& id)
     return t;
 }
 
-static
-UsdPrim
+static UsdPrim
 _GetDeprecatedSurfaceShaderPrim(const UsdShadeMaterial &material)
 {
     // ---------------------------------------------------------------------- //
@@ -381,6 +331,48 @@ _GetDeprecatedSurfaceShaderPrim(const UsdShadeMaterial &material)
     }
 
     return UsdPrim();
+}
+
+/* virtual */
+void
+UsdImagingGLHydraMaterialAdapter::TrackVariability(UsdPrim const& prim,
+                                          SdfPath const& cachePath,
+                                          HdDirtyBits* timeVaryingBits,
+                                          UsdImagingInstancerContext const*
+                                              instancerContext) const
+{
+    // If it is a child path, this adapter is dealing with a texture.
+    // Otherwise, we are tracking variability of the material.
+    if (IsChildPath(cachePath)) {
+        if (_MightBeTimeVarying(prim)) {
+            *timeVaryingBits |= HdTexture::DirtyTexture;
+        }
+        return;
+    }
+
+    UsdPrim surfaceShaderPrim = _GetSurfaceShaderPrim(UsdShadeMaterial(prim));
+    if (!surfaceShaderPrim) {
+        return;
+    }
+
+    // Checking if any of the connected shade nodes have time samples.
+    UsdShadeConnectableAPI source;
+    TfToken sourceName;
+    UsdShadeAttributeType sourceType;
+    UsdShadeConnectableAPI connectableAPI(surfaceShaderPrim);
+    for (UsdShadeInput const& input: connectableAPI.GetInputs()) {
+        if (input.GetConnectedSource(&source, &sourceName, &sourceType)) {
+            if (_MightBeTimeVarying(source.GetPrim())) {
+                *timeVaryingBits |= HdMaterial::DirtyParams;
+                return;
+            }
+        } else {
+            if (input.GetAttr().ValueMightBeTimeVarying()) {
+                *timeVaryingBits |= HdMaterial::DirtyParams;
+                return;
+            }
+        }
+    }
 }
 
 UsdPrim
@@ -515,12 +507,6 @@ UsdImagingGLHydraMaterialAdapter::MarkDirty(UsdPrim const& prim,
         index->MarkBprimDirty(cachePath, dirty);
     } else {
         index->MarkSprimDirty(cachePath, dirty);
-        _iterateAnimatedTextures(
-            _GetSurfaceShaderPrim(UsdShadeMaterial(prim)),
-            [index](const UsdAttribute& a) -> bool {
-                index->MarkBprimDirty(a.GetPath(), HdTexture::DirtyTexture);
-                return false;
-        });
     }
 }
 
