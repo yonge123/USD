@@ -344,6 +344,7 @@ operator <<(std::ostream& out, const UsdMayaJobExportArgs& exportArgs)
         << "exportMeshUVs: " << TfStringify(exportArgs.exportMeshUVs) << std::endl
         << "exportNurbsExplicitUV: " << TfStringify(exportArgs.exportNurbsExplicitUV) << std::endl
         << "exportRefsAsInstanceable: " << TfStringify(exportArgs.exportRefsAsInstanceable) << std::endl
+        << "exportRootPath: " << exportArgs.exportRootPath << std::endl
         << "exportSkels: " << TfStringify(exportArgs.exportSkels) << std::endl
         << "exportSkin: " << TfStringify(exportArgs.exportSkin) << std::endl
         << "exportVisibility: " << TfStringify(exportArgs.exportVisibility) << std::endl
@@ -444,11 +445,11 @@ const VtDictionary& UsdMayaJobExportArgs::GetDefaultDictionary()
         d[UsdMayaJobExportArgsTokens->renderableOnly] = false;
         d[UsdMayaJobExportArgsTokens->renderLayerMode] =
                 UsdMayaJobExportArgsTokens->defaultLayer.GetString();
+        d[UsdMayaJobExportArgsTokens->root] = std::string();
         d[UsdMayaJobExportArgsTokens->shadingMode] =
                 UsdMayaShadingModeTokens->displayColor.GetString();
         d[UsdMayaJobExportArgsTokens->stripNamespaces] = false;
         d[UsdMayaJobExportArgsTokens->verbose] = false;
-        d[UsdMayaJobExportArgsTokens->root] = std::string();
 
         // plugInfo.json site defaults.
         // The defaults dict should be correctly-typed, so enable
