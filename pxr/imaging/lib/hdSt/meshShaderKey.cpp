@@ -38,10 +38,11 @@ TF_DEFINE_PRIVATE_TOKENS(
     // normal mixins
     ((normalsScene,            "MeshNormal.Scene"))
     ((normalsSmooth,           "MeshNormal.Smooth"))
+    ((normalsFlat,             "MeshNormal.Flat"))
     ((normalsPass,             "MeshNormal.Pass"))
 
-    ((normalsFlat,             "MeshNormal.Geometry.Flat"))
-    ((normalsNoFlat,           "MeshNormal.Geometry.NoFlat"))
+    ((normalsGeometryFlat,     "MeshNormal.Geometry.Flat"))
+    ((normalsGeometryNoFlat,   "MeshNormal.Geometry.NoFlat"))
 
     ((doubleSidedFS,           "MeshNormal.Fragment.DoubleSided"))
     ((singleSidedFS,           "MeshNormal.Fragment.SingleSided"))
@@ -118,7 +119,7 @@ HdSt_MeshShaderKey::HdSt_MeshShaderKey(
     NormalSource normalsSource,
     HdInterpolation normalsInterpolation,
     bool doubleSided,
-    bool faceVarying,
+    bool forceGeometryShader,
     bool blendWireframeColor,
     HdCullStyle cullStyle,
     HdMeshGeomStyle geomStyle,
@@ -130,7 +131,6 @@ HdSt_MeshShaderKey::HdSt_MeshShaderKey(
     , cullStyle(cullStyle)
     , polygonMode(HdPolygonModeFill)
     , lineWidth(lineWidth)
-    , isFaceVarying(faceVarying)
     , glslfx(_tokens->baseGLSLFX)
 {
     if (geomStyle == HdMeshGeomStyleEdgeOnly ||
@@ -199,10 +199,12 @@ HdSt_MeshShaderKey::HdSt_MeshShaderKey(
     // geometry shader (note that PRIM_MESH_PATCHES uses triangles)
     GS[0] = _tokens->instancing;
 
-    GS[1] = gsSceneNormals ?
-            _tokens->normalsScene : _tokens->normalsPass;
-    GS[2] = (normalsSource == NormalSourceFlat) ?
-            _tokens->normalsFlat : _tokens->normalsNoFlat;
+    GS[1] = (normalsSource == NormalSourceFlat) ?
+        _tokens->normalsFlat :
+        (gsSceneNormals ? _tokens->normalsScene : _tokens->normalsPass);
+
+    GS[2] = (normalsSource == NormalSourceGeometryShader) ?
+            _tokens->normalsGeometryFlat : _tokens->normalsGeometryNoFlat;
 
     GS[3] = ((geomStyle == HdMeshGeomStyleEdgeOnly ||
               geomStyle == HdMeshGeomStyleHullEdgeOnly)   ? _tokens->edgeOnlyGS
@@ -230,10 +232,10 @@ HdSt_MeshShaderKey::HdSt_MeshShaderKey(
     // opportunity to fully disable the geometry stage.
     if (!useCustomDisplacement
             && (normalsSource != NormalSourceLimit)
-            && (normalsSource != NormalSourceFlat)
+            && (normalsSource != NormalSourceGeometryShader)
             && (geomStyle == HdMeshGeomStyleSurf || geomStyle == HdMeshGeomStyleHull)
             && HdSt_GeometricShader::IsPrimTypeTriangles(primType)
-            && (!isFaceVarying)) {
+            && (!forceGeometryShader)) {
             
         GS[0] = TfToken();
     }
@@ -249,8 +251,11 @@ HdSt_MeshShaderKey::HdSt_MeshShaderKey(
      uint8_t fsIndex = 0;
     FS[fsIndex++] = _tokens->instancing;
 
-    FS[fsIndex++] = (!gsStageEnabled && gsSceneNormals) ?
-        _tokens->normalsScene : _tokens->normalsPass;
+    FS[fsIndex++] = (!gsStageEnabled && normalsSource == NormalSourceFlat) ?
+        _tokens->normalsFlat :
+        ((!gsStageEnabled && gsSceneNormals) ? _tokens->normalsScene :
+         _tokens->normalsPass);
+
     FS[fsIndex++] = doubleSided ?
         _tokens->doubleSidedFS : _tokens->singleSidedFS;
 
