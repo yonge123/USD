@@ -37,6 +37,92 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 struct HdRprimSharedData;
 
+/// \class HdReprSelector
+///
+/// Describes one of more authored rprim display representations.
+/// Display opinions are separated by the topology index they represent.
+/// This allows the application to specify one or more topological
+/// representations for a given HdRprim. For some visualizations it is
+/// important to allow the application to provide an opinion for the display
+/// of the refined surface, the unrefined hull, and the points separately from
+/// the Rprim's authored opinions. This allows the representations to merge
+/// and create a final composite representation to be used for rendering.
+class HdReprSelector {
+public:
+    explicit HdReprSelector()
+    : refinedToken()
+    , unrefinedToken()
+    , pointsToken() { }
+
+    explicit HdReprSelector(TfToken const &token)
+    : refinedToken(token)
+    , unrefinedToken()
+    , pointsToken() { }
+
+    explicit HdReprSelector(
+        TfToken const &refined,
+        TfToken const &unrefined)
+    : refinedToken(refined)
+    , unrefinedToken(unrefined)
+    , pointsToken() { }
+
+    explicit HdReprSelector(
+        TfToken const &refined,
+        TfToken const &unrefined,
+        TfToken const &points)
+    : refinedToken(refined)
+    , unrefinedToken(unrefined)
+    , pointsToken(points) { }
+    
+    /// Returns true if the passed in reprToken is in the set of tokens
+    /// for any topology index.
+    HD_API
+    bool Contains(TfToken reprToken) const;
+
+    /// Returns true if all the tokens for all the topologies are empty.
+    HD_API
+    bool IsEmpty() const;
+    
+    /// Returns a selector that is the composite of this selector 'over'
+    /// the passed in selector.
+    /// For each token that IsEmpty in this selector return the corresponding
+    /// token in the passed in selector.
+    /// Effectively this performs a merge operation where this selector wins
+    /// for each topological index it has an opinion on.
+    HD_API
+    HdReprSelector CompositeOver(const HdReprSelector &under) const;
+
+    HD_API    
+    bool operator==(const HdReprSelector &rhs) const;
+
+    HD_API
+    bool operator!=(const HdReprSelector &rhs) const;
+    
+    HD_API
+    bool operator<(const HdReprSelector &rhs) const;
+    
+    HD_API
+    size_t Hash() const;
+
+    HD_API    
+    char const* GetText() const;
+
+    HD_API    
+    friend std::ostream &operator <<(std::ostream &stream,
+                                     HdReprSelector const& t);
+    
+    HD_API
+    size_t size() const;
+
+    HD_API
+    TfToken const &operator[](int index) const;
+    
+private:
+    TfToken refinedToken;
+    TfToken unrefinedToken;
+    TfToken pointsToken;
+};
+
 /// \class HdRepr
 ///
 /// An HdRepr owns one or more draw item(s) that visually represent it.
