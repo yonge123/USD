@@ -403,24 +403,6 @@ UsdMayaGLBatchRenderer::_OnSoftSelectOptionsChangedCallback(void* clientData)
     batchRenderer->_objectSoftSelectEnabled = (commandResult == 3);
 }
 
-
-/* static */
-bool
-UsdMayaGLBatchRenderer::_GetViewFromDrawContext(
-        const MHWRender::MDrawContext& context,
-        M3dView* view)
-{
-    MString modelPanel;
-    if (context.renderingDestination(modelPanel) ==
-            MHWRender::MFrameContext::k3dViewport) {
-        if (M3dView::getM3dViewFromModelPanel(modelPanel, *view)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer() :
         _lastRenderFrameStamp(0u),
         _lastSelectionFrameStamp(0u),
@@ -451,7 +433,8 @@ UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer() :
         TfStringPrintf("%s_%s",
                        _tokens->BatchRendererRootName.GetText(),
                        _tokens->LegacyViewport.GetText())));
-    _legacyViewportRprimCollection.SetReprName(HdTokens->refined);
+    _legacyViewportRprimCollection.SetReprSelector(
+        HdReprSelector(HdTokens->refined));
     _legacyViewportRprimCollection.SetRootPath(_legacyViewportPrefix);
     _legacyViewportRprimCollection.SetRenderTags(renderTags);
     _renderIndex->GetChangeTracker().AddCollection(
@@ -461,7 +444,8 @@ UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer() :
         TfStringPrintf("%s_%s",
                        _tokens->BatchRendererRootName.GetText(),
                        _tokens->Viewport2.GetText())));
-    _viewport2RprimCollection.SetReprName(HdTokens->refined);
+    _viewport2RprimCollection.SetReprSelector(
+        HdReprSelector(HdTokens->refined));
     _viewport2RprimCollection.SetRootPath(_viewport2Prefix);
     _viewport2RprimCollection.SetRenderTags(renderTags);
     _renderIndex->GetChangeTracker().AddCollection(
@@ -701,16 +685,6 @@ UsdMayaGLBatchRenderer::Draw(
                                         projectionMat);
     }
 
-    const MHWRender::MPassContext& passContext = context.getPassContext();
-    const MString& passId = passContext.passIdentifier();
-
-    const auto inserted = _drawnMayaRenderPasses.insert(passId.asChar());
-    if (!inserted.second) {
-        // We've already done a Hydra draw for this Maya render pass, so we
-        // don't do another one.
-        return;
-    }
-
     const MUint64 frameStamp = context.getFrameStamp();
 
     if (hdUserData->drawShape && _UpdateRenderFrameStamp(frameStamp)) {
@@ -721,7 +695,8 @@ UsdMayaGLBatchRenderer::Draw(
         _GetViewport(context, &viewport);
 
         M3dView view;
-        const bool hasView = _GetViewFromDrawContext(context, &view);
+        const bool hasView =
+            px_vp20Utils::GetViewFromDrawContext(context, view);
 
         _RenderBatches(
                 &context,
@@ -811,6 +786,14 @@ UsdMayaGLBatchRenderer::TestIntersection(
     viewMatrix = localToWorldSpace * viewMatrix;
 
     if (_UpdateLegacySelectionPending(false)) {
+        if (TfDebug::IsEnabled(PXRUSDMAYAGL_BATCHED_SELECTION)) {
+            TF_DEBUG(PXRUSDMAYAGL_BATCHED_SELECTION).Msg(
+                "Computing batched selection for %s\n",
+                useViewport2Buckets ?
+                    "Viewport 2.0 using legacy viewport selection" :
+                    "legacy viewport");
+        }
+
         _ComputeSelection(bucketsMap,
                           &view,
                           viewMatrix,
@@ -840,14 +823,15 @@ UsdMayaGLBatchRenderer::TestIntersection(
         return nullptr;
     }
 
-    TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg("FOUND %zu HIT(s)\n", hitSet->size());
-    if (TfDebug::IsEnabled(PXRUSDMAYAGL_QUEUE_INFO)) {
+    TF_DEBUG(PXRUSDMAYAGL_BATCHED_SELECTION).Msg(
+        "    FOUND %zu HIT(s)\n", hitSet->size());
+    if (TfDebug::IsEnabled(PXRUSDMAYAGL_BATCHED_SELECTION)) {
         for (const HdxIntersector::Hit& hit : *hitSet) {
-            TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg(
-                "    HIT:\n"
-                "        delegateId: %s\n"
-                "        objectId  : %s\n"
-                "        ndcDepth  : %f\n",
+            TF_DEBUG(PXRUSDMAYAGL_BATCHED_SELECTION).Msg(
+                "        HIT:\n"
+                "            delegateId: %s\n"
+                "            objectId  : %s\n"
+                "            ndcDepth  : %f\n",
                 hit.delegateId.GetText(),
                 hit.objectId.GetText(),
                 hit.ndcDepth);
@@ -883,9 +867,26 @@ UsdMayaGLBatchRenderer::TestIntersection(
     }
 
     M3dView view;
-    const bool hasView = _GetViewFromDrawContext(context, &view);
+    const bool hasView = px_vp20Utils::GetViewFromDrawContext(context, view);
 
-    if (_UpdateSelectionFrameStamp(context.getFrameStamp())) {
+    const MUint64 frameStamp = context.getFrameStamp();
+
+    if (_UpdateSelectionFrameStamp(frameStamp)) {
+        if (TfDebug::IsEnabled(PXRUSDMAYAGL_BATCHED_SELECTION)) {
+            TF_DEBUG(PXRUSDMAYAGL_BATCHED_SELECTION).Msg(
+                "Computing batched selection for Viewport 2.0\n");
+
+            const MHWRender::MPassContext& passContext = context.getPassContext();
+            const MString& passId = passContext.passIdentifier();
+            const MStringArray& passSemantics = passContext.passSemantics();
+
+            TF_DEBUG(PXRUSDMAYAGL_BATCHED_SELECTION).Msg(
+                "    frameStamp: %s, passIdentifier: %s, passSemantics: %s\n",
+                TfStringify<MUint64>(frameStamp).c_str(),
+                passId.asChar(),
+                TfStringify<MStringArray>(passSemantics).c_str());
+        }
+
         _ComputeSelection(_shapeAdapterBuckets,
                           hasView ? &view : nullptr,
                           viewMatrix,
@@ -899,14 +900,15 @@ UsdMayaGLBatchRenderer::TestIntersection(
         return nullptr;
     }
 
-    TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg("FOUND %zu HIT(s)\n", hitSet->size());
-    if (TfDebug::IsEnabled(PXRUSDMAYAGL_QUEUE_INFO)) {
+    TF_DEBUG(PXRUSDMAYAGL_BATCHED_SELECTION).Msg(
+        "    FOUND %zu HIT(s)\n", hitSet->size());
+    if (TfDebug::IsEnabled(PXRUSDMAYAGL_BATCHED_SELECTION)) {
         for (const HdxIntersector::Hit& hit : *hitSet) {
-            TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg(
-                "    HIT:\n"
-                "        delegateId: %s\n"
-                "        objectId  : %s\n"
-                "        ndcDepth  : %f\n",
+            TF_DEBUG(PXRUSDMAYAGL_BATCHED_SELECTION).Msg(
+                "        HIT:\n"
+                "            delegateId: %s\n"
+                "            objectId  : %s\n"
+                "            ndcDepth  : %f\n",
                 hit.delegateId.GetText(),
                 hit.objectId.GetText(),
                 hit.ndcDepth);
@@ -921,7 +923,7 @@ UsdMayaGLBatchRenderer::TestIntersectionCustomCollection(
         const HdRprimCollection& collection,
         const GfMatrix4d& viewMatrix,
         const GfMatrix4d& projectionMatrix,
-        GfVec3d* hitPoint)
+        HdxIntersector::Result* outResult)
 {
     // Custom collection implementation.
     // Differs from viewport implementations in that it doesn't rely on
@@ -935,15 +937,7 @@ UsdMayaGLBatchRenderer::TestIntersectionCustomCollection(
     params.projectionMatrix = projectionMatrix;
     params.alphaThreshold = 0.1f;
 
-    HdxIntersector::HitSet hits;
-    if (_TestIntersection(collection, params, true, &hits)) {
-        if (hitPoint) {
-            *hitPoint = hits.begin()->worldSpaceHitPoint;
-        }
-        return true;
-    }
-
-    return false;
+    return _TestIntersection(collection, params, outResult);
 }
 
 /* static */
@@ -1017,12 +1011,9 @@ bool
 UsdMayaGLBatchRenderer::_TestIntersection(
     const HdRprimCollection& rprimCollection,
     HdxIntersector::Params queryParams,
-    const bool singleSelection,
-    HdxIntersector::HitSet* outHitSet)
+    HdxIntersector::Result* result)
 {
     queryParams.renderTags = rprimCollection.GetRenderTags();
-
-    HdxIntersector::Result result;
 
     glPushAttrib(GL_VIEWPORT_BIT |
                  GL_ENABLE_BIT |
@@ -1034,25 +1025,9 @@ UsdMayaGLBatchRenderer::_TestIntersection(
     const bool r = _intersector->Query(queryParams,
                                        rprimCollection,
                                        &_hdEngine,
-                                       &result);
+                                       result);
     glPopAttrib();
-    if (!r) {
-        return false;
-    }
-
-    if (singleSelection) {
-        HdxIntersector::Hit hit;
-        if (!result.ResolveNearest(&hit)) {
-            return false;
-        }
-
-        outHitSet->insert(hit);
-    }
-    else if (!result.ResolveUnique(outHitSet)) {
-        return false;
-    }
-
-    return true;
+    return r;
 }
 
 void
@@ -1082,8 +1057,8 @@ UsdMayaGLBatchRenderer::_ComputeSelection(
         _GetIntersectionRprimCollections(
             bucketsMap, isolatedObjects, useDepthSelection);
 
-    TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg(
-        "____________ SELECTION STAGE START ______________ "
+    TF_DEBUG(PXRUSDMAYAGL_BATCHED_SELECTION).Msg(
+        "    ____________ SELECTION STAGE START ______________ "
         "(singleSelection = %s, %zu collection(s))\n",
         singleSelection ? "true" : "false",
         rprimCollections.size());
@@ -1101,13 +1076,25 @@ UsdMayaGLBatchRenderer::_ComputeSelection(
     _selectResults.clear();
 
     for (const HdRprimCollection& rprimCollection : rprimCollections) {
-        TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg(
-            "--- Intersection Testing with collection: %s\n",
+        TF_DEBUG(PXRUSDMAYAGL_BATCHED_SELECTION).Msg(
+            "    --- Intersection Testing with collection: %s\n",
             rprimCollection.GetName().GetText());
 
+        HdxIntersector::Result result;
+        if (!_TestIntersection(rprimCollection, qparams, &result)) {
+            continue;
+        }
+
         HdxIntersector::HitSet hits;
-        if (!_TestIntersection(
-                rprimCollection, qparams, singleSelection, &hits)) {
+        if (singleSelection) {
+            HdxIntersector::Hit hit;
+            if (!result.ResolveNearest(&hit)) {
+                continue;
+            }
+
+            hits.insert(hit);
+        }
+        else if (!result.ResolveUnique(&hits)) {
             continue;
         }
 
@@ -1134,12 +1121,12 @@ UsdMayaGLBatchRenderer::_ComputeSelection(
         const HdxIntersector::HitSet& hitSet = delegateHits.second;
 
         for (const HdxIntersector::Hit& hit : hitSet) {
-            TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg(
-                "NEW HIT\n"
-                "    delegateId   : %s\n"
-                "    objectId     : %s\n"
-                "    instanceIndex: %d\n"
-                "    ndcDepth     : %f\n",
+            TF_DEBUG(PXRUSDMAYAGL_BATCHED_SELECTION).Msg(
+                "    NEW HIT\n"
+                "        delegateId   : %s\n"
+                "        objectId     : %s\n"
+                "        instanceIndex: %d\n"
+                "        ndcDepth     : %f\n",
                 hit.delegateId.GetText(),
                 hit.objectId.GetText(),
                 hit.instanceIndex,
@@ -1156,8 +1143,8 @@ UsdMayaGLBatchRenderer::_ComputeSelection(
 
     _selectionTracker->SetSelection(selection);
 
-    TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg(
-        "^^^^^^^^^^^^ SELECTION STAGE FINISH ^^^^^^^^^^^^^\n");
+    TF_DEBUG(PXRUSDMAYAGL_BATCHED_SELECTION).Msg(
+        "    ^^^^^^^^^^^^ SELECTION STAGE FINISH ^^^^^^^^^^^^^\n");
 }
 
 void
@@ -1231,8 +1218,8 @@ UsdMayaGLBatchRenderer::_Render(
 
         const HdRprimCollectionVector& rprimCollections = iter.second;
 
-        TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg(
-            "*** renderBucket, parameters hash: %zu, bucket size %zu\n",
+        TF_DEBUG(PXRUSDMAYAGL_BATCHED_DRAWING).Msg(
+            "    *** renderBucket, parameters hash: %zu, bucket size %zu\n",
             paramsHash,
             rprimCollections.size());
 
@@ -1276,6 +1263,25 @@ UsdMayaGLBatchRenderer::_RenderBatches(
         return;
     }
 
+    if (TfDebug::IsEnabled(PXRUSDMAYAGL_BATCHED_DRAWING)) {
+        TF_DEBUG(PXRUSDMAYAGL_BATCHED_DRAWING).Msg(
+            "Drawing batches for %s\n",
+            bool(vp2Context) ? "Viewport 2.0" : "legacy viewport");
+
+        if (vp2Context) {
+            const MUint64 frameStamp = vp2Context->getFrameStamp();
+            const MHWRender::MPassContext& passContext = vp2Context->getPassContext();
+            const MString& passId = passContext.passIdentifier();
+            const MStringArray& passSemantics = passContext.passSemantics();
+
+            TF_DEBUG(PXRUSDMAYAGL_BATCHED_DRAWING).Msg(
+                "    frameStamp: %s, passIdentifier: %s, passSemantics: %s\n",
+                TfStringify<MUint64>(frameStamp).c_str(),
+                passId.asChar(),
+                TfStringify<MStringArray>(passSemantics).c_str());
+        }
+    }
+
     // Figure out Maya's isolate for this viewport.
     MSelectionList isolatedObjects;
 #if MAYA_API_VERSION >= 201700
@@ -1284,8 +1290,8 @@ UsdMayaGLBatchRenderer::_RenderBatches(
     }
 #endif
 
-    TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg(
-        "____________ RENDER STAGE START ______________ (%zu buckets)\n",
+    TF_DEBUG(PXRUSDMAYAGL_BATCHED_DRAWING).Msg(
+        "    ____________ RENDER STAGE START ______________ (%zu buckets)\n",
         bucketsMap.size());
 
     // A new display refresh signifies that the cached selection data is no
@@ -1356,8 +1362,8 @@ UsdMayaGLBatchRenderer::_RenderBatches(
         _MayaRenderDidEnd(nullptr);
     }
 
-    TF_DEBUG(PXRUSDMAYAGL_QUEUE_INFO).Msg(
-        "^^^^^^^^^^^^ RENDER STAGE FINISH ^^^^^^^^^^^^^\n");
+    TF_DEBUG(PXRUSDMAYAGL_BATCHED_DRAWING).Msg(
+        "    ^^^^^^^^^^^^ RENDER STAGE FINISH ^^^^^^^^^^^^^\n");
 }
 
 bool
@@ -1430,8 +1436,6 @@ UsdMayaGLBatchRenderer::_MayaRenderDidEnd(
 
     // End any diagnostics batching.
     _sharedDiagBatchCtx.reset();
-
-    _drawnMayaRenderPasses.clear();
 }
 
 
