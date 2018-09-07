@@ -255,7 +255,7 @@ _GetPackedTypeDefinitions()
             "vec3 hd_sample_udim(vec2 v) {\n"
             "vec2 vf = floor(v);\n"
             "return vec3(v.x - vf.x, v.y - vf.y, clamp(vf.x, 0.0, 10.0) + 10.0 * vf.y);\n"
-            "}\n";
+            "}\n"
 
         // -------------------------------------------------------------------
         // Packed HdType implementation.
