@@ -48,7 +48,7 @@ pxr_library(usdImaging
         distantLightAdapter
         domeLightAdapter
         fieldAdapter
-	field3dAssetAdapter
+        field3dAssetAdapter
         gprimAdapter
         imagePlaneAdapter
         instanceAdapter
@@ -56,7 +56,7 @@ pxr_library(usdImaging
         materialAdapter
         meshAdapter
         nurbsPatchAdapter
-	openvdbAssetAdapter
+        openvdbAssetAdapter
         pointsAdapter
         pointInstancerAdapter
         primAdapter
