@@ -64,6 +64,13 @@
                         "isInternal": true,
                         "primTypeName": "Cylinder"
                     },
+                    "UsdImagingImagePlaneAdapter": {
+                        "bases": [
+                            "UsdImagingGprimAdapter"
+                        ],
+                        "isInternal": true,
+                        "primTypeName": "ImagePlane"
+                    },
                     "UsdImagingMaterialAdapter" : {
                         "bases": ["UsdImagingPrimAdapter"],
                         "isInternal": true,
@@ -103,13 +110,6 @@
                         ],
                         "isInternal": true,
                         "primTypeName": "Sphere"
-                    },
-                    "UsdImagingImagePlaneAdapter": {
-                        "bases": [
-                            "UsdImagingGprimAdapter"
-                        ],
-                        "isInternal": true,
-                        "primTypeName": "ImagePlane"
                     },
                     "UsdImagingDomeLightAdapter": {
                         "bases": [
