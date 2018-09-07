@@ -958,25 +958,6 @@ UsdMayaUtil::CompressFaceVaryingPrimvarIndices(
 }
 
 bool
-UsdMayaUtil::SetUnassignedValueIndex(
-        VtIntArray* assignmentIndices,
-        int* unassignedValueIndex)
-{
-    if (assignmentIndices == nullptr || unassignedValueIndex == nullptr) {
-        return false;
-    }
-
-    *unassignedValueIndex = -1;
-    for (auto& index: *assignmentIndices) {
-        if (index < 0) {
-            index = -1;
-            *unassignedValueIndex = 0;
-        }
-    }
-    return *unassignedValueIndex == 0;
-}
-
-bool
 UsdMayaUtil::IsAuthored(MPlug& plug)
 {
     MStatus status;
@@ -1783,4 +1764,22 @@ UsdMayaUtil::GetAllAncestorMayaNodeTypes(const std::string& ty)
         inheritedTypesVector.emplace_back(inheritedTypes[i].asChar());
     }
     return inheritedTypesVector;
+}
+
+bool
+UsdMayaUtil::FindAncestorSceneAssembly(
+        const MDagPath& dagPath,
+        MDagPath* assemblyPath)
+{
+    MDagPath currentPath(dagPath);
+    while (currentPath.length()) {
+        if (currentPath.hasFn(MFn::kAssembly)) {
+            if (assemblyPath) {
+                *assemblyPath = currentPath;
+            }
+            return true;
+        }
+        currentPath.pop();
+    }
+    return false;
 }
