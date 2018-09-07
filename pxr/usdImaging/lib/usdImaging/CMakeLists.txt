@@ -50,6 +50,7 @@ pxr_library(usdImaging
         fieldAdapter
 	field3dAssetAdapter
         gprimAdapter
+        imagePlaneAdapter
         instanceAdapter
         lightAdapter
         materialAdapter
@@ -62,7 +63,6 @@ pxr_library(usdImaging
         rectLightAdapter
         sphereAdapter
         sphereLightAdapter
-        imagePlaneAdapter
         volumeAdapter
         textureUtils
 
