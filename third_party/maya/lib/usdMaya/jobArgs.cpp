@@ -324,7 +324,7 @@ UsdMayaJobExportArgs::UsdMayaJobExportArgs(
         dagPaths(dagPaths),
         timeSamples(timeSamples),
         exportRootPath(
-            _String(userArgs, PxrUsdExportJobArgsTokens->root))
+            _String(userArgs, UsdMayaJobExportArgsTokens->root))
 {
 }
 
