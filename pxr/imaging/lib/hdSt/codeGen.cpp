@@ -575,7 +575,7 @@ HdSt_CodeGen::Compile()
             _genCommon << "#define HD_HAS_" << dbIt->name << " 1\n";
             if (not dbIt->dataType.IsEmpty()) {
                 _genCommon << "#define HD_HAS_"
-                           << GetPackedType(dbIt->dataType, false)
+                           << _GetPackedType(dbIt->dataType, false)
                            << "_" << dbIt->name << " 1\n";
             }
             declarations << "  " << _GetPackedType(dbIt->dataType, false)
