@@ -157,7 +157,7 @@ MSyntax UsdMayaExportCommand::createSyntax()
                    UsdMayaJobExportArgsTokens->verbose.GetText(),
                    MSyntax::kNoArg);
     syntax.addFlag("-rt" ,
-                   PxrUsdExportJobArgsTokens->root.GetText(),
+                   UsdMayaJobExportArgsTokens->root.GetText(),
                    MSyntax::kString);
 
     // These are additional flags under our control.
