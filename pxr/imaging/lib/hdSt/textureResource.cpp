@@ -199,7 +199,7 @@ GLuint64EXT HdStSimpleTextureResource::GetTexelsTextureHandle()
     }
 
     GLuint64EXT handle = 0;
-    if (textureType != HdTextureType::Uv) {
+    if (_textureType != HdTextureType::Uv) {
         handle = glGetTextureHandleARB(textureId);
     } else {
         GLuint samplerId = GetTexelsSamplerId();
