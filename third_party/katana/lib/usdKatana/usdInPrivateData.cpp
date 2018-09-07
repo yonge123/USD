@@ -449,7 +449,7 @@ PxrUsdKatanaUsdInPrivateData::GetMotionSampleTimes(
 
             // Insert the first sample as long as it is different
             // than what we already have.
-            if (fabs(lower-firstSample) > epsilon)
+            if (!foundSamplesInInterval || fabs(lower-firstSample) > epsilon)
             {
                 result.insert(result.begin(), lower);
             }
@@ -475,7 +475,7 @@ PxrUsdKatanaUsdInPrivateData::GetMotionSampleTimes(
 
             // Append the last sample as long as it is different
             // than what we already have.
-            if (fabs(upper-lastSample) > epsilon)
+            if (!foundSamplesInInterval || fabs(upper-lastSample) > epsilon)
             {
                 result.push_back(upper);
             }
