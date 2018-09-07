@@ -47,6 +47,7 @@ pxr_library(usdImaging
         distantLightAdapter
         domeLightAdapter
         gprimAdapter
+        imagePlaneAdapter
         instanceAdapter
         lightAdapter
         materialAdapter
@@ -58,7 +59,6 @@ pxr_library(usdImaging
         rectLightAdapter
         sphereAdapter
         sphereLightAdapter
-        imagePlaneAdapter
 
     PUBLIC_HEADERS
         api.h
