@@ -123,7 +123,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         self._displayRender = self.stateProperty("displayRender", default=False)
         self._displayPrimId = self.stateProperty("displayPrimId", default=False)
         self._displayImagePlanes = self.stateProperty("displayImagePlanes", default=True)
-        self._enableHardwareShading = self.stateProperty("enableHardwareShading", default=True)
+        self._enableSceneMaterials = self.stateProperty("enableSceneMaterials", default=True)
         self._cullBackfaces = self.stateProperty("cullBackfaces", default=False)
         self._showInactivePrims = self.stateProperty("showInactivePrims", default=True)
         self._showAllMasterPrims = self.stateProperty("showAllMasterPrims", default=False)
@@ -175,7 +175,7 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         state["displayRender"] = self._displayRender
         state["displayPrimId"] = self._displayPrimId
         state["displayImagePlanes"] = self._displayImagePlanes
-        state["enableHardwareShading"] = self._enableHardwareShading
+        state["enableSceneMaterials"] = self._enableSceneMaterials
         state["cullBackfaces"] = self._cullBackfaces
         state["showInactivePrims"] = self._showInactivePrims
         state["showAllMasterPrims"] = self._showAllMasterPrims
@@ -363,13 +363,13 @@ class ViewSettingsDataModel(QtCore.QObject, StateSource):
         self._displayImagePlanes = value
 
     @property
-    def enableHardwareShading(self):
-        return self._enableHardwareShading
+    def enableSceneMaterials(self):
+        return self._enableSceneMaterials
 
-    @enableHardwareShading.setter
+    @enableSceneMaterials.setter
     @visibleViewSetting
-    def enableHardwareShading(self, value):
-        self._enableHardwareShading = value
+    def enableSceneMaterials(self, value):
+        self._enableSceneMaterials = value
 
     @property
     def cullBackfaces(self):
