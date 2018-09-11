@@ -50,8 +50,7 @@ TF_DEFINE_ENV_SETTING(HD_ENABLE_SHARED_VERTEX_PRIMVAR, 1,
 
 HdRprim::HdRprim(SdfPath const& id,
                  SdfPath const& instancerId)
-    : _id(id)
-    , _instancerId(instancerId)
+    : _instancerId(instancerId)
     , _materialId()
     , _sharedData(HdDrawingCoord::DefaultNumSlots,
                   /*hasInstancer=*/(!instancerId.IsEmpty()),
@@ -219,7 +218,7 @@ TfToken
 HdRprim::GetRenderTag(HdSceneDelegate* delegate,
                       HdReprSelector const& reprSelector) const
 {
-    return delegate->GetRenderTag(_id, reprSelector);
+    return delegate->GetRenderTag(GetId(), reprSelector);
 }
 
 void 
@@ -229,8 +228,9 @@ HdRprim::_SetMaterialId(HdChangeTracker &changeTracker,
     if (_materialId != materialId) {
         _materialId = materialId;
 
-        // The batches need to be verified and rebuilt if necessary.
-        changeTracker.MarkShaderBindingsDirty();
+        // The batches need to be verified and rebuilt, since a changed shader
+        // may change aggregation.
+        changeTracker.MarkBatchesDirty();
     }
 }
 
