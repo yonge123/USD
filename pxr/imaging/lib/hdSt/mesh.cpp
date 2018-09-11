@@ -231,7 +231,6 @@ HdStMesh::_PopulateTopology(HdSceneDelegate *sceneDelegate,
                 HdSt_MeshTopology::New(meshTopology, refineLevel, refineMode);
         if (refineLevel > 0) {
             // add subdiv tags before compute hash
-            // XXX: calling GetSubdivTags on implicit prims raises an error.
             topology->SetSubdivTags(GetSubdivTags(sceneDelegate));
         }
 
@@ -371,11 +370,12 @@ HdStMesh::_PopulateTopology(HdSceneDelegate *sceneDelegate,
         if (drawItem->GetTopologyRange() &&
             drawItem->GetTopologyRange() != rangeInstance.GetValue()) {
             // If this is a varying topology (we already have one and we're
-            // going to replace it), ensure we update the draw batches.
-            
-            // Causes a collection change which rebuilds batches.
+            // going to replace it), ensure we update the draw batches and
+            // garbage collect the old buffer.
             sceneDelegate->GetRenderIndex().GetChangeTracker()
                 .SetGarbageCollectionNeeded();
+            sceneDelegate->GetRenderIndex().GetChangeTracker()
+                .MarkBatchesDirty();
         }
 
         // TODO: reuse same range for varying topology
@@ -537,7 +537,8 @@ _RefinePrimvar(HdBufferSourceSharedPtr const &source,
 // points when using the points repr.
 static HdBufferSourceSharedPtr
 _GetExpandedPointsVisibilityBuffer(VtValue input,
-                                   int numPoints)
+                                   int numPoints,
+                                   SdfPath const &id)
 {
     TF_VERIFY(input.IsArrayValued() &&
               input.GetArraySize() > 0);
@@ -546,7 +547,13 @@ _GetExpandedPointsVisibilityBuffer(VtValue input,
     const VtIntArray& invisiblePoints = input.UncheckedGet<VtIntArray>();
     for (VtIntArray::const_iterator i = invisiblePoints.begin(),
                                   end = invisiblePoints.end(); i != end; ++i) {
-        pointsVisibility[*i] = 0.0f;
+        if (*i < 0 || *i >= numPoints) {
+            HF_VALIDATION_WARN(id, "Invisible point index %d isn't in the range"
+                                   " [0, %d).", *i, numPoints);
+            continue;
+        } else {
+            pointsVisibility[*i] = 0.0f;
+        }
     }
 
     return HdBufferSourceSharedPtr(
@@ -708,13 +715,15 @@ HdStMesh::_PopulateVertexPrimvars(HdSceneDelegate *sceneDelegate,
                 //       _pointsVisibilityAuthored to true
                 if (hasInvisiblePoints && _pointsVisibilityAuthored) {
                     source =
-                        _GetExpandedPointsVisibilityBuffer(value, numPoints);
+                        _GetExpandedPointsVisibilityBuffer(value, numPoints,
+                                                           GetId());
                 } else if (!hasInvisiblePoints && _pointsVisibilityAuthored) {
                     source = _GetAllVisiblePointsVisibilityBuffer(numPoints);
                 } else {
                     TF_VERIFY(hasInvisiblePoints && !_pointsVisibilityAuthored);
                     source =
-                        _GetExpandedPointsVisibilityBuffer(value, numPoints);
+                        _GetExpandedPointsVisibilityBuffer(value, numPoints,
+                                                           GetId());
                     _pointsVisibilityAuthored = true;
                     mergePointsVisibilityIntoBAR = true;
                 }
@@ -1002,20 +1011,10 @@ HdStMesh::_PopulateVertexPrimvars(HdSceneDelegate *sceneDelegate,
                 drawItem->GetDrawingCoord()->GetVertexPrimvarIndex(), range);
 
             // If buffer migration actually happens, the old buffer will no
-            // longer be needed, and GC is required to reclaim their memory.
-            // But we don't trigger GC here for now, since it ends up
-            // to make all collections dirty (see HdEngine::Draw),
-            // which can be expensive.
-            // (in other words, we should fix bug 103767:
-            //  "Optimize varying topology buffer updates" first)
-            //
-            // if (range != bar) {
-            //    _GetRenderIndex().GetChangeTracker().
-            //                                     SetGarbageCollectionNeeded();
-            // }
-
-            // set deep invalidation to rebuild draw batch
-            renderIndex.GetChangeTracker().MarkShaderBindingsDirty();
+            // longer be needed, and GC is required to reclaim the memory.
+            // We also need to trigger a batch rebuild.
+            renderIndex.GetChangeTracker().SetGarbageCollectionNeeded();
+            renderIndex.GetChangeTracker().MarkBatchesDirty();
         }
     }
 
@@ -1274,21 +1273,18 @@ HdStMesh::_PopulateElementPrimvars(HdSceneDelegate *sceneDelegate,
                 resourceRegistry->MergeNonUniformBufferArrayRange(
                     HdTokens->primvar, bufferSpecs, bar);
 
-            // If buffer migration actually happens, the old buffer will no
-            // longer be needed, and GC is required to reclaim the memory.
-            // But we don't trigger GC here for now, since it ends up
-            // making all collections dirty which can be expensive.
             if (range != bar) {
                 _sharedData.barContainer.Set(
                     drawItem->GetDrawingCoord()->GetElementPrimvarIndex(),
                     range);
 
-                // _GetRenderIndex().GetChangeTracker().
-                //     SetGarbageCollectionNeeded();
-
-                // set deep invalidation to rebuild draw batch
+                // If buffer migration actually happens, the old buffer will no
+                // longer be needed, and GC is required to reclaim the memory.
+                // We also need to trigger a batch rebuild.
                 sceneDelegate->GetRenderIndex().GetChangeTracker().
-                    MarkShaderBindingsDirty();
+                    SetGarbageCollectionNeeded();
+                sceneDelegate->GetRenderIndex().GetChangeTracker().
+                    MarkBatchesDirty();
             }
         }
     }
@@ -1672,18 +1668,12 @@ HdStMesh::_UpdateDrawItemGeometricShader(HdSceneDelegate *sceneDelegate,
     // Check if the shader bound to this mesh has a custom displacement
     // terminal, or uses ptex, so that we know whether to include the geometry
     // shader.
-    bool hasCustomDisplacementTerminal = false;
-    bool hasPtex = false;
     const HdStMaterial *material = static_cast<const HdStMaterial *>(
             renderIndex.GetSprim(HdPrimTypeTokens->material, GetMaterialId()));
-    if (material) {
-        HdStShaderCodeSharedPtr shaderCode = material->GetShaderCode();
-        if (shaderCode) {
-            hasCustomDisplacementTerminal =
-                !(shaderCode->GetSource(HdShaderTokens->geometryShader).empty());
-        }
-        hasPtex = material->HasPtex();
-    }
+
+    bool hasCustomDisplacementTerminal =
+        material && material->HasDisplacement();
+    bool hasPtex = material && material->HasPtex();
 
     // Enable displacement shading only if the repr enables it, and the
     // entrypoint exists.
@@ -1728,7 +1718,7 @@ HdStMesh::_UpdateDrawItemGeometricShader(HdSceneDelegate *sceneDelegate,
     drawItem->SetGeometricShader(geomShader);
 
     // The batches need to be validated and rebuilt if necessary.
-    renderIndex.GetChangeTracker().MarkShaderBindingsDirty();
+    renderIndex.GetChangeTracker().MarkBatchesDirty();
 }
 
 // virtual
