@@ -163,6 +163,26 @@ _GetMemoryLimit(UsdPrim const &usdPrim)
     return memoryLimit;
 }
 
+GlfImage::ImageOriginLocation
+UsdImagingGL_ComputeTextureOrigin(UsdPrim const& usdPrim)
+{
+    // XXX : This is transitional code. Currently, only textures read
+    //       via UsdUVTexture have the origin at the lower left.
+    // Extract the id of the node and if it is a UsdUVTexture
+    // then we need to use the new coordinate system with (0,0)
+    // in the bottom left.
+    GlfImage::ImageOriginLocation origin =
+        GlfImage::ImageOriginLocation::OriginUpperLeft;
+    TfToken id;
+    UsdAttribute attr1 = UsdShadeShader(usdPrim).GetIdAttr();
+    attr1.Get(&id);
+    if (id == UsdImagingTokens->UsdUVTexture) {
+        origin = GlfImage::ImageOriginLocation::OriginLowerLeft;
+    }
+
+    return origin;
+}
+
 class UdimTextureFactory : public GlfTextureFactoryBase {
 public:
     UdimTextureFactory(
@@ -265,6 +285,9 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
         }
     }
 
+    GlfImage::ImageOriginLocation origin =
+            UsdImagingGL_ComputeTextureOrigin(usdPrim);
+
     // Hash on the texture filename.
     size_t hash = asset.GetHash();
 
@@ -275,6 +298,7 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
     HdMagFilter magFilter = _GetMagFilter(usdPrim);
     float memoryLimit = _GetMemoryLimit(usdPrim);
 
+    boost::hash_combine(hash, origin);
     boost::hash_combine(hash, wrapS);
     boost::hash_combine(hash, wrapT);
     boost::hash_combine(hash, minFilter);
@@ -326,19 +350,8 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
         }
     }
 
-    // XXX : This is transitional code. Currently, only textures read
-    //       via UsdUVTexture have the origin at the lower left.
-    // Extract the id of the node and if it is a UsdUVTexture
-    // then we need to use the new coordinate system with (0,0)
-    // in the bottom left.
-    GlfImage::ImageOriginLocation origin = 
-        GlfImage::ImageOriginLocation::OriginUpperLeft;
-    TfToken id;
-    UsdAttribute attr1 = UsdShadeShader(usdPrim).GetIdAttr();
-    attr1.Get(&id);
-    if (id == UsdImagingTokens->UsdUVTexture) {
-        origin = GlfImage::ImageOriginLocation::OriginLowerLeft;
-    }
+    GlfImage::ImageOriginLocation origin =
+            UsdImagingGL_ComputeTextureOrigin(usdPrim);
 
     HdWrap wrapS = _GetWrapS(usdPrim, textureType);
     HdWrap wrapT = _GetWrapT(usdPrim, textureType);
