@@ -17,7 +17,6 @@ pxr_library(usdImaging
         usdGeom
         usdLux
         usdShade
-        usdVol
         ar
         ${Boost_PYTHON_LIBRARY}
         ${PYTHON_LIBRARY}
@@ -47,8 +46,6 @@ pxr_library(usdImaging
         diskLightAdapter
         distantLightAdapter
         domeLightAdapter
-        fieldAdapter
-        field3dAssetAdapter
         gprimAdapter
         imagePlaneAdapter
         instanceAdapter
@@ -56,14 +53,12 @@ pxr_library(usdImaging
         materialAdapter
         meshAdapter
         nurbsPatchAdapter
-        openvdbAssetAdapter
         pointsAdapter
         pointInstancerAdapter
         primAdapter
         rectLightAdapter
         sphereAdapter
         sphereLightAdapter
-        volumeAdapter
         textureUtils
 
     PUBLIC_HEADERS

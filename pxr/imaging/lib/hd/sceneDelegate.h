@@ -242,27 +242,6 @@ struct HdExtComputationOutputDescriptor {
 typedef std::vector<HdExtComputationOutputDescriptor>
         HdExtComputationOutputDescriptorVector;
 
-/// \struct HdVolumeFieldDescriptor
-///
-/// Description of a single field related to a volume primitive.
-///
-struct HdVolumeFieldDescriptor {
-    TfToken fieldName;
-    TfToken fieldPrimType;
-    SdfPath fieldId;
-
-    HdVolumeFieldDescriptor() {}
-    HdVolumeFieldDescriptor(
-        TfToken const & fieldName_,
-        TfToken const & fieldPrimType_,
-        SdfPath const & fieldId_)
-    : fieldName(fieldName_), fieldPrimType(fieldPrimType_), fieldId(fieldId_)
-    { }
-};
-
-typedef std::vector<HdVolumeFieldDescriptor>
-	HdVolumeFieldDescriptorVector;
-
 /// \struct HdRenderBufferDescriptor
 ///
 /// Describes the allocation structure of a render buffer bprim.
@@ -578,14 +557,6 @@ public:
     /// orientation.
     HD_API
     virtual std::vector<GfVec4d> GetClipPlanes(SdfPath const& cameraId);
-
-    // -----------------------------------------------------------------------//
-    /// \name Volume Aspects
-    // -----------------------------------------------------------------------//
-
-    HD_API
-    virtual HdVolumeFieldDescriptorVector
-    GetVolumeFieldDescriptors(SdfPath const &volumeId);
 
     // -----------------------------------------------------------------------//
     /// \name ExtComputation Aspects

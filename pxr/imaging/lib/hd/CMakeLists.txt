@@ -45,7 +45,6 @@ pxr_library(hd
         extCompPrimvarBufferSource
         extComputation
         extComputationContext
-        field
         flatNormals
         geomSubset
         instancer
@@ -92,7 +91,6 @@ pxr_library(hd
         unitTestNullRenderDelegate
         unitTestNullRenderPass
         vertexAdjacency
-	volume
         vtBufferSource
 
     PUBLIC_HEADERS
