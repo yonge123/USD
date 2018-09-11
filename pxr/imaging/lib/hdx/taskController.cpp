@@ -34,7 +34,6 @@
 
 #include "pxr/imaging/glf/simpleLight.h"
 #include "pxr/imaging/glf/simpleLightingContext.h"
-#include "simpleLightTask.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -397,25 +396,6 @@ HdxTaskController::SetSelectionColor(GfVec4f const& color)
 }
 
 void
-HdxTaskController::SetEnableShadows(bool enable)
-{
-    if (!GetRenderIndex()->IsSprimTypeSupported(
-        HdPrimTypeTokens->simpleLight)) {
-        return;
-    }
-    HdxSimpleLightTaskParams params =
-        _delegate.GetParameter<HdxSimpleLightTaskParams>(
-            _simpleLightTaskId, HdTokens->params);
-
-    if (params.enableShadows != enable) {
-        params.enableShadows = enable;
-        _delegate.SetParameter(_simpleLightTaskId, HdTokens->params, params);
-        GetRenderIndex()->GetChangeTracker().MarkTaskDirty(
-            _simpleLightTaskId, HdChangeTracker::DirtyParams);
-    }
-}
-
-void
 HdxTaskController::SetPickResolution(unsigned int size)
 {
     _intersector->SetResolution(GfVec2i(size, size));
@@ -610,7 +590,6 @@ HdxTaskController::SetCameraViewport(GfVec4d const& viewport)
             _delegate.GetParameter<HdxRenderTaskParams>(
                 tasks[i], HdTokens->params);
         params.viewport = viewport;
-
         _delegate.SetParameter(tasks[i], HdTokens->params, params);
         GetRenderIndex()->GetChangeTracker().MarkTaskDirty(
             tasks[i], HdChangeTracker::DirtyParams);
