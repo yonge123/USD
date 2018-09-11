@@ -1950,6 +1950,8 @@ renderFrame(fpreal time,
         }
     } // end loop through multi-seg samples
 
+    // TODO: figure out if this should support multi-seg samples, and add
+    // that support if desired
     if (evalInt("enablevdbout", 0, 0) != 0) {
         UT_String vdbPath;
         if (!evalParameterOrProperty("vdbout", 0, time, vdbPath)) {
