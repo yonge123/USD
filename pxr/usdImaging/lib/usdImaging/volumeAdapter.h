@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Pixar
+// Copyright 2018 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -27,6 +27,7 @@
 /// \file usdImaging/volumeAdapter.h
 
 #include "pxr/pxr.h"
+#include "pxr/usd/usdVol/volume.h"
 #include "pxr/usdImaging/usdImaging/api.h"
 #include "pxr/usdImaging/usdImaging/primAdapter.h"
 #include "pxr/usdImaging/usdImaging/gprimAdapter.h"
@@ -49,7 +50,7 @@ public:
     virtual SdfPath Populate(UsdPrim const& prim,
                      UsdImagingIndexProxy* index,
                      UsdImagingInstancerContext const*
-			instancerContext = NULL) override;
+                     instancerContext = NULL) override;
 
     virtual bool IsSupported(UsdImagingIndexProxy const* index) const override;
 
@@ -77,8 +78,7 @@ public:
 
 private:
     bool _GatherVolumeData(UsdPrim const& prim, 
-			   SdfPathVector *fieldProperties,
-			   SdfPathVector *fields) const;
+                           UsdVolVolume::FieldMap *fieldMap) const;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

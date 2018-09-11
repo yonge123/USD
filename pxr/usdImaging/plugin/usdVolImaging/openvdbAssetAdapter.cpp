@@ -1,5 +1,5 @@
 //
-// Copyright 2017 Pixar
+// Copyright 2018 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -21,40 +21,32 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef USDIMAGING_FIELD3D_ASSET_ADAPTER_H
-#define USDIMAGING_FIELD3D_ASSET_ADAPTER_H
+#include "pxr/usdImaging/usdVolImaging/openvdbAssetAdapter.h"
 
-/// \file usdImaging/field3dAssetAdapter.h
-
-#include "pxr/pxr.h"
-#include "pxr/usdImaging/usdImaging/api.h"
-#include "pxr/usdImaging/usdImaging/fieldAdapter.h"
+#include "pxr/base/tf/type.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+TF_REGISTRY_FUNCTION(TfType)
+{
+    typedef UsdImagingOpenVDBAssetAdapter Adapter;
+    TfType t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter> >();
+    t.SetFactory< UsdImagingPrimAdapterFactory<Adapter> >();
+}
 
-class UsdPrim;
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    (openvdbAsset)
+);
 
-/// \class UsdImagingField3DAssetAdapter
-///
-/// Adapter class for fields of type Field3DAsset
-///
-class UsdImagingField3DAssetAdapter : public UsdImagingFieldAdapter {
-public:
-    typedef UsdImagingFieldAdapter BaseAdapter;
+UsdImagingOpenVDBAssetAdapter::~UsdImagingOpenVDBAssetAdapter() 
+{
+}
 
-    UsdImagingField3DAssetAdapter()
-        : UsdImagingFieldAdapter()
-    {}
-
-    USDIMAGING_API
-    virtual ~UsdImagingField3DAssetAdapter();
-
-    USDIMAGING_API
-    virtual TfToken GetPrimTypeToken() const;
-};
-
+TfToken
+UsdImagingOpenVDBAssetAdapter::GetPrimTypeToken() const
+{
+    return _tokens->openvdbAsset;
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
-
-#endif // USDIMAGING_FIELD3D_ASSET_ADAPTER_H

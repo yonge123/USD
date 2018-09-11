@@ -1,5 +1,5 @@
 //
-// Copyright 2017 Pixar
+// Copyright 2018 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -21,30 +21,34 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usdImaging/usdImaging/field3dAssetAdapter.h"
-#include "pxr/usdImaging/usdImaging/delegate.h"
-#include "pxr/usdImaging/usdImaging/indexProxy.h"
-#include "pxr/usdImaging/usdImaging/tokens.h"
+#ifndef _GUSD_OP_UTILS_H_
+#define _GUSD_OP_UTILS_H_
 
-#include "pxr/imaging/hd/tokens.h"
+#include "gusd/api.h"
+
+#include "gusd/stageCache.h"
+#include "gusd/GT_PrimCache.h"
+#include "gusd/USD_XformCache.h"
+#include "gusd/USD_VisCache.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-TF_REGISTRY_FUNCTION(TfType)
+namespace GusdOP_Utils
 {
-    typedef UsdImagingField3DAssetAdapter Adapter;
-    TfType t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter> >();
-    t.SetFactory< UsdImagingPrimAdapterFactory<Adapter> >();
-}
 
-UsdImagingField3DAssetAdapter::~UsdImagingField3DAssetAdapter() 
-{
-}
+/// Clear all caches stored by the stage cache, prim cache, xform cache, and
+/// visibility cache.
+GUSD_API
+void      ClearAllCaches();
 
-TfToken
-UsdImagingField3DAssetAdapter::GetPrimTypeToken() const
-{
-    return HdPrimTypeTokens->field3dAsset;
-}
+/// Reload any prims on stages that match the passed in set of layer
+/// identifiers (stage paths). Clear the prim, xform, and visibility caches of
+/// those prims.
+GUSD_API
+void      ReloadStagesAndClearCaches(const UT_StringSet& paths);
+
+} /*namespace GusdOP_Utils*/
 
 PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif /*_GUSD_OP_UTILS_H_*/

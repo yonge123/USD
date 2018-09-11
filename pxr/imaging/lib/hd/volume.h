@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Pixar
+// Copyright 2018 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -29,8 +29,6 @@
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/rprim.h"
 
-#include "pxr/base/tf/staticTokens.h"
-
 #include <boost/shared_ptr.hpp>
 
 #include <vector>
@@ -48,8 +46,8 @@ typedef std::vector<class HdVolume const *> HdVolumePtrConstVector;
 class HdVolume : public HdRprim {
 public:
     HD_API
-    HdVolume(SdfPath const & id,
-             SdfPath const& instancerId = SdfPath());
+    HdVolume(SdfPath const& id, SdfPath const& instancerId = SdfPath());
+
     HD_API
     virtual ~HdVolume();
 };

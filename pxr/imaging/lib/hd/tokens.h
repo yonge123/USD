@@ -31,7 +31,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-            
 #define HD_TOKENS                               \
     (adjacency)                                 \
     (bboxLocalMin)                              \
@@ -115,6 +114,9 @@ PXR_NAMESPACE_OPEN_SCOPE
     (wire)                                      \
     (wireOnSurf)
 
+#define HD_REPR_TOKENS                          \
+    (disabled)
+
 #define HD_PERF_TOKENS                          \
     (adjacencyBufSize)                          \
     (basisCurvesTopology)                       \
@@ -186,7 +188,6 @@ PXR_NAMESPACE_OPEN_SCOPE
     (worldToViewMatrix)                         \
     (worldToViewInverseMatrix)
 
-
 #define HD_OPTION_TOKENS                        \
     (parallelRprimSync)                        
 
@@ -213,8 +214,6 @@ PXR_NAMESPACE_OPEN_SCOPE
     (extComputation)                            \
                                                 \
     /* Bprims */                                \
-    (openvdbAsset)                              \
-    (field3dAsset)                              \
     (texture)                                   \
     (renderBuffer)
 
@@ -279,6 +278,7 @@ HD_API
 TfToken HdAovTokensLpe(TfToken const& lpe);
 
 TF_DECLARE_PUBLIC_TOKENS(HdTokens, HD_API, HD_TOKENS);
+TF_DECLARE_PUBLIC_TOKENS(HdReprTokens, HD_API, HD_REPR_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdPerfTokens, HD_API, HD_PERF_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdShaderTokens, HD_API, HD_SHADER_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdOptionTokens, HD_API, HD_OPTION_TOKENS);

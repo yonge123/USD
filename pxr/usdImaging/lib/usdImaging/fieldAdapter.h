@@ -1,5 +1,5 @@
 //
-// Copyright 2017 Pixar
+// Copyright 2018 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -24,7 +24,7 @@
 #ifndef USDIMAGING_FIELD_ADAPTER_H
 #define USDIMAGING_FIELD_ADAPTER_H
 
-/// \file usdImaging/lightAdapter.h
+/// \file usdImaging/fieldAdapter.h
 
 #include "pxr/pxr.h"
 #include "pxr/usdImaging/usdImaging/api.h"
@@ -58,7 +58,7 @@ public:
 
     USDIMAGING_API
     virtual bool IsSupported(UsdImagingIndexProxy const* index) const;
-    
+
     // ---------------------------------------------------------------------- //
     /// \name Parallel Setup and Resolve
     // ---------------------------------------------------------------------- //
@@ -108,8 +108,12 @@ public:
                                      SdfPath const& cachePath,
                                      UsdImagingIndexProxy* index);
 
+    // ---------------------------------------------------------------------- //
+    /// \name Field adapter requirements
+    // ---------------------------------------------------------------------- //
     /// Returns the token specifying the Hydra primitive type that is created
     /// by this adapter.
+    USDIMAGING_API
     virtual TfToken GetPrimTypeToken() const = 0;
 
 protected:

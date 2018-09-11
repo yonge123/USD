@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Pixar
+// Copyright 2018 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -28,11 +28,9 @@
 #include "pxr/usdImaging/usdImaging/indexProxy.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
-#include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/volume.h"
 
-#include "pxr/usd/usdGeom/xformCache.h"
 #include "pxr/usd/usdVol/tokens.h"
 #include "pxr/usd/usdVol/volume.h"
 #include "pxr/usd/usdVol/fieldBase.h"
@@ -40,7 +38,6 @@
 #include "pxr/base/tf/type.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
-
 
 TF_REGISTRY_FUNCTION(TfType)
 {
@@ -61,26 +58,18 @@ UsdImagingVolumeAdapter::IsSupported(UsdImagingIndexProxy const* index) const
 
 bool
 UsdImagingVolumeAdapter::_GatherVolumeData(UsdPrim const& prim, 
-			    SdfPathVector *fieldProperties,
-			    SdfPathVector *fields) const
+                                      UsdVolVolume::FieldMap *fieldMap) const
 {
-    // Gather all relationships in the "field" namespace to figure out which
-    // field primitives make up this volume.
-    for (auto &&rel : prim.GetRelationships())
-    {
-	if (rel.GetNamespace() == UsdVolTokens->field)
-	{
-	    SdfPathVector targets;
+    UsdVolVolume volume(prim);
 
-	    if (rel.GetTargets(&targets) && targets.size() > 0)
-	    {
-		fieldProperties->push_back(rel.GetPath());
-		fields->push_back(*targets.begin());
-	    }
-	}
+    if (volume) {
+        // Gather all relationships in the "field" namespace to figure out 
+        // which field primitives make up this volume.
+        UsdVolVolume::FieldMap  fields = volume.GetFieldPaths();
+        fieldMap->swap(fields);
     }
 
-    return (fields->size() > 0);
+    return !fieldMap->empty();
 }
 
 SdfPath
@@ -89,7 +78,7 @@ UsdImagingVolumeAdapter::Populate(UsdPrim const& prim,
                             UsdImagingInstancerContext const* instancerContext)
 {
     return  _AddRprim(HdPrimTypeTokens->volume,
-	prim, index, GetMaterialId(prim), instancerContext);
+        prim, index, GetMaterialId(prim), instancerContext);
 }
 
 void 
@@ -101,7 +90,7 @@ UsdImagingVolumeAdapter::TrackVariability(UsdPrim const& prim,
 {
     // Just call the base class to test for a time-varying transform.
     BaseAdapter::TrackVariability(
-	prim, cachePath, timeVaryingBits, instancerContext);
+        prim, cachePath, timeVaryingBits, instancerContext);
 
     // Relationships can't be time varying, so we don't need to worry
     // about the mapping from field names to field prim paths being
@@ -120,7 +109,7 @@ UsdImagingVolumeAdapter::UpdateForTime(UsdPrim const& prim,
 {
     // Call the base class to update the transform.
     BaseAdapter::UpdateForTime(
-	prim, cachePath, time, requestedBits, instancerContext);
+        prim, cachePath, time, requestedBits, instancerContext);
 }
 
 HdVolumeFieldDescriptorVector
@@ -129,38 +118,30 @@ UsdImagingVolumeAdapter::GetVolumeFieldDescriptors(UsdPrim const& usdPrim,
                                                     UsdTimeCode time) const
 {
     HdVolumeFieldDescriptorVector descriptors;
-    SdfPathVector fieldProperties;
-    SdfPathVector fields;
+    std::map<TfToken, SdfPath> fieldMap;
 
-    // Build bprims for all our fields.
-    if (_GatherVolumeData(usdPrim, &fieldProperties, &fields))
-    {
-	for (int i = 0, n = fields.size(); i < n; i++)
-	{
-	    UsdPrim		 fieldUsdPrim(_GetPrim(fields[i]));
-	    UsdVolFieldBase	 fieldPrim(fieldUsdPrim);
+    // Build HdVolumeFieldDescriptors for all our fields.
+    if (_GatherVolumeData(usdPrim, &fieldMap)) {
+        for (auto it = fieldMap.begin(); it != fieldMap.end(); ++it) {
+            UsdPrim fieldUsdPrim(_GetPrim(it->second));
+            UsdVolFieldBase fieldPrim(fieldUsdPrim);
 
-	    if (fieldPrim)
-	    {
-		TfToken			 fieldName;
-		TfToken			 fieldPrimType;
-		auto			 adapter =_GetPrimAdapter(fieldUsdPrim);
-		UsdImagingFieldAdapter	*fieldAdapter;
+            if (fieldPrim) {
+                TfToken fieldPrimType;
+                UsdImagingPrimAdapterSharedPtr adapter
+                    = _GetPrimAdapter(fieldUsdPrim);
+                UsdImagingFieldAdapter *fieldAdapter;
 
-		fieldAdapter = dynamic_cast<UsdImagingFieldAdapter *>(
-		    adapter.get());
-		if (TF_VERIFY(fieldAdapter))
-		{
-		    fieldName = SdfPath::StripNamespace(
-			fieldProperties[i].GetNameToken());
-		    fieldPrimType = fieldAdapter->GetPrimTypeToken();
-		    descriptors.push_back(
-			HdVolumeFieldDescriptor(fieldName,
-						fieldPrimType,
-						fieldUsdPrim.GetPath()));
-		}
-	    }
-	}
+                fieldAdapter = dynamic_cast<UsdImagingFieldAdapter *>(
+                    adapter.get());
+                if (TF_VERIFY(fieldAdapter)) {
+                    fieldPrimType = fieldAdapter->GetPrimTypeToken();
+                    descriptors.push_back(
+                    HdVolumeFieldDescriptor(it->first, fieldPrimType,
+                        _GetPathForIndex(fieldUsdPrim.GetPath())));
+                }
+            }
+        }
     }
 
     return descriptors;

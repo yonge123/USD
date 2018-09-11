@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "./volume.h"
+#include "pxr/usd/usdVol/volume.h"
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/typed.h"
 
@@ -74,6 +74,11 @@ UsdVolVolume::Define(
         stage->DefinePrim(path, usdPrimTypeName));
 }
 
+/* virtual */
+UsdSchemaType UsdVolVolume::_GetSchemaType() const {
+    return UsdVolVolume::schemaType;
+}
+
 /* static */
 const TfType &
 UsdVolVolume::_GetStaticTfType()
@@ -121,3 +126,108 @@ PXR_NAMESPACE_CLOSE_SCOPE
 // 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    ((fieldPrefix, "field:"))
+);
+
+TfToken
+UsdVolVolume::_MakeNamespaced(const TfToken& name)
+{
+    TfToken result;
+
+    if (TfStringStartsWith(name, _tokens->fieldPrefix)) {
+	result = name;
+    }
+    else {
+	result = TfToken(_tokens->fieldPrefix.GetString() + name.GetString());
+    }
+
+    return result;
+}
+
+UsdVolVolume::FieldMap
+UsdVolVolume::GetFieldPaths() const
+{
+    std::map<TfToken, SdfPath> fieldMap;
+    const UsdPrim &prim = GetPrim();
+
+    if (prim) {
+        std::vector<UsdProperty> fieldProps =
+            prim.GetPropertiesInNamespace(_tokens->fieldPrefix);
+        for (const UsdProperty &fieldProp : fieldProps) {
+            UsdRelationship fieldRel = fieldProp.As<UsdRelationship>();
+            SdfPathVector targets;
+
+            // All relationships starting with "field:" should point to
+            // UsdVolFieldBase primitives.
+            if (fieldRel && fieldRel.GetForwardedTargets(&targets)) {
+                if (targets.size() == 1 && 
+                    targets.front().IsPrimPath()) {
+                    fieldMap.emplace(fieldRel.GetBaseName(), targets.front());
+                }
+            }
+        }
+    }
+
+    return fieldMap;
+}
+
+bool
+UsdVolVolume::HasFieldRelationship(const TfToken &name) const
+{
+    return GetPrim().HasRelationship(_MakeNamespaced(name));
+}
+
+SdfPath
+UsdVolVolume::GetFieldPath(const TfToken &name) const
+{
+    UsdRelationship fieldRel =  GetPrim().GetRelationship(_MakeNamespaced(name));
+    SdfPathVector targets;
+    
+    if (fieldRel && fieldRel.GetForwardedTargets(&targets)) {
+        if (targets.size() == 1 && 
+            targets.front().IsPrimPath()) {
+            return targets.front();
+        }
+    }
+
+    return SdfPath::EmptyPath();
+}
+
+bool
+UsdVolVolume::CreateFieldRelationship(const TfToken &name,
+	const SdfPath &fieldPath) const
+{
+    if (!fieldPath.IsPrimPath() && !fieldPath.IsPrimPropertyPath()){
+        return false;
+    }
+    UsdRelationship fieldRel =
+	GetPrim().CreateRelationship(_MakeNamespaced(name), /*custom*/true);
+
+    if (fieldRel) {
+	return fieldRel.SetTargets({fieldPath});
+    }
+
+    return false;
+}
+
+bool
+UsdVolVolume::BlockFieldRelationship(const TfToken &name) const
+{
+    UsdRelationship fieldRel =  GetPrim().GetRelationship(_MakeNamespaced(name));
+    
+    if (fieldRel){
+        fieldRel.BlockTargets();
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+PXR_NAMESPACE_CLOSE_SCOPE
+

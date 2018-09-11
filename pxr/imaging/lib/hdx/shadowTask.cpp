@@ -29,15 +29,18 @@
 #include "pxr/imaging/hdx/package.h"
 
 #include "pxr/imaging/hd/changeTracker.h"
-#include "pxr/imaging/hdSt/glConversions.h"
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/primGather.h"
 #include "pxr/imaging/hd/renderIndex.h"
 #include "pxr/imaging/hd/resourceRegistry.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
 
+
+#include "pxr/imaging/hdSt/glConversions.h"
+#include "pxr/imaging/hdSt/glslfxShader.h"
 #include "pxr/imaging/hdSt/light.h"
 #include "pxr/imaging/hdSt/lightingShader.h"
+#include "pxr/imaging/hdSt/package.h"
 #include "pxr/imaging/hdSt/renderPass.h"
 #include "pxr/imaging/hdSt/renderPassShader.h"
 #include "pxr/imaging/hdSt/renderPassState.h"
@@ -47,6 +50,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+HdStShaderCodeSharedPtr HdxShadowTask::_overrideShader;
 
 HdxShadowTask::HdxShadowTask(HdSceneDelegate* delegate, SdfPath const& id)
     : HdSceneTask(delegate, id)
@@ -63,20 +67,21 @@ HdxShadowTask::_Execute(HdTaskContext* ctx)
         HdxRenderTagsTokens->interactiveOnlyGeom
     };
 
-
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
     GLF_GROUP_FUNCTION();
 
     // Extract the lighting context information from the task context
     GlfSimpleLightingContextRefPtr lightingContext;
-    if (!_GetTaskContextData(ctx, HdxTokens->lightingContext, &lightingContext)) {
+    if (!_GetTaskContextData(ctx, 
+            HdxTokens->lightingContext, &lightingContext)) {
         return;
     }
 
     if (_params.depthBiasEnable) {
         glEnable(GL_POLYGON_OFFSET_FILL);
-        glPolygonOffset(_params.depthBiasSlopeFactor, _params.depthBiasConstantFactor);
+        glPolygonOffset(_params.depthBiasSlopeFactor, 
+            _params.depthBiasConstantFactor);
     } else {
         glDisable(GL_POLYGON_OFFSET_FILL);
     }
@@ -90,14 +95,17 @@ HdxShadowTask::_Execute(HdTaskContext* ctx)
     // This ensures we don't segfault if the shadows and passes are out of sync.
     // The TF_VERIFY is in Sync for making sure they match but we handle
     // failure gracefully here.
-    const size_t shadowCount = std::min(shadows->GetNumLayers(), _passes.size());
+    const size_t shadowCount = 
+        std::min(shadows->GetNumLayers(), _passes.size());
     for(size_t shadowId = 0; shadowId < shadowCount; shadowId++) {
 
         // Bind the framebuffer that will store shadowId shadow map
         shadows->BeginCapture(shadowId, true);
 
         // Render the actual geometry in the collection
-        _passes[shadowId]->Execute(_renderPassStates[shadowId], SHADOW_RENDER_TAGS);
+        _passes[shadowId]->Execute(
+            _renderPassStates[shadowId], 
+            SHADOW_RENDER_TAGS);
 
         // Unbind the buffer and move on to the next shadow map
         shadows->EndCapture(shadowId);
@@ -108,15 +116,49 @@ HdxShadowTask::_Execute(HdTaskContext* ctx)
     glDisable(GL_POLYGON_OFFSET_FILL);
 }
 
-static void
-_UpdateDirtyParams(HdRenderPassStateSharedPtr &renderPassState,
-                   HdxShadowTaskParams const &params)
+void
+HdxShadowTask::_CreateOverrideShader()
+{
+    static std::mutex shaderCreateLock;
+
+    if (!_overrideShader) {
+        std::lock_guard<std::mutex> lock(shaderCreateLock);
+        if (!_overrideShader) {
+            _overrideShader = HdStShaderCodeSharedPtr(new HdStGLSLFXShader(
+                GlfGLSLFXSharedPtr(new GlfGLSLFX(
+                    HdStPackageFallbackSurfaceShader()))));
+        }
+    }
+}
+
+void
+HdxShadowTask::_SetHdStRenderPassState(HdxShadowTaskParams const &params,
+    HdStRenderPassState *renderPassState)
+{
+    if (params.enableSceneMaterials) {
+        renderPassState->SetOverrideShader(HdStShaderCodeSharedPtr());
+    } else {
+        if (!_overrideShader) {
+            _CreateOverrideShader();
+        }
+        renderPassState->SetOverrideShader(_overrideShader);
+    }
+}
+
+void
+HdxShadowTask::_UpdateDirtyParams(HdRenderPassStateSharedPtr &renderPassState,
+    HdxShadowTaskParams const &params)
 {
     renderPassState->SetOverrideColor(params.overrideColor);
     renderPassState->SetWireframeColor(params.wireframeColor);
     renderPassState->SetTessLevel(params.tessLevel);
     renderPassState->SetDrawingRange(params.drawingRange);
     renderPassState->SetCullStyle(HdInvertCullStyle(params.cullStyle));
+
+    if (HdStRenderPassState* extendedState =
+            dynamic_cast<HdStRenderPassState*>(renderPassState.get())) {
+        _SetHdStRenderPassState(params, extendedState);
+    }
 }
 
 void
@@ -125,21 +167,21 @@ HdxShadowTask::_Sync(HdTaskContext* ctx)
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
     GLF_GROUP_FUNCTION();
-    
+
     // Extract the lighting context information from the task context
     GlfSimpleLightingContextRefPtr lightingContext;
-    if (!_GetTaskContextData(ctx, HdxTokens->lightingContext, &lightingContext)) {
+    if (!_GetTaskContextData(ctx, 
+            HdxTokens->lightingContext, 
+            &lightingContext)) {
         return;
     }
-    
+
     GlfSimpleLightVector const glfLights = lightingContext->GetLights();
     GlfSimpleShadowArrayRefPtr const shadows = lightingContext->GetShadows();
-
     HdSceneDelegate *const delegate = GetDelegate();
     HdRenderIndex &renderIndex = delegate->GetRenderIndex();
-    
-    _TaskDirtyState dirtyState;
 
+    _TaskDirtyState dirtyState;
     _GetTaskDirtyState(HdTokens->geometry, &dirtyState);
 
     const bool dirtyParams = dirtyState.bits & HdChangeTracker::DirtyParams;
@@ -171,12 +213,16 @@ HdxShadowTask::_Sync(HdTaskContext* ctx)
             continue;
         }
 
+        // It is possible the light is nullptr for area lights converted to 
+        // simple lights, however they should not have shadows enabled.
+        TF_VERIFY(light);
+
         // Extract the collection from the HD light
         VtValue vtShadowCollection =
             light->Get(HdLightTokens->shadowCollection);
         const HdRprimCollection &col =
             vtShadowCollection.IsHolding<HdRprimCollection>() ?
-                vtShadowCollection.Get<HdRprimCollection>() : HdRprimCollection();
+            vtShadowCollection.Get<HdRprimCollection>() : HdRprimCollection();
 
         // Creates or reuses a pass with the right geometry that will be
         // used during Execute phase to draw the shadow maps.
@@ -247,7 +293,8 @@ HdxShadowTask::_Sync(HdTaskContext* ctx)
 
     // But if it is not then we still have to make sure we don't
     // buffer overrun here.
-    const size_t shadowCount = std::min(shadows->GetNumLayers(), _passes.size());
+    const size_t shadowCount = 
+        std::min(shadows->GetNumLayers(), _passes.size());
     for(size_t passId = 0; passId < shadowCount; passId++) {
         // Move the camera to the correct position to take the shadow map
         _renderPassStates[passId]->SetCamera( 
@@ -261,9 +308,9 @@ HdxShadowTask::_Sync(HdTaskContext* ctx)
     }
 }
 
-// --------------------------------------------------------------------------- //
+// ---------------------------------------------------------------------------//
 // VtValue Requirements
-// --------------------------------------------------------------------------- //
+// ---------------------------------------------------------------------------//
 
 std::ostream& operator<<(std::ostream& out, const HdxShadowTaskParams& pv)
 {
@@ -272,6 +319,7 @@ std::ostream& operator<<(std::ostream& out, const HdxShadowTaskParams& pv)
         << pv.wireframeColor << " " 
         << pv.enableLighting << " "
         << pv.enableIdRender << " "
+        << pv.enableSceneMaterials << " "
         << pv.alphaThreshold << " "
         << pv.tessLevel << " "
         << pv.drawingRange << " "
@@ -295,9 +343,10 @@ std::ostream& operator<<(std::ostream& out, const HdxShadowTaskParams& pv)
 bool operator==(const HdxShadowTaskParams& lhs, const HdxShadowTaskParams& rhs) 
 {
     return  lhs.overrideColor == rhs.overrideColor                      && 
-            lhs.wireframeColor == rhs.wireframeColor                    &&                     
+            lhs.wireframeColor == rhs.wireframeColor                    && 
             lhs.enableLighting == rhs.enableLighting                    &&
             lhs.enableIdRender == rhs.enableIdRender                    &&
+            lhs.enableSceneMaterials == rhs.enableSceneMaterials        &&
             lhs.alphaThreshold == rhs.alphaThreshold                    &&
             lhs.tessLevel == rhs.tessLevel                              && 
             lhs.drawingRange == rhs.drawingRange                        && 

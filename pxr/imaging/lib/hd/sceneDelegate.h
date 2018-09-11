@@ -242,6 +242,15 @@ struct HdExtComputationOutputDescriptor {
 typedef std::vector<HdExtComputationOutputDescriptor>
         HdExtComputationOutputDescriptorVector;
 
+/// \struct HdRenderBufferDescriptor
+///
+/// Describes the allocation structure of a render buffer bprim.
+struct HdRenderBufferDescriptor {
+    GfVec3i dimensions;
+    HdFormat format;
+    bool multiSampled;
+};
+
 /// \struct HdVolumeFieldDescriptor
 ///
 /// Description of a single field related to a volume primitive.
@@ -262,15 +271,6 @@ struct HdVolumeFieldDescriptor {
 
 typedef std::vector<HdVolumeFieldDescriptor>
 	HdVolumeFieldDescriptorVector;
-
-/// \struct HdRenderBufferDescriptor
-///
-/// Describes the allocation structure of a render buffer bprim.
-struct HdRenderBufferDescriptor {
-    GfVec3i dimensions;
-    HdFormat format;
-    bool multiSampled;
-};
 
 /// \class HdSceneDelegate
 ///

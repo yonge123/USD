@@ -1,5 +1,5 @@
 //
-// Copyright 2017 Pixar
+// Copyright 2018 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -21,10 +21,10 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef USDIMAGING_OPENVDB_ASSET_ADAPTER_H
-#define USDIMAGING_OPENVDB_ASSET_ADAPTER_H
+#ifndef USDIMAGING_FIELD3D_ASSET_ADAPTER_H
+#define USDIMAGING_FIELD3D_ASSET_ADAPTER_H
 
-/// \file usdImaging/openvdbAssetAdapter.h
+/// \file usdImaging/field3dAssetAdapter.h
 
 #include "pxr/pxr.h"
 #include "pxr/usdImaging/usdImaging/api.h"
@@ -35,20 +35,20 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class UsdPrim;
 
-/// \class UsdImagingOpenVDBAssetAdapter
+/// \class UsdImagingField3DAssetAdapter
 ///
-/// Adapter class for fields of type OpenVDBAsset
+/// Adapter class for fields of type Field3DAsset
 ///
-class UsdImagingOpenVDBAssetAdapter : public UsdImagingFieldAdapter {
+class UsdImagingField3DAssetAdapter : public UsdImagingFieldAdapter {
 public:
     typedef UsdImagingFieldAdapter BaseAdapter;
 
-    UsdImagingOpenVDBAssetAdapter()
+    UsdImagingField3DAssetAdapter()
         : UsdImagingFieldAdapter()
     {}
 
     USDIMAGING_API
-    virtual ~UsdImagingOpenVDBAssetAdapter();
+    virtual ~UsdImagingField3DAssetAdapter();
 
     USDIMAGING_API
     virtual TfToken GetPrimTypeToken() const;
@@ -57,4 +57,4 @@ public:
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // USDIMAGING_OPENVDB_ASSET_ADAPTER_H
+#endif // USDIMAGING_FIELD3D_ASSET_ADAPTER_H

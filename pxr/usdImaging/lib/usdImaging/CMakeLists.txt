@@ -48,7 +48,6 @@ pxr_library(usdImaging
         distantLightAdapter
         domeLightAdapter
         fieldAdapter
-        field3dAssetAdapter
         gprimAdapter
         imagePlaneAdapter
         instanceAdapter
@@ -56,15 +55,14 @@ pxr_library(usdImaging
         materialAdapter
         meshAdapter
         nurbsPatchAdapter
-        openvdbAssetAdapter
         pointsAdapter
         pointInstancerAdapter
         primAdapter
         rectLightAdapter
         sphereAdapter
         sphereLightAdapter
-        volumeAdapter
         textureUtils
+        volumeAdapter
 
     PUBLIC_HEADERS
         api.h

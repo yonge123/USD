@@ -159,20 +159,6 @@
                         ],
                         "isInternal": true,
                         "primTypeName": "DistantLight"
-                    },
-                    "UsdImagingOpenVDBAssetAdapter": {
-                        "bases": [
-                            "UsdImagingFieldAdapter"
-                        ],
-                        "isInternal": true,
-                        "primTypeName": "OpenVDBAsset"
-                    },
-                    "UsdImagingField3DAssetAdapter": {
-                        "bases": [
-                            "UsdImagingFieldAdapter"
-                        ],
-                        "isInternal": true,
-                        "primTypeName": "Field3DAsset"
                     }
                 }
             },

@@ -803,8 +803,8 @@ class AppController(QtCore.QObject):
             self._ui.actionDisplay_PrimId.triggered.connect(
                 self._toggleDisplayPrimId)
 
-            self._ui.actionEnable_Hardware_Shading.triggered.connect(
-                self._toggleEnableHardwareShading)
+            self._ui.actionEnable_Scene_Materials.triggered.connect(
+                self._toggleEnableSceneMaterials)
 
             self._ui.actionDisplay_Image_Planes.triggered.connect(
                 self._toggleDisplayImagePlanes)
@@ -1980,9 +1980,9 @@ class AppController(QtCore.QObject):
         self._dataModel.viewSettings.displayPrimId = (
             self._ui.actionDisplay_PrimId.isChecked())
 
-    def _toggleEnableHardwareShading(self):
-        self._dataModel.viewSettings.enableHardwareShading = (
-            self._ui.actionEnable_Hardware_Shading.isChecked())
+    def _toggleEnableSceneMaterials(self):
+        self._dataModel.viewSettings.enableSceneMaterials = (
+            self._ui.actionEnable_Scene_Materials.isChecked())
 
     def _toggleDisplayImagePlanes(self):
         self._dataModel.viewSettings.displayImagePlanes = (
@@ -4340,8 +4340,8 @@ class AppController(QtCore.QObject):
             self._dataModel.viewSettings.displayRender)
 
     def _refreshViewMenu(self):
-        self._ui.actionEnable_Hardware_Shading.setChecked(
-            self._dataModel.viewSettings.enableHardwareShading)
+        self._ui.actionEnable_Scene_Materials.setChecked(
+            self._dataModel.viewSettings.enableSceneMaterials)
         self._ui.actionDisplay_PrimId.setChecked(
             self._dataModel.viewSettings.displayPrimId)
         self._ui.actionCull_Backfaces.setChecked(
