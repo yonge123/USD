@@ -1652,6 +1652,69 @@ renderFrame(fpreal time,
         UT_Set<SdfPath> gprimsProcessedThisFrame;
         bool needToUpdateModelExtents = false;
 
+        if (evalInt("enablevdbout", 0, 0) != 0) {
+            UT_String vdbPath;
+            if (!evalParameterOrProperty("vdbout", 0, ctxt.time, vdbPath)) {
+                objNode->evalParameterOrProperty("vdbout", 0, ctxt.time, vdbPath);
+            }
+            if (vdbPath.isstring() && !refinerCollector.m_vdbs.empty()) {
+                openvdb::io::File vdbFile(vdbPath.c_str());
+
+                UT_String compressionMode;
+                evalString(compressionMode, "vdbcompression", 0, 0);
+                // Following the logic in the official openvdb repository.
+    #ifdef OPENVDB_USE_BLOSC
+                auto compressionFlags = vdbFile.compression();
+                if (compressionMode == "none") {
+                    compressionFlags &= ~(openvdb::io::COMPRESS_ZIP | openvdb::io::COMPRESS_BLOSC);
+                } else if (compressionMode == "zip") {
+                    compressionFlags |= openvdb::io::COMPRESS_ZIP;
+                    compressionFlags &= ~openvdb::io::COMPRESS_BLOSC;
+                } else if (compressionMode == "blosc") {
+                    compressionFlags &= ~openvdb::io::COMPRESS_ZIP;
+                    compressionFlags |= openvdb::io::COMPRESS_BLOSC;
+                }
+    #else
+                uint32_t compressionFlags = openvdb::io::COMPRESS_ACTIVE_MASK;
+                if (compressionMode == "zip") {
+                    compressionFlags |= openvdb::io::COMPRESS_ZIP;
+                }
+    #endif
+                vdbFile.setCompression(compressionFlags);
+
+                const SdfPath volumePath(refiner.createPrimPath("volume"));
+                auto materialFound = false;
+                openvdb::GridCPtrVec outGrids;
+                UT_BoundingBox houdiniBounds(
+                    SYS_FP32_MAX, SYS_FP32_MAX, SYS_FP32_MAX,
+                    SYS_FP32_MIN, SYS_FP32_MIN, SYS_FP32_MIN);
+                for (auto vdbHandle: refinerCollector.m_vdbs) {
+                    auto* vdb = dynamic_cast<GT_PrimVDB*>(vdbHandle.get());
+                    if (vdb == nullptr) { continue; }
+                    // TODO: can we avoid copying the grid?
+                    vdbHandle->enlargeRenderBounds(&houdiniBounds, 1);
+                    outGrids.push_back(openvdb::GridBase::ConstPtr(vdb->getGrid()->copyGrid()));
+                    if (!materialFound) {
+                        auto materialPath = getStringUniformOrDetailAttribute(vdbHandle, "shop_materialpath");
+                        if (!materialPath.empty()) {
+                            addShaderToMap(materialPath, volumePath, houMaterialMap);
+                        }
+                        materialFound = true;
+                    }
+                    GusdGT_Utils::getExtentsArray(vdbHandle);
+                }
+                vdbFile.write(outGrids);
+                vdbFile.close();
+
+                UsdAiVolume volume = UsdAiVolume::Define(m_usdStage, volumePath);
+                volume.CreateFilenameAttr().Set(SdfAssetPath(vdbPath.c_str()), ctxt.time);
+                VtArray<GfVec3f> bounds(2);
+                bounds[0].Set(houdiniBounds.minvec().data());
+                bounds[1].Set(houdiniBounds.maxvec().data());
+                volume.CreateExtentAttr().Set(bounds, ctxt.time);
+            }
+        }
+
         GusdSimpleXformCache xformCache;
 
         // If we are not writing an overlay, assume we are writing an asset rooted 
@@ -1949,72 +2012,6 @@ renderFrame(fpreal time,
             }
         }
     } // end loop through multi-seg samples
-
-    // TODO: figure out if this should support multi-seg samples, and add
-    // that support if desired
-    if (evalInt("enablevdbout", 0, 0) != 0) {
-        UT_String vdbPath;
-        if (!evalParameterOrProperty("vdbout", 0, time, vdbPath)) {
-            objNode->evalParameterOrProperty("vdbout", 0, time, vdbPath);
-        }
-        if (vdbPath.isstring() && !refinerCollector.m_vdbs.empty()) {
-            openvdb::io::File vdbFile(vdbPath.c_str());
-
-            UT_String compressionMode;
-            evalString(compressionMode, "vdbcompression", 0, 0);
-            // Following the logic in the official openvdb repository.
-#ifdef OPENVDB_USE_BLOSC
-            auto compressionFlags = vdbFile.compression();
-            if (compressionMode == "none") {
-                compressionFlags &= ~(openvdb::io::COMPRESS_ZIP | openvdb::io::COMPRESS_BLOSC);
-            } else if (compressionMode == "zip") {
-                compressionFlags |= openvdb::io::COMPRESS_ZIP;
-                compressionFlags &= ~openvdb::io::COMPRESS_BLOSC;
-            } else if (compressionMode == "blosc") {
-                compressionFlags &= ~openvdb::io::COMPRESS_ZIP;
-                compressionFlags |= openvdb::io::COMPRESS_BLOSC;
-            }
-#else
-            uint32_t compressionFlags = openvdb::io::COMPRESS_ACTIVE_MASK;
-            if (compressionMode == "zip") {
-                compressionFlags |= openvdb::io::COMPRESS_ZIP;
-            }
-#endif
-            vdbFile.setCompression(compressionFlags);
-
-            const SdfPath volumePath(refiner.createPrimPath("volume"));
-            auto materialFound = false;
-            openvdb::GridCPtrVec outGrids;
-            UT_BoundingBox houdiniBounds(
-                SYS_FP32_MAX, SYS_FP32_MAX, SYS_FP32_MAX,
-                SYS_FP32_MIN, SYS_FP32_MIN, SYS_FP32_MIN);
-            for (auto vdbHandle: refinerCollector.m_vdbs) {
-                auto* vdb = dynamic_cast<GT_PrimVDB*>(vdbHandle.get());
-                if (vdb == nullptr) { continue; }
-                // TODO: can we avoid copying the grid?
-                vdbHandle->enlargeRenderBounds(&houdiniBounds, 1);
-                outGrids.push_back(openvdb::GridBase::ConstPtr(vdb->getGrid()->copyGrid()));
-                if (!materialFound) {
-                    auto materialPath = getStringUniformOrDetailAttribute(vdbHandle, "shop_materialpath");
-                    if (!materialPath.empty()) {
-                        addShaderToMap(materialPath, volumePath, houMaterialMap);
-                    }
-                    materialFound = true;
-                }
-                GusdGT_Utils::getExtentsArray(vdbHandle);
-            }
-            vdbFile.write(outGrids);
-            vdbFile.close();
-
-            UsdAiVolume volume = UsdAiVolume::Define(m_usdStage, volumePath);
-            volume.CreateFilenameAttr().Set(SdfAssetPath(vdbPath.c_str()), ctxt.time);
-            VtArray<GfVec3f> bounds(2);
-            bounds[0].Set(houdiniBounds.minvec().data());
-            bounds[1].Set(houdiniBounds.maxvec().data());
-            volume.CreateExtentAttr().Set(bounds, ctxt.time);
-        }
-    }
-
 
     // If not writing an overlay and if m_pathPrefix is not empty,
     // assume an asset rooted at the prim named m_pathPrefix has
