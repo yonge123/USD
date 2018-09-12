@@ -1543,7 +1543,8 @@ renderFrame(fpreal time,
     for (size_t s = 0; s < samples; s++) {
         double sampleFrame = frame + shutterOpen + (segment * s);
 
-        OP_Context houdiniContext(CHgetTimeFromFrame(sampleFrame));
+        fpreal sampleTime = CHgetTimeFromFrame(sampleFrame);
+        OP_Context houdiniContext(sampleTime);
 
         // Get the OBJ node transform
         UT_Matrix4D localToWorldMatrix;
@@ -1654,8 +1655,8 @@ renderFrame(fpreal time,
 
         if (evalInt("enablevdbout", 0, 0) != 0) {
             UT_String vdbPath;
-            if (!evalParameterOrProperty("vdbout", 0, ctxt.time, vdbPath)) {
-                objNode->evalParameterOrProperty("vdbout", 0, ctxt.time, vdbPath);
+            if (!evalParameterOrProperty("vdbout", 0, sampleTime, vdbPath)) {
+                objNode->evalParameterOrProperty("vdbout", 0, sampleTime, vdbPath);
             }
             if (vdbPath.isstring() && !refinerCollector.m_vdbs.empty()) {
                 openvdb::io::File vdbFile(vdbPath.c_str());
