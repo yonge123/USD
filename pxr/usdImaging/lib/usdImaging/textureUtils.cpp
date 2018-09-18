@@ -58,7 +58,7 @@ UsdImaging_GetUdimTiles(
             ? SdfComputeAssetPathRelativeToLayer(
                 layerHandle, TfStringPrintf(formatString.c_str(), t))
             : TfStringPrintf(formatString.c_str(), t);
-        if (TfPathExists(path)) {
+        if (!resolver.Resolve(path).empty()) {
             ret.emplace_back(t - startTile, TfToken(path));
         }
     }
@@ -95,7 +95,7 @@ UsdImaging_UdimTilesExist(
             ? SdfComputeAssetPathRelativeToLayer(
                 layerHandle, TfStringPrintf(formatString.c_str(), t))
             : TfStringPrintf(formatString.c_str(), t);
-        if (TfPathExists(path)) {
+        if (!resolver.Resolve(path).empty()) {
             return true;
         }
     }
