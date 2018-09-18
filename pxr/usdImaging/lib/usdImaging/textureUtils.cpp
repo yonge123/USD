@@ -26,6 +26,7 @@
 #include "pxr/base/tf/fileUtils.h"
 
 #include "pxr/usd/ar/resolver.h"
+#include "pxr/usd/ar/resolverScopedCache.h"
 
 #include "pxr/usd/sdf/layerUtils.h"
 
@@ -43,11 +44,9 @@ UsdImaging_GetUdimTiles(
     std::string formatString = basePath;
     formatString.replace(pos, 6, "%i");
 
+    ArResolverScopedCache resolverCache;
     ArResolver& resolver = ArGetResolver();
-    VtValue resolverCache;
-    if (layerHandle) {
-        resolver.BeginCacheScope(&resolverCache);
-    }
+
     constexpr int startTile = 1001;
     const int endTile = startTile + tileLimit;
     std::vector<std::tuple<int, TfToken>> ret;
@@ -58,12 +57,9 @@ UsdImaging_GetUdimTiles(
             ? SdfComputeAssetPathRelativeToLayer(
                 layerHandle, TfStringPrintf(formatString.c_str(), t))
             : TfStringPrintf(formatString.c_str(), t);
-        if (TfPathExists(path)) {
+        if (!resolver.Resolve(path).empty()) {
             ret.emplace_back(t - startTile, TfToken(path));
         }
-    }
-    if (layerHandle) {
-        resolver.EndCacheScope(&resolverCache);
     }
     ret.shrink_to_fit();
     return ret;
@@ -81,11 +77,8 @@ UsdImaging_UdimTilesExist(
     std::string formatString = basePath;
     formatString.replace(pos, 6, "%i");
 
+    ArResolverScopedCache resolverCache;
     ArResolver& resolver = ArGetResolver();
-    VtValue resolverCache;
-    if (layerHandle) {
-        resolver.BeginCacheScope(&resolverCache);
-    }
 
     constexpr int startTile = 1001;
     const int endTile = startTile + tileLimit;
@@ -95,13 +88,9 @@ UsdImaging_UdimTilesExist(
             ? SdfComputeAssetPathRelativeToLayer(
                 layerHandle, TfStringPrintf(formatString.c_str(), t))
             : TfStringPrintf(formatString.c_str(), t);
-        if (TfPathExists(path)) {
+        if (!resolver.Resolve(path).empty()) {
             return true;
         }
-    }
-
-    if (layerHandle) {
-        resolver.EndCacheScope(&resolverCache);
     }
     return false;
 }
