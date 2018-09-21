@@ -332,26 +332,26 @@ UsdImagingGLHdEngine::_UpdateHydraCollection(HdRprimCollection *collection,
     }
 
     // choose repr
-    HdReprSelector reprSelector = HdReprSelector(HdTokens->smoothHull);
+    HdReprSelector reprSelector = HdReprSelector(HdReprTokens->smoothHull);
     bool refined = params.complexity > 1.0;
 
     if (params.drawMode == UsdImagingGLEngine::DRAW_GEOM_FLAT ||
         params.drawMode == UsdImagingGLEngine::DRAW_SHADED_FLAT) {
         // Flat shading
-        reprSelector = HdReprSelector(HdTokens->hull);
+        reprSelector = HdReprSelector(HdReprTokens->hull);
     } else if (
         params.drawMode == UsdImagingGLEngine::DRAW_WIREFRAME_ON_SURFACE) {
         // Wireframe on surface
         reprSelector = HdReprSelector(refined ?
-            HdTokens->refinedWireOnSurf : HdTokens->wireOnSurf);
+            HdReprTokens->refinedWireOnSurf : HdReprTokens->wireOnSurf);
     } else if (params.drawMode == UsdImagingGLEngine::DRAW_WIREFRAME) {
         // Wireframe
         reprSelector = HdReprSelector(refined ?
-            HdTokens->refinedWire : HdTokens->wire);
+            HdReprTokens->refinedWire : HdReprTokens->wire);
     } else {
         // Smooth shading
         reprSelector = HdReprSelector(refined ?
-            HdTokens->refined : HdTokens->smoothHull);
+            HdReprTokens->refined : HdReprTokens->smoothHull);
     }
 
     // Calculate the rendertags needed based on the parameters passed by
@@ -462,7 +462,7 @@ UsdImagingGLHdEngine::_MakeHydraRenderParams(
             renderParams.alphaThreshold;
     }
 
-    params.enableHardwareShading = renderParams.enableHardwareShading;
+    params.enableSceneMaterials = renderParams.enableSceneMaterials;
 
     // Leave default values for:
     // - params.geomStyle
@@ -536,6 +536,7 @@ UsdImagingGLHdEngine::TestIntersection(
     qparams.alphaThreshold = params.alphaThreshold;
     qparams.renderTags = _renderTags;
     qparams.cullStyle = HdCullStyleNothing;
+    qparams.enableSceneMaterials = params.enableSceneMaterials;
 
     if (!_taskController->TestIntersection(
             &_engine,
@@ -605,6 +606,7 @@ UsdImagingGLHdEngine::TestIntersectionBatch(
     qparams.alphaThreshold = params.alphaThreshold;
     qparams.cullStyle = USD_2_HD_CULL_STYLE[params.cullStyle];
     qparams.renderTags = _renderTags;
+    qparams.enableSceneMaterials = params.enableSceneMaterials;
 
     _taskController->SetPickResolution(pickResolution);
     if (!_taskController->TestIntersection(
@@ -665,8 +667,8 @@ class _DebugGroupTaskWrapper : public HdTask {
 void
 UsdImagingGLHdEngine::Render(RenderParams params)
 {
-    // Forward hw shading enable to delegate
-    _delegate->SetHardwareShadingEnabled(params.enableHardwareShading);
+    // Forward scene materials enable option to delegate
+    _delegate->SetSceneMaterialsEnabled(params.enableSceneMaterials);
 
 
     // User is responsible for initializing GL context and glew
