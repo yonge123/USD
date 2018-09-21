@@ -437,7 +437,7 @@ UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer() :
                        _tokens->BatchRendererRootName.GetText(),
                        _tokens->LegacyViewport.GetText())));
     _legacyViewportRprimCollection.SetReprSelector(
-        HdReprSelector(HdTokens->refined));
+        HdReprSelector(HdReprTokens->refined));
     _legacyViewportRprimCollection.SetRootPath(_legacyViewportPrefix);
     _legacyViewportRprimCollection.SetRenderTags(renderTags);
     _renderIndex->GetChangeTracker().AddCollection(
@@ -448,7 +448,7 @@ UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer() :
                        _tokens->BatchRendererRootName.GetText(),
                        _tokens->Viewport2.GetText())));
     _viewport2RprimCollection.SetReprSelector(
-        HdReprSelector(HdTokens->refined));
+        HdReprSelector(HdReprTokens->refined));
     _viewport2RprimCollection.SetRootPath(_viewport2Prefix);
     _viewport2RprimCollection.SetRenderTags(renderTags);
     _renderIndex->GetChangeTracker().AddCollection(
@@ -609,7 +609,8 @@ UsdMayaGLBatchRenderer::Draw(const MDrawRequest& request, M3dView& view)
 
     const PxrMayaHdUserData* hdUserData =
         static_cast<const PxrMayaHdUserData*>(drawData.geometry());
-    if (!hdUserData) {
+    if (!hdUserData || (!hdUserData->drawShape && !hdUserData->boundingBox)) {
+        // Bail out as soon as possible if there's nothing to be drawn.
         return;
     }
 
@@ -660,15 +661,16 @@ UsdMayaGLBatchRenderer::Draw(
 {
     // Viewport 2.0 implementation.
 
-    const MHWRender::MRenderer* theRenderer =
-        MHWRender::MRenderer::theRenderer();
-    if (!theRenderer || !theRenderer->drawAPIIsOpenGL()) {
+    const PxrMayaHdUserData* hdUserData =
+        dynamic_cast<const PxrMayaHdUserData*>(userData);
+    if (!hdUserData || (!hdUserData->drawShape && !hdUserData->boundingBox)) {
+        // Bail out as soon as possible if there's nothing to be drawn.
         return;
     }
 
-    const PxrMayaHdUserData* hdUserData =
-        dynamic_cast<const PxrMayaHdUserData*>(userData);
-    if (!hdUserData) {
+    const MHWRender::MRenderer* theRenderer =
+        MHWRender::MRenderer::theRenderer();
+    if (!theRenderer || !theRenderer->drawAPIIsOpenGL()) {
         return;
     }
 
@@ -943,6 +945,20 @@ UsdMayaGLBatchRenderer::TestIntersectionCustomCollection(
     params.alphaThreshold = 0.1f;
 
     return _TestIntersection(collection, params, outResult);
+}
+
+int
+UsdMayaGLBatchRenderer::GetAbsoluteInstanceIndexForHit(
+    const HdxIntersector::Hit& hit) const
+{
+    int ret = -1;
+    if (auto delegate = _renderIndex->GetSceneDelegateForRprim(hit.objectId)) {
+        delegate->GetPathForInstanceIndex(
+            hit.objectId, 
+            hit.instanceIndex, 
+            &ret);
+    }
+    return ret;
 }
 
 /* static */
