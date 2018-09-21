@@ -114,7 +114,7 @@ public:
         GfVec4f wireframeColor;
         float alphaThreshold; // threshold < 0 implies automatic
         ClipPlanesVector clipPlanes;
-        bool enableHardwareShading;
+        bool enableSceneMaterials;
         // Respect USD's model:drawMode attribute...
         bool enableUsdDrawModes;
         bool displayImagePlanes;
@@ -139,7 +139,7 @@ public:
             wireframeColor(.0f, .0f, .0f, .0f),
             alphaThreshold(-1),
             clipPlanes(),
-            enableHardwareShading(true),
+            enableSceneMaterials(true),
             enableUsdDrawModes(true),
             displayImagePlanes(true)
         {
@@ -165,7 +165,7 @@ public:
                 && wireframeColor              == other.wireframeColor
                 && alphaThreshold              == other.alphaThreshold
                 && clipPlanes                  == other.clipPlanes
-                && enableHardwareShading       == other.enableHardwareShading
+                && enableSceneMaterials        == other.enableSceneMaterials
                 && enableUsdDrawModes          == other.enableUsdDrawModes
                 && displayImagePlanes          == other.displayImagePlanes;
         }
