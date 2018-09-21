@@ -48,6 +48,7 @@
 #include <OP/OP_OperatorTable.h>
 #include <PI/PI_EditScriptedParms.h>
 #include <PRM/PRM_AutoDeleter.h>
+#include <PRM/PRM_Conditional.h>
 #include <UT/UT_WorkArgs.h>
 #include <UT/UT_UniquePtr.h>
 #include <PY/PY_Python.h>
@@ -413,11 +414,11 @@ GusdSOP_usdimport::_Cook(OP_Context& ctx)
 namespace {
 
 
-GusdStageBasicEdit*
+GusdStageEdit*
 _CreateEdit(const SdfPath& variantSelPath)
 {
     if(!variantSelPath.IsEmpty()) {
-        GusdStageBasicEdit* edit = new GusdStageBasicEdit();
+        GusdStageEdit* edit = new GusdStageEdit();
         edit->GetVariants().append(variantSelPath);
         return edit;
     }

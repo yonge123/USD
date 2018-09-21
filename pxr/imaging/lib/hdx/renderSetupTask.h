@@ -126,7 +126,7 @@ struct HdxRenderTaskParams : public HdTaskParams
         , alphaThreshold(0.0)
         , tessLevel(1.0)
         , drawingRange(0.0, -1.0)
-        , enableHardwareShading(true)
+        , enableSceneMaterials(true)
         , renderTags()
         , depthBiasUseDefault(true)
         , depthBiasEnable(false)
@@ -139,6 +139,7 @@ struct HdxRenderTaskParams : public HdTaskParams
         , stencilFailOp(HdStencilOpKeep)
         , stencilZFailOp(HdStencilOpKeep)
         , stencilZPassOp(HdStencilOpKeep)
+        , stencilEnable(false)
         , cullStyle(HdCullStyleBackUnlessDoubleSided)
         , geomStyle(HdGeomStylePolygons)
         , complexity(HdComplexityLow)
@@ -162,7 +163,7 @@ struct HdxRenderTaskParams : public HdTaskParams
     float alphaThreshold;
     float tessLevel;
     GfVec2f drawingRange;
-    bool enableHardwareShading;
+    bool enableSceneMaterials;
     TfTokenVector renderTags;
 
     // Depth Bias Raster State
