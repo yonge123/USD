@@ -140,7 +140,7 @@ HdxTaskController::_CreateRenderTasks()
     renderParams.viewport = GfVec4d(0,0,1,1);
 
     HdRprimCollection collection(HdTokens->geometry,
-                                 HdReprSelector(HdTokens->smoothHull));
+                                 HdReprSelector(HdReprTokens->smoothHull));
     collection.SetRootPath(SdfPath::AbsoluteRootPath());
 
     SdfPath const renderTasks[] = {
@@ -318,10 +318,10 @@ HdxTaskController::SetRenderParams(HdxRenderTaskParams const& params)
                 _shadowTaskId, HdTokens->params);
 
             if (oldShParams.enableSceneMaterials != 
-                mergedParams.enableHardwareShading) {
+                mergedParams.enableSceneMaterials) {
 
                 oldShParams.enableSceneMaterials = 
-                    mergedParams.enableHardwareShading;
+                    mergedParams.enableSceneMaterials;
                 _delegate.SetParameter(_shadowTaskId, 
                     HdTokens->params, oldShParams);
 
@@ -626,6 +626,7 @@ HdxTaskController::SetCameraClipPlanes(std::vector<GfVec4d> const& clipPlanes)
 
 void
 HdxTaskController::SetCameraWindowPolicy(
+    CameraUtilConformWindowPolicy windowPolicy) {
     CameraUtilConformWindowPolicy windowPolicy)
 {
     // Cache the window policy, if needed
