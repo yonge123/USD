@@ -233,6 +233,12 @@ public:
     static const HdxIntersector::Hit* GetNearestHit(
             const HdxIntersector::HitSet* hitSet);
 
+    /// Returns the absoluteInstanceIndex (index within the point instancer) for \c hit.
+    ///
+    /// Returns -1 if unable to get the absoluteInstanceIndex.
+    PXRUSDMAYAGL_API
+    int GetAbsoluteInstanceIndexForHit(const HdxIntersector::Hit& hit) const;
+
     /// Returns whether soft selection for proxy shapes is currently enabled.
     PXRUSDMAYAGL_API
     inline bool GetObjectSoftSelectEnabled()
@@ -241,6 +247,7 @@ public:
     /// Starts batching all diagnostics until the end of the current frame draw.
     /// The batch renderer will automatically release the diagnostics when Maya
     /// is done rendering the frame.
+    PXRUSDMAYAGL_API
     void StartBatchingFrameDiagnostics();
 
 private:
