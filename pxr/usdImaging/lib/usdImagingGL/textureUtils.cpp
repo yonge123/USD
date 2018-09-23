@@ -48,7 +48,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
 
-static HdWrap _GetWrap(UsdPrim const &usdPrim, HdTextureType textureType, const TfToken &wrapAttr)
+static HdWrap _GetWrap(
+    UsdPrim const &usdPrim, HdTextureType textureType, const TfToken &wrapAttr)
 {
     if (textureType == HdTextureType::Udim) {
         return HdWrapBlack;
