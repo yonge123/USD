@@ -48,7 +48,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
 
-static HdWrap _GetWrap(
+HdWrap _GetWrap(
     UsdPrim const &usdPrim, HdTextureType textureType, const TfToken &wrapAttr)
 {
     if (textureType == HdTextureType::Udim) {
@@ -100,7 +100,7 @@ static HdWrap _GetWrap(
     return hdWrap;
 }
 
-static HdWrap _GetWrapS(UsdPrim const &usdPrim, HdTextureType textureType)
+HdWrap _GetWrapS(UsdPrim const &usdPrim, HdTextureType textureType)
 {
     return _GetWrap(usdPrim, textureType, UsdHydraTokens->wrapS);
 }
