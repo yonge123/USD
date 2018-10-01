@@ -297,7 +297,7 @@ HdxSimpleLightTask::_Sync(HdTaskContext* ctx)
             int shadowId = _glfSimpleLights[lightId].GetShadowIndex();
 
             _shadows->SetViewMatrix(shadowId,
-                    _glfSimpleLights[lightId].GetTransform());
+                _glfSimpleLights[lightId].GetTransform());
             _shadows->SetProjectionMatrix(shadowId,
                 _glfSimpleLights[lightId].GetShadowMatrix());
         }
