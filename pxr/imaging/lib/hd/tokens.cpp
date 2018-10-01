@@ -41,18 +41,25 @@ TF_DEFINE_PUBLIC_TOKENS(HdPrimvarRoleTokens, HD_PRIMVAR_ROLE_TOKENS);
 
 TF_DEFINE_PUBLIC_TOKENS(HdAovTokens, HD_AOV_TOKENS);
 
-TfToken HdAovTokensPrimvar(TfToken const& primvar)
+TfToken HdAovTokensMakePrimvar(TfToken const& primvar)
 {
     return TfToken(
-        HdAovTokens->primvar.GetString() +
+        HdAovTokens->primvars.GetString() +
         primvar.GetString());
 }
 
-TfToken HdAovTokensLpe(TfToken const& lpe)
+TfToken HdAovTokensMakeLpe(TfToken const& lpe)
 {
     return TfToken(
         HdAovTokens->lpe.GetString() +
         lpe.GetString());
+}
+
+TfToken HdAovTokensMakeShader(TfToken const& shader)
+{
+    return TfToken(
+        HdAovTokens->shader.GetString() +
+        shader.GetString());
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
