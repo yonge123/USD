@@ -914,7 +914,7 @@ _ShaderNetworkWalker::_ShaderNetworkWalker(
     for(_MaterialParam const & param : _params) {
         materialParams->emplace_back(param._paramType,
                 param._name, param._fallbackValue,
-                param._connection, param._samplerCoords, param._isPtex);
+                param._connection, param._samplerCoords, param._textureType);
     }
 }
 
@@ -950,7 +950,7 @@ _ShaderNetworkWalker::_ProcessRootNode(
                     inputConn,/*_connection*/
                     SdfPath(), /*_connectionPrimvar*/
                     TfTokenVector(), /*_samplerCoords*/
-                    false /*_isPtex*/};
+                    HdTextureType::Uv /*_textureType*/};
             _params.push_back(matParam);
             TF_DEBUG(USDIMAGING_SHADERS).Msg(
                 "\t\tAdding attribute <%s> with connection <%s>%s.\n", 
@@ -987,7 +987,7 @@ _ShaderNetworkWalker::_ProcessRootNode(
                     inputConn,/*_connection*/
                     SdfPath(), /*_connectionPrimvar*/
                     TfTokenVector(), /*_samplerCoords*/
-                    false /*_isPtex*/};
+                    HdTextureType::Uv /*_textureType*/};
             _params.push_back(matParam);
 
             TF_DEBUG(USDIMAGING_SHADERS).Msg(
@@ -1007,6 +1007,13 @@ _ShaderNetworkWalker::_ProcessTextureNode(
     SdfPathVector *textureIDs,
     TfTokenVector *primvars) 
 {
+    HdTextureType textureType = HdTextureType::Uv;
+
+    if (sdrNode && sdrNode->GetMetadata().count(
+        _tokens->isPtex)) {
+        textureType = HdTextureType::Ptex;
+    }
+
     // Extract the filename property from the shader node and store 
     // the path in the textureIDs array.
     SdfPath connection;
@@ -1022,6 +1029,14 @@ _ShaderNetworkWalker::_ProcessTextureNode(
         }
         const auto &input = shader.GetInput(assetIdentifierPropertyNames[0]);
         connection = input.GetAttr().GetPath();
+        if (textureType != HdTextureType::Ptex) {
+            SdfAssetPath ap;
+            if (input.GetAttr().Get(&ap, UsdTimeCode::Default())) {
+                if (GlfIsSupportedUdimTexture(TfToken(ap.GetAssetPath()))) {
+                    textureType = HdTextureType::Udim;
+                }
+            }
+        }
     } else {
         if (assetIdentifierPropertyNames.size() > 1) {
             TF_WARN("Found texture node <%s> with no "
@@ -1040,12 +1055,9 @@ _ShaderNetworkWalker::_ProcessTextureNode(
             "\t\tFound texture: <%s>\n", connection.GetText());
     }
 
-    bool isPtex = sdrNode && sdrNode->GetMetadata().count(
-            _tokens->isPtex);
-
     SdfPath connectionPrimvar;
     VtValue fallback = _GetFallbackValue(shader, sdrNode);
-    if (isPtex) {
+    if (textureType == HdTextureType::Ptex) {
         for (auto const & primvarInputName : 
                 sdrNode->GetAdditionalPrimvarProperties()) {
             _ProcessPrimvarInput(primvarInputName, shader, 
@@ -1071,7 +1083,7 @@ _ShaderNetworkWalker::_ProcessTextureNode(
     for(auto &p : _params) {
         if (p._connection == shader.GetPath()) {
             p._paramType = HdMaterialParam::ParamTypeTexture;
-            p._isPtex = isPtex;
+            p._textureType = textureType;
             p._connectionPrimvar = connectionPrimvar;
             p._connection = connection;
             if (!fallback.IsEmpty()) {
