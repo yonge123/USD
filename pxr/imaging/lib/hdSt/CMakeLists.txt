@@ -127,6 +127,7 @@ pxr_library(hdSt
         shaders/renderPassShader.glslfx
         shaders/simpleTexturedSurface.glslfx
         shaders/terminals.glslfx
+        shaders/visibility.glslfx
 )
 
 if (X11_FOUND OR APPLE)
