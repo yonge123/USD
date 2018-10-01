@@ -1435,8 +1435,7 @@ UsdImagingDelegate::SetSceneMaterialsEnabled(bool enable)
 
 /*virtual*/
 TfToken
-UsdImagingDelegate::GetRenderTag(SdfPath const& id,
-                                 HdReprSelector const& reprSelector)
+UsdImagingDelegate::GetRenderTag(SdfPath const& id)
 {
     SdfPath usdPath = GetPathForUsd(id);
 

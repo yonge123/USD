@@ -1040,11 +1040,8 @@ function(_pxr_python_module NAME)
             ${SUBDIR_INC_DIR}
     )
 
-    # Include system headers before our own.  We define several headers
-    # that conflict; for example, half.h in EXR versus gf
     if (args_INCLUDE_DIRS)
         target_include_directories(${LIBRARY_NAME}
-            BEFORE
             PUBLIC
                 ${args_INCLUDE_DIRS}
         )

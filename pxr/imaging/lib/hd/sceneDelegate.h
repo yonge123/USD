@@ -249,6 +249,14 @@ struct HdRenderBufferDescriptor {
     GfVec3i dimensions;
     HdFormat format;
     bool multiSampled;
+
+    bool operator==(HdRenderBufferDescriptor const& rhs) const {
+        return dimensions == rhs.dimensions &&
+               format == rhs.format && multiSampled == rhs.multiSampled;
+    }
+    bool operator!=(HdRenderBufferDescriptor const& rhs) const {
+        return !(*this == rhs);
+    }
 };
 
 /// \struct HdVolumeFieldDescriptor
@@ -378,8 +386,7 @@ public:
     /// Returns the render tag that will be used to bucket prims during
     /// render pass bucketing.
     HD_API
-    virtual TfToken GetRenderTag(SdfPath const& id,
-                                 HdReprSelector const& reprSelector);
+    virtual TfToken GetRenderTag(SdfPath const& id);
 
     /// Returns the prim categories.
     HD_API
