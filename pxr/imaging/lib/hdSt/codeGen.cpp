@@ -2697,7 +2697,7 @@ HdSt_CodeGen::_GenerateShaderParameters()
                     << "  vec3 c = hd_sample_udim(HdGet_"
                     << it->second.inPrimvars[0] << "().xy);\n"
                     << "  c.z = texelFetch(sampler1D(shaderData[shaderCoord]."
-                    << it->second.name << "_layout), int(c.z), 0).x;\n"
+                    << it->second.name << "_layout), int(c.z), 0).x - 1;\n"
                     << "#else\n"
                     << "  vec3 c = vec3(0.0, 0.0, 0.0);\n"
                     << "#endif\n";
@@ -2706,8 +2706,10 @@ HdSt_CodeGen::_GenerateShaderParameters()
                     << "  vec3 c = vec3(0.0, 0.0, 0.0);\n";
             }
             accessors
+                << "if (c.z < -0.5) { return vec4(0, 0, 0, 0)" << swizzle
+                << "; } else { \n"
                 << "  return texture(sampler2DArray(shaderData[shaderCoord]."
-                << it->second.name << "), c)" << swizzle << ";\n}\n";
+                << it->second.name << "), c)" << swizzle << ";}\n}\n";
         } else if (bindingType == HdBinding::TEXTURE_UDIM_ARRAY) {
             declarations
                 << LayoutQualifier(it->first)
@@ -2722,16 +2724,19 @@ HdSt_CodeGen::_GenerateShaderParameters()
                     << "}\n";
             }
             // vec4 HdGet_name(vec2 coord) { vec3 c = hd_sample_udim(coord);
-            // c.z = texelFetch(sampler1d_name_layout, int(c.z), 0).x;
-            // return texture(sampler2dArray_name, hd_sample_udim(coord)).xyz; }
+            // c.z = texelFetch(sampler1d_name_layout, int(c.z), 0).x - 1;
+            // if (c.z < -0.5) { return vec4(0, 0, 0, 0).xyz; } else {
+            // return texture(sampler2dArray_name, hd_sample_udim(coord)).xyz;}}
             accessors
                 << it->second.dataType
                 << " HdGet_" << it->second.name
                 << "(vec2 coord) { vec3 c = hd_sample_udim(coord);\n"
                 << "  c.z = texelFetch(sampler1d_" << it->second.name
-                << "_layout" << ", int(c.z), 0).x;\n"
+                << "_layout" << ", int(c.z), 0).x - 1;\n"
+                << "if (c.z < -0.5) { return vec4(0, 0, 0, 0)"
+                << swizzle << "; } else {\n"
                 << "  return texture(sampler2dArray_"
-                << it->second.name << ", c)" << swizzle << ";}\n";
+                << it->second.name << ", c)" << swizzle << ";}}\n";
             // vec4 HdGet_name() { return HdGet_name(HdGet_st().xy); }
             accessors
                 << it->second.dataType
