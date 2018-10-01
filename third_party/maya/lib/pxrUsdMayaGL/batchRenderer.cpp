@@ -76,6 +76,7 @@
 #include <maya/MObject.h>
 #include <maya/MObjectHandle.h>
 #include <maya/MSceneMessage.h>
+#include <maya/MSelectInfo.h>
 #include <maya/MSelectionContext.h>
 #include <maya/MStatus.h>
 #include <maya/MString.h>
@@ -407,12 +408,10 @@ UsdMayaGLBatchRenderer::_OnSoftSelectOptionsChangedCallback(void* clientData)
 }
 
 UsdMayaGLBatchRenderer::UsdMayaGLBatchRenderer() :
-        _lastRenderFrameStamp(0u),
-        _lastSelectionFrameStamp(0u),
-        _legacyRenderPending(false),
-        _legacySelectionPending(false),
+        _isSelectionPending(false),
         _objectSoftSelectEnabled(false),
-        _softSelectOptionsCallbackId(0)
+        _softSelectOptionsCallbackId(0),
+        _selectResultsKey(GfMatrix4d(0.0), GfMatrix4d(0.0), false)
 {
     _viewport2UsesLegacySelection = TfGetenvBool("MAYA_VP2_USE_VP1_SELECTION",
                                                  false);
@@ -635,7 +634,7 @@ UsdMayaGLBatchRenderer::Draw(const MDrawRequest& request, M3dView& view)
         glDisable(GL_FRAMEBUFFER_SRGB_EXT);
     }
 
-    if (hdUserData->drawShape && _UpdateLegacyRenderPending(false)) {
+    if (hdUserData->drawShape) {
         GfMatrix4d worldToViewMatrix;
         _GetWorldToViewMatrix(view, &worldToViewMatrix);
 
@@ -690,9 +689,26 @@ UsdMayaGLBatchRenderer::Draw(
                                         projectionMat);
     }
 
-    const MUint64 frameStamp = context.getFrameStamp();
+    if (hdUserData->drawShape) {
+        // Check whether this draw call is for a selection pass. If it is, we
+        // do *not* actually perform any drawing, but instead just mark a
+        // selection as pending so we know to re-compute selection when the
+        // next pick attempt is made.
+        // Note that Draw() calls for contexts with the "selectionPass"
+        // semantic are only made from draw overrides that do *not* implement
+        // user selection (i.e. those that do not override, or return false
+        // from, wantUserSelection()). The draw override for pxrHdImagingShape
+        // will likely be the only one of these where that is the case.
+        const MHWRender::MPassContext& passContext = context.getPassContext();
+        const MStringArray& passSemantics = passContext.passSemantics();
 
-    if (hdUserData->drawShape && _UpdateRenderFrameStamp(frameStamp)) {
+        for (unsigned int i = 0u; i < passSemantics.length(); ++i) {
+            if (passSemantics[i] == MHWRender::MPassContext::kSelectionPassSemantic) {
+                _UpdateIsSelectionPending(true);
+                return;
+            }
+        }
+
         GfMatrix4d worldToViewMatrix;
         _GetWorldToViewMatrix(context, &worldToViewMatrix);
 
@@ -734,8 +750,7 @@ void UsdMayaGLBatchRenderer::DrawCustomCollection(
 const HdxIntersector::HitSet*
 UsdMayaGLBatchRenderer::TestIntersection(
         const PxrMayaHdShapeAdapter* shapeAdapter,
-        M3dView& view,
-        const bool singleSelection)
+        MSelectInfo& selectInfo)
 {
     // Legacy viewport implementation.
     //
@@ -745,6 +760,8 @@ UsdMayaGLBatchRenderer::TestIntersection(
     // viewport-based selection method, we compute the selection against the
     // Viewport 2.0 shape adapter buckets rather than the legacy buckets, since
     // we want to compute selection against what's actually being rendered.
+
+    M3dView view = selectInfo.view();
 
     bool useViewport2Buckets = false;
     SdfPath shapeAdapterDelegateId = shapeAdapter->GetDelegateID();
@@ -777,7 +794,7 @@ UsdMayaGLBatchRenderer::TestIntersection(
         return nullptr;
     }
 
-    if (_UpdateLegacySelectionPending(false)) {
+    if (_UpdateIsSelectionPending(false)) {
         if (TfDebug::IsEnabled(PXRUSDMAYAGL_BATCHED_SELECTION)) {
             TF_DEBUG(PXRUSDMAYAGL_BATCHED_SELECTION).Msg(
                 "Computing batched selection for %s\n",
@@ -788,23 +805,16 @@ UsdMayaGLBatchRenderer::TestIntersection(
 
         GfMatrix4d viewMatrix;
         GfMatrix4d projectionMatrix;
-        px_LegacyViewportUtils::GetViewSelectionMatrices(view,
-                                                         &viewMatrix,
-                                                         &projectionMatrix);
-
-        // In the legacy viewport, selection occurs in the local space of SOME
-        // object, but we need the view matrix in world space to correctly
-        // consider all nodes. Applying localToWorldSpace removes the local
-        // space we happen to be in.
-        const GfMatrix4d localToWorldSpace(
-            shapeAdapter->GetRootXform().GetInverse());
-        viewMatrix = localToWorldSpace * viewMatrix;
+        px_LegacyViewportUtils::GetSelectionMatrices(
+            selectInfo,
+            viewMatrix,
+            projectionMatrix);
 
         _ComputeSelection(bucketsMap,
                           &view,
                           viewMatrix,
                           projectionMatrix,
-                          singleSelection);
+                          selectInfo.singleSelection());
     }
 
     const HdxIntersector::HitSet* const hitSet =
@@ -815,14 +825,11 @@ UsdMayaGLBatchRenderer::TestIntersection(
             // Maya does not refresh the viewport. This would be fine, except
             // that we need to make sure we're ready to respond to another
             // selection. Maya may be calling select() on many shapes in
-            // series, so we cannot mark a legacy selection pending here or we
-            // will end up re-computing the selection on every call. Instead we
+            // series, so we cannot mark a selection pending here or we will
+            // end up re-computing the selection on every call. Instead we
             // simply schedule a refresh of the viewport, at the end of which
-            // the end render callback will be invoked and we'll mark a legacy
+            // the end render callback will be invoked and we'll mark a
             // selection pending then.
-            // This is not an issue with Viewport 2.0, since in that case we
-            // have the draw context's frame stamp to uniquely identify the
-            // selection operation.
             view.scheduleRefresh();
         }
 
@@ -850,9 +857,8 @@ UsdMayaGLBatchRenderer::TestIntersection(
 const HdxIntersector::HitSet*
 UsdMayaGLBatchRenderer::TestIntersection(
         const PxrMayaHdShapeAdapter* shapeAdapter,
-        const MHWRender::MSelectionInfo& selectInfo,
-        const MHWRender::MDrawContext& context,
-        const bool singleSelection)
+        const MHWRender::MSelectionInfo& selectionInfo,
+        const MHWRender::MDrawContext& context)
 {
     // Viewport 2.0 implementation.
 
@@ -863,30 +869,37 @@ UsdMayaGLBatchRenderer::TestIntersection(
         return nullptr;
     }
 
-    const MUint64 frameStamp = context.getFrameStamp();
+    GfMatrix4d viewMatrix;
+    GfMatrix4d projectionMatrix;
+    if (!px_vp20Utils::GetSelectionMatrices(selectionInfo,
+                                            context,
+                                            viewMatrix,
+                                            projectionMatrix)) {
+        return nullptr;
+    }
 
-    // FIXME: fix so we don't re-run the same selection query
-    // for every single proxyShape .getFrameStep() does not
-    // uniquely identify the selection event, though - just
-    // the last render. We would either need to also save all
-    // the selection info, do something similar to what
-    // is done for legacy selection.
-    // Going to leave this to Pixar to fix for now, though.
-    // To fix properly, can't just use _UpdateLegacySelectionPending, as that
-    // has the same basic problem - it does not update on every new click,
-    // only on every render.  Only way I can think of to do this "right" is to:
-    //   1) in addition to frameStamp (or selectionPending), also store
-    //      selection info - ie, ray, or selection rect, whether we're doing
-    //      single or drag select, etc
-    //   2) Either also store all selection settings (mask, soft select, etc)
-    //      or add callbacks to selection-related events, that reset the
-    //      frameStamp / selectionPending whenever selection options change
-//    if (_UpdateSelectionFrameStamp(frameStamp)) {
-    {
+    const bool wasSelectionPending = _UpdateIsSelectionPending(false);
+
+    const bool singleSelection = selectionInfo.singleSelection();
+
+    // Typically, we rely on the _isSelectionPending state to determine if we can
+    // re-use the previously computed select results.  However, there are cases
+    // (e.g. Pre-selection hilighting) where we call userSelect without a new
+    // draw call (which typically resets the _isSelectionPending).
+    //
+    // In these cases, we look at the projectionMatrix for the selection as well
+    // to see if the selection needs to be re-computed.
+    const _SelectResultsKey key = std::make_tuple(
+            viewMatrix, projectionMatrix, singleSelection);
+    const bool newSelKey = key != _selectResultsKey;
+
+    const bool needToRecomputeSelection = wasSelectionPending || newSelKey;
+    if (needToRecomputeSelection) {
         if (TfDebug::IsEnabled(PXRUSDMAYAGL_BATCHED_SELECTION)) {
             TF_DEBUG(PXRUSDMAYAGL_BATCHED_SELECTION).Msg(
                 "Computing batched selection for Viewport 2.0\n");
 
+            const MUint64 frameStamp = context.getFrameStamp();
             const MHWRender::MPassContext& passContext = context.getPassContext();
             const MString& passId = passContext.passIdentifier();
             const MStringArray& passSemantics = passContext.passSemantics();
@@ -898,15 +911,6 @@ UsdMayaGLBatchRenderer::TestIntersection(
                 TfStringify<MStringArray>(passSemantics).c_str());
         }
 
-        GfMatrix4d viewMatrix;
-        GfMatrix4d projectionMatrix;
-        if (!px_vp20Utils::GetSelectionMatrices(selectInfo,
-                                                context,
-                                                viewMatrix,
-                                                projectionMatrix)) {
-            return nullptr;
-        }
-
         M3dView view;
         const bool hasView = px_vp20Utils::GetViewFromDrawContext(context,
                                                                   view);
@@ -916,6 +920,7 @@ UsdMayaGLBatchRenderer::TestIntersection(
                           viewMatrix,
                           projectionMatrix,
                           singleSelection);
+        _selectResultsKey = key;
     }
 
     const HdxIntersector::HitSet* const hitSet =
@@ -966,13 +971,13 @@ UsdMayaGLBatchRenderer::TestIntersectionCustomCollection(
 
 int
 UsdMayaGLBatchRenderer::GetAbsoluteInstanceIndexForHit(
-    const HdxIntersector::Hit& hit) const
+        const HdxIntersector::Hit& hit) const
 {
     int ret = -1;
     if (auto delegate = _renderIndex->GetSceneDelegateForRprim(hit.objectId)) {
         delegate->GetPathForInstanceIndex(
-            hit.objectId, 
-            hit.instanceIndex, 
+            hit.objectId,
+            hit.instanceIndex,
             &ret);
     }
     return ret;
@@ -1047,9 +1052,9 @@ UsdMayaGLBatchRenderer::_GetIntersectionRprimCollections(
 
 bool
 UsdMayaGLBatchRenderer::_TestIntersection(
-    const HdRprimCollection& rprimCollection,
-    HdxIntersector::Params queryParams,
-    HdxIntersector::Result* result)
+        const HdRprimCollection& rprimCollection,
+        HdxIntersector::Params queryParams,
+        HdxIntersector::Result* result)
 {
     queryParams.renderTags = rprimCollection.GetRenderTags();
 
@@ -1126,7 +1131,7 @@ UsdMayaGLBatchRenderer::_ComputeSelection(
         HdxIntersector::HitSet hits;
         if (singleSelection) {
             HdxIntersector::Hit hit;
-            if (!result.ResolveNearest(&hit)) {
+            if (!result.ResolveNearestToCenter(&hit)) {
                 continue;
             }
 
@@ -1414,49 +1419,13 @@ UsdMayaGLBatchRenderer::_RenderBatches(
 }
 
 bool
-UsdMayaGLBatchRenderer::_UpdateRenderFrameStamp(const MUint64 frameStamp)
+UsdMayaGLBatchRenderer::_UpdateIsSelectionPending(const bool isPending)
 {
-    if (_lastRenderFrameStamp == frameStamp) {
+    if (_isSelectionPending == isPending) {
         return false;
     }
 
-    _lastRenderFrameStamp = frameStamp;
-
-    return true;
-}
-
-bool
-UsdMayaGLBatchRenderer::_UpdateSelectionFrameStamp(const MUint64 frameStamp)
-{
-    if (_lastSelectionFrameStamp == frameStamp) {
-        return false;
-    }
-
-    _lastSelectionFrameStamp = frameStamp;
-
-    return true;
-}
-
-bool
-UsdMayaGLBatchRenderer::_UpdateLegacyRenderPending(const bool isPending)
-{
-    if (_legacyRenderPending == isPending) {
-        return false;
-    }
-
-    _legacyRenderPending = isPending;
-
-    return true;
-}
-
-bool
-UsdMayaGLBatchRenderer::_UpdateLegacySelectionPending(const bool isPending)
-{
-    if (_legacySelectionPending == isPending) {
-        return false;
-    }
-
-    _legacySelectionPending = isPending;
+    _isSelectionPending = isPending;
 
     return true;
 }
@@ -1473,13 +1442,9 @@ void
 UsdMayaGLBatchRenderer::_MayaRenderDidEnd(
         const MHWRender::MDrawContext* /* context */)
 {
-    // Note that we mark a legacy selection as pending regardless of which
-    // viewport renderer is active. This is to ensure that selection works
-    // correctly in case the MAYA_VP2_USE_VP1_SELECTION environment variable is
-    // being used, in which case even though Viewport 2.0 (MPxDrawOverrides)
-    // will be doing the drawing, the legacy viewport (MPxSurfaceShapeUIs) will
-    // be handling selection.
-    _UpdateLegacySelectionPending(true);
+    // Completing a viewport render invalidates any previous selection
+    // computation we may have done, so mark a new one as pending.
+    _UpdateIsSelectionPending(true);
 
     // End any diagnostics batching.
     _sharedDiagBatchCtx.reset();

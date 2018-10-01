@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Pixar
+// Copyright 2018 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -21,4 +21,29 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/base/tf/copyOnWritePtr.h"
+////////////////////////////////////////////////////////////////////////
+
+#include "pxr/pxr.h"
+#include "pxr/base/tf/registryManager.h"
+#include "pxr/base/tf/scriptModuleLoader.h"
+#include "pxr/base/tf/token.h"
+
+#include <vector>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+TF_REGISTRY_FUNCTION(TfScriptModuleLoader) {
+    // List of direct dependencies for this library.
+    const std::vector<TfToken> reqs = {
+        TfToken("ar"),
+        TfToken("ndr"),
+        TfToken("sdr"),
+        TfToken("usdShade")
+    };
+    TfScriptModuleLoader::GetInstance().
+        RegisterLibrary(TfToken("usdShaders"), TfToken("pxr.UsdShaders"), reqs);
+}
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+
