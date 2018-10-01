@@ -39,6 +39,7 @@ pxr_shared_library(${PXR_PACKAGE}
         colorSpace
         diagnosticDelegate
         editUtil
+        hdImagingShape
         jobArgs
         meshUtil
         pointBasedDeformerNode
