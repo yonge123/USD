@@ -18,3 +18,4 @@ pr/valueCacheCrashFix
 tg/bugfixes/stripNamespaces_mergeTransform_fix
 tg/simple_features/hd_pcss
 tg/simple_features/tex_image_format
+tg/simple_features/animated_textures_for_draw_mode
