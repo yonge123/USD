@@ -896,7 +896,6 @@ HdxTaskController::SetCameraClipPlanes(std::vector<GfVec4d> const& clipPlanes)
 
 void
 HdxTaskController::SetCameraWindowPolicy(
-    CameraUtilConformWindowPolicy windowPolicy) {
     CameraUtilConformWindowPolicy windowPolicy)
 {
     // Cache the window policy, if needed
