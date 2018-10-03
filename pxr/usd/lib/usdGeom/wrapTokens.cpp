@@ -132,6 +132,7 @@ void wrapUsdGeomTokens()
     _AddToken(cls, "linear", UsdGeomTokens->linear);
     _AddToken(cls, "loop", UsdGeomTokens->loop);
     _AddToken(cls, "modelApplyDrawMode", UsdGeomTokens->modelApplyDrawMode);
+    _AddToken(cls, "modelCardDisplayFacing", UsdGeomTokens->modelCardDisplayFacing);
     _AddToken(cls, "modelCardGeometry", UsdGeomTokens->modelCardGeometry);
     _AddToken(cls, "modelCardTextureXNeg", UsdGeomTokens->modelCardTextureXNeg);
     _AddToken(cls, "modelCardTextureXPos", UsdGeomTokens->modelCardTextureXPos);
