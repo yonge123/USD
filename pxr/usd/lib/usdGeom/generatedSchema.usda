@@ -4163,6 +4163,10 @@ class "GeomModelAPI" (
                  set, apply an alternate imaging mode to this prim. See
                  \\ref UsdGeomModelAPI_drawMode."""
     )
+    uniform bool model:cardDisplayFacing (
+        doc = """If true, in cards imaging mode only the camera facing
+                  quad will be displayed."""
+    )
     uniform token model:cardGeometry (
         allowedTokens = ["cross", "box", "fromTexture"]
         doc = """The geometry to generate for imaging prims inserted for \\em

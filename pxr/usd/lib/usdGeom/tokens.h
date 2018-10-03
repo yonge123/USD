@@ -390,6 +390,10 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomModelAPI
     const TfToken modelApplyDrawMode;
+    /// \brief "model:cardDisplayFacing"
+    /// 
+    /// UsdGeomModelAPI
+    const TfToken modelCardDisplayFacing;
     /// \brief "model:cardGeometry"
     /// 
     /// UsdGeomModelAPI
