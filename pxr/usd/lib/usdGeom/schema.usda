@@ -1967,6 +1967,10 @@ class "GeomModelAPI"
         doc = """In \\em cards imaging mode, the texture applied to the Z- quad.
                  The texture axes (s,t) are mapped to model-space axes (-x, -y)."""
     )
+    uniform bool model:cardDisplayFacing (
+        doc = """If true, in \\em cards imaging mode only the camera facing
+                  quad will be displayed."""
+    )
 }
 
 class "MotionAPI"

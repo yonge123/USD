@@ -542,6 +542,7 @@ public:
         return _Extract(Key::MaterialParams(path), value);
     }
     bool ExtractMaterialParam(SdfPath const& path, TfToken const& name, VtValue* value) {
+        std::cerr << "Extracting Material Param: (" << path << ", " << name << ")" << std::endl;
         return _Extract(Key(path, name), value);
     }
 
