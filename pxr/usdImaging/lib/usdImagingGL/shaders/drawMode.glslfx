@@ -21,11 +21,9 @@ vec4 surfaceShader(vec4 Peye, vec3 Neye, vec4 color, vec4 patchCoord)
 {
 #ifdef HD_HAS_cardDisplayFacing
     if (HdGet_cardDisplayFacing() == 1) {
-        vec3 N = normalize(Neye);
-        if (N.z < 0.70710678118) {
-            //return vec4(0, 0, 0, 0);
-            discard; // Discard can be really expensive
-        }
+        if (Neye.z < 0 ||
+            Neye.z < abs(Neye.x) ||
+            Neye.z < abs(Neye.y)) { discard; }
     }
 #endif
     // Texture assignment values, from drawModeAdapter.cpp's AxesMask.
