@@ -600,6 +600,27 @@ void HdxTaskController::SetShadowParams(HdxShadowTaskParams const& params) {
 }
 
 void
+HdxTaskController::SetShadowParams(HdxShadowTaskParams const& params)
+{
+    if (!GetRenderIndex()->IsSprimTypeSupported(HdPrimTypeTokens->simpleLight)){
+        return;
+    }
+
+    HdxShadowTaskParams oldParams = 
+        _delegate.GetParameter<HdxShadowTaskParams>(
+            _shadowTaskId, HdTokens->params);
+
+    HdxShadowTaskParams mergedParams = params;
+    mergedParams.camera = oldParams.camera;
+
+    if (mergedParams != oldParams) {
+        _delegate.SetParameter(_shadowTaskId, HdTokens->params, mergedParams);
+        GetRenderIndex()->GetChangeTracker().MarkTaskDirty(
+            _shadowTaskId, HdChangeTracker::DirtyParams);
+    }
+}
+
+void
 HdxTaskController::SetEnableShadows(bool enable)
 {
     if (!GetRenderIndex()->IsSprimTypeSupported(HdPrimTypeTokens->simpleLight)){
@@ -896,6 +917,7 @@ HdxTaskController::SetCameraClipPlanes(std::vector<GfVec4d> const& clipPlanes)
 
 void
 HdxTaskController::SetCameraWindowPolicy(
+    CameraUtilConformWindowPolicy windowPolicy) {
     CameraUtilConformWindowPolicy windowPolicy)
 {
     // Cache the window policy, if needed
