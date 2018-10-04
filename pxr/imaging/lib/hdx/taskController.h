@@ -118,11 +118,6 @@ public:
     HDX_API
     void SetRenderParams(HdxRenderTaskParams const& params);
 
-    /// Set the shadow params. Note: params.camera will
-    /// be overwritten, since they come from SetCameraState.
-    HDX_API
-    void SetShadowParams(HdxShadowTaskParams const& params);
-
     /// -------------------------------------------------------
     /// AOV API
 

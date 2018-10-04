@@ -585,20 +585,6 @@ HdxTaskController::SetRenderParams(HdxRenderTaskParams const& params)
     }
 }
 
-void HdxTaskController::SetShadowParams(HdxShadowTaskParams const& params) {
-    HdxShadowTaskParams oldParams = _delegate.GetParameter<HdxShadowTaskParams>(
-        _shadowTaskId, HdTokens->params);
-
-    HdxShadowTaskParams mergedParams = params;
-    mergedParams.camera = oldParams.camera;
-
-    if (mergedParams != oldParams) {
-        _delegate.SetParameter(_shadowTaskId, HdTokens->params, mergedParams);
-        GetRenderIndex()->GetChangeTracker().MarkTaskDirty(
-            _shadowTaskId, HdChangeTracker::DirtyParams);
-    }
-}
-
 void
 HdxTaskController::SetShadowParams(HdxShadowTaskParams const& params)
 {
@@ -798,14 +784,11 @@ HdxTaskController::SetLightingState(GlfSimpleLightingContextPtr const& src)
         _delegate.GetParameter<HdxSimpleLightTaskParams>(_simpleLightTaskId,
             HdTokens->params);
 
-    const bool useShadows = src->GetUseShadows();
     if (lightParams.sceneAmbient != src->GetSceneAmbient() ||
-        lightParams.material != src->GetMaterial() ||
-        lightParams.enableShadows != useShadows) {
+        lightParams.material != src->GetMaterial()) {
 
         lightParams.sceneAmbient = src->GetSceneAmbient();
         lightParams.material = src->GetMaterial();
-        lightParams.enableShadows = useShadows;
 
         _delegate.SetParameter(
             _simpleLightTaskId, HdTokens->params, lightParams);
