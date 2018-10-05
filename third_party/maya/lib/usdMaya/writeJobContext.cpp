@@ -152,6 +152,20 @@ UsdMayaWriteJobContext::IsMergedTransform(const MDagPath& path) const
 SdfPath
 UsdMayaWriteJobContext::ConvertDagToUsdPath(const MDagPath& dagPath) const
 {
+    if (dagPath.pathCount() > 1) {
+        // Join together all the sub-paths - that way we (potentially) collapse
+        // each shape at the end of each underworld sub-path
+        SdfPath currentPath = SdfPath::AbsoluteRootPath();
+        MDagPath subPath;
+        for (size_t i = 0, n = dagPath.pathCount(); i < n; ++i) {
+            dagPath.getPath(subPath, i);
+            currentPath = ConvertDagToUsdPath(subPath).ReplacePrefix(
+                    SdfPath::AbsoluteRootPath(),
+                    currentPath);
+        }
+        return currentPath;
+    }
+
     SdfPath path = UsdMayaUtil::MDagPathToUsdPath(
             dagPath, false, mArgs.stripNamespaces);
 
@@ -424,6 +438,16 @@ UsdMayaWriteJobContext::CreatePrimWriter(
     if (curDag.length() == 0) {
         // This is the world root node. It can't have a prim writer.
         return nullptr;
+    }
+
+    if (curDag.pathCount() > 1) {
+        MDagPath underworldLeafPath;
+        curDag.getPath(underworldLeafPath, curDag.pathCount() - 1);
+        if (underworldLeafPath.length() == 0)
+        {
+            // This is an underworld "root" node - also skip
+            return nullptr;
+        }
     }
 
     MObject ob = curDag.node();
