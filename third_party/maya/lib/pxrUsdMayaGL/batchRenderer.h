@@ -51,6 +51,7 @@
 #include <maya/MDrawRequest.h>
 #include <maya/MObjectHandle.h>
 #include <maya/MMessage.h>
+#include <maya/MSelectInfo.h>
 #include <maya/MSelectionContext.h>
 #include <maya/MTypes.h>
 #include <maya/MUserData.h>
@@ -178,7 +179,7 @@ public:
             const PxrMayaHdRenderParams& params = PxrMayaHdRenderParams());
 
     /// Tests the object from the given shape adapter for intersection with
-    /// a given view using the legacy viewport.
+    /// a given selection context in the legacy viewport.
     ///
     /// Returns a pointer to a hit set if there was an intersection, or nullptr
     /// otherwise.
@@ -189,8 +190,7 @@ public:
     PXRUSDMAYAGL_API
     const HdxIntersector::HitSet* TestIntersection(
             const PxrMayaHdShapeAdapter* shapeAdapter,
-            M3dView& view,
-            const bool singleSelection);
+            MSelectInfo& selectInfo);
 
     /// Tests the object from the given shape adapter for intersection with
     /// a given draw context in Viewport 2.0.
@@ -204,9 +204,8 @@ public:
     PXRUSDMAYAGL_API
     const HdxIntersector::HitSet* TestIntersection(
             const PxrMayaHdShapeAdapter* shapeAdapter,
-            const MHWRender::MSelectionInfo& selectInfo,
-            const MHWRender::MDrawContext& context,
-            const bool singleSelection);
+            const MHWRender::MSelectionInfo& selectionInfo,
+            const MHWRender::MDrawContext& context);
 
     /// Tests the contents of the given custom collection (previously obtained
     /// via PopulateCustomCollection) for intersection with the current OpenGL
@@ -266,8 +265,7 @@ private:
     PXRUSDMAYAGL_API
     const UsdMayaGLSoftSelectHelper& GetSoftSelectHelper();
 
-    /// Allow shape adapters access to the soft selection helper, and to the
-    /// _UpdateLegacyRenderPending() method.
+    /// Allow shape adapters access to the soft selection helper.
     friend PxrMayaHdShapeAdapter;
 
     typedef std::pair<PxrMayaHdRenderParams, HdRprimCollectionVector>
@@ -330,54 +328,16 @@ private:
     /// legacy viewport. In that case, vp2Context will be nullptr.
     void _MayaRenderDidEnd(const MHWRender::MDrawContext* vp2Context);
 
-    /// Update the last render frame stamp using the given \p frameStamp.
-    ///
-    /// Note that frame stamps are only available from the MDrawContext when
-    /// using Viewport 2.0.
-    ///
-    /// Returns true if the last frame stamp was updated, or false if the given
-    /// frame stamp is the same as the last frame stamp.
-    bool _UpdateRenderFrameStamp(const MUint64 frameStamp);
-
-    /// Update the last selection frame stamp using the given \p frameStamp.
-    ///
-    /// Note that frame stamps are only available from the MDrawContext when
-    /// using Viewport 2.0.
-    ///
-    /// Returns true if the last frame stamp was updated, or false if the given
-    /// frame stamp is the same as the last frame stamp.
-    bool _UpdateSelectionFrameStamp(const MUint64 frameStamp);
-
-    /// Update the internal marker of whether a legacy viewport render is
-    /// pending.
+    /// Update the internal marker of whether a selection is pending.
     ///
     /// Returns true if the internal marker's value was changed, or false if
     /// the given value is the same as the current value.
-    bool _UpdateLegacyRenderPending(const bool isPending);
+    bool _UpdateIsSelectionPending(const bool isPending);
 
-    /// Update the internal marker of whether a legacy viewport selection is
-    /// pending.
-    ///
-    /// Returns true if the internal marker's value was changed, or false if
-    /// the given value is the same as the current value.
-    bool _UpdateLegacySelectionPending(const bool isPending);
-
-    /// With Viewport 2.0, we can query the draw context for its frameStamp,
-    /// a pseudo-unique identifier for each draw/select operation. We use that
-    /// to determine when to do a batched draw or batched selection versus when
-    /// to simply pass through or re-use cached data.
-    ///
-    /// The legacy viewport however does not provide a context we can query for
-    /// the frameStamp, so we simulate it with bools instead. Shape adapters
-    /// should call _UpdateLegacyRenderPending(true) during the legacy viewport
-    /// draw prep phase (sometime during MPxSurfaceShapeUI::getDrawRequests())
-    /// to indicate that we are prepping for a legacy viewport render.
     /// Rendering invalidates selection, so when a render completes, we mark
     /// selection as pending.
-    MUint64 _lastRenderFrameStamp;
-    MUint64 _lastSelectionFrameStamp;
-    bool _legacyRenderPending;
-    bool _legacySelectionPending;
+    bool _isSelectionPending;
+
     bool _objectSoftSelectEnabled;
     MCallbackId _softSelectOptionsCallbackId;
 
@@ -460,6 +420,12 @@ private:
     /// computed. It maps delegate IDs to a HitSet of all of the intersection
     /// hits for that delegate ID.
     std::unordered_map<SdfPath, HdxIntersector::HitSet, SdfPath::Hash> _selectResults;
+
+    /// We keep track of a "key" that's associated with the select results.
+    /// This is used to determine if the results can be shared among multiple
+    /// shapes calling TestIntersection.
+    typedef std::tuple<GfMatrix4d, GfMatrix4d, bool> _SelectResultsKey;
+    _SelectResultsKey _selectResultsKey;
 
     /// Hydra engine objects used to render batches.
     ///
