@@ -39,6 +39,8 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 TF_REGISTRY_FUNCTION(TfDebug)
 {
     TF_DEBUG_ENVIRONMENT_SYMBOL(KATANA_HYDRA,
@@ -142,7 +144,8 @@ void HydraKatana::setup()
     m_lightingContext = initLighting();
 
     // Set the Collection
-    HdRprimCollection collection(HdTokens->geometry, HdTokens->smoothHull);
+    HdReprSelector selector(HdTokens->smoothHull);
+    HdRprimCollection collection(HdTokens->geometry, selector);
     collection.SetRootPath(SdfPath::AbsoluteRootPath());
     m_taskController->SetCollection(collection);
 }
@@ -239,7 +242,8 @@ bool HydraKatana::pick(ViewportWrapperPtr viewport,
     params.renderTags = m_renderTags;
 
     // Prim Collection
-    HdRprimCollection collection(HdTokens->geometry, HdTokens->smoothHull);
+    HdReprSelector selector(HdTokens->smoothHull);
+    HdRprimCollection collection(HdTokens->geometry, selector);
     collection.SetRootPath(SdfPath::AbsoluteRootPath());
     //collection.SetExcludePaths(excludedPaths);
 

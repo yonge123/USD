@@ -55,6 +55,8 @@ using Foundry::Katana::ViewerAPI::ViewportWrapperPtr;
                    data[12], data[13], data[14], data[15])
 #endif
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
     (proxy)
