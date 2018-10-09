@@ -66,9 +66,6 @@ public:
         SdfPath _path;
         TfToken _attribute;
     public:
-        Key()
-        {}
-
         Key(SdfPath const& path, TfToken const& attr)
             : _path(path)
             , _attribute(attr)
@@ -188,7 +185,7 @@ private:
         typedef tbb::concurrent_unordered_map<Key, Element, Key::Hash> _MapType;
         typedef typename _MapType::iterator                            _MapIt;
         typedef typename _MapType::const_iterator                      _MapConstIt;
-        typedef tbb::concurrent_queue<Key>                             _QueueType;
+        typedef tbb::concurrent_queue<_MapIt>                          _QueueType;
 
         _MapType   _map;
         _QueueType _deferredDeleteQueue;
@@ -237,7 +234,7 @@ private:
 
         // If we're going to erase the old value, swap to avoid a copy.
         std::swap(it->second, *value);
-        cache->_deferredDeleteQueue.push(it->first);
+        cache->_deferredDeleteQueue.push(it);
         return true;
     }
 
@@ -282,10 +279,10 @@ private:
     void _GarbageCollect(_TypedCache<T> &cache) {
         typedef _TypedCache<T> Cache_t;
 
-        Key key;
+        typename Cache_t::_MapIt it;
 
-        while (cache._deferredDeleteQueue.try_pop(key)) {
-            cache._map.unsafe_erase(key);
+        while (cache._deferredDeleteQueue.try_pop(it)) {
+            cache._map.unsafe_erase(it);
         }
     }
 
