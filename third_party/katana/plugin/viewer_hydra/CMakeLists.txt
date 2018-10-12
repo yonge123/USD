@@ -1,4 +1,11 @@
-set(PXR_PACKAGE hydraKatana)
+# NOTE: This plugin has a really weird side-effect that I wasn't able to track
+# down: basically, if it is loaded before the `pxrUsdIn` library, any PxrUsdIn
+# node will subsequently crash Katana on cook. I assume this is somehow related
+# to a difference in the library load order, but I haven't done an exhaustive
+# analysis using LD_DEBUG or anything. Naming this plugin so that it sorts
+# after `pxrUsdIn` alphanumerically avoids the crash, so I'm just using the same
+# name Pixar does.
+set(PXR_PACKAGE viewer_hydra)
 
 if (NOT ${PXR_ENABLE_GL_SUPPORT})
     message(STATUS
@@ -12,6 +19,9 @@ pxr_plugin(${PXR_PACKAGE}
         katanaPluginApi
         arch
         glf
+        hd
+        hdSt
+        hdx
         tf
         usd
         usdGeom
@@ -20,7 +30,6 @@ pxr_plugin(${PXR_PACKAGE}
         usdKatana
 
     INCLUDE_DIRS
-        ${Boost_INCLUDE_DIRS}
         ${GLEW_INCLUDE_DIR}
         ${TBB_INCLUDE_DIRS}
         ${OPENEXR_INCLUDE_DIRS}

@@ -1,5 +1,5 @@
 //
-// Copyright 2018 Pixar
+// Copyright 2017 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -201,7 +201,7 @@ bool ViewerLocationTree::isValidPath(const std::string& path)
 
 ViewerLocationTree::Regex::Regex()
 {
-    regcomp(&m_regex, "^/root(/[_a-zA-Z0-9]+)*$", REG_EXTENDED);
+    regcomp(&m_regex, "^/root(/[_a-zA-Z0-9.]+)*$", REG_EXTENDED);
 }
 
 ViewerLocationTree::Regex::~Regex()

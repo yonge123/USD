@@ -1,5 +1,5 @@
 //
-// Copyright 2018 Pixar
+// Copyright 2017 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -144,8 +144,8 @@ void HydraKatana::setup()
     m_lightingContext = initLighting();
 
     // Set the Collection
-    HdReprSelector selector(HdTokens->smoothHull);
-    HdRprimCollection collection(HdTokens->geometry, selector);
+    HdRprimCollection collection(HdTokens->geometry,
+            HdReprSelector(HdTokens->smoothHull));
     collection.SetRootPath(SdfPath::AbsoluteRootPath());
     m_taskController->SetCollection(collection);
 }
@@ -242,8 +242,8 @@ bool HydraKatana::pick(ViewportWrapperPtr viewport,
     params.renderTags = m_renderTags;
 
     // Prim Collection
-    HdReprSelector selector(HdTokens->smoothHull);
-    HdRprimCollection collection(HdTokens->geometry, selector);
+    HdRprimCollection collection(HdTokens->geometry,
+            HdReprSelector(HdTokens->smoothHull));
     collection.SetRootPath(SdfPath::AbsoluteRootPath());
     //collection.SetExcludePaths(excludedPaths);
 
