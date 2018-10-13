@@ -1,0 +1,7 @@
+From: Paul Molodowitch <paulm@luma-pictures.com>
+Subject: [debug] optionally print info if multiple debug symbol definitions
+
+prints trace both for initial definition, and new one - should help trace problem
+
+can be controlled with preprocessor symbol - or defaults to on in debug mode, off
+in release
