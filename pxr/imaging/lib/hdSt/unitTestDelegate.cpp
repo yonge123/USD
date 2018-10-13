@@ -91,8 +91,8 @@ HdSt_UnitTestDelegate::GetTextureResource(SdfPath const& textureId)
     return HdTextureResourceSharedPtr(
         new HdStSimpleTextureResource(texture,
                                       textureType,
-                                      HdWrapUseMetaDict,
-                                      HdWrapUseMetaDict,
+                                      HdWrapUseMetadata,
+                                      HdWrapUseMetadata,
                                       HdMinFilterNearestMipmapLinear,
                                       HdMagFilterLinear,
                                       0));

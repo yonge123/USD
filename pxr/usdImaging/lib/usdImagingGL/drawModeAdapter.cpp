@@ -53,6 +53,7 @@ TF_DEFINE_PRIVATE_TOKENS(
 
     (cardsUv)
     (cardsTexAssign)
+    (cardDisplayFacing)
 
     (textureXPos)
     (textureYPos)
@@ -292,10 +293,38 @@ UsdImagingGLDrawModeAdapter::TrackVariability(UsdPrim const& prim,
                                             UsdImagingInstancerContext const*
                                                instancerContext) const
 {
-    if (_IsMaterialPath(cachePath) || _IsTexturePath(cachePath)) {
-        // Shader/texture aspects aren't time-varying.
+    const std::array<TfToken, 6> textureAttrs = {
+        UsdGeomTokens->modelCardTextureXPos,
+        UsdGeomTokens->modelCardTextureYPos,
+        UsdGeomTokens->modelCardTextureZPos,
+        UsdGeomTokens->modelCardTextureXNeg,
+        UsdGeomTokens->modelCardTextureYNeg,
+        UsdGeomTokens->modelCardTextureZNeg,
+    };
+
+    auto checkForTextureVariability =
+        [&textureAttrs, &prim, &timeVaryingBits, this] (HdDirtyBits dirtyBits) {
+        for (const TfToken& attr: textureAttrs) {
+            if (_IsVarying(prim, attr, dirtyBits,
+                           UsdImagingTokens->usdVaryingTexture, timeVaryingBits,
+                           true)) {
+                break;
+            }
+        }
+    };
+
+    if (_IsTexturePath(cachePath)) {
+        checkForTextureVariability(HdTexture::DirtyTexture);
         return;
     }
+
+    if (_IsMaterialPath(cachePath)) {
+        checkForTextureVariability(
+            HdMaterial::DirtySurfaceShader | HdMaterial::DirtyParams);
+        return;
+    }
+
+    checkForTextureVariability(HdChangeTracker::DirtyParams);
 
     // WARNING: This method is executed from multiple threads, the value cache
     // has been carefully pre-populated to avoid mutating the underlying
@@ -530,12 +559,27 @@ UsdImagingGLDrawModeAdapter::UpdateForTime(UsdPrim const& prim,
                 // drawing.
                 _SanityCheckFaceSizes(cachePath, extent, axes_mask);
             }
+            UsdAttribute cardDisplayFacingAttr =
+                prim.GetAttribute(UsdGeomTokens->modelCardDisplayFacing);
+            bool cardDisplayFacingValue = false;
+            if (cardDisplayFacingAttr &&
+                cardDisplayFacingAttr.Get(&cardDisplayFacingValue) &&
+                cardDisplayFacingValue) {
+                VtValue& cardDisplayFacing =
+                    valueCache->GetPrimvar(
+                        cachePath, _tokens->cardDisplayFacing);
+                cardDisplayFacing = VtValue(1);
+                _MergePrimvar(
+                    &primvars, _tokens->cardDisplayFacing,
+                    HdInterpolationConstant);
+            }
 
             // Merge "cardsUv" and "cardsTexAssign" primvars
             _MergePrimvar(&primvars, _tokens->cardsUv,
                           HdInterpolationFaceVarying);
             _MergePrimvar(&primvars, _tokens->cardsTexAssign,
                           HdInterpolationUniform);
+
 
             // XXX: backdoor into the material system.
             valueCache->GetPrimvar(cachePath, _tokens->displayRoughness) =

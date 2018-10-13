@@ -40,7 +40,11 @@
 #include "pxr/imaging/hdSt/textureResource.h"
 
 #include "pxr/base/tf/fileUtils.h"
+#include "pxr/base/vt/value.h"
 
+#include "pxr/usd/sdr/registry.h"
+#include "pxr/usd/sdr/shaderNode.h"
+#include "pxr/usd/sdr/shaderProperty.h"
 #include "pxr/usd/usdHydra/tokens.h"
 #include "pxr/usd/usdShade/shader.h"
 
@@ -48,44 +52,85 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
 
-HdWrap
-_GetWrapS(UsdPrim const &usdPrim, HdTextureType textureType)
+HdWrap _GetWrap(
+    UsdPrim const &usdPrim, HdTextureType textureType, const TfToken &wrapAttr)
 {
     if (textureType == HdTextureType::Udim) {
         return HdWrapBlack;
     }
-    // XXX: This default value should come from the registry
-    TfToken wrapS("black");
+    // The fallback, when the prim has no opinion is to use the metadata on
+    // the texture.
+    TfToken usdWrap = UsdHydraTokens->useMetadata;
     UsdShadeShader shader(usdPrim);
+
     if (shader) {
-        UsdAttribute attr = shader.GetInput(UsdHydraTokens->wrapS);
-        if (attr) attr.Get(&wrapS);
+        if (auto wrapInput = shader.GetInput(wrapAttr)) {
+            wrapInput.Get(&usdWrap);
+        } else {
+            // Get the default value from the shader registry if the input is
+            // not authored on the shader prim.
+            TfToken shaderId;
+            shader.GetShaderId(&shaderId);
+            if (!shaderId.IsEmpty()) {
+                auto &shaderReg = SdrRegistry::GetInstance();
+                if (SdrShaderNodeConstPtr sdrNode = 
+                    shaderReg.GetShaderNodeByIdentifierAndType(shaderId, 
+                                GlfGLSLFXTokens->glslfx)) {
+                    if (const auto &sdrInput = 
+                            sdrNode->GetShaderInput(wrapAttr)) {
+                        VtValue wrapVal = sdrInput->GetDefaultValue();
+                        if (wrapVal.IsHolding<TfToken>()) {
+                            usdWrap = wrapVal.UncheckedGet<TfToken>();
+                        }
+                    }
+                }
+            }
+        }
     }
-    HdWrap wrapShd = (wrapS == UsdHydraTokens->clamp) ? HdWrapClamp
-                   : (wrapS == UsdHydraTokens->repeat) ? HdWrapRepeat
-                   : (wrapS == UsdHydraTokens->mirror) ? HdWrapMirror
-                   : HdWrapBlack; 
-    return wrapShd;
+
+    HdWrap hdWrap;
+    if (usdWrap == UsdHydraTokens->clamp) {
+        hdWrap = HdWrapClamp;
+    } else if (usdWrap == UsdHydraTokens->repeat) {
+        hdWrap = HdWrapRepeat;
+    } else if (usdWrap == UsdHydraTokens->mirror) {
+        hdWrap = HdWrapMirror;
+    } else if (usdWrap == UsdHydraTokens->black) {
+        hdWrap = HdWrapBlack;
+    } else {
+        if (usdWrap != UsdHydraTokens->useMetadata) {
+            TF_WARN("Unknown wrap mode on prim %s: %s",
+                    usdPrim.GetPath().GetText(),
+                    usdWrap.GetText());
+        }
+
+        hdWrap = HdWrapUseMetadata;
+
+        // For legacy reasons, there is two different behaviors for
+        // useMetadata.  The deprecated HwUvTexture_1 shader nodes
+        // use the legacy behavior, while new nodes should use the new
+        // behavior.
+        TfToken id;
+        UsdAttribute attr = shader.GetIdAttr();
+        if (attr.Get(&id)) {
+            if (id == UsdHydraTokens->HwUvTexture_1) {
+                hdWrap = HdWrapLegacy;
+            }
+        }
+    }
+
+    return hdWrap;
+}
+
+HdWrap _GetWrapS(UsdPrim const &usdPrim, HdTextureType textureType)
+{
+    return _GetWrap(usdPrim, textureType, UsdHydraTokens->wrapS);
 }
 
 HdWrap
 _GetWrapT(UsdPrim const &usdPrim, HdTextureType textureType)
 {
-    if (textureType == HdTextureType::Udim) {
-        return HdWrapBlack;
-    }
-    // XXX: This default value should come from the registry
-    TfToken wrapT("black");
-    UsdShadeShader shader(usdPrim);
-    if (shader) {
-        UsdAttribute attr = shader.GetInput(UsdHydraTokens->wrapT);
-        if (attr) attr.Get(&wrapT);
-    }
-    HdWrap wrapThd = (wrapT == UsdHydraTokens->clamp) ? HdWrapClamp
-                   : (wrapT == UsdHydraTokens->repeat) ? HdWrapRepeat
-                   : (wrapT == UsdHydraTokens->mirror) ? HdWrapMirror
-                   : HdWrapBlack; 
-    return wrapThd;
+    return _GetWrap(usdPrim, textureType, UsdHydraTokens->wrapT);
 }
 
 HdMinFilter
@@ -139,6 +184,26 @@ _GetMemoryLimit(UsdPrim const &usdPrim)
         if (attr) attr.Get(&memoryLimit);
     }
     return memoryLimit;
+}
+
+GlfImage::ImageOriginLocation
+UsdImagingGL_ComputeTextureOrigin(UsdPrim const& usdPrim)
+{
+    // XXX : This is transitional code. Currently, only textures read
+    //       via UsdUVTexture have the origin at the lower left.
+    // Extract the id of the node and if it is a UsdUVTexture
+    // then we need to use the new coordinate system with (0,0)
+    // in the bottom left.
+    GlfImage::ImageOriginLocation origin =
+        GlfImage::ImageOriginLocation::OriginUpperLeft;
+    TfToken id;
+    UsdAttribute attr1 = UsdShadeShader(usdPrim).GetIdAttr();
+    attr1.Get(&id);
+    if (id == UsdImagingTokens->UsdUVTexture) {
+        origin = GlfImage::ImageOriginLocation::OriginLowerLeft;
+    }
+
+    return origin;
 }
 
 class UdimTextureFactory : public GlfTextureFactoryBase {
@@ -243,6 +308,9 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
         }
     }
 
+    GlfImage::ImageOriginLocation origin =
+            UsdImagingGL_ComputeTextureOrigin(usdPrim);
+
     // Hash on the texture filename.
     size_t hash = asset.GetHash();
 
@@ -253,6 +321,7 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
     HdMagFilter magFilter = _GetMagFilter(usdPrim);
     float memoryLimit = _GetMemoryLimit(usdPrim);
 
+    boost::hash_combine(hash, origin);
     boost::hash_combine(hash, wrapS);
     boost::hash_combine(hash, wrapT);
     boost::hash_combine(hash, minFilter);
@@ -304,19 +373,8 @@ UsdImagingGL_GetTextureResource(UsdPrim const& usdPrim,
         }
     }
 
-    // XXX : This is transitional code. Currently, only textures read
-    //       via UsdUVTexture have the origin at the lower left.
-    // Extract the id of the node and if it is a UsdUVTexture
-    // then we need to use the new coordinate system with (0,0)
-    // in the bottom left.
-    GlfImage::ImageOriginLocation origin = 
-        GlfImage::ImageOriginLocation::OriginUpperLeft;
-    TfToken id;
-    UsdAttribute attr1 = UsdShadeShader(usdPrim).GetIdAttr();
-    attr1.Get(&id);
-    if (id == UsdImagingTokens->UsdUVTexture) {
-        origin = GlfImage::ImageOriginLocation::OriginLowerLeft;
-    }
+    GlfImage::ImageOriginLocation origin =
+            UsdImagingGL_ComputeTextureOrigin(usdPrim);
 
     HdWrap wrapS = _GetWrapS(usdPrim, textureType);
     HdWrap wrapT = _GetWrapT(usdPrim, textureType);

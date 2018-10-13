@@ -69,26 +69,6 @@ HdStSimpleTextureResource::HdStSimpleTextureResource(
         // was added or not.
         _textureHandle->AddMemoryRequest(_memoryRequest);
     }
-
-    bool bindlessTexture = 
-        GlfContextCaps::GetInstance().bindlessTextureEnabled;
-    if (bindlessTexture) {
-        size_t handle = GetTexelsTextureHandle();
-        if (handle) {
-            if (!glIsTextureHandleResidentNV(handle)) {
-                glMakeTextureHandleResidentNV(handle);
-            }
-        }
-
-        if (_textureType != HdTextureType::Uv) {
-            handle = GetLayoutTextureHandle();
-            if (handle) {
-                if (!glIsTextureHandleResidentNV(handle)) {
-                    glMakeTextureHandleResidentNV(handle);
-                }
-            }
-        }
-    }
 }
 
 HdStSimpleTextureResource::~HdStSimpleTextureResource() 
@@ -171,12 +151,12 @@ GLuint HdStSimpleTextureResource::GetTexelsSamplerId()
         if (_texture) {
             VtDictionary txInfo = _texture->GetTextureInfo(true);
 
-            if (_wrapS == HdWrapUseMetaDict &&
+            if ((_wrapS == HdWrapUseMetadata || _wrapS == HdWrapLegacy) &&
                 VtDictionaryIsHolding<GLuint>(txInfo, "wrapModeS")) {
                 fwrapS = VtDictionaryGet<GLuint>(txInfo, "wrapModeS");
             }
 
-            if (_wrapT == HdWrapUseMetaDict &&
+            if ((_wrapT == HdWrapUseMetadata || _wrapT == HdWrapLegacy) &&
                 VtDictionaryIsHolding<GLuint>(txInfo, "wrapModeT")) {
                 fwrapT = VtDictionaryGet<GLuint>(txInfo, "wrapModeT");
             }
@@ -214,12 +194,31 @@ GLuint64EXT HdStSimpleTextureResource::GetTexelsTextureHandle()
         return 0;
     }
 
-    if (_textureType != HdTextureType::Uv) {
-        return textureId ? glGetTextureHandleARB(textureId) : 0;
+    if (textureId == 0) {
+        return 0;
     }
 
-    GLuint samplerId = GetTexelsSamplerId();
-    return textureId ? glGetTextureSamplerHandleARB(textureId, samplerId) : 0;
+    GLuint64EXT handle = 0;
+    if (_textureType != HdTextureType::Uv) {
+        handle = glGetTextureHandleARB(textureId);
+    } else {
+        GLuint samplerId = GetTexelsSamplerId();
+        handle = glGetTextureSamplerHandleARB(textureId, samplerId);
+    }
+
+    if (handle == 0) {
+        return 0;
+    }
+
+    bool bindlessTexture =
+        GlfContextCaps::GetInstance().bindlessTextureEnabled;
+    if (bindlessTexture) {
+        if (!glIsTextureHandleResidentNV(handle)) {
+            glMakeTextureHandleResidentNV(handle);
+        }
+    }
+
+    return handle;
 }
 
 GLuint HdStSimpleTextureResource::GetLayoutTextureId() 
@@ -258,8 +257,24 @@ GLuint64EXT HdStSimpleTextureResource::GetLayoutTextureHandle()
     }
 
     GLuint textureId = GetLayoutTextureId();
+    if (textureId == 0) {
+        return 0;
+    }
 
-    return textureId ? glGetTextureHandleARB(textureId) : 0;
+    GLuint64EXT handle = glGetTextureHandleARB(textureId);
+    if (handle == 0) {
+        return 0;
+    }
+
+    bool bindlessTexture =
+        GlfContextCaps::GetInstance().bindlessTextureEnabled;
+    if (bindlessTexture) {
+        if (!glIsTextureHandleResidentNV(handle)) {
+            glMakeTextureHandleResidentNV(handle);
+        }
+    }
+
+    return handle;
 }
 
 size_t HdStSimpleTextureResource::GetMemoryUsed()
