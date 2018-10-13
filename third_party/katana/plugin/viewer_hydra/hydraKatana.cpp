@@ -145,7 +145,7 @@ void HydraKatana::setup()
 
     // Set the Collection
     HdRprimCollection collection(HdTokens->geometry,
-            HdReprSelector(HdTokens->smoothHull));
+            HdReprSelector(HdReprTokens->smoothHull));
     collection.SetRootPath(SdfPath::AbsoluteRootPath());
     m_taskController->SetCollection(collection);
 }
@@ -243,7 +243,7 @@ bool HydraKatana::pick(ViewportWrapperPtr viewport,
 
     // Prim Collection
     HdRprimCollection collection(HdTokens->geometry,
-            HdReprSelector(HdTokens->smoothHull));
+            HdReprSelector(HdReprTokens->smoothHull));
     collection.SetRootPath(SdfPath::AbsoluteRootPath());
     //collection.SetExcludePaths(excludedPaths);
 
