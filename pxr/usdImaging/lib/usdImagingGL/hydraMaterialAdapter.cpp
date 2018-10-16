@@ -425,18 +425,6 @@ UsdImagingGLHydraMaterialAdapter::MarkMaterialDirty(UsdPrim const& prim,
     }
 }
 
-/* virtual */
-void
-UsdImagingGLHydraMaterialAdapter::_RemovePrim(SdfPath const& cachePath,
-                                 UsdImagingIndexProxy* index)
-{
-    if (IsChildPath(cachePath)) {
-        index->RemoveBprim(HdPrimTypeTokens->texture, cachePath);
-    } else {
-        index->RemoveSprim(HdPrimTypeTokens->material, cachePath);
-    }
-}
-
 std::string
 UsdImagingGLHydraMaterialAdapter::_GetShaderSource(
     UsdPrim const& shaderPrim, 
@@ -694,7 +682,7 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetworkDeprecated(
                 "\t\tFound texture: <%s>\n", connection.GetText());
 
             SdfAssetPath ap;
-            texAttr.Get(&ap, UsdTimeCode::Default());
+            texAttr.Get(&ap, UsdTimeCode::EarliestTime());
 
             if (GlfIsSupportedPtexTexture(TfToken(ap.GetAssetPath()))) {
                 textureType = HdTextureType::Ptex;
@@ -735,7 +723,7 @@ UsdImagingGLHydraMaterialAdapter::_WalkShaderNetworkDeprecated(
             TF_DEBUG(USDIMAGING_SHADERS).Msg(
                 "\t\tFound primvar: <%s>\n", connection.GetText());
 
-            if (TF_VERIFY(pvAttr.Get(&t, UsdTimeCode::Default()))) {
+            if (TF_VERIFY(pvAttr.Get(&t, UsdTimeCode::EarliestTime()))) {
                 primvars->push_back(t);
                 TF_DEBUG(USDIMAGING_SHADERS).Msg(
                     "\t\t\tFound primvar: <%s>\n", t.GetText());
@@ -1009,8 +997,7 @@ _ShaderNetworkWalker::_ProcessTextureNode(
 {
     HdTextureType textureType = HdTextureType::Uv;
 
-    if (sdrNode && sdrNode->GetMetadata().count(
-        _tokens->isPtex)) {
+    if (sdrNode && sdrNode->GetMetadata().count(_tokens->isPtex)) {
         textureType = HdTextureType::Ptex;
     }
 
@@ -1028,12 +1015,14 @@ _ShaderNetworkWalker::_ProcessTextureNode(
                 assetIdentifierPropertyNames.size());
         }
         const auto &input = shader.GetInput(assetIdentifierPropertyNames[0]);
-        connection = input.GetAttr().GetPath();
-        if (textureType != HdTextureType::Ptex) {
-            SdfAssetPath ap;
-            if (input.GetAttr().Get(&ap, UsdTimeCode::Default())) {
-                if (GlfIsSupportedUdimTexture(TfToken(ap.GetAssetPath()))) {
-                    textureType = HdTextureType::Udim;
+        if (input) {
+            connection = input.GetAttr().GetPath();
+            if (textureType != HdTextureType::Ptex) {
+                SdfAssetPath ap;
+                if (input.GetAttr().Get(&ap, UsdTimeCode::EarliestTime())) {
+                    if (GlfIsSupportedUdimTexture(TfToken(ap.GetAssetPath()))) {
+                        textureType = HdTextureType::Udim;
+                    }
                 }
             }
         }
@@ -1208,7 +1197,7 @@ _ShaderNetworkWalker::_GetFallbackValue(
             if (usdShadeInput) {
                 // "fallback" input should have interfaceOnly connectability. 
                 if (usdShadeInput.GetConnectedSource(&_source, &_sourceName, 
-                        &_sourceType)) {         
+                        &_sourceType)) {
                     // XXX: Fallback should be connectable to an output, but 
                     // HdSt does not support this!
                     if (UsdShadeInput connectedInput = _source.GetInput(
