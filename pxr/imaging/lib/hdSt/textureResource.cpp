@@ -229,21 +229,22 @@ GLuint HdStSimpleTextureResource::GetLayoutTextureId()
         if (udimTexture) {
             return udimTexture->GetGlLayoutName();
         }
-        return 0;
-    }
+    } else if (_textureType == HdTextureType::Ptex) {
 #ifdef PXR_PTEX_SUPPORT_ENABLED
-    GlfPtexTextureRefPtr ptexTexture =
-                                 TfDynamic_cast<GlfPtexTextureRefPtr>(_texture);
-
-    if (ptexTexture) {
-        return ptexTexture->GetLayoutTextureName();
+        GlfPtexTextureRefPtr ptexTexture =
+            TfDynamic_cast<GlfPtexTextureRefPtr>(_texture);
+        if (ptexTexture) {
+            return ptexTexture->GetLayoutTextureName();
+        }
+#else
+        TF_CODING_ERROR("Ptex support is disabled.  "
+            "This code path should be unreachable");
+#endif
+    } else {
+        TF_CODING_ERROR(
+            "Using GetLayoutTextureId in a Uv texture is incorrect");
     }
     return 0;
-#else
-    TF_CODING_ERROR("Ptex support is disabled.  "
-        "This code path should be unreachable");
-    return 0;
-#endif
 }
 
 GLuint64EXT HdStSimpleTextureResource::GetLayoutTextureHandle() 
