@@ -36,6 +36,7 @@
 #include "usdMaya/importCommand.h"
 #include "usdMaya/importTranslator.h"
 #include "usdMaya/listShadingModesCommand.h"
+#include "usdMaya/notice.h"
 #include "usdMaya/pointBasedDeformerNode.h"
 #include "usdMaya/proxyShape.h"
 #include "usdMaya/referenceAssembly.h"
@@ -226,6 +227,7 @@ initializePlugin(MObject obj)
         status.perror("pxrUsd: unable to register USD Export translator.");
     }
 
+    UsdMayaSceneResetNotice::InstallListener();
     UsdMayaDiagnosticDelegate::InstallDelegate();
 
     return status;
@@ -308,6 +310,7 @@ uninitializePlugin(MObject obj)
     status = plugin.deregisterData(UsdMayaStageData::mayaTypeId);
     CHECK_MSTATUS(status);
 
+    UsdMayaSceneResetNotice::RemoveListener();
     UsdMayaDiagnosticDelegate::RemoveDelegate();
 
     return status;
