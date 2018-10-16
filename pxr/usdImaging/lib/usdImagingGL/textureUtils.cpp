@@ -320,10 +320,6 @@ UsdImagingGL_GetTextureResourceID(UsdPrim const& usdPrim,
                     filePath.GetText(), usdPath.GetText());
             return HdTextureResource::ID(-1);
         }
-    } else {
-        if (GlfIsSupportedPtexTexture(filePath)) {
-            textureType = HdTextureType::Ptex;
-        }
     }
 
     GlfImage::ImageOriginLocation origin =
