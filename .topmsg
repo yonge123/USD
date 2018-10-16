@@ -1,0 +1,5 @@
+From: Paul Molodowitch <pm@stanfordalumni.org>
+Subject: Adds a fix for the stripNamespaces feature with mergeTransform
+
+The latest changes to how mergeTransform is handled internally broke our
+stripNamespaces feature.  This adds a fix for that.
