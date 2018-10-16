@@ -65,15 +65,8 @@ public:
     GlfTextureHandleRefPtr GetTextureHandle(const TfTokenVector &textures,
                                   GlfImage::ImageOriginLocation originLocation = 
                                                      GlfImage::OriginUpperLeft);
-
     GLF_API
     GlfTextureHandleRefPtr GetTextureHandle(GlfTextureRefPtr texture);
-    GLF_API
-    GlfTextureHandleRefPtr GetTextureHandle(
-        const TfToken& texture,
-        GlfImage::ImageOriginLocation originLocation,
-        const GlfTextureFactoryBase* textureFactory);
-
     GLF_API
     GlfTextureHandleRefPtr GetTextureHandle(
         const TfToken& texture,
