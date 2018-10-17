@@ -117,6 +117,7 @@ public:
         bool enableSceneMaterials;
         // Respect USD's model:drawMode attribute...
         bool enableUsdDrawModes;
+        bool displayImagePlanes;
 
         RenderParams() : 
             frame(UsdTimeCode::Default()),
@@ -139,7 +140,8 @@ public:
             alphaThreshold(-1),
             clipPlanes(),
             enableSceneMaterials(true),
-            enableUsdDrawModes(true)
+            enableUsdDrawModes(true),
+            displayImagePlanes(true)
         {
         }
 
@@ -164,7 +166,8 @@ public:
                 && alphaThreshold              == other.alphaThreshold
                 && clipPlanes                  == other.clipPlanes
                 && enableSceneMaterials        == other.enableSceneMaterials
-                && enableUsdDrawModes          == other.enableUsdDrawModes;
+                && enableUsdDrawModes          == other.enableUsdDrawModes
+                && displayImagePlanes          == other.displayImagePlanes;
         }
         bool operator!=(const RenderParams &other) const {
             return !(*this == other);

@@ -201,6 +201,7 @@ void wrapGL()
             .def_readwrite("enableSceneMaterials", 
                 &Params::enableSceneMaterials)
             .def_readwrite("enableUsdDrawModes", &Params::enableUsdDrawModes)
+            .def_readwrite("displayImagePlanes", &Params::displayImagePlanes)
         ;
 
         TfPyContainerConversions::from_python_sequence<

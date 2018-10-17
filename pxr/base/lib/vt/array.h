@@ -48,6 +48,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <memory>
+#include <initializer_list>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -272,6 +273,13 @@ class VtArray : public Vt_ArrayBase {
     VtArray(VtArray &&other) : Vt_ArrayBase(std::move(other))
                              , _data(other._data) {
         other._data = nullptr;
+    }
+
+    VtArray(std::initializer_list<ElementType> l) {
+        reserve(l.size());
+        for (const auto& v: l) {
+            push_back(v);
+        }
     }
 
     /// Copy assign from \p other.  This array shares underlying data with
