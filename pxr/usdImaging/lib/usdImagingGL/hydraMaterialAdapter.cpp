@@ -425,6 +425,18 @@ UsdImagingGLHydraMaterialAdapter::MarkMaterialDirty(UsdPrim const& prim,
     }
 }
 
+/* virtual */
+void
+UsdImagingGLHydraMaterialAdapter::_RemovePrim(SdfPath const& cachePath,
+                                 UsdImagingIndexProxy* index)
+{
+    if (IsChildPath(cachePath)) {
+        index->RemoveBprim(HdPrimTypeTokens->texture, cachePath);
+    } else {
+        index->RemoveSprim(HdPrimTypeTokens->material, cachePath);
+    }
+}
+
 std::string
 UsdImagingGLHydraMaterialAdapter::_GetShaderSource(
     UsdPrim const& shaderPrim, 
